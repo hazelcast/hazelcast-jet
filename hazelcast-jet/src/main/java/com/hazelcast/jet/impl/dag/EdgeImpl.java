@@ -69,7 +69,7 @@ public class EdgeImpl implements Edge {
         this.hashingStrategy = nvl(hashingStrategy, DefaultHashingStrategy.INSTANCE);
         this.partitioningStrategy = nvl(partitioningStrategy, StringPartitioningStrategy.INSTANCE);
         this.dataTransferringStrategy = nvl(dataTransferringStrategy, ByReferenceDataTransferringStrategy.INSTANCE);
-        this.processingStrategy = nvl(processingStrategy, ProcessingStrategy.ROUND_ROBING);
+        this.processingStrategy = nvl(processingStrategy, ProcessingStrategy.ROUND_ROBIN);
     }
 
     private <T> T nvl(T value, T defaultValue) {
