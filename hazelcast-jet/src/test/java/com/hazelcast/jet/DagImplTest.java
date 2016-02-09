@@ -17,7 +17,7 @@ import static junit.framework.Assert.assertTrue;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
-public class DagTest {
+public class DagImplTest {
 
     @Test(expected = IllegalStateException.class)
     public void test_add_same_vertex_multiple_times_throws_exception() throws Exception {
