@@ -1,4 +1,4 @@
-package com.hazelcast.jet;
+package com.hazelcast.jet.dag;
 
 import com.hazelcast.jet.impl.dag.DAGImpl;
 import com.hazelcast.jet.impl.dag.EdgeImpl;
