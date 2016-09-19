@@ -80,16 +80,12 @@ public class ShufflingSender extends AbstractHazelcastWriter {
     }
 
     @Override
-    public int flush() {
+    public void flush() {
         if (chunkBuffer.size() > 0) {
-            try {
-                consume(chunkBuffer);
-            } catch (Exception e) {
-                throw unchecked(e);
-            }
+            consume(chunkBuffer);
             chunkBuffer.reset();
         }
-        return ringbuffer.flush();
+        ringbuffer.flush();
     }
 
     @Override
