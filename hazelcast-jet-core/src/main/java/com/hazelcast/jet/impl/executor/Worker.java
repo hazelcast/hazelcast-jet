@@ -114,7 +114,7 @@ public abstract class Worker implements Runnable {
             }
 
             if (initTask) {
-                task.beforeProcessing();
+                task.before();
             }
 
             tasks.add(task);

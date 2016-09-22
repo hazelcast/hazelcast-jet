@@ -56,15 +56,6 @@ import com.hazelcast.jet.impl.util.BooleanHolder;
  */
 public abstract class Task {
 
-    protected volatile ClassLoader contextClassLoader;
-
-    /**
-     * @param classLoader - set classLoader to be used as T
-     */
-    public void setThreadContextClassLoader(ClassLoader classLoader) {
-        this.contextClassLoader = classLoader;
-    }
-
     /**
      * Init task, perform initialization actions before task being executed
      * The strict rule is that this method will be executed synchronously on
@@ -95,7 +86,7 @@ public abstract class Task {
      * Will be invoked immediately before task was submitted into the executor,
      * strictly from executor-thread
      */
-    public void beforeProcessing() {
+    public void before() {
 
     }
 

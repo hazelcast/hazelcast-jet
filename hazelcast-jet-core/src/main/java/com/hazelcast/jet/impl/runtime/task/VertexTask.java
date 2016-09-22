@@ -66,6 +66,7 @@ public class VertexTask extends Task {
     private final Map<Address, ShufflingSender> shufflingSenders = new ConcurrentHashMap<>();
     private final TaskContext taskContext;
     private final Processor processor;
+    private final ClassLoader classLoader;
     private volatile TaskProcessor taskProcessor;
     private volatile boolean sendersClosed;
     private volatile ShufflingSender[] sendersArray;
@@ -84,6 +85,7 @@ public class VertexTask extends Task {
         this.taskContext = taskContext;
         this.processor = taskContext.getProcessor();
         logger = taskContext.getJobContext().getNodeEngine().getLogger(getClass());
+        classLoader = taskContext.getJobContext().getDeploymentStorage().getClassLoader();
     }
 
     /**
@@ -194,7 +196,7 @@ public class VertexTask extends Task {
      * Will be invoked immediately before task was submitted into the executor,
      * strictly from executor-thread
      */
-    public void beforeProcessing() {
+    public void before() {
         try {
             processor.before(taskContext);
         } catch (Throwable error) {
@@ -219,11 +221,11 @@ public class VertexTask extends Task {
     public boolean execute(BooleanHolder didWorkHolder) {
         TaskProcessor processor = taskProcessor;
         boolean classLoaderChanged = false;
-        ClassLoader classLoader = null;
-        if (contextClassLoader != null) {
-            classLoader = Thread.currentThread().getContextClassLoader();
-            if (contextClassLoader != classLoader) {
-                Thread.currentThread().setContextClassLoader(contextClassLoader);
+        ClassLoader previousClassLoader = null;
+        if (classLoader != null) {
+            previousClassLoader = Thread.currentThread().getContextClassLoader();
+            if (classLoader != previousClassLoader) {
+                Thread.currentThread().setContextClassLoader(classLoader);
                 classLoaderChanged = true;
             }
         }
@@ -249,7 +251,7 @@ public class VertexTask extends Task {
             return success;
         } finally {
             if (classLoaderChanged) {
-                Thread.currentThread().setContextClassLoader(classLoader);
+                Thread.currentThread().setContextClassLoader(previousClassLoader);
             }
         }
     }
