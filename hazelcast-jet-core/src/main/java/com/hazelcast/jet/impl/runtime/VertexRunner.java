@@ -217,13 +217,11 @@ public class VertexRunner implements StateMachineEventHandler<VertexRunnerEvent>
     }
 
     private void buildTasks() {
-        ClassLoader classLoader = getJobContext().getDeploymentStorage().getClassLoader();
         for (int taskIndex = 0; taskIndex < vertexTasks.length; taskIndex++) {
             Processor processor = createProcessor(vertex.getProcessorClass(), vertex.getProcessorArgs());
             vertexTasks[taskIndex] = new VertexTask(this, getVertex(),
                     new TaskContextImpl(vertex, jobContext, processor, taskIndex));
             getJobContext().getExecutorContext().getProcessingTasks().add(vertexTasks[taskIndex]);
-            vertexTasks[taskIndex].setThreadContextClassLoader(classLoader);
             vertexTaskMap.put(taskIndex, vertexTasks[taskIndex]);
         }
     }
