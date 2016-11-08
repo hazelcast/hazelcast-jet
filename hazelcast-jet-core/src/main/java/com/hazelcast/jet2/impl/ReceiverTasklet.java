@@ -51,7 +51,6 @@ public class ReceiverTasklet implements Tasklet {
     }
 
     @Override
-    @SuppressWarnings("checkstyle:innerassignment")
     public ProgressState call() {
         tracker.reset();
         tryFillInbox();
