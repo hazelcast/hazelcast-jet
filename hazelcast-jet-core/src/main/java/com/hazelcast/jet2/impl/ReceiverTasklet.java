@@ -47,7 +47,7 @@ public class ReceiverTasklet implements Tasklet {
     }
 
     void offer(byte[] item, int offset) {
-        incoming.offer(new ByteArrayInputStream(item, offset, item.length - offset));
+        incoming.add(new ByteArrayInputStream(item, offset, item.length - offset));
     }
 
     @Override
@@ -58,14 +58,14 @@ public class ReceiverTasklet implements Tasklet {
             ObjectWithPartitionId itemWithpId = (ObjectWithPartitionId) item;
             if (itemWithpId.getItem() == DONE_ITEM) {
                 remainingSenders--;
-                tracker.madeProgress();
             } else {
                 ProgressState offered = collector.offer(itemWithpId.getItem(), itemWithpId.getPartitionId());
-                tracker.madeProgress(offered.isMadeProgress());
                 if (!offered.isDone()) {
+                    tracker.madeProgress(offered.isMadeProgress());
                     break;
                 }
             }
+            tracker.madeProgress();
             inbox.remove();
         }
 
@@ -86,7 +86,7 @@ public class ReceiverTasklet implements Tasklet {
                     for (int i = 0; i < count; i++) {
                         Object item = inputStream.readObject();
                         int partitionId = inputStream.readInt();
-                        inbox.offer(new ObjectWithPartitionId(item, partitionId));
+                        inbox.add(new ObjectWithPartitionId(item, partitionId));
                     }
                     tracker.madeProgress();
                 }
