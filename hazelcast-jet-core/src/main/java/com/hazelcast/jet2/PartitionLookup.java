@@ -16,16 +16,14 @@
 
 package com.hazelcast.jet2;
 
-import java.io.Serializable;
-
 /**
- * Javadoc pending.
+ * Provides partition information about an object
  */
 @FunctionalInterface
-public interface KeyExtractor extends Serializable {
+public interface PartitionLookup {
 
     /**
-     * @return Return the key for the specified item
+     * @return the Hazelcast partition for the given object
      */
-    Object extract(Object item);
+    int getPartition(Object object);
 }
