@@ -14,11 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet2.impl;
-
-import com.hazelcast.jet2.Inbox;
-import com.hazelcast.jet2.Outbox;
-import com.hazelcast.jet2.Processor;
+package com.hazelcast.jet2;
 
 import javax.annotation.Nonnull;
 

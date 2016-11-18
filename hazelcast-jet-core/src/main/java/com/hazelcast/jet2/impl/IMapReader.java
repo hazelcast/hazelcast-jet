@@ -35,7 +35,7 @@ import static java.util.stream.Collectors.toList;
 
 public class IMapReader extends AbstractProducer {
 
-    public static final int DEFAULT_FETCH_SIZE = 16384;
+    private static final int DEFAULT_FETCH_SIZE = 16384;
 
     private final MapProxyImpl map;
     private final List<Integer> partitions;
@@ -45,7 +45,7 @@ public class IMapReader extends AbstractProducer {
 
     private CircularCursor<Iterator> iteratorCursor;
 
-    public IMapReader(MapProxyImpl map, List<Integer> partitions, int fetchSize) {
+    private IMapReader(MapProxyImpl map, List<Integer> partitions, int fetchSize) {
         this.map = map;
         this.partitions = partitions;
         this.fetchSize = fetchSize;

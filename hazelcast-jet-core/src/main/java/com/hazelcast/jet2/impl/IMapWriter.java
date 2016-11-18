@@ -17,10 +17,11 @@
 package com.hazelcast.jet2.impl;
 
 import com.hazelcast.core.IMap;
+import com.hazelcast.jet2.AbstractProcessor;
 import com.hazelcast.jet2.Inbox;
-import com.hazelcast.jet2.ProcessorMetaSupplier;
 import com.hazelcast.jet2.Outbox;
 import com.hazelcast.jet2.Processor;
+import com.hazelcast.jet2.ProcessorMetaSupplier;
 import com.hazelcast.jet2.ProcessorSupplier;
 import com.hazelcast.nio.Address;
 
