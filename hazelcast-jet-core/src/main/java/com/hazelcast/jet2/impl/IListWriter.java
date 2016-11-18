@@ -29,11 +29,11 @@ import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
 
-public class IListWriter extends AbstractProcessor {
+public final class IListWriter extends AbstractProcessor {
 
     private IList list;
 
-    public IListWriter(IList list) {
+    private IListWriter(IList list) {
         this.list = list;
     }
 

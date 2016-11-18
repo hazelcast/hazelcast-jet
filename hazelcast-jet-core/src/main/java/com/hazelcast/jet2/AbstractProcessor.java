@@ -18,6 +18,9 @@ package com.hazelcast.jet2;
 
 import javax.annotation.Nonnull;
 
+/**
+ * Javadoc pending
+ */
 public abstract class AbstractProcessor implements Processor {
 
     private Outbox outbox;

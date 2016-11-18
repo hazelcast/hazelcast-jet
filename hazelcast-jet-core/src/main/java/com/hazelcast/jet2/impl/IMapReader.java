@@ -33,7 +33,7 @@ import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
 
-public class IMapReader extends AbstractProducer {
+public final class IMapReader extends AbstractProducer {
 
     private static final int DEFAULT_FETCH_SIZE = 16384;
 
