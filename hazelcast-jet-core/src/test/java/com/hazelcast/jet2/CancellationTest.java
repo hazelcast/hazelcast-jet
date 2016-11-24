@@ -16,13 +16,14 @@
 
 package com.hazelcast.jet2;
 
+import com.hazelcast.client.test.TestHazelcastFactory;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet2.impl.AbstractProducer;
 import com.hazelcast.test.AssertTask;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
-import com.hazelcast.test.TestHazelcastInstanceFactory;
 import com.hazelcast.test.annotation.QuickTest;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -43,56 +44,100 @@ public class CancellationTest extends HazelcastTestSupport {
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
 
-    private TestHazelcastInstanceFactory factory;
+    private TestHazelcastFactory factory;
 
     @Before
     public void setup() {
-        factory = createHazelcastInstanceFactory();
+        factory = new TestHazelcastFactory();
         StuckProcessor.callCounter.set(0);
     }
 
+    @After
+    public void shutdown() {
+        factory.shutdownAll();
+    }
+
     @Test
-    public void when_jobCancelledOnSingleNode_then_shouldTerminate() throws Throwable {
+    public void when_jobCancelledOnSingleNode_then_shouldTerminateEventually() throws Throwable {
+        // Given
         HazelcastInstance instance = factory.newHazelcastInstance();
         JetEngine jetEngine = JetEngine.get(instance, "jetEngine");
 
-        // Given
         DAG dag = new DAG();
         Vertex slow = new Vertex("slow", StuckProcessor::new);
         dag.addVertex(slow);
 
-        // When
         Future<Void> future = jetEngine.newJob(dag).execute();
+        assertExecutionStarted();
+
+        // When
         future.cancel(true);
 
-        assertTaskletComplete();
-
+        // Then
+        assertExecutionTerminated();
         expectedException.expect(CancellationException.class);
         future.get();
     }
 
     @Test
-    public void when_jobCancelledOnMultipleNodes_then_shouldTerminate() throws Throwable {
+    public void when_jobCancelledOnMultipleNodes_then_shouldTerminateEventually() throws Throwable {
+        // Given
         factory.newHazelcastInstance();
         HazelcastInstance instance = factory.newHazelcastInstance();
         JetEngine jetEngine = JetEngine.get(instance, "jetEngine");
 
-        // Given
         DAG dag = new DAG();
         Vertex slow = new Vertex("slow", StuckProcessor::new);
         dag.addVertex(slow);
 
-        // When
         Future<Void> future = jetEngine.newJob(dag).execute();
+        assertExecutionStarted();
+
+        // When
         future.cancel(true);
 
-        assertTaskletComplete();
-
+        //Then
+        assertExecutionTerminated();
         expectedException.expect(CancellationException.class);
         future.get();
     }
 
-    private void assertTaskletComplete() {
+    @Test
+    public void when_jobCancelledFromClient_then_shouldTerminateEventually() throws Throwable {
+        // Given
+        factory.newHazelcastInstance();
+        factory.newHazelcastInstance();
+        HazelcastInstance client = factory.newHazelcastClient();
+        JetEngine jetEngine = JetEngine.get(client, "jetEngine");
+
+        DAG dag = new DAG();
+        Vertex slow = new Vertex("slow", StuckProcessor::new);
+        dag.addVertex(slow);
+
+        Future<Void> future = jetEngine.newJob(dag).execute();
+        assertExecutionStarted();
+
+        // When
+        future.cancel(true);
+
+        // Then
+        assertExecutionTerminated();
+        expectedException.expect(CancellationException.class);
+        future.get();
+    }
+
+    private void assertExecutionStarted() {
+        final long first = StuckProcessor.callCounter.get();
+        assertTrueEventually(new AssertTask() {
+            @Override
+            public void run() throws Exception {
+                assertTrue("Call counter should eventually start being incremented.",
+                        first != StuckProcessor.callCounter.get());
+            }
+        });
+    }
+
+    private void assertExecutionTerminated() {
         final long[] previous = {0};
         assertTrueEventually(new AssertTask() {
             @Override

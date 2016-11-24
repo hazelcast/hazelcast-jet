@@ -66,11 +66,10 @@ public final class Util {
 
     public static CompletableFuture<Object> allOf(final Collection<ICompletableFuture> futures) {
         final CompletableFuture<Object> compositeFuture = new CompletableFuture<>();
-        compositeFuture.exceptionally(e -> {
+        compositeFuture.whenComplete((r, e) -> {
             if (e instanceof CancellationException) {
                 futures.forEach(f -> f.cancel(true));
             }
-            return null;
         });
         final AtomicInteger completionLatch = new AtomicInteger(futures.size());
         for (ICompletableFuture future : futures) {

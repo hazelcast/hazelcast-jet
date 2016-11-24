@@ -32,6 +32,7 @@ import com.hazelcast.spi.impl.PacketHandler;
 
 import java.nio.charset.Charset;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -154,15 +155,8 @@ public class JetService implements ManagedService, RemoteService, PacketHandler,
 
     @Override
     public boolean cancelOperation(Address caller, long callId) {
-        Map<Long, AsyncOperation> calls = liveOperations.get(caller);
-        if (calls == null) {
-            return false;
-        }
-        AsyncOperation operation = calls.get(callId);
-        if (operation == null) {
-            return false;
-        }
-        operation.cancel();
-        return true;
+        Optional<AsyncOperation> operation = Optional.of(liveOperations.get(caller)).map(m -> m.get(callId));
+        operation.ifPresent(AsyncOperation::cancel);
+        return operation.isPresent();
     }
 }
