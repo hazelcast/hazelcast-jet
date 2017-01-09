@@ -253,7 +253,7 @@
                     <runOrder>failedfirst</runOrder>
                     <forkCount>0.5C</forkCount>
                     <argLine>
-                        -Xmx8G
+                        -Xmx2G
                         -Dhazelcast.phone.home.enabled=false
                         -Dhazelcast.mancenter.enabled=false
                         -Dhazelcast.logging.type=log4j
@@ -351,7 +351,7 @@
             <id>test-coverage</id>
             <properties>
                 <argLine>
-                    -Xmx8G
+                    -Xmx2G
                     -Dhazelcast.phone.home.enabled=false
                     -Dhazelcast.mancenter.enabled=false
                     -Dhazelcast.logging.type=none
