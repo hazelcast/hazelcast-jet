@@ -75,6 +75,14 @@ public final class Traversers {
     }
 
     /**
+     * Returns a traverser over the given array.
+     */
+    @Nonnull
+    public static <T> Traverser<T> traverseArray(@Nonnull T[] array) {
+        return new ArrayTraverser<>(array);
+    }
+
+    /**
      * Flattens a supplier of traverser into a lazy-initialized traverser. The traverser
      * is obtained from this method's argument just once, upon the first invocation of
      * {@code get()}.
@@ -114,6 +122,20 @@ public final class Traversers {
         @Override
         public void accept(T t) {
             item = t;
+        }
+    }
+
+    private static class ArrayTraverser<T> implements Traverser<T> {
+        private int i;
+        private final T[] array;
+
+        ArrayTraverser(T[] array) {
+            this.array = array;
+        }
+
+        @Override
+        public T next() {
+            return i < array.length && i >= 0 ? array[i++] : null;
         }
     }
 }
