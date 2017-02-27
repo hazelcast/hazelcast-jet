@@ -22,6 +22,15 @@ import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorMetaSupplier;
 import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.nio.Address;
+import org.apache.hadoop.io.BooleanWritable;
+import org.apache.hadoop.io.ByteWritable;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.ShortWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobContextImpl;
 import org.apache.hadoop.mapred.JobID;
@@ -62,8 +71,35 @@ public final class WriteHdfsP extends AbstractProcessor {
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
         Map.Entry entry = (Map.Entry) item;
-        recordWriter.write(entry.getKey(), entry.getValue());
+        recordWriter.write(getWritable(entry.getKey()), getWritable(entry.getValue()));
         return true;
+    }
+
+    private Object getWritable(Object o) {
+        if (o instanceof Writable) {
+            return o;
+        }
+        Object writable;
+        if (o instanceof String) {
+            writable = new Text((String) o);
+        } else if (o instanceof Integer) {
+            writable = new IntWritable((Integer) o);
+        } else if (o instanceof Long) {
+            writable = new LongWritable((Long) o);
+        } else if (o instanceof Boolean) {
+            writable = new BooleanWritable((Boolean) o);
+        } else if (o instanceof Byte) {
+            writable = new ByteWritable((Byte) o);
+        } else if (o instanceof Short) {
+            writable = new ShortWritable((Short) o);
+        } else if (o instanceof Float) {
+            writable = new FloatWritable((Float) o);
+        } else if (o instanceof Double) {
+            writable = new DoubleWritable((Double) o);
+        } else {
+            writable = o;
+        }
+        return writable;
     }
 
     @Override
