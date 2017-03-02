@@ -18,6 +18,7 @@ package com.hazelcast.jet.connector.kafka;
 
 import com.hazelcast.core.Member;
 import com.hazelcast.jet.AbstractProcessor;
+import com.hazelcast.jet.Distributed.BiFunction;
 import com.hazelcast.jet.Distributed.Function;
 import com.hazelcast.jet.Distributed.Optional;
 import com.hazelcast.jet.Processor;
@@ -60,23 +61,30 @@ import static java.util.stream.Collectors.toList;
  * @param <V> type of the message value
  */
 public final class ReadKafkaP<K, V> extends AbstractProcessor implements Closeable {
+
+    public static final BiFunction<Integer, Long, Long> FROM_BEGINNING_OFFSET_MAPPER = (partition, current) -> 0L;
+
     private static final int POLL_TIMEOUT_MS = 100;
+    private static final BiFunction<Integer, Long, Long> CURRENT_POSITION_OFFSET_MAPPER = (partition, current) -> current;
     private final Properties properties;
     private final String topic;
     private final List<Integer> partitions;
-    private KafkaConsumer<byte[], byte[]> consumer;
-    private long[] partitionOffsets;
     private final Function<byte[], K> deserializeKey;
     private final Function<byte[], V> deserializeValue;
+    private final BiFunction<Integer, Long, Long> partitionOffsetMapper;
+    private KafkaConsumer<byte[], byte[]> consumer;
+    private long[] partitionOffsets;
 
     private ReadKafkaP(String topic, Properties properties, List<Integer> partitions,
-                       Function<byte[], K> deserializeKey, Function<byte[], V> deserializeValue) {
+                       Function<byte[], K> deserializeKey, Function<byte[], V> deserializeValue,
+                       BiFunction<Integer, Long, Long> partitionOffsetMapper) {
         this.topic = topic;
         this.properties = properties;
         this.partitions = partitions;
         this.partitionOffsets = new long[partitions.stream().max(Comparator.naturalOrder()).get() + 1];
         this.deserializeKey = deserializeKey;
         this.deserializeValue = deserializeValue;
+        this.partitionOffsetMapper = partitionOffsetMapper;
         Arrays.fill(partitionOffsets, -1L);
 
     }
@@ -84,17 +92,9 @@ public final class ReadKafkaP<K, V> extends AbstractProcessor implements Closeab
     @Override
     protected void init(@Nonnull Context context) throws Exception {
         consumer = new KafkaConsumer<>(properties);
-        consumer.assign(partitions.stream().map(i -> new TopicPartition(topic, i)).collect(toList()));
-    }
-
-    private static Properties getProperties(String zkAddress, String groupId, String brokerConnectionString) {
-        Properties props = new Properties();
-        props.put("zookeeper.connect", zkAddress);
-        props.put("group.id", groupId);
-        props.put("bootstrap.servers", brokerConnectionString);
-        props.put("key.deserializer", ByteArrayDeserializer.class.getCanonicalName());
-        props.put("value.deserializer", ByteArrayDeserializer.class.getCanonicalName());
-        return props;
+        List<TopicPartition> topicPartitions = partitions.stream().map(i -> new TopicPartition(topic, i)).collect(toList());
+        consumer.assign(topicPartitions);
+        topicPartitions.forEach(tp -> consumer.seek(tp, partitionOffsetMapper.apply(tp.partition(), consumer.position(tp))));
     }
 
     @Override
@@ -132,6 +132,16 @@ public final class ReadKafkaP<K, V> extends AbstractProcessor implements Closeab
         consumer.close();
     }
 
+    private static Properties getProperties(String zkAddress, String groupId, String brokerConnectionString) {
+        Properties props = new Properties();
+        props.put("zookeeper.connect", zkAddress);
+        props.put("group.id", groupId);
+        props.put("bootstrap.servers", brokerConnectionString);
+        props.put("key.deserializer", ByteArrayDeserializer.class.getCanonicalName());
+        props.put("value.deserializer", ByteArrayDeserializer.class.getCanonicalName());
+        return props;
+    }
+
     /**
      * Returns a meta-supplier of processors that consume a kafka topic and emit
      * items from it as {@code Map.Entry} instances.
@@ -145,33 +155,62 @@ public final class ReadKafkaP<K, V> extends AbstractProcessor implements Closeab
      * @param deserializeKey         function for deserializing keys
      * @param deserializeValue       function for deserializing values
      */
-    static <K, V> ProcessorMetaSupplier readKafka(String zkAddress, String groupId, String topicId,
-                                                  String brokerConnectionString,
-                                                  Function<byte[], K> deserializeKey,
-                                                  Function<byte[], V> deserializeValue) {
-        return new MetaSupplier<>(topicId,
-                getProperties(zkAddress, groupId, brokerConnectionString),
-                deserializeKey, deserializeValue);
+    public static <K, V> ProcessorMetaSupplier readKafka(String zkAddress, String groupId, String topicId,
+                                                         String brokerConnectionString,
+                                                         Function<byte[], K> deserializeKey,
+                                                         Function<byte[], V> deserializeValue) {
+        return readKafka(zkAddress, groupId, topicId, brokerConnectionString, deserializeKey, deserializeValue,
+                CURRENT_POSITION_OFFSET_MAPPER);
     }
 
+    /**
+     * Returns a meta-supplier of processors that consume a kafka topic and emit
+     * items from it as {@code Map.Entry} instances.
+     *
+     * <p>
+     *     You can specify a partition to offset mapper to mark the start offset of each partition.
+     *     Any negative value as an offset will throw {@code IllegalArgumentException}
+     * </p>
+     *
+     * @param <K>                    type of keys read
+     * @param <V>                    type of values read
+     * @param zkAddress              zookeeper address
+     * @param groupId                kafka consumer group name
+     * @param topicId                kafka topic name
+     * @param brokerConnectionString kafka broker address
+     * @param deserializeKey         function for deserializing keys
+     * @param deserializeValue       function for deserializing values
+     * @param partitionOffsetMapper  function for mapping partitionOffsets
+     */
+    public static <K, V> ProcessorMetaSupplier readKafka(String zkAddress, String groupId, String topicId,
+                                                         String brokerConnectionString,
+                                                         Function<byte[], K> deserializeKey,
+                                                         Function<byte[], V> deserializeValue,
+                                                         BiFunction<Integer, Long, Long> partitionOffsetMapper) {
+        return new MetaSupplier<>(topicId,
+                getProperties(zkAddress, groupId, brokerConnectionString),
+                deserializeKey, deserializeValue, partitionOffsetMapper);
+    }
 
     private static final class MetaSupplier<K, V> implements ProcessorMetaSupplier {
 
         static final long serialVersionUID = 1L;
         private final String topicId;
-        private Properties properties;
         private final Function<byte[], K> deserializeKey;
         private final Function<byte[], V> deserializeValue;
-
+        private final BiFunction<Integer, Long, Long> partitionOffsetMapper;
+        private Properties properties;
         private transient Map<Address, List<Integer>> partitionMap;
 
         private MetaSupplier(String topicId, Properties properties,
                              Function<byte[], K> deserializeKey,
-                             Function<byte[], V> deserializeValue) {
+                             Function<byte[], V> deserializeValue,
+                             BiFunction<Integer, Long, Long> partitionOffsetMapper) {
             this.topicId = topicId;
             this.properties = properties;
             this.deserializeKey = deserializeKey;
             this.deserializeValue = deserializeValue;
+            this.partitionOffsetMapper = partitionOffsetMapper;
         }
 
         @Override
@@ -189,10 +228,11 @@ public final class ReadKafkaP<K, V> extends AbstractProcessor implements Closeab
             consumer.close();
         }
 
-        @Override @Nonnull
+        @Override
+        @Nonnull
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
             return address -> new Supplier<>(topicId, properties, partitionMap.get(address),
-                    deserializeKey, deserializeValue);
+                    deserializeKey, deserializeValue, partitionOffsetMapper);
         }
     }
 
@@ -202,35 +242,39 @@ public final class ReadKafkaP<K, V> extends AbstractProcessor implements Closeab
 
         private final String topicId;
         private final Properties properties;
-        private List<Integer> ownedPartitions;
         private final Function<byte[], K> deserializeKey;
         private final Function<byte[], V> deserializeValue;
-
+        private final BiFunction<Integer, Long, Long> partitionOffsetMapper;
+        private List<Integer> ownedPartitions;
         private transient List<Processor> processors;
 
         Supplier(String topicId, Properties properties, List<Integer> ownedPartitions,
-                 Function<byte[], K> deserializeKey, Function<byte[], V> deserializeValue) {
+                 Function<byte[], K> deserializeKey, Function<byte[], V> deserializeValue,
+                 BiFunction<Integer, Long, Long> partitionOffsetMapper) {
             this.properties = properties;
             this.topicId = topicId;
             this.ownedPartitions = ownedPartitions;
             this.deserializeKey = deserializeKey;
             this.deserializeValue = deserializeValue;
+            this.partitionOffsetMapper = partitionOffsetMapper;
         }
 
-        @Override @Nonnull
+        @Override
+        @Nonnull
         public List<Processor> get(int count) {
             Map<Integer, List<Integer>> processorToPartitions =
                     IntStream.range(0, ownedPartitions.size()).boxed()
-                             .map(i -> new SimpleImmutableEntry<>(i, ownedPartitions.get(i)))
-                             .collect(groupingBy(e -> e.getKey() % count,
-                                     mapping(Entry::getValue, toList())));
+                            .map(i -> new SimpleImmutableEntry<>(i, ownedPartitions.get(i)))
+                            .collect(groupingBy(e -> e.getKey() % count,
+                                    mapping(Entry::getValue, toList())));
             IntStream.range(0, count)
-                     .forEach(processor -> processorToPartitions.computeIfAbsent(processor, x -> emptyList()));
+                    .forEach(processor -> processorToPartitions.computeIfAbsent(processor, x -> emptyList()));
 
             return (processors = processorToPartitions
                     .values().stream()
                     .map(partitions -> !partitions.isEmpty()
-                            ? new ReadKafkaP<>(topicId, properties, partitions, deserializeKey, deserializeValue)
+                            ? new ReadKafkaP<>(topicId, properties, partitions, deserializeKey, deserializeValue,
+                            partitionOffsetMapper)
                             : new NoopP()
                     )
                     .collect(toList()));
@@ -239,9 +283,9 @@ public final class ReadKafkaP<K, V> extends AbstractProcessor implements Closeab
         @Override
         public void complete(Throwable error) {
             processors.stream()
-                      .filter(p -> p instanceof ReadKafkaP)
-                      .map(p -> (ReadKafkaP) p)
-                      .forEach(p -> Util.uncheckRun(p::close));
+                    .filter(p -> p instanceof ReadKafkaP)
+                    .map(p -> (ReadKafkaP) p)
+                    .forEach(p -> Util.uncheckRun(p::close));
         }
     }
 }
