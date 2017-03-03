@@ -308,46 +308,25 @@ public abstract class AbstractProcessor implements Processor {
     }
 
     /**
-     * Factory of {@link FlatMapper}. The {@code FlatMapper} will emit items to
-     * the given output ordinal.
-     */
-    @Nonnull
-    protected <T, R> FlatMapper<T, R> flatMapper(
-            int outputOrdinal, @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper
-    ) {
-        return new FlatMapper<>(outputOrdinal, mapper);
-    }
-
-    /**
-     * Factory of {@link FlatMapper}. The {@code FlatMapper} will emit items to
-     * all defined output ordinals.
-     */
-    @Nonnull
-    protected <T, R> FlatMapper<T, R> flatMapper(
-            @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper
-    ) {
-        return flatMapper(-1, mapper);
-    }
-
-    /**
      * A helper that simplifies the implementation of
      * {@link AbstractProcessor#tryProcess(int, Object)} for {@code flatMap}-like
      * behavior. User supplies a {@code mapper} which takes an item and
      * returns a traverser over all output items that should be emitted. The
-     * {@link #tryProcess(Object)} method obtains and passes the traverser to
+     * {@link #tryProcess(Object, Function)} method obtains and passes the traverser to
      * {@link #emitCooperatively(int, Traverser)}.
      *
-     * @param <T> type of the input item
      * @param <R> type of the emitted item
      */
-    protected final class FlatMapper<T, R> {
+    protected final class FlatMapper<R> {
         private final int outputOrdinal;
-        private final Function<? super T, ? extends Traverser<? extends R>> mapper;
         private Traverser<? extends R> outputTraverser;
 
-        FlatMapper(int outputOrdinal, @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper) {
+        public FlatMapper(int outputOrdinal) {
             this.outputOrdinal = outputOrdinal;
-            this.mapper = mapper;
+        }
+
+        public FlatMapper() {
+            this(-1);
         }
 
         /**
@@ -358,7 +337,10 @@ public abstract class AbstractProcessor implements Processor {
          * @param item the item to process
          * @return what the calling {@code tryProcessX()} method should return
          */
-        public boolean tryProcess(@Nonnull T item) {
+        public <T> boolean tryProcess(
+                @Nonnull T item,
+                @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper
+        ) {
             if (outputTraverser == null) {
                 outputTraverser = mapper.apply(item);
             }
