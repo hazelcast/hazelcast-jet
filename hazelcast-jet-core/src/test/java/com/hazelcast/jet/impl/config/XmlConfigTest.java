@@ -20,6 +20,8 @@ import com.hazelcast.config.Config;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.util.Util;
+
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -137,6 +139,7 @@ public class XmlConfigTest {
         assertConfig(jetConfig);
     }
 
+    @Ignore("To confirm if substitution in Jet should be visible to IMDG")
     @Test
     public void when_configMemberHasVariable_variablesAreReplaced() {
         // Given
