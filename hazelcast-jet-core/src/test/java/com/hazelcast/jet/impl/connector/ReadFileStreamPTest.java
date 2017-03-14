@@ -20,35 +20,40 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestSupport;
 import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.impl.connector.ReadFileStreamP.WatchType;
 import com.hazelcast.jet.stream.IStreamList;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashSet;
+import java.util.Collections;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.locks.LockSupport;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Processors.writeList;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
-@Ignore
 public class ReadFileStreamPTest extends JetTestSupport {
 
     private JetInstance instance;
@@ -63,112 +68,8 @@ public class ReadFileStreamPTest extends JetTestSupport {
     }
 
     @Test
-    public void when_watchType_new_then_ignorePreexisting() throws IOException, InterruptedException, ExecutionException {
-        DAG dag = buildDag(WatchType.NEW);
-
-        // this is a pre-existing file, should not be picked up
-        File file = createNewFile();
-        appendToFile(file,   "hello", "pre-existing");
-        sleepAtLeastMillis(50);
-
-        Future<Void> jobFuture = instance.newJob(dag).execute();
-        // wait for the processor to initialize and pickup what it wants to
-        sleepAtLeastSeconds(2);
-
-        // check that nothing is picked up
-        assertEquals(0, list.size());
-
-        finishDirectory(jobFuture, file);
-    }
-
-    @Test
-    @Ignore //this does not work reliably due to ENTRY_CREATE might be reported before contents is written
-    public void when_watchType_new_then_pickupNew() throws IOException, InterruptedException, ExecutionException {
-        DAG dag = buildDag(WatchType.NEW);
-
-        Future<Void> jobFuture = instance.newJob(dag).execute();
-        // wait for the processor to initialize
-        sleepAtLeastSeconds(2);
-
-        File file = new File(directory, randomName());
-        appendToFile(file, "hello");
-
-        assertTrueEventually(() -> assertEquals(1, list.size()), 2);
-
-        finishDirectory(jobFuture, file);
-    }
-
-    @Test
-    @Ignore //this does not work reliably due to ENTRY_CREATE might be reported before contents is written
-    public void when_watchType_new_then_doNotPickupModifications() throws IOException, InterruptedException, ExecutionException {
-        DAG dag = buildDag(WatchType.NEW);
-
-        Future<Void> jobFuture = instance.newJob(dag).execute();
-        // wait for the processor to initialize
-        sleepAtLeastSeconds(2);
-
-        File file = new File(directory, randomName());
-        appendToFile(file, "hello", "pre-existing");
-
-        assertTrueEventually(() -> assertEquals(2, list.size()), 2);
-
-        appendToFile(file, "third line");
-
-        // wait for the processor to pickup what it wants to
-        sleepAtLeastSeconds(1);
-
-        // the list should not have the third line
-        assertEquals(2, list.size());
-
-        finishDirectory(jobFuture, file);
-    }
-
-    @Test
-    public void when_watchType_reProcess_then_pickupPreexistingAfterModify() throws IOException, InterruptedException, ExecutionException {
-        DAG dag = buildDag(WatchType.REPROCESS);
-
-        // this is a pre-existing file, should not be picked up
-        File file = createNewFile();
-        appendToFile(file, "hello", "pre-existing");
-        sleepAtLeastMillis(50);
-
-        Future<Void> jobFuture = instance.newJob(dag).execute();
-        // wait for the processor to initialize
-        sleepAtLeastSeconds(2);
-        // check that nothing was picked up
-        assertEquals(0, list.size());
-
-        // append more lines to the file, these should not be picked up
-        appendToFile(file, "third line");
-        assertTrueEventually(() -> assertCountDistinct(3, list), 2);
-
-        finishDirectory(jobFuture, file);
-    }
-
-    @Test
-    public void when_watchType_reProcess_then_pickupNewAndModified() throws IOException, InterruptedException, ExecutionException {
-        DAG dag = buildDag(WatchType.REPROCESS);
-
-        Future<Void> jobFuture = instance.newJob(dag).execute();
-        // wait for the processor to initialize
-        sleepAtLeastSeconds(2);
-
-        File file = new File(directory, randomName());
-        appendToFile(file, "hello", "pre-existing");
-        assertTrueEventually(() -> assertCountDistinct(2, list), 2);
-
-        // append third line to the file, now all three lines should be picked again
-        appendToFile(file, "third line");
-        assertTrueEventually(() -> assertCountDistinct(3, list), 2);
-        // the size should be at least five, because the first two appended lines must have been picked up at least twice
-        assertTrueEventually(() -> assertTrue(list.size() >= 5), 2);
-
-        finishDirectory(jobFuture, file);
-    }
-
-    @Test
-    public void when_watchType_appendedOnly_appendingToPreexisting_then_pickupEntirely() throws IOException, InterruptedException, ExecutionException {
-        DAG dag = buildDag(WatchType.APPENDED_ONLY);
+    public void when_appendingToPreexisting_then_pickupNewLines() throws IOException, InterruptedException, ExecutionException {
+        DAG dag = buildDag();
 
         // this is a pre-existing file, should not be picked up
         File file = createNewFile();
@@ -183,14 +84,71 @@ public class ReadFileStreamPTest extends JetTestSupport {
         assertEquals(0, list.size());
         appendToFile(file, "third line");
         // now, all three lines are picked up
-        assertTrueEventually(() -> assertEquals(3, list.size()), 2);
+        assertTrueEventually(() -> assertEquals(1, list.size()), 2);
 
         finishDirectory(jobFuture, file);
     }
 
     @Test
-    public void when_watchType_appendedOnly_newAndModified_then_pickupAddition() throws IOException, InterruptedException, ExecutionException {
-        DAG dag = buildDag(WatchType.APPENDED_ONLY);
+    public void when_appendingToPreexistingIncompleteLine_then_pickupCompleteLines() throws IOException, InterruptedException, ExecutionException {
+        DAG dag = buildDag();
+
+        // this is a pre-existing file, should not be picked up
+        File file = createNewFile();
+        try (PrintWriter writer = new PrintWriter(new FileOutputStream(file, true))) {
+            // note: no newline appended
+            writer.write("hello");
+        }
+        sleepAtLeastMillis(50);
+
+        Future<Void> jobFuture = instance.newJob(dag).execute();
+        // wait for the processor to initialize
+        sleepAtLeastSeconds(2);
+
+        // pre-existing file should not be picked up
+        assertEquals(0, list.size());
+        // this completes the first line and a second one - only the second one should be picked
+        appendToFile(file, "world", "second line");
+        // now, all three lines are picked up
+        assertTrueEventually(() -> assertEquals(1, list.size()), 2);
+        assertEquals("second line", list.get(0));
+
+        finishDirectory(jobFuture, file);
+    }
+
+    @Test
+    public void when_withCrlf_then_pickupCompleteLines() throws IOException, InterruptedException, ExecutionException {
+        DAG dag = buildDag();
+
+        // this is a pre-existing file, should not be picked up
+        File file = createNewFile();
+        try (PrintWriter writer = new PrintWriter(new FileOutputStream(file, true))) {
+            // note: no newline appended
+            writer.write("hello world\r");
+        }
+        sleepAtLeastMillis(50);
+
+        Future<Void> jobFuture = instance.newJob(dag).execute();
+        // wait for the processor to initialize
+        sleepAtLeastSeconds(2);
+
+        // pre-existing file should not be picked up
+        assertEquals(0, list.size());
+        // this completes the first line and a second one - only the second one should be picked
+        try (PrintWriter writer = new PrintWriter(new FileOutputStream(file, true))) {
+            // note: no newline appended
+            writer.write("\nsecond line\r\n");
+        }
+        // now, all three lines are picked up
+        assertTrueEventually(() -> assertEquals(1, list.size()), 2);
+        assertEquals("second line", list.get(0));
+
+        finishDirectory(jobFuture, file);
+    }
+
+    @Test
+    public void when_newAndModified_then_pickupAddition() throws IOException, InterruptedException, ExecutionException {
+        DAG dag = buildDag();
 
         Future<Void> jobFuture = instance.newJob(dag).execute();
         // wait for the processor to initialize
@@ -208,9 +166,106 @@ public class ReadFileStreamPTest extends JetTestSupport {
         finishDirectory(jobFuture, file);
     }
 
-    private DAG buildDag(WatchType type) {
+    @Test
+    public void when_fileWithManyLines_then_emitCooperatively() throws IOException, InterruptedException, ExecutionException {
+        DAG dag = buildDag();
+
+        Future<Void> jobFuture = instance.newJob(dag).execute();
+        // wait for the processor to initialize
+        sleepAtLeastSeconds(2);
+
+        assertEquals(0, list.size());
+        File subdir = new File(directory, "subdir");
+        assertTrue(subdir.mkdir());
+        File fileInSubdir = new File(subdir, randomName());
+        appendToFile(fileInSubdir, IntStream.range(0, 5000).mapToObj(String::valueOf).collect(Collectors.toList()).toArray(new String[0]));
+
+        // move the file to watchedDirectory
+        File file = new File(directory, fileInSubdir.getName());
+        assertTrue(fileInSubdir.renameTo(file));
+
+        assertTrueEventually(() -> assertEquals(5000, list.size()), 10);
+
+        finishDirectory(jobFuture, file, subdir);
+    }
+
+    @Test
+    public void stressTest() throws InterruptedException, ExecutionException {
+        // Here, I will start the job and in two separate threads I'll write fixed number of lines
+        // to two different log files, with few ms hiccups between each line.
+        // At the end, I'll check, if all the contents matches.
+        DAG dag = buildDag();
+
+        Future<Void> jobFuture = instance.newJob(dag).execute();
+        // wait for the processor to initialize
+        sleepAtLeastSeconds(2);
+        int numLines = 100_000;
+        File file1 = new File(directory, "file1.log");
+        File file2 = new File(directory, "file2.log");
+        Thread t1 = new Thread(new RandomWriter(file1, numLines, "file0"));
+        Thread t2 = new Thread(new RandomWriter(file2, numLines, "file1"));
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+
+        // wait for the list to be full
+        assertTrueEventually(() -> assertEquals(2 * numLines, list.size()));
+
+        // check the list
+        Set<Integer>[] expectedNumbers = new Set[] {
+                IntStream.range(0, numLines).boxed().collect(Collectors.toSet()),
+                IntStream.range(0, numLines).boxed().collect(Collectors.toSet())};
+
+        for (String logLine : list) {
+            // logLine has the form "fileN M ...", N is fileIndex, M is line number
+            int fileIndex = logLine.charAt(4) - '0';
+            int lineIndex = Integer.parseInt(logLine.split(" ", 3)[1]);
+            assertTrue(expectedNumbers[fileIndex].remove(lineIndex));
+        }
+
+        assertEquals(Collections.emptySet(), expectedNumbers[0]);
+        assertEquals(Collections.emptySet(), expectedNumbers[1]);
+
+        finishDirectory(jobFuture, file1, file2);
+    }
+
+    private static class RandomWriter implements Runnable {
+
+        private final File file;
+        private final int numLines;
+        private final String prefix;
+        private final Random random = new Random();
+
+        RandomWriter(File file, int numLines, String prefix) {
+            this.file = file;
+            this.numLines = numLines;
+            this.prefix = prefix;
+        }
+
+        @Override
+        public void run() {
+            try (FileOutputStream fos = new FileOutputStream(file);
+                    OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8);
+                    BufferedWriter bw = new BufferedWriter(osw)
+            ) {
+                for (int i = 0; i < numLines; i++) {
+                    bw.write(prefix + " " + i + " Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua\n");
+                    bw.flush();
+                    osw.flush();
+                    fos.flush();
+                    if (random.nextInt(100) < 5)
+                        LockSupport.parkNanos(1_000_000); // 1ms
+                }
+            } catch (IOException e) {
+                throw sneakyThrow(e);
+            }
+        }
+    }
+
+    private DAG buildDag() {
         DAG dag = new DAG();
-        Vertex reader = dag.newVertex("reader", ReadFileStreamP.supplier(directory.getPath(), type))
+        Vertex reader = dag.newVertex("reader", ReadFileStreamP.supplier(directory.getPath()))
                            .localParallelism(1);
         Vertex writer = dag.newVertex("writer", writeList(list.getName())).localParallelism(1);
         dag.edge(between(reader, writer));
@@ -240,21 +295,13 @@ public class ReadFileStreamPTest extends JetTestSupport {
 
     private void finishDirectory(Future<Void> jobFuture, File ... files) throws InterruptedException, ExecutionException {
         for (File file : files) {
-            assertTrue(file.delete());
+            System.out.println("deleting " + file + "...");
+            assertTrueEventually(() -> assertTrue("Failed to delete " + file, file.delete()), 2);
+            System.out.println("deleted " + file);
         }
-        assertTrue(directory.delete());
+        assertTrueEventually(() -> assertTrue("Failed to delete " + directory, directory.delete()), 2);
         assertTrueEventually(() -> assertTrue("job should complete eventually", jobFuture.isDone()), 5);
         // called for side-effect of throwing exception, if the job failed
         jobFuture.get();
-    }
-
-    /**
-     * Asserts the count of distinct elements. We use this, because reprocess might pick-up single line
-     * multiple times due to multiple {@link java.nio.file.StandardWatchEventKinds#ENTRY_MODIFY}
-     * events fired during writing to the file.
-     */
-    private <T> void assertCountDistinct(int expected, IStreamList<T> list) {
-        Set<T> set = new HashSet<>(list);
-        assertEquals(expected, set.size());
     }
 }

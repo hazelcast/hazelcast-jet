@@ -26,15 +26,16 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
+import java.io.Reader;
+import java.nio.charset.Charset;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.WatchEvent;
-import java.nio.file.WatchEvent.Kind;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -47,100 +48,116 @@ import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
 import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
- * A source that reads files from a directory and emits them line by line. It processes files,
- * as they are created/modified. It completes, when the directory is deleted.
- *
- * <p>This source is mainly aimed for testing a simple streaming setup that reads from files.
- *
+ * A source processor designed to handle log files in a directory in a streaming
+ * way. It processes files, as they are created/appended to. It ignores files in
+ * subdirectories. Contents of the files are emitted line by line. There is no
+ * indication, which file a particular line comes from.
  * <p>
- * {@link WatchType} parameter controls how new and modified files are
- * handled by the {@code Processor}.
+ * Only content appended to the files is read.
+ * Pre-existing files will be scanned for file sizes on startup, and will be
+ * processed from that position, ignoring possibly incomplete first line, if the
+ * file is being written to during startup.
+ * <p>
+ * Only lines terminated with a newline character are emitted. This is to avoid
+ * emitting single line in two chunks, if the file is being actively written to.
+ * <p>
+ * The same directory should be available on all members, but it should not
+ * contain the same files (i.e. it should not a network shared directory, but logs
+ * local to the machine).
+ * <p>
+ * It completes, when the directory is deleted. However, in order to delete
+ * the directory all files in it must be deleted, and if you delete a file, that is
+ * currently being read from, the job will encounter an IOException. Directory
+ * must be deleted on all nodes.
  */
 public class ReadFileStreamP extends AbstractProcessor implements Closeable {
 
-    private final WatchType watchType;
+    /**
+     * Number of lines read in one batch, to allow for timely draining of watcher
+     * events even while reading a file to avoid
+     * {@link java.nio.file.StandardWatchEventKinds#OVERFLOW OVERFLOW}.
+     */
+    private static final int LINES_IN_ONE_BATCH = 64;
+
+    private final Charset charset;
     private final int parallelism;
     private final int id;
     private final Path watchedDirectory;
 
-    private final Map<Path, Long> fileOffsets;
+    private final Map<Path, Long> fileOffsets = new HashMap<>();
 
     private WatchService watcher;
+    private StringBuilder lineBuilder = new StringBuilder();
+    private Path currentFile;
+    private FileInputStream currentInputStream;
+    private Reader currentReader;
 
-    public enum WatchType {
-
-        /**
-         * Process only new files. Modified or pre-existing files will not be re-read.
-         *
-         * <p><b>Warning: </b>Might not work reliably, as the OS may report
-         * new file before its contents are created, just after creation. This might
-         * change by operating system, file system type, encryption/compression,
-         * network drives, etc.
-         */
-        NEW,
-
-        /**
-         * Re-read files from the beginning when a modification occurs. The whole
-         * file will be emitted every time there is a modification. Pre-existing files will
-         * be emitted upon first modification.
-         *
-         * <p><b>Warning: </b>A file being written to might be picked up multiple
-         * times during that period, with possibly incomplete lines.
-         */
-        REPROCESS,
-
-        /**
-         * Read only appended content to the files. Only the new content since the
-         * last read will be emitted. Pre-existing files will be processed entirely upon
-         * first modification.
-         *
-         * <p><b>Warning: </b>A file being written to might be picked up at any
-         * moment during that period, possibly splitting the lines or even words where
-         * they are not split.
-         */
-        APPENDED_ONLY
-    }
-
-
-    ReadFileStreamP(String folder, WatchType watchType, int parallelism, int id) {
-        this.watchType = watchType;
+    ReadFileStreamP(String watchedDirectory, Charset charset, int parallelism, int id) {
+        this.watchedDirectory = Paths.get(watchedDirectory);
+        this.charset = charset;
         this.parallelism = parallelism;
         this.id = id;
-        this.watchedDirectory = Paths.get(folder);
-
-        if (watchType == WatchType.APPENDED_ONLY) {
-            fileOffsets = new HashMap<>();
-        } else {
-            fileOffsets = null;
-        }
     }
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        watcher = FileSystems.getDefault().newWatchService();
-        watchedDirectory.register(watcher, new WatchEvent.Kind[]{ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE}, HIGH);
-        getLogger().info("Started to watch the directory: " + watchedDirectory);
+        for (Path file : Files.newDirectoryStream(watchedDirectory)) {
+            if (Files.isRegularFile(file)) {
+                // I insert negative size to indicate, that we should skip the first line
+                fileOffsets.put(file, -Files.size(file));
+            }
+        }
     }
 
     @Override
     public boolean complete() {
         try {
-            boolean isDone = tryComplete();
-            if (isDone) {
-                close();
+            watcher = FileSystems.getDefault().newWatchService();
+            watchedDirectory.register(watcher, new WatchEvent.Kind[]{ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE}, HIGH);
+            getLogger().info("Started to watch the directory: " + watchedDirectory);
+
+            ArrayDeque<Path> eventQueue = new ArrayDeque<>();
+            while (watcher != null || !eventQueue.isEmpty()) {
+                if (watcher != null) {
+                    drainWatcherEvents(eventQueue);
+                }
+                if (currentFile == null) {
+                    currentFile = eventQueue.poll();
+                }
+                if (currentFile != null) {
+                    processFile();
+                }
             }
-            return isDone;
-        } catch (InterruptedException ignored) {
+
             return true;
         } catch (IOException e) {
             throw sneakyThrow(e);
+        } catch (InterruptedException e) {
+            return true;
         }
     }
 
-    private boolean tryComplete() throws InterruptedException, IOException {
-        WatchKey key = watcher.take();
+    private void drainWatcherEvents(ArrayDeque<Path> eventQueue) throws InterruptedException, IOException {
+        WatchKey key;
+        if (currentFile == null && eventQueue.isEmpty()) {
+            // poll with blocking only when there is no other work to do
+            key = watcher.poll(3, SECONDS);
+        } else {
+            // if there are more lines to emit from current file, just poll without waiting
+            key = watcher.poll();
+        }
+
+        if (key == null) {
+            if (!Files.exists(watchedDirectory)) {
+                getLogger().info("Directory " + watchedDirectory + " does not exist, stopped watching");
+                close();
+            }
+            return;
+        }
+
         for (WatchEvent<?> event : key.pollEvents()) {
             final WatchEvent.Kind<?> kind = event.kind();
             final Path filePath = watchedDirectory.resolve(((WatchEvent<Path>) event).context());
@@ -151,53 +168,37 @@ public class ReadFileStreamP extends AbstractProcessor implements Closeable {
             }
 
             if (kind == ENTRY_DELETE && filePath.equals(watchedDirectory)) {
+                // we'll probably never receive this event, but who knows
                 getLogger().info("Directory " + watchedDirectory + " deleted, stopped watching");
-                return true;
+                close();
+                return;
+            }
+
+            if (kind == ENTRY_DELETE) {
+                if (getLogger().isFineEnabled()) {
+                    getLogger().fine("Detected deleted file: " + filePath);
+                }
+                fileOffsets.remove(filePath);
+                continue;
+            }
+
+            assert kind == ENTRY_CREATE || kind == ENTRY_MODIFY;
+            if (getLogger().isFineEnabled()) {
+                getLogger().fine("Detected new or modified file: " + filePath);
+            }
+
+            // ignore subdirectories
+            if (Files.isDirectory(filePath)) {
+                continue;
             }
 
             if (shouldProcessEvent(filePath)) {
-                processEvent(kind, filePath);
+                eventQueue.add(filePath);
             }
         }
         if (!key.reset()) {
             getLogger().info("Watch key is invalid. Stopping watcher.");
-            return true;
-        }
-        return false;
-    }
-
-    private void processEvent(Kind<?> kind, Path file) throws IOException {
-        // ignore subdirectories
-        if (Files.isDirectory(file)) {
-            return;
-        }
-
-        if (kind == ENTRY_DELETE && watchType == WatchType.APPENDED_ONLY) {
-            if (getLogger().isFineEnabled()) {
-                getLogger().fine("Detected deleted file: " + file);
-            }
-            if (fileOffsets != null) {
-                fileOffsets.remove(file);
-            }
-        } else if (kind == ENTRY_CREATE) {
-            if (getLogger().isFineEnabled()) {
-                getLogger().fine("Detected new file: " + file);
-            }
-            long newOffset = processFile(file, 0L);
-            if (fileOffsets != null) {
-                fileOffsets.put(file, newOffset);
-            }
-        } else if (kind == ENTRY_MODIFY && watchType != WatchType.NEW) {
-            if (getLogger().isFineEnabled()) {
-                getLogger().fine("Detected modified file: " + file);
-            }
-
-            long previousOffset = fileOffsets != null ? fileOffsets.getOrDefault(file, 0L) : 0L;
-            long newOffset = processFile(file, previousOffset);
-
-            if (fileOffsets != null) {
-                fileOffsets.put(file, newOffset);
-            }
+            close();
         }
     }
 
@@ -206,22 +207,125 @@ public class ReadFileStreamP extends AbstractProcessor implements Closeable {
         return ((hashCode & Integer.MAX_VALUE) % parallelism) == id;
     }
 
-    private long processFile(Path file, long offset) throws IOException {
-        try (FileInputStream fis = new FileInputStream(file.toFile())) {
-            fis.getChannel().position(offset);
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(fis, StandardCharsets.UTF_8))) {
-                for (String line; (line = reader.readLine()) != null; ) {
-                    if (getLogger().isFinestEnabled()) {
-                        getLogger().finest("line = " + line);
+    private void processFile() throws IOException {
+        try {
+            // if file is not opened, open it
+            if (currentInputStream == null) {
+                long offset = fileOffsets.getOrDefault(currentFile, 0L);
+                if (getLogger().isFinestEnabled()) {
+                    getLogger().finest("Processing file " + currentFile + ", previous offset: " + offset);
+                }
+
+                try {
+                    currentInputStream = new FileInputStream(currentFile.toFile());
+                } catch (FileNotFoundException ignored) {
+                    // ignore IO errors: on file deletion, ENTRY_MODIFY is reported just before ENTRY_DELETE
+                    closeCurrentFile();
+                    return;
+                }
+                // if offset is negative, it means, that we are reading the file for the first time
+                boolean findNextLine = false;
+                final long originalOffset = offset;
+                if (offset < 0) {
+                    // -1: we start one byte behind, to see, if there is a newline.
+                    // On windows, we'll miss the CR from CRLF sequence, but that's not a problem
+                    // because LF is a line terminator also.
+                    offset = -offset - 1;
+                    findNextLine = true;
+                }
+
+                currentInputStream.getChannel().position(offset);
+                currentReader = new BufferedReader(new InputStreamReader(currentInputStream, charset));
+                if (findNextLine) {
+                    int ch;
+                    while (true) {
+                        ch = currentReader.read();
+                        if (ch < 0) {
+                            // we've hit EOF before finding the end of current line
+                            fileOffsets.put(currentFile, originalOffset);
+                            closeCurrentFile();
+                            return;
+                        }
+                        if (ch == '\n' || ch == '\r') {
+                            maybeSkipLF(currentReader, ch);
+                            break;
+                        }
                     }
+                }
+            }
+
+            // now read regular lines
+            String line;
+            for (int i = 0; i < LINES_IN_ONE_BATCH; i++) {
+                line = readCompleteLine(currentReader);
+                if (line == null) {
+                    fileOffsets.put(currentFile, currentInputStream.getChannel().position());
+                    closeCurrentFile();
+                    break;
+                } else {
                     emit(line);
                 }
-                return fis.getChannel().position();
             }
-        } catch (FileNotFoundException ignored) {
-            // ignore missing file: on file deletion, ENTRY_MODIFY is reported just before ENTRY_DELETE
-            return offset;
+        } catch (IOException e) {
+            // just log the exception. We don't want the streaming job to fail
+            getLogger().warning(e);
+            closeCurrentFile();
         }
+    }
+
+    /**
+     * Reads a line from the input, only if it is terminated by CR or LF or CRLF. If EOF is
+     * detected before newline character, returns null.
+     *
+     * @return The line (possibly zero-length) or null on EOF.
+     */
+    // package-visible for test
+    String readCompleteLine(Reader reader) throws IOException {
+        int ch;
+        while ((ch = reader.read()) >= 0) {
+            if (ch < 0) {
+                break;
+            }
+            if (ch == '\r' || ch == '\n') {
+                maybeSkipLF(reader, ch);
+
+                try {
+                    return lineBuilder.toString();
+                } finally {
+                    lineBuilder.setLength(0);
+                }
+            } else {
+                lineBuilder.append((char) ch);
+            }
+        }
+
+        // EOF
+        return null;
+    }
+
+    private void maybeSkipLF(Reader reader, int ch) throws IOException {
+        // look ahead for possible '\n' after '\r' (windows end-line style)
+        if (ch == '\r') {
+            reader.mark(1);
+            int ch2 = reader.read();
+            if (ch2 != '\n') {
+                reader.reset();
+            }
+        }
+    }
+
+    private void closeCurrentFile() {
+        if (currentReader != null) {
+            try {
+                currentReader.close();
+            } catch (IOException e) {
+                // just ignore the exception
+                getLogger().warning(e);
+            }
+        }
+        currentFile = null;
+        currentReader = null;
+        currentInputStream = null;
     }
 
     @Override
@@ -231,40 +335,50 @@ public class ReadFileStreamP extends AbstractProcessor implements Closeable {
 
     @Override
     public void close() throws IOException {
+        closeCurrentFile();
         if (watcher != null) {
             getLogger().info("Closing watcher");
             watcher.close();
+            watcher = null;
         }
     }
 
     /**
      * Creates a supplier for {@link ReadFileStreamP}
      *
-     * @param folderPath the folder to watch
-     * @param watchType  the
+     * @param watchedDirectory the folder to watch
      */
-    public static ProcessorSupplier supplier(String folderPath, WatchType watchType) {
-        return new Supplier(folderPath, watchType);
+    public static ProcessorSupplier supplier(String watchedDirectory) {
+        return supplier(watchedDirectory, "utf-8");
+    }
+
+    /**
+     * Creates a supplier for {@link ReadFileStreamP}
+     *
+     * @param watchedDirectory the folder to watch
+     */
+    public static ProcessorSupplier supplier(String watchedDirectory, String charset) {
+        return new Supplier(watchedDirectory, charset);
     }
 
     private static class Supplier implements ProcessorSupplier {
 
         static final long serialVersionUID = 1L;
-        private final String folderPath;
-        private final WatchType watchType;
+        private final String watchedDirectory;
+        private final String charset;
 
         private transient ArrayList<ReadFileStreamP> readers;
 
-        Supplier(String folderPath, WatchType watchType) {
-            this.folderPath = folderPath;
-            this.watchType = watchType;
+        Supplier(String watchedDirectory, String charset) {
+            this.watchedDirectory = watchedDirectory;
+            this.charset = charset;
         }
 
         @Override @Nonnull
         public List<ReadFileStreamP> get(int count) {
-            readers = new ArrayList<>();
+            readers = new ArrayList<>(count);
             for (int i = 0; i < count; i++) {
-                readers.add(new ReadFileStreamP(folderPath, watchType, count, i));
+                readers.add(new ReadFileStreamP(watchedDirectory, Charset.forName(charset), count, i));
             }
             return readers;
         }
