@@ -23,6 +23,7 @@ import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.stream.DistributedStream;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.jet.stream.impl.pipeline.StreamContext;
@@ -517,6 +518,11 @@ public class MapDecorator<K, V> implements IStreamMap<K, V> {
 
     @Override
     public DistributedStream<Entry<K, V>> stream() {
-        return new MapSourcePipeline<>(new StreamContext(instance), map);
+        return stream(new JobConfig());
+    }
+
+    @Override
+    public DistributedStream<Entry<K, V>> stream(JobConfig jobConfig) {
+        return new MapSourcePipeline<>(new StreamContext(instance, jobConfig), map);
     }
 }
