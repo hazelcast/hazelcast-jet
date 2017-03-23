@@ -22,6 +22,7 @@ import com.hazelcast.jet.impl.connector.ReadIListP;
 import com.hazelcast.jet.impl.connector.WriteIListP;
 import com.hazelcast.jet.impl.connector.ReadIMapP;
 import com.hazelcast.jet.impl.connector.WriteIMapP;
+import com.hazelcast.jet.impl.connector.WriteSocketTextStreamP;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
@@ -125,6 +126,13 @@ public final class Processors {
     @Nonnull
     public static ProcessorSupplier writeList(@Nonnull String listName, @Nonnull ClientConfig clientConfig) {
         return WriteIListP.supplier(listName, clientConfig);
+    }
+
+    /**
+     * Returns a supplier of processors that connect to specified socket and write the items as text
+     */
+    public static ProcessorSupplier writeSocket(@Nonnull String host, int port) {
+        return WriteSocketTextStreamP.supplier(host, port);
     }
 
     /**
