@@ -26,8 +26,9 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 
-public final class ResourceIterator implements Iterator<ResourcePart> {
+public final class ResourceIterator implements Iterator<ResourcePart>, AutoCloseable {
 
     private final Iterator<ResourceConfig> configIterator;
     private InputStream inputStream;
@@ -44,9 +45,6 @@ public final class ResourceIterator implements Iterator<ResourcePart> {
     }
 
     private void switchFile() throws IOException {
-        if (!configIterator.hasNext()) {
-            throw new NoSuchElementException();
-        }
         resourceConfig = configIterator.next();
         inputStream = resourceConfig.getUrl().openStream();
         offset = 0;
@@ -99,6 +97,13 @@ public final class ResourceIterator implements Iterator<ResourcePart> {
             }
         } catch (IOException e) {
             throw rethrow(e);
+        }
+    }
+
+    @Override
+    public void close() {
+        if (inputStream != null) {
+            uncheckRun(() -> inputStream.close());
         }
     }
 }

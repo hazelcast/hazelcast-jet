@@ -58,59 +58,65 @@ public class ResourceIteratorTest {
     }
 
     private void doTest(int numFiles, IntFunction<String> contentsFactory) throws IOException {
-        // create files and their contents
-        Path directory = Files.createTempDirectory(ResourceIteratorTest.class.getSimpleName());
-        directory.toFile().deleteOnExit();
+        Path directory = null;
+        Path[] files = null;
 
-        Path[] files = new Path[numFiles];
-        ResourceConfig[] configs = new ResourceConfig[numFiles];
-        String[] contents = new String[numFiles];
+        try {
+            // create files and their contents
+            directory = Files.createTempDirectory(ResourceIteratorTest.class.getSimpleName());
 
-        for (int i = 0; i < numFiles; i++) {
-            files[i] = directory.resolve("file" + i);
-            contents[i] = contentsFactory.apply(i);
-            try (Writer writer = Files.newBufferedWriter(files[i])) {
-                writer.append(contents[i]);
-            }
-            files[i].toFile().deleteOnExit();
-            configs[i] = new ResourceConfig(files[i].toUri().toURL(), String.valueOf(i), null);
-        }
+            files = new Path[numFiles];
+            ResourceConfig[] configs = new ResourceConfig[numFiles];
+            String[] contents = new String[numFiles];
 
-        // create the ResourceIterator
-        int partSize = 5;
-        ResourceIterator ri = new ResourceIterator(new LinkedHashSet<>(Arrays.asList(configs)), partSize);
-
-        // iterate it and check, that the contents match
-        int lastIndex = -1;
-        int lastOffset = 0;
-        while (ri.hasNext()) {
-            ResourcePart rp = ri.next();
-            int fileIndex = Integer.parseInt(rp.getDescriptor().getId());
-            assertTrue("part is too big", rp.getBytes().length <= partSize);
-            if (contents[fileIndex].length() > 0) {
-                assertTrue("zero-length part for non-empty file", rp.getBytes().length > 0);
-            }
-            assertTrue("some config was skipped", lastIndex == fileIndex || lastIndex + 1 == fileIndex);
-
-            if (fileIndex > lastIndex) {
-                if (lastIndex >= 0) {
-                    assertEquals("config not fully read", contents[lastIndex].length(), lastOffset);
+            for (int i = 0; i < numFiles; i++) {
+                files[i] = directory.resolve("file" + i);
+                contents[i] = contentsFactory.apply(i);
+                try (Writer writer = Files.newBufferedWriter(files[i])) {
+                    writer.append(contents[i]);
                 }
-                lastIndex = fileIndex;
-                lastOffset = 0;
+                configs[i] = new ResourceConfig(files[i].toUri().toURL(), String.valueOf(i), null);
             }
-            assertEquals("offsets not in sequence", lastOffset, rp.getOffset());
-            lastOffset += rp.getBytes().length;
-            assertEquals("contents don't match", contents[fileIndex].substring(rp.getOffset(), lastOffset), new String(rp.getBytes()));
-        }
-        assertEquals("not all config files read", lastIndex, numFiles - 1);
-        assertEquals("config not fully read", contents[lastIndex].length(), lastOffset);
 
-        // delete the files
-        for (Path file : files) {
-            Files.delete(file);
+            // create the ResourceIterator
+            int partSize = 5;
+            try (ResourceIterator ri = new ResourceIterator(new LinkedHashSet<>(Arrays.asList(configs)), partSize)) {
+                // iterate it and check, that the contents match
+                int lastIndex = -1;
+                int lastOffset = 0;
+                while (ri.hasNext()) {
+                    ResourcePart rp = ri.next();
+                    int fileIndex = Integer.parseInt(rp.getDescriptor().getId());
+                    assertTrue("part is too big", rp.getBytes().length <= partSize);
+                    if (contents[fileIndex].length() > 0) {
+                        assertTrue("zero-length part for non-empty file", rp.getBytes().length > 0);
+                    }
+                    assertTrue("some config was skipped", lastIndex == fileIndex || lastIndex + 1 == fileIndex);
+
+                    if (fileIndex > lastIndex) {
+                        if (lastIndex >= 0) {
+                            assertEquals("config not fully read", contents[lastIndex].length(), lastOffset);
+                        }
+                        lastIndex = fileIndex;
+                        lastOffset = 0;
+                    }
+                    assertEquals("offsets not in sequence", lastOffset, rp.getOffset());
+                    lastOffset += rp.getBytes().length;
+                    assertEquals("contents don't match", contents[fileIndex].substring(rp.getOffset(), lastOffset), new String(rp.getBytes()));
+                }
+                assertEquals("not all config files read", lastIndex, numFiles - 1);
+                assertEquals("config not fully read", contents[lastIndex].length(), lastOffset);
+            }
+        } finally {
+            if (files != null) {
+                for (Path file : files) {
+                    Files.delete(file);
+                }
+            }
+            if (directory != null) {
+                Files.delete(directory);
+            }
         }
-        Files.delete(directory);
     }
 
 }
