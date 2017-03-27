@@ -57,7 +57,7 @@ public final class StreamUtil {
     }
 
     public static void executeJob(StreamContext context, DAG dag) {
-        Job job = context.getJetInstance().newJob(dag);
+        Job job = context.getJetInstance().newJob(dag, context.getJobConfig());
         try {
             job.execute().get();
         } catch (InterruptedException | ExecutionException e) {

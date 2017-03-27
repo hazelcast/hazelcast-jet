@@ -17,6 +17,7 @@
 package com.hazelcast.jet.stream;
 
 import com.hazelcast.core.IList;
+import com.hazelcast.jet.config.JobConfig;
 
 /**
  * A decorator for {@link IList} for supporting distributed {@link java.util.stream.Stream}
@@ -37,6 +38,15 @@ public interface IStreamList<E> extends IList<E> {
     DistributedStream<E> stream();
 
     /**
+     * Returns a sequential {@code Stream} with this list as its source.
+     *
+     * @param jobConfig Job configuration which will be used while executing underlying DAG
+     * @return a sequential {@code Stream} over the elements in this collection
+     * @since 1.8
+     */
+    DistributedStream<E> stream(JobConfig jobConfig);
+
+    /**
      * Returns a parallel {@code Stream} with this list as its source.
      *
      * @return a parallel {@code Stream} over the elements in this collection
@@ -44,5 +54,14 @@ public interface IStreamList<E> extends IList<E> {
      */
     @Override
     DistributedStream<E> parallelStream();
+
+    /**
+     * Returns a parallel {@code Stream} with this list as its source.
+     *
+     * @param jobConfig Job configuration which will be used while executing underlying DAG
+     * @return a parallel {@code Stream} over the elements in this collection
+     * @since 1.8
+     */
+    DistributedStream<E> parallelStream(JobConfig jobConfig);
 
 }

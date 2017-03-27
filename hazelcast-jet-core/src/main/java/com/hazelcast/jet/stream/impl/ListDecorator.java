@@ -19,6 +19,7 @@ package com.hazelcast.jet.stream.impl;
 import com.hazelcast.core.IList;
 import com.hazelcast.core.ItemListener;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.stream.DistributedStream;
 import com.hazelcast.jet.stream.IStreamList;
 import com.hazelcast.jet.stream.impl.pipeline.StreamContext;
@@ -188,11 +189,21 @@ public class ListDecorator<E> implements IStreamList<E> {
 
     @Override
     public DistributedStream<E> stream() {
-        return new ListSourcePipeline<>(new StreamContext(instance), list);
+        return stream(new JobConfig());
+    }
+
+    @Override
+    public DistributedStream<E> stream(JobConfig jobConfig) {
+        return new ListSourcePipeline<>(new StreamContext(instance, jobConfig), list);
     }
 
     @Override
     public DistributedStream<E> parallelStream() {
         return stream().unordered();
+    }
+
+    @Override
+    public DistributedStream<E> parallelStream(JobConfig jobConfig) {
+        return stream(jobConfig).unordered();
     }
 }
