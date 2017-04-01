@@ -48,7 +48,7 @@ import static java.util.stream.Collectors.partitioningBy;
 
 public class ExecutionService {
 
-    private static final IdleStrategy IDLER =
+    static final IdleStrategy IDLER =
             new BackoffIdleStrategy(0, 0, MICROSECONDS.toNanos(1), MILLISECONDS.toNanos(1));
     private final ExecutorService blockingTaskletExecutor = newCachedThreadPool(new BlockingTaskThreadFactory());
     private final CooperativeWorker[] workers;
@@ -126,16 +126,9 @@ public class ExecutionService {
             return;
         }
         Arrays.setAll(workers, i -> new CooperativeWorker(workers));
-        Arrays.setAll(threads, i -> createThread(workers[i], "cooperative", i));
+        Arrays.setAll(threads, i -> new Thread(workers[i],
+                String.format("hz.%s.jet.cooperative.thread-%d", hzInstanceName, i)));
         Arrays.stream(threads).forEach(Thread::start);
-    }
-
-    private Thread createThread(Runnable r, String executorName, int seq) {
-        return new Thread(r, threadNamePrefix() + executorName + ".thread-" + seq);
-    }
-
-    private String threadNamePrefix() {
-        return "hz." + hzInstanceName + ".jet.";
     }
 
     private final class BlockingWorker implements Runnable {
@@ -148,6 +141,9 @@ public class ExecutionService {
         @Override
         public void run() {
             final Tasklet t = tracker.tasklet;
+            if (t instanceof BlockingProcessorTasklet) {
+                ((BlockingProcessorTasklet) t).jobFuture = tracker.jobFuture;
+            }
             try {
                 t.init();
                 long idleCount = 0;
@@ -233,8 +229,8 @@ public class ExecutionService {
                         toStealFrom = w.trackers;
                     }
                 }
-                // if we couldn't find a list longer by more than one, there's nothing to steal
-                if (toStealFrom.size() <= trackers.size() + 1) {
+                // if we couldn't find a list longer by at least two, there's nothing to steal
+                if (toStealFrom.size() < trackers.size() + 2) {
                     return;
                 }
                 // now we must find a task on this list which isn't already scheduled for moving
@@ -262,8 +258,9 @@ public class ExecutionService {
         private final AtomicInteger seq = new AtomicInteger();
 
         @Override
-        public Thread newThread(Runnable r) {
-            return createThread(r, "blocking", seq.getAndIncrement());
+        public Thread newThread(@Nonnull Runnable r) {
+            return new Thread(r,
+                    String.format("hz.%s.jet.blocking.thread-%d", hzInstanceName, seq.getAndIncrement()));
         }
     }
 
@@ -297,5 +294,4 @@ public class ExecutionService {
             }
         }
     }
-
 }
