@@ -20,6 +20,7 @@ import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.Processor.Context;
 import com.hazelcast.jet.impl.util.ProgressState;
+import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -41,6 +42,7 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
             List<InboundEdgeStream> instreams, List<OutboundEdgeStream> outstreams
     ) {
         super(vertexName, context, processor, instreams, outstreams);
+        Preconditions.checkFalse(processor.isCooperative(), "Processor is cooperative");
         outbox = new BlockingOutbox();
         processor.init(outbox, context);
     }
@@ -59,8 +61,6 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
                 complete();
             } else if (!inbox().isEmpty()) {
                 process();
-            } else {
-                System.out.println(processor + "inbox empty " + progTracker);
             }
             return progTracker.toProgressState();
         } catch (JobFutureCancelled e) {

@@ -38,9 +38,9 @@ public class CooperativeProcessorTasklet extends ProcessorTaskletBase {
     public CooperativeProcessorTasklet(String vertexName, Processor.Context context, Processor processor,
                                        List<InboundEdgeStream> instreams, List<OutboundEdgeStream> outstreams) {
         super(vertexName, context, processor, instreams, outstreams);
+        Preconditions.checkTrue(processor.isCooperative(), "Processor is non-cooperative");
         int[] highWaterMarks = Stream.of(this.outstreams).mapToInt(OutboundEdgeStream::getHighWaterMark).toArray();
         this.outbox = new ArrayDequeOutbox(outstreams.size(), highWaterMarks);
-        Preconditions.checkTrue(processor.isCooperative(), "Processor is non-cooperative");
     }
 
     @Override
