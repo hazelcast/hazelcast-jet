@@ -75,11 +75,10 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
 
     private void complete() {
         progTracker.madeProgress();
-        if (!processor.complete()) {
+        if (processor.complete()) {
+            outbox.add(DONE_ITEM);
+        } else {
             progTracker.notDone();
-        }
-        for (OutboundEdgeStream outstream : outstreams) {
-            outbox.add(outstream.ordinal(), DONE_ITEM);
         }
     }
 
