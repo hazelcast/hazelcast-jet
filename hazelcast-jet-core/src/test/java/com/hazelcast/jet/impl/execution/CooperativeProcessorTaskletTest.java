@@ -42,7 +42,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 @Category(QuickTest.class)
-public class ProcessorTaskletTest {
+public class CooperativeProcessorTaskletTest {
 
     private static final int MOCK_INPUT_LENGTH = 10;
     private static final int CALL_COUNT_LIMIT = 10;
@@ -157,7 +157,7 @@ public class ProcessorTaskletTest {
     }
 
     private Tasklet createTasklet() {
-        final ProcessorTasklet t = new ProcessorTasklet("mock", context, processor,
+        final CooperativeProcessorTasklet t = new CooperativeProcessorTasklet("mock", context, processor,
                 instreams, outstreams);
         t.init();
         return t;

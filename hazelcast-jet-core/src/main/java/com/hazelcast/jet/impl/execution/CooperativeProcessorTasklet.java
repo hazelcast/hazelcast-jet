@@ -31,12 +31,12 @@ import static com.hazelcast.jet.impl.util.DoneItem.DONE_ITEM;
 /**
  * Tasklet that drives a cooperative processor.
  */
-public class ProcessorTasklet extends ProcessorTaskletBase {
+public class CooperativeProcessorTasklet extends ProcessorTaskletBase {
     private final ArrayDequeOutbox outbox;
     private boolean processorCompleted;
 
-    public ProcessorTasklet(String vertexName, Processor.Context context, Processor processor,
-                            List<InboundEdgeStream> instreams, List<OutboundEdgeStream> outstreams) {
+    public CooperativeProcessorTasklet(String vertexName, Processor.Context context, Processor processor,
+                                       List<InboundEdgeStream> instreams, List<OutboundEdgeStream> outstreams) {
         super(vertexName, context, processor, instreams, outstreams);
         int[] highWaterMarks = Stream.of(this.outstreams).mapToInt(OutboundEdgeStream::getHighWaterMark).toArray();
         this.outbox = new ArrayDequeOutbox(outstreams.size(), highWaterMarks);
