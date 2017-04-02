@@ -34,8 +34,8 @@ import static com.hazelcast.jet.impl.util.DoneItem.DONE_ITEM;
  */
 public class BlockingProcessorTasklet extends ProcessorTaskletBase {
 
-    CompletableFuture jobFuture;
     private final BlockingOutbox outbox;
+    private CompletableFuture<?> jobFuture;
 
     public BlockingProcessorTasklet(
             String vertexName, Context context, Processor processor,
@@ -50,6 +50,11 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
     @Override
     public final boolean isCooperative() {
         return false;
+    }
+
+    @Override
+    public void init(CompletableFuture<?> jobFuture) {
+        this.jobFuture = jobFuture;
     }
 
     @Override @Nonnull

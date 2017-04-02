@@ -24,6 +24,7 @@ import com.hazelcast.util.Preconditions;
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.impl.util.DoneItem.DONE_ITEM;
@@ -49,7 +50,7 @@ public class CooperativeProcessorTasklet extends ProcessorTaskletBase {
     }
 
     @Override
-    public void init() {
+    public void init(CompletableFuture<?> jobFuture) {
         initProcessor(outbox);
     }
 

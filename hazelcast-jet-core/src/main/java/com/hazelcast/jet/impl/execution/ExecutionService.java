@@ -39,12 +39,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.partitioningBy;
+import static java.util.stream.Collectors.toList;
 
 public class ExecutionService {
 
@@ -101,9 +101,10 @@ public class ExecutionService {
 
     private void submitBlockingTasklets(JobFuture jobFuture, List<Tasklet> tasklets) {
         jobFuture.blockingFutures = tasklets.stream()
+                                            .peek(t -> t.init(jobFuture))
                                             .map(t -> new BlockingWorker(new TaskletTracker(t, jobFuture)))
                                             .map(blockingTaskletExecutor::submit)
-                                            .collect(Collectors.toList());
+                                            .collect(toList());
     }
 
     private void submitCooperativeTasklets(JobFuture jobFuture, List<Tasklet> tasklets) {
@@ -112,7 +113,7 @@ public class ExecutionService {
         Arrays.setAll(trackersByThread, i -> new ArrayList());
         int i = 0;
         for (Tasklet t : tasklets) {
-            t.init();
+            t.init(jobFuture);
             trackersByThread[i++ % trackersByThread.length].add(new TaskletTracker(t, jobFuture));
         }
         for (i = 0; i < trackersByThread.length; i++) {
@@ -141,11 +142,8 @@ public class ExecutionService {
         @Override
         public void run() {
             final Tasklet t = tracker.tasklet;
-            if (t instanceof BlockingProcessorTasklet) {
-                ((BlockingProcessorTasklet) t).jobFuture = tracker.jobFuture;
-            }
             try {
-                t.init();
+                t.init(tracker.jobFuture);
                 long idleCount = 0;
                 for (ProgressState result;
                      !(result = t.call()).isDone() && !tracker.jobFuture.isCompletedExceptionally();

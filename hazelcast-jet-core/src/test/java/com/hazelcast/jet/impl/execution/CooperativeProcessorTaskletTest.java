@@ -31,6 +31,7 @@ import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.util.DoneItem.DONE_ITEM;
@@ -157,9 +158,9 @@ public class CooperativeProcessorTaskletTest {
     }
 
     private Tasklet createTasklet() {
-        final CooperativeProcessorTasklet t = new CooperativeProcessorTasklet("mock", context, processor,
-                instreams, outstreams);
-        t.init();
+        final CooperativeProcessorTasklet t = new CooperativeProcessorTasklet(
+                "mock", context, processor, instreams, outstreams);
+        t.init(new CompletableFuture<>());
         return t;
     }
 
