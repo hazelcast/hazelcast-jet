@@ -63,7 +63,7 @@ public interface Processor {
      * Initializes this processor with the outbox that the processing methods
      * must use to deposit their output items. This method will be called exactly
      * once and strictly before any calls to processing methods
-     * ({@link #process(int, Inbox)}, {@link #completeEdge(int)}, {@link #complete()}).
+     * ({@link #process(int, Inbox)} and {@link #complete()}).
      * <p>
      * The default implementation does nothing.
      */
@@ -135,7 +135,5 @@ public interface Processor {
          */
         @Nonnull
         String vertexName();
-
-
     }
 }
