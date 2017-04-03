@@ -68,7 +68,7 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
                 process();
             }
             return progTracker.toProgressState();
-        } catch (JobFutureCancelled e) {
+        } catch (JobFutureCompletedExceptionally e) {
             return ProgressState.DONE;
         }
     }
@@ -118,7 +118,7 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
                     return;
                 }
                 if (jobFuture.isCompletedExceptionally()) {
-                    throw new JobFutureCancelled();
+                    throw new JobFutureCompletedExceptionally();
                 }
                 if (result.isMadeProgress()) {
                     idleCount = 0;
@@ -129,6 +129,6 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
         }
     }
 
-    private static class JobFutureCancelled extends RuntimeException {
+    private static class JobFutureCompletedExceptionally extends RuntimeException {
     }
 }
