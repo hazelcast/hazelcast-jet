@@ -148,7 +148,7 @@ public class AbstractProcessorTest {
     }
 
     @Test
-    public void when_emitCooperatively_then_outboxHasOneItem() {
+    public void when_emitFromTraverser_then_outboxHasOneItem() {
         final int ordinal = 1;
         final ArrayDequeOutbox outbox = (ArrayDequeOutbox) p.getOutbox();
 
@@ -163,7 +163,7 @@ public class AbstractProcessorTest {
     }
 
     @Test
-    public void test() {
+    public void when_flatMapperTryProcess_then_outboxLimitRespected() {
         final Object item1 = 1;
         final Object item2 = 2;
         final FlatMapper<String, Object> flatMapper = p.flatMapper(x -> Traverser.over(item1, item2));

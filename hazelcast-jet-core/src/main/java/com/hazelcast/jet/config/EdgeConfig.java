@@ -26,9 +26,9 @@ import java.io.Serializable;
 public class EdgeConfig implements Serializable {
 
     /**
-     * The default value of the {@link #setHighWaterMark(int) high water mark}.
+     * The default value of the {@link #setOutboxLimit(int) outbox limit}.
      */
-    public static final int DEFAULT_HIGH_WATER_MARK = 2048;
+    public static final int DEFAULT_OUTBOX_LIMIT = 2048;
 
     /**
      * The default size of the {@link #setQueueSize(int) concurrent queues}
@@ -46,7 +46,7 @@ public class EdgeConfig implements Serializable {
      */
     public static final int DEFAULT_PACKET_SIZE_LIMIT = 1 << 14;
 
-    private int highWaterMark = DEFAULT_HIGH_WATER_MARK;
+    private int outboxLimit = DEFAULT_OUTBOX_LIMIT;
     private int queueSize = DEFAULT_QUEUE_SIZE;
     private int receiveWindowMultiplier = DEFAULT_RECEIVE_WINDOW_MULTIPLIER;
     private int packetSizeLimit = DEFAULT_PACKET_SIZE_LIMIT;
@@ -79,26 +79,28 @@ public class EdgeConfig implements Serializable {
     }
 
     /**
-     * Sets the high water mark for the edge.
+     * Sets the outbox limit for the edge.
      * <p>
-     * A {@code Processor} deposits the output items in its {@code Outbox}&mdash;
-     * an unbounded buffer, but with a "high water mark" which should be respected
-     * by a well-behaving processor. When its outbox reaches the high water mark,
-     * the processor should refrain from emitting any more items and yield control
-     * back to its caller. This method sets the value of the high water mark.
-     * The default value is {@value #DEFAULT_HIGH_WATER_MARK}.
+     * A {@code Processor} deposits the output items to its {@code Outbox},
+     * which will contain a bucket dedicated to this edge. When the bucket
+     * reaches the configured limit, the processor must refrain from emitting
+     * any more items and yield control back to its caller. This method sets
+     * the limit on the number of items in the outbox bucket corresponding to
+     * this edge.
+     * <p>
+     * The default value is {@value #DEFAULT_OUTBOX_LIMIT}.
      */
-    public EdgeConfig setHighWaterMark(int highWaterMark) {
-        this.highWaterMark = highWaterMark;
+    public EdgeConfig setOutboxLimit(int limit) {
+        this.outboxLimit = limit;
         return this;
     }
 
     /**
-     * Returns the {@link #setHighWaterMark(int) high water mark} that will be
+     * Returns the {@link #setOutboxLimit(int) outbox limit} that will be
      * set on the bucket of {@code Outbox} corresponding to this edge.
      */
-    public int getHighWaterMark() {
-        return highWaterMark;
+    public int getOutboxLimit() {
+        return outboxLimit;
     }
 
     /**

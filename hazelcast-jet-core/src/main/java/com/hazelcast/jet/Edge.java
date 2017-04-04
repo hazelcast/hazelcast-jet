@@ -204,7 +204,7 @@ public class Edge implements IdentifiedDataSerializable {
      * buffering on the lower-priority edge.
      * <p>
      * <strong>NOTE:</strong> when this feature is activated, the
-     * {@link EdgeConfig#setHighWaterMark(int) high water mark} property of
+     * {@link EdgeConfig#setOutboxLimit(int) outbox limit} property of
      * {@code EdgeConfig} is ignored and the maximum value is used.
      */
     public Edge buffered() {

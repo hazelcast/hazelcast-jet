@@ -197,8 +197,8 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
                 case "packet-size-limit":
                     config.setPacketSizeLimit(intValue(child));
                     break;
-                case "high-water-mark":
-                    config.setHighWaterMark(intValue(child));
+                case "outbox-limit":
+                    config.setOutboxLimit(intValue(child));
                     break;
                 case "receive-window-multiplier":
                     config.setReceiveWindowMultiplier(intValue(child));
