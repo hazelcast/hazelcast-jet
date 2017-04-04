@@ -32,6 +32,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -41,6 +42,7 @@ import java.util.concurrent.Future;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Edge.between;
+import static com.hazelcast.jet.Processors.readFile;
 import static com.hazelcast.jet.Processors.writeList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -113,7 +115,7 @@ public class ReadFilePTest extends JetTestSupport{
 
     private DAG buildDag(String glob) {
         DAG dag = new DAG();
-        Vertex reader = dag.newVertex("reader", ReadFileP.supplier(directory.getPath(), "utf-8", glob))
+        Vertex reader = dag.newVertex("reader", readFile(directory.getPath(), StandardCharsets.UTF_8, glob))
                 .localParallelism(1);
         Vertex writer = dag.newVertex("writer", writeList(list.getName())).localParallelism(1);
         dag.edge(between(reader, writer));

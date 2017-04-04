@@ -36,11 +36,11 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 /**
  * A source processor designed to process files in a directory in a batch. It
  * processes all files in a directory (optionally filtering with a {@code glob},
- * see {@link Files#newDirectoryStream(Path, String)}). Contents of the
+ * see {@link java.nio.file.FileSystem#getPathMatcher(String)}). Contents of the
  * files are emitted line by line. There is no indication, which file a particular
- * line comes from.
+ * line comes from. Contents of subdirectories are not processed.
  * <p>
- * The same directory should be available on all members, but it should not
+ * The same directory must be available on all members, but it should not
  * contain the same files (i.e. it should not be a network shared directory, but
  * files local to the machine).
  * <p>
@@ -65,16 +65,13 @@ public class ReadFileP extends AbstractProcessor {
 
     @Override
     public boolean complete() {
-        DirectoryStream<Path> directoryStream;
-        try {
-            directoryStream = Files.newDirectoryStream(directory, glob == null ? "*" : glob);
+        try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(directory, glob == null ? "*" : glob)) {
+            StreamSupport.stream(directoryStream.spliterator(), false)
+                    .filter(this::shouldProcessEvent)
+                    .forEach(this::processFile);
         } catch (IOException e) {
             throw sneakyThrow(e);
         }
-
-        StreamSupport.stream(directoryStream.spliterator(), false)
-                .filter(this::shouldProcessEvent)
-                .forEach(this::processFile);
 
         return true;
     }
@@ -89,11 +86,8 @@ public class ReadFileP extends AbstractProcessor {
             getLogger().finest("Processing file " + file);
         }
 
-        try (
-            BufferedReader reader = Files.newBufferedReader(file, charset)
-        ) {
-            String line;
-            while ((line = reader.readLine()) != null) {
+        try (BufferedReader reader = Files.newBufferedReader(file, charset)) {
+            for (String line; (line = reader.readLine()) != null; ) {
                 emit(line);
             }
         } catch (IOException e) {
