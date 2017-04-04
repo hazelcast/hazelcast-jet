@@ -134,7 +134,7 @@ public class WordCountTest extends HazelcastTestSupport implements Serializable 
 
         @Override
         public boolean complete() {
-            return emitCooperatively(trav);
+            return emitFromTraverser(trav);
         }
     }
 

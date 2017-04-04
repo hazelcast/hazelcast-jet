@@ -153,7 +153,7 @@ public class AbstractProcessorTest {
         final ArrayDequeOutbox outbox = (ArrayDequeOutbox) p.getOutbox();
 
         // When
-        p.emitCooperatively(ordinal, () -> MOCK_ITEM);
+        p.emitFromTraverser(ordinal, () -> MOCK_ITEM);
 
         // Then
         for (int i = 0; i < OUTBOX_BUCKET_COUNT; i++) {

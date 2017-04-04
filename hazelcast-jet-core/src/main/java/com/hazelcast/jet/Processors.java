@@ -713,7 +713,7 @@ public final class Processors {
 
         @Override
         public boolean complete() {
-            return emitCooperatively(resultTraverser);
+            return emitFromTraverser(resultTraverser);
         }
     }
 

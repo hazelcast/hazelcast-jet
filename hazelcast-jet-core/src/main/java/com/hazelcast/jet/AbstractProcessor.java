@@ -286,7 +286,7 @@ public abstract class AbstractProcessor implements Processor {
      * @param traverser traverser over items to emit
      * @return whether the traverser has been exhausted
      */
-    protected boolean emitCooperatively(int ordinal, @Nonnull Traverser<?> traverser) {
+    protected boolean emitFromTraverser(int ordinal, @Nonnull Traverser<?> traverser) {
         Object item;
         if (pendingItem != null) {
             item = pendingItem;
@@ -305,10 +305,10 @@ public abstract class AbstractProcessor implements Processor {
     }
 
     /**
-     * Convenience for {@link #emitCooperatively(int, Traverser)} which emits to all ordinals.
+     * Convenience for {@link #emitFromTraverser(int, Traverser)} which emits to all ordinals.
      */
-    protected boolean emitCooperatively(@Nonnull Traverser<?> traverser) {
-        return emitCooperatively(-1, traverser);
+    protected boolean emitFromTraverser(@Nonnull Traverser<?> traverser) {
+        return emitFromTraverser(-1, traverser);
     }
 
     /**
@@ -339,7 +339,7 @@ public abstract class AbstractProcessor implements Processor {
      * collections. User supplies a {@code mapper} which takes an item and
      * returns a traverser over all output items that should be emitted. The
      * {@link #tryProcess(Object)} method obtains and passes the traverser to
-     * {@link #emitCooperatively(int, Traverser)}.
+     * {@link #emitFromTraverser(int, Traverser)}.
      *
      * Example:
      * <pre>
@@ -379,7 +379,7 @@ public abstract class AbstractProcessor implements Processor {
             if (outputTraverser == null) {
                 outputTraverser = mapper.apply(item);
             }
-            if (emitCooperatively(outputOrdinal, outputTraverser)) {
+            if (emitFromTraverser(outputOrdinal, outputTraverser)) {
                 outputTraverser = null;
                 return true;
             }
