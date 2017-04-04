@@ -23,6 +23,7 @@ import javax.annotation.Nonnull;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -105,24 +106,6 @@ public class ReadFileP extends AbstractProcessor {
      *
      * @param directory the folder to process files from
      */
-    public static ProcessorSupplier supplier(String directory) {
-        return supplier(directory, "utf-8", null);
-    }
-
-    /**
-     * Creates a supplier for {@link ReadFileP}
-     *
-     * @param directory the folder to process files from
-     */
-    public static ProcessorSupplier supplier(String directory, String charset) {
-        return supplier(directory, charset, null);
-    }
-
-    /**
-     * Creates a supplier for {@link ReadFileP}
-     *
-     * @param directory the folder to process files from
-     */
     public static ProcessorSupplier supplier(String directory, String charset, String glob) {
         return new Supplier(directory, charset, glob);
     }
@@ -145,8 +128,9 @@ public class ReadFileP extends AbstractProcessor {
         @Override @Nonnull
         public List<ReadFileP> get(int count) {
             readers = new ArrayList<>(count);
+            Charset charsetObj = charset == null ? StandardCharsets.UTF_8 : Charset.forName(charset);
             for (int i = 0; i < count; i++) {
-                readers.add(new ReadFileP(watchedDirectory, Charset.forName(charset), glob, count, i));
+                readers.add(new ReadFileP(watchedDirectory, charsetObj, glob, count, i));
             }
             return readers;
         }
