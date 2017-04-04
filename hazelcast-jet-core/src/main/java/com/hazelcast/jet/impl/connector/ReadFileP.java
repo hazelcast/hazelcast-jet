@@ -28,8 +28,9 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
@@ -117,8 +118,6 @@ public class ReadFileP extends AbstractProcessor {
         private final String charset;
         private final String glob;
 
-        private transient ArrayList<ReadFileP> readers;
-
         Supplier(String watchedDirectory, String charset, String glob) {
             this.watchedDirectory = watchedDirectory;
             this.charset = charset;
@@ -127,12 +126,10 @@ public class ReadFileP extends AbstractProcessor {
 
         @Override @Nonnull
         public List<ReadFileP> get(int count) {
-            readers = new ArrayList<>(count);
             Charset charsetObj = charset == null ? StandardCharsets.UTF_8 : Charset.forName(charset);
-            for (int i = 0; i < count; i++) {
-                readers.add(new ReadFileP(watchedDirectory, charsetObj, glob, count, i));
-            }
-            return readers;
+            return IntStream.range(0, count)
+                    .mapToObj(i -> new ReadFileP(watchedDirectory, charsetObj, glob, count, i))
+                    .collect(Collectors.toList());
         }
     }
 }
