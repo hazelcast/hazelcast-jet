@@ -68,7 +68,7 @@ public class CooperativeProcessorTasklet extends ProcessorTaskletBase {
     }
 
     private void tryProcessInbox() {
-        if (outbox.isHighWater()) {
+        if (outbox.isFull()) {
             progTracker.notDone();
             return;
         }
@@ -84,7 +84,7 @@ public class CooperativeProcessorTasklet extends ProcessorTaskletBase {
         if (processorCompleted) {
             return;
         }
-        if (outbox.isHighWater()) {
+        if (outbox.isFull()) {
             progTracker.notDone();
             return;
         }

@@ -95,7 +95,7 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
         }
 
         @Override
-        public boolean isHighWater(int ordinal) {
+        public boolean isFull(int ordinal) {
             return false;
         }
 

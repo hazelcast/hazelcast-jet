@@ -41,16 +41,16 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
  *     The {@code emit(...)} methods avoid the need to deal with {@code Outbox}
  *     directly.
  * </li><li>
- *     The {@code emitCooperatively(...)} methods handle the boilerplate of
- *     cooperative item emission. They are especially useful in the {@link #complete()}
- *     step when there is a collection of items to emit. The {@link Traversers}
- *     class contains traversers tailored to simplify the implementation of
- *     {@code complete()}.
+ *     The {@code emitFromTraverser(...)} methods handle the boilerplate of
+ *     cooperative item emission. They are especially useful in the
+ *     {@link #complete()} step when there is a collection of items to emit.
+ *     The {@link Traversers} class contains traversers tailored to simplify
+ *     the implementation of {@code complete()}.
  * </li><li>
  *     The {@link FlatMapper TryProcessor} class additionally simplifies the
- *     usage of {@code emitCooperatively()} inside {@code tryProcess()}, in a
- *     scenario where an input item results in a collection of output items.
- *     {@code TryProcessor} is obtained from its factory method
+ *     usage of {@code emitFromTraverser()} inside {@code tryProcess()}, in
+ *     a scenario where an input item results in a collection of output
+ *     items. {@code TryProcessor} is obtained from its factory method
  *     {@link #flatMapper(Function)}.
  * </li></ol>
  */
@@ -270,16 +270,16 @@ public abstract class AbstractProcessor implements Processor {
     }
 
     /**
-     * Emits the items obtained from the traverser to the outbox bucket with the
-     * supplied ordinal, in a cooperative fashion: if the outbox reports a
-     * {@link Outbox#isHighWater() high-water condition}, backs off and returns
-     * {@code false}.
-     *
-     * <p>If this method returns {@code false}, then the same traverser must be
+     * Emits the items obtained from the traverser to the outbox bucket with
+     * the supplied ordinal while respecting the outbox limits: if the outbox
+     * becomes {@link Outbox#isFull() full}, backs off and returns {@code
+     * false}.
+     * <p>
+     * If this method returns {@code false}, then the same traverser must be
      * retained by the caller and passed again in the subsequent invocation of
      * this method, so as to resume emitting where it left off.
-     *
-     * <p>For simplified usage from {@link #tryProcess(int, Object) tryProcess()}
+     * <p>
+     * For simplified usage from {@link #tryProcess(int, Object) tryProcess()}
      * methods, see {@link FlatMapper}.
      *
      * @param ordinal ordinal of the target bucket
@@ -295,7 +295,7 @@ public abstract class AbstractProcessor implements Processor {
             item = traverser.next();
         }
         for (; item != null; item = traverser.next()) {
-            if (outbox.isHighWater(ordinal)) {
+            if (outbox.isFull(ordinal)) {
                 pendingItem = item;
                 return false;
             }

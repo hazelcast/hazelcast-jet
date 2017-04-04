@@ -27,9 +27,9 @@ import javax.annotation.Nonnull;
  * <p>
  * In the case of a processor declared as <em>cooperative</em>, the
  * execution engine will not try to flush the outbox into downstream
- * queues until the processing method returns. Therefore the processor is
- * advised to check {@link #isHighWater()} or {@link #isHighWater(int)}
- * regularly and refrain from outputting more data when it returns true.
+ * queues until the processing method returns. Therefore the processor
+ * must check {@link #isFull()} or {@link #isFull(int)} regularly and
+ * refrain from outputting more data when it returns true.
  * <p>
  * A non-cooperative processor's outbox will have auto-flushing behavior
  * and each item will be immediatelly flushed to the edge, blocking as
@@ -58,20 +58,20 @@ public interface Outbox {
 
     /**
      * Returns {@code true} if any of this outbox's buckets is above its
-     * high water mark (i.e., {@link #isHighWater(int)} would return true
+     * high water mark (i.e., {@link #isFull(int)} would return true
      * for it).
      */
-    default boolean isHighWater() {
-        return isHighWater(-1);
+    default boolean isFull() {
+        return isFull(-1);
     }
 
     /**
-     * Returns {@code true} if the bucket with the given ordinal is above
-     * its high water mark. When {@code true}, no more data should be added
-     * to the bucket during the current invocation of the {@code Processor}
-     * method that made the inquiry.
+     * Returns {@code true} if the bucket with the given ordinal is full.
+     * When {@code true}, no more data can be added to the bucket during
+     * the current invocation of the {@code Processor} method that made
+     * the inquiry.
      * <p>
-     * If {@code ordinal == -1}, behaves identically to {@link #isHighWater()}.
+     * If {@code ordinal == -1}, behaves identically to {@link #isFull()}.
      */
-    boolean isHighWater(int ordinal);
+    boolean isFull(int ordinal);
 }

@@ -29,10 +29,10 @@ import java.util.Queue;
 public final class ArrayDequeOutbox implements Outbox {
 
     private final ArrayDeque<Object>[] buckets;
-    private final int[] highWaterMarks;
+    private final int[] limits;
 
-    public ArrayDequeOutbox(int size, int[] highWaterMarks) {
-        this.highWaterMarks = highWaterMarks.clone();
+    public ArrayDequeOutbox(int size, int[] limits) {
+        this.limits = limits.clone();
         this.buckets = new ArrayDeque[size];
         Arrays.setAll(buckets, i -> new ArrayDeque());
     }
@@ -45,8 +45,10 @@ public final class ArrayDequeOutbox implements Outbox {
     @Override
     public void add(int ordinal, @Nonnull Object item) {
         if (ordinal != -1) {
+            assert !isFull(ordinal) : "Attempt to add item to full bucket #" + ordinal;
             buckets[ordinal].add(item);
         } else {
+            assert !isFull(ordinal) : "Attempt to add item to full outbox";
             for (ArrayDeque<Object> queue : buckets) {
                 queue.add(item);
             }
@@ -54,12 +56,12 @@ public final class ArrayDequeOutbox implements Outbox {
     }
 
     @Override
-    public boolean isHighWater(int ordinal) {
+    public boolean isFull(int ordinal) {
         if (ordinal != -1) {
-            return buckets[ordinal].size() >= highWaterMarks[ordinal];
+            return buckets[ordinal].size() >= limits[ordinal];
         }
         for (int i = 0; i < buckets.length; i++) {
-            if (buckets[i].size() >= highWaterMarks[i]) {
+            if (buckets[i].size() == limits[i]) {
                 return true;
             }
         }
