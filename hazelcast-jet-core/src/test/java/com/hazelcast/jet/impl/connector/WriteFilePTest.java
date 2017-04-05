@@ -25,11 +25,10 @@ import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.stream.IStreamList;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
+import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import javax.annotation.Nonnull;
@@ -37,6 +36,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
@@ -47,6 +47,7 @@ import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Processors.readList;
 import static com.hazelcast.jet.Processors.writeFile;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
+import static java.nio.file.Files.delete;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
@@ -55,31 +56,58 @@ import static org.junit.Assert.assertFalse;
 public class WriteFilePTest extends JetTestSupport {
 
     private JetInstance instance;
+    private Path directory;
     private Path file;
     private IStreamList<String> list;
-
-    @Rule
-    public ExpectedException exception = ExpectedException.none();
 
     @Before
     public void setup() throws IOException {
         instance = createJetMember();
-        file = Files.createTempFile("write-file-p", "txt");
+        directory = Files.createTempDirectory("write-file-p");
+        file = directory.resolve("file.txt");
         list = instance.getList("sourceList");
     }
 
+    @After
+    public void tearDown() throws Exception {
+        Files.newDirectoryStream(directory).forEach(file -> uncheckRun(() -> delete(file)));
+        Files.delete(directory);
+    }
+
     @Test
-    public void when_localParallelismMoreThan1_then_fail() throws ExecutionException, InterruptedException {
+    public void when_localParallelismMoreThan1_then_multipleFiles() throws Exception {
         // Given
         DAG dag = buildDag(null, false);
         dag.getVertex("writer").localParallelism(2);
         addItemsToList(0, 10);
 
+        // When
+        instance.newJob(dag).execute().get();
+
         // Then
-        exception.expect(Exception.class);
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory)) {
+            int[] count = { 0 };
+            stream.forEach(p -> count[0]++);
+            assertEquals(2, count[0]);
+        }
+    }
+
+    @Test
+    public void when_twoMembers_then_multipleFiles() throws Exception {
+        // Given
+        DAG dag = buildDag(null, false);
+        addItemsToList(0, 10);
+        createJetMember();
 
         // When
         instance.newJob(dag).execute().get();
+
+        // Then
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory)) {
+            int[] count = { 0 };
+            stream.forEach(p -> count[0]++);
+            assertEquals(2, count[0]);
+        }
     }
 
     @Test

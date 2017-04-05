@@ -16,19 +16,18 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.ProcessorSupplier;
+import com.hazelcast.jet.ProcessorMetaSupplier;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.BufferedWriter;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.Collection;
-import java.util.Collections;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
@@ -40,34 +39,43 @@ public final class WriteFileP {
 
     private WriteFileP() { }
 
-    public static ProcessorSupplier supplier(String fileName, String charset, boolean append, boolean flushEarly) {
-        return new ProcessorSupplier() {
-            static final long serialVersionUID = 1L;
+    public static ProcessorMetaSupplier supplier(@Nonnull String fileNamePrefix, @Nullable String fileNameSuffix,
+            @Nullable String charset, boolean append, boolean flushEarly) {
+        return addresses -> address -> {
+            boolean hasMultipleAddresses = addresses.size() > 1;
+            // need to do this, as Address is not serializable
+            String sAddress = sanitizeAddressForFilename(address.toString());
 
-            @Nonnull
-            @Override
-            public Collection<? extends Processor> get(int count) {
-                if (count > 1) {
-                    throw new JetException(WriteFileP.class.getSimpleName() + " must have localParallelism=1");
-                }
-                // create the processors
-                return Collections.singletonList(new WriteBufferedP<>(
-                        () -> createBufferedWriter(fileName, charset, append),
-                        (writer, item) -> uncheckRun(() -> {
-                            writer.write(item.toString());
-                            writer.newLine();
-                        }),
-                        flushEarly ? writer -> uncheckRun(writer::flush) : writer -> {
-                        },
-                        bufferedWriter -> uncheckRun(bufferedWriter::close)
-                ));
-            }
+            return count -> IntStream.range(0, count)
+                    .mapToObj(index -> new WriteBufferedP<>(
+                            () -> createBufferedWriter(createFileName(fileNamePrefix, fileNameSuffix, hasMultipleAddresses,
+                                    sAddress, count, index), charset, append),
+                            (writer, item) -> uncheckRun(() -> {
+                                writer.write(item.toString());
+                                writer.newLine();
+                            }),
+                            flushEarly ? writer -> uncheckRun(writer::flush) : writer -> {
+                            },
+                            bufferedWriter -> uncheckRun(bufferedWriter::close)
+                    )).collect(Collectors.toList());
         };
+    }
+
+    private static String sanitizeAddressForFilename(String str) {
+        return str.replace(':', '_');
+    }
+
+    private static String createFileName(String fileNamePrefix, String fileNameSuffix, boolean multipleAddresses,
+            String address, int count, int index) {
+        return fileNamePrefix
+                + (multipleAddresses ? "-" + address : "")
+                + (count > 1 ? "#" + index : "")
+                + fileNameSuffix;
     }
 
     private static BufferedWriter createBufferedWriter(String fileName, String charset, boolean append) {
         return uncheckCall(() -> Files.newBufferedWriter(Paths.get(fileName),
-                charset == null ? StandardCharsets.UTF_8 : Charset.forName(charset),
+                charset == null ? StandardCharsets.UTF_8 : Charset.forName(charset), StandardOpenOption.CREATE,
                 append ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING));
     }
 

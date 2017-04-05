@@ -33,6 +33,7 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -307,12 +308,12 @@ public final class Processors {
      * UTF-8 charset, overwriting the target file and no early file buffer flush.
      */
     @Nonnull
-    public static ProcessorSupplier writeFile(@Nonnull String file) {
+    public static ProcessorMetaSupplier writeFile(@Nonnull String file) {
         return writeFile(file, null, false, false);
     }
 
     /**
-     * Returns a supplier of processor, that writes all items to a local file on
+     * Returns a meta-supplier of processor, that writes all items to a local file on
      * each member. {@code item.toString()} is written to the file, followed by
      * {@code '\n'} (both on linux and Windows).
      * <p>
@@ -329,9 +330,21 @@ public final class Processors {
      *                   you see the changes in file earlier.
      */
     @Nonnull
-    public static ProcessorSupplier writeFile(@Nonnull String file, @Nullable Charset charset,
+    public static ProcessorMetaSupplier writeFile(@Nonnull String file, @Nullable Charset charset,
             boolean append, boolean flushEarly) {
-        return WriteFileP.supplier(file, charset == null ? null : charset.name(), append, flushEarly);
+        String fileNamePrefix = file;
+        String fileNameSuffix = "";
+
+        // if the file name has an extension, use it as a suffix
+        String fileNameWithoutPath = Paths.get(file).getFileName().toString();
+        int lastDot = fileNameWithoutPath.lastIndexOf('.');
+        if (lastDot > 0) {
+            // non-zero is intentional, to not consider files starting with '.' as extension
+            fileNameSuffix = fileNameWithoutPath.substring(lastDot);
+            fileNamePrefix = fileNamePrefix.substring(0, fileNamePrefix.length() - fileNameSuffix.length());
+        }
+
+        return WriteFileP.supplier(fileNamePrefix, fileNameSuffix, charset == null ? null : charset.name(), append, flushEarly);
     }
 
     /**
