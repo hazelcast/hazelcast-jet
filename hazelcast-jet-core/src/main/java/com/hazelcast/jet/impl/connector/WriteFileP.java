@@ -17,14 +17,17 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorSupplier;
 
+import javax.annotation.Nonnull;
 import java.io.BufferedWriter;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.Collection;
 import java.util.Collections;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
@@ -38,20 +41,27 @@ public final class WriteFileP {
     private WriteFileP() { }
 
     public static ProcessorSupplier supplier(String fileName, String charset, boolean append, boolean flushEarly) {
-        return count -> {
-            if (count > 1) {
-                throw new JetException(WriteFileP.class.getSimpleName() + " must have localParallelism=1");
+        return new ProcessorSupplier() {
+            static final long serialVersionUID = 1L;
+
+            @Nonnull
+            @Override
+            public Collection<? extends Processor> get(int count) {
+                if (count > 1) {
+                    throw new JetException(WriteFileP.class.getSimpleName() + " must have localParallelism=1");
+                }
+                // create the processors
+                return Collections.singletonList(new WriteBufferedP<>(
+                        () -> createBufferedWriter(fileName, charset, append),
+                        (writer, item) -> uncheckRun(() -> {
+                            writer.write(item.toString());
+                            writer.write('\n');
+                        }),
+                        flushEarly ? writer -> uncheckRun(writer::flush) : writer -> {
+                        },
+                        bufferedWriter -> uncheckRun(bufferedWriter::close)
+                ));
             }
-            // create the processors
-            return Collections.singletonList(new WriteBufferedP<>(
-                    () -> createBufferedWriter(fileName, charset, append),
-                    (writer, item) -> uncheckRun(() -> {
-                        writer.write(item.toString());
-                        writer.write('\n');
-                    }),
-                    flushEarly ? writer -> uncheckRun(writer::flush) : writer -> { },
-                    bufferedWriter -> uncheckRun(bufferedWriter::close)
-            ));
         };
     }
 
