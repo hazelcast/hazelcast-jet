@@ -77,7 +77,7 @@ public class JetMergeGate extends SpliceGate<TupleEntry, TupleEntry> implements 
     @Override
     public void receive(Duct previous, TupleEntry incomingEntry) {
         try {
-            outbox.add(new AbstractMap.SimpleImmutableEntry<>(incomingEntry.getTupleCopy(), ValueTuple.NULL));
+            outbox.offer(new AbstractMap.SimpleImmutableEntry<>(incomingEntry.getTupleCopy(), ValueTuple.NULL));
             flowProcess.increment(SliceCounters.Tuples_Written, 1);
         } catch (OutOfMemoryError error) {
             handleReThrowableException("out of memory, try increasing task memory allocation", error);

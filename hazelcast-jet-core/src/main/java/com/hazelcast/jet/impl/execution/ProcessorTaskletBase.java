@@ -114,7 +114,21 @@ abstract class ProcessorTaskletBase implements Tasklet {
         return "ProcessorTasklet{vertex=" + vertexName + ", processor=" + processor + '}';
     }
 
-    private static final class ArrayDequeInbox extends ArrayDeque<Object> implements Inbox {
+    final class ArrayDequeInbox extends ArrayDeque<Object> implements Inbox {
+
+        @Override
+        public Object poll() {
+            Object result = super.poll();
+            progTracker.madeProgress(result != null);
+            return result;
+        }
+
+        @Override
+        public Object remove() {
+            Object result = super.remove();
+            progTracker.madeProgress();
+            return result;
+        }
     }
 }
 

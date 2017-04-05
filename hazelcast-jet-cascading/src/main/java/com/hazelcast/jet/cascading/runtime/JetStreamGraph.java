@@ -192,26 +192,17 @@ class JetStreamGraph extends NodeStreamGraph {
         }
 
         @Override
-        public void add(int ordinal, @Nonnull Object item) {
+        public boolean offer(int ordinal, @Nonnull Object item) {
             if (ordinal != -1) {
                 throw new UnsupportedOperationException();
             }
-            for (int ord : ordinals) {
-                outbox.add(ord, item);
-            }
+            outbox.offer(ordinals, item);
+            return true;
         }
 
         @Override
-        public boolean isFull(int ordinal) {
-            if (ordinal != -1) {
-                throw new UnsupportedOperationException();
-            }
-            for (int ord : ordinals) {
-                if (outbox.isFull(ord)) {
-                    return true;
-                }
-            }
-            return false;
+        public boolean offer(int[] ordinals, @Nonnull Object item) {
+            throw new UnsupportedOperationException();
         }
     }
 }

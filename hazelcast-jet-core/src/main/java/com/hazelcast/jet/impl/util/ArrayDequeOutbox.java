@@ -29,11 +29,13 @@ import java.util.Queue;
 public final class ArrayDequeOutbox implements Outbox {
 
     private final Queue<Object>[] buckets;
-    private final int[] limits;
+    private final int[] capacities;
+    private final ProgressTracker progTracker;
 
-    public ArrayDequeOutbox(int size, int[] limits) {
-        this.limits = limits.clone();
+    public ArrayDequeOutbox(int size, int[] capacities, ProgressTracker progTracker) {
+        this.capacities = capacities.clone();
         this.buckets = new Queue[size];
+        this.progTracker = progTracker;
         Arrays.setAll(buckets, i -> new ArrayDeque());
     }
 
@@ -43,39 +45,47 @@ public final class ArrayDequeOutbox implements Outbox {
     }
 
     @Override
-    public void add(int ordinal, @Nonnull Object item) {
+    public boolean offer(int ordinal, @Nonnull Object item) {
         if (ordinal != -1) {
-            addToBucket(ordinal, item);
-        } else {
-            for (int i = 0; i < buckets.length; i++) {
-                addToBucket(i, item);
+            if (isBucketFull(ordinal)) {
+                return false;
+            }
+            buckets[ordinal].add(item);
+            progTracker.madeProgress();
+            return true;
+        }
+        for (int i = 0; i < buckets.length; i++) {
+            if (isBucketFull(i)) {
+                return false;
             }
         }
-    }
-
-    private void addToBucket(int bucketIndex, @Nonnull Object item) {
-        Queue<Object> bucket = buckets[bucketIndex];
-        if (bucket.size() >= limits[bucketIndex]) {
-            throw new IndexOutOfBoundsException("Attempt to add item to full bucket #" + bucketIndex);
+        for (Queue<Object> bucket : buckets) {
+            bucket.add(item);
         }
-        bucket.add(item);
+        progTracker.madeProgress();
+        return true;
     }
 
     @Override
-    public boolean isFull(int ordinal) {
-        if (ordinal != -1) {
-            return buckets[ordinal].size() >= limits[ordinal];
-        }
-        for (int i = 0; i < buckets.length; i++) {
-            if (buckets[i].size() >= limits[i]) {
-                return true;
+    public boolean offer(int[] ordinals, @Nonnull Object item) {
+        for (int ord : ordinals) {
+            if (isBucketFull(ord)) {
+                return false;
             }
         }
-        return false;
+        for (int ord : ordinals) {
+            buckets[ord].add(item);
+        }
+        progTracker.madeProgress();
+        return true;
+    }
+
+    private boolean isBucketFull(int ordinal) {
+        return buckets[ordinal].size() >= capacities[ordinal];
     }
 
 
-    // Private API that exposes the ArrayDeques to the ProcessorTasklet
+    // Private API for tasklets
 
     public Queue<Object> queueWithOrdinal(int ordinal) {
         return buckets[ordinal];

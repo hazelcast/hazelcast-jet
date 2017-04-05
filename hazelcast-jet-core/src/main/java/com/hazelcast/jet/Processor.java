@@ -35,17 +35,14 @@ import javax.annotation.Nonnull;
  * The processor accepts input from instances of {@link Inbox} and pushes
  * its output to an instance of {@link Outbox}.
  * <p>
- * If this processor declares itself as "cooperative" ({@link
- * #isCooperative()} returns {@code true}), it should limit the amount of
- * time it spends per call because it will participate in a cooperative
- * multithreading scheme. The processing methods must also limit the amount
- * of data they output per invocation because the outbox will not be
- * emptied until the processor yields control back to its caller.
- * Specifically, {@code Outbox} has a method {@link Outbox#isFull()}
- * isFull()} that can be tested to see whether it's time to stop pushing
- * more data into it. There is also a finer-grained method
- * {@link Outbox#isFull(int) isFull(ordinal)}, which tells the state of an
- * individual output bucket.
+ * By default the processor declares itself as "cooperative" ({@link
+ * #isCooperative()} returns {@code true}). It will be assigned an outbox
+ * of finite capacity which is not emptied until the processor yields back
+ * to the execution engine. As soon as the outbox refuses an offered item,
+ * the processor should save its current state and return to the caller.
+ * It should also limit the amount of time it spends per call because it
+ * will participate in a cooperative multithreading scheme, sharing a
+ * thread with other processors.
  * <p>
  * On the other hand, if the processor declares itself as "non-cooperative"
  * ({@link #isCooperative()} returns {@code false}), then each item it
@@ -56,6 +53,11 @@ import javax.annotation.Nonnull;
  * example, a source processor can do all of its work in a single
  * invocation of {@link Processor#complete() complete()}, even if the stream
  * it generates is infinite.
+ * <p>
+ * Jet prefers cooperative processors because they result in greater overall
+ * throughput. A processor should be non-cooperative only if it involves
+ * blocking operations, which would cause all other processors on the same
+ * shared thread to starve.
  */
 public interface Processor {
 
@@ -71,8 +73,8 @@ public interface Processor {
     }
 
     /**
-     * Processes some items in the supplied inbox. Removes the items it's
-     * done with. Does not remove an item until it is done with it.
+     * Processes some items in the supplied inbox. Removes the items it's done
+     * with. Does not remove an item until it is done with it.
      * <p>
      * The default implementation does nothing.
      *
@@ -101,10 +103,10 @@ public interface Processor {
      * will take a reasonably small amount of time (up to a millisecond). A
      * cooperative processor should not attempt any blocking I/O operations.
      * <p>
-     * If this processor declares itself non-cooperative, it will be allocated a
-     * dedicated Java thread and assigned an auto-flushing, blocking outbox.
-     * Otherwise it will be allocated a tasklet which shares a thread with other
-     * tasklets and assigned a non-blocking outbox with bounded buffering.
+     * If this processor declares itself cooperative, it will get a
+     * non-blocking, buffering outbox of limited capacity and share a thread
+     * with other cooperative processors. Otherwise it will get an
+     * auto-flushing, blocking outbox and run in a dedicated Java thread.
      * <p>
      * The default implementation returns {@code true}.
      */

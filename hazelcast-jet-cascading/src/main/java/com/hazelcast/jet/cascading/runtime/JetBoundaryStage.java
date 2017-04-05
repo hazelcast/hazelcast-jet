@@ -76,7 +76,7 @@ public class JetBoundaryStage extends BoundaryStage<TupleEntry, TupleEntry> impl
     public void receive(Duct previous, TupleEntry incomingEntry) {
         try {
             Tuple tuple = incomingEntry.getTupleCopy();
-            outbox.add(tuple);
+            outbox.offer(tuple);
             flowProcess.increment(SliceCounters.Tuples_Written, 1);
         } catch (OutOfMemoryError error) {
             handleReThrowableException("out of memory, try increasing task memory allocation", error);

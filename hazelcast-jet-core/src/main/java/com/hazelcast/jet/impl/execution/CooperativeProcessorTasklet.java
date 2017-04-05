@@ -40,8 +40,8 @@ public class CooperativeProcessorTasklet extends ProcessorTaskletBase {
                                        List<InboundEdgeStream> instreams, List<OutboundEdgeStream> outstreams) {
         super(vertexName, context, processor, instreams, outstreams);
         Preconditions.checkTrue(processor.isCooperative(), "Processor is non-cooperative");
-        int[] outboxLimits = Stream.of(this.outstreams).mapToInt(OutboundEdgeStream::getOutboxLimit).toArray();
-        this.outbox = new ArrayDequeOutbox(outstreams.size(), outboxLimits);
+        int[] bucketCapacities = Stream.of(this.outstreams).mapToInt(OutboundEdgeStream::getOutboxCapacity).toArray();
+        this.outbox = new ArrayDequeOutbox(outstreams.size(), bucketCapacities, progTracker);
     }
 
     @Override
@@ -68,13 +68,7 @@ public class CooperativeProcessorTasklet extends ProcessorTaskletBase {
     }
 
     private void tryProcessInbox() {
-        if (outbox.isFull()) {
-            progTracker.notDone();
-            return;
-        }
-        progTracker.madeProgress(true);
-        final int inboundOrdinal = currInstream.ordinal();
-        processor.process(inboundOrdinal, inbox());
+        processor.process(currInstream.ordinal(), inbox());
         if (!inbox().isEmpty()) {
             progTracker.notDone();
         }
@@ -84,18 +78,13 @@ public class CooperativeProcessorTasklet extends ProcessorTaskletBase {
         if (processorCompleted) {
             return;
         }
-        if (outbox.isFull()) {
-            progTracker.notDone();
-            return;
-        }
-        progTracker.madeProgress(true);
         if (!processor.complete()) {
             progTracker.notDone();
             return;
         }
         processorCompleted = true;
         for (OutboundEdgeStream outstream : outstreams) {
-            outbox.add(outstream.ordinal(), DONE_ITEM);
+            outbox.offer(outstream.ordinal(), DONE_ITEM);
         }
     }
 
