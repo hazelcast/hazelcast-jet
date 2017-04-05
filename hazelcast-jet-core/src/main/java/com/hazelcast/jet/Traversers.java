@@ -127,6 +127,11 @@ public final class Traversers {
         public void accept(T t) {
             item = t;
         }
+
+        public ResettableSingletonTraverser<T> reset(T t) {
+            item = t;
+            return this;
+        }
     }
 
     private static final class LazyTraverser<T> implements Traverser<T> {

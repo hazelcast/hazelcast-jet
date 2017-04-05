@@ -17,26 +17,26 @@
 package com.hazelcast.jet.stream.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
+import com.hazelcast.jet.Traversers.ResettableSingletonTraverser;
 
 import javax.annotation.Nonnull;
 
 public class SkipP extends AbstractProcessor {
 
-    private final long skip;
+    private final long skipCount;
+    private final FlatMapper<Object, Object> flatMapper = flatMapper(new ResettableSingletonTraverser<>()::reset);
     private long index;
 
-    public SkipP(Long skip) {
-        this.skip = skip;
+    public SkipP(long skipCount) {
+        this.skipCount = skipCount;
     }
 
-
     @Override
-    protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
-        if (index >= skip) {
-            emit(item);
-        } else {
+    protected boolean tryProcess(int ordinal, @Nonnull Object item) {
+        if (index < skipCount) {
             index++;
+            return true;
         }
-        return true;
+        return flatMapper.tryProcess(item);
     }
 }
