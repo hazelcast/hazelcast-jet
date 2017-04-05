@@ -273,6 +273,15 @@ public abstract class AbstractProcessor implements Processor {
     }
 
     /**
+     * Offers the item to the outbox buckets identified in the supplied array.
+     *
+     * @return whether the outbox accepted the item
+     */
+    protected boolean tryEmit(int[] ordinals, @Nonnull Object item) {
+        return outbox.offer(ordinals, item);
+    }
+
+    /**
      * Obtains items from the traverser and offers them to the outbox's bucket
      * with the supplied ordinal. If the outbox refuses an item, it backs off
      * and returns {@code false}.
@@ -313,6 +322,39 @@ public abstract class AbstractProcessor implements Processor {
     }
 
     /**
+     * Obtains items from the traverser and offers them to the outbox's buckets
+     * identified in the supplied array. If the outbox refuses an item, it
+     * backs off and returns {@code false}.
+     * <p>
+     * If this method returns {@code false}, then the same traverser must be
+     * retained by the caller and passed again in the subsequent invocation of
+     * this method, so as to resume emitting where it left off.
+     * <p>
+     * For simplified usage from {@link #tryProcess(int, Object) tryProcess()}
+     * methods, see {@link FlatMapper}.
+     *
+     * @param ordinals ordinals of the target bucket
+     * @param traverser traverser over items to emit
+     * @return whether the traverser has been exhausted
+     */
+    protected boolean emitFromTraverser(int[] ordinals, @Nonnull Traverser<?> traverser) {
+        Object item;
+        if (pendingItem != null) {
+            item = pendingItem;
+            pendingItem = null;
+        } else {
+            item = traverser.next();
+        }
+        for (; item != null; item = traverser.next()) {
+            if (!tryEmit(ordinals, item)) {
+                pendingItem = item;
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Factory of {@link FlatMapper}. The {@code FlatMapper} will emit items to
      * the given output ordinal.
      */
@@ -335,19 +377,30 @@ public abstract class AbstractProcessor implements Processor {
     }
 
     /**
-     * A helper that simplifies the implementation of
-     * {@link AbstractProcessor#tryProcess(int, Object) tryProcess()} for emitting
-     * collections. User supplies a {@code mapper} which takes an item and
-     * returns a traverser over all output items that should be emitted. The
-     * {@link #tryProcess(Object)} method obtains and passes the traverser to
-     * {@link #emitFromTraverser(int, Traverser)}.
+     * Factory of {@link FlatMapper}. The {@code FlatMapper} will emit items to
+     * the ordinals identified in the array.
+     */
+    @Nonnull
+    protected <T, R> FlatMapper<T, R> flatMapper(
+            int[] ordinals, @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper
+    ) {
+        return new FlatMapper<>(ordinals, mapper);
+    }
+
+    /**
+     * A helper that simplifies the implementation of {@link #tryProcess(int,
+     * Object) tryProcess()} for emitting collections. User supplies a {@code
+     * mapper} which takes an item and returns a traverser over all output
+     * items that should be emitted. The {@link #tryProcess(Object)} method
+     * obtains and passes the traverser to {@link #emitFromTraverser(int,
+     * Traverser)}.
      *
      * Example:
      * <pre>
      * public static class SplitWordsP extends AbstractProcessor {
      *
      *    {@code private FlatMapper<String, String> flatMapper =
-     *             flatMapper((String item) -> Traverser.over(item.split("\\W")));}
+     *             flatMapper(item -> Traverser.over(item.split("\\W")));}
      *
      *    {@code @Override}
      *     protected boolean tryProcess(int ordinal, Object item) throws Exception {
@@ -359,12 +412,17 @@ public abstract class AbstractProcessor implements Processor {
      * @param <R> type of the emitted item
      */
     protected final class FlatMapper<T, R> {
-        private final int outputOrdinal;
+        private final int[] outputOrdinals;
         private final Function<? super T, ? extends Traverser<? extends R>> mapper;
         private Traverser<? extends R> outputTraverser;
 
         FlatMapper(int outputOrdinal, @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper) {
-            this.outputOrdinal = outputOrdinal;
+            this.outputOrdinals = new int[] {outputOrdinal};
+            this.mapper = mapper;
+        }
+
+        FlatMapper(int[] outputOrdinals, @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper) {
+            this.outputOrdinals = outputOrdinals;
             this.mapper = mapper;
         }
 
@@ -380,7 +438,7 @@ public abstract class AbstractProcessor implements Processor {
             if (outputTraverser == null) {
                 outputTraverser = mapper.apply(item);
             }
-            if (emitFromTraverser(outputOrdinal, outputTraverser)) {
+            if (emitFromTraverser(outputOrdinals, outputTraverser)) {
                 outputTraverser = null;
                 return true;
             }
