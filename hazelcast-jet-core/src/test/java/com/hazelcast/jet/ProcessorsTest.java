@@ -18,12 +18,12 @@ package com.hazelcast.jet;
 
 import com.hazelcast.jet.Processor.Context;
 import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
+import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -52,7 +52,7 @@ public class ProcessorsTest {
     @Before
     public void before() {
         inbox = new TestInbox();
-        outbox = new ArrayDequeOutbox(1, new int[]{1});
+        outbox = new ArrayDequeOutbox(1, new int[]{1}, new ProgressTracker());
         context = mock(Context.class);
         bucket = outbox.queueWithOrdinal(0);
     }
