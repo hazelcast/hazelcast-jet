@@ -44,6 +44,11 @@ public interface Outbox {
 
     /**
      * Adds the supplied item to all the output buckets.
+     * <p>
+     * Must not be called when the outbox is full ({@link #isFull()}
+     * would return true).
+     *
+     * @throws IndexOutOfBoundsException if the outbox is full
      */
     default void add(@Nonnull Object item) {
         add(-1, item);
@@ -53,13 +58,17 @@ public interface Outbox {
      * Adds the supplied item to the output bucket with the supplied ordinal.
      * If {@code ordinal == -1}, adds the supplied item to all buckets
      * (behaves the same as {@link #add(Object)}).
+     * <p>
+     * Must not be called when the outbox is full ({@link #isFull(int)
+     * isFull(ordinal)} would return true).
+     *
+     * @throws IndexOutOfBoundsException if the bucket is full
      */
     void add(int ordinal, @Nonnull Object item);
 
     /**
-     * Returns {@code true} if any of this outbox's buckets is above its
-     * high water mark (i.e., {@link #isFull(int)} would return true
-     * for it).
+     * Returns {@code true} if any of this outbox's buckets is full
+     * (i.e., {@link #isFull(int)} would return true for it).
      */
     default boolean isFull() {
         return isFull(-1);

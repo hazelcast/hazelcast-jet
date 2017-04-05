@@ -24,16 +24,16 @@ import java.util.Arrays;
 import java.util.Queue;
 
 /**
- * Implements {@code Outbox} with an {@link ArrayDeque}.
+ * Implements {@code Outbox} with an array of {@link ArrayDeque}s.
  */
 public final class ArrayDequeOutbox implements Outbox {
 
-    private final ArrayDeque<Object>[] buckets;
+    private final Queue<Object>[] buckets;
     private final int[] limits;
 
     public ArrayDequeOutbox(int size, int[] limits) {
         this.limits = limits.clone();
-        this.buckets = new ArrayDeque[size];
+        this.buckets = new Queue[size];
         Arrays.setAll(buckets, i -> new ArrayDeque());
     }
 
@@ -45,14 +45,20 @@ public final class ArrayDequeOutbox implements Outbox {
     @Override
     public void add(int ordinal, @Nonnull Object item) {
         if (ordinal != -1) {
-            assert !isFull(ordinal) : "Attempt to add item to full bucket #" + ordinal;
-            buckets[ordinal].add(item);
+            addToBucket(ordinal, item);
         } else {
-            assert !isFull(ordinal) : "Attempt to add item to full outbox";
-            for (ArrayDeque<Object> queue : buckets) {
-                queue.add(item);
+            for (int i = 0; i < buckets.length; i++) {
+                addToBucket(i, item);
             }
         }
+    }
+
+    private void addToBucket(int bucketIndex, @Nonnull Object item) {
+        Queue<Object> bucket = buckets[bucketIndex];
+        if (bucket.size() >= limits[bucketIndex]) {
+            throw new IndexOutOfBoundsException("Attempt to add item to full bucket #" + bucketIndex);
+        }
+        bucket.add(item);
     }
 
     @Override
@@ -61,7 +67,7 @@ public final class ArrayDequeOutbox implements Outbox {
             return buckets[ordinal].size() >= limits[ordinal];
         }
         for (int i = 0; i < buckets.length; i++) {
-            if (buckets[i].size() == limits[i]) {
+            if (buckets[i].size() >= limits[i]) {
                 return true;
             }
         }
