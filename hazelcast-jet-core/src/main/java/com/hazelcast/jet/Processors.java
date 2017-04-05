@@ -264,31 +264,40 @@ public final class Processors {
     }
 
     /**
-     * Returns a supplier of processors, that read all files in a directory and emit them line by line.
-     * Files should be in UTF-8 encoding.
+     * Returns a supplier of processors, that read all files in a directory and emit them
+     * line by line. Files should be in UTF-8 encoding.
      *
      * @param directory Parent directory of the files.
      *
-     * @see ReadFileP
+     * @see #readFile(String, Charset, String)
      */
     @Nonnull
     public static ProcessorSupplier readFile(@Nonnull String directory) {
         return readFile(directory, StandardCharsets.UTF_8, null);
     }
 
-
     /**
-     * Returns a supplier of processors, that read files matching the supplied {@code glob}
-     * pattern, and emit them line by line.
+     * Returns a supplier of source processor designed to process files in a directory
+     * in a batch. It processes all files in a directory (optionally filtering with a
+     * {@code glob}). Contents of the files are emitted line by line. There is no
+     * indication, which file a particular line comes from. Contents of subdirectories
+     * are not processed.
+     * <p>
+     * The same directory must be available on all members, but it should not
+     * contain the same files (i.e. it should not be a network shared directory, but
+     * files local to the machine).
+     * <p>
+     * If directory contents are changed while processing, the behavior is
+     * undefined: the changed contents might or might not be processed.
      *
      * @param directory Parent directory of the files.
      * @param charset Character set used when reading the files. If null, utf-8 is used.
-     * @param glob The filtering pattern, see {@link java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()}
-     *
-     * @see ReadFileP
+     * @param glob The filtering pattern, see
+     *          {@link java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()}
      */
     @Nonnull
-    public static ProcessorSupplier readFile(@Nonnull String directory, @Nullable Charset charset, @Nullable String glob) {
+    public static ProcessorSupplier readFile(@Nonnull String directory, @Nullable Charset charset,
+            @Nullable String glob) {
         return ReadFileP.supplier(directory, charset == null ? "utf-8" : charset.name(), glob);
     }
 

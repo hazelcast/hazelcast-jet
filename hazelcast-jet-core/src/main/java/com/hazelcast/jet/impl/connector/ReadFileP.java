@@ -36,18 +36,7 @@ import java.util.stream.StreamSupport;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 
 /**
- * A source processor designed to process files in a directory in a batch. It
- * processes all files in a directory (optionally filtering with a {@code glob},
- * see {@link java.nio.file.FileSystem#getPathMatcher(String)}). Contents of the
- * files are emitted line by line. There is no indication, which file a particular
- * line comes from. Contents of subdirectories are not processed.
- * <p>
- * The same directory must be available on all members, but it should not
- * contain the same files (i.e. it should not be a network shared directory, but
- * files local to the machine).
- * <p>
- * If directory contents are changed while processing, the behavior is
- * undefined: the changed contents might or might not be processed.
+ * @see com.hazelcast.jet.Processors#readFile(String, Charset, String)
  */
 public class ReadFileP extends AbstractProcessor {
 
@@ -102,11 +91,6 @@ public class ReadFileP extends AbstractProcessor {
         return false;
     }
 
-    /**
-     * Creates a supplier for {@link ReadFileP}
-     *
-     * @param directory the folder to process files from
-     */
     public static ProcessorSupplier supplier(String directory, String charset, String glob) {
         return new Supplier(directory, charset, glob);
     }
