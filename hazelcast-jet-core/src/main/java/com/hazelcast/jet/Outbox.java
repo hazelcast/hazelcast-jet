@@ -46,7 +46,7 @@ public interface Outbox {
      * Adds the supplied item to all the output buckets.
      * <p>
      * Must not be called when the outbox is full ({@link #isFull()}
-     * would return true).
+     * would return {@code true}).
      *
      * @throws IndexOutOfBoundsException if the outbox is full
      */
@@ -60,7 +60,7 @@ public interface Outbox {
      * (behaves the same as {@link #add(Object)}).
      * <p>
      * Must not be called when the outbox is full ({@link #isFull(int)
-     * isFull(ordinal)} would return true).
+     * isFull(ordinal)} would return {@code true}).
      *
      * @throws IndexOutOfBoundsException if the bucket is full
      */

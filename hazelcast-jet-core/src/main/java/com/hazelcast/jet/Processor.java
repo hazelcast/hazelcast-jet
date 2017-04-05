@@ -36,13 +36,16 @@ import javax.annotation.Nonnull;
  * its output to an instance of {@link Outbox}.
  * <p>
  * If this processor declares itself as "cooperative" ({@link
- * #isCooperative()} returns {@code true}, the default), it should limit
- * the amount of time it spends per call because it will participate in a
- * cooperative multithreading scheme. The processing methods must also
- * limit the amount of data they output per invocation because the outbox
- * will not be emptied until the processor yields control back to its
- * caller. Outbox's {@code add(...)} methods return {@code true} when it is
- * full and won't accept any more items.
+ * #isCooperative()} returns {@code true}), it should limit the amount of
+ * time it spends per call because it will participate in a cooperative
+ * multithreading scheme. The processing methods must also limit the amount
+ * of data they output per invocation because the outbox will not be
+ * emptied until the processor yields control back to its caller.
+ * Specifically, {@code Outbox} has a method {@link Outbox#isFull()}
+ * isFull()} that can be tested to see whether it's time to stop pushing
+ * more data into it. There is also a finer-grained method
+ * {@link Outbox#isFull(int) isFull(ordinal)}, which tells the state of an
+ * individual output bucket.
  * <p>
  * On the other hand, if the processor declares itself as "non-cooperative"
  * ({@link #isCooperative()} returns {@code false}), then each item it
@@ -99,8 +102,11 @@ public interface Processor {
      * cooperative processor should not attempt any blocking I/O operations.
      * <p>
      * If this processor declares itself non-cooperative, it will be allocated a
-     * dedicated Java thread. Otherwise it will be allocated a tasklet which
-     * shares a thread with other tasklets.
+     * dedicated Java thread and assigned an auto-flushing, blocking outbox.
+     * Otherwise it will be allocated a tasklet which shares a thread with other
+     * tasklets and assigned a non-blocking outbox with bounded buffering.
+     * <p>
+     * The default implementation returns {@code true}.
      */
     default boolean isCooperative() {
         return true;
