@@ -35,7 +35,7 @@ public class LimitP extends AbstractProcessor {
             return true;
         }
         index++;
-        emit(item);
+        tryEmit(item);
         return true;
     }
 }

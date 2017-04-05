@@ -44,7 +44,7 @@ public class CollectorCombineP<T> extends AbstractProcessor {
     @Override
     public boolean complete() {
         if (result != null) {
-            emit(result);
+            tryEmit(result);
         }
         return true;
     }

@@ -36,7 +36,7 @@ class ListProducer extends AbstractProcessor {
             throw new IllegalStateException("process() called after completion");
         }
         for (int i = 0; i < batchSize && iterator.hasNext(); i++) {
-            emit(iterator.next());
+            tryEmit(iterator.next());
         }
         completed = !iterator.hasNext();
         return completed;

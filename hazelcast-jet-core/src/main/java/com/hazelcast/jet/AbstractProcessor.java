@@ -88,12 +88,11 @@ public abstract class AbstractProcessor implements Processor {
     }
 
     /**
-     * Method that can be overridden to perform any necessary initialization for
-     * the processor. It is called exactly once and strictly before any of the
-     * processing methods ({@link #process(int, Inbox) process()},
-     * {@link #completeEdge(int) completeEdge()}, {@link #complete() complete()}),
-     * but after the {@link #getOutbox() outbox} and {@link #getLogger() logger}
-     * have been initialized.
+     * Method that can be overridden to perform any necessary initialization
+     * for the processor. It is called exactly once and strictly before any of
+     * the processing methods ({@link #process(int, Inbox) process()} and
+     * {@link #complete() complete()}), but after the outbox {@link #getLogger()
+     * logger} have been initialized.
      *
      * @param context the {@link Context context} associated with this processor
      */
@@ -256,24 +255,27 @@ public abstract class AbstractProcessor implements Processor {
     }
 
     /**
-     * Emits the item to the outbox bucket at the supplied ordinal.
+     * Offers the item to the outbox bucket at the supplied ordinal.
+     *
+     * @return whether the outbox accepted the item
      */
-    protected void emit(int ordinal, @Nonnull Object item) {
-        outbox.add(ordinal, item);
+    protected boolean tryEmit(int ordinal, @Nonnull Object item) {
+        return outbox.offer(ordinal, item);
     }
 
     /**
      * Emits the item to all the outbox buckets.
+     *
+     * @return whether the outbox accepted the item
      */
-    protected void emit(@Nonnull Object item) {
-        outbox.add(item);
+    protected boolean tryEmit(@Nonnull Object item) {
+        return outbox.offer(item);
     }
 
     /**
-     * Emits the items obtained from the traverser to the outbox bucket with
-     * the supplied ordinal while respecting the outbox limits: if the outbox
-     * becomes {@link Outbox#isFull() full}, backs off and returns {@code
-     * false}.
+     * Obtains items from the traverser and offers them to the outbox's bucket
+     * with the supplied ordinal. If the outbox refuses an item, it backs off
+     * and returns {@code false}.
      * <p>
      * If this method returns {@code false}, then the same traverser must be
      * retained by the caller and passed again in the subsequent invocation of
@@ -295,11 +297,10 @@ public abstract class AbstractProcessor implements Processor {
             item = traverser.next();
         }
         for (; item != null; item = traverser.next()) {
-            if (outbox.isFull(ordinal)) {
+            if (!tryEmit(ordinal, item)) {
                 pendingItem = item;
                 return false;
             }
-            emit(ordinal, item);
         }
         return true;
     }

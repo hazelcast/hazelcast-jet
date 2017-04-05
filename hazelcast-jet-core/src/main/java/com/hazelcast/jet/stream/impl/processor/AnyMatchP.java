@@ -44,7 +44,7 @@ public class AnyMatchP<T> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
-        emit(match);
+        tryEmit(match);
         return true;
     }
 }

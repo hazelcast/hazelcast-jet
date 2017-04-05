@@ -18,6 +18,7 @@ package com.hazelcast.jet;
 
 import com.hazelcast.jet.AbstractProcessor.FlatMapper;
 import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
+import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.logging.ILogger;
 import org.junit.Before;
 import org.junit.Test;
@@ -48,7 +49,7 @@ public class AbstractProcessorTest {
         p = new SpecializedByOrdinal();
         final Processor.Context ctx = mock(Processor.Context.class);
         Mockito.when(ctx.logger()).thenReturn(mock(ILogger.class));
-        outbox = new ArrayDequeOutbox(OUTBOX_BUCKET_COUNT, new int[]{1, 1});
+        outbox = new ArrayDequeOutbox(OUTBOX_BUCKET_COUNT, new int[]{1, 1}, new ProgressTracker());
         p.init(outbox, ctx);
     }
 
@@ -125,7 +126,7 @@ public class AbstractProcessorTest {
     @Test
     public void when_emit_then_outboxHasItemInAllBuckets() {
         // When
-        p.emit(MOCK_ITEM);
+        p.tryEmit(MOCK_ITEM);
 
         // Then
         for (int i = 0; i < OUTBOX_BUCKET_COUNT; i++) {
@@ -138,7 +139,7 @@ public class AbstractProcessorTest {
         final int ordinal = 1;
 
         // When
-        p.emit(ordinal, MOCK_ITEM);
+        p.tryEmit(ordinal, MOCK_ITEM);
 
         // Then
         for (int i = 0; i < OUTBOX_BUCKET_COUNT; i++) {

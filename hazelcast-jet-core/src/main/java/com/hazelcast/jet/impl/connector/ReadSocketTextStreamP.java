@@ -79,7 +79,7 @@ public class ReadSocketTextStreamP extends AbstractProcessor implements Closeabl
         if (line == null) {
             return true;
         }
-        emit(line);
+        tryEmit(line);
         return false;
     }
 

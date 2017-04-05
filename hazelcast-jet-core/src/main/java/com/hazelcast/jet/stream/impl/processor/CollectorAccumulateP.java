@@ -48,7 +48,7 @@ public class CollectorAccumulateP<IN, OUT> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
-        emit(result);
+        tryEmit(result);
         return true;
     }
 }

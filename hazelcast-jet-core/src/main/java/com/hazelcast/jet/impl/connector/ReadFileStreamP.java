@@ -214,7 +214,7 @@ public class ReadFileStreamP extends AbstractProcessor implements Closeable {
                     if (getLogger().isFinestEnabled()) {
                         getLogger().finest("line = " + line);
                     }
-                    emit(line);
+                    tryEmit(line);
                 }
                 return fis.getChannel().position();
             }
