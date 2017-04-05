@@ -17,6 +17,7 @@
 package com.hazelcast.jet;
 
 import com.hazelcast.jet.Processor.Context;
+import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.test.annotation.QuickTest;
@@ -44,14 +45,14 @@ import static org.mockito.Mockito.mock;
 
 @Category(QuickTest.class)
 public class ProcessorsTest {
-    private TestInbox inbox;
+    private ArrayDequeInbox inbox;
     private ArrayDequeOutbox outbox;
     private Queue<Object> bucket;
     private Context context;
 
     @Before
     public void before() {
-        inbox = new TestInbox();
+        inbox = new ArrayDequeInbox();
         outbox = new ArrayDequeOutbox(1, new int[]{1}, new ProgressTracker());
         context = mock(Context.class);
         bucket = outbox.queueWithOrdinal(0);
@@ -319,9 +320,6 @@ public class ProcessorsTest {
         return supplier.get(1).iterator().next();
     }
 
-
-    private static class TestInbox extends ArrayDeque<Object> implements Inbox {
-    }
 
     private interface TwinConsumer<T> extends BiConsumer<T, T> { }
 }
