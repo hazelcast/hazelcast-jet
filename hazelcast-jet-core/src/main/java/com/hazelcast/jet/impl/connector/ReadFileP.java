@@ -91,6 +91,9 @@ public class ReadFileP extends AbstractProcessor {
         return false;
     }
 
+    /**
+     * @see com.hazelcast.jet.Processors#readFile(String, Charset, String)
+     */
     public static ProcessorSupplier supplier(String directory, String charset, String glob) {
         return new Supplier(directory, charset, glob);
     }
