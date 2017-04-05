@@ -38,7 +38,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Edge.between;
@@ -49,7 +48,7 @@ import static org.junit.Assert.assertTrue;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
-public class ReadFilePTest extends JetTestSupport{
+public class ReadFilePTest extends JetTestSupport {
 
     private JetInstance instance;
     private File directory;
@@ -71,11 +70,11 @@ public class ReadFilePTest extends JetTestSupport{
         File file2 = new File(directory, randomName());
         appendToFile(file2, "hello2", "world2");
 
-        Future<Void> jobFuture = instance.newJob(dag).execute();
+        instance.newJob(dag).execute().get();
 
-        assertTrueEventually(() -> assertEquals(4, list.size()), 2);
+        assertEquals(4, list.size());
 
-        finishDirectory(jobFuture, file1, file2);
+        finishDirectory(file1, file2);
     }
 
     @Test
@@ -86,11 +85,9 @@ public class ReadFilePTest extends JetTestSupport{
         final int listLength = 10000;
         appendToFile(file1, IntStream.range(0, listLength).mapToObj(String::valueOf).toArray(String[]::new));
 
-        Future<Void> jobFuture = instance.newJob(dag).execute();
+        instance.newJob(dag).execute().get();
 
-        assertTrueEventually(() -> assertEquals(listLength, list.size()), 2);
-
-        finishDirectory(jobFuture, file1);
+        assertEquals(listLength, list.size());
     }
 
     @Test
@@ -102,15 +99,11 @@ public class ReadFilePTest extends JetTestSupport{
         File file2 = new File(directory, "file2.txt");
         appendToFile(file2, "hello2", "world2");
 
-        Future<Void> jobFuture = instance.newJob(dag).execute();
+        instance.newJob(dag).execute().get();
 
-        assertTrueEventually(() -> assertEquals(Arrays.asList("hello2", "world2"), new ArrayList<>(list)), 2);
-
-        // sleep little more to check, that file1 is not picked up
-        sleepAtLeastMillis(500);
         assertEquals(Arrays.asList("hello2", "world2"), new ArrayList<>(list));
 
-        finishDirectory(jobFuture, file1, file2);
+        finishDirectory(file1, file2);
     }
 
     private DAG buildDag(String glob) {
@@ -131,19 +124,16 @@ public class ReadFilePTest extends JetTestSupport{
     }
 
     private static File createTempDirectory() throws IOException {
-        Path directory = Files.createTempDirectory("read-file-stream-p");
+        Path directory = Files.createTempDirectory("read-file-p");
         File file = directory.toFile();
         file.deleteOnExit();
         return file;
     }
 
-    private void finishDirectory(Future<Void> jobFuture, File ... files) throws InterruptedException, ExecutionException {
+    private void finishDirectory(File ... files) throws InterruptedException, ExecutionException {
         for (File file : files) {
             assertTrue(file.delete());
         }
         assertTrue(directory.delete());
-        assertTrueEventually(() -> assertTrue("job should complete eventually", jobFuture.isDone()), 5);
-        // called for side-effect of throwing exception, if the job failed
-        jobFuture.get();
     }
 }
