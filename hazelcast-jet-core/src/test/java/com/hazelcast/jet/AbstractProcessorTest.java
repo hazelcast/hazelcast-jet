@@ -164,7 +164,7 @@ public class AbstractProcessorTest {
     }
 
     @Test
-    public void when_flatMapperTryProcess_then_outboxLimitRespected() {
+    public void when_flatMapperTryProcess_then_outboxHasOneItem() {
         final Object item1 = 1;
         final Object item2 = 2;
         final FlatMapper<String, Object> flatMapper = p.flatMapper(x -> Traverser.over(item1, item2));
