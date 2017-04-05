@@ -123,13 +123,26 @@ public final class Traversers {
             }
         }
 
+        /**
+         * Resets this traverser so that the following {@code next()} call
+         * will return the item supplied here.
+         *
+         * @param item the item to return from {@code next()}
+         */
         @Override
-        public void accept(T t) {
-            item = t;
+        public void accept(T item) {
+            this.item = item;
         }
 
-        public ResettableSingletonTraverser<T> reset(T t) {
-            item = t;
+        /**
+         * Resets this traverser so that the following {@code next()} call
+         * will return the item supplied here.
+         *
+         * @param item the item to return from {@code next()}
+         * @return this traverser
+         */
+        public ResettableSingletonTraverser<T> reset(T item) {
+            this.item = item;
             return this;
         }
     }
