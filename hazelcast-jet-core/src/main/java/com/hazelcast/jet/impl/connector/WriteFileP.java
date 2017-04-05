@@ -59,7 +59,8 @@ public class WriteFileP implements Processor, Closeable {
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         try {
-            writer = Files.newBufferedWriter(file, charset, append ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING);
+            writer = Files.newBufferedWriter(file, charset,
+                    append ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING);
         } catch (IOException e) {
             throw sneakyThrow(e);
         }
@@ -121,7 +122,8 @@ public class WriteFileP implements Processor, Closeable {
             if (count != 1) {
                 throw new JetException("localParallelism must be 1 for " + WriteFileP.class.getSimpleName());
             }
-            processor = new WriteFileP(file, charset == null ? StandardCharsets.UTF_8 : Charset.forName(charset), append, flushEarly);
+            processor = new WriteFileP(file,
+                    charset == null ? StandardCharsets.UTF_8 : Charset.forName(charset), append, flushEarly);
             return Collections.singletonList(processor);
         }
 
