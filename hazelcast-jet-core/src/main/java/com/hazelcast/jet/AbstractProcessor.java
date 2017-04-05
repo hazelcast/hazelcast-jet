@@ -337,7 +337,7 @@ public abstract class AbstractProcessor implements Processor {
      * @param traverser traverser over items to emit
      * @return whether the traverser has been exhausted
      */
-    protected boolean emitFromTraverser(int[] ordinals, @Nonnull Traverser<?> traverser) {
+    protected boolean emitFromTraverser(@Nonnull int[] ordinals, @Nonnull Traverser<?> traverser) {
         Object item;
         if (pendingItem != null) {
             item = pendingItem;
@@ -362,7 +362,7 @@ public abstract class AbstractProcessor implements Processor {
     protected <T, R> FlatMapper<T, R> flatMapper(
             int outputOrdinal, @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper
     ) {
-        return new FlatMapper<>(outputOrdinal, mapper);
+        return outputOrdinal != -1 ? flatMapper(new int[] {outputOrdinal}, mapper) : flatMapper(mapper);
     }
 
     /**
@@ -373,7 +373,7 @@ public abstract class AbstractProcessor implements Processor {
     protected <T, R> FlatMapper<T, R> flatMapper(
             @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper
     ) {
-        return flatMapper(-1, mapper);
+        return flatMapper(null, mapper);
     }
 
     /**
@@ -416,11 +416,6 @@ public abstract class AbstractProcessor implements Processor {
         private final Function<? super T, ? extends Traverser<? extends R>> mapper;
         private Traverser<? extends R> outputTraverser;
 
-        FlatMapper(int outputOrdinal, @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper) {
-            this.outputOrdinals = new int[] {outputOrdinal};
-            this.mapper = mapper;
-        }
-
         FlatMapper(int[] outputOrdinals, @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper) {
             this.outputOrdinals = outputOrdinals;
             this.mapper = mapper;
@@ -438,11 +433,17 @@ public abstract class AbstractProcessor implements Processor {
             if (outputTraverser == null) {
                 outputTraverser = mapper.apply(item);
             }
-            if (emitFromTraverser(outputOrdinals, outputTraverser)) {
+            if (emit()) {
                 outputTraverser = null;
                 return true;
             }
             return false;
+        }
+
+        private boolean emit() {
+            return outputOrdinals != null
+                    ? emitFromTraverser(outputOrdinals, outputTraverser)
+                    : emitFromTraverser(outputTraverser);
         }
     }
 
