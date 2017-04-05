@@ -33,8 +33,8 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import javax.annotation.Nonnull;
+import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -113,8 +113,9 @@ public class WriteFilePTest extends JetTestSupport {
         // Given
         DAG dag = buildDag(null, true);
         addItemsToList(1, 10);
-        try (Writer writer = Files.newBufferedWriter(file)) {
-            writer.write("0\n");
+        try (BufferedWriter writer = Files.newBufferedWriter(file)) {
+            writer.write("0");
+            writer.newLine();
         }
 
         // When
@@ -129,8 +130,9 @@ public class WriteFilePTest extends JetTestSupport {
         // Given
         DAG dag = buildDag(null, false);
         addItemsToList(0, 10);
-        try (Writer writer = Files.newBufferedWriter(file)) {
-            writer.write("bla bla\n");
+        try (BufferedWriter writer = Files.newBufferedWriter(file)) {
+            writer.write("bla bla");
+            writer.newLine();
         }
 
         // When
@@ -205,7 +207,7 @@ public class WriteFilePTest extends JetTestSupport {
         instance.newJob(dag).execute().get();
 
         // Then
-        assertEquals(text + '\n', new String(Files.readAllBytes(file), charset));
+        assertEquals(text + System.getProperty("line.separator"), new String(Files.readAllBytes(file), charset));
     }
 
     private static class SlowSourceP implements Processor {
@@ -246,7 +248,7 @@ public class WriteFilePTest extends JetTestSupport {
 
         StringBuilder expected = new StringBuilder();
         for (int i = 0; i < numTo; i++) {
-            expected.append(i).append('\n');
+            expected.append(i).append(System.getProperty("line.separator"));
         }
 
         assertEquals(expected.toString(), actual);

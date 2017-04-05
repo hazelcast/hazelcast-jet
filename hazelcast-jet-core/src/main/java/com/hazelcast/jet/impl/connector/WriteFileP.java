@@ -55,7 +55,7 @@ public final class WriteFileP {
                         () -> createBufferedWriter(fileName, charset, append),
                         (writer, item) -> uncheckRun(() -> {
                             writer.write(item.toString());
-                            writer.write('\n');
+                            writer.newLine();
                         }),
                         flushEarly ? writer -> uncheckRun(writer::flush) : writer -> {
                         },
