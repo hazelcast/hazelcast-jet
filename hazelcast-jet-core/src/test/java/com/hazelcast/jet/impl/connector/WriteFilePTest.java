@@ -48,6 +48,7 @@ import static com.hazelcast.jet.Processors.readList;
 import static com.hazelcast.jet.Processors.writeFile;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
@@ -82,7 +83,7 @@ public class WriteFilePTest extends JetTestSupport {
     }
 
     @Test
-    public void test_smallFile() throws Exception {
+    public void smokeTest_smallFile() throws Exception {
         // Given
         DAG dag = buildDag(null, false);
         addItemsToList(0, 10);
@@ -95,7 +96,7 @@ public class WriteFilePTest extends JetTestSupport {
     }
 
     @Test
-    public void test_bigFile() throws Exception {
+    public void smokeTest_bigFile() throws Exception {
         // Given
         DAG dag = buildDag(null, false);
         addItemsToList(0, 100_000);
@@ -108,7 +109,7 @@ public class WriteFilePTest extends JetTestSupport {
     }
 
     @Test
-    public void testAppend() throws Exception {
+    public void when_append_then_previousContentsOfFileIsKept() throws Exception {
         // Given
         DAG dag = buildDag(null, true);
         addItemsToList(1, 10);
@@ -124,7 +125,23 @@ public class WriteFilePTest extends JetTestSupport {
     }
 
     @Test
-    public void testEarlyFlush() throws Exception {
+    public void when_overwrite_then_previousContentsOverwritten() throws Exception {
+        // Given
+        DAG dag = buildDag(null, false);
+        addItemsToList(0, 10);
+        try (Writer writer = Files.newBufferedWriter(file)) {
+            writer.write("bla bla\n");
+        }
+
+        // When
+        instance.newJob(dag).execute().get();
+
+        // Then
+        checkFileContents(StandardCharsets.UTF_8, 10);
+    }
+
+    @Test
+    public void when_earlyFlush_then_fileFlushedAfterEachItem() throws Exception {
         // Given
         Semaphore semaphore = new Semaphore(0);
         int numItems = 10;
@@ -136,19 +153,44 @@ public class WriteFilePTest extends JetTestSupport {
                 .localParallelism(1);
         dag.edge(between(source, sink));
 
-        // When
         Future<Void> jobFuture = instance.newJob(dag).execute();
         for (int i = 0; i < numItems; i++) {
+            // When
             semaphore.release();
             int finalI = i;
+            // Then
             assertTrueEventually(() -> checkFileContents(StandardCharsets.UTF_8, finalI + 1), 2);
         }
 
         // wait for the job to finish
         jobFuture.get();
+    }
 
+    @Test
+    public void when_noEarlyFlush_then_fileEmptyAfterFewBytes() throws Exception {
+        // Given
+        Semaphore semaphore = new Semaphore(0);
+
+        DAG dag = new DAG();
+        Vertex source = dag.newVertex("source", () -> new SlowSourceP(semaphore, 2))
+                .localParallelism(1);
+        Vertex sink = dag.newVertex("sink", writeFile(file.toString(), null, false, false))
+                .localParallelism(1);
+        dag.edge(between(source, sink));
+
+        Future<Void> jobFuture = instance.newJob(dag).execute();
+        // When
+        semaphore.release();
         // Then
-        checkFileContents(StandardCharsets.UTF_8, 10);
+        sleepAtLeastMillis(500);
+        assertEquals("file should be empty", 0, Files.size(file));
+        assertFalse(jobFuture.isDone());
+
+        // this causes the job to finish
+        semaphore.release();
+
+        // wait for the job to finish
+        jobFuture.get();
     }
 
     @Test

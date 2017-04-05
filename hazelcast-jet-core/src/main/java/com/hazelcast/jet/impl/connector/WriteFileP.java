@@ -16,124 +16,49 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.Outbox;
-import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorSupplier;
 
-import javax.annotation.Nonnull;
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.Writer;
+import java.io.BufferedWriter;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Collections;
-import java.util.List;
 
-import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static com.hazelcast.jet.impl.util.Util.uncheckCall;
+import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 
 /**
  * @see com.hazelcast.jet.Processors#writeFile(String, Charset, boolean, boolean)
  */
-public class WriteFileP implements Processor, Closeable {
+public final class WriteFileP {
 
-    private final Path file;
-    private final Charset charset;
-    private final boolean append;
-    private final boolean flushEarly;
+    private WriteFileP() { }
 
-    private Writer writer;
-
-    WriteFileP(String file, Charset charset, boolean append, boolean flushEarly) {
-        this.file = Paths.get(file);
-        this.charset = charset;
-        this.append = append;
-        this.flushEarly = flushEarly;
-    }
-
-    @Override
-    public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
-        try {
-            writer = Files.newBufferedWriter(file, charset,
-                    append ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING);
-        } catch (IOException e) {
-            throw sneakyThrow(e);
-        }
-    }
-
-    @Override
-    public void process(int ordinal, @Nonnull Inbox inbox) {
-        try {
-            for (Object item; (item = inbox.poll()) != null; ) {
-                writer.write(item.toString());
-                writer.write('\n');
+    public static ProcessorSupplier supplier(String fileName, String charset, boolean append, boolean flushEarly) {
+        return count -> {
+            if (count > 1) {
+                throw new JetException(WriteFileP.class.getSimpleName() + " must have localParallelism=1");
             }
-            if (flushEarly) {
-                writer.flush();
-            }
-        } catch (IOException e) {
-            throw sneakyThrow(e);
-        }
+            // create the processors
+            return Collections.singletonList(new WriteBufferedP<>(
+                    () -> createBufferedWriter(fileName, charset, append),
+                    (writer, item) -> uncheckRun(() -> {
+                        writer.write(item.toString());
+                        writer.write('\n');
+                    }),
+                    flushEarly ? writer -> uncheckRun(writer::flush) : writer -> { },
+                    bufferedWriter -> uncheckRun(bufferedWriter::close)
+            ));
+        };
     }
 
-    @Override
-    public void close() throws IOException {
-        writer.close();
-        writer = null;
+    private static BufferedWriter createBufferedWriter(String fileName, String charset, boolean append) {
+        return uncheckCall(() -> Files.newBufferedWriter(Paths.get(fileName),
+                charset == null ? StandardCharsets.UTF_8 : Charset.forName(charset),
+                append ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING));
     }
 
-    @Override
-    public boolean isCooperative() {
-        return false;
-    }
-
-    /**
-     * @see com.hazelcast.jet.Processors#writeFile(String, Charset, boolean, boolean)
-     */
-    @Nonnull
-    public static ProcessorSupplier supplier(String file, String charset, boolean append, boolean flushEarly) {
-        return new Supplier(file, charset, append, flushEarly);
-    }
-
-    private static class Supplier implements ProcessorSupplier {
-
-        static final long serialVersionUID = 1L;
-        private final String file;
-        private final String charset;
-        private final boolean append;
-        private final boolean flushEarly;
-
-        private transient WriteFileP processor;
-
-        Supplier(String file, String charset, boolean append, boolean flushEarly) {
-            this.file = file;
-            this.charset = charset;
-            this.append = append;
-            this.flushEarly = flushEarly;
-        }
-
-        @Override @Nonnull
-        public List<WriteFileP> get(int count) {
-            if (count != 1) {
-                throw new JetException("localParallelism must be 1 for " + WriteFileP.class.getSimpleName());
-            }
-            processor = new WriteFileP(file,
-                    charset == null ? StandardCharsets.UTF_8 : Charset.forName(charset), append, flushEarly);
-            return Collections.singletonList(processor);
-        }
-
-        @Override
-        public void complete(Throwable error) {
-            try {
-                processor.close();
-            } catch (IOException e) {
-                throw sneakyThrow(e);
-            }
-        }
-    }
 }
