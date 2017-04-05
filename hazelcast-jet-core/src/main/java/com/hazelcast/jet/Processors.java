@@ -29,11 +29,11 @@ import com.hazelcast.jet.impl.connector.WriteFileP;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -336,7 +336,7 @@ public final class Processors {
         String fileNameSuffix = "";
 
         // if the file name has an extension, use it as a suffix
-        String fileNameWithoutPath = Paths.get(file).getFileName().toString();
+        String fileNameWithoutPath = new File(file).getName();
         int lastDot = fileNameWithoutPath.lastIndexOf('.');
         if (lastDot > 0) {
             // non-zero is intentional, to not consider files starting with '.' as extension
