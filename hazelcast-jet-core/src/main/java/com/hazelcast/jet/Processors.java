@@ -304,11 +304,11 @@ public final class Processors {
 
     /**
      * Convenience for {@link #writeFile(String, Charset, boolean, boolean)}, with
-     * UTF-8 charset, overwriting the file and early file buffer flush.
+     * UTF-8 charset, overwriting the target file and no early file buffer flush.
      */
     @Nonnull
     public static ProcessorSupplier writeFile(@Nonnull String file) {
-        return writeFile(file, null, false, true);
+        return writeFile(file, null, false, false);
     }
 
     /**

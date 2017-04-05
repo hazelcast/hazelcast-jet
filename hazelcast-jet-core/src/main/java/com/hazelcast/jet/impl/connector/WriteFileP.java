@@ -37,6 +37,9 @@ import java.util.List;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 
+/**
+ * @see com.hazelcast.jet.Processors#writeFile(String, Charset, boolean, boolean)
+ */
 public class WriteFileP implements Processor, Closeable {
 
     private final Path file;
