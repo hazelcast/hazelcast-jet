@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.jet.AbstractProcessor;
+import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorSupplier;
 
 import javax.annotation.Nonnull;
@@ -28,6 +29,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -95,28 +97,17 @@ public class ReadFileP extends AbstractProcessor {
      * @see com.hazelcast.jet.Processors#readFile(String, Charset, String)
      */
     public static ProcessorSupplier supplier(String directory, String charset, String glob) {
-        return new Supplier(directory, charset, glob);
-    }
+        return new ProcessorSupplier() {
+            static final long serialVersionUID = 1L;
 
-    private static class Supplier implements ProcessorSupplier {
-
-        static final long serialVersionUID = 1L;
-        private final String watchedDirectory;
-        private final String charset;
-        private final String glob;
-
-        Supplier(String watchedDirectory, String charset, String glob) {
-            this.watchedDirectory = watchedDirectory;
-            this.charset = charset;
-            this.glob = glob;
-        }
-
-        @Override @Nonnull
-        public List<ReadFileP> get(int count) {
-            Charset charsetObj = charset == null ? StandardCharsets.UTF_8 : Charset.forName(charset);
-            return IntStream.range(0, count)
-                    .mapToObj(i -> new ReadFileP(watchedDirectory, charsetObj, glob, count, i))
-                    .collect(Collectors.toList());
-        }
+            @Nonnull
+            @Override
+            public Collection<? extends Processor> get(int count) {
+                Charset charsetObj = charset == null ? StandardCharsets.UTF_8 : Charset.forName(charset);
+                return IntStream.range(0, count)
+                        .mapToObj(i -> new ReadFileP(directory, charsetObj, glob, count, i))
+                        .collect(Collectors.toList());
+            }
+        };
     }
 }
