@@ -75,16 +75,15 @@ public class CooperativeProcessorTasklet extends ProcessorTaskletBase {
     }
 
     private void completeIfNeeded() {
-        if (processorCompleted) {
-            return;
+        if (!processorCompleted) {
+            processorCompleted = processor.complete();
+            if (!processorCompleted) {
+                progTracker.notDone();
+                return;
+            }
         }
-        if (!processor.complete()) {
+        if (!outbox.offer(DONE_ITEM)) {
             progTracker.notDone();
-            return;
-        }
-        processorCompleted = true;
-        for (OutboundEdgeStream outstream : outstreams) {
-            outbox.offer(outstream.ordinal(), DONE_ITEM);
         }
     }
 
