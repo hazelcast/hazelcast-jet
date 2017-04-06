@@ -57,7 +57,10 @@ import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
  * <p>
  * {@link WatchType} parameter controls how new and modified files are
  * handled by the {@code Processor}.
+ *
+ * @deprecated Does not work reliably. See https://github.com/hazelcast/hazelcast-jet/issues/311
  */
+@Deprecated
 public class ReadFileStreamP extends AbstractProcessor implements Closeable {
 
     private final WatchType watchType;
