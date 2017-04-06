@@ -43,14 +43,13 @@ public final class WriteFileP {
     public static ProcessorMetaSupplier supplier(@Nonnull String fileNamePrefix, @Nullable String fileNameSuffix,
             @Nullable String charset, boolean append, boolean flushEarly) {
         return addresses -> address -> {
-            boolean hasMultipleAddresses = addresses.size() > 1;
             // need to do this, as Address is not serializable
             String sAddress = sanitizeAddressForFilename(address.toString());
 
             return count -> IntStream.range(0, count)
                     .mapToObj(index -> new WriteBufferedP<>(
                             () -> createBufferedWriter(
-                                    createFileName(fileNamePrefix, fileNameSuffix, hasMultipleAddresses, sAddress, count, index),
+                                    createFileName(fileNamePrefix, fileNameSuffix, sAddress, index),
                                     charset, append),
                             (writer, item) -> uncheckRun(() -> {
                                 writer.write(item.toString());
@@ -62,16 +61,12 @@ public final class WriteFileP {
         };
     }
 
-    private static String sanitizeAddressForFilename(String str) {
-        return str.replace(':', '_');
+    static String createFileName(@Nonnull String fileNamePrefix, @Nullable String fileNameSuffix, String sAddress, int index) {
+        return fileNamePrefix + "-" + sAddress + "#" + index + fileNameSuffix;
     }
 
-    private static String createFileName(String fileNamePrefix, String fileNameSuffix, boolean multipleAddresses,
-            String address, int count, int index) {
-        return fileNamePrefix
-                + (multipleAddresses ? "-" + address : "")
-                + (count > 1 ? "#" + index : "")
-                + fileNameSuffix;
+    static String sanitizeAddressForFilename(String str) {
+        return str.replace(':', '_');
     }
 
     private static BufferedWriter createBufferedWriter(String fileName, String charset, boolean append) {

@@ -57,14 +57,18 @@ public class WriteFilePTest extends JetTestSupport {
 
     private JetInstance instance;
     private Path directory;
-    private Path file;
+    private Path requestedFile;
+    private Path actualFile;
     private IStreamList<String> list;
 
     @Before
     public void setup() throws IOException {
         instance = createJetMember();
         directory = Files.createTempDirectory("write-file-p");
-        file = directory.resolve("file.txt");
+        requestedFile = directory.resolve("file.txt");
+        String address = instance.getCluster().getMembers().iterator().next().getAddress().toString();
+        actualFile = directory.resolve(WriteFileP.createFileName("file", ".txt",
+                WriteFileP.sanitizeAddressForFilename(address), 0));
         list = instance.getList("sourceList");
     }
 
@@ -140,7 +144,7 @@ public class WriteFilePTest extends JetTestSupport {
         // Given
         DAG dag = buildDag(null, true);
         addItemsToList(1, 10);
-        try (BufferedWriter writer = Files.newBufferedWriter(file)) {
+        try (BufferedWriter writer = Files.newBufferedWriter(actualFile)) {
             writer.write("0");
             writer.newLine();
         }
@@ -157,7 +161,7 @@ public class WriteFilePTest extends JetTestSupport {
         // Given
         DAG dag = buildDag(null, false);
         addItemsToList(0, 10);
-        try (BufferedWriter writer = Files.newBufferedWriter(file)) {
+        try (BufferedWriter writer = Files.newBufferedWriter(actualFile)) {
             writer.write("bla bla");
             writer.newLine();
         }
@@ -178,7 +182,7 @@ public class WriteFilePTest extends JetTestSupport {
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", () -> new SlowSourceP(semaphore, numItems))
                 .localParallelism(1);
-        Vertex sink = dag.newVertex("sink", writeFile(file.toString(), null, false, true))
+        Vertex sink = dag.newVertex("sink", writeFile(requestedFile.toString(), null, false, true))
                 .localParallelism(1);
         dag.edge(between(source, sink));
 
@@ -203,7 +207,7 @@ public class WriteFilePTest extends JetTestSupport {
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", () -> new SlowSourceP(semaphore, 2))
                 .localParallelism(1);
-        Vertex sink = dag.newVertex("sink", writeFile(file.toString(), null, false, false))
+        Vertex sink = dag.newVertex("sink", writeFile(requestedFile.toString(), null, false, false))
                 .localParallelism(1);
         dag.edge(between(source, sink));
 
@@ -212,7 +216,7 @@ public class WriteFilePTest extends JetTestSupport {
         semaphore.release();
         // Then
         sleepAtLeastMillis(500);
-        assertEquals("file should be empty", 0, Files.size(file));
+        assertEquals("file should be empty", 0, Files.size(actualFile));
         assertFalse(jobFuture.isDone());
 
         // this causes the job to finish
@@ -234,7 +238,7 @@ public class WriteFilePTest extends JetTestSupport {
         instance.newJob(dag).execute().get();
 
         // Then
-        assertEquals(text + System.getProperty("line.separator"), new String(Files.readAllBytes(file), charset));
+        assertEquals(text + System.getProperty("line.separator"), new String(Files.readAllBytes(actualFile), charset));
     }
 
     private static class SlowSourceP implements Processor {
@@ -271,7 +275,7 @@ public class WriteFilePTest extends JetTestSupport {
     }
 
     private void checkFileContents(Charset charset, int numTo) throws IOException {
-        String actual = new String(Files.readAllBytes(file), charset);
+        String actual = new String(Files.readAllBytes(actualFile), charset);
 
         StringBuilder expected = new StringBuilder();
         for (int i = 0; i < numTo; i++) {
@@ -291,7 +295,7 @@ public class WriteFilePTest extends JetTestSupport {
         DAG dag = new DAG();
         Vertex reader = dag.newVertex("reader", readList(list.getName()))
                 .localParallelism(1);
-        Vertex writer = dag.newVertex("writer", writeFile(file.toString(), charset, append, false))
+        Vertex writer = dag.newVertex("writer", writeFile(requestedFile.toString(), charset, append, false))
                 .localParallelism(1);
         dag.edge(between(reader, writer));
         return dag;
