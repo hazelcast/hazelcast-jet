@@ -30,8 +30,8 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
  *     {@link #init(Outbox, Context)} retains the supplied outbox and the
  *     logger retrieved from the context.
  * </li><li>
- *     {@link #process(int, Inbox) process(n, inbox)} delegates to the
- *     matching {@code tryProcessN} with each item received in the inbox.
+ *     {@link #process(int, Inbox) process(n, inbox)} delegates to the matching
+ *     {@code tryProcessN} with each item received in the inbox.
  * </li><li>
  *     There is also the catch-all {@link #tryProcess(int, Object)} to which
  *     the {@code tryProcessN} methods delegate by default. It must be used
@@ -47,11 +47,11 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
  *     The {@link Traversers} class contains traversers tailored to simplify
  *     the implementation of {@code complete()}.
  * </li><li>
- *     The {@link FlatMapper TryProcessor} class additionally simplifies the
+ *     The {@link FlatMapper FlatMapper} class additionally simplifies the
  *     usage of {@code emitFromTraverser()} inside {@code tryProcess()}, in
  *     a scenario where an input item results in a collection of output
- *     items. {@code TryProcessor} is obtained from its factory method
- *     {@link #flatMapper(Function)}.
+ *     items. {@code FlatMapper} is obtained from one of the factory methods
+ *     {@link #flatMapper(Function) flatMapper(...)}.
  * </li></ol>
  */
 public abstract class AbstractProcessor implements Processor {
@@ -257,7 +257,7 @@ public abstract class AbstractProcessor implements Processor {
     }
 
     /**
-     * Emits the item to all the outbox buckets.
+     * Offers the item to all the outbox buckets.
      *
      * @return whether the outbox accepted the item
      */
@@ -272,6 +272,45 @@ public abstract class AbstractProcessor implements Processor {
      */
     protected boolean tryEmit(int[] ordinals, @Nonnull Object item) {
         return outbox.offer(ordinals, item);
+    }
+
+    /**
+     * Adds the item to the outbox bucket with the supplied ordinal, throwing
+     * an exception if the outbox refuses it. Useful for non-cooperative
+     * processors that work with an auto-flushing outbox.
+     *
+     * @throws IndexOutOfBoundsException if the outbox refused the item
+     */
+    protected void emit(int ordinal, @Nonnull Object item) {
+        ensureAccepted(tryEmit(ordinal, item));
+    }
+
+    /**
+     * Adds the item to all the outbox buckets, throwing an exception if the
+     * outbox refuses it. Useful for non-cooperative processors that work with
+     * an auto-flushing outbox.
+     *
+     * @throws IndexOutOfBoundsException if the outbox refused the item
+     */
+    protected void emit(@Nonnull Object item) {
+        ensureAccepted(tryEmit(item));
+    }
+
+    /**
+     * Adds the item to the outbox buckets identified in the supplied array,
+     * throwing an exception if the outbox refuses it. Useful for
+     * non-cooperative processors that work with an auto-flushing outbox.
+     *
+     * @throws IndexOutOfBoundsException if the outbox refused the item
+     */
+    protected void emit(int[] ordinals, @Nonnull Object item) {
+        ensureAccepted(tryEmit(ordinals, item));
+    }
+
+    private static void ensureAccepted(boolean accepted) {
+        if (!accepted) {
+            throw new IllegalStateException("Attempt to emit an item to a full outbox");
+        }
     }
 
     /**
@@ -353,9 +392,9 @@ public abstract class AbstractProcessor implements Processor {
      */
     @Nonnull
     protected <T, R> FlatMapper<T, R> flatMapper(
-            int outputOrdinal, @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper
+            int ordinal, @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper
     ) {
-        return outputOrdinal != -1 ? flatMapper(new int[] {outputOrdinal}, mapper) : flatMapper(mapper);
+        return ordinal != -1 ? flatMapper(new int[] {ordinal}, mapper) : flatMapper(mapper);
     }
 
     /**
