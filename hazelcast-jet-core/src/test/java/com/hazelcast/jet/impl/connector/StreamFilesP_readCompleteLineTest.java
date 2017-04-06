@@ -23,9 +23,9 @@ import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
 
-public class ReadFileStream_readCompleteLineTest {
+public class StreamFilesP_readCompleteLineTest {
 
-    private ReadFileStreamP p = new ReadFileStreamP("", StandardCharsets.UTF_8, 0, 0);
+    private StreamFilesP p = new StreamFilesP("", StandardCharsets.UTF_8, 0, 0);
 
     @Test
     public void when_emptyFile_then_null() throws Exception {

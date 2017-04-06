@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.connector;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestSupport;
+import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.stream.IStreamList;
 import com.hazelcast.test.HazelcastParallelClassRunner;
@@ -54,7 +55,7 @@ import static org.junit.Assert.assertTrue;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
-public class ReadFileStreamPTest extends JetTestSupport {
+public class StreamFilesPTest extends JetTestSupport {
 
     private JetInstance instance;
     private File directory;
@@ -265,7 +266,7 @@ public class ReadFileStreamPTest extends JetTestSupport {
 
     private DAG buildDag() {
         DAG dag = new DAG();
-        Vertex reader = dag.newVertex("reader", ReadFileStreamP.supplier(directory.getPath()))
+        Vertex reader = dag.newVertex("reader", Processors.streamFiles(directory.getPath()))
                            .localParallelism(1);
         Vertex writer = dag.newVertex("writer", writeList(list.getName())).localParallelism(1);
         dag.edge(between(reader, writer));

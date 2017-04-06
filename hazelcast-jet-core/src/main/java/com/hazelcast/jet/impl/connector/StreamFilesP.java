@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -51,29 +52,9 @@ import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
- * A source processor designed to handle log files in a directory in a streaming
- * way. It processes files, as they are created/appended to. It ignores files in
- * subdirectories. Contents of the files are emitted line by line. There is no
- * indication, which file a particular line comes from.
- * <p>
- * Only content appended to the files is read.
- * Pre-existing files will be scanned for file sizes on startup, and will be
- * processed from that position, ignoring possibly incomplete first line, if the
- * file is being written to during startup.
- * <p>
- * Only lines terminated with a newline character are emitted. This is to avoid
- * emitting single line in two chunks, if the file is being actively written to.
- * <p>
- * The same directory should be available on all members, but it should not
- * contain the same files (i.e. it should not a network shared directory, but logs
- * local to the machine).
- * <p>
- * It completes, when the directory is deleted. However, in order to delete
- * the directory all files in it must be deleted, and if you delete a file, that is
- * currently being read from, the job will encounter an IOException. Directory
- * must be deleted on all nodes.
+ * @see com.hazelcast.jet.Processors#streamFiles(String, Charset)
  */
-public class ReadFileStreamP extends AbstractProcessor implements Closeable {
+public class StreamFilesP extends AbstractProcessor implements Closeable {
 
     /**
      * Number of lines read in one batch, to allow for timely draining of watcher
@@ -95,7 +76,7 @@ public class ReadFileStreamP extends AbstractProcessor implements Closeable {
     private FileInputStream currentInputStream;
     private Reader currentReader;
 
-    ReadFileStreamP(String watchedDirectory, Charset charset, int parallelism, int id) {
+    StreamFilesP(String watchedDirectory, Charset charset, int parallelism, int id) {
         this.watchedDirectory = Paths.get(watchedDirectory);
         this.charset = charset;
         this.parallelism = parallelism;
@@ -131,6 +112,8 @@ public class ReadFileStreamP extends AbstractProcessor implements Closeable {
                     processFile();
                 }
             }
+
+            close();
 
             return true;
         } catch (IOException e) {
@@ -344,18 +327,7 @@ public class ReadFileStreamP extends AbstractProcessor implements Closeable {
     }
 
     /**
-     * Creates a supplier for {@link ReadFileStreamP}
-     *
-     * @param watchedDirectory the folder to watch
-     */
-    public static ProcessorSupplier supplier(String watchedDirectory) {
-        return supplier(watchedDirectory, "utf-8");
-    }
-
-    /**
-     * Creates a supplier for {@link ReadFileStreamP}
-     *
-     * @param watchedDirectory the folder to watch
+     * @see com.hazelcast.jet.Processors#streamFiles(String, Charset)
      */
     public static ProcessorSupplier supplier(String watchedDirectory, String charset) {
         return new Supplier(watchedDirectory, charset);
@@ -367,7 +339,7 @@ public class ReadFileStreamP extends AbstractProcessor implements Closeable {
         private final String watchedDirectory;
         private final String charset;
 
-        private transient ArrayList<ReadFileStreamP> readers;
+        private transient ArrayList<StreamFilesP> readers;
 
         Supplier(String watchedDirectory, String charset) {
             this.watchedDirectory = watchedDirectory;
@@ -375,10 +347,11 @@ public class ReadFileStreamP extends AbstractProcessor implements Closeable {
         }
 
         @Override @Nonnull
-        public List<ReadFileStreamP> get(int count) {
+        public List<StreamFilesP> get(int count) {
             readers = new ArrayList<>(count);
+            Charset charsetObj = charset == null ? StandardCharsets.UTF_8 : Charset.forName(charset);
             for (int i = 0; i < count; i++) {
-                readers.add(new ReadFileStreamP(watchedDirectory, Charset.forName(charset), count, i));
+                readers.add(new StreamFilesP(watchedDirectory, charsetObj, count, i));
             }
             return readers;
         }
