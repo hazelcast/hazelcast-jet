@@ -16,29 +16,19 @@
 
 package com.hazelcast.jet;
 
-import java.util.Iterator;
 import java.util.List;
 
+import static com.hazelcast.jet.Traversers.traverseIterable;
+
 class ListProducer extends AbstractProcessor {
+    private final Traverser<?> trav;
 
-    private Iterator<?> iterator;
-    private int batchSize;
-    private boolean completed;
-
-    public ListProducer(List<?> list, int batchSize) {
-        this.iterator = list.iterator();
-        this.batchSize = batchSize;
+    ListProducer(List<?> list) {
+        trav = traverseIterable(list);
     }
 
     @Override
     public boolean complete() {
-        if (completed) {
-            throw new IllegalStateException("process() called after completion");
-        }
-        for (int i = 0; i < batchSize && iterator.hasNext(); i++) {
-            tryEmit(iterator.next());
-        }
-        completed = !iterator.hasNext();
-        return completed;
+        return emitFromTraverser(trav);
     }
 }
