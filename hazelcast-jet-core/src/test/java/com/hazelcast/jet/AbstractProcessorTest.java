@@ -62,14 +62,12 @@ public class AbstractProcessorTest {
     }
 
     @Test
-    public void when_init_then_outboxAndLoggerAvailable() {
+    public void when_init_then_loggerAvailable() {
         // When
         final ILogger logger = p.getLogger();
-        final Outbox outbox = p.getOutbox();
 
         // Then
         assertNotNull(logger);
-        assertNotNull(outbox);
     }
 
     @Test
@@ -133,7 +131,7 @@ public class AbstractProcessorTest {
 
         // Then
         for (int i = 0; i < OUTBOX_BUCKET_COUNT; i++) {
-            assertEquals(MOCK_ITEM, ((ArrayDequeOutbox) p.getOutbox()).queueWithOrdinal(i).remove());
+            assertEquals(MOCK_ITEM, outbox.queueWithOrdinal(i).remove());
         }
     }
 
@@ -146,15 +144,13 @@ public class AbstractProcessorTest {
 
         // Then
         for (int i = 0; i < OUTBOX_BUCKET_COUNT; i++) {
-            assertEquals(i == ordinal ? MOCK_ITEM : null,
-                    ((ArrayDequeOutbox) p.getOutbox()).queueWithOrdinal(i).poll());
+            assertEquals(i == ordinal ? MOCK_ITEM : null, outbox.queueWithOrdinal(i).poll());
         }
     }
 
     @Test
     public void when_emitFromTraverser_then_outboxHasOneItem() {
         final int ordinal = 1;
-        final ArrayDequeOutbox outbox = (ArrayDequeOutbox) p.getOutbox();
 
         // When
         p.emitFromTraverser(ordinal, () -> MOCK_ITEM);

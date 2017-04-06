@@ -248,13 +248,6 @@ public abstract class AbstractProcessor implements Processor {
     }
 
     /**
-     * Returns the outbox received in the {@code init()} method call.
-     */
-    protected final Outbox getOutbox() {
-        return outbox;
-    }
-
-    /**
      * Offers the item to the outbox bucket at the supplied ordinal.
      *
      * @return whether the outbox accepted the item
