@@ -85,7 +85,7 @@ public class StreamFilesPTest extends JetTestSupport {
         assertEquals(0, list.size());
         appendToFile(file, "third line");
         // now, all three lines are picked up
-        assertTrueEventually(() -> assertEquals(1, list.size()), 2);
+        assertTrueEventually(() -> assertEquals(1, list.size()));
 
         finishDirectory(jobFuture, file);
     }
@@ -111,7 +111,7 @@ public class StreamFilesPTest extends JetTestSupport {
         // this completes the first line and a second one - only the second one should be picked
         appendToFile(file, "world", "second line");
         // now, all three lines are picked up
-        assertTrueEventually(() -> assertEquals(1, list.size()), 2);
+        assertTrueEventually(() -> assertEquals(1, list.size()));
         assertEquals("second line", list.get(0));
 
         finishDirectory(jobFuture, file);
@@ -141,7 +141,7 @@ public class StreamFilesPTest extends JetTestSupport {
             writer.write("\nsecond line\r\n");
         }
         // now, all three lines are picked up
-        assertTrueEventually(() -> assertEquals(1, list.size()), 2);
+        assertTrueEventually(() -> assertEquals(1, list.size()));
         assertEquals("second line", list.get(0));
 
         finishDirectory(jobFuture, file);
@@ -158,11 +158,11 @@ public class StreamFilesPTest extends JetTestSupport {
         assertEquals(0, list.size());
         File file = new File(directory, randomName());
         appendToFile(file, "hello", "world");
-        assertTrueEventually(() -> assertEquals(2, list.size()), 2);
+        assertTrueEventually(() -> assertEquals(2, list.size()));
 
         // now add one more line, only this line should be picked up
         appendToFile(file, "third line");
-        assertTrueEventually(() -> assertEquals(3, list.size()), 2);
+        assertTrueEventually(() -> assertEquals(3, list.size()));
 
         finishDirectory(jobFuture, file);
     }
@@ -185,7 +185,7 @@ public class StreamFilesPTest extends JetTestSupport {
         File file = new File(directory, fileInSubdir.getName());
         assertTrue(fileInSubdir.renameTo(file));
 
-        assertTrueEventually(() -> assertEquals(5000, list.size()), 10);
+        assertTrueEventually(() -> assertEquals(5000, list.size()));
 
         finishDirectory(jobFuture, file, subdir);
     }
@@ -275,7 +275,7 @@ public class StreamFilesPTest extends JetTestSupport {
 
     private File createNewFile() {
         File file = new File(directory, randomName());
-        assertTrueEventually(() -> assertTrue(file.createNewFile()), 2);
+        assertTrueEventually(() -> assertTrue(file.createNewFile()));
         return file;
     }
 
@@ -297,11 +297,11 @@ public class StreamFilesPTest extends JetTestSupport {
     private void finishDirectory(Future<Void> jobFuture, File ... files) throws InterruptedException, ExecutionException {
         for (File file : files) {
             System.out.println("deleting " + file + "...");
-            assertTrueEventually(() -> assertTrue("Failed to delete " + file, file.delete()), 2);
+            assertTrueEventually(() -> assertTrue("Failed to delete " + file, file.delete()));
             System.out.println("deleted " + file);
         }
-        assertTrueEventually(() -> assertTrue("Failed to delete " + directory, directory.delete()), 2);
-        assertTrueEventually(() -> assertTrue("job should complete eventually", jobFuture.isDone()), 5);
+        assertTrueEventually(() -> assertTrue("Failed to delete " + directory, directory.delete()));
+        assertTrueEventually(() -> assertTrue("job should complete eventually", jobFuture.isDone()));
         // called for side-effect of throwing exception, if the job failed
         jobFuture.get();
     }
