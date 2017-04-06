@@ -20,10 +20,10 @@ import java.util.List;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
 
-class ListProducer extends AbstractProcessor {
+class ListSource extends AbstractProcessor {
     private final Traverser<?> trav;
 
-    ListProducer(List<?> list) {
+    ListSource(List<?> list) {
         trav = traverseIterable(list);
     }
 

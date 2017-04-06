@@ -140,7 +140,7 @@ public class AbstractProcessorTest {
         final int ordinal = 1;
 
         // When
-        p.tryEmit(ordinal, MOCK_ITEM);
+        p.emit(ordinal, MOCK_ITEM);
 
         // Then
         for (int i = 0; i < OUTBOX_BUCKET_COUNT; i++) {

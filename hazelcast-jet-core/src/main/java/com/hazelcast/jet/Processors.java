@@ -795,8 +795,7 @@ public final class Processors {
 
         @Override
         public boolean complete() {
-            tryEmit((long) seenItems.size());
-            return true;
+            return tryEmit((long) seenItems.size());
         }
     }
 }

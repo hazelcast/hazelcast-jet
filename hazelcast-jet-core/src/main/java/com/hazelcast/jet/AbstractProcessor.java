@@ -18,6 +18,7 @@ package com.hazelcast.jet;
 
 import com.hazelcast.logging.ILogger;
 
+import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import java.util.function.Function;
 
@@ -252,6 +253,7 @@ public abstract class AbstractProcessor implements Processor {
      *
      * @return whether the outbox accepted the item
      */
+    @CheckReturnValue
     protected boolean tryEmit(int ordinal, @Nonnull Object item) {
         return outbox.offer(ordinal, item);
     }
@@ -261,6 +263,7 @@ public abstract class AbstractProcessor implements Processor {
      *
      * @return whether the outbox accepted the item
      */
+    @CheckReturnValue
     protected boolean tryEmit(@Nonnull Object item) {
         return outbox.offer(item);
     }
@@ -270,6 +273,7 @@ public abstract class AbstractProcessor implements Processor {
      *
      * @return whether the outbox accepted the item
      */
+    @CheckReturnValue
     protected boolean tryEmit(int[] ordinals, @Nonnull Object item) {
         return outbox.offer(ordinals, item);
     }

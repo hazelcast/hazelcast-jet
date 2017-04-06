@@ -294,8 +294,7 @@ public class WordCountTest extends HazelcastTestSupport implements Serializable 
 
         @Override
         public boolean complete() {
-            tryEmit(entry("result", counts));
-            return true;
+            return tryEmit(entry("result", counts));
         }
 
         private void accumulate(String key) {
@@ -318,8 +317,7 @@ public class WordCountTest extends HazelcastTestSupport implements Serializable 
 
         @Override
         public boolean complete() {
-            tryEmit(entry("result", counts));
-            return true;
+            return tryEmit(entry("result", counts));
         }
 
         private void accumulate(String key, long addition) {

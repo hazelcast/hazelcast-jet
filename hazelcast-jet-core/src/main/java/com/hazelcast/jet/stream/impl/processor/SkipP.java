@@ -23,20 +23,18 @@ import javax.annotation.Nonnull;
 
 public class SkipP extends AbstractProcessor {
 
-    private final long skipCount;
-    private final FlatMapper<Object, Object> flatMapper = flatMapper(new ResettableSingletonTraverser<>()::reset);
-    private long index;
+    private long remainingToSkip;
 
     public SkipP(long skipCount) {
-        this.skipCount = skipCount;
+        this.remainingToSkip = skipCount;
     }
 
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-        if (index < skipCount) {
-            index++;
-            return true;
+        if (remainingToSkip == 0) {
+            return tryEmit(item);
         }
-        return flatMapper.tryProcess(item);
+        remainingToSkip--;
+        return true;
     }
 }

@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet;
 
+import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 
 /**
@@ -51,6 +52,7 @@ public interface Outbox {
      *
      * @return whether the outbox accepted the item
      */
+    @CheckReturnValue
     boolean offer(int ordinal, @Nonnull Object item);
 
     /**
@@ -61,6 +63,7 @@ public interface Outbox {
      *
      * @return whether the outbox accepted the item
      */
+    @CheckReturnValue
     boolean offer(int[] ordinals, @Nonnull Object item);
 
     /**
@@ -70,6 +73,7 @@ public interface Outbox {
      *
      * @return whether the outbox accepted the item
      */
+    @CheckReturnValue
     default boolean offer(@Nonnull Object item) {
         return offer(-1, item);
     }

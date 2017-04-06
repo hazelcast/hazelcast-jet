@@ -196,7 +196,8 @@ class JetStreamGraph extends NodeStreamGraph {
             if (ordinal != -1) {
                 throw new UnsupportedOperationException();
             }
-            outbox.offer(ordinals, item);
+            boolean accepted = outbox.offer(ordinals, item);
+            assert accepted : "Outbox rejected item";
             return true;
         }
 
