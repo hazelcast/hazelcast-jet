@@ -32,7 +32,7 @@ import cascading.tuple.io.ValueTuple;
 import cascading.util.Util;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Outbox;
-import java.util.AbstractMap;
+
 import java.util.Map;
 
 import static com.hazelcast.jet.Util.entry;

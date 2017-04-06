@@ -133,18 +133,6 @@ public final class Traversers {
         public void accept(T item) {
             this.item = item;
         }
-
-        /**
-         * Resets this traverser so that the following {@code next()} call
-         * will return the item supplied here.
-         *
-         * @param item the item to return from {@code next()}
-         * @return this traverser
-         */
-        public ResettableSingletonTraverser<T> reset(T item) {
-            this.item = item;
-            return this;
-        }
     }
 
     private static final class LazyTraverser<T> implements Traverser<T> {

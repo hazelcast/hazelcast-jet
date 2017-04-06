@@ -28,7 +28,7 @@ public class EdgeConfig implements Serializable {
     /**
      * The default value of the {@link #setOutboxCapacity(int) outbox bucket capacity}.
      */
-    public static final int DEFAULT_OUTBOX_LIMIT = 2048;
+    public static final int DEFAULT_OUTBOX_CAPACITY = 2048;
 
     /**
      * The default size of the {@link #setQueueSize(int) concurrent queues}
@@ -46,7 +46,7 @@ public class EdgeConfig implements Serializable {
      */
     public static final int DEFAULT_PACKET_SIZE_LIMIT = 1 << 14;
 
-    private int outboxCapacity = DEFAULT_OUTBOX_LIMIT;
+    private int outboxCapacity = DEFAULT_OUTBOX_CAPACITY;
     private int queueSize = DEFAULT_QUEUE_SIZE;
     private int receiveWindowMultiplier = DEFAULT_RECEIVE_WINDOW_MULTIPLIER;
     private int packetSizeLimit = DEFAULT_PACKET_SIZE_LIMIT;
@@ -86,7 +86,7 @@ public class EdgeConfig implements Serializable {
      * refuse further items. At that time the processor must yield control back
      * to its caller.
      * <p>
-     * The default value is {@value #DEFAULT_OUTBOX_LIMIT}.
+     * The default value is {@value #DEFAULT_OUTBOX_CAPACITY}.
      */
     public EdgeConfig setOutboxCapacity(int capacity) {
         this.outboxCapacity = capacity;
