@@ -189,7 +189,7 @@ public class WriteFilePTest extends JetTestSupport {
             semaphore.release();
             int finalI = i;
             // Then
-            assertTrueEventually(() -> checkFileContents(StandardCharsets.UTF_8, finalI + 1), 2);
+            assertTrueEventually(() -> checkFileContents(StandardCharsets.UTF_8, finalI + 1), 5);
         }
 
         // wait for the job to finish
