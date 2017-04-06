@@ -29,6 +29,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static com.hazelcast.jet.DistributedFunctions.noopConsumer;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 
@@ -48,14 +49,14 @@ public final class WriteFileP {
 
             return count -> IntStream.range(0, count)
                     .mapToObj(index -> new WriteBufferedP<>(
-                            () -> createBufferedWriter(createFileName(fileNamePrefix, fileNameSuffix, hasMultipleAddresses,
-                                    sAddress, count, index), charset, append),
+                            () -> createBufferedWriter(
+                                    createFileName(fileNamePrefix, fileNameSuffix, hasMultipleAddresses, sAddress, count, index),
+                                    charset, append),
                             (writer, item) -> uncheckRun(() -> {
                                 writer.write(item.toString());
                                 writer.newLine();
                             }),
-                            flushEarly ? writer -> uncheckRun(writer::flush) : writer -> {
-                            },
+                            flushEarly ? writer -> uncheckRun(writer::flush) : noopConsumer(),
                             bufferedWriter -> uncheckRun(bufferedWriter::close)
                     )).collect(Collectors.toList());
         };

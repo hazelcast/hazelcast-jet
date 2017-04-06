@@ -23,6 +23,7 @@ import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.stream.IStreamList;
+import com.hazelcast.nio.IOUtil;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
@@ -47,7 +48,6 @@ import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Processors.readList;
 import static com.hazelcast.jet.Processors.writeFile;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
-import static java.nio.file.Files.delete;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
@@ -70,8 +70,7 @@ public class WriteFilePTest extends JetTestSupport {
 
     @After
     public void tearDown() throws Exception {
-        Files.newDirectoryStream(directory).forEach(file -> uncheckRun(() -> delete(file)));
-        Files.delete(directory);
+        IOUtil.delete(directory.toFile());
     }
 
     @Test
