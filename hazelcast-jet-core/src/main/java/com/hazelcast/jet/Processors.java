@@ -260,7 +260,7 @@ public final class Processors {
      * @see #streamTextSocket(String, int, Charset)
      */
     @Nonnull
-    public static ProcessorSupplier streamTextSocket(@Nonnull String host, int port) {
+    public static Distributed.Supplier<Processor> streamTextSocket(@Nonnull String host, int port) {
         return streamTextSocket(host, port, null);
     }
 
@@ -280,7 +280,7 @@ public final class Processors {
      * @param charset Character set used to decode the stream
      */
     @Nonnull
-    public static ProcessorSupplier streamTextSocket(@Nonnull String host, int port, Charset charset) {
+    public static Distributed.Supplier<Processor> streamTextSocket(@Nonnull String host, int port, Charset charset) {
         return StreamTextSocketP.supplier(host, port, charset != null ? charset.name() : null);
     }
 

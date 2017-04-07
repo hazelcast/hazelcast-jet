@@ -17,7 +17,8 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.jet.AbstractProcessor;
-import com.hazelcast.jet.ProcessorSupplier;
+import com.hazelcast.jet.Distributed.Supplier;
+import com.hazelcast.jet.Processor;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -27,8 +28,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.IntStream.range;
 
 /**
  * @see com.hazelcast.jet.Processors#streamTextSocket(String, int, Charset)
@@ -78,12 +77,8 @@ public class StreamTextSocketP extends AbstractProcessor {
         return host + ':' + port;
     }
 
-    public static ProcessorSupplier supplier(String host, int port, String charset) {
-        return count -> {
-            Charset charsetObj = charset == null ? StandardCharsets.UTF_8 : Charset.forName(charset);
-            return range(0, count)
-                    .mapToObj(i -> new StreamTextSocketP(host, port, charsetObj))
-                    .collect(toList());
-        };
+    public static Supplier<Processor> supplier(String host, int port, String charset) {
+        Charset charsetObj = charset == null ? StandardCharsets.UTF_8 : Charset.forName(charset);
+        return () -> new StreamTextSocketP(host, port, charsetObj);
     }
 }
