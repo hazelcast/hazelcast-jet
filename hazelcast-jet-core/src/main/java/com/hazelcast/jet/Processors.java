@@ -20,10 +20,10 @@ import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.jet.Traversers.ResettableSingletonTraverser;
 import com.hazelcast.jet.impl.connector.HazelcastWriters;
 import com.hazelcast.jet.impl.connector.ReadFilesP;
-import com.hazelcast.jet.impl.connector.StreamFilesP;
 import com.hazelcast.jet.impl.connector.ReadIListP;
-import com.hazelcast.jet.impl.connector.StreamTextSocketP;
 import com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP;
+import com.hazelcast.jet.impl.connector.StreamFilesP;
+import com.hazelcast.jet.impl.connector.StreamTextSocketP;
 import com.hazelcast.jet.impl.connector.WriteBufferedP;
 
 import javax.annotation.Nonnull;
@@ -352,6 +352,12 @@ public final class Processors {
      * the directory all files in it must be deleted, and if you delete a file, that is
      * currently being read from, the job will encounter an IOException. Directory
      * must be deleted on all nodes.
+     *
+     * <p><b>Warning:</b> The processor makes use of
+     * {@link java.nio.file.WatchService}, which had serious bugs in its history.
+     * Be sure to use most recent JRE version. The failures manifested as a deadlock
+     * or missed/duplicate events or events for one directory delivered to watcher
+     * for other directory.
      *
      * @param watchedDirectory The directory where we watch files
      * @param charset Charset used to read files. If null, UTF-8 is used
