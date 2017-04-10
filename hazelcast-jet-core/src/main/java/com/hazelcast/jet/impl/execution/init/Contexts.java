@@ -23,24 +23,28 @@ import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
+import java.util.concurrent.CompletableFuture;
 
-final class Contexts {
+public final class Contexts {
 
     private Contexts() {
     }
 
-    static class ProcCtx implements Processor.Context {
+    public static class ProcCtx implements Processor.Context {
 
         private final JetInstance instance;
         private final ILogger logger;
         private final String vertexName;
         private final int index;
+        private final CompletableFuture<Void> jobFuture;
 
-        ProcCtx(JetInstance instance, ILogger logger, String vertexName, int index) {
+        public ProcCtx(JetInstance instance, ILogger logger, String vertexName, int index,
+                       CompletableFuture<Void> jobFuture) {
             this.instance = instance;
             this.logger = logger;
             this.vertexName = vertexName;
             this.index = index;
+            this.jobFuture = jobFuture;
         }
 
         @Nonnull
@@ -64,6 +68,12 @@ final class Contexts {
         @Override
         public String vertexName() {
             return vertexName;
+        }
+
+        @Nonnull
+        @Override
+        public CompletableFuture<Void> jobFuture() {
+            return jobFuture;
         }
     }
 

@@ -38,16 +38,15 @@ import com.hazelcast.jet.impl.execution.ConcurrentInboundEdgeStream;
 import com.hazelcast.jet.impl.execution.ConveyorCollector;
 import com.hazelcast.jet.impl.execution.ConveyorCollectorWithPartition;
 import com.hazelcast.jet.impl.execution.ConveyorEmitter;
+import com.hazelcast.jet.impl.execution.CooperativeProcessorTasklet;
 import com.hazelcast.jet.impl.execution.InboundEdgeStream;
 import com.hazelcast.jet.impl.execution.InboundEmitter;
 import com.hazelcast.jet.impl.execution.OutboundCollector;
 import com.hazelcast.jet.impl.execution.OutboundEdgeStream;
-import com.hazelcast.jet.impl.execution.CooperativeProcessorTasklet;
 import com.hazelcast.jet.impl.execution.ReceiverTasklet;
 import com.hazelcast.jet.impl.execution.SenderTasklet;
 import com.hazelcast.jet.impl.execution.Tasklet;
 import com.hazelcast.jet.impl.execution.init.Contexts.MetaSupplierCtx;
-import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
@@ -189,10 +188,12 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 final List<InboundEdgeStream> inboundStreams = createInboundEdgeStreams(srcVertex, processorIdx);
                 ILogger logger = nodeEngine.getLogger(p.getClass().getName() + '.'
                         + srcVertex.name() + '(' + p.getClass().getSimpleName() + ")#" + processorIdx);
-                ProcCtx context = new ProcCtx(instance, logger, srcVertex.name(), processorIdx);
+
                 tasklets.add(p.isCooperative()
-                        ? new CooperativeProcessorTasklet(srcVertex.name(), context, p, inboundStreams, outboundStreams)
-                        : new BlockingProcessorTasklet(srcVertex.name(), context, p, inboundStreams, outboundStreams)
+                        ? new CooperativeProcessorTasklet(srcVertex.name(), instance, logger, processorIdx, p,
+                                inboundStreams, outboundStreams)
+                        : new BlockingProcessorTasklet(srcVertex.name(), instance, logger, processorIdx, p,
+                                inboundStreams, outboundStreams)
                 );
             }
         }

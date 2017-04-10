@@ -17,13 +17,15 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.Inbox;
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.Processor.Context;
+import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.CircularListCursor;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
+import com.hazelcast.logging.ILogger;
 import com.hazelcast.util.Preconditions;
 
 import java.util.ArrayDeque;
@@ -33,6 +35,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.TreeMap;
+import java.util.concurrent.CompletableFuture;
 
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.groupingBy;
@@ -44,15 +47,18 @@ abstract class ProcessorTaskletBase implements Tasklet {
     final Processor processor;
     final OutboundEdgeStream[] outstreams;
     InboundEdgeStream currInstream;
+    private final JetInstance instance;
+    private final int processorIdx;
+    private ILogger logger;
 
-    private final Context context;
     private final ArrayDequeInbox inbox = new ArrayDequeInbox(progTracker);
     private final Queue<ArrayList<InboundEdgeStream>> instreamGroupQueue;
     private final String vertexName;
     private CircularListCursor<InboundEdgeStream> instreamCursor;
 
-    ProcessorTaskletBase(String vertexName, Processor.Context context, Processor processor,
-                         List<InboundEdgeStream> instreams, List<OutboundEdgeStream> outstreams) {
+    ProcessorTaskletBase(String vertexName, JetInstance instance, ILogger logger, Processor processor,
+                         int processorIdx, List<InboundEdgeStream> instreams,
+                         List<OutboundEdgeStream> outstreams) {
         Preconditions.checkNotNull(processor, "processor");
         this.vertexName = vertexName;
         this.processor = processor;
@@ -67,7 +73,9 @@ abstract class ProcessorTaskletBase implements Tasklet {
                                     .sorted(comparing(OutboundEdgeStream::ordinal))
                                     .toArray(OutboundEdgeStream[]::new);
 
-        this.context = context;
+        this.instance = instance;
+        this.logger = logger;
+        this.processorIdx = processorIdx;
         this.instreamCursor = popInstreamGroup();
     }
 
@@ -75,7 +83,8 @@ abstract class ProcessorTaskletBase implements Tasklet {
         return inbox;
     }
 
-    void initProcessor(Outbox outbox) {
+    void initProcessor(Outbox outbox, CompletableFuture<Void> jobFuture) {
+        ProcCtx context = new ProcCtx(instance, logger, vertexName, processorIdx, jobFuture);
         processor.init(outbox, context);
     }
 

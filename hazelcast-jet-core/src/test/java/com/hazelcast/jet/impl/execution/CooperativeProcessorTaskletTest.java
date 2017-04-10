@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.Processor.Context;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Before;
@@ -41,7 +40,6 @@ import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
 
 @Category(QuickTest.class)
 public class CooperativeProcessorTaskletTest {
@@ -52,14 +50,12 @@ public class CooperativeProcessorTaskletTest {
     private List<InboundEdgeStream> instreams;
     private List<OutboundEdgeStream> outstreams;
     private PassThroughProcessor processor;
-    private Context context;
 
 
     @Before
     public void setUp() {
         this.mockInput = IntStream.range(0, MOCK_INPUT_LENGTH).boxed().collect(toList());
         this.processor = new PassThroughProcessor();
-        this.context = mock(Context.class);
         this.instreams = new ArrayList<>();
         this.outstreams = new ArrayList<>();
     }
@@ -160,7 +156,7 @@ public class CooperativeProcessorTaskletTest {
 
     private Tasklet createTasklet() {
         final CooperativeProcessorTasklet t = new CooperativeProcessorTasklet(
-                "mock", context, processor, instreams, outstreams);
+                "mock", null, null, 0, processor, instreams, outstreams);
         t.init(new CompletableFuture<>());
         return t;
     }

@@ -16,10 +16,11 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.Processor.Context;
 import com.hazelcast.jet.impl.util.ProgressState;
+import com.hazelcast.logging.ILogger;
 import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
@@ -38,13 +39,12 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
     private CompletableFuture<?> jobFuture;
 
     public BlockingProcessorTasklet(
-            String vertexName, Context context, Processor processor,
+            String vertexName, JetInstance instance, ILogger logger, int processorIdx, Processor processor,
             List<InboundEdgeStream> instreams, List<OutboundEdgeStream> outstreams
     ) {
-        super(vertexName, context, processor, instreams, outstreams);
+        super(vertexName, instance, logger, processor, processorIdx, instreams, outstreams);
         Preconditions.checkFalse(processor.isCooperative(), "Processor is cooperative");
         outbox = new BlockingOutbox();
-        processor.init(outbox, context);
     }
 
     @Override
@@ -53,8 +53,10 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
     }
 
     @Override
-    public void init(CompletableFuture<?> jobFuture) {
+    public void init(CompletableFuture<Void> jobFuture) {
+        super.init(jobFuture);
         this.jobFuture = jobFuture;
+        initProcessor(outbox, jobFuture);
     }
 
     @Override @Nonnull
