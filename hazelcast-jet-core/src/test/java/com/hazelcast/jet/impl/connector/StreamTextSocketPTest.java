@@ -71,78 +71,79 @@ public class StreamTextSocketPTest extends JetTestSupport {
     public void when_dataWrittenToSocket_then_dataImmediatelyEmitted() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         // Given
-        ServerSocket socket = new ServerSocket(PORT);
-        new Thread(() -> uncheckRun(() -> {
-            Socket accept1 = socket.accept();
-            Socket accept2 = socket.accept();
-            PrintWriter writer1 = new PrintWriter(accept1.getOutputStream());
-            writer1.write("hello1 \n");
-            writer1.flush();
-            PrintWriter writer2 = new PrintWriter(accept2.getOutputStream());
-            writer2.write("hello2 \n");
-            writer2.flush();
+        try (ServerSocket socket = new ServerSocket(PORT)) {
+            new Thread(() -> uncheckRun(() -> {
+                Socket accept1 = socket.accept();
+                Socket accept2 = socket.accept();
+                PrintWriter writer1 = new PrintWriter(accept1.getOutputStream());
+                writer1.write("hello1 \n");
+                writer1.flush();
+                PrintWriter writer2 = new PrintWriter(accept2.getOutputStream());
+                writer2.write("hello2 \n");
+                writer2.flush();
 
-            assertOpenEventually(latch);
-            writer1.write("world1 \n");
-            writer1.write("jet1 \n");
-            writer1.flush();
-            writer2.write("world2 \n");
-            writer2.write("jet2 \n");
-            writer2.flush();
+                assertOpenEventually(latch);
+                writer1.write("world1 \n");
+                writer1.write("jet1 \n");
+                writer1.flush();
+                writer2.write("world2 \n");
+                writer2.write("jet2 \n");
+                writer2.flush();
 
-            accept1.close();
-            accept2.close();
-            socket.close();
-        })).start();
+                accept1.close();
+                accept2.close();
+            })).start();
 
-        DAG dag = new DAG();
-        Vertex producer = dag.newVertex("producer", streamTextSocket(HOST, PORT)).localParallelism(2);
-        Vertex consumer = dag.newVertex("consumer", writeList("consumer")).localParallelism(1);
-        dag.edge(between(producer, consumer));
+            DAG dag = new DAG();
+            Vertex producer = dag.newVertex("producer", streamTextSocket(HOST, PORT)).localParallelism(2);
+            Vertex consumer = dag.newVertex("consumer", writeList("consumer")).localParallelism(1);
+            dag.edge(between(producer, consumer));
 
-        // When
-        Future<Void> job = instance.newJob(dag).execute();
-        IList<Object> list = instance.getList("consumer");
+            // When
+            Future<Void> job = instance.newJob(dag).execute();
+            IList<Object> list = instance.getList("consumer");
 
-        assertTrueEventually(() -> assertEquals(2, list.size()));
-        latch.countDown();
-        job.get();
-        assertEquals(6, list.size());
+            assertTrueEventually(() -> assertEquals(2, list.size()));
+            latch.countDown();
+            job.get();
+            assertEquals(6, list.size());
+        }
     }
 
     @Test
     public void when_jobCancelled_then_readerClosed() throws Exception {
-        ServerSocket socket = new ServerSocket(PORT);
-        AtomicReference<Socket> accept = new AtomicReference<>();
-        CountDownLatch acceptationLatch = new CountDownLatch(1);
-        // Cancellation only works, if there are data on socket. Without data, SocketInputStream.read()
-        // blocks indefinitely. The StreamTextSocketP should be improved to use NIO.
-        new Thread(() -> uncheckRun(() -> {
-            accept.set(socket.accept());
-            acceptationLatch.countDown();
-            byte[] word = "jet\n".getBytes();
-            try (OutputStream outputStream = accept.get().getOutputStream()) {
-                while (true) {
-                    outputStream.write(word);
-                    outputStream.flush();
-                    Thread.sleep(1000);
+        try (ServerSocket socket = new ServerSocket(PORT)) {
+            AtomicReference<Socket> accept = new AtomicReference<>();
+            CountDownLatch acceptationLatch = new CountDownLatch(1);
+            // Cancellation only works, if there are data on socket. Without data, SocketInputStream.read()
+            // blocks indefinitely. The StreamTextSocketP should be improved to use NIO.
+            new Thread(() -> uncheckRun(() -> {
+                accept.set(socket.accept());
+                acceptationLatch.countDown();
+                byte[] word = "jet\n".getBytes();
+                try (OutputStream outputStream = accept.get().getOutputStream()) {
+                    while (true) {
+                        outputStream.write(word);
+                        outputStream.flush();
+                        Thread.sleep(1000);
+                    }
                 }
-            }
-        })).start();
+            })).start();
 
-        Vertex producer = new Vertex("producer", Processors.streamTextSocket(HOST, PORT)).localParallelism(1);
-        Vertex sink = new Vertex("sink", NoopP::new).localParallelism(1);
-        DAG dag = new DAG()
-                .vertex(producer)
-                .vertex(sink)
-                .edge(between(producer, sink));
+            Vertex producer = new Vertex("producer", Processors.streamTextSocket(HOST, PORT)).localParallelism(1);
+            Vertex sink = new Vertex("sink", NoopP::new).localParallelism(1);
+            DAG dag = new DAG()
+                    .vertex(producer)
+                    .vertex(sink)
+                    .edge(between(producer, sink));
 
-        Future<Void> job = instance.newJob(dag).execute();
-        acceptationLatch.await();
-        job.cancel(true);
+            Future<Void> job = instance.newJob(dag).execute();
+            acceptationLatch.await();
+            job.cancel(true);
 
-        assertTrueEventually(() -> {
-            assertTrue("Socket not closed", accept.get().isClosed());
-        });
+            assertTrueEventually(() -> {
+                assertTrue("Socket not closed", accept.get().isClosed());
+            });
+        }
     }
 }
