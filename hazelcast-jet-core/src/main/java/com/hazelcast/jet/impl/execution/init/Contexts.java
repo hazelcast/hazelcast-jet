@@ -80,7 +80,7 @@ public final class Contexts {
         }
 
         public void initJobFuture(CompletableFuture<Void> jobFuture) {
-            assert this.jobFuture == null;
+            assert this.jobFuture == null : "jobFuture already initialized";
             this.jobFuture = jobFuture;
         }
     }
