@@ -16,12 +16,10 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ProgressState;
-import com.hazelcast.logging.ILogger;
 import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
