@@ -149,11 +149,13 @@ public interface Processor {
         /**
          * Returns the future to check for cancellation status.
          * <p>
-         * This is only necessary, if the {@link #complete()} method never returns and blocks
-         * indefinitely, which is only legal for {@link #isCooperative() non-cooperative} processors.
-         * In this case, the {@link #complete()} should check regularly the {@code jobFuture}'s
-         * {@link CompletableFuture#isCompletedExceptionally()} and return, when it returns
-         * {@code true}:
+         * This is necessary, if the {@link #complete()} or
+         * {@link #process(int, Inbox) process()} methods do not return promptly
+         * after each blocking call (note, that blocking calls are allowed only
+         * in {@link #isCooperative() non-cooperative} processors). In this case,
+         * the methods should regularly check the {@code jobFuture}'s
+         * {@link CompletableFuture#isCompletedExceptionally()} and return, when
+         * it returns {@code true}:
          *
          * <pre>
          * public boolean complete() {
