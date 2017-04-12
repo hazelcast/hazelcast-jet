@@ -154,12 +154,12 @@ public interface Processor {
          * after each blocking call (note, that blocking calls are allowed only
          * in {@link #isCooperative() non-cooperative} processors). In this case,
          * the methods should regularly check the {@code jobFuture}'s
-         * {@link CompletableFuture#isCompletedExceptionally()} and return, when
-         * it returns {@code true}:
+         * {@link CompletableFuture#isDone() isDone()} and return, when it returns
+         * {@code true}:
          *
          * <pre>
          * public boolean complete() {
-         *     while (!jobFuture.isCompletedExceptionally()) {
+         *     while (!jobFuture.isDone()) {
          *         // we should not block indefinitely, but rather with a timeout
          *         Collection data = blockingRead(timeout);
          *         for (Object item : data) {

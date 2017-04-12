@@ -78,7 +78,7 @@ public final class StreamKafkaP extends AbstractProcessor {
         try (KafkaConsumer<?, ?> consumer = new KafkaConsumer<>(properties)) {
             consumer.subscribe(Arrays.asList(topicIds));
 
-            while (!jobFuture.isCompletedExceptionally()) {
+            while (!jobFuture.isDone()) {
                 ConsumerRecords<?, ?> records = consumer.poll(POLL_TIMEOUT_MS);
 
                 for (ConsumerRecord<?, ?> r : records) {
