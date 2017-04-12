@@ -68,8 +68,10 @@ public final class WriteFileP {
 
     private static BufferedWriter createBufferedWriter(String fileName, String charset, boolean append) {
         Path path = Paths.get(fileName);
-        //noinspection ResultOfMethodCallIgnored - we'll fail later when creating the file
-        path.getParent().toFile().mkdirs();
+        if (path.getParent() != null) {
+            //noinspection ResultOfMethodCallIgnored - we'll fail later when creating the file
+            path.getParent().toFile().mkdirs();
+        }
 
         return uncheckCall(() -> Files.newBufferedWriter(path,
                 charset == null ? StandardCharsets.UTF_8 : Charset.forName(charset), StandardOpenOption.CREATE,
