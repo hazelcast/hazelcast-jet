@@ -68,9 +68,10 @@ public final class WriteFileP {
 
     private static BufferedWriter createBufferedWriter(String fileName, String charset, boolean append) {
         Path path = Paths.get(fileName);
-        if (path.getParent() != null) {
+        Path directory = path.getParent();
+        if (directory != null) {
             //noinspection ResultOfMethodCallIgnored - we'll fail later when creating the file
-            path.getParent().toFile().mkdirs();
+            directory.toFile().mkdirs();
         }
 
         return uncheckCall(() -> Files.newBufferedWriter(path,
