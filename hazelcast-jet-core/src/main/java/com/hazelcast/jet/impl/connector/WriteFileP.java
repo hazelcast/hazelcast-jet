@@ -70,8 +70,8 @@ public final class WriteFileP {
         Path path = Paths.get(fileName);
         Path directory = path.getParent();
         if (directory != null) {
-            //noinspection ResultOfMethodCallIgnored - we'll fail later when creating the file
-            directory.toFile().mkdirs();
+            // ignore result, we'll fail later when creating the file. Could be also false, if the directory existed
+            boolean ignored = directory.toFile().mkdirs();
         }
 
         return uncheckCall(() -> Files.newBufferedWriter(path,
