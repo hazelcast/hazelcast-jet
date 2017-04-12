@@ -16,11 +16,10 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processor;
+import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
 import com.hazelcast.jet.impl.util.ProgressState;
-import com.hazelcast.logging.ILogger;
 import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
@@ -38,10 +37,9 @@ public class CooperativeProcessorTasklet extends ProcessorTaskletBase {
     private final ArrayDequeOutbox outbox;
     private boolean processorCompleted;
 
-    public CooperativeProcessorTasklet(String vertexName, JetInstance instance, ILogger logger,
-                                       int processorIdx, Processor processor, List<InboundEdgeStream> instreams,
-                                       List<OutboundEdgeStream> outstreams) {
-        super(vertexName, instance, logger, processor, processorIdx, instreams, outstreams);
+    public CooperativeProcessorTasklet(ProcCtx context, Processor processor,
+                                       List<InboundEdgeStream> instreams, List<OutboundEdgeStream> outstreams) {
+        super(context, processor, instreams, outstreams);
         Preconditions.checkTrue(processor.isCooperative(), "Processor is non-cooperative");
         int[] bucketCapacities = Stream.of(this.outstreams).mapToInt(OutboundEdgeStream::getOutboxCapacity).toArray();
         this.outbox = new ArrayDequeOutbox(outstreams.size(), bucketCapacities, progTracker);

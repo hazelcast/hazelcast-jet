@@ -47,9 +47,9 @@ import com.hazelcast.jet.impl.execution.ReceiverTasklet;
 import com.hazelcast.jet.impl.execution.SenderTasklet;
 import com.hazelcast.jet.impl.execution.Tasklet;
 import com.hazelcast.jet.impl.execution.init.Contexts.MetaSupplierCtx;
+import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.logging.Logger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -80,8 +80,6 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
 public class ExecutionPlan implements IdentifiedDataSerializable {
-
-    private static final ILogger LOGGER = Logger.getLogger(ExecutionPlan.class);
 
     private final List<Tasklet> tasklets = new ArrayList<>();
     // vertex id --> ordinal --> receiver tasklet
@@ -188,12 +186,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 final List<InboundEdgeStream> inboundStreams = createInboundEdgeStreams(srcVertex, processorIdx);
                 ILogger logger = nodeEngine.getLogger(p.getClass().getName() + '.'
                         + srcVertex.name() + '(' + p.getClass().getSimpleName() + ")#" + processorIdx);
-
+                ProcCtx context = new ProcCtx(instance, logger, srcVertex.name(), processorIdx);
                 tasklets.add(p.isCooperative()
-                        ? new CooperativeProcessorTasklet(srcVertex.name(), instance, logger, processorIdx, p,
-                                inboundStreams, outboundStreams)
-                        : new BlockingProcessorTasklet(srcVertex.name(), instance, logger, processorIdx, p,
-                                inboundStreams, outboundStreams)
+                        ? new CooperativeProcessorTasklet(context, p, inboundStreams, outboundStreams)
+                        : new BlockingProcessorTasklet(context, p, inboundStreams, outboundStreams)
                 );
             }
         }

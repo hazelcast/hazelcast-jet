@@ -36,15 +36,13 @@ public final class Contexts {
         private final ILogger logger;
         private final String vertexName;
         private final int index;
-        private final CompletableFuture<Void> jobFuture;
+        private CompletableFuture<Void> jobFuture;
 
-        public ProcCtx(JetInstance instance, ILogger logger, String vertexName, int index,
-                       CompletableFuture<Void> jobFuture) {
+        public ProcCtx(JetInstance instance, ILogger logger, String vertexName, int index) {
             this.instance = instance;
             this.logger = logger;
             this.vertexName = vertexName;
             this.index = index;
-            this.jobFuture = jobFuture;
         }
 
         @Nonnull
@@ -70,10 +68,20 @@ public final class Contexts {
             return vertexName;
         }
 
+        /**
+         * Note that method is marked sa {@link Nonnull}, however, it's only
+         * non-null after {@link #initJobFuture(CompletableFuture)} is called,
+         * which means it's <i>practically non-null</i>.
+         */
         @Nonnull
         @Override
         public CompletableFuture<Void> jobFuture() {
             return jobFuture;
+        }
+
+        public void initJobFuture(CompletableFuture<Void> jobFuture) {
+            assert this.jobFuture == null;
+            this.jobFuture = jobFuture;
         }
     }
 

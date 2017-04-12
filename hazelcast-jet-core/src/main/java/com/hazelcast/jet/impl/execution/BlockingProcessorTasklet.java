@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
+import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.util.Preconditions;
@@ -39,10 +40,10 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
     private CompletableFuture<?> jobFuture;
 
     public BlockingProcessorTasklet(
-            String vertexName, JetInstance instance, ILogger logger, int processorIdx, Processor processor,
-            List<InboundEdgeStream> instreams, List<OutboundEdgeStream> outstreams
+            ProcCtx context, Processor processor, List<InboundEdgeStream> instreams,
+            List<OutboundEdgeStream> outstreams
     ) {
-        super(vertexName, instance, logger, processor, processorIdx, instreams, outstreams);
+        super(context, processor, instreams, outstreams);
         Preconditions.checkFalse(processor.isCooperative(), "Processor is cooperative");
         outbox = new BlockingOutbox();
     }
