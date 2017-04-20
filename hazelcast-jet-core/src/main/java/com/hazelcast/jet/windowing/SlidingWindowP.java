@@ -32,9 +32,9 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
 import static java.lang.Math.min;
-import static java.util.function.Function.identity;
 
 /**
  * Sliding window processor. See {@link
@@ -47,6 +47,12 @@ import static java.util.function.Function.identity;
  * @param <R> type of the finished result
  */
 class SlidingWindowP<K, F, R> extends AbstractProcessor {
+
+    // package-visible for test
+    final NavigableMap<Long, Map<K, F>> seqToKeyToFrame = new TreeMap<>();
+    final Map<K, F> slidingWindow = new HashMap<>();
+
+    private final Traverser<Object> nullTraverser = Traversers.newNullTraverser();
     private final WindowDefinition wDef;
     private final Supplier<F> createF;
     private final BinaryOperator<F> combineF;
@@ -55,8 +61,6 @@ class SlidingWindowP<K, F, R> extends AbstractProcessor {
 
     private final FlatMapper<Punctuation, Object> flatMapper;
     private final F emptyAcc;
-    private final NavigableMap<Long, Map<K, F>> seqToKeyToFrame = new TreeMap<>();
-    private final Map<K, F> slidingWindow = new HashMap<>();
 
     private long nextFrameSeqToEmit = Long.MIN_VALUE;
 
@@ -100,34 +104,51 @@ class SlidingWindowP<K, F, R> extends AbstractProcessor {
     }
 
     private Traverser<Object> slidingWindowTraverser(Punctuation punc) {
-        Traverser<Object> traverser = Traversers.traverseStream(
-                range(nextFrameSeqToEmit, nextFrameSeqToEmit = wDef.higherFrameSeq(punc.seq()), wDef.frameLength())
-                        .mapToObj(frameSeq ->
-                                computeWindow(frameSeq, seqToKeyToFrame.remove(frameSeq - wDef.windowLength()))
-                                        .entrySet().stream()
-                                        .map(e -> new Frame<>(frameSeq, e.getKey(), finishF.apply(e.getValue()))))
-                        .flatMap(identity()));
+        long rangeStart = nextFrameSeqToEmit;
+        nextFrameSeqToEmit = wDef.higherFrameSeq(punc.seq());
+        Stream<Long> rangeStream = range(rangeStart, nextFrameSeqToEmit, wDef.frameLength()).boxed();
 
-        traverser = traverser.append(punc);
-        return traverser;
+        return Traversers.traverseStream(rangeStream)
+                .flatMap(frameSeq -> {
+                    Map<K, F> currentFrameMap = computeWindow(frameSeq);
+
+                    Traverser<Object> traverser = Traversers.traverseIterable(currentFrameMap.entrySet())
+                            .map(e -> (Object) new Frame<>(frameSeq, e.getKey(), finishF.apply(e.getValue())))
+                            .onFirstNull(() -> completeWindow(frameSeq));
+
+                    // Append punctuation, only if there are some frames, or it is the last frameSeq
+                    // to emit for this punc. This is an optimization to emit less punctuations.
+                    if (!currentFrameMap.isEmpty() || frameSeq >= nextFrameSeqToEmit - 1) {
+                        traverser = traverser.append(new Punctuation(frameSeq));
+                    }
+
+                    return traverser;
+                });
     }
 
-    private Map<K, F> computeWindow(long frameSeq, Map<K, F> evictedFrame) {
+    private void completeWindow(long frameSeq) {
+        Map<K, F> evictedFrame = seqToKeyToFrame.remove(frameSeq - wDef.windowLength() + wDef.frameLength());
+        if (deductF != null) {
+            // deduct trailing-edge frame
+            patchSlidingWindow(deductF, evictedFrame);
+        }
+    }
+
+    private Map<K, F> computeWindow(long frameSeq) {
         if (deductF != null) {
             // add leading-edge frame
             patchSlidingWindow(combineF, seqToKeyToFrame.get(frameSeq));
-            // deduct trailing-edge frame
-            patchSlidingWindow(deductF, evictedFrame);
             return slidingWindow;
+        } else {
+            // without deductF we have to recompute the window from scratch
+            Map<K, F> window = new HashMap<>();
+            Map<Long, Map<K, F>> frames = seqToKeyToFrame.subMap(frameSeq - wDef.windowLength(), false, frameSeq, true);
+            for (Map<K, F> keyToFrame : frames.values()) {
+                keyToFrame.forEach((key, currAcc) ->
+                        window.compute(key, (x, acc) -> combineF.apply(acc != null ? acc : createF.get(), currAcc)));
+            }
+            return window;
         }
-        // without deductF we have to recompute the window from scratch
-        Map<K, F> window = new HashMap<>();
-        Map<Long, Map<K, F>> frames = seqToKeyToFrame.subMap(frameSeq - wDef.windowLength(), false, frameSeq, true);
-        for (Map<K, F> keyToFrame : frames.values()) {
-            keyToFrame.forEach((key, currAcc) ->
-                    window.compute(key, (x, acc) -> combineF.apply(acc != null ? acc : createF.get(), currAcc)));
-        }
-        return window;
     }
 
     private void patchSlidingWindow(BinaryOperator<F> patchOp, Map<K, F> patchingFrame) {
@@ -145,6 +166,6 @@ class SlidingWindowP<K, F, R> extends AbstractProcessor {
     private static LongStream range(long start, long end, long step) {
         return start >= end
                 ? LongStream.empty()
-                : LongStream.iterate(start, n -> n + step).limit(1 + (end - start - 1) / step);
+                : LongStream.iterate(start, n -> n + step).limit((end - start) / step);
     }
 }

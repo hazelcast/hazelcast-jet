@@ -22,7 +22,9 @@ import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import com.hazelcast.util.MutableLong;
+import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -32,7 +34,6 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
 import static java.util.Arrays.asList;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -60,6 +61,11 @@ public class GroupByFramePTest extends StreamingTestSupport {
         processor.init(outbox, mock(Context.class));
     }
 
+    @After
+    public void after() {
+        assertTrue("map not empty after emitting everything", processor.seqToKeyToFrame.isEmpty());
+    }
+
     @Test
     public void smokeTest() {
         // Given
@@ -68,7 +74,7 @@ public class GroupByFramePTest extends StreamingTestSupport {
                 entry(0L, 1L), // to frame 4
                 entry(1L, 1L), // to frame 4
                 punc(3), // does not close anything
-                entry(2L, 1L), // to frame 4
+                entry(2L, 1L), // to frame 4, still accepted, even after punc(3)
                 punc(4), // closes frame 4
                 entry(4L, 1L), // to frame 8
                 entry(5L, 1L), // to frame 8
@@ -95,11 +101,8 @@ public class GroupByFramePTest extends StreamingTestSupport {
                 frame(8, 2),
                 punc(8),
                 frame(12, 3),
-                punc(21),
-                null
+                punc(21)
         ));
-
-        assertTrue("map not empty after emitting everyting", processor.seqToKeyToFrame.isEmpty());
     }
 
     @Test
@@ -122,8 +125,6 @@ public class GroupByFramePTest extends StreamingTestSupport {
 
         // Then
         assertOutbox(somePuncs);
-        assertNull(pollOutbox());
-        assertTrue("map not empty after emitting everyting", processor.seqToKeyToFrame.isEmpty());
     }
 
     private static Frame<Long, MutableLong> frame(long seq, long value) {
