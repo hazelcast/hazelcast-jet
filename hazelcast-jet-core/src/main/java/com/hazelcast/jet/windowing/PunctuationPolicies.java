@@ -70,7 +70,6 @@ public final class PunctuationPolicies {
         checkNotNegative(eventSeqLag, "eventSeqLag must not be negative");
 
         return new PunctuationPolicyBase() {
-
             @Override
             public long reportEvent(long eventSeq) {
                 return makePuncAtLeast(eventSeq - eventSeqLag);

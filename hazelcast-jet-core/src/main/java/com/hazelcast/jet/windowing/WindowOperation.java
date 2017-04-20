@@ -24,10 +24,11 @@ import java.io.Serializable;
 import java.util.Objects;
 
 /**
- * Contains functions needed to compute a windowed result of infinite
- * stream processing by storing intermediate results in a mutable result
- * container, called the <em>accumulator</em>. These are the supported
- * operations:
+ * Contains primitives needed to compute a windowed result of infinite
+ * stream processing. The result is computed by maintaining a mutable
+ * result container, called the <em>accumulator</em>, which is transformed
+ * to the final result at the end of accumulation. These are the
+ * primitives:
  * <ol><li>
  *     {@link #createAccumulatorF() create} a new accumulator
  * </li><li>
@@ -36,8 +37,8 @@ import java.util.Objects;
  *     {@link #combineAccumulatorsF() combine} the contents of two accumulator
  *     objects
  * </li><li>
- *     {@link #deductAccumulatorF() deduct} the contents of an accumulator from
- *     another
+ *     {@link #deductAccumulatorF() deduct} the contents of one accumulator
+ *     from another (undo the effects of {@code combine})
  * </li><li>
  *     {@link #finishAccumulationF() finish} accumulation by transforming the
  *     accumulator's intermediate result into the final result
@@ -53,7 +54,8 @@ public interface WindowOperation<T, A, R> extends Serializable {
      * A function that creates a new accumulator and returns it. If the {@code
      * deduct} operation is defined, the accumulator object must properly
      * implement {@code equals()}, which will be used to detect when an
-     * accumulator is "empty" and can be evicted from a processor's storage.
+     * accumulator is "empty" (i.e., equal to a fresh instance returned from
+     * this method) and can be evicted from a processor's storage.
      */
     Distributed.Supplier<A> createAccumulatorF();
 
@@ -76,6 +78,11 @@ public interface WindowOperation<T, A, R> extends Serializable {
      * accumulator with the resulting state. It is allowed to mutate the
      * left-hand accumulator (presumably to return it as the new result), but
      * not the right-hand one.
+     * <p>
+     * The effect of this function must be the opposite of {@link
+     * #combineAccumulatorsF() combine} so that {@code deduct(combine(acc, x),
+     * x)} returns an accumulator in the same state as {@code acc} was before
+     * the operation.
      */
     BinaryOperator<A> deductAccumulatorF();
 
@@ -86,8 +93,8 @@ public interface WindowOperation<T, A, R> extends Serializable {
     Distributed.Function<A, R> finishAccumulationF();
 
     /**
-     * Returns a new {@code WindowingFunctions} object composed from the
-     * provided functions.
+     * Returns a new {@code WindowOperation} object composed from the provided
+     * primitives.
      *
      * @param <T> the type of the stream item
      * @param <A> the type of the accumulator
@@ -108,8 +115,10 @@ public interface WindowOperation<T, A, R> extends Serializable {
     }
 
     /**
-     * Returns a new {@code WindowingFunctions} object based on a
-     * {@code DistributedCollector}.
+     * Returns a new {@code WindowOperation} object based on a {@code
+     * DistributedCollector}. <strong>Note:</strong> the resulting operation
+     * will lack the {@code deduct} primitive, which can cause poor performance
+     * of a sliding window computation.
      */
     static <T, A, R> WindowOperation<T, A, R> fromCollector(DistributedCollector<T, A, R> c) {
         return of(c.supplier(), c.accumulator(), c.combiner(), null, c.finisher());

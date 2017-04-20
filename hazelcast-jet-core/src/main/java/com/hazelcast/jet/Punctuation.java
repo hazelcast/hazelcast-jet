@@ -51,7 +51,7 @@ public final class Punctuation implements Serializable {
 
     @Override
     public int hashCode() {
-        return (int) (seq ^ (seq >>> 32));
+        return Long.hashCode(seq);
     }
 
     @Override

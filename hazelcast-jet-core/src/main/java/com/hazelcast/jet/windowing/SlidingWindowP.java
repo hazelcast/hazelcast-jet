@@ -52,7 +52,6 @@ public class SlidingWindowP<K, F, R> extends AbstractProcessor {
     private final BinaryOperator<F> combineF;
     private final Distributed.BinaryOperator<F> deductF;
     private final Function<F, R> finishF;
-    private final boolean emitPunctuation;
 
     private final FlatMapper<Punctuation, Object> flatMapper;
     private final F emptyAcc;
@@ -61,7 +60,7 @@ public class SlidingWindowP<K, F, R> extends AbstractProcessor {
 
     private long nextFrameSeqToEmit = Long.MIN_VALUE;
 
-    SlidingWindowP(WindowDefinition winDef, @Nonnull WindowOperation<K, F, R> winOp, boolean emitPunctuation) {
+    SlidingWindowP(WindowDefinition winDef, @Nonnull WindowOperation<K, F, R> winOp) {
         this.wDef = winDef;
         this.createF = winOp.createAccumulatorF();
         this.combineF = winOp.combineAccumulatorsF();
@@ -69,7 +68,6 @@ public class SlidingWindowP<K, F, R> extends AbstractProcessor {
         this.finishF = winOp.finishAccumulationF();
         this.flatMapper = flatMapper(this::slidingWindowTraverser);
         this.emptyAcc = createF.get();
-        this.emitPunctuation = emitPunctuation;
     }
 
     @Override
@@ -87,7 +85,7 @@ public class SlidingWindowP<K, F, R> extends AbstractProcessor {
         if (nextFrameSeqToEmit == Long.MIN_VALUE) {
             if (seqToKeyToFrame.isEmpty()) {
                 // We have no data, just forward the punctuation.
-                return !emitPunctuation || tryEmit(punc);
+                return tryEmit(punc);
             }
             // This is the first punctuation we are acting upon. Find the lowest
             // frameSeq that can be emitted: at most the top existing frameSeq lower
@@ -110,9 +108,7 @@ public class SlidingWindowP<K, F, R> extends AbstractProcessor {
                                         .map(e -> new Frame<>(frameSeq, e.getKey(), finishF.apply(e.getValue()))))
                         .flatMap(identity()));
 
-        if (emitPunctuation) {
-            traverser = traverser.append(punc);
-        }
+        traverser = traverser.append(punc);
         return traverser;
     }
 
@@ -124,6 +120,7 @@ public class SlidingWindowP<K, F, R> extends AbstractProcessor {
             patchSlidingWindow(deductF, evictedFrame);
             return slidingWindow;
         }
+        // without deductF we have to recompute the window from scratch
         Map<K, F> window = new HashMap<>();
         Map<Long, Map<K, F>> frames = seqToKeyToFrame.subMap(frameSeq - wDef.windowLength(), false, frameSeq, true);
         for (Map<K, F> keyToFrame : frames.values()) {

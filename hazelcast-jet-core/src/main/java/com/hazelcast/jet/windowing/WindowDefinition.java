@@ -35,9 +35,10 @@ import static java.lang.Math.floorMod;
  * treats the frame as a "unit range" of event seqs which cannot be further
  * divided and immediately applies the aggregate function to the items
  * belonging to the same frame. This allows Jet to let go of the individual
- * items' data, saving memory. The user-visible consequence of this is that
- * the configured window length must be an integer multiple of the sliding
- * step.
+ * items' data, saving memory. The user-visible consequences of this are
+ * that the configured window length must be an integer multiple of the
+ * sliding step and that the memory requirements scale with the ratio
+ * between window size and the sliding step.
  * <p>
  * A frame is labelled with its {@code frameSeq}, which is the first
  * {@code eventSeq} beyond the range covered by the frame. In other words,
@@ -51,29 +52,11 @@ public class WindowDefinition implements Serializable {
     private final long frameOffset;
     private final long windowLength;
 
-    /**
-     * Create a new window definition.
-     * <p>
-     * For example, if we want to aggregate into 10-second windows,
-     * that will slide by one second, and event sequence is in milliseconds, use:
-     * <pre>
-     *     new WindowDefinition(1000, 0, 10);
-     * </pre>
-     *
-     * @param frameLength Length of the frame, i.e. the amount, by which the window slides.
-     * @param frameOffset {@link #frameOffset()}
-     * @param framesPerWindow Number of frames that make up one window.
-     *                        {@code framesPerWindow * frameLength == }{@link #windowLength()}
-     */
     WindowDefinition(long frameLength, long frameOffset, long framesPerWindow) {
         checkPositive(frameLength, "frameLength must be positive");
         checkNotNegative(frameOffset, "frameOffset must not be negative");
+        checkTrue(frameOffset < frameLength, "frameOffset must be less than frameLength");
         checkPositive(framesPerWindow, "framesPerWindow must be positive");
-
-        // this is not strictly required, however, semantically it's cleaner. If someone, say, decreases
-        // the frameLength and does not decrease frameOffset, he probably didn't realize something.
-        checkTrue(frameOffset < frameLength,
-                "frameOffset must be less than frameLength");
 
         this.frameLength = frameLength;
         this.frameOffset = frameOffset;
@@ -81,23 +64,23 @@ public class WindowDefinition implements Serializable {
     }
 
     /**
-     * The length of the frame, i.e. the amount, by which the window slides.
+     * Returns the length of the frame (equal to the sliding step).
      */
     public long frameLength() {
         return frameLength;
     }
 
     /**
-     * The frame offset. For example, if {@code frameLength=10} and
-     * {@code frameOffset=5}, then frames will start at 5, 15, 25...
+     * Returns the frame offset. For example, if {@code frameLength = 10} and
+     * {@code frameOffset = 5}, then frames will start at 5, 15, 25...
      */
     public long frameOffset() {
         return frameOffset;
     }
 
     /**
-     * The length of the window in terms of event sequence. It's an integer multiple of
-     * {@link #frameLength()}.
+     * Returns the length of the window in terms of {@code eventSeq}. It is an
+     * integer multiple of {@link #frameLength()}.
      */
     public long windowLength() {
         return windowLength;
@@ -122,23 +105,21 @@ public class WindowDefinition implements Serializable {
      * {@code eventSeq}. If there is no such {@code long} value, returns {@code
      * Long.MIN_VALUE}.
      */
-    long floorFrameSeq(long seq) {
-        return subtractClamped(
-                seq,
-                floorMod(
-                        (seq >= Long.MIN_VALUE + frameOffset ? seq : seq + frameLength) - frameOffset,
-                        frameLength
-                ));
+    long floorFrameSeq(long eventSeq) {
+        return subtractClamped(eventSeq, floorMod(
+                (eventSeq >= Long.MIN_VALUE + frameOffset ? eventSeq : eventSeq + frameLength) - frameOffset,
+                frameLength
+        ));
     }
 
     /**
      * Returns the lowest {@code frameSeq} greater than the given {@code
      * eventSeq}. If there is no such value, returns {@code Long.MAX_VALUE}.
      */
-    long higherFrameSeq(long seq) {
-        long seqPlusFrame = seq + frameLength;
-        return sumHadOverflow(seq, frameLength, seqPlusFrame)
-                ? addClamped(floorFrameSeq(seq), frameLength)
+    long higherFrameSeq(long eventSeq) {
+        long seqPlusFrame = eventSeq + frameLength;
+        return sumHadOverflow(eventSeq, frameLength, seqPlusFrame)
+                ? addClamped(floorFrameSeq(eventSeq), frameLength)
                 : floorFrameSeq(seqPlusFrame);
     }
 

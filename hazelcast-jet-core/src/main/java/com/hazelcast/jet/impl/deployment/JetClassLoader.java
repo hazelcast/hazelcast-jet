@@ -80,11 +80,7 @@ public class JetClassLoader extends ClassLoader {
 
     @Override
     public URL getResource(String name) {
-        if (isEmpty(name)) {
-            return null;
-        }
-        URL url = getResourceURL(name);
-        return url != null ? url : null;
+        return isEmpty(name) ? null : getResourceURL(name);
     }
 
     @Override
@@ -106,7 +102,6 @@ public class JetClassLoader extends ClassLoader {
     private byte[] classBytes(String name) {
         ClassLoaderEntry entry = coalesce(name, store.getClassEntries(), store.getJarEntries());
         return entry != null ? entry.getResourceBytes() : null;
-
     }
 
     private URL getResourceURL(String name) {
@@ -139,5 +134,4 @@ public class JetClassLoader extends ClassLoader {
     private static boolean isEmpty(String className) {
         return className == null || className.isEmpty();
     }
-
 }

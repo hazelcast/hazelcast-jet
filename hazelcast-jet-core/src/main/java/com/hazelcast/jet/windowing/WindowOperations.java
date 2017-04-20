@@ -28,10 +28,10 @@ public final class WindowOperations {
     }
 
     /**
-     * An operation that will count the number of items in the window.
+     * Returns an operation that counts the items in the window.
      */
     public static <T> WindowOperation<T, ?, Long> counting() {
-        return reducing(0L, e -> 1L, java.lang.Long::sum, (a, b) -> a - b);
+        return reducing(0L, e -> 1L, Long::sum, (a, b) -> a - b);
     }
 
     /**
@@ -40,14 +40,19 @@ public final class WindowOperations {
      * by applying the <em>combining</em> function to the current value and a
      * new item's value. The item is first passed through the provided <em>
      * mapping</em> function. Since the order of application of the function to
-     * stream items is unspecified, the function must be commutative and
-     * associative to produce meaningful results.
+     * stream items is unspecified, the combining function must be commutative
+     * and associative to produce meaningful results.
      * <p>
      * To support O(1) maintenance of a sliding window, a <em>deducting</em> function
      * should be supplied whose effect is the opposite of the combining function,
      * removing the contribution of an item to the reduced result:
-     * <p>
-     * {@code deduct(combine(acc, map(item)), item) = acc}
+     * <pre>
+     *     U acc = ... // any possible value
+     *     U val = mapF.apply(item);
+     *     U combined = combineF.apply(acc, val);
+     *     U deducted = deductF.apply(combined, val);
+     *     assert deducted.equals(acc);
+     * </pre>
      *
      * @param identity the reducing operation's identity element
      * @param mapF a function to apply to the item before passing it to the combining

@@ -42,8 +42,8 @@ import static com.hazelcast.util.Preconditions.checkTrue;
  * skew (the difference between its punctuation and the bottom punctuation)
  * reaches the configured {@code priorityDrainingThreshold}, it will be
  * drained only if no queue with a lower skew had any data. Furthermore,
- * when a queue exceeds the configured {@code maxSkew}, action will be taken
- * to prevent its further increase by either:
+ * when a queue exceeds the configured {@code maxSkew}, action will be
+ * taken to prevent its further increase by either:
  * <ul><li>
  *     refusing to drain the advanced queues while waiting for the punctuation
  *     on the lagging queues to catch up until the skew is back below
@@ -53,23 +53,25 @@ import static com.hazelcast.util.Preconditions.checkTrue;
  *     possibly causing items on those queues that wouldn't be late by their
  *     local punctuation, to be declared late anyway and dropped.
  * </li></ul>
- * <p>
- * The intended usage is as follows:
+ * This class should be used in the loop that drains the queues, as
+ * follows:
  * <ol><li>
- *     Create an instance of this class, supplying the number of queues whose
- *     draining order must be managed.
+ *     Create an instance of this class, supplying the number of queues the
+ *     loop will be draining.
  * </li><li>
  *     Use an indexed loop ranging over {@code [0..numQueues)}.
  * </li><li>
- *     For each {@code i} drain the queue indicated by {@link #toQueueIndex(
- *     int) toQueueIndex(i)}.
+ *     For each {@code i} prepare to drain the queue indicated by {@link
+ *     #toQueueIndex( int) toQueueIndex(i)}.
  * </li><li>
- *     Call {@link #observePunc(int, long) observePunc(queueIndex, puncSeq)} for
- *     every punctuation item received from any queue.
+ *     Before draining the queue check the result of {@link
+ *     #shouldStopDraining(int, boolean) shouldStopDraining(drainOrder,
+ *     madeProgress)} to see whether to exit the loop.
  * </li><li>
- *     Before draining a queue check the result of {@link #shouldStopDraining(
- *     int, boolean) shouldStopDraining(drainOrder, madeProgress)} to see
- *     whether to break the draining loop.
+ *     Call {@link #observePunc(int, long) observePunc(queueIndex, puncSeq)}
+ *     for every punctuation item received from any queue. If this method
+ *     returns {@code true}, it means that the draining order was changed and
+ *     the draining loop should exit.
  * </li></ol>
  */
 public class SkewReductionPolicy {
@@ -151,7 +153,7 @@ public class SkewReductionPolicy {
      *     configured "priority draining" skew threshold, or
      * </li><li>
      *     the queue has exceeded the configured {@code maxSkew} and the
-     *     configured policy is not to drop late events.
+     *     configured policy is not to force-advance the punctuation.
      * </li></ol>
      *
      * @param queueIndex the current position in the draining order
@@ -172,9 +174,10 @@ public class SkewReductionPolicy {
     }
 
     /**
-     * React to the advancement of a queue's punctuation by repositioning
+     * Reacts to the advancement of a queue's punctuation by repositioning
      * it in the drain order, so as to keep the drain order sorted by
      * queue punctuation.
+     *
      * @return whether the queue had to be repositioned
      */
     private boolean adjustDrainingOrder(int queueIndex, long puncSeq) {

@@ -46,11 +46,12 @@ public final class WindowingProcessors {
     }
 
     /**
-     * Groups items into frames. A frame is identified by its {@code long frameSeq};
-     * the {@code extractFrameSeqF} function determines this number for each item.
-     * Within a frame items are further classified by a grouping key determined by
-     * the {@code extractKeyF} function. When the processor receives a punctuation
-     * with a given {@code puncSeq}, it emits the current state of all frames with
+     * Groups items into frames. A frame is identified by its {@code
+     * long frameSeq} and {@link WindowDefinition#higherFrameSeq(long)} maps
+     * the item's {@code eventSeq} to its {@code frameSeq}. Within a frame
+     * items are further classified by a grouping key determined by the {@code
+     * extractKeyF} function. When the processor receives a punctuation with a
+     * given {@code puncSeq}, it emits the current state of all frames with
      * {@code frameSeq <= puncSeq} and deletes these frames from its storage.
      *
      * @param <T> item type
@@ -95,7 +96,7 @@ public final class WindowingProcessors {
      */
     public static <K, F, R> Distributed.Supplier<SlidingWindowP<K, F, R>> slidingWindow(
             WindowDefinition windowDef, WindowOperation<K, F, R> windowOperation, boolean emitPunctuation) {
-        return () -> new SlidingWindowP<>(windowDef, windowOperation, emitPunctuation);
+        return () -> new SlidingWindowP<>(windowDef, windowOperation);
     }
 
     /**
@@ -103,13 +104,13 @@ public final class WindowingProcessors {
      * different grouping keys behave independenly.
      * <p>
      * The functioning of this processor is easiest to explain in terms of
-     * the <em>event interval</em>: the range {@code [eventSeq, eventSeq + maxSeqGap]}.
-     * Initially an event causes a new session window to be created, covering
-     * exactly the event interval. A following event under the same key belongs
-     * to this window iff its interval overlaps it. The window is extended to
-     * cover the entire interval of the new event. The event may happen to
-     * belong to two existing windows if its interval bridges the gap between
-     * them; in that case they are combined into one.
+     * the <em>event interval</em>: the range {@code [eventSeq, eventSeq +
+     * maxSeqGap]}. Initially an event causes a new session window to be
+     * created, covering exactly the event interval. A following event under
+     * the same key belongs to this window iff its interval overlaps it. The
+     * window is extended to cover the entire interval of the new event. The
+     * event may happen to belong to two existing windows if its interval
+     * bridges the gap between them; in that case they are combined into one.
      *
      * @param maxSeqGap        maximum gap between consecutive events in the same session window
      * @param extractEventSeqF function to extract the event seq from the event item

@@ -20,8 +20,8 @@ package com.hazelcast.jet.windowing;
  * A policy object that decides on the punctuation in a single data
  * (sub)stream. The event seq of every observed item should be reported
  * to this object and it will respond with the current value of the
- * punctuation. Punctuation may also advance even in the absence of
- * observed events; {@link #getCurrentPunctuation()} can be called at any
+ * punctuation. Punctuation may also advance in the absence of observed
+ * events; {@link #getCurrentPunctuation()} can be called at any
  * time to see this change.
  */
 public interface PunctuationPolicy {
@@ -39,14 +39,14 @@ public interface PunctuationPolicy {
     long reportEvent(long eventSeq);
 
     /**
-     * Called to get the current punctuation in the absence of an observed event.
-     * The punctuation may advance just based on the passage of time.
+     * Called to get the current punctuation in the absence of an observed
+     * event. The punctuation may advance just based on the passage of time.
      */
     long getCurrentPunctuation();
 
     /**
      * Returns a new punctuation policy that throttles this policy's output
-     * by suppressing advancement of punctuation by less than the supplied
+     * by suppressing the advancement of punctuation by less than the supplied
      * {@code minStep}. The throttling policy will ignore any punctuation
      * returned from this policy that is less than {@code minStep} ahead of
      * the top punctuation returned from the throttling policy.

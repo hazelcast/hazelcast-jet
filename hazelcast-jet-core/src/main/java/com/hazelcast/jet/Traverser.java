@@ -125,22 +125,6 @@ public interface Traverser<T> {
     }
 
     /**
-     * Returns a traverser that will emit the same items as this traverser and
-     * will additionally run the supplied action every time this traverser
-     * returns {@code null}.
-     */
-    @Nonnull
-    default Traverser<T> onNull(@Nonnull Runnable action) {
-        return () -> {
-            T t = next();
-            if (t == null) {
-                action.run();
-            }
-            return t;
-        };
-    }
-
-    /**
      * Returns a traverser that will emit the same items as this traverser,
      * additionally passing each item to the supplied consumer. A {@code null}
      * return value is not passed to the action.
@@ -165,23 +149,5 @@ public interface Traverser<T> {
     @SafeVarargs
     static <T> Traverser<T> over(T... items) {
         return Traversers.traverseArray(items);
-    }
-
-    /**
-     * Returns a traverser that emits the concatenation of the supplied
-     * traversers.
-     */
-    @SafeVarargs
-    static <T> Traverser<T> concat(Traverser<T>... travs) {
-        int[] i = {0};
-        return () -> {
-            for (; i[0] < travs.length; i[0]++) {
-                T t = travs[i[0]].next();
-                if (t != null) {
-                    return t;
-                }
-            }
-            return null;
-        };
     }
 }

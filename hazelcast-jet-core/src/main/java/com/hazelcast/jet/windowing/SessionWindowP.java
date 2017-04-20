@@ -158,20 +158,20 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
             long eventEnd = eventSeq + maxSeqGap;
             int i = 0;
             for (; i < size && starts[i] <= eventEnd; i++) {
-                // this window is not after the event interval
+                // the window `i` is not after the event interval
 
                 if (ends[i] < eventSeq) {
-                    // this window is before the event interval
+                    // the window `i` is before the event interval
                     continue;
                 }
                 if (starts[i] <= eventSeq && ends[i] >= eventEnd) {
-                    // this window fully covers the event interval
+                    // the window `i` fully covers the event interval
                     return accs[i];
                 }
-                // this window overlaps the event interval
+                // the window `i` overlaps the event interval
 
                 if (i + 1 == size || starts[i + 1] > eventEnd) {
-                    // next window doesn't overlap the event interval
+                    // the window `i + 1` doesn't overlap the event interval
                     starts[i] = min(starts[i], eventSeq);
                     if (ends[i] < eventEnd) {
                         removeFromDeadlines(key, ends[i]);
@@ -180,7 +180,7 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
                     }
                     return accs[i];
                 }
-                // event belongs to both this and next window
+                // both `i` and `i + 1` windows overlap the event interval
                 removeFromDeadlines(key, ends[i]);
                 ends[i] = ends[i + 1];
                 accs[i] = combineAccF.apply(accs[i], accs[i + 1]);

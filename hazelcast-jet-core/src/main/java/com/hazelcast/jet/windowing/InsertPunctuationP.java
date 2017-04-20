@@ -58,14 +58,14 @@ public class InsertPunctuationP<T> extends AbstractProcessor {
     @Override
     public boolean tryProcess() {
         long newPunc = punctuationPolicy.getCurrentPunctuation();
-        if (newPunc > currPunc) {
-            boolean didEmit = tryEmit(new Punctuation(newPunc));
-            if (didEmit) {
-                currPunc = newPunc;
-            }
-            return didEmit;
+        if (newPunc <= currPunc) {
+            return true;
         }
-        return true;
+        boolean didEmit = tryEmit(new Punctuation(newPunc));
+        if (didEmit) {
+            currPunc = newPunc;
+        }
+        return didEmit;
     }
 
     @Override
