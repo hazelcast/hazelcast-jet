@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.execution.init;
+package com.hazelcast.jet.impl.util;
 
 import java.util.function.Supplier;
 
@@ -27,12 +27,8 @@ final class MemoizingSupplier<T> implements Supplier<T> {
     private Supplier<T> onceSupplier;
     private T remembered;
 
-    private MemoizingSupplier(Supplier<T> onceSupplier) {
+    MemoizingSupplier(Supplier<T> onceSupplier) {
         this.onceSupplier = onceSupplier;
-    }
-
-    static <T> Supplier<T> memoize(Supplier<T> onceSupplier) {
-        return new MemoizingSupplier<>(onceSupplier);
     }
 
     @Override

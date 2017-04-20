@@ -21,5 +21,7 @@ performance*.log
 dependency-reduced-pom.xml
 *.jfr
 
+# flight recorder
+*.jfr
 # Hadoop files
 *.crc

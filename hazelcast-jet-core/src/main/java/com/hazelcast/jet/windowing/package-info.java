@@ -14,21 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.util;
-
-import java.io.Serializable;
-
-public class DoneItem implements Serializable {
-
-    public static final DoneItem DONE_ITEM = new DoneItem();
-
-    @Override
-    public String toString() {
-        return "DONE_ITEM";
-    }
-
-    protected Object readResolve() {
-        return DONE_ITEM;
-    }
-
-}
+/**
+ * Code to perform grouping of items into windows in an infinite stream.
+ */
+package com.hazelcast.jet.windowing;
