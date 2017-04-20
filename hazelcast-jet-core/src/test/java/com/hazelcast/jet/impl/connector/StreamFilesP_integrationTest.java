@@ -42,7 +42,6 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Collectors;
@@ -57,7 +56,7 @@ import static org.junit.Assert.assertTrue;
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
 @Ignore
-public class StreamFilesPTest extends JetTestSupport {
+public class StreamFilesP_integrationTest extends JetTestSupport {
 
     private JetInstance instance;
     private File directory;
@@ -71,7 +70,7 @@ public class StreamFilesPTest extends JetTestSupport {
     }
 
     @Test
-    public void when_appendingToPreexisting_then_pickupNewLines() throws IOException, InterruptedException, ExecutionException {
+    public void when_appendingToPreexisting_then_pickupNewLines() throws Exception {
         DAG dag = buildDag();
 
         // this is a pre-existing file, should not be picked up
@@ -93,7 +92,7 @@ public class StreamFilesPTest extends JetTestSupport {
     }
 
     @Test
-    public void when_appendingToPreexistingIncompleteLine_then_pickupCompleteLines() throws IOException, InterruptedException, ExecutionException {
+    public void when_appendingToPreexistingIncompleteLine_then_pickupCompleteLines() throws Exception {
         DAG dag = buildDag();
 
         // this is a pre-existing file, should not be picked up
@@ -120,7 +119,7 @@ public class StreamFilesPTest extends JetTestSupport {
     }
 
     @Test
-    public void when_withCrlf_then_pickupCompleteLines() throws IOException, InterruptedException, ExecutionException {
+    public void when_withCrlf_then_pickupCompleteLines() throws Exception {
         DAG dag = buildDag();
 
         // this is a pre-existing file, should not be picked up
@@ -150,7 +149,8 @@ public class StreamFilesPTest extends JetTestSupport {
     }
 
     @Test
-    public void when_newAndModified_then_pickupAddition() throws IOException, InterruptedException, ExecutionException {
+    @Ignore
+    public void when_newAndModified_then_pickupAddition() throws Exception {
         DAG dag = buildDag();
 
         Future<Void> jobFuture = instance.newJob(dag).execute();
@@ -170,7 +170,7 @@ public class StreamFilesPTest extends JetTestSupport {
     }
 
     @Test
-    public void when_fileWithManyLines_then_emitCooperatively() throws IOException, InterruptedException, ExecutionException {
+    public void when_fileWithManyLines_then_emitCooperatively() throws Exception {
         DAG dag = buildDag();
 
         Future<Void> jobFuture = instance.newJob(dag).execute();
@@ -193,7 +193,8 @@ public class StreamFilesPTest extends JetTestSupport {
     }
 
     @Test
-    public void stressTest() throws InterruptedException, ExecutionException {
+    @Ignore
+    public void stressTest() throws Exception {
         // Here, I will start the job and in two separate threads I'll write fixed number of lines
         // to two different log files, with few ms hiccups between each line.
         // At the end, I'll check, if all the contents matches.
@@ -202,7 +203,7 @@ public class StreamFilesPTest extends JetTestSupport {
         Future<Void> jobFuture = instance.newJob(dag).execute();
         // wait for the processor to initialize
         sleepAtLeastSeconds(2);
-        int numLines = 100_000;
+        int numLines = 10_000;
         File file1 = new File(directory, "file1.log");
         File file2 = new File(directory, "file2.log");
         Thread t1 = new Thread(new RandomWriter(file1, numLines, "file0"));
@@ -253,7 +254,9 @@ public class StreamFilesPTest extends JetTestSupport {
                     BufferedWriter bw = new BufferedWriter(osw)
             ) {
                 for (int i = 0; i < numLines; i++) {
-                    bw.write(prefix + " " + i + " Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua\n");
+                    bw.write(prefix + ' ' + i +
+                            " Lorem ipsum dolor sit amet, consectetur adipiscing elit," +
+                            " sed do eiusmod tempor incididunt ut labore et dolore magna aliqua\n");
                     bw.flush();
                     osw.flush();
                     fos.flush();
@@ -296,7 +299,7 @@ public class StreamFilesPTest extends JetTestSupport {
         return file;
     }
 
-    private void finishDirectory(Future<Void> jobFuture, File ... files) throws InterruptedException, ExecutionException {
+    private void finishDirectory(Future<Void> jobFuture, File ... files) throws Exception {
         for (File file : files) {
             System.out.println("deleting " + file + "...");
             assertTrueEventually(() -> assertTrue("Failed to delete " + file, file.delete()));
