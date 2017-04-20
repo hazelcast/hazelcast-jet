@@ -89,12 +89,13 @@ public interface WindowOperation<T, A, R> extends Serializable {
      * x)} returns an accumulator in the same state as {@code acc} was before
      * the operation.
      * <p>
-     * <b>Note:</b> this operation is optional and can return {@code null}. If
-     * omitted it can affect performance: this function allows us to <i>combine
-     * </i> new frames into sliding window and <i>deduct</i> old frames.
-     * Without it, we always have to combine all frames for each window slide,
-     * which gets worse, when the window is sled by small increments (relative
-     * to window length). For tumbling windows, it makes no difference.
+     * <b>Note:</b> it's allowed to return {@code null} here, however it
+     * impacts performance. This function allows us to <i>combine </i> new
+     * frames into sliding window and <i>deduct</i> old frames, as the window
+     * slides. Without it, we always have to combine all frames for each window
+     * slide, which gets worse, when the window is sled by small increments
+     * (with regard to window length). For tumbling windows, it makes no
+     * difference.
      */
     @Nullable
     BinaryOperator<A> deductAccumulatorF();
