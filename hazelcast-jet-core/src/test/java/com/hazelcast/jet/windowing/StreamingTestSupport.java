@@ -43,7 +43,7 @@ class StreamingTestSupport {
         assertEquals(expected, actual);
     }
 
-    private String streamToString(Stream<?> stream) {
+    public static String streamToString(Stream<?> stream) {
         return stream
                 .map(String::valueOf)
                 .collect(Collectors.joining("\n"));
