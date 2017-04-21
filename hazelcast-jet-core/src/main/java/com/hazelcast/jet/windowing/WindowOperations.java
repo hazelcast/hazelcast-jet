@@ -17,6 +17,9 @@
 package com.hazelcast.jet.windowing;
 
 import com.hazelcast.jet.Distributed;
+import com.hazelcast.jet.Distributed.BinaryOperator;
+
+import java.io.Serializable;
 
 /**
  * Utility class with factory methods for several useful windowing
@@ -70,19 +73,45 @@ public final class WindowOperations {
                                                            Distributed.BinaryOperator<U> deductF) {
         return new WindowOperationImpl<>(
                 boxSupplier(identity),
-                (a, t) -> a[0] = combineF.apply(a[0], mapF.apply(t)),
+                (a, t) -> a.value = combineF.apply(a.value, mapF.apply(t)),
                 (a, b) -> {
-                    a[0] = combineF.apply(a[0], b[0]);
+                    a.value = combineF.apply(a.value, b.value);
                     return a;
                 },
-                (a, b) -> {
-                    a[0] = deductF.apply(a[0], b[0]);
-                    return a;
-                },
-                a -> a[0]);
+                deductF != null
+                        ? (BinaryOperator<MutableObject<U>>) (a, b) -> {
+                            a.value = deductF.apply(a.value, b.value);
+                            return a;
+                        }
+                        : null,
+                a -> a.value);
     }
 
-    private static <T> Distributed.Supplier<T[]> boxSupplier(T identity) {
-        return () -> (T[]) new Object[]{identity};
+    private static <T> Distributed.Supplier<MutableObject<T>> boxSupplier(T identity) {
+        return () -> new MutableObject<>(identity);
+    }
+
+    private static final class MutableObject<T> implements Serializable {
+        T value;
+
+        MutableObject(T value) {
+            this.value = value;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            return value.equals(((MutableObject<?>) o).value);
+        }
+
+        @Override
+        public int hashCode() {
+            return value.hashCode();
+        }
     }
 }
