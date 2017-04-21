@@ -32,7 +32,6 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.LongStream;
-import java.util.stream.Stream;
 
 import static java.lang.Math.min;
 
@@ -52,7 +51,6 @@ class SlidingWindowP<K, F, R> extends AbstractProcessor {
     final NavigableMap<Long, Map<K, F>> seqToKeyToFrame = new TreeMap<>();
     final Map<K, F> slidingWindow = new HashMap<>();
 
-    private final Traverser<Object> nullTraverser = Traversers.newNullTraverser();
     private final WindowDefinition wDef;
     private final Supplier<F> createF;
     private final BinaryOperator<F> combineF;
@@ -106,24 +104,11 @@ class SlidingWindowP<K, F, R> extends AbstractProcessor {
     private Traverser<Object> slidingWindowTraverser(Punctuation punc) {
         long rangeStart = nextFrameSeqToEmit;
         nextFrameSeqToEmit = wDef.higherFrameSeq(punc.seq());
-        Stream<Long> rangeStream = range(rangeStart, nextFrameSeqToEmit, wDef.frameLength()).boxed();
-
-        return Traversers.traverseStream(rangeStream)
-                .flatMap(frameSeq -> {
-                    Map<K, F> currentFrameMap = computeWindow(frameSeq);
-
-                    Traverser<Object> traverser = Traversers.traverseIterable(currentFrameMap.entrySet())
-                            .map(e -> (Object) new Frame<>(frameSeq, e.getKey(), finishF.apply(e.getValue())))
-                            .onFirstNull(() -> completeWindow(frameSeq));
-
-                    // Append punctuation, only if there are some frames, or it is the last frameSeq
-                    // to emit for this punc. This is an optimization to emit less punctuations.
-                    if (!currentFrameMap.isEmpty() || frameSeq >= nextFrameSeqToEmit - 1) {
-                        traverser = traverser.append(new Punctuation(frameSeq));
-                    }
-
-                    return traverser;
-                });
+        return Traversers.traverseStream(range(rangeStart, nextFrameSeqToEmit, wDef.frameLength()).boxed())
+                .flatMap(frameSeq -> Traversers.traverseIterable(computeWindow(frameSeq).entrySet())
+                        .map(e -> (Object) new Frame<>(frameSeq, e.getKey(), finishF.apply(e.getValue())))
+                        .onFirstNull(() -> completeWindow(frameSeq)))
+                .append(punc);
     }
 
     private void completeWindow(long frameSeq) {
@@ -166,6 +151,6 @@ class SlidingWindowP<K, F, R> extends AbstractProcessor {
     private static LongStream range(long start, long end, long step) {
         return start >= end
                 ? LongStream.empty()
-                : LongStream.iterate(start, n -> n + step).limit((end - start) / step);
+                : LongStream.iterate(start, n -> n + step).limit(1 + (end - start - 1) / step);
     }
 }
