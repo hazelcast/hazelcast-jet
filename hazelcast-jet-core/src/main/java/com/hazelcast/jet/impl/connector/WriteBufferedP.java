@@ -53,11 +53,11 @@ public final class WriteBufferedP<B, T> implements Processor {
 
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
-        for (Object o; (o = inbox.poll()) != null; ) {
-            if (!(o instanceof Punctuation)) {
-                addToBuffer.accept(buffer, (T) o);
+        inbox.drain(item -> {
+            if (!(item instanceof Punctuation)) {
+                addToBuffer.accept(buffer, (T) item);
             }
-        }
+        });
         flushBuffer.accept(buffer);
     }
 
