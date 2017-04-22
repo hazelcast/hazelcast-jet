@@ -37,7 +37,7 @@ import static java.lang.Math.min;
 
 /**
  * Sliding window processor. See {@link
- * WindowingProcessors#slidingWindow(WindowDefinition, WindowOperation, boolean)
+ * WindowingProcessors#slidingWindow(WindowDefinition, WindowOperation)
  * slidingWindow(frameLength, framesPerWindow, windowToolkit)} for
  * documentation.
  *
