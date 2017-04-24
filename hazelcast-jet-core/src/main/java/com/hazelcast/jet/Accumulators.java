@@ -31,7 +31,7 @@ public final class Accumulators {
      */
     public static class MutableInteger {
 
-        @SuppressWarnings({"checkstyle:javadocvariable"})
+        @SuppressWarnings({"checkstyle:javadocvariable", "checkstyle:visibilitymodifier"})
         public int value;
 
         /**
@@ -90,7 +90,7 @@ public final class Accumulators {
      */
     public static class MutableLong {
 
-        @SuppressWarnings({"checkstyle:javadocvariable"})
+        @SuppressWarnings({"checkstyle:javadocvariable", "checkstyle:visibilitymodifier"})
         public long value;
 
         /**
@@ -148,7 +148,7 @@ public final class Accumulators {
      */
     public static class MutableDouble {
 
-        @SuppressWarnings({"checkstyle:javadocvariable"})
+        @SuppressWarnings({"checkstyle:javadocvariable", "checkstyle:visibilitymodifier"})
         public double value;
 
         /**
@@ -203,22 +203,24 @@ public final class Accumulators {
 
     /**
      * Mutable object container.
+     *
+     * @param <T> referenced object type
      */
-    public static class MutableObject<T> {
+    public static class MutableReference<T> {
 
-        @SuppressWarnings({"checkstyle:javadocvariable"})
+        @SuppressWarnings({"checkstyle:javadocvariable", "checkstyle:visibilitymodifier"})
         public T value;
 
         /**
          * Create new instance with {@code null} value.
          */
-        public MutableObject() {
+        public MutableReference() {
         }
 
         /**
          * Create new instance with specified value.
          */
-        public MutableObject(T value) {
+        public MutableReference(T value) {
             this.value = value;
         }
 
@@ -244,7 +246,7 @@ public final class Accumulators {
             if (o == null || getClass() != o.getClass()) {
                 return false;
             }
-            return Objects.equals(value, ((MutableObject<?>) o).value);
+            return Objects.equals(value, ((MutableReference<?>) o).value);
         }
 
         @Override
@@ -254,7 +256,7 @@ public final class Accumulators {
 
         @Override
         public String toString() {
-            return "MutableObject(" + value + ')';
+            return "MutableReference(" + value + ')';
         }
     }
 }

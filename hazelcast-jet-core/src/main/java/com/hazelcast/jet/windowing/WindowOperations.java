@@ -17,7 +17,7 @@
 package com.hazelcast.jet.windowing;
 
 import com.hazelcast.jet.Accumulators.MutableLong;
-import com.hazelcast.jet.Accumulators.MutableObject;
+import com.hazelcast.jet.Accumulators.MutableReference;
 import com.hazelcast.jet.Distributed;
 import com.hazelcast.jet.Distributed.BinaryOperator;
 
@@ -120,7 +120,7 @@ public final class WindowOperations {
                     return a;
                 },
                 deductF != null
-                        ? (BinaryOperator<MutableObject<U>>) (a, b) -> {
+                        ? (BinaryOperator<MutableReference<U>>) (a, b) -> {
                             a.value = deductF.apply(a.value, b.value);
                             return a;
                         }
@@ -128,7 +128,7 @@ public final class WindowOperations {
                 a -> a.value);
     }
 
-    private static <T> Distributed.Supplier<MutableObject<T>> boxSupplier(T identity) {
-        return () -> new MutableObject<>(identity);
+    private static <T> Distributed.Supplier<MutableReference<T>> boxSupplier(T identity) {
+        return () -> new MutableReference<>(identity);
     }
 }

@@ -20,7 +20,7 @@ import com.hazelcast.internal.serialization.impl.SerializationConstants;
 import com.hazelcast.jet.Accumulators.MutableDouble;
 import com.hazelcast.jet.Accumulators.MutableInteger;
 import com.hazelcast.jet.Accumulators.MutableLong;
-import com.hazelcast.jet.Accumulators.MutableObject;
+import com.hazelcast.jet.Accumulators.MutableReference;
 import com.hazelcast.jet.windowing.Frame;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -50,7 +50,7 @@ public final class JetSerializerHook {
     public static final int MUTABLE_INTEGER = -304;
     public static final int MUTABLE_LONG = -305;
     public static final int MUTABLE_DOUBLE = -306;
-    public static final int MUTABLE_OBJECT = -307;
+    public static final int MUTABLE_REFERENCE = -307;
 
     // reserved for hadoop module -380 to -390
 
@@ -304,19 +304,19 @@ public final class JetSerializerHook {
         }
     }
 
-    public static final class MutableObjectSerializer implements SerializerHook<MutableObject> {
+    public static final class MutableObjectSerializer implements SerializerHook<MutableReference> {
 
         @Override
-        public Class<MutableObject> getSerializationType() {
-            return MutableObject.class;
+        public Class<MutableReference> getSerializationType() {
+            return MutableReference.class;
         }
 
         @Override
         public Serializer createSerializer() {
-            return new StreamSerializer<MutableObject>() {
+            return new StreamSerializer<MutableReference>() {
                 @Override
                 public int getTypeId() {
-                    return MUTABLE_OBJECT;
+                    return MUTABLE_REFERENCE;
                 }
 
                 @Override
@@ -325,13 +325,13 @@ public final class JetSerializerHook {
                 }
 
                 @Override
-                public void write(ObjectDataOutput out, MutableObject object) throws IOException {
+                public void write(ObjectDataOutput out, MutableReference object) throws IOException {
                     out.writeObject(object.value);
                 }
 
                 @Override
-                public MutableObject read(ObjectDataInput in) throws IOException {
-                    return new MutableObject(in.readObject());
+                public MutableReference read(ObjectDataInput in) throws IOException {
+                    return new MutableReference(in.readObject());
                 }
             };
         }

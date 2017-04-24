@@ -20,7 +20,7 @@ import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuil
 import com.hazelcast.jet.Accumulators.MutableDouble;
 import com.hazelcast.jet.Accumulators.MutableInteger;
 import com.hazelcast.jet.Accumulators.MutableLong;
-import com.hazelcast.jet.Accumulators.MutableObject;
+import com.hazelcast.jet.Accumulators.MutableReference;
 import com.hazelcast.jet.windowing.Frame;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.serialization.SerializationService;
@@ -59,7 +59,7 @@ public class JetSerializerHookTest {
                 new MutableInteger(1),
                 new MutableLong(2),
                 new MutableDouble(3),
-                new MutableObject("foo")
+                new MutableReference("foo")
         );
     }
 
