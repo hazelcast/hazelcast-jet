@@ -16,10 +16,12 @@
 
 package com.hazelcast.jet.windowing;
 
+import com.hazelcast.jet.Accumulators.MutableLong;
+import com.hazelcast.jet.Accumulators.MutableObject;
 import com.hazelcast.jet.Distributed;
 import com.hazelcast.jet.Distributed.BinaryOperator;
 
-import java.io.Serializable;
+import javax.annotation.Nonnull;
 
 /**
  * Utility class with factory methods for several useful windowing
@@ -33,8 +35,47 @@ public final class WindowOperations {
     /**
      * Returns an operation that counts the items in the window.
      */
-    public static <T> WindowOperation<T, ?, Long> counting() {
-        return reducing(0L, e -> 1L, Long::sum, (a, b) -> a - b);
+    public static WindowOperation<?, ?, Long> counting() {
+        return WindowOperation.of(
+                MutableLong::new,
+                (a, i) -> a.value++,
+                (a1, a2) -> {
+                    a1.value = Math.addExact(a1.value, a2.value);
+                    return a1;
+                },
+                (a1, a2) -> {
+                    // with counting, value should never go below 0, so no need for subtractExact
+                    a1.value -= a2.value;
+                    return a1;
+                },
+                a -> a.value
+        );
+    }
+
+    /**
+     * Returns an operation that sums the items in the window.
+     */
+    public static WindowOperation<Long, ?, Long> summingToLong() {
+        return WindowOperations.summingToLong(Long::longValue);
+    }
+
+    /**
+     * Returns an operation that counts the items in the window.
+     */
+    public static <T> WindowOperation<T, ?, Long> summingToLong(@Nonnull Distributed.ToLongFunction<T> mapper) {
+        return WindowOperation.of(
+                MutableLong::new,
+                (a, value) -> a.value = Math.addExact(a.value, mapper.applyAsLong(value)),
+                (a1, a2) -> {
+                    a1.value = Math.addExact(a1.value, a2.value);
+                    return a1;
+                },
+                (a1, a2) -> {
+                    a1.value = Math.subtractExact(a1.value, a2.value);
+                    return a1;
+                },
+                a -> a.value
+        );
     }
 
     /**
@@ -89,29 +130,5 @@ public final class WindowOperations {
 
     private static <T> Distributed.Supplier<MutableObject<T>> boxSupplier(T identity) {
         return () -> new MutableObject<>(identity);
-    }
-
-    private static final class MutableObject<T> implements Serializable {
-        T value;
-
-        MutableObject(T value) {
-            this.value = value;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            return value.equals(((MutableObject<?>) o).value);
-        }
-
-        @Override
-        public int hashCode() {
-            return value.hashCode();
-        }
     }
 }
