@@ -27,10 +27,15 @@ import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
 import java.io.Serializable;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Map;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -38,27 +43,29 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 
+@RunWith(Parameterized.class)
 @Category(QuickTest.class)
 public class JetSerializerHookTest {
 
-    @Test
-    public void testSerialization() throws Exception {
-        // this test tries to serialize and deserialize all types defined in JetSerializerHook
-        for (Object instance : Arrays.asList(
-                new String[] {"a", "b", "c"},
+    @Parameter
+    public Object instance;
+
+    @Parameters
+    public static Collection<Object> data() throws Exception {
+        return Arrays.asList(
+                new Object[]{new String[]{"a", "b", "c"}},
                 new SimpleImmutableEntry<>("key", "value"),
                 new Frame(1, "key", "value"),
                 new MutableInteger(1),
                 new MutableLong(2),
                 new MutableDouble(3),
                 new MutableObject("foo")
-        )) {
-            System.out.println("type: " + instance.getClass());
-            doTest(instance);
-        }
+        );
     }
 
-    private void doTest(Object instance) throws Exception {
+    @Test
+    public void testSerialization() throws Exception {
+        // this test tries to serialize and deserialize all types defined in JetSerializerHook
         SerializationService serializationService = new DefaultSerializationServiceBuilder().build();
 
         Data serialized = serializationService.toData(instance);
