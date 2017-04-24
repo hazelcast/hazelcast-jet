@@ -135,7 +135,8 @@ public class SlidingWindowPTest extends StreamingTestSupport {
                 punc(4),
                 punc(5),
                 punc(6),
-                punc(7)
+                punc(7),
+                punc(8) // extra punc to trigger lazy clean-up
         ));
 
         // When
@@ -158,7 +159,8 @@ public class SlidingWindowPTest extends StreamingTestSupport {
                 outboxFrame(6, 2),
                 punc(6),
                 outboxFrame(7, 1),
-                punc(7)
+                punc(7),
+                punc(8)
         ));
     }
 
@@ -177,7 +179,8 @@ public class SlidingWindowPTest extends StreamingTestSupport {
                 punc(4),
                 punc(5),
                 punc(6),
-                punc(7)
+                punc(7),
+                punc(8) // extra punc to trigger lazy clean-up
         ));
 
         // When
@@ -200,7 +203,8 @@ public class SlidingWindowPTest extends StreamingTestSupport {
                 outboxFrame(6, 2),
                 punc(6),
                 outboxFrame(7, 1),
-                punc(7)
+                punc(7),
+                punc(8)
         ));
     }
 
@@ -259,7 +263,8 @@ public class SlidingWindowPTest extends StreamingTestSupport {
                 frame(11, 1),
                 punc(15),
                 frame(16, 3),
-                punc(19)
+                punc(19),
+                punc(20) // extra punc to trigger lazy clean-up
         ));
 
         // When
@@ -284,7 +289,8 @@ public class SlidingWindowPTest extends StreamingTestSupport {
                 outboxFrame(17, 3),
                 outboxFrame(18, 3),
                 outboxFrame(19, 3),
-                punc(19)
+                punc(19),
+                punc(20)
         ));
     }
 
@@ -301,7 +307,8 @@ public class SlidingWindowPTest extends StreamingTestSupport {
                 frame(4, 1),
                 punc(4),
                 punc(12),
-                punc(15)
+                punc(15),
+                punc(16) // extra punc to trigger lazy clean-up
         ));
 
         // When
@@ -326,7 +333,8 @@ public class SlidingWindowPTest extends StreamingTestSupport {
                 outboxFrame(13, 3),
                 outboxFrame(14, 2),
                 outboxFrame(15, 1),
-                punc(15)
+                punc(15),
+                punc(16)
         ));
     }
 

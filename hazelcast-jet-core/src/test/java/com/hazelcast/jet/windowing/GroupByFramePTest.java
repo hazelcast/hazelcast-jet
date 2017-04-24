@@ -74,7 +74,7 @@ public class GroupByFramePTest extends StreamingTestSupport {
                 entry(0L, 1L), // to frame 4
                 entry(1L, 1L), // to frame 4
                 punc(3), // does not close anything
-                entry(2L, 1L), // to frame 4, still accepted, even after punc(3)
+                entry(2L, 1L), // to frame 4, still accepted, even though it's late after punc(3)
                 punc(4), // closes frame 4
                 entry(4L, 1L), // to frame 8
                 entry(5L, 1L), // to frame 8

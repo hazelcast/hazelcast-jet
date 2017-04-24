@@ -33,6 +33,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.LongStream;
 
+import static com.hazelcast.jet.Distributed.Function.identity;
 import static java.lang.Math.min;
 
 /**
@@ -102,38 +103,34 @@ class SlidingWindowP<K, F, R> extends AbstractProcessor {
     }
 
     private Traverser<Object> slidingWindowTraverser(Punctuation punc) {
-        long rangeStart = nextFrameSeqToEmit;
-        nextFrameSeqToEmit = wDef.higherFrameSeq(punc.seq());
-        return Traversers.traverseStream(range(rangeStart, nextFrameSeqToEmit, wDef.frameLength()).boxed())
-                .flatMap(frameSeq -> Traversers.traverseIterable(computeWindow(frameSeq).entrySet())
-                        .map(e -> (Object) new Frame<>(frameSeq, e.getKey(), finishF.apply(e.getValue())))
-                        .onFirstNull(() -> completeWindow(frameSeq)))
-                .append(punc);
+        Traverser<Object> traverser = Traversers.traverseStream(
+                range(nextFrameSeqToEmit, nextFrameSeqToEmit = wDef.higherFrameSeq(punc.seq()), wDef.frameLength())
+                        .mapToObj(frameSeq ->
+                                computeWindow(frameSeq, seqToKeyToFrame.remove(frameSeq - wDef.windowLength()))
+                                        .entrySet().stream()
+                                        .map(e -> new Frame<>(frameSeq, e.getKey(), finishF.apply(e.getValue()))))
+                        .flatMap(identity()));
+
+        traverser = traverser.append(punc);
+        return traverser;
     }
 
-    private void completeWindow(long frameSeq) {
-        Map<K, F> evictedFrame = seqToKeyToFrame.remove(frameSeq - wDef.windowLength() + wDef.frameLength());
-        if (deductF != null) {
-            // deduct trailing-edge frame
-            patchSlidingWindow(deductF, evictedFrame);
-        }
-    }
-
-    private Map<K, F> computeWindow(long frameSeq) {
+    private Map<K, F> computeWindow(long frameSeq, Map<K, F> evictedFrame) {
         if (deductF != null) {
             // add leading-edge frame
             patchSlidingWindow(combineF, seqToKeyToFrame.get(frameSeq));
+            // deduct trailing-edge frame
+            patchSlidingWindow(deductF, evictedFrame);
             return slidingWindow;
-        } else {
-            // without deductF we have to recompute the window from scratch
-            Map<K, F> window = new HashMap<>();
-            Map<Long, Map<K, F>> frames = seqToKeyToFrame.subMap(frameSeq - wDef.windowLength(), false, frameSeq, true);
-            for (Map<K, F> keyToFrame : frames.values()) {
-                keyToFrame.forEach((key, currAcc) ->
-                        window.compute(key, (x, acc) -> combineF.apply(acc != null ? acc : createF.get(), currAcc)));
-            }
-            return window;
         }
+        // without deductF we have to recompute the window from scratch
+        Map<K, F> window = new HashMap<>();
+        Map<Long, Map<K, F>> frames = seqToKeyToFrame.subMap(frameSeq - wDef.windowLength(), false, frameSeq, true);
+        for (Map<K, F> keyToFrame : frames.values()) {
+            keyToFrame.forEach((key, currAcc) ->
+                    window.compute(key, (x, acc) -> combineF.apply(acc != null ? acc : createF.get(), currAcc)));
+        }
+        return window;
     }
 
     private void patchSlidingWindow(BinaryOperator<F> patchOp, Map<K, F> patchingFrame) {
