@@ -52,7 +52,7 @@ public class SlidingWindowPTest extends StreamingTestSupport {
                 (acc1, acc2) -> acc1 + acc2,
                 null,
                 acc -> acc);
-        processor = slidingWindow(windowDef, operation, true).get();
+        processor = slidingWindow(windowDef, operation).get();
         processor.init(outbox, mock(Context.class));
     }
 
