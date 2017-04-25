@@ -74,7 +74,7 @@ public class SlidingWindowIntegrationTest extends JetTestSupport {
         JetInstance instance = super.createJetMember();
 
         WindowDefinition wDef = slidingWindowDef(2000, 1000);
-        WindowOperation<MockEvent, ?, ?> wOperation = WindowOperations.counting();
+        WindowOperation<Object, ?, Long> wOperation = WindowOperations.counting();
 
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", streamList(sourceEvents)).localParallelism(1);

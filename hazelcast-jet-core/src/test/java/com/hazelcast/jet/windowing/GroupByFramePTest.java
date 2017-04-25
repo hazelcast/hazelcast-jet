@@ -16,15 +16,14 @@
 
 package com.hazelcast.jet.windowing;
 
+import com.hazelcast.jet.Accumulators.MutableLong;
 import com.hazelcast.jet.Processor.Context;
 import com.hazelcast.jet.Punctuation;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
-import com.hazelcast.util.MutableLong;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -42,7 +41,7 @@ import static org.mockito.Mockito.mock;
 public class GroupByFramePTest extends StreamingTestSupport {
 
     private static final long KEY = 77L;
-    private GroupByFrameP<Entry<Long, Long>, Long, MutableLong> processor;
+    private GroupByFrameP<Entry<Long, Long>, Long, ?> processor;
 
     @Before
     public void before() {
@@ -50,13 +49,7 @@ public class GroupByFramePTest extends StreamingTestSupport {
                 (Entry<Long, Long> x) -> KEY,
                 Entry::getKey,
                 new WindowDefinition(4, 0, 4),
-                WindowOperation.of(
-                        MutableLong::new,
-                        (acc, e) -> acc.value += e.getValue(),
-                        (a, b) -> MutableLong.valueOf(a.value + b.value),
-                        (a, b) -> MutableLong.valueOf(a.value - b.value),
-                        a -> a.value
-                )
+                WindowOperations.summingToLong((Entry<Long, Long> e) -> e.getValue())
         ).get();
         processor.init(outbox, mock(Context.class));
     }
@@ -128,6 +121,6 @@ public class GroupByFramePTest extends StreamingTestSupport {
     }
 
     private static Frame<Long, MutableLong> frame(long seq, long value) {
-        return new Frame<>(seq, KEY, MutableLong.valueOf(value));
+        return new Frame<>(seq, KEY, new MutableLong(value));
     }
 }
