@@ -31,7 +31,10 @@ public final class Accumulators {
      */
     public static class MutableInteger {
 
-        @SuppressWarnings({"checkstyle:javadocvariable", "checkstyle:visibilitymodifier"})
+        /**
+         * Internal value.
+         */
+        @SuppressWarnings("checkstyle:visibilitymodifier")
         public int value;
 
         /**
@@ -90,7 +93,10 @@ public final class Accumulators {
      */
     public static class MutableLong {
 
-        @SuppressWarnings({"checkstyle:javadocvariable", "checkstyle:visibilitymodifier"})
+        /**
+         * Internal value.
+         */
+        @SuppressWarnings("checkstyle:visibilitymodifier")
         public long value;
 
         /**
@@ -148,7 +154,10 @@ public final class Accumulators {
      */
     public static class MutableDouble {
 
-        @SuppressWarnings({"checkstyle:javadocvariable", "checkstyle:visibilitymodifier"})
+        /**
+         * Internal value.
+         */
+        @SuppressWarnings("checkstyle:visibilitymodifier")
         public double value;
 
         /**
@@ -208,7 +217,10 @@ public final class Accumulators {
      */
     public static class MutableReference<T> {
 
-        @SuppressWarnings({"checkstyle:javadocvariable", "checkstyle:visibilitymodifier"})
+        /**
+         * Internal value.
+         */
+        @SuppressWarnings("checkstyle:visibilitymodifier")
         public T value;
 
         /**
