@@ -90,12 +90,9 @@ public final class WindowingProcessors {
      * @param <K> type of the grouping key
      * @param <F> type of the frame
      * @param <R> type of the result derived from a frame
-     * @param emitPunctuation If {@code true}, punctuation will be emitted when window
-     *                        is closed. Enable, if downstream vertex needs to know,
-     *                        that it has received all keys for a particular window.
      */
     public static <K, F, R> Distributed.Supplier<SlidingWindowP<K, F, R>> slidingWindow(
-            WindowDefinition windowDef, WindowOperation<K, F, R> windowOperation, boolean emitPunctuation) {
+            WindowDefinition windowDef, WindowOperation<K, F, R> windowOperation) {
         return () -> new SlidingWindowP<>(windowDef, windowOperation);
     }
 

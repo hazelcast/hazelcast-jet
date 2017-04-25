@@ -38,7 +38,7 @@ import static java.util.function.Function.identity;
 
 /**
  * Sliding window processor. See {@link
- * WindowingProcessors#slidingWindow(WindowDefinition, WindowOperation, boolean)
+ * #slidingWindow(WindowDefinition, WindowOperation
  * slidingWindow(frameLength, framesPerWindow, windowToolkit)} for
  * documentation.
  *
