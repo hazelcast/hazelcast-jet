@@ -53,9 +53,9 @@ public class SlidingWindowPTest extends StreamingTestSupport {
     public boolean hasDeduct;
 
     @Parameter(1)
-    public  boolean isMutableFrame;
+    public boolean isMutableFrame;
 
-    @Parameters
+    @Parameters(name = "hasDeduct={0}, isMutableFrame={1}")
     public static Collection<Object[]> parameters() {
         return Arrays.asList(new Object[][]{
                 {true, true},
