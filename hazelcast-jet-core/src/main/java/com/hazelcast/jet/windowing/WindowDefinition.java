@@ -152,4 +152,11 @@ public class WindowDefinition implements Serializable {
     public static WindowDefinition tumblingWindowDef(long windowLength) {
         return slidingWindowDef(windowLength, windowLength);
     }
+
+    /**
+     * Returns {@code true}, if this is a tumbling window.
+     */
+    public boolean isTumbling() {
+        return windowLength == frameLength;
+    }
 }

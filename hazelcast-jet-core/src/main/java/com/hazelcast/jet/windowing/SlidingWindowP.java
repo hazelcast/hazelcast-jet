@@ -35,6 +35,7 @@ import java.util.stream.LongStream;
 
 import static com.hazelcast.jet.Distributed.Function.identity;
 import static java.lang.Math.min;
+import static java.util.Collections.emptyMap;
 
 /**
  * Sliding window processor. See {@link
@@ -116,6 +117,9 @@ class SlidingWindowP<K, F, R> extends AbstractProcessor {
     }
 
     private Map<K, F> computeWindow(long frameSeq, Map<K, F> evictedFrame) {
+        if (wDef.isTumbling()) {
+            return seqToKeyToFrame.getOrDefault(frameSeq, emptyMap());
+        }
         if (deductF != null) {
             // add leading-edge frame
             patchSlidingWindow(combineF, seqToKeyToFrame.get(frameSeq));
