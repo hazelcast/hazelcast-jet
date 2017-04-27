@@ -87,6 +87,13 @@ public class WindowDefinition implements Serializable {
     }
 
     /**
+     * Returns {@code true}, if this is a tumbling window.
+     */
+    public boolean isTumbling() {
+        return windowLength == frameLength;
+    }
+
+    /**
      * Returns a new window definition where all the frames are shifted by the
      * given offset. More formally, it specifies the value of the lowest
      * non-negative {@code frameSeq}.
@@ -151,12 +158,5 @@ public class WindowDefinition implements Serializable {
      */
     public static WindowDefinition tumblingWindowDef(long windowLength) {
         return slidingWindowDef(windowLength, windowLength);
-    }
-
-    /**
-     * Returns {@code true}, if this is a tumbling window.
-     */
-    public boolean isTumbling() {
-        return windowLength == frameLength;
     }
 }

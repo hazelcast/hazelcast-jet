@@ -40,7 +40,7 @@ import static java.lang.Math.min;
  * @param <F> type of the frame accumulator object
  * @param <R> type of the finished result
  */
-class SlidingWindowP<K, F, R> extends WindowCombinerBaseP<K, F, R> {
+class SlidingWindowP<K, F, R> extends FrameCombinerBaseP<K, F, R> {
 
     private final Distributed.BinaryOperator<F> deductF;
     private final F emptyAcc;

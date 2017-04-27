@@ -32,13 +32,13 @@ import java.util.stream.LongStream;
 import static java.lang.Math.min;
 
 /**
- * Base class for {@link SlidingWindowP} and {@link TumblingWindowP}
+ * Base class for {@link SlidingWindowP} and {@link SingleFrameWindowP}
  *
  * @param <K> type of the grouping key
  * @param <F> type of the frame accumulator object
  * @param <R> type of the finished result
  */
-class WindowCombinerBaseP<K, F, R> extends AbstractProcessor {
+class FrameCombinerBaseP<K, F, R> extends AbstractProcessor {
 
     // package-visible for test
     final NavigableMap<Long, Map<K, F>> seqToKeyToFrame = new TreeMap<>();
@@ -53,7 +53,7 @@ class WindowCombinerBaseP<K, F, R> extends AbstractProcessor {
 
     long nextFrameSeqToEmit = Long.MIN_VALUE;
 
-    WindowCombinerBaseP(WindowDefinition winDef, @Nonnull WindowOperation<?, F, R> winOp) {
+    FrameCombinerBaseP(WindowDefinition winDef, @Nonnull WindowOperation<?, F, R> winOp) {
         this.wDef = winDef;
         this.createF = winOp.createAccumulatorF();
         this.combineF = winOp.combineAccumulatorsF();

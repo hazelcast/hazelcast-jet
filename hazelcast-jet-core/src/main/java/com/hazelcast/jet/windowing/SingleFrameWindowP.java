@@ -34,12 +34,12 @@ import static com.hazelcast.jet.Traversers.traverseIterableWithRemoval;
  * @param <F> type of the frame accumulator object
  * @param <R> type of the finished result
  */
-class TumblingWindowP<K, F, R> extends WindowCombinerBaseP<K, F, R> {
+class SingleFrameWindowP<K, F, R> extends FrameCombinerBaseP<K, F, R> {
 
-    TumblingWindowP(WindowDefinition winDef, @Nonnull WindowOperation<?, F, R> winOp) {
+    SingleFrameWindowP(WindowDefinition winDef, @Nonnull WindowOperation<?, F, R> winOp) {
         super(winDef, winOp);
 
-        assert winDef.isTumbling() : TumblingWindowP.class.getSimpleName() + " used with sliding window";
+        assert winDef.isTumbling() : SingleFrameWindowP.class.getSimpleName() + " used with sliding window";
 
         this.flatMapper = flatMapper(this::tumblingWindowTraverser);
     }
