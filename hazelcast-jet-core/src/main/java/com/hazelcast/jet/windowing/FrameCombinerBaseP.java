@@ -32,7 +32,7 @@ import java.util.stream.LongStream;
 import static java.lang.Math.min;
 
 /**
- * Base class for {@link SlidingWindowP} and {@link SingleFrameWindowP}
+ * Base class for {@link SlidingWindowP} and {@link TumblingWindowP}
  *
  * @param <K> type of the grouping key
  * @param <F> type of the frame accumulator object

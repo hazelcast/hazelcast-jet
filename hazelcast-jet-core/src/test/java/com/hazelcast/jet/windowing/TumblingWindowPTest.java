@@ -34,16 +34,16 @@ import static org.mockito.Mockito.mock;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
-public class SingleFrameWindowPTest extends StreamingTestSupport {
+public class TumblingWindowPTest extends StreamingTestSupport {
 
     private static final long KEY = 77L;
-    private SingleFrameWindowP<Object, ?, Long> processor;
+    private TumblingWindowP<Object, ?, Long> processor;
 
     @Before
     public void before() {
         WindowOperation<Entry<Long, Long>, ?, Long> operation = WindowOperations.summingToLong(Entry::getValue);
 
-        processor = new SingleFrameWindowP<>(WindowDefinition.tumblingWindowDef(1), operation);
+        processor = new TumblingWindowP<>(WindowDefinition.tumblingWindowDef(1), operation);
         processor.init(outbox, mock(Context.class));
     }
 
