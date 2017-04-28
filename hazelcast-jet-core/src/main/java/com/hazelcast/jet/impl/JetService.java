@@ -122,6 +122,7 @@ public class JetService
     public void shutdown(boolean terminate) {
         networking.destroy();
         executionService.shutdown();
+        liveOperationRegistry.shutdown();
     }
 
     @Override
