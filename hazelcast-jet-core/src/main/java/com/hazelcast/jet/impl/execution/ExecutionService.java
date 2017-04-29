@@ -59,6 +59,8 @@ public class ExecutionService {
     private final String hzInstanceName;
     private final ILogger logger;
 
+    private volatile boolean isShutdown;
+
     public ExecutionService(HazelcastInstance hz, int threadCount) {
         this.hzInstanceName = hz.getName();
         this.cooperativeWorkers = new CooperativeWorker[threadCount];
@@ -89,19 +91,13 @@ public class ExecutionService {
     }
 
     public void shutdown() {
-        blockingTaskletExecutor.shutdown();
-        synchronized (this) {
-            for (CooperativeWorker worker : workers) {
-                if (worker != null) {
-                    worker.isShutdown = true;
-                }
-            }
-        }
+        isShutdown = true;
+        blockingTaskletExecutor.shutdownNow();
     }
 
     private void ensureStillRunning() {
-        if (blockingTaskletExecutor.isShutdown()) {
-            throw new IllegalStateException("Execution service was ordered to shut down");
+        if (isShutdown) {
+            throw new IllegalStateException("Execution service was already ordered to shut down");
         }
     }
 
@@ -163,8 +159,8 @@ public class ExecutionService {
                 t.init(tracker.jobFuture);
                 long idleCount = 0;
                 for (ProgressState result;
-                     !(result = t.call()).isDone() && !tracker.jobFuture.isCompletedExceptionally();
-                ) {
+                     !(result = t.call()).isDone() && !tracker.jobFuture.isDone() && !isShutdown;
+                 ) {
                     if (result.isMadeProgress()) {
                         idleCount = 0;
                     } else {
@@ -181,10 +177,9 @@ public class ExecutionService {
         }
     }
 
-    private class CooperativeWorker implements Runnable {
+    private final class CooperativeWorker implements Runnable {
         private final List<TaskletTracker> trackers;
         private final CooperativeWorker[] colleagues;
-        private volatile boolean isShutdown;
 
         CooperativeWorker(CooperativeWorker[] colleagues) {
             this.colleagues = colleagues;
