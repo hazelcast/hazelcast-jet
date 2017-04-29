@@ -54,15 +54,15 @@ public class ExecutionService {
             new BackoffIdleStrategy(0, 0, MICROSECONDS.toNanos(1), MILLISECONDS.toNanos(1));
 
     private final ExecutorService blockingTaskletExecutor = newCachedThreadPool(new BlockingTaskThreadFactory());
-    private final CooperativeWorker[] workers;
-    private final Thread[] threads;
+    private final CooperativeWorker[] cooperativeWorkers;
+    private final Thread[] cooperativeThreadPool;
     private final String hzInstanceName;
     private final ILogger logger;
 
     public ExecutionService(HazelcastInstance hz, int threadCount) {
         this.hzInstanceName = hz.getName();
-        this.workers = new CooperativeWorker[threadCount];
-        this.threads = new Thread[threadCount];
+        this.cooperativeWorkers = new CooperativeWorker[threadCount];
+        this.cooperativeThreadPool = new Thread[threadCount];
         this.logger = hz.getLoggingService().getLogger(ExecutionService.class);
     }
 
@@ -115,7 +115,7 @@ public class ExecutionService {
 
     private void submitCooperativeTasklets(JobFuture jobFuture, ClassLoader jobClassLoader, List<Tasklet> tasklets) {
         ensureThreadsStarted();
-        final List<TaskletTracker>[] trackersByThread = new List[workers.length];
+        final List<TaskletTracker>[] trackersByThread = new List[cooperativeWorkers.length];
         Arrays.setAll(trackersByThread, i -> new ArrayList());
         int i = 0;
         for (Tasklet t : tasklets) {
@@ -123,23 +123,23 @@ public class ExecutionService {
             trackersByThread[i++ % trackersByThread.length].add(new TaskletTracker(t, jobFuture, jobClassLoader));
         }
         for (i = 0; i < trackersByThread.length; i++) {
-            workers[i].trackers.addAll(trackersByThread[i]);
+            cooperativeWorkers[i].trackers.addAll(trackersByThread[i]);
         }
-        Arrays.stream(threads).forEach(LockSupport::unpark);
+        Arrays.stream(cooperativeThreadPool).forEach(LockSupport::unpark);
     }
 
     private synchronized void ensureThreadsStarted() {
-        if (workers[0] != null) {
+        if (cooperativeWorkers[0] != null) {
             return;
         }
-        Arrays.setAll(workers, i -> new CooperativeWorker(workers));
-        Arrays.setAll(threads, i -> new Thread(workers[i],
+        Arrays.setAll(cooperativeWorkers, i -> new CooperativeWorker(cooperativeWorkers));
+        Arrays.setAll(cooperativeThreadPool, i -> new Thread(cooperativeWorkers[i],
                 String.format("hz.%s.jet.cooperative.thread-%d", hzInstanceName, i)));
-        Arrays.stream(threads).forEach(Thread::start);
+        Arrays.stream(cooperativeThreadPool).forEach(Thread::start);
     }
 
     private String trackersToString() {
-        return Arrays.stream(workers)
+        return Arrays.stream(cooperativeWorkers)
                      .flatMap(w -> w.trackers.stream())
                      .map(Object::toString)
                      .sorted()
