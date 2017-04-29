@@ -123,6 +123,7 @@ public class JetService
     public void shutdown(boolean terminate) {
         networking.destroy();
         executionService.shutdown();
+        executionContexts.forEach((jobId, exeCtx) -> exeCtx.getJobFuture().toCompletableFuture().cancel(true));
     }
 
     @Override
