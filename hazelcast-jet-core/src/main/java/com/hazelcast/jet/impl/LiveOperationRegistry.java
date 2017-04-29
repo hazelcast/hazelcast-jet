@@ -61,4 +61,9 @@ public class LiveOperationRegistry {
         return operation.isPresent();
     }
 
+    public void shutdown() {
+        liveOperations.values().stream()
+                .flatMap(e -> e.values().stream())
+                .forEach(AsyncExecutionOperation::cancel);
+    }
 }
