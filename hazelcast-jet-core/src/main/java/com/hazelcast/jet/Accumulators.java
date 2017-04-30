@@ -16,12 +16,15 @@
 
 package com.hazelcast.jet;
 
+import com.hazelcast.nio.ObjectDataOutput;
+
+import java.io.IOException;
+import java.math.BigInteger;
 import java.util.Objects;
 
 /**
- * Mutable holders of primitive values and references. The classes are
- * designed so that they have both getters/setters and the exposed value
- * field. Depending on context, one or the other is more convenient.
+ * Mutable holders of primitive values and references with support
+ * for some common accumulation operations.
  */
 public final class Accumulators {
 
@@ -29,99 +32,73 @@ public final class Accumulators {
     }
 
     /**
-     * Mutable {@code int} holder.
+     * Accumulator of a primitive {@code long} value.
      */
-    public static class MutableInteger {
+    public static class LongAccumulator {
 
-        /**
-         * The holder's value.
-         */
-        @SuppressWarnings("checkstyle:visibilitymodifier")
-        public int value;
+        private long value;
 
         /**
          * Creates a new instance with {@code value == 0}.
          */
-        public MutableInteger() {
-        }
-
-        /**
-         * Creates new instance with the given initial value.
-         */
-        public MutableInteger(int value) {
-            this.value = value;
-        }
-
-        /**
-         * Returns the current value.
-         */
-        public int getValue() {
-            return value;
-        }
-
-        /**
-         * Sets the value as given.
-         */
-        public void setValue(int value) {
-            this.value = value;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            return this == o ||
-                    o != null
-                    && this.getClass() == o.getClass()
-                    && this.value == ((MutableInteger) o).value;
-        }
-
-        @Override
-        public int hashCode() {
-            return Integer.hashCode(value);
-        }
-
-        @Override
-        public String toString() {
-            return "MutableInteger(" + value + ')';
-        }
-    }
-
-
-    /**
-     * Mutable {@code long} holder.
-     */
-    public static class MutableLong {
-
-        /**
-         * The holder's value.
-         */
-        @SuppressWarnings("checkstyle:visibilitymodifier")
-        public long value;
-
-        /**
-         * Creates a new instance with {@code value == 0}.
-         */
-        public MutableLong() {
+        public LongAccumulator() {
         }
 
         /**
          * Creates a new instance with the specified value.
          */
-        public MutableLong(long value) {
+        public LongAccumulator(long value) {
             this.value = value;
         }
 
         /**
          * Returns the current value.
          */
-        public long getValue() {
+        public long get() {
             return value;
         }
 
         /**
          * Sets the value as given.
          */
-        public void setValue(long value) {
+        public LongAccumulator set(long value) {
             this.value = value;
+            return this;
+        }
+
+        /**
+         * Uses {@link Math#addExact(long, long) Math.addExact()} to add the
+         * supplied value to this accumulator.
+         */
+        public LongAccumulator addExact(long value) {
+            this.value = Math.addExact(this.value, value);
+            return this;
+        }
+
+        /**
+         * Uses {@link Math#addExact(long, long) Math.addExact()} to add the value
+         * of the supplied accumulator into this one.
+         */
+        public LongAccumulator addExact(LongAccumulator that) {
+            this.value = Math.addExact(this.value, that.value);
+            return this;
+        }
+
+        /**
+         * Subtracts the value of the supplied accumulator from this one.
+         */
+        public LongAccumulator subtract(LongAccumulator that) {
+            this.value -= that.value;
+            return this;
+        }
+
+        /**
+         * Uses {@link Math#subtractExact(long, long) Math.subtractExact()}
+         * to subtract the value of the supplied accumulator from this one.
+         */
+        public LongAccumulator subtractExact(LongAccumulator that) {
+            this.value = Math.subtractExact(this.value, that.value);
+            return this;
         }
 
         @Override
@@ -129,7 +106,7 @@ public final class Accumulators {
             return this == o ||
                     o != null
                     && this.getClass() == o.getClass()
-                    && this.value == ((MutableLong) o).value;
+                    && this.value == ((LongAccumulator) o).value;
         }
 
         @Override
@@ -144,41 +121,38 @@ public final class Accumulators {
     }
 
     /**
-     * Mutable {@code double} container.
+     * Accumulator of a primitive {@code double} value.
      */
-    public static class MutableDouble {
+    public static class DoubleAccumulator {
 
-        /**
-         * The holder's value.
-         */
-        @SuppressWarnings("checkstyle:visibilitymodifier")
-        public double value;
+        private double value;
 
         /**
          * Creates a new instance with {@code value == 0}.
          */
-        public MutableDouble() {
+        public DoubleAccumulator() {
         }
 
         /**
          * Creates a new instance with the specified value.
          */
-        public MutableDouble(double value) {
+        public DoubleAccumulator(double value) {
             this.value = value;
         }
 
         /**
          * Returns the current value.
          */
-        public double getValue() {
+        public double get() {
             return value;
         }
 
         /**
          * Sets the value as given.
          */
-        public void setValue(double value) {
+        public DoubleAccumulator set(double value) {
             this.value = value;
+            return this;
         }
 
         @Override
@@ -186,7 +160,7 @@ public final class Accumulators {
             return this == o ||
                     o != null
                     && this.getClass() == o.getClass()
-                    && this.value == ((MutableDouble) o).value;
+                    && this.value == ((DoubleAccumulator) o).value;
         }
 
         @Override
@@ -210,8 +184,7 @@ public final class Accumulators {
         /**
          * The holder's value.
          */
-        @SuppressWarnings("checkstyle:visibilitymodifier")
-        public T value;
+        private T value;
 
         /**
          * Creates a new instance with a {@code null} value.
@@ -229,15 +202,16 @@ public final class Accumulators {
         /**
          * Returns the current value.
          */
-        public T getValue() {
+        public T get() {
             return value;
         }
 
         /**
          * Sets the value as given.
          */
-        public void setValue(T value) {
+        public MutableReference set(T value) {
             this.value = value;
+            return this;
         }
 
         @Override

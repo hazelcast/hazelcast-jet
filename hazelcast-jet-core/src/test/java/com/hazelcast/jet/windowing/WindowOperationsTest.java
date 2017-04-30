@@ -16,9 +16,13 @@
 
 package com.hazelcast.jet.windowing;
 
-import com.hazelcast.jet.Accumulators.MutableLong;
+import com.hazelcast.jet.Accumulators.LongAccumulator;
 import com.hazelcast.jet.Accumulators.MutableReference;
+import com.hazelcast.jet.Distributed;
+import com.hazelcast.jet.Distributed.BiConsumer;
 import com.hazelcast.jet.Distributed.BinaryOperator;
+import com.hazelcast.jet.Distributed.Supplier;
+import com.hazelcast.jet.Accumulators.LinRegAccumulator;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Test;
@@ -38,19 +42,19 @@ import static org.junit.Assert.assertNotNull;
 public class WindowOperationsTest {
     @Test
     public void when_counting() {
-        validateOp(counting(), MutableLong::getValue,
+        validateOp(counting(), LongAccumulator::get,
                 new Object(), 1L, 2L, 1L);
     }
 
     @Test
     public void when_summingToLong() {
-        validateOp(summingToLong(), MutableLong::getValue,
+        validateOp(summingToLong(), LongAccumulator::get,
                 1L, 1L, 2L, 1L);
     }
 
     @Test
     public void when_summingToLongWithMapper() {
-        validateOp(summingToLong(x -> 1L), MutableLong::getValue,
+        validateOp(summingToLong(x -> 1L), LongAccumulator::get,
                 new Object(), 1L, 2L, 1L);
     }
 
