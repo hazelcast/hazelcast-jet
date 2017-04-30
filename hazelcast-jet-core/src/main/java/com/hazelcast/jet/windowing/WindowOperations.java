@@ -16,10 +16,10 @@
 
 package com.hazelcast.jet.windowing;
 
+import com.hazelcast.jet.Accumulators.LinRegAccumulator;
 import com.hazelcast.jet.Accumulators.LongAccumulator;
 import com.hazelcast.jet.Accumulators.MutableReference;
 import com.hazelcast.jet.Distributed;
-import com.hazelcast.jet.Distributed.BinaryOperator;
 
 import javax.annotation.Nonnull;
 
@@ -66,6 +66,26 @@ public final class WindowOperations {
                 LongAccumulator::addExact,
                 LongAccumulator::subtractExact,
                 LongAccumulator::get
+        );
+    }
+
+    /**
+     * Returns an operation that computes the linear regression on the items
+     * in the window. The operation will produce a {@code double}-valued
+     * coefficient that approximates the rate of change of {@code y} as a
+     * function of {@code x}, where {@code x} and {@code y} are {@code long}
+     * quantities extracted from each item by the two provided functions.
+     */
+    public static <T> WindowOperation<T, LinRegAccumulator, Double> linearTrend(
+            @Nonnull Distributed.ToLongFunction<T> getX,
+            @Nonnull Distributed.ToLongFunction<T> getY
+    ) {
+        return WindowOperation.of(
+                LinRegAccumulator::new,
+                (a, item) -> a.accumulate(getX.applyAsLong(item), getY.applyAsLong(item)),
+                LinRegAccumulator::combine,
+                LinRegAccumulator::deduct,
+                LinRegAccumulator::finish
         );
     }
 

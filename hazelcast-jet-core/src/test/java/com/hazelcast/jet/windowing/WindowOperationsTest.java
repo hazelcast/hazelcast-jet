@@ -29,9 +29,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
+import java.util.Map.Entry;
 import java.util.function.Function;
 
+import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.windowing.WindowOperations.counting;
+import static com.hazelcast.jet.windowing.WindowOperations.linearTrend;
 import static com.hazelcast.jet.windowing.WindowOperations.reducing;
 import static com.hazelcast.jet.windowing.WindowOperations.summingToLong;
 import static org.junit.Assert.assertEquals;
@@ -59,9 +62,43 @@ public class WindowOperationsTest {
     }
 
     @Test
+    public void when_linearRegression() {
+        // Given
+
+        WindowOperation<Entry<Long, Long>, LinRegAccumulator, Double> op = linearTrend(Entry::getKey, Entry::getValue);
+        Supplier<LinRegAccumulator> newF = op.createAccumulatorF();
+        BiConsumer<LinRegAccumulator, Entry<Long, Long>> accF = op.accumulateItemF();
+        BinaryOperator<LinRegAccumulator> combineF = op.combineAccumulatorsF();
+        BinaryOperator<LinRegAccumulator> deductF = op.deductAccumulatorF();
+        Distributed.Function<LinRegAccumulator, Double> finishF = op.finishAccumulationF();
+        assertNotNull(deductF);
+
+        // When
+
+        LinRegAccumulator a1 = newF.get();
+        accF.accept(a1, entry(1L, 2L));
+        accF.accept(a1, entry(2L, 4L));
+        assertEquals(a1.finish(), 2.0, Double.MIN_VALUE);
+
+        LinRegAccumulator a2 = newF.get();
+        accF.accept(a2, entry(4L, 8L));
+        accF.accept(a2, entry(5L, 10L));
+        assertEquals(a2.finish(), 2.0, Double.MIN_VALUE);
+
+        LinRegAccumulator combined = combineF.apply(a1, a2);
+        assertEquals(combined.finish(), 2.0, Double.MIN_VALUE);
+
+        LinRegAccumulator deducted = deductF.apply(combined, a2);
+        assertEquals(deducted.finish(), 2.0, Double.MIN_VALUE);
+
+        Double result = finishF.apply(deducted);
+        assertEquals(result, Double.valueOf(2));
+    }
+
+    @Test
     public void when_reducing() {
         validateOp(reducing(0, Integer::valueOf, Integer::sum, (x, y) -> x - y),
-                MutableReference::getValue,
+                MutableReference::get,
                 "1", 1, 2, 1);
     }
 

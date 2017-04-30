@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.execution.init;
 
 import com.hazelcast.internal.serialization.impl.SerializationConstants;
 import com.hazelcast.jet.Accumulators.DoubleAccumulator;
+import com.hazelcast.jet.Accumulators.LinRegAccumulator;
 import com.hazelcast.jet.Accumulators.LongAccumulator;
 import com.hazelcast.jet.Accumulators.MutableReference;
 import com.hazelcast.jet.windowing.Frame;
@@ -28,6 +29,7 @@ import com.hazelcast.nio.serialization.SerializerHook;
 import com.hazelcast.nio.serialization.StreamSerializer;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -49,8 +51,9 @@ public final class JetSerializerHook {
     public static final int MUTABLE_LONG = -304;
     public static final int MUTABLE_DOUBLE = -305;
     public static final int MUTABLE_REFERENCE = -306;
+    public static final int LIN_REG_ACC = -307;
 
-    // reserved for hadoop module -380 to -390
+    // reserved for hadoop module: -380 to -390
 
     /**
      * End of reserved space for Jet-specific serializers.
@@ -302,4 +305,49 @@ public final class JetSerializerHook {
         }
     }
 
+    public static final class LinRegAccSerializer implements SerializerHook<LinRegAccumulator> {
+
+        @Override
+        public Class<LinRegAccumulator> getSerializationType() {
+            return LinRegAccumulator.class;
+        }
+
+        @Override
+        public Serializer createSerializer() {
+            return new StreamSerializer<LinRegAccumulator>() {
+                @Override
+                public int getTypeId() {
+                    return LIN_REG_ACC;
+                }
+
+                @Override
+                public void destroy() {
+                }
+
+                @Override
+                public void write(ObjectDataOutput out, LinRegAccumulator object) throws IOException {
+                    object.writeObject(out);
+                }
+
+                @Override
+                public LinRegAccumulator read(ObjectDataInput in) throws IOException {
+                    return new LinRegAccumulator(
+                            in.readLong(), readBigInt(in), readBigInt(in), readBigInt(in), readBigInt(in));
+                }
+
+                private BigInteger readBigInt(ObjectDataInput in) throws IOException {
+                    byte[] bytes = new byte[in.readUnsignedByte()];
+                    for (int i = 0; i < bytes.length; i++) {
+                        bytes[i] = in.readByte();
+                    }
+                    return new BigInteger(bytes);
+                }
+            };
+        }
+
+        @Override
+        public boolean isOverwritable() {
+            return true;
+        }
+    }
 }
