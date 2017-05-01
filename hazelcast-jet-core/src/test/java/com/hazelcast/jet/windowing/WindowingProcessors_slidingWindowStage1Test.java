@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.windowing;
 
-import com.hazelcast.jet.Accumulators.LongAccumulator;
+import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.Processor.Context;
 import com.hazelcast.jet.Punctuation;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;

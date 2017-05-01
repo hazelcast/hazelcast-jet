@@ -16,13 +16,13 @@
 
 package com.hazelcast.jet.windowing;
 
-import com.hazelcast.jet.Accumulators.LongAccumulator;
-import com.hazelcast.jet.Accumulators.MutableReference;
+import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.jet.accumulator.MutableReference;
 import com.hazelcast.jet.Distributed;
 import com.hazelcast.jet.Distributed.BiConsumer;
 import com.hazelcast.jet.Distributed.BinaryOperator;
 import com.hazelcast.jet.Distributed.Supplier;
-import com.hazelcast.jet.Accumulators.LinRegAccumulator;
+import com.hazelcast.jet.accumulator.LinRegAccumulator;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Test;

@@ -16,10 +16,10 @@
 
 package com.hazelcast.jet.windowing;
 
-import com.hazelcast.jet.Accumulators.LinRegAccumulator;
-import com.hazelcast.jet.Accumulators.LongAccumulator;
-import com.hazelcast.jet.Accumulators.MutableReference;
 import com.hazelcast.jet.Distributed;
+import com.hazelcast.jet.accumulator.LinRegAccumulator;
+import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.jet.accumulator.MutableReference;
 
 import javax.annotation.Nonnull;
 

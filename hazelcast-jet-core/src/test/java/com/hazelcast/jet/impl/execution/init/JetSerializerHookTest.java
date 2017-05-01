@@ -17,10 +17,10 @@
 package com.hazelcast.jet.impl.execution.init;
 
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
-import com.hazelcast.jet.Accumulators.DoubleAccumulator;
-import com.hazelcast.jet.Accumulators.LinRegAccumulator;
-import com.hazelcast.jet.Accumulators.LongAccumulator;
-import com.hazelcast.jet.Accumulators.MutableReference;
+import com.hazelcast.jet.accumulator.DoubleAccumulator;
+import com.hazelcast.jet.accumulator.LinRegAccumulator;
+import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.jet.accumulator.MutableReference;
 import com.hazelcast.jet.windowing.Frame;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.serialization.SerializationService;
