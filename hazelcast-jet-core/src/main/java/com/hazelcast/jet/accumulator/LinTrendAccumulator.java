@@ -28,7 +28,7 @@ import java.math.BigInteger;
  * the form of {@link BigInteger} and the finished value is a {@code
  * double}-valued linear coefficient.
  */
-public final class LinRegAccumulator {
+public final class LinTrendAccumulator {
     private static final int MAX_BIGINT_LEN = 255;
 
     private long n;
@@ -40,7 +40,7 @@ public final class LinRegAccumulator {
     /**
      * Constructs a new accumulator with all components at zero.
      */
-    public LinRegAccumulator() {
+    public LinTrendAccumulator() {
         this.sumX = BigInteger.ZERO;
         this.sumY = BigInteger.ZERO;
         this.sumXY = BigInteger.ZERO;
@@ -51,7 +51,7 @@ public final class LinRegAccumulator {
      * Creates a new accumulator with the given components. Intended only for
      * testing and deserialization.
      */
-    public LinRegAccumulator(long n, BigInteger sumX, BigInteger sumY, BigInteger sumXY, BigInteger sumX2) {
+    public LinTrendAccumulator(long n, BigInteger sumX, BigInteger sumY, BigInteger sumXY, BigInteger sumX2) {
         this.n = n;
         this.sumX = sumX;
         this.sumY = sumY;
@@ -62,7 +62,7 @@ public final class LinRegAccumulator {
     /**
      * Accumulates a new sample.
      */
-    public LinRegAccumulator accumulate(long x, long y) {
+    public LinTrendAccumulator accumulate(long x, long y) {
         BigInteger bigX = BigInteger.valueOf(x);
         BigInteger bigY = BigInteger.valueOf(y);
         sumX = sumX.add(bigX);
@@ -75,7 +75,7 @@ public final class LinRegAccumulator {
     /**
      * Combines this accumulator with the supplied one.
      */
-    public LinRegAccumulator combine(LinRegAccumulator that) {
+    public LinTrendAccumulator combine(LinTrendAccumulator that) {
         n += that.n;
         sumX = sumX.add(that.sumX);
         sumY = sumY.add(that.sumY);
@@ -87,7 +87,7 @@ public final class LinRegAccumulator {
     /**
      * Deducts the supplied accumulator from this one.
      */
-    public LinRegAccumulator deduct(LinRegAccumulator that) {
+    public LinTrendAccumulator deduct(LinTrendAccumulator that) {
         n -= that.n;
         sumX = sumX.subtract(that.sumX);
         sumY = sumY.subtract(that.sumY);
@@ -108,10 +108,10 @@ public final class LinRegAccumulator {
 
     @Override
     public boolean equals(Object obj) {
-        LinRegAccumulator that;
+        LinTrendAccumulator that;
         return this == obj ||
-                obj instanceof LinRegAccumulator
-                && this.n == (that = (LinRegAccumulator) obj).n
+                obj instanceof LinTrendAccumulator
+                && this.n == (that = (LinTrendAccumulator) obj).n
                 && this.sumX.equals(that.sumX)
                 && this.sumY.equals(that.sumY)
                 && this.sumXY.equals(that.sumXY)

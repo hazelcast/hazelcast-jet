@@ -22,7 +22,7 @@ import com.hazelcast.jet.Distributed;
 import com.hazelcast.jet.Distributed.BiConsumer;
 import com.hazelcast.jet.Distributed.BinaryOperator;
 import com.hazelcast.jet.Distributed.Supplier;
-import com.hazelcast.jet.accumulator.LinRegAccumulator;
+import com.hazelcast.jet.accumulator.LinTrendAccumulator;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Test;
@@ -30,6 +30,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 import java.util.Map.Entry;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.Util.entry;
@@ -62,33 +63,33 @@ public class WindowOperationsTest {
     }
 
     @Test
-    public void when_linearRegression() {
+    public void when_linearTrend() {
         // Given
 
-        WindowOperation<Entry<Long, Long>, LinRegAccumulator, Double> op = linearTrend(Entry::getKey, Entry::getValue);
-        Supplier<LinRegAccumulator> newF = op.createAccumulatorF();
-        BiConsumer<LinRegAccumulator, Entry<Long, Long>> accF = op.accumulateItemF();
-        BinaryOperator<LinRegAccumulator> combineF = op.combineAccumulatorsF();
-        BinaryOperator<LinRegAccumulator> deductF = op.deductAccumulatorF();
-        Distributed.Function<LinRegAccumulator, Double> finishF = op.finishAccumulationF();
+        WindowOperation<Entry<Long, Long>, LinTrendAccumulator, Double> op = linearTrend(Entry::getKey, Entry::getValue);
+        Supplier<LinTrendAccumulator> newF = op.createAccumulatorF();
+        BiFunction<LinTrendAccumulator, Entry<Long, Long>, LinTrendAccumulator> accF = op.accumulateItemF();
+        BinaryOperator<LinTrendAccumulator> combineF = op.combineAccumulatorsF();
+        BinaryOperator<LinTrendAccumulator> deductF = op.deductAccumulatorF();
+        Distributed.Function<LinTrendAccumulator, Double> finishF = op.finishAccumulationF();
         assertNotNull(deductF);
 
         // When
 
-        LinRegAccumulator a1 = newF.get();
-        accF.accept(a1, entry(1L, 2L));
-        accF.accept(a1, entry(2L, 4L));
+        LinTrendAccumulator a1 = newF.get();
+        accF.apply(a1, entry(1L, 2L));
+        accF.apply(a1, entry(2L, 4L));
         assertEquals(a1.finish(), 2.0, Double.MIN_VALUE);
 
-        LinRegAccumulator a2 = newF.get();
-        accF.accept(a2, entry(4L, 8L));
-        accF.accept(a2, entry(5L, 10L));
+        LinTrendAccumulator a2 = newF.get();
+        accF.apply(a2, entry(4L, 8L));
+        accF.apply(a2, entry(5L, 10L));
         assertEquals(a2.finish(), 2.0, Double.MIN_VALUE);
 
-        LinRegAccumulator combined = combineF.apply(a1, a2);
+        LinTrendAccumulator combined = combineF.apply(a1, a2);
         assertEquals(combined.finish(), 2.0, Double.MIN_VALUE);
 
-        LinRegAccumulator deducted = deductF.apply(combined, a2);
+        LinTrendAccumulator deducted = deductF.apply(combined, a2);
         assertEquals(deducted.finish(), 2.0, Double.MIN_VALUE);
 
         Double result = finishF.apply(deducted);

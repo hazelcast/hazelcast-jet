@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.execution.init;
 
 import com.hazelcast.internal.serialization.impl.SerializationConstants;
 import com.hazelcast.jet.accumulator.DoubleAccumulator;
-import com.hazelcast.jet.accumulator.LinRegAccumulator;
+import com.hazelcast.jet.accumulator.LinTrendAccumulator;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.accumulator.MutableReference;
 import com.hazelcast.jet.windowing.Frame;
@@ -305,16 +305,16 @@ public final class JetSerializerHook {
         }
     }
 
-    public static final class LinRegAccSerializer implements SerializerHook<LinRegAccumulator> {
+    public static final class LinRegAccSerializer implements SerializerHook<LinTrendAccumulator> {
 
         @Override
-        public Class<LinRegAccumulator> getSerializationType() {
-            return LinRegAccumulator.class;
+        public Class<LinTrendAccumulator> getSerializationType() {
+            return LinTrendAccumulator.class;
         }
 
         @Override
         public Serializer createSerializer() {
-            return new StreamSerializer<LinRegAccumulator>() {
+            return new StreamSerializer<LinTrendAccumulator>() {
                 @Override
                 public int getTypeId() {
                     return LIN_REG_ACC;
@@ -325,13 +325,13 @@ public final class JetSerializerHook {
                 }
 
                 @Override
-                public void write(ObjectDataOutput out, LinRegAccumulator object) throws IOException {
+                public void write(ObjectDataOutput out, LinTrendAccumulator object) throws IOException {
                     object.writeObject(out);
                 }
 
                 @Override
-                public LinRegAccumulator read(ObjectDataInput in) throws IOException {
-                    return new LinRegAccumulator(
+                public LinTrendAccumulator read(ObjectDataInput in) throws IOException {
+                    return new LinTrendAccumulator(
                             in.readLong(), readBigInt(in), readBigInt(in), readBigInt(in), readBigInt(in));
                 }
 

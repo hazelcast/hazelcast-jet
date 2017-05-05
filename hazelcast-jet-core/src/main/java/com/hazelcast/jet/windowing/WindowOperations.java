@@ -17,7 +17,7 @@
 package com.hazelcast.jet.windowing;
 
 import com.hazelcast.jet.Distributed;
-import com.hazelcast.jet.accumulator.LinRegAccumulator;
+import com.hazelcast.jet.accumulator.LinTrendAccumulator;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.accumulator.MutableReference;
 
@@ -76,16 +76,16 @@ public final class WindowOperations {
      * function of {@code x}, where {@code x} and {@code y} are {@code long}
      * quantities extracted from each item by the two provided functions.
      */
-    public static <T> WindowOperation<T, LinRegAccumulator, Double> linearTrend(
+    public static <T> WindowOperation<T, LinTrendAccumulator, Double> linearTrend(
             @Nonnull Distributed.ToLongFunction<T> getX,
             @Nonnull Distributed.ToLongFunction<T> getY
     ) {
         return WindowOperation.of(
-                LinRegAccumulator::new,
+                LinTrendAccumulator::new,
                 (a, item) -> a.accumulate(getX.applyAsLong(item), getY.applyAsLong(item)),
-                LinRegAccumulator::combine,
-                LinRegAccumulator::deduct,
-                LinRegAccumulator::finish
+                LinTrendAccumulator::combine,
+                LinTrendAccumulator::deduct,
+                LinTrendAccumulator::finish
         );
     }
 
