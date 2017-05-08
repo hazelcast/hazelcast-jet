@@ -61,6 +61,8 @@
     <properties>
         <argLine> <!-- surefire parameters -->
             -Xmx1G
+            -Xms1G
+            -XX:+AlwaysPreTouch
             -Dhazelcast.phone.home.enabled=false
             -Dhazelcast.mancenter.enabled=false
             -Dhazelcast.logging.type=log4j
