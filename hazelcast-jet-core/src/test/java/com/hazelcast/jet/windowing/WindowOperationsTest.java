@@ -40,7 +40,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.stream.DistributedCollectors.maxBy;
 import static com.hazelcast.jet.windowing.WindowOperations.counting;
 import static com.hazelcast.jet.windowing.WindowOperations.linearTrend;
-import static com.hazelcast.jet.windowing.WindowOperations.multiple;
+import static com.hazelcast.jet.windowing.WindowOperations.allOf;
 import static com.hazelcast.jet.windowing.WindowOperations.reducing;
 import static com.hazelcast.jet.windowing.WindowOperations.summingToLong;
 import static org.junit.Assert.assertEquals;
@@ -69,9 +69,9 @@ public class WindowOperationsTest {
     }
 
     @Test
-    public void when_multiple() {
+    public void when_allOf() {
         validateOp(
-                multiple(counting(), summingToLong()),
+                allOf(counting(), summingToLong()),
                 Function.identity(),
                 10L,
                 Arrays.asList(new LongAccumulator(1L), new LongAccumulator(10L)),
@@ -81,8 +81,8 @@ public class WindowOperationsTest {
     }
 
     @Test
-    public void when_multipleWithoutDeduct() {
-        WindowOperation<Long, List<Object>, List<Object>> op = multiple(counting(), WindowOperation.fromCollector(maxBy(Comparator.<Long>naturalOrder())));
+    public void when_allOfWithoutDeduct() {
+        WindowOperation<Long, List<Object>, List<Object>> op = allOf(counting(), WindowOperation.fromCollector(maxBy(Comparator.<Long>naturalOrder())));
 
         // Then
         assertNull(op.deductAccumulatorF());
@@ -180,7 +180,7 @@ public class WindowOperationsTest {
         // When
         A deducted = deductAccF.apply(combined, acc2);
         // Then
-        assertEquals("deduced", expectAcced, getAccValF.apply(combined));
+        assertEquals("deducted", expectAcced, getAccValF.apply(combined));
 
         // When
         R finished = op.finishAccumulationF().apply(deducted);

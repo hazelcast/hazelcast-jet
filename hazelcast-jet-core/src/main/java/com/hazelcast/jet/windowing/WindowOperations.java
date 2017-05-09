@@ -101,45 +101,45 @@ public final class WindowOperations {
      * @param operations Operations to calculate.
      */
     @SafeVarargs
-    public static <T> WindowOperation<T, List<Object>, List<Object>> multiple(
+    public static <T> WindowOperation<T, List<Object>, List<Object>> allOf(
             WindowOperation<? super T, ?, ?> ... operations
     ) {
-        WindowOperation[] untypedOp = operations;
+        WindowOperation[] untypedOps = operations;
 
         return WindowOperation.of(
                 () -> {
-                    Object[] res = new Object[untypedOp.length];
-                    for (int i = 0; i < untypedOp.length; i++) {
-                        res[i] = untypedOp[i].createAccumulatorF().get();
+                    Object[] res = new Object[untypedOps.length];
+                    for (int i = 0; i < untypedOps.length; i++) {
+                        res[i] = untypedOps[i].createAccumulatorF().get();
                     }
                     // wrap to List to have equals() implemented
                     return Arrays.asList(res);
                 },
                 (accs, item) -> {
-                    for (int i = 0; i < untypedOp.length; i++) {
-                        accs.set(i, untypedOp[i].accumulateItemF().apply(accs.get(i), item));
+                    for (int i = 0; i < untypedOps.length; i++) {
+                        accs.set(i, untypedOps[i].accumulateItemF().apply(accs.get(i), item));
                     }
                     return accs;
                 },
                 (accs1, accs2) -> {
-                    for (int i = 0; i < untypedOp.length; i++) {
-                        accs1.set(i, untypedOp[i].combineAccumulatorsF().apply(accs1.get(i), accs2.get(i)));
+                    for (int i = 0; i < untypedOps.length; i++) {
+                        accs1.set(i, untypedOps[i].combineAccumulatorsF().apply(accs1.get(i), accs2.get(i)));
                     }
                     return accs1;
                 },
                 // we support deduct, only if all operations do
-                Stream.of(untypedOp).allMatch(o -> o.deductAccumulatorF() != null)
+                Stream.of(untypedOps).allMatch(o -> o.deductAccumulatorF() != null)
                         ? (accs1, accs2) -> {
-                            for (int i = 0; i < untypedOp.length; i++) {
-                                    accs1.set(i, untypedOp[i].deductAccumulatorF().apply(accs1.get(i), accs2.get(i)));
+                            for (int i = 0; i < untypedOps.length; i++) {
+                                    accs1.set(i, untypedOps[i].deductAccumulatorF().apply(accs1.get(i), accs2.get(i)));
                                 }
                                 return accs1;
                             }
                         : null,
                 accs -> {
-                    Object[] res = new Object[untypedOp.length];
-                    for (int i = 0; i < untypedOp.length; i++) {
-                        res[i] = untypedOp[i].finishAccumulationF().apply(accs.get(i));
+                    Object[] res = new Object[untypedOps.length];
+                    for (int i = 0; i < untypedOps.length; i++) {
+                        res[i] = untypedOps[i].finishAccumulationF().apply(accs.get(i));
                     }
                     return Arrays.asList(res);
                 }
