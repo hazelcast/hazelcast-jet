@@ -34,19 +34,34 @@ import java.util.function.Supplier;
 import java.util.jar.JarFile;
 
 /**
- * A Bootstrapper for {@link JetInstance} which returns a bootstrapped
- * Jet client instance. When used in combination with {@code jet-submit.sh},
- * it runs the Main-Class defined in the manifest in the JAR file
- * supplied to {@code jet-submit.sh}. The wrapped instance will then add
- * the given JAR file to all jobs submitted through that instance.
+ * A helper class that allows one to create a standalone runnable JAR which
+ * contains all the code needed to submit a job to a running Jet cluster.
+ * The main issue with achieving this is that the JAR must be attached as a
+ * resource to the job being submitted, so the Jet cluster will be able to
+ * load and use its classes. However, from within a running {@code main()}
+ * method it is not trivial to find out the filename of the JAR containing
+ * it.
  * <p>
- * This utility is needed in cases where you want to run a JAR which
- * will execute a job, but the job requires the JAR itself to be deployed as well.
- * <p>
- * In the following example, the JAR file containing {@code CustomJetJob}
- * will be submitted automatically in the {@link JetInstance#newJob(DAG)} method
- * call as part of the {@link JobConfig} when run as {@code jet-submit.sh custom-jet-job.jar}.
+ * This helper is a part of the solution to the above "bootstrapping"
+ * issue. To use it, follow these steps:
+ * <ol><li>
+ *     Write your {@code main()} method and your Jet code the usual way,
+ *     except for calling {@code JetBootstrap.getInstance()} instead of
+ *     {@code Jet.newJetClient()} to acquire a Jet client instance.
+ *     The created client is optionally configured through {@code hazelcast-client.xml}
+ *     which can be present in working directory or supplied as part of the
+ *     {@code -Dhazelcast.client.config} system property.
+ * </li><li>
+ *     Create a runnable JAR with your entry point declared as the main
+ *     class in {@code MANIFEST.MF}.
+ * </li><li>
+ *     Run your JAR, but instead of {@code java -jar jetjob.jar} use {@code
+ *     jet-submit.sh jetjob.jar}. The script is found in the Jet distribution
+ *     zipfile, in the {@code bin} directory. On Windows use {@code
+ *     jet-submit.bat}.
+ * </li></ol>
  *
+ * Example:
  * <pre>
  * public class CustomJetJob {
  *   public static void main(String[] args) {
@@ -54,6 +69,12 @@ import java.util.jar.JarFile;
  *     jet.newJob(getDAG()).execute().get();
  *   }
  * }
+ * </pre>
+ *
+ *  And then run this main class as follows:
+ *
+ * <pre>
+ *   jet-submit.sh jarwithjob.jar
  * </pre>
  *
  */
