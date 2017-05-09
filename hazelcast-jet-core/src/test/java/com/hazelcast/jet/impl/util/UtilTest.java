@@ -22,9 +22,17 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
+import java.util.List;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import static com.hazelcast.jet.impl.util.Util.addClamped;
+import static com.hazelcast.jet.impl.util.Util.concurrentMemoize;
+import static com.hazelcast.jet.impl.util.Util.memoize;
 import static com.hazelcast.jet.impl.util.Util.subtractClamped;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
@@ -62,6 +70,32 @@ public class UtilTest {
         // overflow over MIN_VALUE
         assertEquals(Long.MIN_VALUE, subtractClamped(Long.MIN_VALUE, 1));
         assertEquals(Long.MIN_VALUE, subtractClamped(Long.MIN_VALUE, Long.MAX_VALUE));
+    }
+
+    @Test
+    public void testConcurrentMemoize() {
+        final Object obj = new Object();
+        Supplier<Object> supplier = new Supplier<Object>() {
+            boolean supplied;
+            @Override
+            public Object get() {
+               if (supplied) {
+                   throw new IllegalStateException("Supplier was already called once.");
+               }
+               supplied = true;
+               return obj;
+            }
+        };
+
+        // does not fail 100% with non-concurrent memoize, but about 50% of the time.
+        List<Object> list = Stream.generate(concurrentMemoize(supplier)).limit(4).parallel().collect(Collectors.toList());
+        assertTrue("Not all objects matched expected", list.stream().allMatch(o -> o.equals(obj)));
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void testConcurrentMemoize_when_nullSupplier() {
+       Supplier<Object> supplier = () -> null;
+       concurrentMemoize(supplier).get();
     }
 
 }
