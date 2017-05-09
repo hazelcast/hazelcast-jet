@@ -848,25 +848,42 @@ public final class Processors {
      * <p>
      * Note, that the event will be logged on the nodes, not on the client.
      * Useful for testing.
+     *
+     * @param toStringF Function to convert item to String, if {@code null},
+     *                  {@link Object#toString()} is used.
      */
-    public static Distributed.Supplier<Processor> writeSystemOut(Distributed.Function<Object, String> toStringF) {
+    public static Distributed.Supplier<Processor> writeSystemOut(
+            @Nullable Distributed.Function<Object, String> toStringF
+    ) {
         return () -> new WriteSystemOutP(toStringF);
     }
 
+    /**
+     * See {@link #peekInput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     */
     public static Distributed.Supplier<Processor> peekInput(Distributed.Supplier<Processor> wrapped) {
         return peekInput(null, null, wrapped);
     }
 
+    /**
+     * See {@link #peekInput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     */
     public static Distributed.Supplier<Processor> peekInput(
             DistributedFunction<Object, String> toStringF, DistributedPredicate<Object> shouldLogF,
             DistributedSupplier<Processor> wrapped) {
         return () -> new PeekWrappedP(wrapped.get(), toStringF, shouldLogF, true, false);
     }
 
+    /**
+     * See {@link #peekInput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     */
     public static ProcessorSupplier peekInput(ProcessorSupplier wrapped) {
         return peekInput(null, null, wrapped);
     }
 
+    /**
+     * See {@link #peekInput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     */
     public static ProcessorSupplier peekInput(
             DistributedFunction<Object, String> toStringF, DistributedPredicate<Object> shouldLogF,
             ProcessorSupplier wrapped
@@ -874,30 +891,60 @@ public final class Processors {
         return new WrappingProcessorSupplier(wrapped, p -> new PeekWrappedP(p, toStringF, shouldLogF, true, false));
     }
 
+    /**
+     * See {@link #peekInput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     */
     public static ProcessorMetaSupplier peekInput(ProcessorMetaSupplier wrapped) {
         return peekInput(null, null, wrapped);
     }
 
-    public static ProcessorMetaSupplier peekInput(DistributedFunction<Object, String> toStringF, DistributedPredicate<Object> shouldLogF,
-            ProcessorMetaSupplier wrapped
+    /**
+     * Returns a supplier, that wraps the provided {@link
+     * ProcessorMetaSupplier}, so that all input events are logged, when they
+     * are removed from the {@link Inbox}. Events are logged at the INFO level
+     * to the following logger {@link PeekWrappedP}.
+     *
+     * @param toStringF Function to convert items to String, if {@code null},
+     *                  {@link Object#toString()} is used.
+     * @param shouldLogF Function to filter logged items. If {@code null}, all
+     *                   items are logged. <b>Warning:</b> Function will see
+     *                   both items and {@link Punctuation}
+     * @param wrapped The wrapped supplier.
+     */
+    public static ProcessorMetaSupplier peekInput(
+            @Nullable DistributedFunction<Object, String> toStringF,
+            @Nullable DistributedPredicate<Object> shouldLogF,
+            @Nonnull ProcessorMetaSupplier wrapped
     ) {
         return new WrappingProcessorMetaSupplier(wrapped, p -> new PeekWrappedP(p, toStringF, shouldLogF, true, false));
     }
 
+    /**
+     * See {@link #peekOutput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     */
     public static Distributed.Supplier<Processor> peekOutput(Distributed.Supplier<Processor> wrapped) {
         return peekOutput(null, null, wrapped);
     }
 
+    /**
+     * See {@link #peekOutput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     */
     public static Distributed.Supplier<Processor> peekOutput(
             DistributedFunction<Object, String> toStringF, DistributedPredicate<Object> shouldLogF,
             DistributedSupplier<Processor> wrapped) {
         return () -> new PeekWrappedP(wrapped.get(), toStringF, shouldLogF, false, true);
     }
 
+    /**
+     * See {@link #peekOutput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     */
     public static ProcessorSupplier peekOutput(ProcessorSupplier wrapped) {
         return peekOutput(null, null, wrapped);
     }
 
+    /**
+     * See {@link #peekOutput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     */
     public static ProcessorSupplier peekOutput(
             DistributedFunction<Object, String> toStringF, DistributedPredicate<Object> shouldLogF,
             ProcessorSupplier wrapped
@@ -905,12 +952,28 @@ public final class Processors {
         return new WrappingProcessorSupplier(wrapped, p -> new PeekWrappedP(p, toStringF, shouldLogF, false, true));
     }
 
+    /**
+     * See {@link #peekOutput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     */
     public static ProcessorMetaSupplier peekOutput(ProcessorMetaSupplier wrapped) {
         return peekOutput(null, null, wrapped);
     }
 
-    public static ProcessorMetaSupplier peekOutput(DistributedFunction<Object, String> toStringF, DistributedPredicate<Object> shouldLogF,
-            ProcessorMetaSupplier wrapped
+    /**
+     * Returns a supplier, that wraps the provided {@link
+     * ProcessorMetaSupplier}, so that all output events are logged, when they
+     * are accepted by the {@link Outbox}. Events are logged at the INFO level
+     * to the following logger {@link PeekWrappedP}.
+     *
+     * @param toStringF Function to convert items to String, if {@code null},
+     *                  {@link Object#toString()} is used.
+     * @param shouldLogF Function to filter logged items. If {@code null}, all
+     *                   items are logged. <b>Warning:</b> Function will see
+     *                   both items and {@link Punctuation}
+     * @param wrapped The wrapped supplier.
+     */
+    public static ProcessorMetaSupplier peekOutput(DistributedFunction<Object, String> toStringF,
+            DistributedPredicate<Object> shouldLogF, ProcessorMetaSupplier wrapped
     ) {
         return new WrappingProcessorMetaSupplier(wrapped, p -> new PeekWrappedP(p, toStringF, shouldLogF, false, true));
     }
