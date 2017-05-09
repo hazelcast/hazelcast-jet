@@ -20,6 +20,7 @@ import com.hazelcast.core.Cluster;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
@@ -30,6 +31,7 @@ import com.hazelcast.jet.stream.IStreamList;
 import com.hazelcast.jet.stream.IStreamMap;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.function.Supplier;
 import java.util.jar.JarFile;
 
@@ -61,8 +63,7 @@ import java.util.jar.JarFile;
  *     found in the {@code config} directory in Jet's distribution directory
  *     structure. Adjust that file to suit your needs.
  * </li></ol>
- *
- * Example:
+ * For example, write a class like this:
  * <pre>
  * public class CustomJetJob {
  *   public static void main(String[] args) {
@@ -71,19 +72,17 @@ import java.util.jar.JarFile;
  *   }
  * }
  * </pre>
- *
- *  And then run this main class as follows:
- *
+ * After building the JAR, submit the job:
  * <pre>
- *   submit-jet.sh custom-jet-job.jar
+ * $ submit-jet.sh jetjob.jar
  * </pre>
  *
  */
 public final class JetBootstrap {
 
-    private static String jar;
-    private static final Supplier<JetBootstrap> SUPPLIER = Util.memoizeConcurrent(() ->
-            new JetBootstrap(Jet.newJetClient()));
+    private static final Supplier<JetBootstrap> SUPPLIER =
+            Util.memoizeConcurrent(() -> new JetBootstrap(Jet.newJetClient()));
+    private static String jarPathname;
     private final JetInstance instance;
 
     private JetBootstrap(JetInstance instance) {
@@ -96,14 +95,14 @@ public final class JetBootstrap {
     public static void main(String[] args) throws Exception {
         int argLength = 1;
         if (args.length < argLength) {
-            System.err.println("Usage:");
-            System.err.println("  submit-jet.sh <JAR> ");
+            System.err.println(JetBootstrap.class.getSimpleName()
+                    + ".main() must be called with the JAR filename as the first argument");
             System.exit(1);
         }
 
-        jar = args[0];
+        jarPathname = args[0];
 
-        try (JarFile jarFile = new JarFile(jar)) {
+        try (JarFile jarFile = new JarFile(jarPathname)) {
             String mainClass = jarFile.getManifest().getMainAttributes().getValue("Main-Class");
             String[] jobArgs = new String[args.length - argLength];
             System.arraycopy(args, argLength, jobArgs, 0, args.length - argLength);
@@ -111,12 +110,18 @@ public final class JetBootstrap {
             ClassLoader classLoader = JetBootstrap.class.getClassLoader();
             Class<?> clazz = classLoader.loadClass(mainClass);
             Method main = clazz.getDeclaredMethod("main", String[].class);
-            main.invoke(null, new Object[]{jobArgs});
+            int mods = main.getModifiers();
+            if ((mods & Modifier.PUBLIC) == 0 || (mods & Modifier.STATIC) == 0) {
+                throw new JetException("Class " + clazz.getName()
+                        + " has a main(String[] args) method which is not public static");
+            }
+            // upcast args to Object so it's passed as a single array-typed argument
+            main.invoke(null, (Object) jobArgs);
         }
     }
 
     /**
-     * Returns the bootstrapped {@code JetInstance}
+     * Returns the bootstrapped {@code JetInstance}.
      */
     public static JetInstance getInstance() {
         return SUPPLIER.get().instance;
@@ -157,8 +162,8 @@ public final class JetBootstrap {
 
         @Override
         public Job newJob(DAG dag, JobConfig config) {
-            if (jar != null) {
-                config.addJar(jar);
+            if (jarPathname != null) {
+                config.addJar(jarPathname);
             }
             return instance.newJob(dag, config);
         }
