@@ -82,7 +82,7 @@ import java.util.jar.JarFile;
 public final class JetBootstrap {
 
     private static String jar;
-    private static final Supplier<JetBootstrap> SUPPLIER = Util.concurrentMemoize(() ->
+    private static final Supplier<JetBootstrap> SUPPLIER = Util.memoizeConcurrent(() ->
             new JetBootstrap(Jet.newJetClient()));
     private final JetInstance instance;
 

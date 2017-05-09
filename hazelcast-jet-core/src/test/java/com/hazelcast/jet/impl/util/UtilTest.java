@@ -28,8 +28,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.impl.util.Util.addClamped;
-import static com.hazelcast.jet.impl.util.Util.concurrentMemoize;
-import static com.hazelcast.jet.impl.util.Util.memoize;
+import static com.hazelcast.jet.impl.util.Util.memoizeConcurrent;
 import static com.hazelcast.jet.impl.util.Util.subtractClamped;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -88,14 +87,14 @@ public class UtilTest {
         };
 
         // does not fail 100% with non-concurrent memoize, but about 50% of the time.
-        List<Object> list = Stream.generate(concurrentMemoize(supplier)).limit(4).parallel().collect(Collectors.toList());
+        List<Object> list = Stream.generate(memoizeConcurrent(supplier)).limit(4).parallel().collect(Collectors.toList());
         assertTrue("Not all objects matched expected", list.stream().allMatch(o -> o.equals(obj)));
     }
 
     @Test(expected = NullPointerException.class)
     public void testConcurrentMemoize_when_nullSupplier() {
        Supplier<Object> supplier = () -> null;
-       concurrentMemoize(supplier).get();
+       memoizeConcurrent(supplier).get();
     }
 
 }
