@@ -45,12 +45,9 @@ import java.util.jar.JarFile;
  * This helper is a part of the solution to the above "bootstrapping"
  * issue. To use it, follow these steps:
  * <ol><li>
- *     Write your {@code main()} method and your Jet code the usual way,
- *     except for calling {@code JetBootstrap.getInstance()} instead of
- *     {@code Jet.newJetClient()} to acquire a Jet client instance.
- *     The created client is optionally configured through {@code hazelcast-client.xml}
- *     which can be present in working directory or supplied as part of the
- *     {@code -Dhazelcast.client.config} system property.
+ *     Write your {@code main()} method and your Jet code the usual way, except
+ *     for calling {@code JetBootstrap.getInstance()} instead of {@code
+ *     Jet.newJetClient()} to acquire a Jet client instance.
  * </li><li>
  *     Create a runnable JAR with your entry point declared as the main
  *     class in {@code MANIFEST.MF}.
@@ -59,6 +56,10 @@ import java.util.jar.JarFile;
  *     jet-submit.sh jetjob.jar}. The script is found in the Jet distribution
  *     zipfile, in the {@code bin} directory. On Windows use {@code
  *     jet-submit.bat}.
+ * </li><li>
+ *     The Jet client will be configured from {@code hazelcast-client.xml}
+ *     found in the {@code config} directory in Jet's distribution directory
+ *     structure. Adjust that file to suit your needs.
  * </li></ol>
  *
  * Example:
@@ -74,7 +75,7 @@ import java.util.jar.JarFile;
  *  And then run this main class as follows:
  *
  * <pre>
- *   jet-submit.sh jarwithjob.jar
+ *   jet-submit.sh custom-jet-job.jar
  * </pre>
  *
  */
