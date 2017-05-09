@@ -33,6 +33,9 @@ import com.hazelcast.jet.impl.connector.StreamFilesP;
 import com.hazelcast.jet.impl.connector.StreamTextSocketP;
 import com.hazelcast.jet.impl.connector.WriteBufferedP;
 import com.hazelcast.jet.impl.connector.WriteFileP;
+import com.hazelcast.jet.impl.connector.WriteSystemOutP;
+import com.hazelcast.logging.ILogger;
+import com.hazelcast.nio.Address;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -44,6 +47,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -56,6 +60,7 @@ import static com.hazelcast.jet.Traversers.lazy;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
+import static com.hazelcast.jet.stream.DistributedCollectors.toList;
 
 /**
  * Static utility class with factory methods for predefined processors.
@@ -824,6 +829,265 @@ public final class Processors {
         @Override
         public void process(int ordinal, @Nonnull Inbox inbox) {
             inbox.drain(noopConsumer());
+        }
+    }
+
+    /**
+     * Convenience for {@link #writeSystemOut(Distributed.Function)} without format.
+     * It will use {@link Object#toString()}.
+     */
+    public static Distributed.Supplier<Processor> writeSystemOut() {
+        return writeSystemOut(Object::toString);
+    }
+
+    /**
+     * Returns a supplier of processors, that sends all events to logger on the
+     * INFO level.
+     * <p>
+     * Note, that the event will be logged on the nodes, not on the client.
+     * Useful for testing.
+     */
+    public static Distributed.Supplier<Processor> writeSystemOut(Distributed.Function<Object, String> toStringF) {
+        return () -> new WriteSystemOutP(toStringF);
+    }
+
+    public static Distributed.Supplier<Processor> peekInput(Distributed.Supplier<Processor> wrapped) {
+        return peekInput(null, 0, wrapped);
+    }
+
+    public static Distributed.Supplier<Processor> peekInput(
+            Distributed.Function<Object, String> toStringF, int itemsToSkip,
+            Distributed.Supplier<Processor> wrapped) {
+        Distributed.Function<Object, String> toStringF2 = toStringF == null ? Object::toString : toStringF;
+        return () -> new PeekWrappedP(wrapped.get(), toStringF2, itemsToSkip, true, false);
+    }
+
+    public static ProcessorSupplier peekInput(ProcessorSupplier wrapped) {
+        return peekInput(null, 0, wrapped);
+    }
+
+    public static ProcessorSupplier peekInput(
+            Distributed.Function<Object, String> toStringF, int itemsToSkip,
+            ProcessorSupplier wrapped
+    ) {
+        Distributed.Function<Object, String> toStringF2 = toStringF == null ? Object::toString : toStringF;
+        return new WrappingProcessorSupplier(wrapped, p -> new PeekWrappedP(p, toStringF2, itemsToSkip, true, false));
+    }
+
+    public static ProcessorMetaSupplier peekInput(ProcessorMetaSupplier wrapped) {
+        return peekInput(null, 0, wrapped);
+    }
+
+    public static ProcessorMetaSupplier peekInput(Distributed.Function<Object, String> toStringF, int itemsToSkip,
+            ProcessorMetaSupplier wrapped
+    ) {
+        Distributed.Function<Object, String> toStringF2 = toStringF == null ? Object::toString : toStringF;
+        return new WrappingProcessorMetaSupplier(wrapped, p -> new PeekWrappedP(p, toStringF2, itemsToSkip, true, false));
+    }
+
+    public static Distributed.Supplier<Processor> peekOutput(Distributed.Supplier<Processor> wrapped) {
+        return peekOutput(null, 0, wrapped);
+    }
+
+    public static Distributed.Supplier<Processor> peekOutput(
+            Distributed.Function<Object, String> toStringF, int itemsToSkip,
+            Distributed.Supplier<Processor> wrapped) {
+        Distributed.Function<Object, String> toStringF2 = toStringF == null ? Object::toString : toStringF;
+        return () -> new PeekWrappedP(wrapped.get(), toStringF2, itemsToSkip, false, true);
+    }
+
+    public static ProcessorSupplier peekOutput(ProcessorSupplier wrapped) {
+        return peekOutput(null, 0, wrapped);
+    }
+
+    public static ProcessorSupplier peekOutput(
+            Distributed.Function<Object, String> toStringF, int itemsToSkip,
+            ProcessorSupplier wrapped
+    ) {
+        Distributed.Function<Object, String> toStringF2 = toStringF == null ? Object::toString : toStringF;
+        return new WrappingProcessorSupplier(wrapped, p -> new PeekWrappedP(p, toStringF2, itemsToSkip, false, true));
+    }
+
+    public static ProcessorMetaSupplier peekOutput(ProcessorMetaSupplier wrapped) {
+        return peekOutput(null, 0, wrapped);
+    }
+
+    public static ProcessorMetaSupplier peekOutput(Distributed.Function<Object, String> toStringF, int itemsToSkip,
+            ProcessorMetaSupplier wrapped
+    ) {
+        Distributed.Function<Object, String> toStringF2 = toStringF == null ? Object::toString : toStringF;
+        return new WrappingProcessorMetaSupplier(wrapped, p -> new PeekWrappedP(p, toStringF2, itemsToSkip, false, true));
+    }
+
+    private static class WrappingProcessorSupplier implements ProcessorSupplier {
+        private ProcessorSupplier wrapped;
+        private Function<Processor, Processor> wrapperSupplier;
+
+        private WrappingProcessorSupplier(ProcessorSupplier wrapped, Function<Processor, Processor> wrapperSupplier) {
+            this.wrapped = wrapped;
+            this.wrapperSupplier = wrapperSupplier;
+        }
+
+        @Nonnull
+        @Override
+        public Collection<? extends Processor> get(int count) {
+            Collection<? extends Processor> processors = wrapped.get(count);
+            return processors.stream()
+                    .map(wrapperSupplier)
+                    .collect(toList());
+        }
+
+        @Override
+        public void init(@Nonnull Context context) {
+            wrapped.init(context);
+        }
+
+        @Override
+        public void complete(Throwable error) {
+            wrapped.complete(error);
+        }
+    }
+
+    private static class WrappingProcessorMetaSupplier implements ProcessorMetaSupplier {
+        private ProcessorMetaSupplier wrapped;
+        private Function<Processor, Processor> wrapperSupplier;
+
+        private WrappingProcessorMetaSupplier(ProcessorMetaSupplier wrapped, Function<Processor, Processor> wrapperSupplier) {
+            this.wrapped = wrapped;
+            this.wrapperSupplier = wrapperSupplier;
+        }
+
+        @Nonnull
+        @Override
+        public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
+            Function<Address, ProcessorSupplier> function = wrapped.get(addresses);
+            return address -> new WrappingProcessorSupplier(function.apply(address), wrapperSupplier);
+        }
+
+        @Override
+        public void init(@Nonnull Context context) {
+            wrapped.init(context);
+        }
+    }
+
+    private static class PeekWrappedP implements Processor {
+
+        private final Processor wrappedProcessor;
+        private final Distributed.Function<Object, String> toStringF;
+        private final int itemsToSkip;
+        private final boolean peekInput;
+        private final boolean peekOutput;
+
+        private final LoggingInbox loggingInbox;
+        private ILogger logger;
+        private int skippedItems;
+
+        private PeekWrappedP(Processor wrappedProcessor, Distributed.Function<?, String> toStringF, int itemsToSkip,
+                boolean peekInput, boolean peekOutput) {
+            if (!peekInput && !peekOutput) {
+                throw new IllegalArgumentException("Peeking neither on input nor on output");
+            }
+            this.wrappedProcessor = wrappedProcessor;
+            this.toStringF = (Distributed.Function<Object, String>) toStringF;
+            this.itemsToSkip = itemsToSkip;
+            this.peekInput = peekInput;
+            this.peekOutput = peekOutput;
+
+            loggingInbox = peekInput ? new LoggingInbox() : null;
+        }
+
+        @Override
+        public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
+            logger = context.logger();
+            if (peekOutput) {
+                outbox = new LoggingOutbox(outbox);
+            }
+            wrappedProcessor.init(outbox, context);
+        }
+
+        @Override
+        public boolean isCooperative() {
+            return wrappedProcessor.isCooperative();
+        }
+
+        @Override
+        public void process(int ordinal, @Nonnull Inbox inbox) {
+            if (peekInput) {
+                loggingInbox.wrappedInbox = inbox;
+                wrappedProcessor.process(ordinal, loggingInbox);
+            } else {
+                wrappedProcessor.process(ordinal, inbox);
+            }
+        }
+
+        @Override
+        public boolean tryProcess() {
+            return wrappedProcessor.tryProcess();
+        }
+
+        @Override
+        public boolean complete() {
+            return wrappedProcessor.complete();
+        }
+
+        private boolean log(Object object) {
+            if (skippedItems == itemsToSkip) {
+                skippedItems = 0;
+                logger.info(toStringF.apply(object));
+            } else {
+                skippedItems++;
+            }
+            return true;
+        }
+
+        class LoggingInbox implements Inbox {
+
+            private Inbox wrappedInbox;
+
+            @Override
+            public boolean isEmpty() {
+                return wrappedInbox.isEmpty();
+            }
+
+            @Override
+            public Object peek() {
+                return wrappedInbox.peek();
+            }
+
+            @Override
+            public Object poll() {
+                return log(wrappedInbox.poll());
+            }
+
+            @Override
+            public Object remove() {
+                return log(wrappedInbox.remove());
+            }
+        }
+
+        class LoggingOutbox implements Outbox {
+            private final Outbox wrappedOutbox;
+
+            public LoggingOutbox(Outbox wrappedOutbox) {
+                this.wrappedOutbox = wrappedOutbox;
+            }
+
+            @Override
+            public int bucketCount() {
+                return wrappedOutbox.bucketCount();
+            }
+
+            @Override
+            public boolean offer(int ordinal, @Nonnull Object item) {
+                return wrappedOutbox.offer(ordinal, item)
+                        && log(item);
+            }
+
+            @Override
+            public boolean offer(int[] ordinals, @Nonnull Object item) {
+                return wrappedOutbox.offer(ordinals, item)
+                        && log(item);
+            }
         }
     }
 
