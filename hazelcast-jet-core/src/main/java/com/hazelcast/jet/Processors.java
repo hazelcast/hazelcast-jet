@@ -22,6 +22,7 @@ import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedIntFunction;
+import com.hazelcast.jet.Distributed.Predicate;
 import com.hazelcast.jet.Traversers.ResettableSingletonTraverser;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -61,6 +62,7 @@ import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static com.hazelcast.jet.stream.DistributedCollectors.toList;
+import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * Static utility class with factory methods for predefined processors.
@@ -852,74 +854,68 @@ public final class Processors {
     }
 
     public static Distributed.Supplier<Processor> peekInput(Distributed.Supplier<Processor> wrapped) {
-        return peekInput(null, 0, wrapped);
+        return peekInput(null, null, wrapped);
     }
 
     public static Distributed.Supplier<Processor> peekInput(
-            Distributed.Function<Object, String> toStringF, int itemsToSkip,
-            Distributed.Supplier<Processor> wrapped) {
-        Distributed.Function<Object, String> toStringF2 = toStringF == null ? Object::toString : toStringF;
-        return () -> new PeekWrappedP(wrapped.get(), toStringF2, itemsToSkip, true, false);
+            DistributedFunction<Object, String> toStringF, DistributedPredicate<Object> shouldLogF,
+            DistributedSupplier<Processor> wrapped) {
+        return () -> new PeekWrappedP(wrapped.get(), toStringF, shouldLogF, true, false);
     }
 
     public static ProcessorSupplier peekInput(ProcessorSupplier wrapped) {
-        return peekInput(null, 0, wrapped);
+        return peekInput(null, null, wrapped);
     }
 
     public static ProcessorSupplier peekInput(
-            Distributed.Function<Object, String> toStringF, int itemsToSkip,
+            DistributedFunction<Object, String> toStringF, DistributedPredicate<Object> shouldLogF,
             ProcessorSupplier wrapped
     ) {
-        Distributed.Function<Object, String> toStringF2 = toStringF == null ? Object::toString : toStringF;
-        return new WrappingProcessorSupplier(wrapped, p -> new PeekWrappedP(p, toStringF2, itemsToSkip, true, false));
+        return new WrappingProcessorSupplier(wrapped, p -> new PeekWrappedP(p, toStringF, shouldLogF, true, false));
     }
 
     public static ProcessorMetaSupplier peekInput(ProcessorMetaSupplier wrapped) {
-        return peekInput(null, 0, wrapped);
+        return peekInput(null, null, wrapped);
     }
 
-    public static ProcessorMetaSupplier peekInput(Distributed.Function<Object, String> toStringF, int itemsToSkip,
+    public static ProcessorMetaSupplier peekInput(DistributedFunction<Object, String> toStringF, DistributedPredicate<Object> shouldLogF,
             ProcessorMetaSupplier wrapped
     ) {
-        Distributed.Function<Object, String> toStringF2 = toStringF == null ? Object::toString : toStringF;
-        return new WrappingProcessorMetaSupplier(wrapped, p -> new PeekWrappedP(p, toStringF2, itemsToSkip, true, false));
+        return new WrappingProcessorMetaSupplier(wrapped, p -> new PeekWrappedP(p, toStringF, shouldLogF, true, false));
     }
 
     public static Distributed.Supplier<Processor> peekOutput(Distributed.Supplier<Processor> wrapped) {
-        return peekOutput(null, 0, wrapped);
+        return peekOutput(null, null, wrapped);
     }
 
     public static Distributed.Supplier<Processor> peekOutput(
-            Distributed.Function<Object, String> toStringF, int itemsToSkip,
-            Distributed.Supplier<Processor> wrapped) {
-        Distributed.Function<Object, String> toStringF2 = toStringF == null ? Object::toString : toStringF;
-        return () -> new PeekWrappedP(wrapped.get(), toStringF2, itemsToSkip, false, true);
+            DistributedFunction<Object, String> toStringF, DistributedPredicate<Object> shouldLogF,
+            DistributedSupplier<Processor> wrapped) {
+        return () -> new PeekWrappedP(wrapped.get(), toStringF, shouldLogF, false, true);
     }
 
     public static ProcessorSupplier peekOutput(ProcessorSupplier wrapped) {
-        return peekOutput(null, 0, wrapped);
+        return peekOutput(null, null, wrapped);
     }
 
     public static ProcessorSupplier peekOutput(
-            Distributed.Function<Object, String> toStringF, int itemsToSkip,
+            DistributedFunction<Object, String> toStringF, DistributedPredicate<Object> shouldLogF,
             ProcessorSupplier wrapped
     ) {
-        Distributed.Function<Object, String> toStringF2 = toStringF == null ? Object::toString : toStringF;
-        return new WrappingProcessorSupplier(wrapped, p -> new PeekWrappedP(p, toStringF2, itemsToSkip, false, true));
+        return new WrappingProcessorSupplier(wrapped, p -> new PeekWrappedP(p, toStringF, shouldLogF, false, true));
     }
 
     public static ProcessorMetaSupplier peekOutput(ProcessorMetaSupplier wrapped) {
-        return peekOutput(null, 0, wrapped);
+        return peekOutput(null, null, wrapped);
     }
 
-    public static ProcessorMetaSupplier peekOutput(Distributed.Function<Object, String> toStringF, int itemsToSkip,
+    public static ProcessorMetaSupplier peekOutput(DistributedFunction<Object, String> toStringF, DistributedPredicate<Object> shouldLogF,
             ProcessorMetaSupplier wrapped
     ) {
-        Distributed.Function<Object, String> toStringF2 = toStringF == null ? Object::toString : toStringF;
-        return new WrappingProcessorMetaSupplier(wrapped, p -> new PeekWrappedP(p, toStringF2, itemsToSkip, false, true));
+        return new WrappingProcessorMetaSupplier(wrapped, p -> new PeekWrappedP(p, toStringF, shouldLogF, false, true));
     }
 
-    private static class WrappingProcessorSupplier implements ProcessorSupplier {
+    private static final class WrappingProcessorSupplier implements ProcessorSupplier {
         private ProcessorSupplier wrapped;
         private Function<Processor, Processor> wrapperSupplier;
 
@@ -948,11 +944,12 @@ public final class Processors {
         }
     }
 
-    private static class WrappingProcessorMetaSupplier implements ProcessorMetaSupplier {
+    private static final class WrappingProcessorMetaSupplier implements ProcessorMetaSupplier {
         private ProcessorMetaSupplier wrapped;
         private Function<Processor, Processor> wrapperSupplier;
 
-        private WrappingProcessorMetaSupplier(ProcessorMetaSupplier wrapped, Function<Processor, Processor> wrapperSupplier) {
+        private WrappingProcessorMetaSupplier(ProcessorMetaSupplier wrapped, Function<Processor,
+                Processor> wrapperSupplier) {
             this.wrapped = wrapped;
             this.wrapperSupplier = wrapperSupplier;
         }
@@ -970,26 +967,28 @@ public final class Processors {
         }
     }
 
-    private static class PeekWrappedP implements Processor {
+    private static final class PeekWrappedP implements Processor {
 
         private final Processor wrappedProcessor;
         private final Distributed.Function<Object, String> toStringF;
-        private final int itemsToSkip;
+        private final Predicate<Object> shouldLogF;
         private final boolean peekInput;
         private final boolean peekOutput;
 
         private final LoggingInbox loggingInbox;
         private ILogger logger;
-        private int skippedItems;
 
-        private PeekWrappedP(Processor wrappedProcessor, Distributed.Function<?, String> toStringF, int itemsToSkip,
-                boolean peekInput, boolean peekOutput) {
+        private PeekWrappedP(Processor wrappedProcessor, Distributed.Function<Object, String> toStringF,
+                Predicate<Object> shouldLogF, boolean peekInput, boolean peekOutput
+        ) {
             if (!peekInput && !peekOutput) {
                 throw new IllegalArgumentException("Peeking neither on input nor on output");
             }
+            checkNotNull(wrappedProcessor, "wrappedProcessor");
+
             this.wrappedProcessor = wrappedProcessor;
-            this.toStringF = (Distributed.Function<Object, String>) toStringF;
-            this.itemsToSkip = itemsToSkip;
+            this.toStringF = toStringF == null ? Object::toString : toStringF;
+            this.shouldLogF = shouldLogF == null ? o -> true : shouldLogF;
             this.peekInput = peekInput;
             this.peekOutput = peekOutput;
 
@@ -1031,11 +1030,8 @@ public final class Processors {
         }
 
         private boolean log(Object object) {
-            if (skippedItems == itemsToSkip) {
-                skippedItems = 0;
+            if (shouldLogF.test(object)) {
                 logger.info(toStringF.apply(object));
-            } else {
-                skippedItems++;
             }
             return true;
         }
@@ -1065,10 +1061,10 @@ public final class Processors {
             }
         }
 
-        class LoggingOutbox implements Outbox {
+        private final class LoggingOutbox implements Outbox {
             private final Outbox wrappedOutbox;
 
-            public LoggingOutbox(Outbox wrappedOutbox) {
+            private LoggingOutbox(Outbox wrappedOutbox) {
                 this.wrappedOutbox = wrappedOutbox;
             }
 
