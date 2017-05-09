@@ -48,10 +48,10 @@ public final class WriteFileP {
      */
     public static <T> ProcessorMetaSupplier supplier(
             @Nonnull String directoryName,
-            @Nullable Distributed.Function<T, String> formatF,
+            @Nullable Distributed.Function<T, String> toStringF,
             @Nullable String charset,
             boolean append) {
-        Distributed.Function<T, String> formatF2 = formatF == null ? Object::toString : formatF;
+        Distributed.Function<T, String> toStringF2 = toStringF == null ? Object::toString : toStringF;
 
         return addresses -> address -> count -> {
             Path directory = Paths.get(directoryName);
@@ -64,7 +64,7 @@ public final class WriteFileP {
                             globalIndex -> createBufferedWriter(directory.resolve(Integer.toString(globalIndex)),
                                     charset, append),
                             (writer, item) -> uncheckRun(() -> {
-                                writer.write(formatF2.apply((T) item));
+                                writer.write(toStringF2.apply((T) item));
                                 writer.newLine();
                             }),
                             writer -> uncheckRun(writer::flush),

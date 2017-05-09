@@ -398,9 +398,9 @@ public final class Processors {
      */
     @Nonnull
     public static <T> ProcessorMetaSupplier writeFile(
-            @Nonnull String directoryName, @Nullable Distributed.Function<T, String> formatF
+            @Nonnull String directoryName, @Nullable Distributed.Function<T, String> toStringF
     ) {
-        return writeFile(directoryName, formatF, null, false);
+        return writeFile(directoryName, toStringF, null, false);
     }
 
     /**
@@ -418,7 +418,7 @@ public final class Processors {
      *
      * @param directoryName directory to create the files in. Will be created,
      *                      if it doesn't exist. Must be the same on all nodes.
-     * @param formatF A function to convert items to String (a formatter), or
+     * @param toStringF A function to convert items to String (a formatter), or
      *                {@code null} to use {@code toString()}
      * @param charset charset used to encode the file output, or {@code null}
      *                to use UTF-8
@@ -427,11 +427,11 @@ public final class Processors {
     @Nonnull
     public static <T> ProcessorMetaSupplier writeFile(
             @Nonnull String directoryName,
-            @Nullable Distributed.Function<T, String> formatF,
+            @Nullable Distributed.Function<T, String> toStringF,
             @Nullable Charset charset,
             boolean append
     ) {
-        return WriteFileP.supplier(directoryName, formatF, charset == null ? null : charset.name(), append);
+        return WriteFileP.supplier(directoryName, toStringF, charset == null ? null : charset.name(), append);
     }
 
     /**

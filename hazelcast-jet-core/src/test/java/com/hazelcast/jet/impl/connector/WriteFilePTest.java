@@ -237,7 +237,7 @@ public class WriteFilePTest extends JetTestSupport {
     }
 
     @Test
-    public void when_formatF_then_used() throws Exception {
+    public void when_toStringF_then_used() throws Exception {
         // Given
         DAG dag = buildDag(val -> Integer.toString(Integer.parseInt(val) - 1), null, false);
         addItemsToList(1, 11);
@@ -299,11 +299,11 @@ public class WriteFilePTest extends JetTestSupport {
         }
     }
 
-    private DAG buildDag(Distributed.Function<String, String> formatF, Charset charset, boolean append) {
+    private DAG buildDag(Distributed.Function<String, String> toStringF, Charset charset, boolean append) {
         DAG dag = new DAG();
         Vertex reader = dag.newVertex("reader", readList(list.getName()))
                 .localParallelism(1);
-        Vertex writer = dag.newVertex("writer", writeFile(directory.toString(), formatF, charset, append))
+        Vertex writer = dag.newVertex("writer", writeFile(directory.toString(), toStringF, charset, append))
                 .localParallelism(1);
         dag.edge(between(reader, writer));
         return dag;
