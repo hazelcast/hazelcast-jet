@@ -34,15 +34,19 @@ import java.util.function.Supplier;
 import java.util.jar.JarFile;
 
 /**
- * A Bootstrapper for {@link JetInstance} which returns a bootstrapped Jet client instance.
- * When used in combination with {@code jet-submit.sh}, it runs the JAR file
+ * A Bootstrapper for {@link JetInstance} which returns a bootstrapped
+ * Jet client instance. When used in combination with {@code jet-submit.sh},
+ * it runs the Main-Class defined in the manifest in the JAR file
  * supplied to {@code jet-submit.sh}. The wrapped instance will then add
  * the given JAR file to all jobs submitted through that instance.
  * <p>
+ * This utility is needed in cases where you want to run a JAR which
+ * will execute a job, but the job requires the JAR itself to be deployed as well.
+ * <p>
  * In the following example, the JAR file containing {@code CustomJetJob}
- * will be submitted automatically in the {@link JetInstance#newJob(DAG)} method call as part of the
- * {@link JobConfig} when run as {@code jet-submit.sh custom-jet-job.jar}.
-
+ * will be submitted automatically in the {@link JetInstance#newJob(DAG)} method
+ * call as part of the {@link JobConfig} when run as {@code jet-submit.sh custom-jet-job.jar}.
+ *
  * <pre>
  * public class CustomJetJob {
  *   public static void main(String[] args) {
@@ -51,6 +55,7 @@ import java.util.jar.JarFile;
  *   }
  * }
  * </pre>
+ *
  */
 public final class JetBootstrap {
 
