@@ -35,8 +35,9 @@ import com.hazelcast.jet.impl.connector.StreamTextSocketP;
 import com.hazelcast.jet.impl.connector.WriteBufferedP;
 import com.hazelcast.jet.impl.connector.WriteFileP;
 import com.hazelcast.jet.impl.connector.WriteSystemOutP;
-import com.hazelcast.logging.ILogger;
-import com.hazelcast.nio.Address;
+import com.hazelcast.jet.impl.util.PeekWrappedP;
+import com.hazelcast.jet.impl.util.WrappingProcessorMetaSupplier;
+import com.hazelcast.jet.impl.util.WrappingProcessorSupplier;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -48,7 +49,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -61,8 +61,6 @@ import static com.hazelcast.jet.Traversers.lazy;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
-import static com.hazelcast.jet.stream.DistributedCollectors.toList;
-import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * Static utility class with factory methods for predefined processors.
@@ -910,6 +908,8 @@ public final class Processors {
      *                   items are logged. <b>Warning:</b> Function will see
      *                   both items and {@link Punctuation}
      * @param wrapped The wrapped supplier.
+     *
+     * @see #peekOutput(Distributed.Function, Predicate, ProcessorMetaSupplier)
      */
     public static ProcessorMetaSupplier peekInput(
             @Nullable DistributedFunction<Object, String> toStringF,
@@ -971,183 +971,13 @@ public final class Processors {
      *                   items are logged. <b>Warning:</b> Function will see
      *                   both items and {@link Punctuation}
      * @param wrapped The wrapped supplier.
+     *
+     * @see #peekInput(Distributed.Function, Predicate, ProcessorMetaSupplier)
      */
     public static ProcessorMetaSupplier peekOutput(DistributedFunction<Object, String> toStringF,
             DistributedPredicate<Object> shouldLogF, ProcessorMetaSupplier wrapped
     ) {
         return new WrappingProcessorMetaSupplier(wrapped, p -> new PeekWrappedP(p, toStringF, shouldLogF, false, true));
-    }
-
-    private static final class WrappingProcessorSupplier implements ProcessorSupplier {
-        private ProcessorSupplier wrapped;
-        private Function<Processor, Processor> wrapperSupplier;
-
-        private WrappingProcessorSupplier(ProcessorSupplier wrapped, Function<Processor, Processor> wrapperSupplier) {
-            this.wrapped = wrapped;
-            this.wrapperSupplier = wrapperSupplier;
-        }
-
-        @Nonnull
-        @Override
-        public Collection<? extends Processor> get(int count) {
-            Collection<? extends Processor> processors = wrapped.get(count);
-            return processors.stream()
-                    .map(wrapperSupplier)
-                    .collect(toList());
-        }
-
-        @Override
-        public void init(@Nonnull Context context) {
-            wrapped.init(context);
-        }
-
-        @Override
-        public void complete(Throwable error) {
-            wrapped.complete(error);
-        }
-    }
-
-    private static final class WrappingProcessorMetaSupplier implements ProcessorMetaSupplier {
-        private ProcessorMetaSupplier wrapped;
-        private Function<Processor, Processor> wrapperSupplier;
-
-        private WrappingProcessorMetaSupplier(ProcessorMetaSupplier wrapped, Function<Processor,
-                Processor> wrapperSupplier) {
-            this.wrapped = wrapped;
-            this.wrapperSupplier = wrapperSupplier;
-        }
-
-        @Nonnull
-        @Override
-        public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-            Function<Address, ProcessorSupplier> function = wrapped.get(addresses);
-            return address -> new WrappingProcessorSupplier(function.apply(address), wrapperSupplier);
-        }
-
-        @Override
-        public void init(@Nonnull Context context) {
-            wrapped.init(context);
-        }
-    }
-
-    private static final class PeekWrappedP implements Processor {
-
-        private final Processor wrappedProcessor;
-        private final Distributed.Function<Object, String> toStringF;
-        private final Predicate<Object> shouldLogF;
-        private final boolean peekInput;
-        private final boolean peekOutput;
-
-        private final LoggingInbox loggingInbox;
-        private ILogger logger;
-
-        private PeekWrappedP(Processor wrappedProcessor, Distributed.Function<Object, String> toStringF,
-                Predicate<Object> shouldLogF, boolean peekInput, boolean peekOutput
-        ) {
-            if (!peekInput && !peekOutput) {
-                throw new IllegalArgumentException("Peeking neither on input nor on output");
-            }
-            checkNotNull(wrappedProcessor, "wrappedProcessor");
-
-            this.wrappedProcessor = wrappedProcessor;
-            this.toStringF = toStringF == null ? Object::toString : toStringF;
-            this.shouldLogF = shouldLogF == null ? o -> true : shouldLogF;
-            this.peekInput = peekInput;
-            this.peekOutput = peekOutput;
-
-            loggingInbox = peekInput ? new LoggingInbox() : null;
-        }
-
-        @Override
-        public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
-            logger = context.logger();
-            if (peekOutput) {
-                outbox = new LoggingOutbox(outbox);
-            }
-            wrappedProcessor.init(outbox, context);
-        }
-
-        @Override
-        public boolean isCooperative() {
-            return wrappedProcessor.isCooperative();
-        }
-
-        @Override
-        public void process(int ordinal, @Nonnull Inbox inbox) {
-            if (peekInput) {
-                loggingInbox.wrappedInbox = inbox;
-                wrappedProcessor.process(ordinal, loggingInbox);
-            } else {
-                wrappedProcessor.process(ordinal, inbox);
-            }
-        }
-
-        @Override
-        public boolean tryProcess() {
-            return wrappedProcessor.tryProcess();
-        }
-
-        @Override
-        public boolean complete() {
-            return wrappedProcessor.complete();
-        }
-
-        private boolean log(Object object) {
-            if (shouldLogF.test(object)) {
-                logger.info(toStringF.apply(object));
-            }
-            return true;
-        }
-
-        class LoggingInbox implements Inbox {
-
-            private Inbox wrappedInbox;
-
-            @Override
-            public boolean isEmpty() {
-                return wrappedInbox.isEmpty();
-            }
-
-            @Override
-            public Object peek() {
-                return wrappedInbox.peek();
-            }
-
-            @Override
-            public Object poll() {
-                return log(wrappedInbox.poll());
-            }
-
-            @Override
-            public Object remove() {
-                return log(wrappedInbox.remove());
-            }
-        }
-
-        private final class LoggingOutbox implements Outbox {
-            private final Outbox wrappedOutbox;
-
-            private LoggingOutbox(Outbox wrappedOutbox) {
-                this.wrappedOutbox = wrappedOutbox;
-            }
-
-            @Override
-            public int bucketCount() {
-                return wrappedOutbox.bucketCount();
-            }
-
-            @Override
-            public boolean offer(int ordinal, @Nonnull Object item) {
-                return wrappedOutbox.offer(ordinal, item)
-                        && log(item);
-            }
-
-            @Override
-            public boolean offer(int[] ordinals, @Nonnull Object item) {
-                return wrappedOutbox.offer(ordinals, item)
-                        && log(item);
-            }
-        }
     }
 
     /**
