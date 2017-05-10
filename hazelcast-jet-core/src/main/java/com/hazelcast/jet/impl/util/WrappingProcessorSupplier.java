@@ -26,8 +26,8 @@ import java.util.function.Function;
 import static java.util.stream.Collectors.toList;
 
 /**
- * A {@link ProcessorSupplier}, which wraps another {@code ProcessorSupplier},
- * with one, that will wrap its processors using {@code wrapperSupplier}.
+ * A {@link ProcessorSupplier} which wraps another {@code ProcessorSupplier}
+ * with one that will wrap its processors using {@code wrapperSupplier}.
  */
 public final class WrappingProcessorSupplier implements ProcessorSupplier {
     private ProcessorSupplier wrapped;

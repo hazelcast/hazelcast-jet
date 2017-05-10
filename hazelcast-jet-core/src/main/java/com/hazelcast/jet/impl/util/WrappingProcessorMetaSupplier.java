@@ -26,8 +26,8 @@ import java.util.List;
 import java.util.function.Function;
 
 /**
- * A {@link ProcessorMetaSupplier}, which wraps another {@code
- * ProcessorMetaSupplier} with one, that will wrap its processors using
+ * A {@link ProcessorMetaSupplier} which wraps another {@code
+ * ProcessorMetaSupplier} with one that will wrap its processors using
  * {@code wrapperSupplier}.
  */
 public final class WrappingProcessorMetaSupplier implements ProcessorMetaSupplier {
