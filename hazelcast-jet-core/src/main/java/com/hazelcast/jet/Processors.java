@@ -839,7 +839,7 @@ public final class Processors {
      * It will use {@link Object#toString()}.
      */
     public static Distributed.Supplier<Processor> writeSystemOut() {
-        return writeSystemOut(Object::toString);
+        return writeSystemOut(null);
     }
 
     /**
