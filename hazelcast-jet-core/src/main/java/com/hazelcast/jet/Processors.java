@@ -17,13 +17,12 @@
 package com.hazelcast.jet;
 
 import com.hazelcast.client.config.ClientConfig;
-import com.hazelcast.jet.function.DistributedConsumer;
+import com.hazelcast.jet.Traversers.ResettableSingletonTraverser;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedIntFunction;
-import com.hazelcast.jet.Distributed.Predicate;
-import com.hazelcast.jet.Traversers.ResettableSingletonTraverser;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.connector.HazelcastWriters;
@@ -56,11 +55,10 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import static com.hazelcast.jet.DistributedFunctions.alwaysTrue;
-import static com.hazelcast.jet.DistributedFunctions.noopConsumer;
-import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 import static com.hazelcast.jet.Traversers.lazy;
 import static com.hazelcast.jet.Traversers.traverseStream;
+import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
+import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 
@@ -390,7 +388,7 @@ public final class Processors {
     }
 
     /**
-     * Convenience for {@link #writeFile(String, Distributed.Function, Charset,
+     * Convenience for {@link #writeFile(String, DistributedFunction, Charset,
      * boolean)} with UTF-8 charset and with overwriting of existing files.
      *
      * @param directoryName directory to create the files in. Will be created,
@@ -402,7 +400,7 @@ public final class Processors {
     }
 
     /**
-     * Convenience for {@link #writeFile(String, Distributed.Function, Charset,
+     * Convenience for {@link #writeFile(String, DistributedFunction, Charset,
      * boolean)} with UTF-8 charset and with overwriting of existing files.
      *
      * @param directoryName directory to create the files in. Will be created,
@@ -835,11 +833,11 @@ public final class Processors {
     }
 
     /**
-     * Convenience for {@link #writeSystemOut(Distributed.Function)} without format.
+     * Convenience for {@link #writeSystemOut(DistributedFunction)} without format.
      * It will use {@link Object#toString()}.
      */
     @Nonnull
-    public static Distributed.Supplier<Processor> writeSystemOut() {
+    public static DistributedSupplier<Processor> writeSystemOut() {
         return writeSystemOut(Object::toString);
     }
 
@@ -854,25 +852,25 @@ public final class Processors {
      *                  {@link Object#toString()} is used.
      */
     @Nonnull
-    public static Distributed.Supplier<Processor> writeSystemOut(
-            @Nonnull Distributed.Function<Object, String> toStringF
+    public static DistributedSupplier<Processor> writeSystemOut(
+            @Nonnull DistributedFunction<Object, String> toStringF
     ) {
         return () -> new WriteSystemOutP(toStringF);
     }
 
     /**
-     * See {@link #peekInput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     * See {@link #peekInput(DistributedFunction, DistributedPredicate, ProcessorMetaSupplier)}
      */
     @Nonnull
-    public static Distributed.Supplier<Processor> peekInput(@Nonnull Distributed.Supplier<Processor> wrapped) {
+    public static DistributedSupplier<Processor> peekInput(@Nonnull DistributedSupplier<Processor> wrapped) {
         return peekInput(Object::toString, alwaysTrue(), wrapped);
     }
 
     /**
-     * See {@link #peekInput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     * See {@link #peekInput(DistributedFunction, DistributedPredicate, ProcessorMetaSupplier)}
      */
     @Nonnull
-    public static Distributed.Supplier<Processor> peekInput(
+    public static DistributedSupplier<Processor> peekInput(
             @Nonnull DistributedFunction<Object, String> toStringF,
             @Nonnull DistributedPredicate<Object> shouldLogF,
             @Nonnull DistributedSupplier<Processor> wrapped) {
@@ -880,7 +878,7 @@ public final class Processors {
     }
 
     /**
-     * See {@link #peekInput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     * See {@link #peekInput(DistributedFunction, DistributedPredicate, ProcessorMetaSupplier)}
      */
     @Nonnull
     public static ProcessorSupplier peekInput(@Nonnull ProcessorSupplier wrapped) {
@@ -888,7 +886,7 @@ public final class Processors {
     }
 
     /**
-     * See {@link #peekInput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     * See {@link #peekInput(DistributedFunction, DistributedPredicate, ProcessorMetaSupplier)}
      */
     @Nonnull
     public static ProcessorSupplier peekInput(
@@ -900,7 +898,7 @@ public final class Processors {
     }
 
     /**
-     * See {@link #peekInput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     * See {@link #peekInput(DistributedFunction, DistributedPredicate, ProcessorMetaSupplier)}
      */
     @Nonnull
     public static ProcessorMetaSupplier peekInput(@Nonnull ProcessorMetaSupplier wrapped) {
@@ -920,7 +918,7 @@ public final class Processors {
      *                   both items and {@link Punctuation}
      * @param wrapped The wrapped supplier.
      *
-     * @see #peekOutput(Distributed.Function, Predicate, ProcessorMetaSupplier)
+     * @see #peekOutput(DistributedFunction, DistributedPredicate, ProcessorMetaSupplier)
      */
     @Nonnull
     public static ProcessorMetaSupplier peekInput(
@@ -932,18 +930,18 @@ public final class Processors {
     }
 
     /**
-     * See {@link #peekOutput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     * See {@link #peekOutput(DistributedFunction, DistributedPredicate, ProcessorMetaSupplier)}
      */
     @Nonnull
-    public static Distributed.Supplier<Processor> peekOutput(@Nonnull Distributed.Supplier<Processor> wrapped) {
+    public static DistributedSupplier<Processor> peekOutput(@Nonnull DistributedSupplier<Processor> wrapped) {
         return peekOutput(Object::toString, alwaysTrue(), wrapped);
     }
 
     /**
-     * See {@link #peekOutput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     * See {@link #peekOutput(DistributedFunction, DistributedPredicate, ProcessorMetaSupplier)}
      */
     @Nonnull
-    public static Distributed.Supplier<Processor> peekOutput(
+    public static DistributedSupplier<Processor> peekOutput(
             @Nonnull DistributedFunction<Object, String> toStringF,
             @Nonnull DistributedPredicate<Object> shouldLogF,
             @Nonnull DistributedSupplier<Processor> wrapped) {
@@ -951,7 +949,7 @@ public final class Processors {
     }
 
     /**
-     * See {@link #peekOutput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     * See {@link #peekOutput(DistributedFunction, DistributedPredicate, ProcessorMetaSupplier)}
      */
     @Nonnull
     public static ProcessorSupplier peekOutput(@Nonnull ProcessorSupplier wrapped) {
@@ -959,7 +957,7 @@ public final class Processors {
     }
 
     /**
-     * See {@link #peekOutput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     * See {@link #peekOutput(DistributedFunction, DistributedPredicate, ProcessorMetaSupplier)}
      */
     @Nonnull
     public static ProcessorSupplier peekOutput(
@@ -971,7 +969,7 @@ public final class Processors {
     }
 
     /**
-     * See {@link #peekOutput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
+     * See {@link #peekOutput(DistributedFunction, DistributedPredicate, ProcessorMetaSupplier)}
      */
     @Nonnull
     public static ProcessorMetaSupplier peekOutput(@Nonnull ProcessorMetaSupplier wrapped) {
@@ -991,7 +989,7 @@ public final class Processors {
      *                   both items and {@link Punctuation}
      * @param wrapped The wrapped supplier.
      *
-     * @see #peekInput(Distributed.Function, Predicate, ProcessorMetaSupplier)
+     * @see #peekInput(DistributedFunction, DistributedPredicate, ProcessorMetaSupplier)
      */
     @Nonnull
     public static ProcessorMetaSupplier peekOutput(

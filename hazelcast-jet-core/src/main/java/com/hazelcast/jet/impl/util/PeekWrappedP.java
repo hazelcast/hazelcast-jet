@@ -16,11 +16,11 @@
 
 package com.hazelcast.jet.impl.util;
 
-import com.hazelcast.jet.Distributed;
-import com.hazelcast.jet.Distributed.Supplier;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
@@ -30,12 +30,12 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * A wrapper processor to peek at input or output of other processor.
- * See {@link com.hazelcast.jet.Processors#peekInput(Supplier)}.
+ * See {@link com.hazelcast.jet.Processors#peekInput(DistributedSupplier)}.
  */
 public final class PeekWrappedP implements Processor {
 
     private final Processor wrappedProcessor;
-    private final Distributed.Function<Object, String> toStringF;
+    private final DistributedFunction<Object, String> toStringF;
     private final Predicate<Object> shouldLogF;
     private final boolean peekInput;
     private final boolean peekOutput;
@@ -43,7 +43,7 @@ public final class PeekWrappedP implements Processor {
     private final LoggingInbox loggingInbox;
     private ILogger logger;
 
-    public PeekWrappedP(Processor wrappedProcessor, Distributed.Function<Object, String> toStringF,
+    public PeekWrappedP(Processor wrappedProcessor, DistributedFunction<Object, String> toStringF,
             Predicate<Object> shouldLogF, boolean peekInput, boolean peekOutput
     ) {
         if (!peekInput && !peekOutput) {

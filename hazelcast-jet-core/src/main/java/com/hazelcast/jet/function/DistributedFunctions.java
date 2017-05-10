@@ -70,7 +70,7 @@ public final class DistributedFunctions {
      * Returns a predicate that always returns {@code true}.
      */
     @Nonnull
-    public static <T> Distributed.Predicate<T> alwaysTrue() {
+    public static <T> DistributedPredicate<T> alwaysTrue() {
         return t -> true;
     }
 
@@ -78,7 +78,7 @@ public final class DistributedFunctions {
      * Returns a predicate that always returns {@code false}.
      */
     @Nonnull
-    public static <T> Distributed.Predicate<T> alwaysFalse() {
+    public static <T> DistributedPredicate<T> alwaysFalse() {
         return t -> false;
     }
 }

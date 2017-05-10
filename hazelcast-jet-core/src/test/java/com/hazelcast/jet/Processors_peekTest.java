@@ -16,8 +16,9 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.jet.Distributed.Function;
-import com.hazelcast.jet.Distributed.Predicate;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedPredicate;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
@@ -39,8 +40,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 
-import static com.hazelcast.jet.DistributedFunctions.alwaysTrue;
 import static com.hazelcast.jet.Processors.peekInput;
+import static com.hazelcast.jet.Processors.peekOutput;
+import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
@@ -56,18 +58,18 @@ public class Processors_peekTest {
     private ILogger logger;
 
     @Parameter
-    public Function<Object, String> toStringF;
+    public DistributedFunction<Object, String> toStringF;
 
     @Parameter(1)
-    public Predicate<Object> shouldLogF;
+    public DistributedPredicate<Object> shouldLogF;
 
     @Parameters(name = "toStringF={0}, shouldLogF={1}")
     public static Collection<Object[]> parameters() {
         return Arrays.asList(
                 new Object[]{null, null},
                 new Object[]{
-                        (Function<Object, String>) o -> "a" + o,
-                        (Predicate<Object>) o -> (int) o <= 1
+                        (DistributedFunction<Object, String>) o -> "a" + o,
+                        (DistributedPredicate<Object>) o -> (int) o <= 1
                 }
         );
     }
@@ -83,7 +85,7 @@ public class Processors_peekTest {
     @Test
     public void when_peekInput_SupplierProcessor() {
         // Given
-        Distributed.Supplier<Processor> passThroughPSupplier = Processors.filter(alwaysTrue());
+        DistributedSupplier<Processor> passThroughPSupplier = Processors.filter(alwaysTrue());
         Processor wrappedP =
                 (toStringF == null ? peekInput(passThroughPSupplier) : peekInput(toStringF, shouldLogF, passThroughPSupplier))
                         .get();
@@ -122,9 +124,9 @@ public class Processors_peekTest {
     @Test
     public void when_peekOutput_SupplierProcessor() {
         // Given
-        Distributed.Supplier<Processor> passThroughPSupplier = Processors.filter(alwaysTrue());
+        DistributedSupplier<Processor> passThroughPSupplier = Processors.filter(alwaysTrue());
         Processor wrappedP =
-                (toStringF == null ? peekInput(passThroughPSupplier) : peekInput(toStringF, shouldLogF, passThroughPSupplier))
+                (toStringF == null ? peekInput(passThroughPSupplier) : peekOutput(toStringF, shouldLogF, passThroughPSupplier))
                         .get();
 
         wrappedP.init(outbox, context);
@@ -138,7 +140,7 @@ public class Processors_peekTest {
         // Given
         ProcessorSupplier passThroughPSupplier = ProcessorSupplier.of(Processors.filter(alwaysTrue()));
         Processor wrappedP =
-                (toStringF == null ? peekInput(passThroughPSupplier) : peekInput(toStringF, shouldLogF, passThroughPSupplier))
+                (toStringF == null ? peekInput(passThroughPSupplier) : peekOutput(toStringF, shouldLogF, passThroughPSupplier))
                         .get(1).iterator().next();
         wrappedP.init(outbox, context);
 
@@ -151,7 +153,7 @@ public class Processors_peekTest {
         // Given
         ProcessorMetaSupplier passThroughPSupplier = ProcessorMetaSupplier.of(Processors.filter(alwaysTrue()));
         Address address = new Address();
-        Processor wrappedP = (toStringF == null ? peekInput(passThroughPSupplier) : peekInput(toStringF, shouldLogF, passThroughPSupplier))
+        Processor wrappedP = (toStringF == null ? peekInput(passThroughPSupplier) : peekOutput(toStringF, shouldLogF, passThroughPSupplier))
                 .get(Collections.singletonList(address)).apply(address).get(1).iterator().next();
         wrappedP.init(outbox, context);
 

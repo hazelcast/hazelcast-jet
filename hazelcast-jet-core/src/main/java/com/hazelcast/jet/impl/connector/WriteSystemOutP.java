@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.jet.AbstractProcessor;
-import com.hazelcast.jet.Distributed.Function;
+import com.hazelcast.jet.function.DistributedFunction;
 
 import javax.annotation.Nonnull;
 
@@ -26,9 +26,9 @@ import javax.annotation.Nonnull;
  */
 public class WriteSystemOutP extends AbstractProcessor {
 
-    private Function<Object, String> toStringF;
+    private DistributedFunction<Object, String> toStringF;
 
-    public WriteSystemOutP(Function<Object, String> toStringF) {
+    public WriteSystemOutP(DistributedFunction<Object, String> toStringF) {
         this.toStringF = toStringF;
     }
 
