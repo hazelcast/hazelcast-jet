@@ -20,7 +20,6 @@ import com.hazelcast.core.Cluster;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
@@ -47,12 +46,12 @@ import java.util.jar.JarFile;
  * This helper is a part of the solution to the above "bootstrapping"
  * issue. To use it, follow these steps:
  * <ol><li>
- *     Write your {@code main()} method and your Jet code the usual way, except
- *     for calling {@code JetBootstrap.getInstance()} instead of {@code
- *     Jet.newJetClient()} to acquire a Jet client instance.
+ *     Write your {@code main()} method and your Jet code the usual way. Use
+ *     {@link JetBootstrap#getInstance()} to acquire a Jet client instance (not
+ *     the usual {@link Jet#newJetClient()}).
  * </li><li>
- *     Create a runnable JAR with your entry point declared as the main
- *     class in {@code MANIFEST.MF}.
+ *     Create a runnable JAR with your entry point declared as the {@code
+ *     Main-Class} in {@code MANIFEST.MF}.
  * </li><li>
  *     Run your JAR, but instead of {@code java -jar jetjob.jar} use {@code
  *     submit-jet.sh jetjob.jar}. The script is found in the Jet distribution
@@ -63,6 +62,7 @@ import java.util.jar.JarFile;
  *     found in the {@code config} directory in Jet's distribution directory
  *     structure. Adjust that file to suit your needs.
  * </li></ol>
+ *
  * For example, write a class like this:
  * <pre>
  * public class CustomJetJob {
@@ -72,6 +72,7 @@ import java.util.jar.JarFile;
  *   }
  * }
  * </pre>
+ *
  * After building the JAR, submit the job:
  * <pre>
  * $ submit-jet.sh jetjob.jar
@@ -95,15 +96,20 @@ public final class JetBootstrap {
     public static void main(String[] args) throws Exception {
         int argLength = 1;
         if (args.length < argLength) {
-            System.err.println(JetBootstrap.class.getSimpleName()
+            error(JetBootstrap.class.getSimpleName()
                     + ".main() must be called with the JAR filename as the first argument");
-            System.exit(1);
         }
 
         jarPathname = args[0];
 
         try (JarFile jarFile = new JarFile(jarPathname)) {
+            if (jarFile.getManifest() == null) {
+                error("No manifest file in " + jarPathname);
+            }
             String mainClass = jarFile.getManifest().getMainAttributes().getValue("Main-Class");
+            if (mainClass == null) {
+                error("No Main-Class found in manifest");
+            }
             String[] jobArgs = new String[args.length - argLength];
             System.arraycopy(args, argLength, jobArgs, 0, args.length - argLength);
 
@@ -112,12 +118,17 @@ public final class JetBootstrap {
             Method main = clazz.getDeclaredMethod("main", String[].class);
             int mods = main.getModifiers();
             if ((mods & Modifier.PUBLIC) == 0 || (mods & Modifier.STATIC) == 0) {
-                throw new JetException("Class " + clazz.getName()
+                error("Class " + clazz.getName()
                         + " has a main(String[] args) method which is not public static");
             }
             // upcast args to Object so it's passed as a single array-typed argument
             main.invoke(null, (Object) jobArgs);
         }
+    }
+
+    private static void error(String msg) {
+        System.err.println(msg);
+        System.exit(1);
     }
 
     /**
