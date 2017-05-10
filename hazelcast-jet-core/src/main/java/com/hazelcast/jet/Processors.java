@@ -308,12 +308,7 @@ public final class Processors {
     }
 
     /**
-     * Returns a supplier of processors, that read all files in a directory and emit them
-     * line by line. Files should be in UTF-8 encoding.
-     *
-     * @param directory Parent directory of the files.
-     *
-     * @see #readFiles(String, Charset, String)
+     * See {@link #readFiles(String, Charset, String)}.
      */
     @Nonnull
     public static ProcessorSupplier readFiles(@Nonnull String directory) {
@@ -344,10 +339,10 @@ public final class Processors {
     }
 
     /**
-     * @see #streamFiles(String, Charset)
+     * See {@link #streamFiles(String, Charset, String)}
      */
     public static ProcessorSupplier streamFiles(@Nonnull String watchedDirectory) {
-        return streamFiles(watchedDirectory, null);
+        return streamFiles(watchedDirectory, null, null);
     }
 
     /**
@@ -359,18 +354,25 @@ public final class Processors {
      * from.
      * <p>
      * The processor will scan pre-existing files for file sizes on startup and
-     * process them from that position, except that it will ignore the first
-     * line because it may be incomplete (it is assumed that another process is
-     * concurrently appending to the file).
+     * process them from that position. It will ignore the first line if the
+     * starting offset is not immediately after a newline character (it is
+     * assumed that another process is concurrently appending to the file).
      * <p>
      * The same pathname should be available on all members, but it should not
      * contain the same files &mdash; (e.g., it shouldn't resolve to a
      * directory shared over the network).
      * <p>
+     * Multiple processor instances read multiple files in parallel. Single
+     * file is always read by one processor instance. When a change is detected
+     * the file is opened, appended lines are read and file is closed. This
+     * process is repeated as necessary.
+     * <p>
      * The processor completes when the directory is deleted. However, in order
      * to delete the directory, all files in it must be deleted and if you
      * delete a file that is currently being read from, the job may encounter
      * an {@code IOException}. The directory must be deleted on all nodes.
+     * <p>
+     * Any {@code IOException} will cause the job to fail.
      * <p>
      * <strong>Note:</strong> the underlying JDK API, {@link
      * java.nio.file.WatchService}, has a history of unreliability and this
@@ -380,11 +382,13 @@ public final class Processors {
      *
      * @param watchedDirectory The directory where we watch files
      * @param charset charset to use to decode the files, or {@code null} to use UTF-8
+     * @param glob the file filter, see {@link
+     *             java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()}
      */
     public static ProcessorSupplier streamFiles(
-            @Nonnull String watchedDirectory, @Nullable Charset charset
+            @Nonnull String watchedDirectory, @Nullable Charset charset, @Nullable String glob
     ) {
-        return StreamFilesP.supplier(watchedDirectory, charset == null ? null : charset.toString());
+        return StreamFilesP.supplier(watchedDirectory, charset == null ? null : charset.toString(), glob);
     }
 
     /**

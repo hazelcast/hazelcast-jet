@@ -34,6 +34,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
@@ -57,7 +58,7 @@ import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
- * @see com.hazelcast.jet.Processors#streamFiles(String, Charset)
+ * @see com.hazelcast.jet.Processors#streamFiles(String, Charset, String)
  */
 public class StreamFilesP extends AbstractProcessor implements Closeable {
 
@@ -73,6 +74,7 @@ public class StreamFilesP extends AbstractProcessor implements Closeable {
 
     private final Path watchedDirectory;
     private final Charset charset;
+    private final PathMatcher glob;
     private final int parallelism;
 
     private final int id;
@@ -84,9 +86,10 @@ public class StreamFilesP extends AbstractProcessor implements Closeable {
     private FileInputStream currentInputStream;
     private Reader currentReader;
 
-    StreamFilesP(String watchedDirectory, Charset charset, int parallelism, int id) {
+    StreamFilesP(String watchedDirectory, Charset charset, String glob, int parallelism, int id) {
         this.watchedDirectory = Paths.get(watchedDirectory);
         this.charset = charset;
+        this.glob = FileSystems.getDefault().getPathMatcher("glob:" + (glob == null ? "*" : glob));
         this.parallelism = parallelism;
         this.id = id;
         setCooperative(false);
@@ -157,9 +160,10 @@ public class StreamFilesP extends AbstractProcessor implements Closeable {
         }
         for (WatchEvent<?> event : key.pollEvents()) {
             final WatchEvent.Kind<?> kind = event.kind();
-            final Path filePath = watchedDirectory.resolve(((WatchEvent<Path>) event).context());
+            final Path fileName = ((WatchEvent<Path>) event).context();
+            final Path filePath = watchedDirectory.resolve(fileName);
             if (kind == ENTRY_CREATE || kind == ENTRY_MODIFY) {
-                if (belongsToThisProcessor(filePath) && !Files.isDirectory(filePath)) {
+                if (glob.matches(fileName) && belongsToThisProcessor(fileName) && !Files.isDirectory(filePath)) {
                     logFine(logger, "Will open file to read new content: %s", filePath);
                     eventQueue.add(filePath);
                 }
@@ -303,10 +307,10 @@ public class StreamFilesP extends AbstractProcessor implements Closeable {
     }
 
     /**
-     * @see com.hazelcast.jet.Processors#streamFiles(String, Charset)
+     * @see com.hazelcast.jet.Processors#streamFiles(String, Charset, String)
      */
-    public static ProcessorSupplier supplier(String watchedDirectory, String charset) {
-        return new Supplier(watchedDirectory, charset);
+    public static ProcessorSupplier supplier(String watchedDirectory, String charset, String glob) {
+        return new Supplier(watchedDirectory, charset, glob);
     }
 
     private static class Supplier implements ProcessorSupplier {
@@ -314,12 +318,14 @@ public class StreamFilesP extends AbstractProcessor implements Closeable {
         static final long serialVersionUID = 1L;
         private final String watchedDirectory;
         private final String charset;
+        private final String glob;
 
         private transient ArrayList<StreamFilesP> processors;
 
-        Supplier(String watchedDirectory, String charset) {
+        Supplier(String watchedDirectory, String charset, String glob) {
             this.watchedDirectory = watchedDirectory;
             this.charset = charset;
+            this.glob = glob;
         }
 
         @Override @Nonnull
@@ -327,7 +333,7 @@ public class StreamFilesP extends AbstractProcessor implements Closeable {
             processors = new ArrayList<>(count);
             Charset charsetObj = charset == null ? StandardCharsets.UTF_8 : Charset.forName(charset);
             for (int i = 0; i < count; i++) {
-                processors.add(new StreamFilesP(watchedDirectory, charsetObj, count, i));
+                processors.add(new StreamFilesP(watchedDirectory, charsetObj, glob, count, i));
             }
             return processors;
         }
