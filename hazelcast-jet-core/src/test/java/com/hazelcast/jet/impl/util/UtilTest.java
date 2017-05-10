@@ -38,7 +38,7 @@ import static org.junit.Assert.assertTrue;
 public class UtilTest {
 
     @Test
-    public void testAddClamped() {
+    public void when_addClamped_then_doesntOverflow() {
         // no overflow
         assertEquals(0, addClamped(0, 0));
         assertEquals(1, addClamped(1, 0));
@@ -55,7 +55,7 @@ public class UtilTest {
     }
 
     @Test
-    public void testSubtractClamped() {
+    public void when_subtractClamped_then_doesntOverflow() {
         // no overflow
         assertEquals(0, subtractClamped(0, 0));
         assertEquals(1, subtractClamped(1, 0));
@@ -72,7 +72,7 @@ public class UtilTest {
     }
 
     @Test
-    public void testConcurrentMemoize() {
+    public void when_memoizeConcurrent_then_threadSafe() {
         final Object obj = new Object();
         Supplier<Object> supplier = new Supplier<Object>() {
             boolean supplied;
@@ -92,7 +92,7 @@ public class UtilTest {
     }
 
     @Test(expected = NullPointerException.class)
-    public void testConcurrentMemoize_when_nullSupplier() {
+    public void when_memoizeConcurrentWithNullSupplier_then_exception() {
        Supplier<Object> supplier = () -> null;
        memoizeConcurrent(supplier).get();
     }

@@ -46,9 +46,9 @@ import java.util.jar.JarFile;
  * This helper is a part of the solution to the above "bootstrapping"
  * issue. To use it, follow these steps:
  * <ol><li>
- *     Write your {@code main()} method and your Jet code the usual way. Use
- *     {@link JetBootstrap#getInstance()} to acquire a Jet client instance (not
- *     the usual {@link Jet#newJetClient()}).
+ *     Write your {@code main()} method and your Jet code the usual way, except
+ *     for calling {@link JetBootstrap#getInstance()} to acquire a Jet client
+ *     instance (instead of {@link Jet#newJetClient()}).
  * </li><li>
  *     Create a runnable JAR with your entry point declared as the {@code
  *     Main-Class} in {@code MANIFEST.MF}.
