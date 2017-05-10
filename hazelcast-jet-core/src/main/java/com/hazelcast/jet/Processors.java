@@ -900,7 +900,7 @@ public final class Processors {
      * Returns a supplier, that wraps the provided {@link
      * ProcessorMetaSupplier}, so that all input events are logged, when they
      * are removed from the {@link Inbox}. Events are logged at the INFO level
-     * to the following logger {@link PeekWrappedP}.
+     * to the following logger: {@link PeekWrappedP}.
      *
      * @param toStringF Function to convert items to String, if {@code null},
      *                  {@link Object#toString()} is used.
@@ -963,7 +963,7 @@ public final class Processors {
      * Returns a supplier, that wraps the provided {@link
      * ProcessorMetaSupplier}, so that all output events are logged, when they
      * are accepted by the {@link Outbox}. Events are logged at the INFO level
-     * to the following logger {@link PeekWrappedP}.
+     * to the following logger: {@link PeekWrappedP}.
      *
      * @param toStringF Function to convert items to String, if {@code null},
      *                  {@link Object#toString()} is used.
