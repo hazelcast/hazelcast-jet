@@ -34,8 +34,8 @@ public final class WrappingProcessorMetaSupplier implements ProcessorMetaSupplie
     private ProcessorMetaSupplier wrapped;
     private Function<Processor, Processor> wrapperSupplier;
 
-    public WrappingProcessorMetaSupplier(ProcessorMetaSupplier wrapped, Function<Processor,
-            Processor> wrapperSupplier) {
+    public WrappingProcessorMetaSupplier(ProcessorMetaSupplier wrapped,
+                                         Function<Processor, Processor> wrapperSupplier) {
         this.wrapped = wrapped;
         this.wrapperSupplier = wrapperSupplier;
     }

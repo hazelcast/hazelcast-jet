@@ -43,8 +43,8 @@ public final class WrappingProcessorSupplier implements ProcessorSupplier {
     public Collection<? extends Processor> get(int count) {
         Collection<? extends Processor> processors = wrapped.get(count);
         return processors.stream()
-                .map(wrapperSupplier)
-                .collect(toList());
+                         .map(wrapperSupplier)
+                         .collect(toList());
     }
 
     @Override

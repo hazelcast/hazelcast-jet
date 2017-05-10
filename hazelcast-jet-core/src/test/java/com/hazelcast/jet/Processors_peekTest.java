@@ -113,8 +113,9 @@ public class Processors_peekTest {
         // Given
         ProcessorMetaSupplier passThroughPSupplier = ProcessorMetaSupplier.of(Processors.filter(alwaysTrue()));
         Address address = new Address();
-        Processor wrappedP = (toStringF == null ? peekInput(passThroughPSupplier) : peekInput(toStringF, shouldLogF, passThroughPSupplier))
-                .get(Collections.singletonList(address)).apply(address).get(1).iterator().next();
+        Processor wrappedP =
+                (toStringF == null ? peekInput(passThroughPSupplier) : peekInput(toStringF, shouldLogF, passThroughPSupplier))
+                    .get(Collections.singletonList(address)).apply(address).get(1).iterator().next();
         wrappedP.init(outbox, context);
 
         // When+Then
@@ -153,8 +154,9 @@ public class Processors_peekTest {
         // Given
         ProcessorMetaSupplier passThroughPSupplier = ProcessorMetaSupplier.of(Processors.filter(alwaysTrue()));
         Address address = new Address();
-        Processor wrappedP = (toStringF == null ? peekInput(passThroughPSupplier) : peekOutput(toStringF, shouldLogF, passThroughPSupplier))
-                .get(Collections.singletonList(address)).apply(address).get(1).iterator().next();
+        Processor wrappedP =
+                (toStringF == null ? peekInput(passThroughPSupplier) : peekOutput(toStringF, shouldLogF, passThroughPSupplier))
+                    .get(Collections.singletonList(address)).apply(address).get(1).iterator().next();
         wrappedP.init(outbox, context);
 
         // When+Then
