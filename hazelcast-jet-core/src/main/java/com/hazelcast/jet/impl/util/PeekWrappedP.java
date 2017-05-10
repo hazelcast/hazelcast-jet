@@ -52,8 +52,8 @@ public final class PeekWrappedP implements Processor {
         checkNotNull(wrappedProcessor, "wrappedProcessor");
 
         this.wrappedProcessor = wrappedProcessor;
-        this.toStringF = toStringF == null ? Object::toString : toStringF;
-        this.shouldLogF = shouldLogF == null ? o -> true : shouldLogF;
+        this.toStringF = toStringF;
+        this.shouldLogF = shouldLogF;
         this.peekInput = peekInput;
         this.peekOutput = peekOutput;
 

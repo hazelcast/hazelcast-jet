@@ -39,6 +39,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 
+import static com.hazelcast.jet.DistributedFunctions.alwaysTrue;
+import static com.hazelcast.jet.Processors.peekInput;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
@@ -81,8 +83,10 @@ public class Processors_peekTest {
     @Test
     public void when_peekInput_SupplierProcessor() {
         // Given
-        Distributed.Supplier<Processor> passThroughPSupplier = Processors.filter(o -> true);
-        Processor wrappedP = Processors.peekInput(toStringF, shouldLogF, passThroughPSupplier).get();
+        Distributed.Supplier<Processor> passThroughPSupplier = Processors.filter(alwaysTrue());
+        Processor wrappedP =
+                (toStringF == null ? peekInput(passThroughPSupplier) : peekInput(toStringF, shouldLogF, passThroughPSupplier))
+                        .get();
         wrappedP.init(outbox, context);
 
         // When+Then
@@ -92,8 +96,10 @@ public class Processors_peekTest {
     @Test
     public void when_peekInput_ProcessorSupplier() {
         // Given
-        ProcessorSupplier passThroughPSupplier = ProcessorSupplier.of(Processors.filter(o -> true));
-        Processor wrappedP = Processors.peekInput(toStringF, shouldLogF, passThroughPSupplier).get(1).iterator().next();
+        ProcessorSupplier passThroughPSupplier = ProcessorSupplier.of(Processors.filter(alwaysTrue()));
+        Processor wrappedP =
+                (toStringF == null ? peekInput(passThroughPSupplier) : peekInput(toStringF, shouldLogF, passThroughPSupplier))
+                        .get(1).iterator().next();
         wrappedP.init(outbox, context);
 
         // When+Then
@@ -103,9 +109,9 @@ public class Processors_peekTest {
     @Test
     public void when_peekInput_ProcessorMetaSupplier() {
         // Given
-        ProcessorMetaSupplier passThroughPSupplier = ProcessorMetaSupplier.of(Processors.filter(o -> true));
+        ProcessorMetaSupplier passThroughPSupplier = ProcessorMetaSupplier.of(Processors.filter(alwaysTrue()));
         Address address = new Address();
-        Processor wrappedP = Processors.peekInput(toStringF, shouldLogF, passThroughPSupplier)
+        Processor wrappedP = (toStringF == null ? peekInput(passThroughPSupplier) : peekInput(toStringF, shouldLogF, passThroughPSupplier))
                 .get(Collections.singletonList(address)).apply(address).get(1).iterator().next();
         wrappedP.init(outbox, context);
 
@@ -116,8 +122,11 @@ public class Processors_peekTest {
     @Test
     public void when_peekOutput_SupplierProcessor() {
         // Given
-        Distributed.Supplier<Processor> passThroughPSupplier = Processors.filter(o -> true);
-        Processor wrappedP = Processors.peekOutput(toStringF, shouldLogF, passThroughPSupplier).get();
+        Distributed.Supplier<Processor> passThroughPSupplier = Processors.filter(alwaysTrue());
+        Processor wrappedP =
+                (toStringF == null ? peekInput(passThroughPSupplier) : peekInput(toStringF, shouldLogF, passThroughPSupplier))
+                        .get();
+
         wrappedP.init(outbox, context);
 
         // When+Then
@@ -127,8 +136,10 @@ public class Processors_peekTest {
     @Test
     public void when_peekOutput_ProcessorSupplier() {
         // Given
-        ProcessorSupplier passThroughPSupplier = ProcessorSupplier.of(Processors.filter(o -> true));
-        Processor wrappedP = Processors.peekOutput(toStringF, shouldLogF, passThroughPSupplier).get(1).iterator().next();
+        ProcessorSupplier passThroughPSupplier = ProcessorSupplier.of(Processors.filter(alwaysTrue()));
+        Processor wrappedP =
+                (toStringF == null ? peekInput(passThroughPSupplier) : peekInput(toStringF, shouldLogF, passThroughPSupplier))
+                        .get(1).iterator().next();
         wrappedP.init(outbox, context);
 
         // When+Then
@@ -138,9 +149,9 @@ public class Processors_peekTest {
     @Test
     public void when_peekOutput_ProcessorMetaSupplier() {
         // Given
-        ProcessorMetaSupplier passThroughPSupplier = ProcessorMetaSupplier.of(Processors.filter(o -> true));
+        ProcessorMetaSupplier passThroughPSupplier = ProcessorMetaSupplier.of(Processors.filter(alwaysTrue()));
         Address address = new Address();
-        Processor wrappedP = Processors.peekOutput(toStringF, shouldLogF, passThroughPSupplier)
+        Processor wrappedP = (toStringF == null ? peekInput(passThroughPSupplier) : peekInput(toStringF, shouldLogF, passThroughPSupplier))
                 .get(Collections.singletonList(address)).apply(address).get(1).iterator().next();
         wrappedP.init(outbox, context);
 

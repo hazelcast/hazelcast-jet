@@ -56,6 +56,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static com.hazelcast.jet.DistributedFunctions.alwaysTrue;
+import static com.hazelcast.jet.DistributedFunctions.noopConsumer;
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 import static com.hazelcast.jet.Traversers.lazy;
 import static com.hazelcast.jet.Traversers.traverseStream;
@@ -799,7 +801,7 @@ public final class Processors {
      * that are {@code instanceof} {@link AbstractProcessor}.
      */
     @Nonnull
-    public static ProcessorSupplier nonCooperative(ProcessorSupplier wrapped) {
+    public static ProcessorSupplier nonCooperative(@Nonnull ProcessorSupplier wrapped) {
         return count -> {
             final Collection<? extends Processor> ps = wrapped.get(count);
             ps.forEach(p -> ((AbstractProcessor) p).setCooperative(false));
@@ -813,7 +815,7 @@ public final class Processors {
      * processors that are {@code instanceof} {@link AbstractProcessor}.
      */
     @Nonnull
-    public static DistributedSupplier<Processor> nonCooperative(DistributedSupplier<Processor> wrapped) {
+    public static DistributedSupplier<Processor> nonCooperative(@Nonnull DistributedSupplier<Processor> wrapped) {
         return () -> {
             final Processor p = wrapped.get();
             ((AbstractProcessor) p).setCooperative(false);
@@ -836,8 +838,9 @@ public final class Processors {
      * Convenience for {@link #writeSystemOut(Distributed.Function)} without format.
      * It will use {@link Object#toString()}.
      */
+    @Nonnull
     public static Distributed.Supplier<Processor> writeSystemOut() {
-        return writeSystemOut(null);
+        return writeSystemOut(Object::toString);
     }
 
     /**
@@ -850,8 +853,9 @@ public final class Processors {
      * @param toStringF Function to convert item to String, if {@code null},
      *                  {@link Object#toString()} is used.
      */
+    @Nonnull
     public static Distributed.Supplier<Processor> writeSystemOut(
-            @Nullable Distributed.Function<Object, String> toStringF
+            @Nonnull Distributed.Function<Object, String> toStringF
     ) {
         return () -> new WriteSystemOutP(toStringF);
     }
@@ -859,32 +863,38 @@ public final class Processors {
     /**
      * See {@link #peekInput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
      */
-    public static Distributed.Supplier<Processor> peekInput(Distributed.Supplier<Processor> wrapped) {
-        return peekInput(null, null, wrapped);
+    @Nonnull
+    public static Distributed.Supplier<Processor> peekInput(@Nonnull Distributed.Supplier<Processor> wrapped) {
+        return peekInput(Object::toString, alwaysTrue(), wrapped);
     }
 
     /**
      * See {@link #peekInput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
      */
+    @Nonnull
     public static Distributed.Supplier<Processor> peekInput(
-            DistributedFunction<Object, String> toStringF, DistributedPredicate<Object> shouldLogF,
-            DistributedSupplier<Processor> wrapped) {
+            @Nonnull DistributedFunction<Object, String> toStringF,
+            @Nonnull DistributedPredicate<Object> shouldLogF,
+            @Nonnull DistributedSupplier<Processor> wrapped) {
         return () -> new PeekWrappedP(wrapped.get(), toStringF, shouldLogF, true, false);
     }
 
     /**
      * See {@link #peekInput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
      */
-    public static ProcessorSupplier peekInput(ProcessorSupplier wrapped) {
-        return peekInput(null, null, wrapped);
+    @Nonnull
+    public static ProcessorSupplier peekInput(@Nonnull ProcessorSupplier wrapped) {
+        return peekInput(Object::toString, alwaysTrue(), wrapped);
     }
 
     /**
      * See {@link #peekInput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
      */
+    @Nonnull
     public static ProcessorSupplier peekInput(
-            DistributedFunction<Object, String> toStringF, DistributedPredicate<Object> shouldLogF,
-            ProcessorSupplier wrapped
+            @Nonnull DistributedFunction<Object, String> toStringF,
+            @Nonnull DistributedPredicate<Object> shouldLogF,
+            @Nonnull ProcessorSupplier wrapped
     ) {
         return new WrappingProcessorSupplier(wrapped, p -> new PeekWrappedP(p, toStringF, shouldLogF, true, false));
     }
@@ -892,8 +902,9 @@ public final class Processors {
     /**
      * See {@link #peekInput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
      */
-    public static ProcessorMetaSupplier peekInput(ProcessorMetaSupplier wrapped) {
-        return peekInput(null, null, wrapped);
+    @Nonnull
+    public static ProcessorMetaSupplier peekInput(@Nonnull ProcessorMetaSupplier wrapped) {
+        return peekInput(Object::toString, alwaysTrue(), wrapped);
     }
 
     /**
@@ -911,9 +922,10 @@ public final class Processors {
      *
      * @see #peekOutput(Distributed.Function, Predicate, ProcessorMetaSupplier)
      */
+    @Nonnull
     public static ProcessorMetaSupplier peekInput(
-            @Nullable DistributedFunction<Object, String> toStringF,
-            @Nullable DistributedPredicate<Object> shouldLogF,
+            @Nonnull DistributedFunction<Object, String> toStringF,
+            @Nonnull DistributedPredicate<Object> shouldLogF,
             @Nonnull ProcessorMetaSupplier wrapped
     ) {
         return new WrappingProcessorMetaSupplier(wrapped, p -> new PeekWrappedP(p, toStringF, shouldLogF, true, false));
@@ -922,32 +934,38 @@ public final class Processors {
     /**
      * See {@link #peekOutput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
      */
-    public static Distributed.Supplier<Processor> peekOutput(Distributed.Supplier<Processor> wrapped) {
-        return peekOutput(null, null, wrapped);
+    @Nonnull
+    public static Distributed.Supplier<Processor> peekOutput(@Nonnull Distributed.Supplier<Processor> wrapped) {
+        return peekOutput(Object::toString, alwaysTrue(), wrapped);
     }
 
     /**
      * See {@link #peekOutput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
      */
+    @Nonnull
     public static Distributed.Supplier<Processor> peekOutput(
-            DistributedFunction<Object, String> toStringF, DistributedPredicate<Object> shouldLogF,
-            DistributedSupplier<Processor> wrapped) {
+            @Nonnull DistributedFunction<Object, String> toStringF,
+            @Nonnull DistributedPredicate<Object> shouldLogF,
+            @Nonnull DistributedSupplier<Processor> wrapped) {
         return () -> new PeekWrappedP(wrapped.get(), toStringF, shouldLogF, false, true);
     }
 
     /**
      * See {@link #peekOutput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
      */
-    public static ProcessorSupplier peekOutput(ProcessorSupplier wrapped) {
-        return peekOutput(null, null, wrapped);
+    @Nonnull
+    public static ProcessorSupplier peekOutput(@Nonnull ProcessorSupplier wrapped) {
+        return peekOutput(Object::toString, alwaysTrue(), wrapped);
     }
 
     /**
      * See {@link #peekOutput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
      */
+    @Nonnull
     public static ProcessorSupplier peekOutput(
-            DistributedFunction<Object, String> toStringF, DistributedPredicate<Object> shouldLogF,
-            ProcessorSupplier wrapped
+            @Nonnull DistributedFunction<Object, String> toStringF,
+            @Nonnull DistributedPredicate<Object> shouldLogF,
+            @Nonnull ProcessorSupplier wrapped
     ) {
         return new WrappingProcessorSupplier(wrapped, p -> new PeekWrappedP(p, toStringF, shouldLogF, false, true));
     }
@@ -955,8 +973,9 @@ public final class Processors {
     /**
      * See {@link #peekOutput(Distributed.Function, Predicate, ProcessorMetaSupplier)}
      */
-    public static ProcessorMetaSupplier peekOutput(ProcessorMetaSupplier wrapped) {
-        return peekOutput(null, null, wrapped);
+    @Nonnull
+    public static ProcessorMetaSupplier peekOutput(@Nonnull ProcessorMetaSupplier wrapped) {
+        return peekOutput(Object::toString, alwaysTrue(), wrapped);
     }
 
     /**
@@ -974,8 +993,11 @@ public final class Processors {
      *
      * @see #peekInput(Distributed.Function, Predicate, ProcessorMetaSupplier)
      */
-    public static ProcessorMetaSupplier peekOutput(DistributedFunction<Object, String> toStringF,
-            DistributedPredicate<Object> shouldLogF, ProcessorMetaSupplier wrapped
+    @Nonnull
+    public static ProcessorMetaSupplier peekOutput(
+            @Nonnull DistributedFunction<Object, String> toStringF,
+            @Nonnull DistributedPredicate<Object> shouldLogF,
+            @Nonnull ProcessorMetaSupplier wrapped
     ) {
         return new WrappingProcessorMetaSupplier(wrapped, p -> new PeekWrappedP(p, toStringF, shouldLogF, false, true));
     }

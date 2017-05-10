@@ -29,7 +29,7 @@ public class WriteSystemOutP extends AbstractProcessor {
     private Function<Object, String> toStringF;
 
     public WriteSystemOutP(Function<Object, String> toStringF) {
-        this.toStringF = toStringF == null ? Object::toString : toStringF;
+        this.toStringF = toStringF;
     }
 
     @Override
