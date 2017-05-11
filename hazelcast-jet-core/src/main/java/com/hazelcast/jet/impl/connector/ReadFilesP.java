@@ -58,7 +58,7 @@ public class ReadFilesP extends AbstractProcessor {
     public boolean complete() {
         try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(directory, glob)) {
             StreamSupport.stream(directoryStream.spliterator(), false)
-                    .filter(this::shouldProcessEventAndNotDir)
+                    .filter(this::shouldProcessEvent)
                     .forEach(this::processFile);
         } catch (IOException e) {
             throw sneakyThrow(e);
@@ -67,7 +67,7 @@ public class ReadFilesP extends AbstractProcessor {
         return true;
     }
 
-    private boolean shouldProcessEventAndNotDir(Path file) {
+    private boolean shouldProcessEvent(Path file) {
         if (Files.isDirectory(file)) {
             return false;
         }
