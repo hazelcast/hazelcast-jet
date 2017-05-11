@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -86,10 +85,12 @@ public class StreamFilesP extends AbstractProcessor implements Closeable {
     private FileInputStream currentInputStream;
     private Reader currentReader;
 
-    StreamFilesP(String watchedDirectory, Charset charset, String glob, int parallelism, int id) {
+    StreamFilesP(@Nonnull String watchedDirectory, @Nonnull Charset charset, @Nonnull String glob,
+                 int parallelism, int id
+    ) {
         this.watchedDirectory = Paths.get(watchedDirectory);
         this.charset = charset;
-        this.glob = FileSystems.getDefault().getPathMatcher("glob:" + (glob == null ? "*" : glob));
+        this.glob = FileSystems.getDefault().getPathMatcher("glob:" + glob);
         this.parallelism = parallelism;
         this.id = id;
         setCooperative(false);
@@ -309,11 +310,13 @@ public class StreamFilesP extends AbstractProcessor implements Closeable {
     /**
      * @see com.hazelcast.jet.Processors#streamFiles(String, Charset, String)
      */
-    public static ProcessorSupplier supplier(String watchedDirectory, String charset, String glob) {
+    public static ProcessorSupplier supplier(@Nonnull String watchedDirectory, @Nonnull String charset,
+                                             @Nonnull String glob
+    ) {
         return new Supplier(watchedDirectory, charset, glob);
     }
 
-    private static class Supplier implements ProcessorSupplier {
+    private static final class Supplier implements ProcessorSupplier {
 
         static final long serialVersionUID = 1L;
         private final String watchedDirectory;
@@ -322,7 +325,7 @@ public class StreamFilesP extends AbstractProcessor implements Closeable {
 
         private transient ArrayList<StreamFilesP> processors;
 
-        Supplier(String watchedDirectory, String charset, String glob) {
+        private Supplier(String watchedDirectory, String charset, String glob) {
             this.watchedDirectory = watchedDirectory;
             this.charset = charset;
             this.glob = glob;
@@ -331,7 +334,7 @@ public class StreamFilesP extends AbstractProcessor implements Closeable {
         @Override @Nonnull
         public List<StreamFilesP> get(int count) {
             processors = new ArrayList<>(count);
-            Charset charsetObj = charset == null ? StandardCharsets.UTF_8 : Charset.forName(charset);
+            Charset charsetObj = Charset.forName(charset);
             for (int i = 0; i < count; i++) {
                 processors.add(new StreamFilesP(watchedDirectory, charsetObj, glob, count, i));
             }

@@ -284,7 +284,7 @@ public final class Processors {
      */
     @Nonnull
     public static DistributedSupplier<Processor> streamTextSocket(@Nonnull String host, int port) {
-        return streamTextSocket(host, port, null);
+        return streamTextSocket(host, port, StandardCharsets.UTF_8);
     }
 
     /**
@@ -303,8 +303,10 @@ public final class Processors {
      * @param charset Character set used to decode the stream
      */
     @Nonnull
-    public static DistributedSupplier<Processor> streamTextSocket(@Nonnull String host, int port, Charset charset) {
-        return StreamTextSocketP.supplier(host, port, charset != null ? charset.name() : null);
+    public static DistributedSupplier<Processor> streamTextSocket(@Nonnull String host, int port,
+                                                                  @Nonnull Charset charset
+    ) {
+        return StreamTextSocketP.supplier(host, port, charset.name());
     }
 
     /**
@@ -313,7 +315,7 @@ public final class Processors {
      */
     @Nonnull
     public static ProcessorSupplier readFiles(@Nonnull String directory) {
-        return readFiles(directory, StandardCharsets.UTF_8, null);
+        return readFiles(directory, StandardCharsets.UTF_8, "*");
     }
 
     /**
@@ -328,16 +330,16 @@ public final class Processors {
      * directory shared over the network).
      *
      * @param directory parent directory of the files
-     * @param charset charset to use to decode the files, or {@code null} to use UTF-8
+     * @param charset charset to use to decode the files
      * @param glob the globbing mask, see {@link
-     *             java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()},
-     *             match all files, if {@code null}
+     *             java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()}.
+     *             Use {@code "*"} for all files.
      */
     @Nonnull
     public static ProcessorSupplier readFiles(
-            @Nonnull String directory, @Nullable Charset charset, @Nullable String glob
+            @Nonnull String directory, @Nonnull Charset charset, @Nonnull String glob
     ) {
-        return ReadFilesP.supplier(directory, charset == null ? "utf-8" : charset.name(), glob);
+        return ReadFilesP.supplier(directory, charset.name(), glob);
     }
 
     /**
@@ -345,7 +347,7 @@ public final class Processors {
      * default charset (UTF-8) and default glob (match all files).
      */
     public static ProcessorSupplier streamFiles(@Nonnull String watchedDirectory) {
-        return streamFiles(watchedDirectory, null, null);
+        return streamFiles(watchedDirectory, StandardCharsets.UTF_8, "*");
     }
 
     /**
@@ -384,15 +386,15 @@ public final class Processors {
      * latest version.
      *
      * @param watchedDirectory The directory where we watch files
-     * @param charset charset to use to decode the files, or {@code null} to use UTF-8
+     * @param charset charset to use to decode the files
      * @param glob the globbing mask, see {@link
-     *             java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()},
-     *             match all files, if {@code null}
+     *             java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()}.
+     *             Use {@code "*"} for all files.
      */
     public static ProcessorSupplier streamFiles(
-            @Nonnull String watchedDirectory, @Nullable Charset charset, @Nullable String glob
+            @Nonnull String watchedDirectory, @Nonnull Charset charset, @Nonnull String glob
     ) {
-        return StreamFilesP.supplier(watchedDirectory, charset == null ? null : charset.toString(), glob);
+        return StreamFilesP.supplier(watchedDirectory, charset.name(), glob);
     }
 
     /**
