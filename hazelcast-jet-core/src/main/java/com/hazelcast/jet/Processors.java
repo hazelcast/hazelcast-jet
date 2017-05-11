@@ -308,7 +308,8 @@ public final class Processors {
     }
 
     /**
-     * See {@link #readFiles(String, Charset, String)}.
+     * Convenience for {@link #readFiles(String, Charset, String)} with default
+     * charset (UTF-8) and default glob (match all files).
      */
     @Nonnull
     public static ProcessorSupplier readFiles(@Nonnull String directory) {
@@ -328,8 +329,9 @@ public final class Processors {
      *
      * @param directory parent directory of the files
      * @param charset charset to use to decode the files, or {@code null} to use UTF-8
-     * @param glob the file filter, see {@link
-     *             java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()}
+     * @param glob the globbing mask, see {@link
+     *             java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()},
+     *             match all files, if {@code null}
      */
     @Nonnull
     public static ProcessorSupplier readFiles(
@@ -339,7 +341,8 @@ public final class Processors {
     }
 
     /**
-     * See {@link #streamFiles(String, Charset, String)}
+     * Convenience for {@link #streamFiles(String, Charset, String)} with
+     * default charset (UTF-8) and default glob (match all files).
      */
     public static ProcessorSupplier streamFiles(@Nonnull String watchedDirectory) {
         return streamFiles(watchedDirectory, null, null);
@@ -382,8 +385,9 @@ public final class Processors {
      *
      * @param watchedDirectory The directory where we watch files
      * @param charset charset to use to decode the files, or {@code null} to use UTF-8
-     * @param glob the file filter, see {@link
-     *             java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()}
+     * @param glob the globbing mask, see {@link
+     *             java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()},
+     *             match all files, if {@code null}
      */
     public static ProcessorSupplier streamFiles(
             @Nonnull String watchedDirectory, @Nullable Charset charset, @Nullable String glob
