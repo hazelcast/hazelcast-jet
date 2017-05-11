@@ -22,6 +22,7 @@ import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedFunctions;
 import com.hazelcast.jet.function.DistributedIntFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -33,13 +34,12 @@ import com.hazelcast.jet.impl.connector.StreamFilesP;
 import com.hazelcast.jet.impl.connector.StreamTextSocketP;
 import com.hazelcast.jet.impl.connector.WriteBufferedP;
 import com.hazelcast.jet.impl.connector.WriteFileP;
-import com.hazelcast.jet.impl.connector.WriteSystemOutP;
+import com.hazelcast.jet.impl.connector.WriteLoggerP;
 import com.hazelcast.jet.impl.util.PeekWrappedP;
 import com.hazelcast.jet.impl.util.WrappingProcessorMetaSupplier;
 import com.hazelcast.jet.impl.util.WrappingProcessorSupplier;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
@@ -328,6 +328,12 @@ public final class Processors {
      * The same pathname should be available on all members, but it should not
      * contain the same files &mdash; (e.g., it shouldn't resolve to a
      * directory shared over the network).
+     * <p>
+     * Since the work of this processor is file IO-intensive, {@link
+     * Vertex#localParallelism(int) local parallelism} of the vertex should be
+     * set according to the performance characteristics of the underlying
+     * storage system. Typical values are in the range of 1 to 4. If just a
+     * single file is read, it is always read by single thread.
      *
      * @param directory parent directory of the files
      * @param charset charset to use to decode the files
@@ -367,10 +373,14 @@ public final class Processors {
      * contain the same files &mdash; (e.g., it shouldn't resolve to a
      * directory shared over the network).
      * <p>
-     * Multiple processor instances read multiple files in parallel. Single
-     * file is always read by one processor instance. When a change is detected
-     * the file is opened, appended lines are read and file is closed. This
-     * process is repeated as necessary.
+     * Since the work of this processor is file IO-intensive, {@link
+     * Vertex#localParallelism(int) local parallelism} of the vertex should be
+     * set according to the performance characteristics of the underlying
+     * storage system. Typical values are in the range of 1 to 4. If just a
+     * single file is read, it is always read by single thread.
+     * <p>
+     * When a change is detected the file is opened, appended lines are read
+     * and file is closed. This process is repeated as necessary.
      * <p>
      * The processor completes when the directory is deleted. However, in order
      * to delete the directory, all files in it must be deleted and if you
@@ -378,12 +388,20 @@ public final class Processors {
      * an {@code IOException}. The directory must be deleted on all nodes.
      * <p>
      * Any {@code IOException} will cause the job to fail.
-     * <p>
-     * <strong>Note:</strong> the underlying JDK API, {@link
-     * java.nio.file.WatchService}, has a history of unreliability and this
-     * processor may experience infinite blocking, missed, or duplicate events
-     * as a result. Such problems may be resolved by upgrading the JRE to the
-     * latest version.
+     *
+     * <h3>Limitation on Windows</h3>
+     * On Windows, the WatchService is not notified of appended lines, until
+     * the file is closed. If the writer keeps the file open while appending
+     * (which is typical), we might miss the changes. The changes will be
+     * notified, if any process tries to open that file, such as looking at the
+     * file in Explorer. This holds for Windows 10 with NTFS file system and
+     * might change in future - do your test, if you plan to run on Windows.
+     *
+     * <h3>Use latest JRE</h3>
+     * The underlying JDK API - the {@link java.nio.file.WatchService} - has a
+     * history of unreliability and this processor may experience infinite
+     * blocking, missed, or duplicate events as a result. Such problems may be
+     * resolved by upgrading the JRE to the latest version.
      *
      * @param watchedDirectory The directory where we watch files
      * @param charset charset to use to decode the files
@@ -406,7 +424,7 @@ public final class Processors {
      */
     @Nonnull
     public static ProcessorMetaSupplier writeFile(@Nonnull String directoryName) {
-        return writeFile(directoryName, null, null, false);
+        return writeFile(directoryName, Object::toString, StandardCharsets.UTF_8, false);
     }
 
     /**
@@ -415,12 +433,13 @@ public final class Processors {
      *
      * @param directoryName directory to create the files in. Will be created,
      *                      if it doesn't exist. Must be the same on all nodes.
+     * @param toStringF a function to convert items to String (a formatter).
      */
     @Nonnull
     public static <T> ProcessorMetaSupplier writeFile(
-            @Nonnull String directoryName, @Nullable DistributedFunction<T, String> toStringF
+            @Nonnull String directoryName, @Nonnull DistributedFunction<T, String> toStringF
     ) {
-        return writeFile(directoryName, toStringF, null, false);
+        return writeFile(directoryName, toStringF, StandardCharsets.UTF_8, false);
     }
 
     /**
@@ -438,20 +457,18 @@ public final class Processors {
      *
      * @param directoryName directory to create the files in. Will be created,
      *                      if it doesn't exist. Must be the same on all nodes.
-     * @param toStringF A function to convert items to String (a formatter), or
-     *                {@code null} to use {@code toString()}
-     * @param charset charset used to encode the file output, or {@code null}
-     *                to use UTF-8
+     * @param toStringF a function to convert items to String (a formatter)
+     * @param charset charset used to encode the file output
      * @param append whether to append or overwrite the file
      */
     @Nonnull
     public static <T> ProcessorMetaSupplier writeFile(
             @Nonnull String directoryName,
-            @Nullable DistributedFunction<T, String> toStringF,
-            @Nullable Charset charset,
+            @Nonnull DistributedFunction<T, String> toStringF,
+            @Nonnull Charset charset,
             boolean append
     ) {
-        return WriteFileP.supplier(directoryName, toStringF, charset == null ? null : charset.name(), append);
+        return WriteFileP.supplier(directoryName, toStringF, charset.name(), append);
     }
 
     /**
@@ -843,12 +860,12 @@ public final class Processors {
     }
 
     /**
-     * Convenience for {@link #writeSystemOut(DistributedFunction)} without format.
+     * Convenience for {@link #writeLogger(DistributedFunction)} without format.
      * It will use {@link Object#toString()}.
      */
     @Nonnull
-    public static DistributedSupplier<Processor> writeSystemOut() {
-        return writeSystemOut(Object::toString);
+    public static DistributedSupplier<Processor> writeLogger() {
+        return writeLogger(Object::toString);
     }
 
     /**
@@ -856,16 +873,19 @@ public final class Processors {
      * INFO level.
      * <p>
      * Note, that the event will be logged on the nodes, not on the client.
-     * Useful for testing.
+     * Useful for testing. Also note, that {@link Punctuation} events will not
+     * be logged.
+     * <p>
+     * It's recommended to use with {@link Vertex#localParallelism(int)} local
+     * parallelism} of 1.
      *
-     * @param toStringF Function to convert item to String, if {@code null},
-     *                  {@link Object#toString()} is used.
+     * @param toStringF Function to convert item to String.
      */
     @Nonnull
-    public static DistributedSupplier<Processor> writeSystemOut(
+    public static DistributedSupplier<Processor> writeLogger(
             @Nonnull DistributedFunction<Object, String> toStringF
     ) {
-        return () -> new WriteSystemOutP(toStringF);
+        return () -> new WriteLoggerP(toStringF);
     }
 
     /**
@@ -921,11 +941,11 @@ public final class Processors {
      * are removed from the {@link Inbox}. Events are logged at the INFO level
      * to the following logger: {@link PeekWrappedP}.
      *
-     * @param toStringF Function to convert items to String, if {@code null},
-     *                  {@link Object#toString()} is used.
-     * @param shouldLogF Function to filter logged items. If {@code null}, all
-     *                   items are logged. <b>Warning:</b> Function will see
-     *                   both items and {@link Punctuation}
+     * @param toStringF Function to convert items to String.
+     * @param shouldLogF Function to filter logged items. Use
+     *                   {@link DistributedFunctions#alwaysTrue()}, if you
+     *                   don't want to filter. <b>Warning:</b> Function will
+     *                   see both items and {@link Punctuation}s.
      * @param wrapped The wrapped supplier.
      *
      * @see #peekOutput(DistributedFunction, DistributedPredicate, ProcessorMetaSupplier)
@@ -992,11 +1012,11 @@ public final class Processors {
      * are accepted by the {@link Outbox}. Events are logged at the INFO level
      * to the following logger: {@link PeekWrappedP}.
      *
-     * @param toStringF Function to convert items to String, if {@code null},
-     *                  {@link Object#toString()} is used.
-     * @param shouldLogF Function to filter logged items. If {@code null}, all
-     *                   items are logged. <b>Warning:</b> Function will see
-     *                   both items and {@link Punctuation}
+     * @param toStringF Function to convert items to String.
+     * @param shouldLogF Function to filter logged items. Use
+     *                   {@link DistributedFunctions#alwaysTrue()}, if you
+     *                   don't want to filter. <b>Warning:</b> Function will
+     *                   see both items and {@link Punctuation}s.
      * @param wrapped The wrapped supplier.
      *
      * @see #peekInput(DistributedFunction, DistributedPredicate, ProcessorMetaSupplier)
