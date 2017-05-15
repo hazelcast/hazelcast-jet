@@ -37,7 +37,7 @@ public final class Traversers {
      * Returns a traverser that always returns null.
      */
     @Nonnull
-    public static <T> Traverser<T> nullTraverser() {
+    public static <T> Traverser<T> empty() {
         return () -> null;
     }
 

@@ -21,7 +21,7 @@ import org.junit.Test;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Traverser.over;
-import static com.hazelcast.jet.Traversers.nullTraverser;
+import static com.hazelcast.jet.Traversers.empty;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -47,9 +47,9 @@ public class FlatMappingTraverserTest {
     @Test
     public void when_flatMapToNullTraverser_then_skipOverToNext() {
         // This test would fail, if the internal FlatMappingTraverser.NULL_TRAVERSER instance
-        // would be the same (as per == operator) as the instance returned by Traversers.nullTraverser()
+        // would be the same (as per == operator) as the instance returned by Traversers.empty()
         FlatMappingTraverser<Integer, String> trav =
-                new FlatMappingTraverser<>(over(1, 2, 3), item -> item != 3 ? nullTraverser() : over("a"));
+                new FlatMappingTraverser<>(over(1, 2, 3), item -> item != 3 ? empty() : over("a"));
 
         assertEquals("a", trav.next());
         assertNull(trav.next());

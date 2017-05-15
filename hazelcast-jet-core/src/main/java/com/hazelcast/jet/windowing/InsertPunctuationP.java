@@ -24,7 +24,7 @@ import com.hazelcast.jet.Traversers.ResettableSingletonTraverser;
 import javax.annotation.Nonnull;
 import java.util.function.ToLongFunction;
 
-import static com.hazelcast.jet.Traversers.nullTraverser;
+import static com.hazelcast.jet.Traversers.empty;
 
 /**
  * A processor that inserts punctuation into a data stream. See
@@ -79,7 +79,7 @@ public class InsertPunctuationP<T> extends AbstractProcessor {
         long timestamp = extractTimestampF.applyAsLong((T) item);
         if (timestamp < currPunc) {
             // drop late event
-            return nullTraverser();
+            return empty();
         }
         long newPunc = punctuationPolicy.reportEvent(timestamp);
         singletonTraverser.accept(item);
