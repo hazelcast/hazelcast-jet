@@ -802,13 +802,22 @@ public final class Processors {
     }
 
     /**
-     * Returns a supplier of processors that will calculate the number of
-     * distinct keys they have seen on input. To work properly the vertex has
-     * to be preceded by an {@link Edge#allToOne() all-to-one} and a {@link
-     * Edge#distributed() distributed} edge. It will emit single {@code
-     * Long} value when the input is fully processed.
-     * <p>
-     * Internally, it maintains a {@code HashSet} of all keys.
+     * Returns a supplier of processors with the following semantics:
+     * <ul><li>
+     *     Accepts items of type {@code T}.
+     * </li><li>
+     *     Computes the key of type {@code K} by applying the key extractor
+     *     to the item.
+     * </li><li>
+     *     Maintains a set of all seen keys.
+     * </li><li>
+     *     Emits the size of the set (the number of seen distinct keys) as a
+     *     {@code Long} value.
+     * </li></ul>
+     *
+     * To work properly the vertex has to be connected to upstream vertex by an
+     * edge that is defined as {@link Edge#allToOne() all-to-one} and {@link
+     * Edge#distributed() distributed}.
      *
      * @param keyExtractor function to extract key from input item
      * @param <T> received item type
@@ -827,7 +836,7 @@ public final class Processors {
      */
     @Nonnull
     public static DistributedSupplier<Processor> countDistinct() {
-        return () -> new CountDistinctP<>(identity());
+        return countDistinct(identity());
     }
 
     /**
@@ -1146,7 +1155,6 @@ public final class Processors {
 
         @Override
         protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
-            assert ordinal == 0;
             seenItems.add(extractKey.apply((T) item));
             return true;
         }
