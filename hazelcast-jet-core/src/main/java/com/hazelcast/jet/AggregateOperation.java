@@ -21,7 +21,7 @@ import com.hazelcast.jet.function.DistributedBinaryOperator;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.stream.DistributedCollector;
-import com.hazelcast.jet.windowing.AggregateOperationImpl;
+import com.hazelcast.jet.impl.AggregateOperationImpl;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

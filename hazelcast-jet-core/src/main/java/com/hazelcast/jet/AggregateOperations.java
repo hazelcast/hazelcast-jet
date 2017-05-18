@@ -27,7 +27,7 @@ import com.hazelcast.jet.function.DistributedComparator;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedToDoubleFunction;
 import com.hazelcast.jet.function.DistributedToLongFunction;
-import com.hazelcast.jet.windowing.AggregateOperationImpl;
+import com.hazelcast.jet.impl.AggregateOperationImpl;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

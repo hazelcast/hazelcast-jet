@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.windowing;
+package com.hazelcast.jet.impl;
 
 import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.function.DistributedBinaryOperator;
