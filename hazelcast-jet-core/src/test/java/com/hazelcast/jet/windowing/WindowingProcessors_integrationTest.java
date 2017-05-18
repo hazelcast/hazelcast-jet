@@ -18,6 +18,7 @@ package com.hazelcast.jet.windowing;
 
 import com.hazelcast.core.IList;
 import com.hazelcast.jet.AbstractProcessor;
+import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestSupport;
@@ -47,7 +48,7 @@ import static com.hazelcast.jet.Processors.writeList;
 import static com.hazelcast.jet.windowing.PunctuationPolicies.limitingLagAndLull;
 import static com.hazelcast.jet.windowing.StreamingTestSupport.streamToString;
 import static com.hazelcast.jet.windowing.WindowDefinition.slidingWindowDef;
-import static com.hazelcast.jet.windowing.AggregateOperations.counting;
+import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.windowing.WindowingProcessors.insertPunctuation;
 import static com.hazelcast.jet.windowing.WindowingProcessors.slidingWindowSingleStage;
 import static com.hazelcast.jet.windowing.WindowingProcessors.slidingWindowStage1;

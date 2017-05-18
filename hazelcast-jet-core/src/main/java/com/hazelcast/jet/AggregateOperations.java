@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.windowing;
+package com.hazelcast.jet;
 
 import com.hazelcast.jet.accumulator.DoubleAccumulator;
 import com.hazelcast.jet.accumulator.LinTrendAccumulator;
@@ -27,6 +27,7 @@ import com.hazelcast.jet.function.DistributedComparator;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedToDoubleFunction;
 import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.windowing.AggregateOperationImpl;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

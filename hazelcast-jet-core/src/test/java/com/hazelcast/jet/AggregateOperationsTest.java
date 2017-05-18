@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.windowing;
+package com.hazelcast.jet;
 
 import com.hazelcast.jet.accumulator.DoubleAccumulator;
 import com.hazelcast.jet.accumulator.LinTrendAccumulator;
@@ -38,16 +38,6 @@ import java.util.function.Function;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.function.DistributedComparator.naturalOrder;
-import static com.hazelcast.jet.windowing.AggregateOperations.allOf;
-import static com.hazelcast.jet.windowing.AggregateOperations.averagingDouble;
-import static com.hazelcast.jet.windowing.AggregateOperations.averagingLong;
-import static com.hazelcast.jet.windowing.AggregateOperations.counting;
-import static com.hazelcast.jet.windowing.AggregateOperations.linearTrend;
-import static com.hazelcast.jet.windowing.AggregateOperations.maxBy;
-import static com.hazelcast.jet.windowing.AggregateOperations.minBy;
-import static com.hazelcast.jet.windowing.AggregateOperations.reducing;
-import static com.hazelcast.jet.windowing.AggregateOperations.summingToDouble;
-import static com.hazelcast.jet.windowing.AggregateOperations.summingToLong;
 import static java.util.function.Function.identity;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -59,50 +49,50 @@ import static org.junit.Assert.assertTrue;
 public class AggregateOperationsTest {
     @Test
     public void when_counting() {
-        validateOp(counting(), LongAccumulator::get,
+        validateOp(AggregateOperations.counting(), LongAccumulator::get,
                 null, null, 1L, 2L, 2L);
     }
 
     @Test
     public void when_summingToLong() {
-        validateOp(summingToLong(Long::longValue), LongAccumulator::get,
+        validateOp(AggregateOperations.summingToLong(Long::longValue), LongAccumulator::get,
                 1L, 2L, 1L, 3L, 3L);
     }
 
     @Test
     public void when_summingToDouble() {
-        validateOp(summingToDouble(Double::doubleValue), DoubleAccumulator::get,
+        validateOp(AggregateOperations.summingToDouble(Double::doubleValue), DoubleAccumulator::get,
                 0.5, 1.5, 0.5, 2.0, 2.0);
     }
 
     @Test
     public void when_averagingLong() {
-        validateOp(averagingLong(Long::longValue), identity(),
+        validateOp(AggregateOperations.averagingLong(Long::longValue), identity(),
                 1L, 2L, new LongLongAccumulator(1, 1), new LongLongAccumulator(2, 3), 1.5);
     }
 
     @Test
     public void when_averagingDouble() {
-        validateOp(averagingDouble(Double::doubleValue), identity(),
+        validateOp(AggregateOperations.averagingDouble(Double::doubleValue), identity(),
                 1.5, 2.5, new LongDoubleAccumulator(1, 1.5), new LongDoubleAccumulator(2, 4.0), 2.0);
     }
 
     @Test
     public void when_maxBy() {
-        validateOpWithoutDeduct(maxBy(naturalOrder()), MutableReference::get,
+        validateOpWithoutDeduct(AggregateOperations.maxBy(naturalOrder()), MutableReference::get,
                 10L, 11L, 10L, 11L, 11L);
     }
 
     @Test
     public void when_minBy() {
-        validateOpWithoutDeduct(minBy(naturalOrder()), MutableReference::get,
+        validateOpWithoutDeduct(AggregateOperations.minBy(naturalOrder()), MutableReference::get,
                 10L, 11L, 10L, 10L, 10L);
     }
 
     @Test
     public void when_allOf() {
         validateOp(
-                allOf(counting(), summingToLong(Long::longValue)),
+                AggregateOperations.allOf(AggregateOperations.counting(), AggregateOperations.summingToLong(Long::longValue)),
                 identity(), 10L, 11L,
                 Arrays.asList(new LongAccumulator(1L), new LongAccumulator(10L)),
                 Arrays.asList(new LongAccumulator(2L), new LongAccumulator(21L)),
@@ -113,7 +103,7 @@ public class AggregateOperationsTest {
     @Test
     public void when_allOfWithoutDeduct() {
         validateOpWithoutDeduct(
-                allOf(counting(), maxBy(naturalOrder())),
+                AggregateOperations.allOf(AggregateOperations.counting(), AggregateOperations.maxBy(naturalOrder())),
                 identity(), 10L, 11L,
                 Arrays.asList(new LongAccumulator(1), new MutableReference<>(10L)),
                 Arrays.asList(new LongAccumulator(2), new MutableReference<>(11L)),
@@ -124,7 +114,7 @@ public class AggregateOperationsTest {
     @Test
     public void when_linearTrend() {
         // Given
-        AggregateOperation<Entry<Long, Long>, LinTrendAccumulator, Double> op = linearTrend(Entry::getKey, Entry::getValue);
+        AggregateOperation<Entry<Long, Long>, LinTrendAccumulator, Double> op = AggregateOperations.linearTrend(Entry::getKey, Entry::getValue);
         DistributedSupplier<LinTrendAccumulator> newF = op.createAccumulatorF();
         BiFunction<LinTrendAccumulator, Entry<Long, Long>, LinTrendAccumulator> accF = op.accumulateItemF();
         DistributedBinaryOperator<LinTrendAccumulator> combineF = op.combineAccumulatorsF();
@@ -175,7 +165,7 @@ public class AggregateOperationsTest {
 
     @Test
     public void when_reducing() {
-        validateOp(reducing(0, Integer::intValue, Integer::sum, (x, y) -> x - y),
+        validateOp(AggregateOperations.reducing(0, Integer::intValue, Integer::sum, (x, y) -> x - y),
                 MutableReference::get,
                 1, 2, 1, 3, 3);
     }

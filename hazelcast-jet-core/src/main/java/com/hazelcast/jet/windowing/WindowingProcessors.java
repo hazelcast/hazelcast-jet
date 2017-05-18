@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.windowing;
 
+import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.Processor;

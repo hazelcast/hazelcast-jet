@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.windowing;
 
+import com.hazelcast.jet.AggregateOperation;
+
 /**
  * A policy object that decides on the punctuation in a single data
  * (sub)stream. The timestamp of every observed item should be reported

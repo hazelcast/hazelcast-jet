@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.windowing;
 
+import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.function.DistributedBinaryOperator;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -24,7 +25,7 @@ import com.hazelcast.jet.function.DistributedSupplier;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-class AggregateOperationImpl<T, A, R> implements AggregateOperation<T, A, R> {
+public class AggregateOperationImpl<T, A, R> implements AggregateOperation<T, A, R> {
     private final DistributedSupplier<A> createAccumulatorF;
     private final DistributedBiFunction<A, T, A> accumulateItemF;
     private final DistributedBinaryOperator<A> combineAccumulatorsF;

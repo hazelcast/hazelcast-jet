@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.windowing.AggregateOperations.summingToLong;
+import static com.hazelcast.jet.AggregateOperations.summingToLong;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;

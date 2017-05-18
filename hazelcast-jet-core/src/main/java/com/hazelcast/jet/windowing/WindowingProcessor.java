@@ -17,6 +17,7 @@
 package com.hazelcast.jet.windowing;
 
 import com.hazelcast.jet.AbstractProcessor;
+import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.Punctuation;
 import com.hazelcast.jet.Traverser;
