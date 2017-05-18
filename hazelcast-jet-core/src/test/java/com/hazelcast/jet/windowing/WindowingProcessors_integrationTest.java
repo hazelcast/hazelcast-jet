@@ -47,7 +47,7 @@ import static com.hazelcast.jet.Processors.writeList;
 import static com.hazelcast.jet.windowing.PunctuationPolicies.limitingLagAndLull;
 import static com.hazelcast.jet.windowing.StreamingTestSupport.streamToString;
 import static com.hazelcast.jet.windowing.WindowDefinition.slidingWindowDef;
-import static com.hazelcast.jet.windowing.WindowOperations.counting;
+import static com.hazelcast.jet.windowing.AggregateOperations.counting;
 import static com.hazelcast.jet.windowing.WindowingProcessors.insertPunctuation;
 import static com.hazelcast.jet.windowing.WindowingProcessors.slidingWindowSingleStage;
 import static com.hazelcast.jet.windowing.WindowingProcessors.slidingWindowStage1;
@@ -91,7 +91,7 @@ public class WindowingProcessors_integrationTest extends JetTestSupport {
         JetInstance instance = super.createJetMember();
 
         WindowDefinition wDef = slidingWindowDef(2000, 1000);
-        WindowOperation<Object, ?, Long> counting = counting();
+        AggregateOperation<Object, ?, Long> counting = counting();
 
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", streamList(sourceEvents)).localParallelism(1);

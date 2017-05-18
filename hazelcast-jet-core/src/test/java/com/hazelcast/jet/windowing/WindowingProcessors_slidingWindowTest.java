@@ -55,10 +55,10 @@ import static org.mockito.Mockito.mock;
 /**
  * This one tests:
  * <ul><li>
- *     {@link WindowingProcessors#slidingWindowStage2(WindowDefinition, WindowOperation)}
+ *     {@link WindowingProcessors#slidingWindowStage2(WindowDefinition, AggregateOperation)}
  * </li><li>
  *     {@link WindowingProcessors#slidingWindowSingleStage(DistributedFunction, DistributedToLongFunction,
- *     WindowDefinition, WindowOperation)}
+ *     WindowDefinition, AggregateOperation)}
  * </ul>
  */
 @RunWith(Parameterized.class)
@@ -89,16 +89,16 @@ public class WindowingProcessors_slidingWindowTest extends StreamingTestSupport 
     @Before
     public void before() {
         WindowDefinition windowDef = new WindowDefinition(1, 0, 4);
-        WindowOperation<Entry<?, Long>, LongAccumulator, Long> operation;
+        AggregateOperation<Entry<?, Long>, LongAccumulator, Long> operation;
 
         operation = mutateAccumulator
-                ? WindowOperation.of(
+                ? AggregateOperation.of(
                     LongAccumulator::new,
                     (acc, item) -> acc.addExact(item.getValue()),
                     LongAccumulator::addExact,
                     hasDeduct ? LongAccumulator::subtractExact : null,
                     LongAccumulator::get)
-                : WindowOperation.of(
+                : AggregateOperation.of(
                     LongAccumulator::new,
                     (acc, item) -> new LongAccumulator(acc.get() + item.getValue()),
                     (acc1, acc2) -> new LongAccumulator(acc1.get() + acc2.get()),

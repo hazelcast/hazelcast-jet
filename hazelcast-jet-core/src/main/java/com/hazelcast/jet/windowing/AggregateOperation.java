@@ -28,7 +28,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 /**
- * Contains primitives needed to compute a windowed result of infinite
+ * Contains primitives needed to compute an aggregated result of
  * stream processing. The result is computed by maintaining a mutable
  * result container, called the <em>accumulator</em>, which is transformed
  * to the final result at the end of accumulation. These are the
@@ -47,15 +47,17 @@ import java.util.Objects;
  *     {@link #finishAccumulationF() finish} accumulation by transforming the
  *     accumulator's intermediate result into the final result
  * </li></ol>
+ * The <em>deduct</em> primitive is optional. It is used in sliding window
+ * aggregation, where it can significantly improve the performance.
  *
  * @param <T> the type of the stream item &mdash; contravariant
  * @param <A> the type of the accumulator &mdash; invariant
  * @param <R> the type of the final result &mdash; covariant
  */
-public interface WindowOperation<T, A, R> extends Serializable {
+public interface AggregateOperation<T, A, R> extends Serializable {
 
     /**
-     * A function that creates a new accumulator and returns it. If the {@code
+     * A function that returns a new accumulator. If the {@code
      * deduct} operation is defined, the accumulator object must properly
      * implement {@code equals()}, which will be used to detect when an
      * accumulator is "empty" (i.e., equal to a fresh instance returned from
@@ -91,12 +93,14 @@ public interface WindowOperation<T, A, R> extends Serializable {
      * x)} returns an accumulator in the same state as {@code acc} was before
      * the operation.
      * <p>
-     * <b>Note:</b> it's allowed to return {@code null} here, however it
-     * impacts performance. This function allows us to <i>combine </i> new
-     * frames into sliding window and <i>deduct</i> old frames, as the window
-     * slides. Without it, we always have to combine all frames for each window
-     * slide, which gets worse, when the window is sled by small increments
-     * (with regard to window length). For tumbling windows, it is never used.
+     * <strong>Note:</strong> this method may return {@code null} because the
+     * <em>deduct</em> primitive is optional. However, when this aggregate
+     * operation is used to compute a sliding window, its presence may
+     * significantly reduce computational cost. With it, the next sliding
+     * window can be obtained by deducting the trailing frame and combining
+     * the leading frame; without it, each window must be recomputed from
+     * all its constituent frames. The finer the sliding step, the more
+     * pronounced the difference.
      */
     @Nullable
     DistributedBinaryOperator<A> deductAccumulatorF();
@@ -109,7 +113,7 @@ public interface WindowOperation<T, A, R> extends Serializable {
     DistributedFunction<A, R> finishAccumulationF();
 
     /**
-     * Returns a new {@code WindowOperation} object composed from the provided
+     * Returns a new {@code AggregateOperation} object composed from the provided
      * primitives.
      *
      * @param <T> the type of the stream item
@@ -123,28 +127,29 @@ public interface WindowOperation<T, A, R> extends Serializable {
      * @param finishAccumulationF see {@link #finishAccumulationF()}
      */
     @Nonnull
-    static <T, A, R> WindowOperation<T, A, R> of(@Nonnull DistributedSupplier<A> createAccumulatorF,
-                                                 @Nonnull DistributedBiFunction<A, T, A> accumulateItemF,
-                                                 @Nonnull DistributedBinaryOperator<A> combineAccumulatorsF,
-                                                 @Nullable DistributedBinaryOperator<A> deductAccumulatorF,
-                                                 @Nonnull DistributedFunction<A, R> finishAccumulationF
+    static <T, A, R> AggregateOperation<T, A, R> of(
+            @Nonnull DistributedSupplier<A> createAccumulatorF,
+            @Nonnull DistributedBiFunction<A, T, A> accumulateItemF,
+            @Nonnull DistributedBinaryOperator<A> combineAccumulatorsF,
+            @Nullable DistributedBinaryOperator<A> deductAccumulatorF,
+            @Nonnull DistributedFunction<A, R> finishAccumulationF
     ) {
         Objects.requireNonNull(createAccumulatorF);
         Objects.requireNonNull(accumulateItemF);
         Objects.requireNonNull(combineAccumulatorsF);
         Objects.requireNonNull(finishAccumulationF);
-        return new WindowOperationImpl<>(
+        return new AggregateOperationImpl<>(
                 createAccumulatorF, accumulateItemF, combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
     }
 
     /**
-     * Returns a new {@code WindowOperation} object based on a {@code
+     * Returns a new {@code AggregateOperation} object based on a {@code
      * DistributedCollector}. <strong>Note:</strong> the resulting operation
      * will lack the {@code deduct} primitive, which can cause poor performance
      * of a sliding window computation, see {@link #deductAccumulatorF()}
      */
     @Nonnull
-    static <T, A, R> WindowOperation<T, A, R> fromCollector(@Nonnull DistributedCollector<T, A, R> c) {
+    static <T, A, R> AggregateOperation<T, A, R> fromCollector(@Nonnull DistributedCollector<T, A, R> c) {
         return of(c.supplier(),
                 (a, v) -> {
                     c.accumulator().accept(a, v);

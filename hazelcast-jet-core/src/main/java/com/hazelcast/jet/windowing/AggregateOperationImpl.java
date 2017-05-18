@@ -24,18 +24,18 @@ import com.hazelcast.jet.function.DistributedSupplier;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-class WindowOperationImpl<T, A, R> implements WindowOperation<T, A, R> {
+class AggregateOperationImpl<T, A, R> implements AggregateOperation<T, A, R> {
     private final DistributedSupplier<A> createAccumulatorF;
     private final DistributedBiFunction<A, T, A> accumulateItemF;
     private final DistributedBinaryOperator<A> combineAccumulatorsF;
     private final DistributedBinaryOperator<A> deductAccumulatorF;
     private final DistributedFunction<A, R> finishAccumulationF;
 
-    WindowOperationImpl(DistributedSupplier<A> createAccumulatorF,
-                        DistributedBiFunction<A, T, A> accumulateItemF,
-                        DistributedBinaryOperator<A> combineAccumulatorsF,
-                        DistributedBinaryOperator<A> deductAccumulatorF,
-                        DistributedFunction<A, R> finishAccumulationF
+    AggregateOperationImpl(DistributedSupplier<A> createAccumulatorF,
+                           DistributedBiFunction<A, T, A> accumulateItemF,
+                           DistributedBinaryOperator<A> combineAccumulatorsF,
+                           DistributedBinaryOperator<A> deductAccumulatorF,
+                           DistributedFunction<A, R> finishAccumulationF
     ) {
         this.createAccumulatorF = createAccumulatorF;
         this.accumulateItemF = accumulateItemF;

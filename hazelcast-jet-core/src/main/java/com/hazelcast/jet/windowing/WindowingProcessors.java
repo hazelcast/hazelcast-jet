@@ -61,7 +61,7 @@ import static com.hazelcast.jet.function.DistributedFunction.identity;
  * </pre>
  *
  * To get consistent results, the same {@link WindowDefinition} and {@link
- * WindowOperation} must be used for both stages.
+ * AggregateOperation} must be used for both stages.
  *
  * <h1>Single-stage aggregation</h1>
  *
@@ -129,7 +129,7 @@ public final class WindowingProcessors {
      *
      * @param <T> input item type
      * @param <K> type of key returned from {@code extractKeyF}
-     * @param <A> type of accumulator returned from {@code windowOperation.
+     * @param <A> type of accumulator returned from {@code aggregateOperation.
      *            createAccumulatorF()}
      */
     @Nonnull
@@ -137,7 +137,7 @@ public final class WindowingProcessors {
             @Nonnull DistributedFunction<? super T, K> extractKeyF,
             @Nonnull DistributedToLongFunction<? super T> extractTimestampF,
             @Nonnull WindowDefinition windowDef,
-            @Nonnull WindowOperation<? super T, A, ?> windowOperation
+            @Nonnull AggregateOperation<? super T, A, ?> aggregateOperation
     ) {
         // use a single-frame window in this stage; the downstream processor
         // combines the frames into a window with the user-requested size
@@ -148,11 +148,11 @@ public final class WindowingProcessors {
                 tumblingWinDef,
                 item -> tumblingWinDef.higherFrameTs(extractTimestampF.applyAsLong(item)),
                 extractKeyF,
-                WindowOperation.of(
-                        windowOperation.createAccumulatorF(),
-                        windowOperation.accumulateItemF(),
-                        windowOperation.combineAccumulatorsF(),
-                        windowOperation.deductAccumulatorF(),
+                AggregateOperation.of(
+                        aggregateOperation.createAccumulatorF(),
+                        aggregateOperation.accumulateItemF(),
+                        aggregateOperation.combineAccumulatorsF(),
+                        aggregateOperation.deductAccumulatorF(),
                         identity()
                 )
         );
@@ -160,24 +160,24 @@ public final class WindowingProcessors {
 
     /**
      * Convenience for {@link #slidingWindowStage1(DistributedFunction,
-     * DistributedToLongFunction, WindowDefinition, WindowOperation)
+     * DistributedToLongFunction, WindowDefinition, AggregateOperation)
      * slidingWindowStage1(extractKeyF, extractTimestampF, windowDef,
-     * windowOperation)} which doesn't group by key.
+     * aggregateOperation)} which doesn't group by key.
      */
     @Nonnull
     public static <T, A> DistributedSupplier<Processor> slidingWindowStage1(
             @Nonnull DistributedToLongFunction<? super T> extractTimestampF,
             @Nonnull WindowDefinition windowDef,
-            @Nonnull WindowOperation<? super T, A, ?> windowOperation
+            @Nonnull AggregateOperation<? super T, A, ?> aggregateOperation
     ) {
-        return slidingWindowStage1(t -> GLOBAL_WINDOW_KEY, extractTimestampF, windowDef, windowOperation);
+        return slidingWindowStage1(t -> GLOBAL_WINDOW_KEY, extractTimestampF, windowDef, aggregateOperation);
     }
 
     /**
      * Constructs sliding windows by combining their constituent frames
      * received from several upstream instances of {@link
      * #slidingWindowStage1(DistributedFunction, DistributedToLongFunction, WindowDefinition,
-     * WindowOperation)}. After combining applies the {@code windowOperation}'s
+     * AggregateOperation)}. After combining applies the {@code aggregateOperation}'s
      * finishing function to compute the emitted result.
      * <p>
      * The type of emitted items is {@link TimestampedEntry
@@ -190,18 +190,18 @@ public final class WindowingProcessors {
     @Nonnull
     public static <A, R> DistributedSupplier<Processor> slidingWindowStage2(
             @Nonnull WindowDefinition windowDef,
-            @Nonnull WindowOperation<?, A, R> windowOperation
+            @Nonnull AggregateOperation<?, A, R> aggregateOperation
     ) {
         return () -> new WindowingProcessor<TimestampedEntry<?, A>, A, R>(
                 windowDef,
                 TimestampedEntry::getTimestamp,
                 TimestampedEntry::getKey,
-                WindowOperation.of(
-                        windowOperation.createAccumulatorF(),
-                        (acc, frame) -> windowOperation.combineAccumulatorsF().apply(acc, frame.getValue()),
-                        windowOperation.combineAccumulatorsF(),
-                        windowOperation.deductAccumulatorF(),
-                        windowOperation.finishAccumulationF()
+                AggregateOperation.of(
+                        aggregateOperation.createAccumulatorF(),
+                        (acc, frame) -> aggregateOperation.combineAccumulatorsF().apply(acc, frame.getValue()),
+                        aggregateOperation.combineAccumulatorsF(),
+                        aggregateOperation.deductAccumulatorF(),
+                        aggregateOperation.finishAccumulationF()
                 )
         );
     }
@@ -227,29 +227,29 @@ public final class WindowingProcessors {
             @Nonnull DistributedFunction<? super T, ?> extractKeyF,
             @Nonnull DistributedToLongFunction<? super T> extractTimestampF,
             @Nonnull WindowDefinition windowDef,
-            @Nonnull WindowOperation<? super T, A, R> windowOperation
+            @Nonnull AggregateOperation<? super T, A, R> aggregateOperation
     ) {
         return () -> new WindowingProcessor<T, A, R>(
                 windowDef,
                 item -> windowDef.higherFrameTs(extractTimestampF.applyAsLong(item)),
                 extractKeyF,
-                windowOperation
+                aggregateOperation
         );
     }
 
     /**
      * Convenience for {@link #slidingWindowSingleStage(DistributedFunction,
-     * DistributedToLongFunction, WindowDefinition, WindowOperation)
+     * DistributedToLongFunction, WindowDefinition, AggregateOperation)
      * slidingWindowSingleStage(extractKeyF, extractTimestampF, windowDef,
-     * windowOperation} which doesn't group by key.
+     * aggregateOperation} which doesn't group by key.
      */
     @Nonnull
     public static <T, A, R> DistributedSupplier<Processor> slidingWindowSingleStage(
             @Nonnull DistributedToLongFunction<? super T> extractTimestampF,
             @Nonnull WindowDefinition windowDef,
-            @Nonnull WindowOperation<? super T, A, R> windowOperation
+            @Nonnull AggregateOperation<? super T, A, R> aggregateOperation
     ) {
-        return slidingWindowSingleStage(t -> GLOBAL_WINDOW_KEY, extractTimestampF, windowDef, windowOperation);
+        return slidingWindowSingleStage(t -> GLOBAL_WINDOW_KEY, extractTimestampF, windowDef, aggregateOperation);
     }
 
     /**
@@ -268,7 +268,7 @@ public final class WindowingProcessors {
      * @param sessionTimeout    maximum gap between consecutive events in the same session window
      * @param extractTimestampF function to extract the timestamp from the item
      * @param extractKeyF       function to extract the grouping key from the item
-     * @param windowOperation   contains aggregation logic
+     * @param aggregateOperation   contains aggregation logic
      *
      * @param <T> type of the stream event
      * @param <K> type of the item's grouping key
@@ -280,8 +280,8 @@ public final class WindowingProcessors {
             long sessionTimeout,
             @Nonnull DistributedToLongFunction<? super T> extractTimestampF,
             @Nonnull DistributedFunction<? super T, K> extractKeyF,
-            @Nonnull DistributedCollector<? super T, A, R> windowOperation
+            @Nonnull DistributedCollector<? super T, A, R> aggregateOperation
     ) {
-        return () -> new SessionWindowP<>(sessionTimeout, extractTimestampF, extractKeyF, windowOperation);
+        return () -> new SessionWindowP<>(sessionTimeout, extractTimestampF, extractKeyF, aggregateOperation);
     }
 }

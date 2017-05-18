@@ -38,16 +38,16 @@ import java.util.function.Function;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.function.DistributedComparator.naturalOrder;
-import static com.hazelcast.jet.windowing.WindowOperations.allOf;
-import static com.hazelcast.jet.windowing.WindowOperations.averagingDouble;
-import static com.hazelcast.jet.windowing.WindowOperations.averagingLong;
-import static com.hazelcast.jet.windowing.WindowOperations.counting;
-import static com.hazelcast.jet.windowing.WindowOperations.linearTrend;
-import static com.hazelcast.jet.windowing.WindowOperations.maxBy;
-import static com.hazelcast.jet.windowing.WindowOperations.minBy;
-import static com.hazelcast.jet.windowing.WindowOperations.reducing;
-import static com.hazelcast.jet.windowing.WindowOperations.summingToDouble;
-import static com.hazelcast.jet.windowing.WindowOperations.summingToLong;
+import static com.hazelcast.jet.windowing.AggregateOperations.allOf;
+import static com.hazelcast.jet.windowing.AggregateOperations.averagingDouble;
+import static com.hazelcast.jet.windowing.AggregateOperations.averagingLong;
+import static com.hazelcast.jet.windowing.AggregateOperations.counting;
+import static com.hazelcast.jet.windowing.AggregateOperations.linearTrend;
+import static com.hazelcast.jet.windowing.AggregateOperations.maxBy;
+import static com.hazelcast.jet.windowing.AggregateOperations.minBy;
+import static com.hazelcast.jet.windowing.AggregateOperations.reducing;
+import static com.hazelcast.jet.windowing.AggregateOperations.summingToDouble;
+import static com.hazelcast.jet.windowing.AggregateOperations.summingToLong;
 import static java.util.function.Function.identity;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -56,7 +56,7 @@ import static org.junit.Assert.assertTrue;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
-public class WindowOperationsTest {
+public class AggregateOperationsTest {
     @Test
     public void when_counting() {
         validateOp(counting(), LongAccumulator::get,
@@ -124,7 +124,7 @@ public class WindowOperationsTest {
     @Test
     public void when_linearTrend() {
         // Given
-        WindowOperation<Entry<Long, Long>, LinTrendAccumulator, Double> op = linearTrend(Entry::getKey, Entry::getValue);
+        AggregateOperation<Entry<Long, Long>, LinTrendAccumulator, Double> op = linearTrend(Entry::getKey, Entry::getValue);
         DistributedSupplier<LinTrendAccumulator> newF = op.createAccumulatorF();
         BiFunction<LinTrendAccumulator, Entry<Long, Long>, LinTrendAccumulator> accF = op.accumulateItemF();
         DistributedBinaryOperator<LinTrendAccumulator> combineF = op.combineAccumulatorsF();
@@ -181,7 +181,7 @@ public class WindowOperationsTest {
     }
 
     private static <T, A, X, R> void validateOp(
-            WindowOperation<T, A, R> op,
+            AggregateOperation<T, A, R> op,
             Function<A, X> getAccValF,
             T item1,
             T item2,
@@ -230,7 +230,7 @@ public class WindowOperationsTest {
     }
 
     private static <T, A, X, R> void validateOpWithoutDeduct(
-            WindowOperation<T, A, R> op,
+            AggregateOperation<T, A, R> op,
             Function<A, X> getAccValF,
             T item1,
             T item2,

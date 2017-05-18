@@ -50,7 +50,7 @@ class WindowingProcessor<T, A, R> extends AbstractProcessor {
     private final WindowDefinition wDef;
     private final DistributedToLongFunction<? super T> extractFrameTimestampF;
     private final Function<? super T, ?> extractKeyF;
-    private final WindowOperation<? super T, A, R> winOp;
+    private final AggregateOperation<? super T, A, R> winOp;
 
     private final FlatMapper<Punctuation, Object> flatMapper;
 
@@ -61,7 +61,7 @@ class WindowingProcessor<T, A, R> extends AbstractProcessor {
             WindowDefinition winDef,
             DistributedToLongFunction<? super T> extractFrameTimestampF,
             Function<? super T, ?> extractKeyF,
-            WindowOperation<? super T, A, R> winOp) {
+            AggregateOperation<? super T, A, R> winOp) {
         this.wDef = winDef;
         this.extractFrameTimestampF = extractFrameTimestampF;
         this.extractKeyF = extractKeyF;

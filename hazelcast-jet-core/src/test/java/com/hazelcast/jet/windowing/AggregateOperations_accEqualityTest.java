@@ -30,28 +30,28 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import static com.hazelcast.jet.function.DistributedComparator.naturalOrder;
-import static com.hazelcast.jet.windowing.WindowOperations.allOf;
-import static com.hazelcast.jet.windowing.WindowOperations.averagingDouble;
-import static com.hazelcast.jet.windowing.WindowOperations.averagingLong;
-import static com.hazelcast.jet.windowing.WindowOperations.counting;
-import static com.hazelcast.jet.windowing.WindowOperations.linearTrend;
-import static com.hazelcast.jet.windowing.WindowOperations.maxBy;
-import static com.hazelcast.jet.windowing.WindowOperations.minBy;
-import static com.hazelcast.jet.windowing.WindowOperations.reducing;
-import static com.hazelcast.jet.windowing.WindowOperations.summingToDouble;
-import static com.hazelcast.jet.windowing.WindowOperations.summingToLong;
+import static com.hazelcast.jet.windowing.AggregateOperations.allOf;
+import static com.hazelcast.jet.windowing.AggregateOperations.averagingDouble;
+import static com.hazelcast.jet.windowing.AggregateOperations.averagingLong;
+import static com.hazelcast.jet.windowing.AggregateOperations.counting;
+import static com.hazelcast.jet.windowing.AggregateOperations.linearTrend;
+import static com.hazelcast.jet.windowing.AggregateOperations.maxBy;
+import static com.hazelcast.jet.windowing.AggregateOperations.minBy;
+import static com.hazelcast.jet.windowing.AggregateOperations.reducing;
+import static com.hazelcast.jet.windowing.AggregateOperations.summingToDouble;
+import static com.hazelcast.jet.windowing.AggregateOperations.summingToLong;
 import static org.junit.Assert.assertEquals;
 
 @Category(QuickTest.class)
 @RunWith(Parameterized.class)
 @UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
-public class WindowOperations_accEqualityTest {
+public class AggregateOperations_accEqualityTest {
 
     @Parameter
-    public WindowOperation<?, ?, ?> operation;
+    public AggregateOperation<?, ?, ?> operation;
 
     @Parameters
-    public static Collection<WindowOperation<?, ?, ?>> data() {
+    public static Collection<AggregateOperation<?, ?, ?>> data() {
         return Arrays.asList(
                 counting(),
                 summingToLong(Long::longValue),
