@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.windowing;
+package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.Punctuation;
 import com.hazelcast.jet.stream.DistributedCollector;
+import com.hazelcast.jet.Session;
+import com.hazelcast.jet.StreamingTestSupport;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import com.hazelcast.util.MutableLong;
@@ -50,7 +52,7 @@ import static org.mockito.Mockito.mock;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
-public class WindowingProcessors_sessionWindowTest extends StreamingTestSupport {
+public class SessionWindowPTest extends StreamingTestSupport {
 
     private static final int SESSION_TIMEOUT = 10;
     private SessionWindowP<Entry<String, Long>, String, MutableLong, Long> processor;
@@ -109,7 +111,9 @@ public class WindowingProcessors_sessionWindowTest extends StreamingTestSupport 
             inbox.add(ev);
             keys.add(ev.getKey());
         }
-        Set<Session> expectedSessions = keys.stream().flatMap(WindowingProcessors_sessionWindowTest::expectedSessions).collect(toSet());
+        Set<Session> expectedSessions = keys.stream()
+                                            .flatMap(SessionWindowPTest::expectedSessions)
+                                            .collect(toSet());
         inbox.add(new Punctuation(100));
 
         // When
@@ -133,7 +137,7 @@ public class WindowingProcessors_sessionWindowTest extends StreamingTestSupport 
 
     public static void main(String[] args) {
         for (int i = 0; i < 10; i++) {
-            WindowingProcessors_sessionWindowTest test = new WindowingProcessors_sessionWindowTest();
+            SessionWindowPTest test = new SessionWindowPTest();
             test.before();
             test.runBench();
         }

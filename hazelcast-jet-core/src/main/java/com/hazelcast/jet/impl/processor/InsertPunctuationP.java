@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.windowing;
+package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.Punctuation;
+import com.hazelcast.jet.PunctuationPolicy;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers.ResettableSingletonTraverser;
 
@@ -28,7 +29,7 @@ import static com.hazelcast.jet.Traversers.empty;
 
 /**
  * A processor that inserts punctuation into a data stream. See
- * {@link WindowingProcessors#insertPunctuation(
+ * {@link com.hazelcast.jet.WindowingProcessors#insertPunctuation(
  *      com.hazelcast.jet.function.DistributedToLongFunction,
  *      com.hazelcast.jet.function.DistributedSupplier)
  * WindowingProcessors.insertPunctuation()}.
@@ -48,7 +49,7 @@ public class InsertPunctuationP<T> extends AbstractProcessor {
      * @param extractTimestampF function that extracts the timestamp from the item
      * @param punctuationPolicy the punctuation policy
      */
-    InsertPunctuationP(@Nonnull ToLongFunction<T> extractTimestampF,
+    public InsertPunctuationP(@Nonnull ToLongFunction<T> extractTimestampF,
                        @Nonnull PunctuationPolicy punctuationPolicy
     ) {
         this.extractTimestampF = extractTimestampF;

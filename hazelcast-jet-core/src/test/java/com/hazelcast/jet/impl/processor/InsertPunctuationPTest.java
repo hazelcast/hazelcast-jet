@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.windowing;
+package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.Processor.Context;
+import com.hazelcast.jet.PunctuationPolicies;
 import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.test.HazelcastParallelClassRunner;

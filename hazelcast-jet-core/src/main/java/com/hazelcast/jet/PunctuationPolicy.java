@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.windowing;
-
-import com.hazelcast.jet.AggregateOperation;
+package com.hazelcast.jet;
 
 /**
  * A policy object that decides on the punctuation in a single data

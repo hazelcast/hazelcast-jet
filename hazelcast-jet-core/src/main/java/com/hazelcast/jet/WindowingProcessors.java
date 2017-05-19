@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.windowing;
+package com.hazelcast.jet;
 
-import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedToLongFunction;
-import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.impl.processor.InsertPunctuationP;
+import com.hazelcast.jet.impl.processor.SessionWindowP;
+import com.hazelcast.jet.impl.processor.SlidingWindowP;
 import com.hazelcast.jet.stream.DistributedCollector;
 
 import javax.annotation.Nonnull;
@@ -145,7 +146,7 @@ public final class WindowingProcessors {
         WindowDefinition tumblingWinDef = new WindowDefinition(
                 windowDef.frameLength(), windowDef.frameOffset(), 1);
 
-        return () -> new WindowingProcessor<T, A, A>(
+        return () -> new SlidingWindowP<T, A, A>(
                 tumblingWinDef,
                 item -> tumblingWinDef.higherFrameTs(extractTimestampF.applyAsLong(item)),
                 extractKeyF,
@@ -193,7 +194,7 @@ public final class WindowingProcessors {
             @Nonnull WindowDefinition windowDef,
             @Nonnull AggregateOperation<?, A, R> aggregateOperation
     ) {
-        return () -> new WindowingProcessor<TimestampedEntry<?, A>, A, R>(
+        return () -> new SlidingWindowP<TimestampedEntry<?, A>, A, R>(
                 windowDef,
                 TimestampedEntry::getTimestamp,
                 TimestampedEntry::getKey,
@@ -230,7 +231,7 @@ public final class WindowingProcessors {
             @Nonnull WindowDefinition windowDef,
             @Nonnull AggregateOperation<? super T, A, R> aggregateOperation
     ) {
-        return () -> new WindowingProcessor<T, A, R>(
+        return () -> new SlidingWindowP<T, A, R>(
                 windowDef,
                 item -> windowDef.higherFrameTs(extractTimestampF.applyAsLong(item)),
                 extractKeyF,

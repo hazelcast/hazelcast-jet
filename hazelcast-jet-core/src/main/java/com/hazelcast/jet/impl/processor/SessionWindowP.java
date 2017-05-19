@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.windowing;
+package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
+import com.hazelcast.jet.Punctuation;
+import com.hazelcast.jet.Session;
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.DistributedBinaryOperator;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
-import com.hazelcast.jet.Punctuation;
-import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.stream.DistributedCollector;
 
 import javax.annotation.Nonnull;
@@ -44,9 +45,10 @@ import static java.lang.System.arraycopy;
 
 /**
  * Session window processor. See {@link
- * WindowingProcessors#sessionWindow(long, DistributedToLongFunction, DistributedFunction,
- * DistributedCollector) sessionWindow(sessionTimeout, extractTimestampF,
- * extractKeyF, collector)} for documentation.
+ *      com.hazelcast.jet.WindowingProcessors#sessionWindow(long,
+ *      DistributedToLongFunction, DistributedFunction, DistributedCollector)
+ * sessionWindow(sessionTimeout, extractTimestampF, extractKeyF, collector)}
+ * for documentation.
  *
  * @param <T> type of the stream item
  * @param <K> type of the extracted grouping key
@@ -68,7 +70,7 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
     private final DistributedBinaryOperator<A> combineAccF;
     private final FlatMapper<Punctuation, Session<K, R>> expiredSessionFlatmapper;
 
-    SessionWindowP(
+    public SessionWindowP(
             long sessionTimeout,
             DistributedToLongFunction<? super T> extractTimestampF,
             DistributedFunction<? super T, K> extractKeyF,

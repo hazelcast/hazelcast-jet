@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.windowing;
+package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.AggregateOperation;
@@ -22,13 +22,15 @@ import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.Punctuation;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
+import com.hazelcast.jet.TimestampedEntry;
+import com.hazelcast.jet.WindowDefinition;
+import com.hazelcast.jet.WindowingProcessors;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
-import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.LongStream;
 
@@ -37,13 +39,14 @@ import static java.lang.Math.min;
 import static java.util.Collections.emptyMap;
 
 /**
- * See {@link WindowingProcessors}.
+ * Handles various setups of sliding and tumbling window aggregation.
+ * See {@link WindowingProcessors} for more documentation.
  *
  * @param <T> type of input item (stream item in 1st stage, Frame, if 2nd stage)
  * @param <A> type of the frame accumulator object
  * @param <R> type of the finished result
  */
-class WindowingProcessor<T, A, R> extends AbstractProcessor {
+public class SlidingWindowP<T, A, R> extends AbstractProcessor {
 
     // package-visible for testing
     final Map<Long, Map<Object, A>> tsToKeyToFrame = new HashMap<>();
@@ -59,7 +62,7 @@ class WindowingProcessor<T, A, R> extends AbstractProcessor {
     private long nextFrameTsToEmit = Long.MIN_VALUE;
     private final A emptyAcc;
 
-    WindowingProcessor(
+    public SlidingWindowP(
             WindowDefinition winDef,
             DistributedToLongFunction<? super T> extractFrameTimestampF,
             Function<? super T, ?> extractKeyF,
