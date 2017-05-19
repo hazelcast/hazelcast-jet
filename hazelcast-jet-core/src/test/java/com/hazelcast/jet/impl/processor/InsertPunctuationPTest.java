@@ -139,8 +139,9 @@ public class InsertPunctuationPTest {
     }
 
     private void drainOutbox(List<String> actual) {
-        for (Object o; (o = outbox.queueWithOrdinal(0).poll()) != null; )
+        for (Object o; (o = outbox.queueWithOrdinal(0).poll()) != null; ) {
             actual.add(o.toString());
+        }
     }
 
     private static String toString(List<String> actual) {

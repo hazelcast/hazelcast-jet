@@ -122,7 +122,8 @@ public class AggregateOperationsTest {
     @Test
     public void when_linearTrend() {
         // Given
-        AggregateOperation<Entry<Long, Long>, LinTrendAccumulator, Double> op = linearTrend(Entry::getKey, Entry::getValue);
+        AggregateOperation<Entry<Long, Long>, LinTrendAccumulator, Double> op =
+                linearTrend(Entry::getKey, Entry::getValue);
         Supplier<LinTrendAccumulator> newF = op.createAccumulatorF();
         BiConsumer<LinTrendAccumulator, Entry<Long, Long>> accF = op.accumulateItemF();
         BiConsumer<LinTrendAccumulator, LinTrendAccumulator> combineF = op.combineAccumulatorsF();

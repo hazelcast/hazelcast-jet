@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.jet.Punctuation;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
 import com.hazelcast.jet.impl.util.ProgressTracker;

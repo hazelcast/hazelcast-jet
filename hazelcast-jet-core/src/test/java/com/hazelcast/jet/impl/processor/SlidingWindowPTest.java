@@ -19,14 +19,11 @@ package com.hazelcast.jet.impl.processor;
 import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.Processor.Context;
-import com.hazelcast.jet.accumulator.LongAccumulator;
-import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.StreamingTestSupport;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.WindowDefinition;
-import com.hazelcast.jet.WindowingProcessors;
+import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
 import com.hazelcast.test.annotation.QuickTest;
@@ -58,15 +55,6 @@ import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
-/**
- * This one tests:
- * <ul><li>
- *     {@link WindowingProcessors#slidingWindowStage2(WindowDefinition, AggregateOperation)}
- * </li><li>
- *     {@link WindowingProcessors#slidingWindowSingleStage(DistributedFunction, DistributedToLongFunction,
- *     WindowDefinition, AggregateOperation)}
- * </ul>
- */
 @RunWith(Parameterized.class)
 @Category({QuickTest.class, ParallelTest.class})
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
@@ -80,14 +68,14 @@ public class SlidingWindowPTest extends StreamingTestSupport {
     @Parameter(1)
     public boolean singleStageProcessor;
 
+    private SlidingWindowP<?, ?, Long> processor;
+
     @Parameters(name = "hasDeduct={0}, singleStageProcessor={1}")
     public static Collection<Object[]> parameters() {
         return IntStream.range(0, 4)
                         .mapToObj(i -> new Boolean[]{(i & 2) == 2, (i & 1) == 1})
                         .collect(toList());
     }
-
-    private SlidingWindowP<?, ?, Long> processor;
 
     @Before
     public void before() {

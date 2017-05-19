@@ -142,7 +142,7 @@ public class WindowingProcessors_integrationTest extends JetTestSupport {
         private final long timestamp;
         private final long value;
 
-        private MockEvent(String key, long timestamp, long value) {
+        MockEvent(String key, long timestamp, long value) {
             this.key = key;
             this.timestamp = timestamp;
             this.value = value;

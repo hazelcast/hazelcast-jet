@@ -143,6 +143,7 @@ public class SessionWindowPTest extends StreamingTestSupport {
         }
     }
 
+    @SuppressWarnings("checkstyle:emptystatement")
     private void runBench() {
         Random rnd = ThreadLocalRandom.current();
         long start = System.nanoTime();
@@ -157,17 +158,20 @@ public class SessionWindowPTest extends StreamingTestSupport {
         for (long idx = 0; idx < eventsPerKey; idx++) {
             long timestampBase = idx * timestampStep;
             for (long key = (timestampBase / SESSION_TIMEOUT) % 2; key < keyCount; key += 2) {
-                while (!processor.tryProcess0(entry(key, timestampBase + rnd.nextInt(spread))));
-                while (!processor.tryProcess0(entry(key, timestampBase + rnd.nextInt(spread))));
+                while (!processor.tryProcess0(entry(key, timestampBase + rnd.nextInt(spread)))) { }
+                while (!processor.tryProcess0(entry(key, timestampBase + rnd.nextInt(spread)))) { }
             }
             if (idx % puncInterval == 0) {
                 Punctuation punc = new Punctuation(timestampBase - puncLag);
                 int winCount = 0;
                 while (!processor.tryProcessPunc0(punc)) {
-                    while (pollOutbox() != null) winCount++;
+                    while (pollOutbox() != null) {
+                        winCount++;
+                    }
                 }
-                while (pollOutbox() != null) winCount++;
-//                System.out.print(winCount + " ");
+                while (pollOutbox() != null) {
+                    winCount++;
+                }
             }
         }
         long took = System.nanoTime() - start;
