@@ -16,11 +16,9 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.jet.function.DistributedBiFunction;
-import com.hazelcast.jet.function.DistributedBinaryOperator;
+import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.stream.DistributedCollector;
 import com.hazelcast.jet.impl.AggregateOperationImpl;
 
 import javax.annotation.Nonnull;
@@ -39,8 +37,8 @@ import java.util.Objects;
  * </li><li>
  *     {@link #accumulateItemF() accumulate} the data of an item
  * </li><li>
- *     {@link #combineAccumulatorsF() combine} the contents of two accumulator
- *     objects
+ *     {@link #combineAccumulatorsF() combine} the contents of one accumulator
+ *     into another one
  * </li><li>
  *     {@link #deductAccumulatorF() deduct} the contents of one accumulator
  *     from another (undo the effects of {@code combine})
@@ -68,46 +66,47 @@ public interface AggregateOperation<T, A, R> extends Serializable {
     DistributedSupplier<A> createAccumulatorF();
 
     /**
-     * A function that updates the accumulated value to account for a new item.
+     * A primitive that updates the accumulator state to account for a new item.
      */
     @Nonnull
-    DistributedBiFunction<A, T, A> accumulateItemF();
+    DistributedBiConsumer<A, T> accumulateItemF();
 
     /**
-     * A function that accepts two accumulators, merges their contents, and
-     * returns an accumulator with the resulting state. It is allowed to mutate
-     * the left-hand operator (presumably to return it as the new result), but
-     * not the right-hand one.
+     * A primitive that accepts two accumulators and updates the state of the
+     * left-hand one by combining it with the state of the right-hand one.
+     * The right-hand accumulator remains unchanged.
      */
     @Nonnull
-    DistributedBinaryOperator<A> combineAccumulatorsF();
+    DistributedBiConsumer<A, A> combineAccumulatorsF();
 
     /**
-     * A function that accepts two accumulators, deducts the contents of the
-     * right-hand one from the contents of the left-hand one, and returns an
-     * accumulator with the resulting state. It is allowed to mutate the
-     * left-hand accumulator (presumably to return it as the new result), but
-     * not the right-hand one.
+     * A primitive that accepts two accumulators and updates the state of the
+     * left-hand one by deducting the state of the right-hand one from it. The
+     * right-hand accumulator remains unchanged.
      * <p>
-     * The effect of this function must be the opposite of {@link
-     * #combineAccumulatorsF() combine} so that {@code deduct(combine(acc, x),
-     * x)} returns an accumulator in the same state as {@code acc} was before
-     * the operation.
+     * The effect of this primitive must be the opposite of {@link
+     * #combineAccumulatorsF() combine} so that
+     * <pre>
+     *     combine(acc, x);
+     *     deduct(acc, x);
+     * </pre>
+     * leaves {@code acc} in the same state as it was before the two
+     * operations.
      * <p>
      * <strong>Note:</strong> this method may return {@code null} because the
      * <em>deduct</em> primitive is optional. However, when this aggregate
      * operation is used to compute a sliding window, its presence may
-     * significantly reduce computational cost. With it, the next sliding
-     * window can be obtained by deducting the trailing frame and combining
-     * the leading frame; without it, each window must be recomputed from
-     * all its constituent frames. The finer the sliding step, the more
-     * pronounced the difference.
+     * significantly reduce the computational cost. With it, the current
+     * sliding window can be obtained from the previous one by deducting the
+     * trailing frame and combining the leading frame; without it, each window
+     * must be recomputed from all its constituent frames. The finer the sliding
+     * step, the more pronounced the difference in computation effort will be.
      */
     @Nullable
-    DistributedBinaryOperator<A> deductAccumulatorF();
+    DistributedBiConsumer<A, A> deductAccumulatorF();
 
     /**
-     * A function that finishes the accumulation process by transforming
+     * A primitive that finishes the accumulation process by transforming
      * the accumulator object into the final result.
      */
     @Nonnull
@@ -118,7 +117,7 @@ public interface AggregateOperation<T, A, R> extends Serializable {
      * primitives.
      *
      * @param <T> the type of the stream item
-     * @param <A> the type of the accumulator
+     * @param <A> the type of the accumulator object
      * @param <R> the type of the final result
      *
      * @param createAccumulatorF see {@link #createAccumulatorF()}()
@@ -130,9 +129,9 @@ public interface AggregateOperation<T, A, R> extends Serializable {
     @Nonnull
     static <T, A, R> AggregateOperation<T, A, R> of(
             @Nonnull DistributedSupplier<A> createAccumulatorF,
-            @Nonnull DistributedBiFunction<A, T, A> accumulateItemF,
-            @Nonnull DistributedBinaryOperator<A> combineAccumulatorsF,
-            @Nullable DistributedBinaryOperator<A> deductAccumulatorF,
+            @Nonnull DistributedBiConsumer<A, T> accumulateItemF,
+            @Nonnull DistributedBiConsumer<A, A> combineAccumulatorsF,
+            @Nullable DistributedBiConsumer<A, A> deductAccumulatorF,
             @Nonnull DistributedFunction<A, R> finishAccumulationF
     ) {
         Objects.requireNonNull(createAccumulatorF);
@@ -141,21 +140,5 @@ public interface AggregateOperation<T, A, R> extends Serializable {
         Objects.requireNonNull(finishAccumulationF);
         return new AggregateOperationImpl<>(
                 createAccumulatorF, accumulateItemF, combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
-    }
-
-    /**
-     * Returns a new {@code AggregateOperation} object based on a {@code
-     * DistributedCollector}. <strong>Note:</strong> the resulting operation
-     * will lack the {@code deduct} primitive, which can cause poor performance
-     * of a sliding window computation, see {@link #deductAccumulatorF()}
-     */
-    @Nonnull
-    static <T, A, R> AggregateOperation<T, A, R> fromCollector(@Nonnull DistributedCollector<T, A, R> c) {
-        return of(c.supplier(),
-                (a, v) -> {
-                    c.accumulator().accept(a, v);
-                    return a;
-                },
-                c.combiner(), null, c.finisher());
     }
 }

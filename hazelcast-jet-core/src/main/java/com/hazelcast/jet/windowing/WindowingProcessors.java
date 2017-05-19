@@ -199,7 +199,7 @@ public final class WindowingProcessors {
                 TimestampedEntry::getKey,
                 AggregateOperation.of(
                         aggregateOperation.createAccumulatorF(),
-                        (acc, frame) -> aggregateOperation.combineAccumulatorsF().apply(acc, frame.getValue()),
+                        (acc, frame) -> aggregateOperation.combineAccumulatorsF().accept(acc, frame.getValue()),
                         aggregateOperation.combineAccumulatorsF(),
                         aggregateOperation.deductAccumulatorF(),
                         aggregateOperation.finishAccumulationF()

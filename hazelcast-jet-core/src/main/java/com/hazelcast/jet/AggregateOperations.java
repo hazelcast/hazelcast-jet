@@ -131,13 +131,11 @@ public final class AggregateOperations {
                     if (a.get() == null || comparator.compare(i, a.get()) > 0) {
                         a.set(i);
                     }
-                    return a;
                 },
                 (a1, a2) -> {
                     if (comparator.compare(a1.get(), a2.get()) < 0) {
                         a1.set(a2.get());
                     }
-                    return a1;
                 },
                 null,
                 MutableReference::get
@@ -165,17 +163,14 @@ public final class AggregateOperations {
                     }
                     a.setValue1(a.getValue1() + 1);
                     a.setValue2(Math.addExact(a.getValue2(), mapToLongF.applyAsLong(i)));
-                    return a;
                 },
                 (a1, a2) -> {
                     a1.setValue1(Math.addExact(a1.getValue1(), a2.getValue1()));
                     a1.setValue2(Math.addExact(a1.getValue2(), a2.getValue2()));
-                    return a1;
                 },
                 (a1, a2) -> {
                     a1.setValue1(Math.subtractExact(a1.getValue1(), a2.getValue1()));
                     a1.setValue2(Math.subtractExact(a1.getValue2(), a2.getValue2()));
-                    return a1;
                 },
                 a -> (double) a.getValue2() / a.getValue1()
         );
@@ -202,17 +197,14 @@ public final class AggregateOperations {
                     }
                     a.setValue1(a.getValue1() + 1);
                     a.setValue2(a.getValue2() + mapToDoubleF.applyAsDouble(i));
-                    return a;
                 },
                 (a1, a2) -> {
                     a1.setValue1(Math.addExact(a1.getValue1(), a2.getValue1()));
                     a1.setValue2(a1.getValue2() + a2.getValue2());
-                    return a1;
                 },
                 (a1, a2) -> {
                     a1.setValue1(Math.subtractExact(a1.getValue1(), a2.getValue1()));
                     a1.setValue2(a1.getValue2() - a2.getValue2());
-                    return a1;
                 },
                 a -> a.getValue2() / a.getValue1()
         );
@@ -264,24 +256,21 @@ public final class AggregateOperations {
                 },
                 (accs, item) -> {
                     for (int i = 0; i < untypedOps.length; i++) {
-                        accs.set(i, untypedOps[i].accumulateItemF().apply(accs.get(i), item));
+                        untypedOps[i].accumulateItemF().accept(accs.get(i), item);
                     }
-                    return accs;
                 },
                 (accs1, accs2) -> {
                     for (int i = 0; i < untypedOps.length; i++) {
-                        accs1.set(i, untypedOps[i].combineAccumulatorsF().apply(accs1.get(i), accs2.get(i)));
+                        untypedOps[i].combineAccumulatorsF().accept(accs1.get(i), accs2.get(i));
                     }
-                    return accs1;
                 },
-                // we support deduct, only if all operations do
+                // we can support deduct only if all operations do
                 Stream.of(untypedOps).allMatch(o -> o.deductAccumulatorF() != null)
                         ? (accs1, accs2) -> {
                             for (int i = 0; i < untypedOps.length; i++) {
-                                    accs1.set(i, untypedOps[i].deductAccumulatorF().apply(accs1.get(i), accs2.get(i)));
-                                }
-                                return accs1;
+                                untypedOps[i].deductAccumulatorF().accept(accs1.get(i), accs2.get(i));
                             }
+                        }
                         : null,
                 accs -> {
                     Object[] res = new Object[untypedOps.length];

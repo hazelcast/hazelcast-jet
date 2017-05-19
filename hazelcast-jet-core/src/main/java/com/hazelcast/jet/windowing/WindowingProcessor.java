@@ -27,6 +27,7 @@ import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.BiConsumer;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.LongStream;
@@ -77,9 +78,9 @@ class WindowingProcessor<T, A, R> extends AbstractProcessor {
         T t = (T) item;
         final Long frameTimestamp = extractFrameTimestampF.applyAsLong(t);
         final Object key = extractKeyF.apply(t);
-        tsToKeyToFrame.computeIfAbsent(frameTimestamp, x -> new HashMap<>())
-                      .compute(key, (x, acc) ->
-                        winOp.accumulateItemF().apply(acc == null ? winOp.createAccumulatorF().get() : acc, t));
+        A acc = tsToKeyToFrame.computeIfAbsent(frameTimestamp, x -> new HashMap<>())
+                              .computeIfAbsent(key, k -> winOp.createAccumulatorF().get());
+        winOp.accumulateItemF().accept(acc, t);
         return true;
     }
 
@@ -130,8 +131,9 @@ class WindowingProcessor<T, A, R> extends AbstractProcessor {
         Map<Object, A> window = new HashMap<>();
         for (long ts = frameTs - wDef.windowLength() + wDef.frameLength(); ts <= frameTs; ts += wDef.frameLength()) {
             tsToKeyToFrame.getOrDefault(ts, emptyMap())
-                          .forEach((key, currAcc) -> window.compute(key, (x, acc) -> winOp.combineAccumulatorsF().apply(
-                            acc != null ? acc : winOp.createAccumulatorF().get(), currAcc)));
+                          .forEach((key, currAcc) -> winOp.combineAccumulatorsF().accept(
+                                  window.computeIfAbsent(key, k -> winOp.createAccumulatorF().get()),
+                                  currAcc));
         }
         return window;
     }
@@ -144,13 +146,14 @@ class WindowingProcessor<T, A, R> extends AbstractProcessor {
         }
     }
 
-    private void patchSlidingWindow(BinaryOperator<A> patchOp, Map<Object, A> patchingFrame) {
+    private void patchSlidingWindow(BiConsumer<A, A> patchOp, Map<Object, A> patchingFrame) {
         if (patchingFrame == null) {
             return;
         }
         for (Entry<Object, A> e : patchingFrame.entrySet()) {
             slidingWindow.compute(e.getKey(), (k, acc) -> {
-                A result = patchOp.apply(acc != null ? acc : winOp.createAccumulatorF().get(), e.getValue());
+                A result = acc != null ? acc : winOp.createAccumulatorF().get();
+                patchOp.accept(result, e.getValue());
                 return result.equals(emptyAcc) ? null : result;
             });
         }
