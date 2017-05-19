@@ -27,7 +27,7 @@ import static org.junit.Assert.assertEquals;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
-public class LimitingLagAndDelayTest {
+public class PunctuationPolicies_limitingLagAndDelayTest {
 
     private static final int MAX_RETAIN_MS = 8;
     private static final int TIMESTAMP_LAG = 8;

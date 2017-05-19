@@ -38,7 +38,7 @@ import static com.hazelcast.jet.Traversers.empty;
  */
 public class InsertPunctuationP<T> extends AbstractProcessor {
 
-    private final ToLongFunction<T> extractTimestampF;
+    private final ToLongFunction<T> getTimestampF;
     private final PunctuationPolicy punctuationPolicy;
     private final ResettableSingletonTraverser<Object> singletonTraverser;
     private final FlatMapper<Object, Object> flatMapper;
@@ -46,13 +46,13 @@ public class InsertPunctuationP<T> extends AbstractProcessor {
     private long currPunc = Long.MIN_VALUE;
 
     /**
-     * @param extractTimestampF function that extracts the timestamp from the item
+     * @param getTimestampF function that extracts the timestamp from the item
      * @param punctuationPolicy the punctuation policy
      */
-    public InsertPunctuationP(@Nonnull ToLongFunction<T> extractTimestampF,
+    public InsertPunctuationP(@Nonnull ToLongFunction<T> getTimestampF,
                        @Nonnull PunctuationPolicy punctuationPolicy
     ) {
-        this.extractTimestampF = extractTimestampF;
+        this.getTimestampF = getTimestampF;
         this.punctuationPolicy = punctuationPolicy;
         this.flatMapper = flatMapper(this::traverser);
         this.singletonTraverser = new ResettableSingletonTraverser<>();
@@ -77,7 +77,7 @@ public class InsertPunctuationP<T> extends AbstractProcessor {
     }
 
     private Traverser<Object> traverser(Object item) {
-        long timestamp = extractTimestampF.applyAsLong((T) item);
+        long timestamp = getTimestampF.applyAsLong((T) item);
         if (timestamp < currPunc) {
             // drop late event
             return empty();

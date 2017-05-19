@@ -110,7 +110,7 @@ public class SlidingWindowPTest extends StreamingTestSupport {
 
     @After
     public void after() {
-        assertTrue("tsToKeyToFrame is not empty: " + processor.tsToKeyToFrame, processor.tsToKeyToFrame.isEmpty());
+        assertTrue("tsToKeyToFrame is not empty: " + processor.tsToKeyToAcc, processor.tsToKeyToAcc.isEmpty());
         assertTrue("slidingWindow is not empty: " + processor.slidingWindow, processor.slidingWindow.isEmpty());
     }
 

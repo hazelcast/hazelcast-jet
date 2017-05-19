@@ -35,13 +35,17 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.IntStream;
 
-import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Processors.writeList;
 import static com.hazelcast.jet.PunctuationPolicies.limitingLagAndLull;
-import static com.hazelcast.jet.AggregateOperations.counting;
+import static com.hazelcast.jet.StreamingTestSupport.streamToString;
+import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
+import static com.hazelcast.jet.WindowingProcessors.insertPunctuation;
 import static com.hazelcast.jet.WindowingProcessors.slidingWindowSingleStage;
 import static com.hazelcast.jet.WindowingProcessors.slidingWindowStage1;
+import static com.hazelcast.jet.WindowingProcessors.slidingWindowStage2;
+import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
@@ -78,31 +82,31 @@ public class WindowingProcessors_integrationTest extends JetTestSupport {
 
     private void runTest(List<MockEvent> sourceEvents, List<TimestampedEntry<String, Long>> expectedOutput)
             throws Exception {
-        JetInstance instance = super.createJetMember();
+        JetInstance instance = createJetMember();
 
-        WindowDefinition wDef = WindowDefinition.slidingWindowDef(2000, 1000);
+        WindowDefinition wDef = slidingWindowDef(2000, 1000);
         AggregateOperation<Object, ?, Long> counting = counting();
 
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", streamList(sourceEvents)).localParallelism(1);
-        Vertex insertPP = dag.newVertex("insertPP", WindowingProcessors.insertPunctuation(MockEvent::getTimestamp,
-                () -> PunctuationPolicies.limitingLagAndLull(500, 1000).throttleByFrame(wDef)))
+        Vertex insertPP = dag.newVertex("insertPP", insertPunctuation(MockEvent::getTimestamp,
+                () -> limitingLagAndLull(500, 1000).throttleByFrame(wDef)))
                 .localParallelism(1);
         Vertex sink = dag.newVertex("sink", writeList("sink"));
 
         dag.edge(between(source, insertPP).oneToMany());
 
         if (singleStageProcessor) {
-            Vertex slidingWin = dag.newVertex("slidingWin", WindowingProcessors.slidingWindowSingleStage(
+            Vertex slidingWin = dag.newVertex("slidingWin", slidingWindowSingleStage(
                     MockEvent::getKey, MockEvent::getTimestamp, wDef, counting));
             dag
                     .edge(between(insertPP, slidingWin).partitioned(MockEvent::getKey).distributed())
                     .edge(between(slidingWin, sink).oneToMany());
 
         } else {
-            Vertex groupByFrame = dag.newVertex("groupByFrame", WindowingProcessors.slidingWindowStage1(
+            Vertex groupByFrame = dag.newVertex("groupByFrame", slidingWindowStage1(
                     MockEvent::getKey, MockEvent::getTimestamp, wDef, counting));
-            Vertex slidingWin = dag.newVertex("slidingWin", WindowingProcessors.slidingWindowStage2(wDef, counting));
+            Vertex slidingWin = dag.newVertex("slidingWin", slidingWindowStage2(wDef, counting));
             dag
                     .edge(between(insertPP, groupByFrame).partitioned(MockEvent::getKey))
                     .edge(between(groupByFrame, slidingWin).partitioned(entryKey()).distributed())
@@ -117,8 +121,8 @@ public class WindowingProcessors_integrationTest extends JetTestSupport {
         // wait a little more and make sure, that there are no more frames
         Thread.sleep(2000);
 
-        String expected = StreamingTestSupport.streamToString(expectedOutput.stream());
-        String actual = StreamingTestSupport.streamToString(new ArrayList<>(sinkList).stream());
+        String expected = streamToString(expectedOutput.stream());
+        String actual = streamToString(new ArrayList<>(sinkList).stream());
         assertEquals(expected, actual);
     }
 

@@ -29,11 +29,11 @@ import static org.junit.Assert.assertEquals;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
-public class LimitingLagAndLullTest {
+public class PunctuationPolicies_limitingLagAndLullTest {
 
     private static final int MAX_LULL_MS = 3;
     private long currTime;
-    private PunctuationPolicy p = PunctuationPolicies.limitingLagAndLull(2, MAX_LULL_MS, () -> currTime);
+    private PunctuationPolicy p = limitingLagAndLull(2, MAX_LULL_MS, () -> currTime);
 
     @Test
     public void when_outOfOrderEvents_then_monotonicPunct() {

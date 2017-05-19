@@ -31,11 +31,12 @@ public class AggregateOperationImpl<T, A, R> implements AggregateOperation<T, A,
     private final DistributedBiConsumer<A, A> deductAccumulatorF;
     private final DistributedFunction<A, R> finishAccumulationF;
 
-    public AggregateOperationImpl(DistributedSupplier<A> createAccumulatorF,
-                           DistributedBiConsumer<A, T> accumulateItemF,
-                           DistributedBiConsumer<A, A> combineAccumulatorsF,
-                           DistributedBiConsumer<A, A> deductAccumulatorF,
-                           DistributedFunction<A, R> finishAccumulationF
+    public AggregateOperationImpl(
+            DistributedSupplier<A> createAccumulatorF,
+            DistributedBiConsumer<A, T> accumulateItemF,
+            DistributedBiConsumer<A, A> combineAccumulatorsF,
+            DistributedBiConsumer<A, A> deductAccumulatorF,
+            DistributedFunction<A, R> finishAccumulationF
     ) {
         this.createAccumulatorF = createAccumulatorF;
         this.accumulateItemF = accumulateItemF;

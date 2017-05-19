@@ -62,8 +62,8 @@ public class SlidingWindowP_stage1Test extends StreamingTestSupport {
 
     @After
     public void after() {
-        assertTrue("map not empty after emitting everything: " + processor.tsToKeyToFrame,
-                processor.tsToKeyToFrame.isEmpty());
+        assertTrue("map not empty after emitting everything: " + processor.tsToKeyToAcc,
+                processor.tsToKeyToAcc.isEmpty());
     }
 
     @Test

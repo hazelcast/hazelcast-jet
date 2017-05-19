@@ -22,10 +22,6 @@ import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.accumulator.LongDoubleAccumulator;
 import com.hazelcast.jet.accumulator.LongLongAccumulator;
 import com.hazelcast.jet.accumulator.MutableReference;
-import com.hazelcast.jet.function.DistributedBiConsumer;
-import com.hazelcast.jet.function.DistributedBinaryOperator;
-import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Test;
@@ -35,10 +31,19 @@ import org.junit.runner.RunWith;
 import java.util.Arrays;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static com.hazelcast.jet.AggregateOperations.allOf;
+import static com.hazelcast.jet.AggregateOperations.averagingDouble;
+import static com.hazelcast.jet.AggregateOperations.averagingLong;
+import static com.hazelcast.jet.AggregateOperations.counting;
+import static com.hazelcast.jet.AggregateOperations.linearTrend;
+import static com.hazelcast.jet.AggregateOperations.maxBy;
+import static com.hazelcast.jet.AggregateOperations.minBy;
+import static com.hazelcast.jet.AggregateOperations.reducing;
+import static com.hazelcast.jet.AggregateOperations.summingToDouble;
+import static com.hazelcast.jet.AggregateOperations.summingToLong;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.function.DistributedComparator.naturalOrder;
 import static java.util.function.Function.identity;
@@ -52,50 +57,50 @@ import static org.junit.Assert.assertTrue;
 public class AggregateOperationsTest {
     @Test
     public void when_counting() {
-        validateOp(AggregateOperations.counting(), LongAccumulator::get,
+        validateOp(counting(), LongAccumulator::get,
                 null, null, 1L, 2L, 2L);
     }
 
     @Test
     public void when_summingToLong() {
-        validateOp(AggregateOperations.summingToLong(Long::longValue), LongAccumulator::get,
+        validateOp(summingToLong(Long::longValue), LongAccumulator::get,
                 1L, 2L, 1L, 3L, 3L);
     }
 
     @Test
     public void when_summingToDouble() {
-        validateOp(AggregateOperations.summingToDouble(Double::doubleValue), DoubleAccumulator::get,
+        validateOp(summingToDouble(Double::doubleValue), DoubleAccumulator::get,
                 0.5, 1.5, 0.5, 2.0, 2.0);
     }
 
     @Test
     public void when_averagingLong() {
-        validateOp(AggregateOperations.averagingLong(Long::longValue), identity(),
+        validateOp(averagingLong(Long::longValue), identity(),
                 1L, 2L, new LongLongAccumulator(1, 1), new LongLongAccumulator(2, 3), 1.5);
     }
 
     @Test
     public void when_averagingDouble() {
-        validateOp(AggregateOperations.averagingDouble(Double::doubleValue), identity(),
+        validateOp(averagingDouble(Double::doubleValue), identity(),
                 1.5, 2.5, new LongDoubleAccumulator(1, 1.5), new LongDoubleAccumulator(2, 4.0), 2.0);
     }
 
     @Test
     public void when_maxBy() {
-        validateOpWithoutDeduct(AggregateOperations.maxBy(naturalOrder()), MutableReference::get,
+        validateOpWithoutDeduct(maxBy(naturalOrder()), MutableReference::get,
                 10L, 11L, 10L, 11L, 11L);
     }
 
     @Test
     public void when_minBy() {
-        validateOpWithoutDeduct(AggregateOperations.minBy(naturalOrder()), MutableReference::get,
+        validateOpWithoutDeduct(minBy(naturalOrder()), MutableReference::get,
                 10L, 11L, 10L, 10L, 10L);
     }
 
     @Test
     public void when_allOf() {
         validateOp(
-                AggregateOperations.allOf(AggregateOperations.counting(), AggregateOperations.summingToLong(Long::longValue)),
+                allOf(counting(), summingToLong(Long::longValue)),
                 identity(), 10L, 11L,
                 Arrays.asList(new LongAccumulator(1L), new LongAccumulator(10L)),
                 Arrays.asList(new LongAccumulator(2L), new LongAccumulator(21L)),
@@ -106,7 +111,7 @@ public class AggregateOperationsTest {
     @Test
     public void when_allOfWithoutDeduct() {
         validateOpWithoutDeduct(
-                AggregateOperations.allOf(AggregateOperations.counting(), AggregateOperations.maxBy(naturalOrder())),
+                allOf(counting(), maxBy(naturalOrder())),
                 identity(), 10L, 11L,
                 Arrays.asList(new LongAccumulator(1), new MutableReference<>(10L)),
                 Arrays.asList(new LongAccumulator(2), new MutableReference<>(11L)),
@@ -117,7 +122,7 @@ public class AggregateOperationsTest {
     @Test
     public void when_linearTrend() {
         // Given
-        AggregateOperation<Entry<Long, Long>, LinTrendAccumulator, Double> op = AggregateOperations.linearTrend(Entry::getKey, Entry::getValue);
+        AggregateOperation<Entry<Long, Long>, LinTrendAccumulator, Double> op = linearTrend(Entry::getKey, Entry::getValue);
         Supplier<LinTrendAccumulator> newF = op.createAccumulatorF();
         BiConsumer<LinTrendAccumulator, Entry<Long, Long>> accF = op.accumulateItemF();
         BiConsumer<LinTrendAccumulator, LinTrendAccumulator> combineF = op.combineAccumulatorsF();
@@ -146,29 +151,29 @@ public class AggregateOperationsTest {
         assertEquals(Double.valueOf(2), result);
 
         // When
-        a1 = newF.get();
+        LinTrendAccumulator acc = newF.get();
         // Then
-        assertTrue("NaN expected if nothing accumulated", Double.isNaN(finishF.apply(a1)));
+        assertTrue("NaN expected if nothing accumulated", Double.isNaN(finishF.apply(acc)));
 
         // When
-        accF.accept(a1, entry(2L, 1L));
+        accF.accept(acc, entry(2L, 1L));
         // Then
-        assertTrue("NaN expected if just single point accumulated", Double.isNaN(finishF.apply(a1)));
+        assertTrue("NaN expected if just single point accumulated", Double.isNaN(finishF.apply(acc)));
 
         // When
-        accF.accept(a1, entry(2L, 1L));
+        accF.accept(acc, entry(2L, 1L));
         // Then
-        assertTrue("NaN expected if all data points are equal", Double.isNaN(finishF.apply(a1)));
+        assertTrue("NaN expected if all data points are equal", Double.isNaN(finishF.apply(acc)));
 
         // When
-        accF.accept(a1, entry(2L, 2L));
+        accF.accept(acc, entry(2L, 2L));
         // Then
-        assertTrue("NaN expected if all data points have same x value", Double.isNaN(finishF.apply(a1)));
+        assertTrue("NaN expected if all data points have same x value", Double.isNaN(finishF.apply(acc)));
     }
 
     @Test
     public void when_reducing() {
-        validateOp(AggregateOperations.reducing(0, Integer::intValue, Integer::sum, (x, y) -> x - y),
+        validateOp(reducing(0, Integer::intValue, Integer::sum, (x, y) -> x - y),
                 MutableReference::get,
                 1, 2, 1, 3, 3);
     }

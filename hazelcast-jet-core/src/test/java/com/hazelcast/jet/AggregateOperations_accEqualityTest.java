@@ -29,6 +29,16 @@ import org.junit.runners.Parameterized.UseParametersRunnerFactory;
 import java.util.Arrays;
 import java.util.Collection;
 
+import static com.hazelcast.jet.AggregateOperations.allOf;
+import static com.hazelcast.jet.AggregateOperations.averagingDouble;
+import static com.hazelcast.jet.AggregateOperations.averagingLong;
+import static com.hazelcast.jet.AggregateOperations.counting;
+import static com.hazelcast.jet.AggregateOperations.linearTrend;
+import static com.hazelcast.jet.AggregateOperations.maxBy;
+import static com.hazelcast.jet.AggregateOperations.minBy;
+import static com.hazelcast.jet.AggregateOperations.reducing;
+import static com.hazelcast.jet.AggregateOperations.summingToDouble;
+import static com.hazelcast.jet.AggregateOperations.summingToLong;
 import static com.hazelcast.jet.function.DistributedComparator.naturalOrder;
 import static org.junit.Assert.assertEquals;
 
@@ -43,16 +53,16 @@ public class AggregateOperations_accEqualityTest {
     @Parameters
     public static Collection<AggregateOperation<?, ?, ?>> data() {
         return Arrays.asList(
-                AggregateOperations.counting(),
-                AggregateOperations.summingToLong(Long::longValue),
-                AggregateOperations.summingToDouble(Double::doubleValue),
-                AggregateOperations.averagingLong(Long::longValue),
-                AggregateOperations.averagingDouble(Double::doubleValue),
-                AggregateOperations.minBy(naturalOrder()),
-                AggregateOperations.maxBy(naturalOrder()),
-                AggregateOperations.linearTrend(x -> 1L, x -> 1L),
-                AggregateOperations.allOf(AggregateOperations.counting(), AggregateOperations.summingToLong(Long::longValue)),
-                AggregateOperations.reducing(1, null, null, null)
+                counting(),
+                summingToLong(Long::longValue),
+                summingToDouble(Double::doubleValue),
+                averagingLong(Long::longValue),
+                averagingDouble(Double::doubleValue),
+                minBy(naturalOrder()),
+                maxBy(naturalOrder()),
+                linearTrend(x -> 1L, x -> 1L),
+                allOf(counting(), summingToLong(Long::longValue)),
+                reducing(1, null, null, null)
         );
     }
 

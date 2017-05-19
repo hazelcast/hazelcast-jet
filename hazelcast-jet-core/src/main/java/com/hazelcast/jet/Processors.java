@@ -1148,16 +1148,16 @@ public final class Processors {
     }
 
     private static class CountDistinctP<T, K> extends AbstractProcessor {
-        private final DistributedFunction<T, K> extractKey;
+        private final DistributedFunction<T, K> getKeyF;
         private final Set<K> seenItems = new HashSet<>();
 
-        CountDistinctP(@Nonnull DistributedFunction<T, K> extractKey) {
-            this.extractKey = extractKey;
+        CountDistinctP(@Nonnull DistributedFunction<T, K> getKeyF) {
+            this.getKeyF = getKeyF;
         }
 
         @Override
         protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
-            seenItems.add(extractKey.apply((T) item));
+            seenItems.add(getKeyF.apply((T) item));
             return true;
         }
 

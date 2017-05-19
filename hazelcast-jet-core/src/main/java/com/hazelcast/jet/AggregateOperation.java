@@ -56,11 +56,11 @@ import java.util.Objects;
 public interface AggregateOperation<T, A, R> extends Serializable {
 
     /**
-     * A function that returns a new accumulator. If the {@code
-     * deduct} operation is defined, the accumulator object must properly
-     * implement {@code equals()}, which will be used to detect when an
-     * accumulator is "empty" (i.e., equal to a fresh instance returned from
-     * this method) and can be evicted from a processor's storage.
+     * A primitive that returns a new accumulator. If the {@code deduct}
+     * operation is defined, the accumulator object must properly implement
+     * {@code equals()}, which will be used to detect when an accumulator is
+     * "empty" (i.e., equal to a fresh instance returned from this method) and
+     * can be evicted from a processor's storage.
      */
     @Nonnull
     DistributedSupplier<A> createAccumulatorF();
