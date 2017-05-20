@@ -406,6 +406,12 @@ public final class Processors {
      * blocking, missed, or duplicate events as a result. Such problems may be
      * resolved by upgrading the JRE to the latest version.
      *
+     * <p><b>Warning:</b> The processor makes use of
+     * {@link java.nio.file.WatchService}, which had serious bugs in its history.
+     * Be sure to use most recent JRE version. The failures manifested as a deadlock
+     * or missed/duplicate events or events for one directory delivered to watcher
+     * for other directory.
+     *
      * @param watchedDirectory The directory where we watch files
      * @param charset charset to use to decode the files
      * @param glob the globbing mask, see {@link
