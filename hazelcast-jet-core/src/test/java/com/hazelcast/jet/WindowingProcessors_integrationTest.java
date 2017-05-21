@@ -42,7 +42,7 @@ import static com.hazelcast.jet.PunctuationPolicies.limitingLagAndLull;
 import static com.hazelcast.jet.StreamingTestSupport.streamToString;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.WindowingProcessors.insertPunctuation;
-import static com.hazelcast.jet.WindowingProcessors.slidingWindowSingleStage;
+import static com.hazelcast.jet.WindowingProcessors.slidingWindow;
 import static com.hazelcast.jet.WindowingProcessors.slidingWindowStage1;
 import static com.hazelcast.jet.WindowingProcessors.slidingWindowStage2;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
@@ -97,7 +97,7 @@ public class WindowingProcessors_integrationTest extends JetTestSupport {
         dag.edge(between(source, insertPP).oneToMany());
 
         if (singleStageProcessor) {
-            Vertex slidingWin = dag.newVertex("slidingWin", slidingWindowSingleStage(
+            Vertex slidingWin = dag.newVertex("slidingWin", slidingWindow(
                     MockEvent::getKey, MockEvent::getTimestamp, wDef, counting));
             dag
                     .edge(between(insertPP, slidingWin).partitioned(MockEvent::getKey).distributed())

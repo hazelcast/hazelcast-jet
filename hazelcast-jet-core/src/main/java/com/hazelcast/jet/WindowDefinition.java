@@ -132,6 +132,14 @@ public class WindowDefinition implements Serializable {
     }
 
     /**
+     * Converts this definiiton to one defining a tumbling window of the
+     * same length as this definition's frame.
+     */
+    public WindowDefinition toTumblingByFrame() {
+        return new WindowDefinition(frameLength, frameOffset, 1);
+    }
+
+    /**
      * Returns the definition of a sliding window of length {@code
      * windowLength} that slides by {@code slideBy}. Given {@code
      * windowLength = 4} and {@code slideBy = 2}, the generated windows would

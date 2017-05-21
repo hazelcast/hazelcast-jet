@@ -46,7 +46,7 @@ import java.util.stream.LongStream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
-import static com.hazelcast.jet.WindowingProcessors.slidingWindowSingleStage;
+import static com.hazelcast.jet.WindowingProcessors.slidingWindow;
 import static com.hazelcast.jet.WindowingProcessors.slidingWindowStage2;
 import static java.util.Arrays.asList;
 import static java.util.Collections.shuffle;
@@ -90,7 +90,7 @@ public class SlidingWindowPTest extends StreamingTestSupport {
                     LongAccumulator::get);
 
         DistributedSupplier<Processor> procSupplier = singleStageProcessor
-                ? slidingWindowSingleStage(t -> KEY, Entry<Long, Long>::getKey, windowDef, operation)
+                ? slidingWindow(t -> KEY, Entry<Long, Long>::getKey, windowDef, operation)
                 : slidingWindowStage2(windowDef, operation);
         processor = (SlidingWindowP<?, ?, Long>) procSupplier.get();
         processor.init(outbox, mock(Context.class));

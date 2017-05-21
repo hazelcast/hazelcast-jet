@@ -91,7 +91,7 @@ public interface PunctuationPolicy {
      *      com.hazelcast.jet.function.DistributedToLongFunction,
      *      WindowDefinition, AggregateOperation)
      * slidingWindowStage1} or
-     * {@link WindowingProcessors#slidingWindowSingleStage(
+     * {@link WindowingProcessors#slidingWindow(
      *      com.hazelcast.jet.function.DistributedFunction,
      *      com.hazelcast.jet.function.DistributedToLongFunction,
      *      WindowDefinition, AggregateOperation)
