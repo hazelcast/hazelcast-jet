@@ -17,6 +17,7 @@
 package com.hazelcast.jet.connector.kafka;
 
 import com.hazelcast.jet.AbstractProcessor;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.util.Preconditions;
@@ -96,22 +97,27 @@ public final class StreamKafkaP extends AbstractProcessor {
         if (iterator == null) {
             iterator = consumer.poll(ZERO_POLL_TIMEOUT).iterator();
         }
-        while (iterator.hasNext() && !jobFuture.isDone()) {
-            ConsumerRecord<?, ?> record = iterator.next();
-            Map.Entry<?, ?> entry = entry(record.key(), record.value());
-            // If emit is not successful save the entry as pendingEntry
-            // pause the consumer and do an empty poll for heartbeat
-            if (!tryEmit(entry)) {
-                pendingEntry = entry;
-                pause();
-                emptyPoll();
-                return false;
+
+        if (iterator.hasNext()) {
+            while (iterator.hasNext()) {
+                ConsumerRecord<?, ?> record = iterator.next();
+                Map.Entry<?, ?> entry = entry(record.key(), record.value());
+                // If emit is not successful save the entry as pendingEntry
+                // pause the consumer and do an empty poll for heartbeat
+                if (!tryEmit(entry)) {
+                    pendingEntry = entry;
+                    pause();
+                    emptyPoll();
+                    return false;
+                }
             }
+
+            // Records are consumed, commit the offset and reset the iterator for next poll
+            consumer.commitSync();
         }
-        // Records are consumed, commit the offset and reset the iterator for next poll
-        consumer.commitSync();
+
         iterator = null;
-        return jobFuture.isDone();
+        return false;
     }
 
     private void pause() {
@@ -123,10 +129,8 @@ public final class StreamKafkaP extends AbstractProcessor {
     }
 
     private void emptyPoll() {
-        int count = consumer.poll(0).count();
-        if (count != 0) {
-            throw new IllegalStateException("Empty poll call returned some records: " + count);
+        if (!consumer.poll(0).isEmpty()) {
+            throw new JetException("Empty poll call returned some records");
         }
     }
-
 }
