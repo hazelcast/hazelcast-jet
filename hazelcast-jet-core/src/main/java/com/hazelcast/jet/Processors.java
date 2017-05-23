@@ -843,6 +843,15 @@ public final class Processors {
     }
 
     /**
+     * Returns a supplier of processor that do nothing. They consume all input
+     * items and are done after that, without emitting anything.
+     */
+    @Nonnull
+    public static DistributedSupplier<Processor> noop() {
+        return NoopP::new;
+    }
+
+    /**
      * Decorates a {@code ProcessorSupplier} into one that will declare all its
      * processors non-cooperative. The wrapped supplier must return processors
      * that are {@code instanceof} {@link AbstractProcessor}.
@@ -870,11 +879,8 @@ public final class Processors {
         };
     }
 
-    /**
-     * A processor that does nothing. It consumes all input items and is done
-     * after that, without emitting anything.
-     */
-    public static class NoopP implements Processor {
+    /** See {@link #noop()} */
+    private static class NoopP implements Processor {
         @Override
         public void process(int ordinal, @Nonnull Inbox inbox) {
             inbox.drain(noopConsumer());
