@@ -30,16 +30,59 @@ import static com.hazelcast.jet.TimestampKind.EVENT;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 
 /**
- * Contains factory methods for processors dealing with windowing
- * operations.
+ * Contains factory methods for processors that perform an aggregating
+ * operation over stream items grouped by an arbitrary key and an event
+ * timestamp-based window. There are two main aggregation setups:
+ * single-stage and two-stage.
+ *
+ * <h1>Single-stage aggregation</h1>
+ *
+ * This is the basic setup where all the aggregation steps happen in one
+ * vertex. The input must be properly partitioned and distributed. If the
+ * window is non-aligned (e.g., session-based, trigger-based, etc.) this is
+ * the only choice. In the case of aligned windows it is the best choice if
+ * the source is already partitioned by the grouping key because the
+ * inbound edge will not have to be distributed. If the input stream needs
+ * repartitioning, this setup will incur heavier network traffic than the
+ * two-stage setup due to the need for a distributed-partitioned edge.
+ * However, it will use less memory because each member keeps track only of
+ * the keys belonging to its own partitions. This is the expected DAG:
+ *
+ * <pre>
+ *               -------------------------
+ *              | source with punctuation |
+ *               -------------------------
+ *                         |
+ *                         | (partitioned edge, distributed as needed)
+ *                         V
+ *                 --------------------
+ *                |    single-stage    |
+ *                |  window aggregator |
+ *                 --------------------
+ *                         |
+ *                         | (local edge)
+ *                         V
+ *             ----------------------------
+ *            | sink or further processing |
+ *             ----------------------------
+ * </pre>
  *
  * <h1>Two-stage aggregation</h1>
  *
- * This setup first aggregates events on the local member and then sends
- * just the per-key aggregation state over the distributed edge. Compared
+ * This setup can be used only for aligned window aggregation
+ * (sliding/tumbling windows). The first stage applies just the
+ * {@link AggregateOperation#accumulateItemF() accumulate} aggregation
+ * primitive and the second stage does {@link
+ * AggregateOperation#combineAccumulatorsF() combine} and {@link
+ * AggregateOperation#finishAccumulationF() finish}.
+ * <p>
+ * The essential property of this setup is that the edge leading to the
+ * first stage is local-partitioned, incurring no network traffic, and
+ * only the edge from the first to the second stage is distributed. There
+ * is only one item per key per frame traveling on this edge. Compared
  * to the single-stage setup this can dramatically reduce network traffic,
- * but it will have to keep track of all keys on each cluster member. The
- * complete DAG should look like the following:
+ * but it needs more memory to keep track of all keys on each cluster
+ * member. The DAG should look like the following:
  *
  * <pre>
  *             -------------------------
@@ -48,52 +91,26 @@ import static com.hazelcast.jet.function.DistributedFunction.identity;
  *                        |
  *                        | (local partitioned edge)
  *                        V
- *               ---------------------
- *              | slidingWindowStage1 |
- *               ---------------------
+ *            ---------------------------
+ *           | groupByFrameAndAccumulate |
+ *            ---------------------------
  *                        |
  *                        | (distributed partitioned edge)
  *                        V
- *               ---------------------
- *              | slidingWindowStage2 |
- *               ---------------------
+ *             ------------------------
+ *            | combineToSlidingWindow |
+ *             ------------------------
  *                        |
  *                        | (local edge)
  *                        V
- *             ----------------------------
- *            | sink or further processing |
- *             ----------------------------
- * </pre>
- *
- * To get consistent results, the same {@link WindowDefinition} and {@link
- * AggregateOperation} must be used for both stages.
- *
- * <h1>Single-stage aggregation</h1>
- *
- * In this setup there is only one processing stage, so its input must be
- * properly partitioned and distributed. If the source is already
- * partitioned by the grouping key, this setup is the best choice. Another
- * reason may be memory constraints because with this setup, each member
- * keeps track only of the keys belonging to its own partitions. This is the
- * expected DAG:
- * <pre>
- *              -------------------------
- *             | source with punctuation |
- *              -------------------------
- *                         |
- *                         | (partitioned edge, distributed as needed)
- *                         V
- *                 --------------------
-                  |    single-stage    |
- *                |  window aggregator |
- *                 --------------------
- *                         |
- *                         | (local edge)
- *                         V
  *           ----------------------------
  *          | sink or further processing |
  *           ----------------------------
  * </pre>
+ *
+ * To get consistent results the same {@link WindowDefinition} and {@link
+ * AggregateOperation} must be used for both stages.
+ *
  */
 public final class WindowingProcessors {
 
@@ -117,20 +134,23 @@ public final class WindowingProcessors {
     }
 
     /**
-     * A single-stage processor that aggregates events into a sliding window
-     * (see the {@link WindowingProcessors class Javadoc} for an overview). The
-     * processor groups items by the grouping key (as obtained from the given
-     * key extractor) and by <em>frame</em>, which is a range of timestamps
-     * equal to the sliding step. When it receives a punctuation, it combines
-     * consecutive frames into sliding windows of the requested size. To
-     * calculate the finalized window result it applies the finishing function
-     * to the combined frames. All windows that end before the punctuation are
-     * computed.
+     * A processor that aggregates events into a sliding window in a single
+     * stage (see the {@link WindowingProcessors class Javadoc} for an
+     * explanation of aggregation stages). The processor groups items by the
+     * grouping key (as obtained from the given key-extracting function) and by
+     * <em>frame</em>, which is a range of timestamps equal to the sliding step.
+     * It emits sliding window results labeled with the timestamp denoting the
+     * window's end time. This timestamp is equal to the exclusive upper bound of
+     * timestamps belonging to the window.
      * <p>
-     * The type of emitted items is {@link TimestampedEntry
-     * TimestampedEntry&lt;K, A>} so there is one item per key per window. The
-     * item's timestamp is the upper exclusive bound of the timestamp range
-     * covered by the window.
+     * When the processor receives a punctuation with a given {@code puncVal},
+     * it emits the result of aggregation for all positions of the sliding
+     * window with {@code windowTimestamp <= puncVal}. It computes the window
+     * result by combining the partial results of the frames belonging to it
+     * and finally applying the {@code finish} aggregation primitive. After this
+     * it deletes from storage all the frames that trail behind the emitted
+     * windows. The type of emitted items is {@link TimestampedEntry
+     * TimestampedEntry&lt;K, A>} so there is one item per key per window position.
      */
     @Nonnull
     public static <T, K, A, R> DistributedSupplier<Processor> aggregateToSlidingWindow(
@@ -152,12 +172,13 @@ public final class WindowingProcessors {
     /**
      * The first-stage processor in a two-stage sliding window aggregation
      * setup (see the {@link WindowingProcessors class Javadoc} for an
-     * overview). The processor groups items by the grouping key (as obtained
-     * from the given key extractor) and by <em>frame</em>, which is a range
-     * of timestamps equal to the sliding step. The frame is identified by its
-     * timestamp, which is the upper exclusive bound of its timestamp range.
-     * {@link WindowDefinition#higherFrameTs(long)} maps an item's timestamp to
-     * the timestamp of the frame it belongs to.
+     * explanation of aggregation stages). The processor groups items by the
+     * grouping key (as obtained from the given key-extracting function) and by
+     * <em>frame</em>, which is a range of timestamps equal to the sliding step.
+     * The frame is identified by the timestamp denoting its end time, which is
+     * the exclusive upper bound of its timestamp range. {@link
+     * WindowDefinition#higherFrameTs(long)} maps the event timestamp to the
+     * timestamp of the frame it belongs to.
      * <p>
      * When the processor receives a punctuation with a given {@code puncVal},
      * it emits the current accumulated state of all frames with {@code
@@ -191,16 +212,25 @@ public final class WindowingProcessors {
     }
 
     /**
-     * Constructs sliding windows by combining their constituent frames
-     * received from several upstream instances of {@link
+     * The second-stage processor in a two-stage sliding window aggregation
+     * setup (see the {@link WindowingProcessors class Javadoc} for an
+     * explanation of aggregation stages). It applies the
+     * {@link AggregateOperation#combineAccumulatorsF() combine} aggregation
+     * primitive to frames received from several upstream instances of {@link
      * #groupByFrameAndAccumulate(DistributedFunction, DistributedToLongFunction,
-     * WindowDefinition, AggregateOperation)}. After combining it applies the
-     * {@code windowOperation}'s finishing function to compute the emitted
-     * result.
+     * TimestampKind, WindowDefinition, AggregateOperation)
+     * groupByFrameAndAccumulate()}. It emits sliding window results labeled with
+     * the timestamp denoting the window's end time. This timestamp is equal to
+     * the exclusive upper bound of timestamps belonging to the window.
      * <p>
-     * The type of emitted items is {@link TimestampedEntry
-     * TimestampedEntry&lt;K, R>}. The item's timestamp is the upper exclusive
-     * bound of the timestamp range covered by the window.
+     * When the processor receives a punctuation with a given {@code puncVal},
+     * it emits the result of aggregation for all positions of the sliding
+     * window with {@code windowTimestamp <= puncVal}. It computes the window
+     * result by combining the partial results of the frames belonging to it
+     * and finally applying the {@code finish} aggregation primitive. After this
+     * it deletes from storage all the frames that trail behind the emitted
+     * windows. The type of emitted items is {@link TimestampedEntry
+     * TimestampedEntry&lt;K, A>} so there is one item per key per window position.
      *
      * @param <A> type of the accumulator
      * @param <R> type of the finishing function's result
