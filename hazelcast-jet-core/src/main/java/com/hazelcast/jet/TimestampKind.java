@@ -24,9 +24,9 @@ public enum TimestampKind {
     /**
      * Denotes the event timestamp kind.
      */
-    EVENT_TIMESTAMP,
+    EVENT,
     /**
      * Denotes the frame timestamp kind.
      */
-    FRAME_TIMESTAMP
+    FRAME
 }

@@ -51,7 +51,7 @@ public class SlidingWindowP_stage1Test extends StreamingTestSupport {
     @Before
     @SuppressWarnings("unchecked")
     public void before() {
-        processor = (SlidingWindowP<Entry<Long, Long>, Long, ?>) WindowingProcessors.slidingWindowStage1(
+        processor = (SlidingWindowP<Entry<Long, Long>, Long, ?>) WindowingProcessors.groupByFrameAndAccumulate(
                 x -> KEY,
                 Entry::getKey,
                 slidingWindowDef(16, 4),

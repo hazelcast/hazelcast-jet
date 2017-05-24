@@ -26,8 +26,7 @@ import com.hazelcast.jet.stream.DistributedCollector;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.TimestampKind.EVENT_TIMESTAMP;
-import static com.hazelcast.jet.TimestampKind.FRAME_TIMESTAMP;
+import static com.hazelcast.jet.TimestampKind.EVENT;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 
 /**
@@ -118,38 +117,6 @@ public final class WindowingProcessors {
     }
 
     /**
-     * A processor that performs a general group-by-key-and-window operation and
-     * applies the provided aggregate operation on groups.
-     *
-     * @param getKeyF function that extracts the grouping key from the input item
-     * @param getTimestampF function that extracts the timestamp from the input item
-     * @param timestampKind the kind of timestamp extracted by {@code getTimestampF}: either the
-     *                      event timestamp or the frame timestamp
-     * @param windowDef definition of the window to compute
-     * @param aggregateOperation aggregate operation to perform on each group in a window
-     * @param <T> type of stream item
-     * @param <K> type of grouping key
-     * @param <A> type of the aggregate operation's accumulator
-     * @param <R> type of the aggregated result
-     */
-    @Nonnull
-    public static <T, K, A, R> DistributedSupplier<Processor> aggregateByKeyAndWindow(
-            @Nonnull DistributedFunction<? super T, K> getKeyF,
-            @Nonnull DistributedToLongFunction<? super T> getTimestampF,
-            @Nonnull TimestampKind timestampKind,
-            @Nonnull WindowDefinition windowDef,
-            @Nonnull AggregateOperation<? super T, A, R> aggregateOperation
-    ) {
-        return () -> new SlidingWindowP<T, A, R>(
-                getKeyF,
-                timestampKind == EVENT_TIMESTAMP
-                        ? item -> windowDef.higherFrameTs(getTimestampF.applyAsLong(item))
-                        : getTimestampF,
-                windowDef,
-                aggregateOperation);
-    }
-
-    /**
      * A single-stage processor that aggregates events into a sliding window
      * (see the {@link WindowingProcessors class Javadoc} for an overview). The
      * processor groups items by the grouping key (as obtained from the given
@@ -166,16 +133,17 @@ public final class WindowingProcessors {
      * covered by the window.
      */
     @Nonnull
-    public static <T, K, A, R> DistributedSupplier<Processor> slidingWindow(
+    public static <T, K, A, R> DistributedSupplier<Processor> aggregateToSlidingWindow(
             @Nonnull DistributedFunction<? super T, K> getKeyF,
-            @Nonnull DistributedToLongFunction<? super T> getEventTimestampF,
+            @Nonnull DistributedToLongFunction<? super T> getTimestampF,
+            @Nonnull TimestampKind timestampKind,
             @Nonnull WindowDefinition windowDef,
             @Nonnull AggregateOperation<? super T, A, R> aggregateOperation
     ) {
         return WindowingProcessors.<T, K, A, R>aggregateByKeyAndWindow(
                 getKeyF,
-                getEventTimestampF,
-                EVENT_TIMESTAMP,
+                getTimestampF,
+                timestampKind,
                 windowDef,
                 aggregateOperation
         );
@@ -203,9 +171,10 @@ public final class WindowingProcessors {
      *            createAccumulatorF()}
      */
     @Nonnull
-    public static <T, K, A> DistributedSupplier<Processor> slidingWindowStage1(
+    public static <T, K, A> DistributedSupplier<Processor> groupByFrameAndAccumulate(
             @Nonnull DistributedFunction<? super T, K> getKeyF,
-            @Nonnull DistributedToLongFunction<? super T> getEventTimestampF,
+            @Nonnull DistributedToLongFunction<? super T> getTimestampF,
+            @Nonnull TimestampKind timestampKind,
             @Nonnull WindowDefinition windowDef,
             @Nonnull AggregateOperation<? super T, A, ?> aggregateOperation
     ) {
@@ -214,8 +183,8 @@ public final class WindowingProcessors {
         WindowDefinition tumblingByFrame = windowDef.toTumblingByFrame();
         return WindowingProcessors.<T, K, A, A>aggregateByKeyAndWindow(
                 getKeyF,
-                getEventTimestampF,
-                EVENT_TIMESTAMP,
+                getTimestampF,
+                timestampKind,
                 tumblingByFrame,
                 aggregateOperation.withFinish(identity())
         );
@@ -224,7 +193,7 @@ public final class WindowingProcessors {
     /**
      * Constructs sliding windows by combining their constituent frames
      * received from several upstream instances of {@link
-     * #slidingWindowStage1(DistributedFunction, DistributedToLongFunction,
+     * #groupByFrameAndAccumulate(DistributedFunction, DistributedToLongFunction,
      * WindowDefinition, AggregateOperation)}. After combining it applies the
      * {@code windowOperation}'s finishing function to compute the emitted
      * result.
@@ -237,17 +206,51 @@ public final class WindowingProcessors {
      * @param <R> type of the finishing function's result
      */
     @Nonnull
-    public static <K, A, R> DistributedSupplier<Processor> slidingWindowStage2(
+    public static <K, A, R> DistributedSupplier<Processor> combineToSlidingWindow(
             @Nonnull WindowDefinition windowDef,
             @Nonnull AggregateOperation<?, A, R> aggregateOperation
     ) {
         return aggregateByKeyAndWindow(
                 TimestampedEntry<K, A>::getKey,
                 TimestampedEntry::getTimestamp,
-                FRAME_TIMESTAMP,
+                TimestampKind.FRAME,
                 windowDef,
-                withFrameCombining(aggregateOperation)
+                aggregateOperation.withAccumulate(
+                        (A acc, TimestampedEntry<?, A> tsEntry) ->
+                                aggregateOperation.combineAccumulatorsF().accept(acc, tsEntry.getValue()))
         );
+    }
+
+    /**
+     * A processor that performs a general group-by-key-and-window operation and
+     * applies the provided aggregate operation on groups.
+     *
+     * @param getKeyF function that extracts the grouping key from the input item
+     * @param getTimestampF function that extracts the timestamp from the input item
+     * @param timestampKind the kind of timestamp extracted by {@code getTimestampF}: either the
+     *                      event timestamp or the frame timestamp
+     * @param windowDef definition of the window to compute
+     * @param aggregateOperation aggregate operation to perform on each group in a window
+     * @param <T> type of stream item
+     * @param <K> type of grouping key
+     * @param <A> type of the aggregate operation's accumulator
+     * @param <R> type of the aggregated result
+     */
+    @Nonnull
+    private static <T, K, A, R> DistributedSupplier<Processor> aggregateByKeyAndWindow(
+            @Nonnull DistributedFunction<? super T, K> getKeyF,
+            @Nonnull DistributedToLongFunction<? super T> getTimestampF,
+            @Nonnull TimestampKind timestampKind,
+            @Nonnull WindowDefinition windowDef,
+            @Nonnull AggregateOperation<? super T, A, R> aggregateOperation
+    ) {
+        return () -> new SlidingWindowP<T, A, R>(
+                getKeyF,
+                timestampKind == EVENT
+                        ? item -> windowDef.higherFrameTs(getTimestampF.applyAsLong(item))
+                        : getTimestampF,
+                windowDef,
+                aggregateOperation);
     }
 
     /**
@@ -263,10 +266,10 @@ public final class WindowingProcessors {
      * event may happen to belong to two existing windows if its interval
      * bridges the gap between them; in that case they are combined into one.
      *
-     * @param sessionTimeout    maximum gap between consecutive events in the same session window
-     * @param getTimestampF function to extract the timestamp from the item
-     * @param getKeyF       function to extract the grouping key from the item
-     * @param aggregateOperation   contains aggregation logic
+     * @param sessionTimeout     maximum gap between consecutive events in the same session window
+     * @param getTimestampF      function to extract the timestamp from the item
+     * @param getKeyF            function to extract the grouping key from the item
+     * @param aggregateOperation contains aggregation logic
      *
      * @param <T> type of the stream event
      * @param <K> type of the item's grouping key
@@ -281,13 +284,5 @@ public final class WindowingProcessors {
             @Nonnull DistributedCollector<? super T, A, R> aggregateOperation
     ) {
         return () -> new SessionWindowP<>(sessionTimeout, getTimestampF, getKeyF, aggregateOperation);
-    }
-
-    private static <A, R> AggregateOperation<TimestampedEntry<?, A>, A, R> withFrameCombining(
-            AggregateOperation<?, A, R> aggrOp
-    ) {
-        return aggrOp.withAccumulate(
-                (A acc, TimestampedEntry<?, A> tsEntry) ->
-                        aggrOp.combineAccumulatorsF().accept(acc, tsEntry.getValue()));
     }
 }
