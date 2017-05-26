@@ -22,10 +22,10 @@ import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.jet.PunctuationPolicy;
+import com.hazelcast.jet.ResettableSingletonTraverser;
 import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.ResettableSingletonTraverser;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
@@ -57,7 +57,7 @@ import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
  * and/or an event timestamp-based window. There are two main aggregation
  * setups: single-stage and two-stage.
  *
- * <h2>Single-stage aggregation</h2>
+ * <h1>Single-stage aggregation</h1>
  *
  * This is the basic setup where all the aggregation steps happen in one
  * vertex. The input must be properly partitioned and distributed. For
@@ -83,9 +83,9 @@ import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
  *                    -----------
  * </pre>
  *
- * <h2>Two-stage aggregation</h2>
+ * <h1>Two-stage aggregation</h1>
  *
- * In two-stage aggrgegation, the first stage applies just the
+ * In two-stage aggregation, the first stage applies just the
  * {@link AggregateOperation#accumulateItemF() accumulate} aggregation
  * primitive and the second stage does {@link
  * AggregateOperation#combineAccumulatorsF() combine} and {@link
@@ -139,6 +139,54 @@ import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
  * This will parallelize and distributed most of the processing and
  * the second-stage processor will receive just a single item from
  * each upstream processor, doing very little work.
+ *
+ * <h1>Overview of factory methods for aggregate operations</h1>
+ *
+ * <h2>Global batch aggregation</strong> (no grouping)</h2>
+ * <ul><li>
+ *     single-stage: {@link #aggregate(AggregateOperation) aggregate()}
+ * </li><li>
+ *     1/2 stage: {@link #accumulate(AggregateOperation) accumulate()}
+ * </li><li>
+ *     2/2 stage: {@link #combine(AggregateOperation) combine()}
+ * </ul></li>
+ *
+ * <h2>Batch aggregation by key</h2>
+ *
+ * <ul><li>
+ *     single-stage: {@link #aggregateByKey(DistributedFunction, AggregateOperation)
+ *     aggregateByKey()}
+ *  </li><li>
+ *     1/2 stage: {@link #accumulateByKey(DistributedFunction, AggregateOperation)
+ *     accumulateByKey()}
+ *  </li><li>
+ *     2/2 stage: {@link #combineByKey(AggregateOperation) combineByKey()}
+ * </ul></li>
+ *
+ * <h2>Aggregation by key and sliding window</h2>
+ *
+ * Tumbling window is a special case of sliding window with sliding step =
+ * window size. To achieve the effect of aggregation without a
+ * grouping key, specify {@link com.hazelcast.jet.function.DistributedFunctions#constantKey()
+ * constantKey()} as the key-extracting function.
+ * <ul><li>
+ *     single-stage: {@link #aggregateToSlidingWindow(DistributedFunction,
+ *          DistributedToLongFunction, TimestampKind, WindowDefinition, AggregateOperation)
+ *     aggregateToSlidingWindow()}
+ * </li><li>
+ *     1/2 stage: {@link #accumulateByFrame(DistributedFunction,
+ *          DistributedToLongFunction, TimestampKind, WindowDefinition, AggregateOperation)
+ *     accumulateByFrame()}
+ * </li><li>
+ *     2/2 stage: {@link #combineToSlidingWindow(WindowDefinition, AggregateOperation)
+ *     combineToSlidingWindow()}
+ * </li></ul>
+ *
+ * <h2>Aggregation by key and session window</h2>
+ *
+ * {@link #aggregateToSessionWindow(long, DistributedToLongFunction,
+ *     DistributedFunction, AggregateOperation)
+ * aggregateToSessionWindow()}
  */
 public final class Processors {
 
@@ -264,7 +312,7 @@ public final class Processors {
     public static <T, A, R> DistributedSupplier<Processor> accumulate(
             @Nonnull AggregateOperation<T, A, R> aggregateOperation
     ) {
-        return () -> new AggregateP<>(aggregateOperation);
+        return () -> new AggregateP<>(aggregateOperation.withFinish(identity()));
     }
 
     /**
@@ -287,7 +335,7 @@ public final class Processors {
     public static <T, A, R> DistributedSupplier<Processor> combine(
             @Nonnull AggregateOperation<T, A, R> aggregateOperation
     ) {
-        return () -> new AggregateP<>(aggregateOperation);
+        return () -> new AggregateP<>(withCombiningAccumulate(aggregateOperation));
     }
 
     /**

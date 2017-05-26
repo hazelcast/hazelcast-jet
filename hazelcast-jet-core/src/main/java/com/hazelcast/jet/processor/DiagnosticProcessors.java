@@ -36,7 +36,9 @@ import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
 /**
  * Static utility class with factories of sinks and wrappers that log
  * the data flowing through the DAG. These processors are useful while
- * diagnosing the execution of Jet jobs.
+ * diagnosing the execution of Jet jobs. For other kinds of processors
+ * refer to the {@link com.hazelcast.jet.processor package-level
+ * documentation}.
  */
 public final class DiagnosticProcessors {
     private DiagnosticProcessors() {

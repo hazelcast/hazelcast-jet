@@ -16,13 +16,15 @@
 
 /**
  * Contains static utility classes with factories of Jet processors. The
- * factories are organized into several categories:
+ * factories are organized into several categories according to the role
+ * of the vertex they implement:
  * <ul><li>
- *     {@link com.hazelcast.jet.processor.Sources}
+ *     {@link com.hazelcast.jet.processor.Sources} (have no inbound edges)
  * </li><li>
- *     {@link com.hazelcast.jet.processor.Sinks}
+ *     {@link com.hazelcast.jet.processor.Sinks} (have no outbound adges)
  * </li><li>
- *     {@link com.hazelcast.jet.processor.Processors Internal DAG vertices}
+ *     {@link com.hazelcast.jet.processor.Processors Internal vertices}
+ *     (have both inbound and outbound edges)
  * </li><li>
  *     {@link com.hazelcast.jet.processor.DiagnosticProcessors Diagnostic
  *     helpers}
