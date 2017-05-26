@@ -29,7 +29,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Util.entry;
 
@@ -41,7 +40,6 @@ public final class StreamKafkaP extends AbstractProcessor {
     private static final int ZERO_POLL_TIMEOUT = 0;
     private final Properties properties;
     private final String[] topicIds;
-    private CompletableFuture<Void> jobFuture;
     private KafkaConsumer<?, ?> consumer;
     private Iterator<? extends ConsumerRecord<?, ?>> iterator;
     private Map.Entry<?, ?> pendingEntry;
@@ -75,7 +73,6 @@ public final class StreamKafkaP extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        jobFuture = context.jobFuture();
         consumer = new KafkaConsumer<>(properties);
         consumer.subscribe(Arrays.asList(topicIds));
     }
@@ -89,32 +86,35 @@ public final class StreamKafkaP extends AbstractProcessor {
                 pendingEntry = null;
                 resume();
             } else {
-                emptyPoll();
-                return jobFuture.isDone();
+                pollWhilePaused();
+                return false;
             }
         }
         // poll for records if iterator is null
         if (iterator == null) {
             iterator = consumer.poll(ZERO_POLL_TIMEOUT).iterator();
-        }
-
-        if (iterator.hasNext()) {
-            while (iterator.hasNext()) {
-                ConsumerRecord<?, ?> record = iterator.next();
-                Map.Entry<?, ?> entry = entry(record.key(), record.value());
-                // If emit is not successful save the entry as pendingEntry
-                // pause the consumer and do an empty poll for heartbeat
-                if (!tryEmit(entry)) {
-                    pendingEntry = entry;
-                    pause();
-                    emptyPoll();
-                    return false;
-                }
+            // poll is empty, return immediately without committing
+            if (!iterator.hasNext()) {
+                iterator = null;
+                return false;
             }
-
-            // Records are consumed, commit the offset and reset the iterator for next poll
-            consumer.commitSync();
         }
+
+        while (iterator.hasNext()) {
+            ConsumerRecord<?, ?> record = iterator.next();
+            Map.Entry<?, ?> entry = entry(record.key(), record.value());
+            // If emit is not successful save the entry as pendingEntry
+            // pause the consumer and do an empty poll for heartbeat
+            if (!tryEmit(entry)) {
+                pendingEntry = entry;
+                pause();
+                pollWhilePaused();
+                return false;
+            }
+        }
+
+        // Records are consumed, commit the offset and reset the iterator for next poll
+        consumer.commitSync();
 
         iterator = null;
         return false;
@@ -128,8 +128,8 @@ public final class StreamKafkaP extends AbstractProcessor {
         consumer.resume(consumer.assignment());
     }
 
-    private void emptyPoll() {
-        if (!consumer.poll(0).isEmpty()) {
+    private void pollWhilePaused() {
+        if (!consumer.poll(ZERO_POLL_TIMEOUT).isEmpty()) {
             throw new JetException("Empty poll call returned some records");
         }
     }
