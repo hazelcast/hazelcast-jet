@@ -17,17 +17,18 @@
 package com.hazelcast.jet.connector.kafka;
 
 import com.hazelcast.jet.AbstractProcessor;
-import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Processor;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.util.Preconditions;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 
 import javax.annotation.Nonnull;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Util.entry;
 
@@ -36,10 +37,12 @@ import static com.hazelcast.jet.Util.entry;
  */
 public final class StreamKafkaP extends AbstractProcessor {
 
-    private static final int POLL_TIMEOUT_MS = 1000;
+    private static final int ZERO_POLL_TIMEOUT = 0;
     private final Properties properties;
     private final String[] topicIds;
-    private CompletableFuture<Void> jobFuture;
+    private KafkaConsumer<?, ?> consumer;
+    private Iterator<? extends ConsumerRecord<?, ?>> iterator;
+    private Map.Entry<?, ?> pendingEntry;
 
     private StreamKafkaP(String[] topicIds, Properties properties) {
         this.topicIds = topicIds;
@@ -70,29 +73,64 @@ public final class StreamKafkaP extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        jobFuture = context.jobFuture();
+        consumer = new KafkaConsumer<>(properties);
+        consumer.subscribe(Arrays.asList(topicIds));
     }
 
     @Override
     public boolean complete() {
-        try (KafkaConsumer<?, ?> consumer = new KafkaConsumer<>(properties)) {
-            consumer.subscribe(Arrays.asList(topicIds));
-
-            while (!jobFuture.isDone()) {
-                ConsumerRecords<?, ?> records = consumer.poll(POLL_TIMEOUT_MS);
-
-                for (ConsumerRecord<?, ?> r : records) {
-                    emit(entry(r.key(), r.value()));
-                }
-                consumer.commitSync();
+        if (pendingEntry != null) {
+            // If successfully emit the pending entry, resume the consumer
+            // else do an empty poll for heartbeat
+            if (tryEmit(pendingEntry)) {
+                pendingEntry = null;
+                resume();
+            } else {
+                pollWhilePaused();
+                return false;
+            }
+        }
+        // poll for records if iterator is null
+        if (iterator == null) {
+            iterator = consumer.poll(ZERO_POLL_TIMEOUT).iterator();
+            // poll is empty, return immediately without committing
+            if (!iterator.hasNext()) {
+                iterator = null;
+                return false;
             }
         }
 
-        return true;
+        while (iterator.hasNext()) {
+            ConsumerRecord<?, ?> record = iterator.next();
+            Map.Entry<?, ?> entry = entry(record.key(), record.value());
+            // If emit is not successful save the entry as pendingEntry
+            // pause the consumer and do an empty poll for heartbeat
+            if (!tryEmit(entry)) {
+                pendingEntry = entry;
+                pause();
+                pollWhilePaused();
+                return false;
+            }
+        }
+
+        // Records are consumed, commit the offset and reset the iterator for next poll
+        consumer.commitSync();
+
+        iterator = null;
+        return false;
     }
 
-    @Override
-    public boolean isCooperative() {
-        return false;
+    private void pause() {
+        consumer.pause(consumer.assignment());
+    }
+
+    private void resume() {
+        consumer.resume(consumer.assignment());
+    }
+
+    private void pollWhilePaused() {
+        if (!consumer.poll(ZERO_POLL_TIMEOUT).isEmpty()) {
+            throw new JetException("Empty poll call returned some records");
+        }
     }
 }
