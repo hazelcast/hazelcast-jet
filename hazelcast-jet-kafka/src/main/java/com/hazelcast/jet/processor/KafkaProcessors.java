@@ -26,7 +26,7 @@ import com.hazelcast.util.Preconditions;
 import java.util.Properties;
 
 /**
- * Static utility class with factories of Kafka source and sink processors.
+ * Static utility class with factories of Apache Kafka source and sink processors.
  */
 public final class KafkaProcessors {
 
@@ -34,8 +34,8 @@ public final class KafkaProcessors {
     }
 
     /**
-     * Returns a supplier of processor that consumes one or more Kafka topics
-     * and emits items from them as {@code Map.Entry} instances.
+     * Returns a supplier of processor that consumes one or more Apache Kafka
+     * topics and emits items from them as {@code Map.Entry} instances.
      * <p>
      * One {@code KafkaConsumer} is created per {@code Processor} instance
      * using the supplied {@code properties}. All processors are in the same
@@ -59,9 +59,9 @@ public final class KafkaProcessors {
     }
 
     /**
-     * Returns a meta-supplier of processor that publishes messages to a Kafka
-     * topic. It expects items of type {@code Map.Entry<K,V>} on input and
-     * publishes them to Kafka.
+     * Returns a meta-supplier of processor that publishes messages to an
+     * Apache Kafka topic. It expects items of type {@code Map.Entry<K,V>} on
+     * input and publishes them to Apache Kafka.
      *
      * A single {@code KafkaProducer} is created per node using the supplied
      * properties file. The producer instance is shared across all {@code
@@ -69,7 +69,7 @@ public final class KafkaProcessors {
      *
      * @param <K>        type of keys written
      * @param <V>        type of values written
-     * @param topic      kafka topic name to publish to
+     * @param topic      Kafka topic name to publish to
      * @param properties producer properties which should contain broker
      *                   address and key/value serializers
      */

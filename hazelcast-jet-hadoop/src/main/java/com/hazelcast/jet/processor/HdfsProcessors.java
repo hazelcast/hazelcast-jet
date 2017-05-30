@@ -33,7 +33,8 @@ import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.impl.connector.hadoop.SerializableJobConf.asSerializable;
 
 /**
- * Static utility class with factories of HDFS source and sink processors.
+ * Static utility class with factories of Apache Hadoop HDFS source and sink
+ * processors.
  */
 public final class HdfsProcessors {
 
@@ -50,7 +51,8 @@ public final class HdfsProcessors {
     }
 
     /**
-     * A meta-supplier of processor which reads and emits records from HDFS.
+     * A meta-supplier of processor which reads and emits records from Apache
+     * Hadoop HDFS.
      *
      * The input according to the given {@code InputFormat} is split among the
      * processor instances and each processor instance is responsible for
@@ -58,11 +60,12 @@ public final class HdfsProcessors {
      * Map.Entry<K,V>} by default, but this can also be transformed to another
      * type using an optional {@code mapper}.
      *
-     * Jet cluster should be run on the same nodes as the HDFS nodes for best
-     * read performance. If the hosts are aligned, each processor instance will
-     * try to read as much local data as possible. A heuristic algorithm is
-     * used to assign replicated blocks across the cluster to ensure a
-     * well-balanced work distribution between processor instances.
+     * Jet cluster should be run on the same machines as the Apache Hadoop
+     * cluster for best read performance. If the hosts are aligned, each
+     * processor instance will try to read as much local data as possible. A
+     * heuristic algorithm is used to assign replicated blocks across the
+     * cluster to ensure a well-balanced work distribution between processor
+     * instances.
      *
      * @param <K> key type of the records
      * @param <V> value type of the records
@@ -88,11 +91,11 @@ public final class HdfsProcessors {
     }
 
     /**
-     * Returns a meta-supplier of processor that writes to HDFS. The processor
-     * expects items of type {@code Map.Entry<K,V>} on input and takes optional
-     * mappers for converting the key and the value to types required by the
-     * output format. For example, the mappers can be used to map the keys and
-     * the values to their {@code Writable} equivalents.
+     * Returns a meta-supplier of processor that writes to Apache Hadoop HDFS.
+     * The processor expects items of type {@code Map.Entry<K,V>} on input and
+     * takes optional mappers for converting the key and the value to types
+     * required by the output format. For example, the mappers can be used to
+     * map the keys and the values to their {@code Writable} equivalents.
      *
      * Each processor instance creates a single file in the output path identified by
      * the member ID and the processor ID. Unlike MapReduce, the output files
