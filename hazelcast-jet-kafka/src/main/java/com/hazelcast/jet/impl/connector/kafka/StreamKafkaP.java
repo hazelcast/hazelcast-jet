@@ -29,7 +29,7 @@ import java.util.concurrent.CompletableFuture;
 import static com.hazelcast.jet.Util.entry;
 
 /**
- * See {@link com.hazelcast.jet.processors.KafkaProcessors#streamKafka(
+ * See {@link com.hazelcast.jet.processor.KafkaProcessors#streamKafka(
  * Properties, String...)}.
  */
 public final class StreamKafkaP extends AbstractProcessor {

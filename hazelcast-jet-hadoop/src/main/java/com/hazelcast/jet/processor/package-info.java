@@ -17,4 +17,4 @@
 /**
  * HDFS read/write support for Hazelcast Jet.
  */
-package com.hazelcast.jet.processors;
+package com.hazelcast.jet.processor;

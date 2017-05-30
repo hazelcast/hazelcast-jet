@@ -52,8 +52,8 @@ import java.util.stream.IntStream;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.processor.Sources.readMap;
 import static com.hazelcast.jet.processor.Sinks.writeList;
-import static com.hazelcast.jet.processors.HdfsProcessors.readHdfs;
-import static com.hazelcast.jet.processors.HdfsProcessors.writeHdfs;
+import static com.hazelcast.jet.processor.HdfsProcessors.readHdfs;
+import static com.hazelcast.jet.processor.HdfsProcessors.writeHdfs;
 import static java.util.stream.Collectors.toMap;
 import static org.junit.Assert.assertEquals;
 

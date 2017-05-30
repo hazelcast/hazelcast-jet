@@ -43,7 +43,7 @@ import static java.util.stream.IntStream.range;
 import static org.apache.hadoop.mapreduce.TaskType.JOB_SETUP;
 
 /**
- * See {@link com.hazelcast.jet.processors.HdfsProcessors#writeHdfs(
+ * See {@link com.hazelcast.jet.processor.HdfsProcessors#writeHdfs(
  * org.apache.hadoop.mapred.JobConf, DistributedFunction, DistributedFunction)}.
  */
 public final class WriteHdfsP<K, KM, V, VM> extends AbstractProcessor {

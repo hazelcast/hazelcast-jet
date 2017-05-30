@@ -17,4 +17,4 @@
 /**
  * Kafka reader/writer support for Hazelcast Jet.
  */
-package com.hazelcast.jet.processors;
+package com.hazelcast.jet.processor;

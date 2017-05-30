@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.processor.Sources.readMap;
-import static com.hazelcast.jet.processors.KafkaProcessors.writeKafka;
+import static com.hazelcast.jet.processor.KafkaProcessors.writeKafka;
 import static java.util.stream.IntStream.range;
 
 @Category(QuickTest.class)

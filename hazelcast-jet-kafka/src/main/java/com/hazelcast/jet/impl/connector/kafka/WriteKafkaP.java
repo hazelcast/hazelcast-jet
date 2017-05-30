@@ -31,7 +31,7 @@ import java.util.stream.Stream;
 import static java.util.stream.Collectors.toList;
 
 /**
- * See {@link com.hazelcast.jet.processors.KafkaProcessors#writeKafka(String,
+ * See {@link com.hazelcast.jet.processor.KafkaProcessors#writeKafka(String,
  * Properties)}.
  */
 public final class WriteKafkaP<K, V> extends AbstractProcessor {
