@@ -39,9 +39,9 @@ public final class StreamKafkaP extends AbstractProcessor {
     private final String[] topicIds;
     private CompletableFuture<Void> jobFuture;
 
-    public StreamKafkaP(String[] topicIds, Properties properties) {
-        this.topicIds = topicIds;
+    public StreamKafkaP(Properties properties, String[] topicIds) {
         this.properties = properties;
+        this.topicIds = Arrays.copyOf(topicIds, topicIds.length);
     }
 
     @Override

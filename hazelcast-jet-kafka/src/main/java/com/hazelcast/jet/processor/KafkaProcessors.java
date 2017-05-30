@@ -55,7 +55,7 @@ public final class KafkaProcessors {
         Preconditions.checkTrue(properties.containsKey("group.id"), "Properties should contain `group.id`");
         properties.put("enable.auto.commit", false);
 
-        return () -> new StreamKafkaP(topics, properties);
+        return () -> new StreamKafkaP(properties, topics);
     }
 
     /**
