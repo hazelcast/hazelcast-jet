@@ -31,7 +31,6 @@ import org.junit.runners.Parameterized.Parameters;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
@@ -43,11 +42,9 @@ import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
 import static com.hazelcast.jet.processor.Processors.aggregateToSlidingWindow;
 import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
 import static com.hazelcast.jet.processor.Processors.insertPunctuation;
-import static com.hazelcast.jet.processor.Processors.noop;
 import static com.hazelcast.jet.processor.Sinks.writeList;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -87,7 +84,7 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
         AggregateOperation<Object, ?, Long> counting = counting();
 
         DAG dag = new DAG();
-        Vertex source = dag.newVertex("source", streamList(sourceEvents)).localParallelism(1);
+        Vertex source = dag.newVertex("source", () -> new StreamListP(sourceEvents)).localParallelism(1);
         Vertex insertPP = dag.newVertex("insertPP", insertPunctuation(TimestampedEntry<String, Long>::getTimestamp,
                 () -> limitingLagAndLull(500, 1000).throttleByFrame(wDef)))
                 .localParallelism(1);
@@ -126,16 +123,8 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
     }
 
     /**
-     * Returns a {@link ProcessorMetaSupplier}, that will emit contents of a list and the NOT complete.
-     * Emits from single node and single processor instance.
+     * A processor that will emit contents of a list and then NOT complete.
      */
-    private static ProcessorMetaSupplier streamList(List<?> sourceList) {
-        return addresses -> address -> count ->
-                IntStream.range(0, count)
-                        .mapToObj(i -> i == 0 ? new StreamListP(sourceList) : noop().get())
-                        .collect(toList());
-    }
-
     private static class StreamListP extends AbstractProcessor {
         private final List<?> list;
 
