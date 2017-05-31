@@ -16,125 +16,68 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.core.IList;
-import com.hazelcast.jet.DAG;
-import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.JetTestSupport;
-import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.Processor;
+import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
+import com.hazelcast.jet.impl.util.ArrayDequeInbox;
+import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
+import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.jet.processor.Sources;
-import com.hazelcast.test.HazelcastSerialClassRunner;
-import com.hazelcast.test.annotation.QuickTest;
+import com.hazelcast.logging.ILogger;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
 
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
 
-import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
-import static com.hazelcast.jet.processor.Processors.noop;
-import static com.hazelcast.jet.processor.Sinks.writeList;
-import static com.hazelcast.jet.processor.Sources.streamTextSocket;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
-@Category(QuickTest.class)
-@RunWith(HazelcastSerialClassRunner.class)
-public class StreamTextSocketPTest extends JetTestSupport {
-
+public class StreamTextSocketPTest {
     private static final String HOST = "localhost";
     private static final int PORT = 8888;
 
-    private JetInstance instance;
+    private ArrayDequeInbox inbox;
+    private ArrayDequeOutbox outbox;
+    private Queue<Object> bucket;
+    private ProcCtx context;
+
+    private Processor processor;
 
     @Before
-    public void setupEngine() {
-        instance = createJetMember();
-    }
-    @Test
-    public void when_dataWrittenToSocket_then_dataImmediatelyEmitted() throws Exception {
-        CountDownLatch latch = new CountDownLatch(1);
-        // Given
-        try (ServerSocket socket = new ServerSocket(PORT)) {
-            new Thread(() -> uncheckRun(() -> {
-                Socket accept1 = socket.accept();
-                Socket accept2 = socket.accept();
-                PrintWriter writer1 = new PrintWriter(accept1.getOutputStream());
-                writer1.write("hello1 \n");
-                writer1.flush();
-                PrintWriter writer2 = new PrintWriter(accept2.getOutputStream());
-                writer2.write("hello2 \n");
-                writer2.flush();
+    public void before() {
+        inbox = new ArrayDequeInbox();
+        outbox = new ArrayDequeOutbox(new int[]{10}, new ProgressTracker());
+        ILogger logger = mock(ILogger.class);
+        context = new ProcCtx(null, logger, null, 0);
+        context.initJobFuture(new CompletableFuture<>());
+        bucket = outbox.queueWithOrdinal(0);
 
-                assertOpenEventually(latch);
-                writer1.write("world1 \n");
-                writer1.write("jet1 \n");
-                writer1.flush();
-                writer2.write("world2 \n");
-                writer2.write("jet2 \n");
-                writer2.flush();
-
-                accept1.close();
-                accept2.close();
-            })).start();
-
-            DAG dag = new DAG();
-            Vertex producer = dag.newVertex("producer", streamTextSocket(HOST, PORT)).localParallelism(2);
-            Vertex consumer = dag.newVertex("consumer", writeList("consumer")).localParallelism(1);
-            dag.edge(between(producer, consumer));
-
-            // When
-            Future<Void> job = instance.newJob(dag).execute();
-            IList<Object> list = instance.getList("consumer");
-
-            assertTrueEventually(() -> assertEquals(2, list.size()));
-            latch.countDown();
-            job.get();
-            assertEquals(6, list.size());
-        }
+        processor = Sources.streamTextSocket(HOST, PORT).get();
+        processor.init(outbox, context);
     }
 
     @Test
-    public void when_jobCancelled_then_readerClosed() throws Exception {
-        try (ServerSocket socket = new ServerSocket(PORT)) {
-            AtomicReference<Socket> accept = new AtomicReference<>();
-            CountDownLatch acceptationLatch = new CountDownLatch(1);
-            // Cancellation only works, if there are data on socket. Without data, SocketInputStream.read()
-            // blocks indefinitely. The StreamTextSocketP should be improved to use NIO.
+    public void smokeTest() throws Exception {
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             new Thread(() -> uncheckRun(() -> {
-                accept.set(socket.accept());
-                acceptationLatch.countDown();
-                byte[] word = "jet\n".getBytes();
-                try (OutputStream outputStream = accept.get().getOutputStream()) {
-                    while (true) {
-                        outputStream.write(word);
-                        outputStream.flush();
-                        Thread.sleep(1000);
-                    }
-                }
+                Socket socket = serverSocket.accept();
+                PrintWriter writer = new PrintWriter(socket.getOutputStream());
+                writer.write("hello\n");
+                writer.write("world\n");
+                writer.close();
+                socket.close();
             })).start();
 
-            Vertex producer = new Vertex("producer", Sources.streamTextSocket(HOST, PORT)).localParallelism(1);
-            Vertex sink = new Vertex("sink", noop()).localParallelism(1);
-            DAG dag = new DAG()
-                    .vertex(producer)
-                    .vertex(sink)
-                    .edge(between(producer, sink));
-
-            Future<Void> job = instance.newJob(dag).execute();
-            acceptationLatch.await();
-            job.cancel(true);
-
-            assertTrueEventually(() -> {
-                assertTrue("Socket not closed", accept.get().isClosed());
-            });
+            assertTrue(processor.complete());
+            assertEquals("hello", bucket.poll());
+            assertEquals("world", bucket.poll());
+            assertEquals(null, bucket.poll());
         }
     }
+
 }
