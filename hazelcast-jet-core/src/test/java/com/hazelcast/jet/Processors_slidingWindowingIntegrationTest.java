@@ -36,16 +36,16 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.processor.Processors.noop;
-import static com.hazelcast.jet.processor.Sinks.writeList;
 import static com.hazelcast.jet.PunctuationPolicies.limitingLagAndLull;
 import static com.hazelcast.jet.StreamingTestSupport.streamToString;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
-import static com.hazelcast.jet.processor.Processors.insertPunctuation;
-import static com.hazelcast.jet.processor.Processors.aggregateToSlidingWindow;
-import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
-import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
+import static com.hazelcast.jet.processor.Processors.aggregateToSlidingWindow;
+import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
+import static com.hazelcast.jet.processor.Processors.insertPunctuation;
+import static com.hazelcast.jet.processor.Processors.noop;
+import static com.hazelcast.jet.processor.Sinks.writeList;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
@@ -55,7 +55,7 @@ import static org.junit.Assert.assertTrue;
 @RunWith(Parameterized.class)
 @Category({QuickTest.class, ParallelTest.class})
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
-public class WindowingProcessors_integrationTest extends JetTestSupport {
+public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
 
     @Parameter
     public boolean singleStageProcessor;

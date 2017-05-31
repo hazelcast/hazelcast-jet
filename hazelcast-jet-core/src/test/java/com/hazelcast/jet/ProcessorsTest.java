@@ -17,7 +17,6 @@
 package com.hazelcast.jet;
 
 import com.hazelcast.jet.Processor.Context;
-import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.AggregateOperationImpl;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
@@ -35,13 +34,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Queue;
-import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Util.entry;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -116,8 +115,39 @@ public class ProcessorsTest {
     }
 
     @Test
-    public void groupAndAggregate() {
-        final Processor p = processorFrom(Processors.aggregateByKey(Object::toString, aggregateToList()));
+    public void aggregateByKey() {
+        final Processor p = processorFrom(Processors.aggregateByKey(Object::toString, aggregateToListAndString()));
+        // Given
+        inbox.add(1);
+        inbox.add(1);
+        inbox.add(2);
+        inbox.add(2);
+        p.process(0, inbox);
+
+        // When
+        boolean done = p.complete();
+        // Then
+        assertFalse(done);
+        final Entry<String, String> result1 = (Entry<String, String>) bucket.remove();
+
+        // When
+        done = p.complete();
+        // Then
+        assertTrue(done);
+        final Entry<String, String> result2 = (Entry<String, String>) bucket.remove();
+
+        // Finally
+        assertEquals(
+                new HashSet<>(asList(
+                    entry("1", "[1, 1]"),
+                    entry("2", "[2, 2]")
+                )),
+                new HashSet<>(asList(result1, result2)));
+    }
+
+    @Test
+    public void accumulateByKey() {
+        final Processor p = processorFrom(Processors.accumulateByKey(Object::toString, aggregateToListAndString()));
         // Given
         inbox.add(1);
         inbox.add(1);
@@ -138,15 +168,97 @@ public class ProcessorsTest {
         final Entry<String, List<Integer>> result2 = (Entry<String, List<Integer>>) bucket.remove();
 
         // Finally
-        ga_stringEntryResultTester().accept(result1, result2);
+        assertEquals(
+                new HashSet<>(asList(
+                        entry("1", asList(1, 1)),
+                        entry("2", asList(2, 2))
+                )),
+                new HashSet<>(asList(result1, result2)));
     }
 
-    private static TwinConsumer<Entry<String, List<Integer>>> ga_stringEntryResultTester() {
-        final Set<Entry<String, List<Integer>>> expected = new HashSet<>(asList(
-                entry("1", asList(1, 1)),
-                entry("2", asList(2, 2))
-        ));
-        return (result1, result2) -> assertEquals(expected, new HashSet<>(asList(result1, result2)));
+    @Test
+    public void combineByKey() {
+        final Processor p = processorFrom(Processors.combineByKey(aggregateToListAndString()));
+        // Given
+        inbox.add(entry("1", asList(1, 2)));
+        inbox.add(entry("1", asList(3, 4)));
+        inbox.add(entry("2", asList(5, 6)));
+        inbox.add(entry("2", asList(7, 8)));
+        p.process(0, inbox);
+
+        // When
+        boolean done = p.complete();
+        // Then
+        assertFalse(done);
+        final Entry<String, String> result1 = (Entry<String, String>) bucket.remove();
+
+        // When
+        done = p.complete();
+        // Then
+        assertTrue(done);
+        final Entry<String, String> result2 = (Entry<String, String>) bucket.remove();
+
+        // Finally
+        assertEquals(
+                new HashSet<>(asList(
+                        entry("1", "[1, 2, 3, 4]"),
+                        entry("2", "[5, 6, 7, 8]")
+                )),
+                new HashSet<>(asList(result1, result2)));
+    }
+
+    @Test
+    public void aggregate() {
+        final Processor p = processorFrom(Processors.aggregate(aggregateToListAndString()));
+        // Given
+        inbox.add(1);
+        inbox.add(2);
+        p.process(0, inbox);
+
+        // When
+        boolean done = p.complete();
+        // Then
+        assertTrue(done);
+        final String result = (String) bucket.remove();
+
+        // Finally
+        assertEquals("[1, 2]", result);
+    }
+
+    @Test
+    public void accumulate() {
+        final Processor p = processorFrom(Processors.accumulate(aggregateToListAndString()));
+        // Given
+        inbox.add(1);
+        inbox.add(2);
+        p.process(0, inbox);
+
+        // When
+        boolean done = p.complete();
+        // Then
+        assertTrue(done);
+        final List<Integer> result = (List<Integer>) bucket.remove();
+
+        // Finally
+        assertEquals(asList(1, 2), result);
+    }
+
+    @Test
+    public void combine() {
+        final Processor p = processorFrom(Processors.combine(aggregateToListAndString()));
+        // Given
+        inbox.add(singletonList(1));
+        inbox.add(singletonList(2));
+        p.process(0, inbox);
+
+        // When
+        boolean done = p.complete();
+        // Then
+        assertTrue(done);
+        final String result = (String) bucket.remove();
+
+        // Finally
+        assertEquals("[1, 2]", result);
     }
 
     private Processor processorFrom(Supplier<Processor> supplier) {
@@ -155,13 +267,13 @@ public class ProcessorsTest {
         return p;
     }
 
-    private static <T> AggregateOperation<T, List<T>, List<T>> aggregateToList() {
+    private static <T> AggregateOperation<T, List<T>, String> aggregateToListAndString() {
         return new AggregateOperationImpl<>(
                 ArrayList::new,
                 List::add,
                 List::addAll,
                 null,
-                DistributedFunction.identity()
+                Object::toString
         );
     }
 
