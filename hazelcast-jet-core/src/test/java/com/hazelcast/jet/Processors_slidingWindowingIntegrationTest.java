@@ -28,7 +28,6 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -73,14 +72,14 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
     @Test
     public void smokeTest() throws Exception {
         runTest(
-                singletonList(new MockEvent("a", 10, 1)),
+                singletonList(new TimestampedEntry<>(10, "a", 1)),
                 asList(
                         new TimestampedEntry<>(1000, "a", 1L),
                         new TimestampedEntry<>(2000, "a", 1L)
                 ));
     }
 
-    private void runTest(List<MockEvent> sourceEvents, List<TimestampedEntry<String, Long>> expectedOutput)
+    private void runTest(List<TimestampedEntry> sourceEvents, List<TimestampedEntry<String, Long>> expectedOutput)
             throws Exception {
         JetInstance instance = createJetMember();
 
@@ -89,7 +88,7 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
 
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", streamList(sourceEvents)).localParallelism(1);
-        Vertex insertPP = dag.newVertex("insertPP", insertPunctuation(MockEvent::getTimestamp,
+        Vertex insertPP = dag.newVertex("insertPP", insertPunctuation(TimestampedEntry<String, Long>::getTimestamp,
                 () -> limitingLagAndLull(500, 1000).throttleByFrame(wDef)))
                 .localParallelism(1);
         Vertex sink = dag.newVertex("sink", writeList("sink"));
@@ -98,17 +97,17 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
 
         if (singleStageProcessor) {
             Vertex slidingWin = dag.newVertex("slidingWin", aggregateToSlidingWindow(
-                    MockEvent::getKey, MockEvent::getTimestamp, TimestampKind.EVENT, wDef, counting));
+                    TimestampedEntry<String, Long>::getKey, TimestampedEntry::getTimestamp, TimestampKind.EVENT, wDef, counting));
             dag
-                    .edge(between(insertPP, slidingWin).partitioned(MockEvent::getKey).distributed())
+                    .edge(between(insertPP, slidingWin).partitioned(TimestampedEntry<String, Long>::getKey).distributed())
                     .edge(between(slidingWin, sink).oneToMany());
 
         } else {
             Vertex accumulateByFrame = dag.newVertex("accumulateByFrame", accumulateByFrame(
-                    MockEvent::getKey, MockEvent::getTimestamp, TimestampKind.EVENT, wDef, counting));
+                    TimestampedEntry<String, Long>::getKey, TimestampedEntry::getTimestamp, TimestampKind.EVENT, wDef, counting));
             Vertex slidingWin = dag.newVertex("slidingWin", combineToSlidingWindow(wDef, counting));
             dag
-                    .edge(between(insertPP, accumulateByFrame).partitioned(MockEvent::getKey))
+                    .edge(between(insertPP, accumulateByFrame).partitioned(TimestampedEntry<String, Long>::getKey))
                     .edge(between(accumulateByFrame, slidingWin).partitioned(entryKey()).distributed())
                     .edge(between(slidingWin, sink).oneToMany());
         }
@@ -135,30 +134,6 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
                 IntStream.range(0, count)
                         .mapToObj(i -> i == 0 ? new StreamListP(sourceList) : noop().get())
                         .collect(toList());
-    }
-
-    private static class MockEvent implements Serializable {
-        private final String key;
-        private final long timestamp;
-        private final long value;
-
-        MockEvent(String key, long timestamp, long value) {
-            this.key = key;
-            this.timestamp = timestamp;
-            this.value = value;
-        }
-
-        String getKey() {
-            return key;
-        }
-
-        long getTimestamp() {
-            return timestamp;
-        }
-
-        long getValue() {
-            return value;
-        }
     }
 
     private static class StreamListP extends AbstractProcessor {
