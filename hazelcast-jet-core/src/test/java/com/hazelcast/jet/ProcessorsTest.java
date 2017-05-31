@@ -287,7 +287,7 @@ public class ProcessorsTest {
         }
         p.process(0, inbox);
         assertEquals(0, inbox.size());
-        assertEquals(0, outbox.queueWithOrdinal(0).size());
+        assertEquals(0, bucket.size());
     }
 
     private Processor processorFrom(Supplier<Processor> supplier) {

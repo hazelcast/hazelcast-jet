@@ -19,13 +19,11 @@ package com.hazelcast.jet.impl.connector;
 import com.hazelcast.core.IList;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.JetTestSupport;
-import com.hazelcast.jet.processor.Sources;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.processor.Sources;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -40,10 +38,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.processor.Processors.noop;
-import static com.hazelcast.jet.processor.Sources.streamTextSocket;
-import static com.hazelcast.jet.processor.Sinks.writeList;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
+import static com.hazelcast.jet.processor.Processors.noop;
+import static com.hazelcast.jet.processor.Sinks.writeList;
+import static com.hazelcast.jet.processor.Sources.streamTextSocket;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -54,20 +52,12 @@ public class StreamTextSocketPTest extends JetTestSupport {
     private static final String HOST = "localhost";
     private static final int PORT = 8888;
 
-    private JetTestInstanceFactory factory;
     private JetInstance instance;
 
     @Before
     public void setupEngine() {
-        factory = new JetTestInstanceFactory();
-        instance = factory.newMember();
+        instance = createJetMember();
     }
-
-    @After
-    public void shutdown() {
-        factory.shutdownAll();
-    }
-
     @Test
     public void when_dataWrittenToSocket_then_dataImmediatelyEmitted() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
