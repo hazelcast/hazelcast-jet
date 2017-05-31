@@ -17,6 +17,7 @@
 package com.hazelcast.jet;
 
 import com.hazelcast.jet.Processor.Context;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.AggregateOperationImpl;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
@@ -39,6 +40,7 @@ import java.util.function.Supplier;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
@@ -259,6 +261,33 @@ public class ProcessorsTest {
 
         // Finally
         assertEquals("[1, 2]", result);
+    }
+
+    @Test
+    public void nonCooperative_ProcessorSupplier() {
+        ProcessorSupplier cooperativeSupplier = ProcessorSupplier.of(Processors.filter(alwaysTrue()));
+        ProcessorSupplier nonCooperativeSupplier = Processors.nonCooperative(cooperativeSupplier);
+        assertTrue(cooperativeSupplier.get(1).iterator().next().isCooperative());
+        assertFalse(nonCooperativeSupplier.get(1).iterator().next().isCooperative());
+    }
+
+    @Test
+    public void nonCooperative_SupplierProcessor() {
+        DistributedSupplier<Processor> cooperativeSupplier = Processors.filter(alwaysTrue());
+        DistributedSupplier<Processor> nonCooperativeSupplier = Processors.nonCooperative(cooperativeSupplier);
+        assertTrue(cooperativeSupplier.get().isCooperative());
+        assertFalse(nonCooperativeSupplier.get().isCooperative());
+    }
+
+    @Test
+    public void noop() {
+        Processor p = processorFrom(Processors.noop());
+        for (int i = 0; i < 100; i++) {
+            inbox.add("a");
+        }
+        p.process(0, inbox);
+        assertEquals(0, inbox.size());
+        assertEquals(0, outbox.queueWithOrdinal(0).size());
     }
 
     private Processor processorFrom(Supplier<Processor> supplier) {
