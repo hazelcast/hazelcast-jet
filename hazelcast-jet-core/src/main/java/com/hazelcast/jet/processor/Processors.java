@@ -277,7 +277,7 @@ public final class Processors {
      * aggregate operation.
      * <p>
      * Since the input to this processor must be bounded, its primary use case
-     * are batch jobs.
+     * is batch jobs.
      *
      * @param aggregateOperation the aggregate operation to perform
      * @param <T> type of received item
