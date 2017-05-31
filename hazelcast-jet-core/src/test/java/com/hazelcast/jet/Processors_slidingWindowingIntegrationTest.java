@@ -93,15 +93,17 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
         dag.edge(between(source, insertPP).oneToMany());
 
         if (singleStageProcessor) {
-            Vertex slidingWin = dag.newVertex("slidingWin", aggregateToSlidingWindow(
-                    TimestampedEntry<String, Long>::getKey, TimestampedEntry::getTimestamp, TimestampKind.EVENT, wDef, counting));
+            Vertex slidingWin = dag.newVertex("slidingWin",
+                    aggregateToSlidingWindow(TimestampedEntry<String, Long>::getKey,
+                            TimestampedEntry::getTimestamp, TimestampKind.EVENT, wDef, counting));
             dag
                     .edge(between(insertPP, slidingWin).partitioned(TimestampedEntry<String, Long>::getKey).distributed())
                     .edge(between(slidingWin, sink).oneToMany());
 
         } else {
-            Vertex accumulateByFrame = dag.newVertex("accumulateByFrame", accumulateByFrame(
-                    TimestampedEntry<String, Long>::getKey, TimestampedEntry::getTimestamp, TimestampKind.EVENT, wDef, counting));
+            Vertex accumulateByFrame = dag.newVertex("accumulateByFrame",
+                    accumulateByFrame(TimestampedEntry<String, Long>::getKey,
+                            TimestampedEntry::getTimestamp, TimestampKind.EVENT, wDef, counting));
             Vertex slidingWin = dag.newVertex("slidingWin", combineToSlidingWindow(wDef, counting));
             dag
                     .edge(between(insertPP, accumulateByFrame).partitioned(TimestampedEntry<String, Long>::getKey))
