@@ -16,15 +16,19 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.jet.JetTestSupport;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
-import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.jet.processor.Sources;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.test.HazelcastSerialClassRunner;
+import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
 
 import java.io.PrintWriter;
 import java.net.ServerSocket;
@@ -34,49 +38,48 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
-public class StreamTextSocketPTest {
-    private static final String HOST = "localhost";
-    private static final int PORT = 8888;
+@Category(QuickTest.class)
+@RunWith(HazelcastSerialClassRunner.class)
+public class StreamTextSocketPTest extends JetTestSupport {
 
-    private ArrayDequeInbox inbox;
-    private ArrayDequeOutbox outbox;
     private Queue<Object> bucket;
+    private ArrayDequeOutbox outbox;
     private ProcCtx context;
-
-    private Processor processor;
 
     @Before
     public void before() {
-        inbox = new ArrayDequeInbox();
         outbox = new ArrayDequeOutbox(new int[]{10}, new ProgressTracker());
         ILogger logger = mock(ILogger.class);
         context = new ProcCtx(null, logger, null, 0);
         context.initJobFuture(new CompletableFuture<>());
         bucket = outbox.queueWithOrdinal(0);
-
-        processor = Sources.streamTextSocket(HOST, PORT).get();
-        processor.init(outbox, context);
     }
 
     @Test
     public void smokeTest() throws Exception {
-        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-            new Thread(() -> uncheckRun(() -> {
+        try (ServerSocket serverSocket = new ServerSocket(0)) {
+            Thread thread = new Thread(() -> uncheckRun(() -> {
                 Socket socket = serverSocket.accept();
                 PrintWriter writer = new PrintWriter(socket.getOutputStream());
                 writer.write("hello\n");
                 writer.write("world\n");
                 writer.close();
                 socket.close();
-            })).start();
+            }));
+            thread.start();
+
+            Processor processor = Sources.streamTextSocket("localhost", serverSocket.getLocalPort()).get();
+            processor.init(outbox, context);
 
             assertTrue(processor.complete());
             assertEquals("hello", bucket.poll());
             assertEquals("world", bucket.poll());
             assertEquals(null, bucket.poll());
+            assertTrueEventually(() -> assertFalse(thread.isAlive()));
         }
     }
 
