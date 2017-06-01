@@ -172,4 +172,26 @@ public interface Traverser<T> {
     static <T> Traverser<T> over(T... items) {
         return Traversers.traverseArray(items);
     }
+
+    /**
+     * TODO
+     */
+    @Nonnull
+    default Traverser<T> until(Predicate<T> predicate) {
+        return new Traverser<T>() {
+            private boolean finished;
+            @Override
+            public T next() {
+                if (finished) {
+                    return null;
+                }
+                T t = Traverser.this.next();
+                if (predicate.test(t)) {
+                    finished = true;
+                    return null;
+                }
+                return t;
+            }
+        };
+    }
 }

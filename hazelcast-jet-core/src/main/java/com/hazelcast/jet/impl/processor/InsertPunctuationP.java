@@ -76,6 +76,11 @@ public class InsertPunctuationP<T> extends AbstractProcessor {
         return flatMapper.tryProcess(item);
     }
 
+    @Override
+    public boolean complete() {
+        return currPunc == Long.MAX_VALUE || tryEmit(new Punctuation(Long.MAX_VALUE));
+    }
+
     private Traverser<Object> traverser(Object item) {
         long timestamp = getTimestampF.applyAsLong((T) item);
         if (timestamp < currPunc) {
