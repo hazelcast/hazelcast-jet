@@ -170,5 +170,15 @@ public final class PeekWrappedP implements Processor {
             }
             return false;
         }
+
+        @Override
+        public boolean offer(@Nonnull Object item) {
+            // if item goes to all buckets, log it just once
+            if (wrappedOutbox.offer(item)) {
+                log(item);
+                return true;
+            }
+            return false;
+        }
     }
 }
