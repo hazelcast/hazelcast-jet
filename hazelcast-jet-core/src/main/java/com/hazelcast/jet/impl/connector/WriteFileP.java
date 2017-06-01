@@ -16,21 +16,17 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.jet.ProcessorMetaSupplier;
-import com.hazelcast.jet.processor.Sinks;
+import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.processor.Sinks;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.BufferedWriter;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
@@ -45,36 +41,32 @@ public final class WriteFileP {
     /**
      * Use {@link Sinks#writeFile(String, DistributedFunction, Charset, boolean)}
      */
-    public static <T> ProcessorMetaSupplier supplier(
+    public static <T> ProcessorSupplier supplier(
             @Nonnull String directoryName,
-            @Nullable DistributedFunction<T, String> toStringF,
-            @Nullable String charset,
+            @Nonnull DistributedFunction<T, String> toStringF,
+            @Nonnull String charset,
             boolean append) {
-        DistributedFunction<T, String> toStringF2 = toStringF == null ? Object::toString : toStringF;
 
-        return addresses -> address -> count -> {
-            Path directory = Paths.get(directoryName);
-            // ignore the result: we'll fail later when creating the files.
-            // It's also false, if the directory already existed
-            boolean ignored = directory.toFile().mkdirs();
-
-            return IntStream.range(0, count)
-                    .mapToObj(localIndex -> new WriteBufferedP<>(
-                            globalIndex -> createBufferedWriter(directory.resolve(Integer.toString(globalIndex)),
-                                    charset, append),
-                            (writer, item) -> uncheckRun(() -> {
-                                writer.write(toStringF2.apply((T) item));
-                                writer.newLine();
-                            }),
-                            writer -> uncheckRun(writer::flush),
-                            bufferedWriter -> uncheckRun(bufferedWriter::close)
-                    )).collect(Collectors.toList());
-        };
+        return Sinks.writeBuffered(
+                globalIndex -> createBufferedWriter(Paths.get(directoryName).resolve(Integer.toString(globalIndex)),
+                        charset, append),
+                (fileWriter, item) -> uncheckRun(() -> {
+                    fileWriter.write(toStringF.apply((T) item));
+                    fileWriter.newLine();
+                }),
+                fileWriter -> uncheckRun(fileWriter::flush),
+                fileWriter -> uncheckRun(fileWriter::close)
+        );
     }
 
     private static BufferedWriter createBufferedWriter(Path path, String charset, boolean append) {
+        // Ignore the result: we'll fail later when creating the files.
+        // It's also false if the directory already existed, which is probable,
+        // because we try to create the dir in each processor instance.
+        boolean ignored = path.getParent().toFile().mkdirs();
+
         return uncheckCall(() -> Files.newBufferedWriter(path,
-                charset == null ? StandardCharsets.UTF_8 : Charset.forName(charset), StandardOpenOption.CREATE,
+                Charset.forName(charset), StandardOpenOption.CREATE,
                 append ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING));
     }
 
