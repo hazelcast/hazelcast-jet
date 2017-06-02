@@ -90,6 +90,26 @@ public class TraversersTest {
         validateTraversal(t);
     }
 
+    @Test
+    public void takeWhile_allEmitted() {
+        Traverser<Integer> t = Traverser.over(1, 2);
+        t = t.takeWhile(i -> i < 3);
+        validateTraversal(t);
+    }
+
+    @Test
+    public void takeWhile_nulls() {
+        Traverser<Integer> t = Traverser.over(null, 1, null, 2, null, 3);
+        t = t.takeWhile(i -> i < 3);
+        assertEquals(null, t.next());
+        assertEquals((Integer) 1, t.next());
+        assertEquals(null, t.next());
+        assertEquals((Integer) 2, t.next());
+        assertEquals(null, t.next());
+        assertEquals(null, t.next());
+        assertEquals(null, t.next());
+    }
+
     private static void validateTraversal(Traverser<?> trav) {
         // When
         final Object t1 = trav.next();
