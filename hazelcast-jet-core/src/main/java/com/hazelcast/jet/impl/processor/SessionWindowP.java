@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.AggregateOperation;
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Punctuation;
 import com.hazelcast.jet.Session;
 import com.hazelcast.jet.Traverser;
@@ -56,6 +55,7 @@ import static java.lang.System.arraycopy;
  * @param <R> type of the finished result
  */
 public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
+    private static final Punctuation FINAL_PUNC = new Punctuation(Long.MAX_VALUE);
 
     // exposed for testing, to check for memory leaks
     final Map<K, Windows> keyToWindows = new HashMap<>();
@@ -103,10 +103,7 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
-        if (!keyToWindows.isEmpty() || !deadlineToKeys.isEmpty()) {
-            throw new JetException("Processor has pending data, no Punctuation(MAX_VALUE) was probably received");
-        }
-        return true;
+        return expiredSessionFlatmapper.tryProcess(FINAL_PUNC);
     }
 
     private Traverser<Session<K, R>> expiredSessionTraverser(Punctuation punc) {

@@ -44,6 +44,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.shuffle;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.IntStream.range;
 import static org.junit.Assert.assertEquals;
@@ -100,6 +101,35 @@ public class SessionWindowPTest extends StreamingTestSupport {
         assertCorrectness(events);
     }
 
+    @Test
+    public void when_batchProcessing_then_flushEverything() {
+        // Given
+        inbox.addAll(eventsWithKey("a"));
+        // this punctuation will cause the first session to be emitted, but not the second
+        inbox.add(new Punctuation(25));
+
+        // When
+        processor.process(0, inbox);
+
+        // Then
+        List<Session<String, Long>> expectedSessions = expectedSessions("a").collect(toList());
+        assertEquals(expectedSessions.get(0), pollOutbox());
+        assertNull(pollOutbox());
+
+        // When
+        // this will cause the second session to be emitted
+        long start = System.nanoTime();
+        processor.complete();
+        long processTime = System.nanoTime() - start;
+        // this is to test that there is no iteration from current punctuation up to Long.MAX_VALUE, which
+        // will take too long.
+
+        // Then
+        assertTrue("process took too long: " + processTime, processTime < MILLISECONDS.toNanos(100));
+        assertEquals(expectedSessions.get(1), pollOutbox());
+        assertNull(pollOutbox());
+    }
+
     private void assertCorrectness(List<Entry<String, Long>> events) {
         // Given
         Set<String> keys = new HashSet<>();
@@ -110,19 +140,10 @@ public class SessionWindowPTest extends StreamingTestSupport {
         Set<Session> expectedSessions = keys.stream()
                                             .flatMap(SessionWindowPTest::expectedSessions)
                                             .collect(toSet());
-        // This is typical punctuation which follows the items.
         inbox.add(new Punctuation(100));
-        // This is the "sweep out everything" punctuation that is used in batch processing.
-        // The processor must be able to handle it.
-        inbox.add(new Punctuation(Long.MAX_VALUE));
 
         // When
-        long start = System.nanoTime();
         processor.process(0, inbox);
-        long processTime = System.nanoTime() - start;
-        // this is to test that there is no iteration from current punctuation up to Long.MAX_VALUE, which
-        // will take too long.
-        assertTrue("process took too long: " + processTime, processTime < MILLISECONDS.toNanos(100));
         Set<Object> actualSessions = range(0, expectedSessions.size())
                 .mapToObj(x -> pollOutbox())
                 .collect(toSet());
