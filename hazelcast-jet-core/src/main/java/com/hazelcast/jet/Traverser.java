@@ -77,7 +77,7 @@ public interface Traverser<T> {
      * after it returns the first {@code null} value.
      */
     @Nonnull
-    default Traverser<T> append(T item) {
+    default Traverser<T> append(@Nonnull T item) {
         return new Traverser<T>() {
             T appendedItem = item;
             @Override
@@ -100,7 +100,7 @@ public interface Traverser<T> {
      * all the items of this traverser.
      */
     @Nonnull
-    default Traverser<T> prepend(T item) {
+    default Traverser<T> prepend(@Nonnull T item) {
         return new Traverser<T>() {
             private boolean itemReturned;
             @Override
@@ -174,10 +174,14 @@ public interface Traverser<T> {
     }
 
     /**
-     * TODO
+     * Returns a traverser traversing over the longest prefix of elements taken
+     * from this traverser that match the given predicate.
+     *
+     * @param predicate  predicate to apply to elements to determine the
+     *                   longest prefix of elements
      */
     @Nonnull
-    default Traverser<T> until(Predicate<T> predicate) {
+    default Traverser<T> takeWhile(@Nonnull Predicate<? super T> predicate) {
         return new Traverser<T>() {
             private boolean finished;
             @Override
@@ -186,7 +190,7 @@ public interface Traverser<T> {
                     return null;
                 }
                 T t = Traverser.this.next();
-                if (predicate.test(t)) {
+                if (!predicate.test(t)) {
                     finished = true;
                     return null;
                 }

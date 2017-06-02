@@ -83,6 +83,13 @@ public class TraversersTest {
         validateTraversal(Traversers.lazy(() -> Traversers.traverseStream(of(1, 2))));
     }
 
+    @Test
+    public void takeWhile() {
+        Traverser<Integer> t = Traverser.over(1, 2, 3);
+        t = t.takeWhile(i -> i < 3);
+        validateTraversal(t);
+    }
+
     private static void validateTraversal(Traverser<?> trav) {
         // When
         final Object t1 = trav.next();

@@ -116,7 +116,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         long rangeStart = nextFrameTsToEmit;
         nextFrameTsToEmit = wDef.higherFrameTs(punc.timestamp());
         return Traversers.traverseStream(range(rangeStart, nextFrameTsToEmit, wDef.frameLength()).boxed())
-                .until(frameTs -> tsToKeyToAcc.isEmpty())
+                .takeWhile(frameTs -> !tsToKeyToAcc.isEmpty())
                 .<Object>flatMap(frameTs -> Traversers.traverseIterable(computeWindow(frameTs).entrySet())
                         .map(e -> new TimestampedEntry<>(
                                 frameTs, e.getKey(), aggrOp.finishAccumulationF().apply(e.getValue())))
