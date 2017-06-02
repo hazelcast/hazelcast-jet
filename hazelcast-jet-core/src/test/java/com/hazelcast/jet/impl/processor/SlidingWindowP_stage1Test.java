@@ -135,13 +135,13 @@ public class SlidingWindowP_stage1Test extends StreamingTestSupport {
         ArrayDequeInbox inbox = new ArrayDequeInbox();
         inbox.addAll(asList(
                 entry(0L, 1L), // to frame 4
-                punc(4), // closes frame 4
-                punc(Long.MAX_VALUE) // final punctuation from InsertPunctuationP.complete()
+                punc(4) // closes frame 4
         ));
 
         // When
-        long start = System.nanoTime();
         processor.process(0, inbox);
+        long start = System.nanoTime();
+        processor.complete();
         long processTime = System.nanoTime() - start;
         // this is to test that there is no iteration from current punctuation up to Long.MAX_VALUE, which
         // will take too long.
@@ -151,8 +151,7 @@ public class SlidingWindowP_stage1Test extends StreamingTestSupport {
         // Then
         assertOutbox(asList(
                 frame(4, 1),
-                punc(4),
-                punc(Long.MAX_VALUE)
+                punc(4)
         ));
     }
 

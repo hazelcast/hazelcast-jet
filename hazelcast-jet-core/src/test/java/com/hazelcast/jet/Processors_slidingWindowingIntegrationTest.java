@@ -128,7 +128,7 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
 
         IList<TimestampedEntry<String, Long>> sinkList = instance.getList("sink");
 
-        assertTrueEventually(() -> assertTrue(sinkList.size() == expectedOutput.size()));
+        assertTrueEventually(() -> assertTrue(sinkList.size() == expectedOutput.size()), 5);
         // wait a little more and make sure, that there are no more frames
         Thread.sleep(1000);
 

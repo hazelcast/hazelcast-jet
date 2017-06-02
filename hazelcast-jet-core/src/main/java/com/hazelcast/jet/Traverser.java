@@ -172,37 +172,4 @@ public interface Traverser<T> {
     static <T> Traverser<T> over(T... items) {
         return Traversers.traverseArray(items);
     }
-
-    /**
-     * Returns a traverser traversing over the longest prefix of elements taken
-     * from this traverser that match the given predicate. When first item that
-     * does not match the predicate is received, the returned traverser will
-     * only return {@code null}.
-     * <p>
-     * {@code null} received from this traverser is assumed to be matching.
-     * In other words, if this traverser returns a non-null item after a null
-     * item, returned traverser will continue to return the items until first
-     * non-null non-matching item is found.
-     *
-     * @param predicate  predicate to apply to elements to determine the
-     *                   longest prefix of elements
-     */
-    @Nonnull
-    default Traverser<T> takeWhile(@Nonnull Predicate<? super T> predicate) {
-        return new Traverser<T>() {
-            private boolean finished;
-            @Override
-            public T next() {
-                if (finished) {
-                    return null;
-                }
-                T t = Traverser.this.next();
-                if (t != null && !predicate.test(t)) {
-                    finished = true;
-                    return null;
-                }
-                return t;
-            }
-        };
-    }
 }

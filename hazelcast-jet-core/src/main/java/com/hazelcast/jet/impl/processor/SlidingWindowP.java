@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.AggregateOperation;
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Punctuation;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Traverser;
@@ -92,10 +91,34 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
 
     @Override
     protected boolean tryProcessPunc0(@Nonnull Punctuation punc) {
+        return flatMapper.tryProcess(punc);
+    }
+
+    @Override
+    public boolean complete() {
+        if (finalTraverser == null) {
+            if (tsToKeyToAcc.isEmpty()) {
+                return true;
+            }
+            long topTs = tsToKeyToAcc
+                    .keySet().stream()
+                    .max(naturalOrder())
+                    .get();
+            finalTraverser = flushBufferUpTo(topTs + wDef.frameLength());
+        }
+        return emitFromTraverser(finalTraverser);
+    }
+
+    private Traverser<Object> windowTraverser(Punctuation punc) {
+        return flushBufferUpTo(punc.timestamp())
+                .append(punc);
+    }
+
+    private Traverser<Object> flushBufferUpTo(long rangeEndExclusive) {
         if (nextFrameTsToEmit == Long.MIN_VALUE) {
             if (tsToKeyToAcc.isEmpty()) {
                 // There are no frames on record; just forward the punctuation.
-                return tryEmit(punc);
+                return Traversers.empty();
             }
             // This is the first punctuation we are acting upon. Find the lowest frame
             // timestamp that can be emitted: at most the top existing timestamp lower
@@ -108,29 +131,16 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
                     .keySet().stream()
                     .min(naturalOrder())
                     .orElseThrow(() -> new AssertionError("Failed to find the min key in a non-empty map"));
-            nextFrameTsToEmit = min(bottomTs, wDef.floorFrameTs(punc.timestamp()));
+            nextFrameTsToEmit = min(bottomTs, wDef.floorFrameTs(rangeEndExclusive));
         }
-        return flatMapper.tryProcess(punc);
-    }
 
-    @Override
-    public boolean complete() {
-        if (!tsToKeyToAcc.isEmpty()) {
-            throw new JetException("Processor has pending data, no Punctuation(MAX_VALUE) was probably received");
-        }
-        return true;
-    }
-
-    private Traverser<Object> windowTraverser(Punctuation punc) {
         long rangeStart = nextFrameTsToEmit;
-        nextFrameTsToEmit = wDef.higherFrameTs(punc.timestamp());
+        nextFrameTsToEmit = wDef.higherFrameTs(rangeEndExclusive);
         return Traversers.traverseStream(range(rangeStart, nextFrameTsToEmit, wDef.frameLength()).boxed())
-                .takeWhile(frameTs -> !tsToKeyToAcc.isEmpty())
-                .<Object>flatMap(frameTs -> Traversers.traverseIterable(computeWindow(frameTs).entrySet())
-                        .map(e -> new TimestampedEntry<>(
-                                frameTs, e.getKey(), aggrOp.finishAccumulationF().apply(e.getValue())))
-                        .onFirstNull(() -> completeWindow(frameTs)))
-                .append(punc);
+                         .flatMap(frameTs -> Traversers.traverseIterable(computeWindow(frameTs).entrySet())
+                               .map(e -> new TimestampedEntry<>(
+                                       frameTs, e.getKey(), aggrOp.finishAccumulationF().apply(e.getValue())))
+                               .onFirstNull(() -> completeWindow(frameTs)));
     }
 
     private Map<Object, A> computeWindow(long frameTs) {
