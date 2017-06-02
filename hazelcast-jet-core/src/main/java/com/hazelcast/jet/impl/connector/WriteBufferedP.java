@@ -69,7 +69,7 @@ public final class WriteBufferedP<B, T> implements Processor {
             DistributedConsumer<B> disposeBufferF
     ) {
         return new ProcessorSupplier() {
-            private List<WriteBufferedP<B, T>> processors;
+            private transient List<WriteBufferedP<B, T>> processors;
 
             @Nonnull
             @Override

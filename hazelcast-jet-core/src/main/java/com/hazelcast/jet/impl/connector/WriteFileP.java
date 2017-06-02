@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.connector;
 import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.processor.Sinks;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedWriter;
@@ -48,7 +49,7 @@ public final class WriteFileP {
             boolean append) {
 
         return Sinks.writeBuffered(
-                globalIndex -> createBufferedWriter(Paths.get(directoryName).resolve(Integer.toString(globalIndex)),
+                globalIndex -> createBufferedWriter(Paths.get(directoryName), globalIndex,
                         charset, append),
                 (fileWriter, item) -> uncheckRun(() -> {
                     fileWriter.write(toStringF.apply((T) item));
@@ -59,13 +60,16 @@ public final class WriteFileP {
         );
     }
 
-    private static BufferedWriter createBufferedWriter(Path path, String charset, boolean append) {
-        // Ignore the result: we'll fail later when creating the files.
-        // It's also false if the directory already existed, which is probable,
-        // because we try to create the dir in each processor instance.
-        boolean ignored = path.getParent().toFile().mkdirs();
+    @SuppressFBWarnings(value = "RV_RETURN_VALUE_IGNORED_BAD_PRACTICE",
+            justification = "mkdirs() returns false if the directory already existed, which is good. "
+                    + "We don't care even if it didn't exist and we failed to create it, "
+                    + "because we'll fail later when trying to create the file.")
+    private static BufferedWriter createBufferedWriter(Path directory, int globalIndex, String charset, boolean append) {
+        directory.toFile().mkdirs();
 
-        return uncheckCall(() -> Files.newBufferedWriter(path,
+        Path file = directory.resolve(String.valueOf(globalIndex));
+
+        return uncheckCall(() -> Files.newBufferedWriter(file,
                 Charset.forName(charset), StandardOpenOption.CREATE,
                 append ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING));
     }
