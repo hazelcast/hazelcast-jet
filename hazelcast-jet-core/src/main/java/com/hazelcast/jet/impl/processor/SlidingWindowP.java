@@ -73,7 +73,9 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         this.getKeyF = getKeyF;
         this.aggrOp = aggrOp;
 
-        this.flatMapper = flatMapper(this::windowTraverser);
+        this.flatMapper = flatMapper(
+                punc -> windowTraverserAndEvictor(punc.timestamp())
+                            .append(punc));
         this.emptyAcc = aggrOp.createAccumulatorF().get();
     }
 
@@ -104,17 +106,12 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
                     .keySet().stream()
                     .max(naturalOrder())
                     .get();
-            finalTraverser = flushBufferUpTo(topTs + wDef.frameLength());
+            finalTraverser = windowTraverserAndEvictor(topTs + wDef.frameLength());
         }
         return emitFromTraverser(finalTraverser);
     }
 
-    private Traverser<Object> windowTraverser(Punctuation punc) {
-        return flushBufferUpTo(punc.timestamp())
-                .append(punc);
-    }
-
-    private Traverser<Object> flushBufferUpTo(long rangeEndExclusive) {
+    private Traverser<Object> windowTraverserAndEvictor(long endTsExclusive) {
         if (nextFrameTsToEmit == Long.MIN_VALUE) {
             if (tsToKeyToAcc.isEmpty()) {
                 // There are no frames on record; just forward the punctuation.
@@ -131,11 +128,11 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
                     .keySet().stream()
                     .min(naturalOrder())
                     .orElseThrow(() -> new AssertionError("Failed to find the min key in a non-empty map"));
-            nextFrameTsToEmit = min(bottomTs, wDef.floorFrameTs(rangeEndExclusive));
+            nextFrameTsToEmit = min(bottomTs, wDef.floorFrameTs(endTsExclusive));
         }
 
         long rangeStart = nextFrameTsToEmit;
-        nextFrameTsToEmit = wDef.higherFrameTs(rangeEndExclusive);
+        nextFrameTsToEmit = wDef.higherFrameTs(endTsExclusive);
         return Traversers.traverseStream(range(rangeStart, nextFrameTsToEmit, wDef.frameLength()).boxed())
                          .flatMap(frameTs -> Traversers.traverseIterable(computeWindow(frameTs).entrySet())
                                .map(e -> new TimestampedEntry<>(
