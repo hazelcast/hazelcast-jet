@@ -42,6 +42,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static java.util.Arrays.asList;
 import static java.util.Collections.shuffle;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.IntStream.range;
@@ -69,50 +70,59 @@ public class SessionWindowPTest extends StreamingTestSupport {
 
     @Test
     public void when_orderedEventsWithOneKey() {
-        List<Entry<String, Long>> evs = eventsWithKey("a");
-        assertCorrectness(evs);
+        List<Entry<String, Long>> events = eventsWithKey("a");
+        assertCorrectness(events);
     }
 
     @Test
     public void when_disorderedEventsWithOneKey() {
-        List<Entry<String, Long>> evs = eventsWithKey("a");
-        shuffle(evs);
-        assertCorrectness(evs);
+        List<Entry<String, Long>> events = eventsWithKey("a");
+        shuffle(events);
+        assertCorrectness(events);
     }
 
     @Test
     public void when_orderedEventsWithThreeKeys() {
-        List<Entry<String, Long>> evs = new ArrayList<>();
-        evs.addAll(eventsWithKey("a"));
-        evs.addAll(eventsWithKey("b"));
-        evs.addAll(eventsWithKey("c"));
-        assertCorrectness(evs);
+        List<Entry<String, Long>> events = new ArrayList<>();
+        events.addAll(eventsWithKey("a"));
+        events.addAll(eventsWithKey("b"));
+        events.addAll(eventsWithKey("c"));
+        assertCorrectness(events);
     }
 
     @Test
     public void when_disorderedEVentsWithThreeKeys() {
-        List<Entry<String, Long>> evs = new ArrayList<>();
-        evs.addAll(eventsWithKey("a"));
-        evs.addAll(eventsWithKey("b"));
-        evs.addAll(eventsWithKey("c"));
-        shuffle(evs);
-        assertCorrectness(evs);
+        List<Entry<String, Long>> events = new ArrayList<>();
+        events.addAll(eventsWithKey("a"));
+        events.addAll(eventsWithKey("b"));
+        events.addAll(eventsWithKey("c"));
+        shuffle(events);
+        assertCorrectness(events);
     }
 
-    private void assertCorrectness(List<Entry<String, Long>> evs) {
+    private void assertCorrectness(List<Entry<String, Long>> events) {
         // Given
         Set<String> keys = new HashSet<>();
-        for (Entry<String, Long> ev : evs) {
+        for (Entry<String, Long> ev : events) {
             inbox.add(ev);
             keys.add(ev.getKey());
         }
         Set<Session> expectedSessions = keys.stream()
                                             .flatMap(SessionWindowPTest::expectedSessions)
                                             .collect(toSet());
+        // This is typical punctuation which follows the items.
         inbox.add(new Punctuation(100));
+        // This is the "sweep out everything" punctuation that is used in batch processing.
+        // The processor must be able to handle it.
+        inbox.add(new Punctuation(Long.MAX_VALUE));
 
         // When
+        long start = System.nanoTime();
         processor.process(0, inbox);
+        long processTime = System.nanoTime() - start;
+        // this is to test that there is no iteration from current punctuation up to Long.MAX_VALUE, which
+        // will take too long.
+        assertTrue("process took too long: " + processTime, processTime < MILLISECONDS.toNanos(100));
         Set<Object> actualSessions = range(0, expectedSessions.size())
                 .mapToObj(x -> pollOutbox())
                 .collect(toSet());
@@ -125,7 +135,7 @@ public class SessionWindowPTest extends StreamingTestSupport {
             assertTrue("keyToWindows not empty", processor.keyToWindows.isEmpty());
             assertTrue("deadlineToKeys not empty", processor.deadlineToKeys.isEmpty());
         } catch (AssertionError e) {
-            System.err.println("Tested with events: " + evs);
+            System.err.println("Tested with events: " + events);
             throw e;
         }
     }

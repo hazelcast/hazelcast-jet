@@ -124,7 +124,7 @@ public class InsertPunctuationPTest {
             }
 
             p.tryProcess();
-            drainOutbox(resultToCheck);
+            drainOutbox();
 
             clock.advance();
         }
@@ -132,15 +132,32 @@ public class InsertPunctuationPTest {
         assertEquals(toString(Arrays.asList(expected)), toString(resultToCheck));
     }
 
+    @Test
+    public void when_complete_then_finalPunctuation() throws Exception {
+        setUp(100);
+        Item item = new Item(10);
+        tryProcessAndDrain(item);
+
+        // this should add Punctuation(Long.MAX_VALUE) to the outbox
+        p.complete();
+        drainOutbox();
+
+        assertEquals(toString(Arrays.asList(
+                "Punctuation{timestamp=7}",
+                "Item{timestamp=10}",
+                "Punctuation{timestamp=" + Long.MAX_VALUE + "}"
+        )), toString(resultToCheck));
+    }
+
     private void tryProcessAndDrain(Item item) throws Exception {
         while (!p.tryProcess(0, item)) {
-            drainOutbox(resultToCheck);
+            drainOutbox();
         }
     }
 
-    private void drainOutbox(List<String> actual) {
+    private void drainOutbox() {
         for (Object o; (o = outbox.queueWithOrdinal(0).poll()) != null; ) {
-            actual.add(o.toString());
+            resultToCheck.add(o.toString());
         }
     }
 
