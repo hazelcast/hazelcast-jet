@@ -28,12 +28,14 @@ import com.hazelcast.jet.impl.connector.WriteFileP;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedWriter;
+import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 
@@ -149,17 +151,50 @@ public final class Sinks {
     }
 
     /**
+     * Convenience for {@link #writeSocket(String, int, DistributedFunction, Charset)}
+     * with {@code Object::toString} formatter and UTF-8 charset.
+     */
+    public static ProcessorSupplier writeSocket(@Nonnull String host, int port) {
+        return writeSocket(host, port, Object::toString, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Convenience for {@link #writeSocket(String, int, DistributedFunction, Charset)}
+     * with UTF-8 charset.
+     */
+    public static <T> ProcessorSupplier writeSocket(
+            @Nonnull String host,
+            int port,
+            @Nonnull DistributedFunction<T, String> toStringF
+    ) {
+        return writeSocket(host, port, toStringF, StandardCharsets.UTF_8);
+    }
+
+    /**
      * Returns a supplier of processor which connects to specified socket and
      * writes the items as text.
      * <p>
      * Note that no separator is added between items.
      */
-    public static ProcessorSupplier writeSocket(@Nonnull String host, int port) {
+    public static <T> ProcessorSupplier writeSocket(
+            @Nonnull String host,
+            int port,
+            @Nonnull DistributedFunction<T, String> toStringF,
+            @Nonnull Charset charset
+    ) {
+        String charsetName = charset.name();
         return writeBuffered(
                 index -> uncheckCall(
                         () -> new BufferedWriter(new OutputStreamWriter(
-                                new Socket(host, port).getOutputStream(), "UTF-8"))),
-                (bufferedWriter, item) -> uncheckRun(() -> bufferedWriter.write(item.toString())),
+                                new Socket(host, port).getOutputStream(), charsetName))),
+                (bufferedWriter, item) -> {
+                    try {
+                        bufferedWriter.write(toStringF.apply((T) item));
+                        bufferedWriter.write('\n');
+                    } catch (IOException e) {
+                        throw sneakyThrow(e);
+                    }
+                },
                 bufferedWriter -> uncheckRun(bufferedWriter::flush),
                 bufferedWriter -> uncheckRun(bufferedWriter::close)
         );
@@ -170,7 +205,7 @@ public final class Sinks {
      * boolean)} with the UTF-8 charset and with overwriting of existing files.
      *
      * @param directoryName directory to create the files in. Will be created,
-     *                      if it doesn't exist. Must be the same on all nodes.
+     *                      if it doesn't exist. Must be the same on all members.
      */
     @Nonnull
     public static ProcessorSupplier writeFile(@Nonnull String directoryName) {
@@ -182,7 +217,7 @@ public final class Sinks {
      * boolean)} with the UTF-8 charset and with overwriting of existing files.
      *
      * @param directoryName directory to create the files in. Will be created,
-     *                      if it doesn't exist. Must be the same on all nodes.
+     *                      if it doesn't exist. Must be the same on all members.
      * @param toStringF a function to convert items to String (a formatter).
      */
     @Nonnull
@@ -198,7 +233,7 @@ public final class Sinks {
      * file, followed by a platform-specific line separator. Files are named
      * with an integer number starting from 0, which is unique cluster-wide.
      * <p>
-     * The same pathname must be available for writing on all nodes. Each
+     * The same pathname must be available for writing on all members. Each
      * processor instance will write to its own file so the full data will be
      * distributed among several files and members.
      * <p>
@@ -210,7 +245,7 @@ public final class Sinks {
      * vertex, the optimal value would be in the range of 4-8.
      *
      * @param directoryName directory to create the files in. Will be created,
-     *                      if it doesn't exist. Must be the same on all nodes.
+     *                      if it doesn't exist. Must be the same on all members.
      * @param toStringF a function to convert items to String (a formatter)
      * @param charset charset used to encode the file output
      * @param append whether to append or overwrite the file

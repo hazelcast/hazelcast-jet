@@ -66,7 +66,7 @@ public class WriteSocketTest extends JetTestSupport {
         })).start();
 
         ArrayDequeInbox inbox = new ArrayDequeInbox();
-        range(0, ITEM_COUNT).forEach(i -> inbox.add(i + "\n"));
+        range(0, ITEM_COUNT).forEach(inbox::add);
 
         Processor p = writeSocket("localhost", serverSocket.getLocalPort()).get(1).iterator().next();
         p.init(mock(Outbox.class), new ProcCtx(null, null, null, 0));
@@ -99,7 +99,7 @@ public class WriteSocketTest extends JetTestSupport {
         JetInstance jetInstance = createJetMember();
         createJetMember();
         IStreamMap<Integer, String> map = jetInstance.getMap("map");
-        range(0, ITEM_COUNT).forEach(i -> map.put(i, i + "\n"));
+        range(0, ITEM_COUNT).forEach(i -> map.put(i, String.valueOf(i)));
 
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", readMap("map"));
