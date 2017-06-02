@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.AggregateOperation;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Punctuation;
 import com.hazelcast.jet.Session;
 import com.hazelcast.jet.Traverser;
@@ -98,6 +99,14 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
     @Override
     protected boolean tryProcessPunc0(@Nonnull Punctuation punc) {
         return expiredSessionFlatmapper.tryProcess(punc);
+    }
+
+    @Override
+    public boolean complete() {
+        if (!keyToWindows.isEmpty() || !deadlineToKeys.isEmpty()) {
+            throw new JetException("Processor has pending data, no Punctuation(MAX_VALUE) was probably received");
+        }
+        return true;
     }
 
     private Traverser<Session<K, R>> expiredSessionTraverser(Punctuation punc) {

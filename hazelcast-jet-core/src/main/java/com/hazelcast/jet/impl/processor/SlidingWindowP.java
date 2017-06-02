@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.AggregateOperation;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Punctuation;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Traverser;
@@ -110,6 +111,14 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
             nextFrameTsToEmit = min(bottomTs, wDef.floorFrameTs(punc.timestamp()));
         }
         return flatMapper.tryProcess(punc);
+    }
+
+    @Override
+    public boolean complete() {
+        if (!tsToKeyToAcc.isEmpty()) {
+            throw new JetException("Processor has pending data, no Punctuation(MAX_VALUE) was probably received");
+        }
+        return true;
     }
 
     private Traverser<Object> windowTraverser(Punctuation punc) {
