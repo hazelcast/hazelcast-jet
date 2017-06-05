@@ -42,8 +42,8 @@ import static com.hazelcast.jet.AggregateOperations.linearTrend;
 import static com.hazelcast.jet.AggregateOperations.maxBy;
 import static com.hazelcast.jet.AggregateOperations.minBy;
 import static com.hazelcast.jet.AggregateOperations.reducing;
-import static com.hazelcast.jet.AggregateOperations.summingToDouble;
-import static com.hazelcast.jet.AggregateOperations.summingToLong;
+import static com.hazelcast.jet.AggregateOperations.summingDouble;
+import static com.hazelcast.jet.AggregateOperations.summingLong;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.function.DistributedComparator.naturalOrder;
 import static java.util.function.Function.identity;
@@ -63,13 +63,13 @@ public class AggregateOperationsTest {
 
     @Test
     public void when_summingToLong() {
-        validateOp(summingToLong(Long::longValue), LongAccumulator::get,
+        validateOp(summingLong(Long::longValue), LongAccumulator::get,
                 1L, 2L, 1L, 3L, 3L);
     }
 
     @Test
     public void when_summingToDouble() {
-        validateOp(summingToDouble(Double::doubleValue), DoubleAccumulator::get,
+        validateOp(summingDouble(Double::doubleValue), DoubleAccumulator::get,
                 0.5, 1.5, 0.5, 2.0, 2.0);
     }
 
@@ -100,7 +100,7 @@ public class AggregateOperationsTest {
     @Test
     public void when_allOf() {
         validateOp(
-                allOf(counting(), summingToLong(Long::longValue)),
+                allOf(counting(), summingLong(Long::longValue)),
                 identity(), 10L, 11L,
                 Arrays.asList(new LongAccumulator(1L), new LongAccumulator(10L)),
                 Arrays.asList(new LongAccumulator(2L), new LongAccumulator(21L)),
