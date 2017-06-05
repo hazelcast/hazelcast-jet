@@ -114,7 +114,6 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     private Traverser<Object> windowTraverserAndEvictor(long endTsExclusive) {
         if (nextFrameTsToEmit == Long.MIN_VALUE) {
             if (tsToKeyToAcc.isEmpty()) {
-                // There are no frames on record; just forward the punctuation.
                 return Traversers.empty();
             }
             // This is the first punctuation we are acting upon. Find the lowest frame
