@@ -434,12 +434,13 @@ public class Edge implements IdentifiedDataSerializable {
 
 
     /**
-     * Enumerates the supported patterns of forwarding data items along an edge. Since there
-     * are many {@code Processor} instances doing the work of the same destination vertex, a
-     * choice can be made which processor(s) to send the item to.
+     * Enumerates the supported patterns of forwarding data items along an
+     * edge. Since there are many {@code Processor} instances doing the work
+     * of the same destination vertex, a choice can be made which processor(s)
+     * to send the item to.
      * <p>
-     * If the edge is not distributed, candidate processors are only those running within
-     * the same cluster member.
+     * If the edge is not distributed, candidate processors are only those
+     * running within the same cluster member.
      */
     public enum ForwardingPattern implements Serializable {
         /**
