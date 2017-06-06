@@ -283,7 +283,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 ptionArrgmt.assignPartitionsToProcessors(downstreamParallelism, edge.isDistributed());
 
         // in a one to many edge, each downstream processor is assigned only one processor.
-        if (edge.forwardingPattern() == RoutingPolicy.ONE_TO_MANY) {
+        if (edge.routingPolicy() == RoutingPolicy.ISOLATED) {
             if (downstreamParallelism < upstreamParallelism) {
                 throw new IllegalArgumentException("Downstream parallelism (" + downstreamParallelism
                         + ") should be greater than or equal to upstream parallelism (" + upstreamParallelism

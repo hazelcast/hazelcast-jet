@@ -67,7 +67,7 @@ public class EdgeDef implements IdentifiedDataSerializable {
         this.id = sourceVertex.vertexId() + ":" + destVertex.vertexId();
     }
 
-    public RoutingPolicy forwardingPattern() {
+    public RoutingPolicy routingPolicy() {
         return routingPolicy;
     }
 

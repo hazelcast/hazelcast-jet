@@ -109,7 +109,7 @@ public class EdgeTest {
     }
 
     @Test
-    public void whenPartitioned_thenPartitionerAndForwardingPatternSet() {
+    public void whenPartitioned_thenPartitionerAndRoutingPolicySet() {
         // Given
         final Edge e = Edge.from(a);
 
