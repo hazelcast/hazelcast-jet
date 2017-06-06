@@ -19,7 +19,7 @@ package com.hazelcast.jet.impl.execution.init;
 import com.hazelcast.internal.util.concurrent.ConcurrentConveyor;
 import com.hazelcast.internal.util.concurrent.OneToOneConcurrentArrayQueue;
 import com.hazelcast.internal.util.concurrent.QueuedPipe;
-import com.hazelcast.jet.Edge.ForwardingPattern;
+import com.hazelcast.jet.Edge.RoutingPolicy;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processor;
@@ -283,7 +283,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 ptionArrgmt.assignPartitionsToProcessors(downstreamParallelism, edge.isDistributed());
 
         // in a one to many edge, each downstream processor is assigned only one processor.
-        if (edge.forwardingPattern() == ForwardingPattern.ONE_TO_MANY) {
+        if (edge.forwardingPattern() == RoutingPolicy.ONE_TO_MANY) {
             if (downstreamParallelism < upstreamParallelism) {
                 throw new IllegalArgumentException("Downstream parallelism (" + downstreamParallelism
                         + ") should be greater than or equal to upstream parallelism (" + upstreamParallelism
