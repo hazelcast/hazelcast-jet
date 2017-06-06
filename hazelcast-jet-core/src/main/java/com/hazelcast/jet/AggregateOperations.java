@@ -256,12 +256,11 @@ public final class AggregateOperations {
 
         return AggregateOperation.of(
                 () -> {
-                    Object[] res = new Object[untypedOps.length];
-                    for (int i = 0; i < untypedOps.length; i++) {
-                        res[i] = untypedOps[i].createAccumulatorF().get();
+                    List<Object> res = new ArrayList<>(untypedOps.length);
+                    for (AggregateOperation untypedOp : untypedOps) {
+                        res.add(untypedOp.createAccumulatorF().get());
                     }
-                    // wrap to List to have equals() implemented
-                    return toArrayList(res);
+                    return res;
                 },
                 (accs, item) -> {
                     for (int i = 0; i < untypedOps.length; i++) {
@@ -282,28 +281,23 @@ public final class AggregateOperations {
                         }
                         : null,
                 accs -> {
-                    Object[] res = new Object[untypedOps.length];
+                    List<Object> res = new ArrayList<>(untypedOps.length);
                     for (int i = 0; i < untypedOps.length; i++) {
-                        res[i] = untypedOps[i].finishAccumulationF().apply(accs.get(i));
+                        res.add(untypedOps[i].finishAccumulationF().apply(accs.get(i)));
                     }
-                    return toArrayList(res);
+                    return res;
                 }
         );
-    }
-
-    private static <T> ArrayList<T> toArrayList(T[] array) {
-        ArrayList<T> res = new ArrayList<>(array.length);
-        for (T t : array) {
-            res.add(t);
-        }
-        return res;
     }
 
     /**
      * Adapts an {@code AggregateOperation} accepting elements of type {@code
      * U} to one accepting elements of type {@code T} by applying a mapping
      * function to each input element before accumulation.
-     *
+     * <p>
+     * If the {@code mapF} maps to {@code null}, the item won't be aggregated
+     * at all. This allows the mapping to be used as a filter at the same time.
+     * <p>
      * This operation is useful if we cannot precede the aggregating vertex
      * with a {@link
      * com.hazelcast.jet.processor.Processors#map(DistributedFunction) map()}
@@ -321,7 +315,12 @@ public final class AggregateOperations {
                                @Nonnull AggregateOperation<? super U, A, R> downstream) {
         DistributedBiConsumer<? super A, ? super U> downstreamAccumulateF = downstream.accumulateItemF();
         return new AggregateOperationImpl<>(downstream.createAccumulatorF(),
-                (r, t) -> downstreamAccumulateF.accept(r, mapF.apply(t)),
+                (r, t) -> {
+                    U mapped = mapF.apply(t);
+                    if (mapped != null) {
+                        downstreamAccumulateF.accept(r, mapped);
+                    }
+                },
                 downstream.combineAccumulatorsF(),
                 downstream.deductAccumulatorF(),
                 downstream.finishAccumulationF());
@@ -340,7 +339,7 @@ public final class AggregateOperations {
      * @param createCollectionF a {@code Supplier} which returns a new, empty
      *                          {@code Collection} of the appropriate type
      */
-    public static <T, C extends Collection<T>> AggregateOperation<T, ?, C> toCollection(
+    public static <T, C extends Collection<T>> AggregateOperation<T, C, C> toCollection(
             DistributedSupplier<C> createCollectionF) {
         return new AggregateOperationImpl<>(
                 createCollectionF,
@@ -356,7 +355,7 @@ public final class AggregateOperations {
      *
      * @param <T> the type of the input elements
      */
-    public static <T> AggregateOperation<T, ?, List<T>> toList() {
+    public static <T> AggregateOperation<T, List<T>, List<T>> toList() {
         return toCollection(ArrayList::new);
     }
 
@@ -393,7 +392,7 @@ public final class AggregateOperations {
      * @see #toMap(DistributedFunction, DistributedFunction,
      *      DistributedBinaryOperator, DistributedSupplier)
      */
-    public static <T, K, U> AggregateOperation<T, ?, Map<K, U>> toMap(
+    public static <T, K, U> AggregateOperation<T, Map<K, U>, Map<K, U>> toMap(
             DistributedFunction<? super T, ? extends K> getKeyF,
             DistributedFunction<? super T, ? extends U> getValueF
     ) {
@@ -424,7 +423,7 @@ public final class AggregateOperations {
      * @see #toMap(DistributedFunction, DistributedFunction,
      *      DistributedBinaryOperator, DistributedSupplier)
      */
-    public static <T, K, U> AggregateOperation<T, ?, Map<K, U>> toMap(
+    public static <T, K, U> AggregateOperation<T, Map<K, U>, Map<K, U>> toMap(
             DistributedFunction<? super T, ? extends K> getKeyF,
             DistributedFunction<? super T, ? extends U> getValueF,
             DistributedBinaryOperator<U> mergeF
@@ -459,7 +458,7 @@ public final class AggregateOperations {
      * @see #toMap(DistributedFunction, DistributedFunction)
      * @see #toMap(DistributedFunction, DistributedFunction, DistributedBinaryOperator)
      */
-    public static <T, K, U, M extends Map<K, U>> AggregateOperation<T, ?, M> toMap(
+    public static <T, K, U, M extends Map<K, U>> AggregateOperation<T, M, M> toMap(
             DistributedFunction<? super T, ? extends K> getKeyF,
             DistributedFunction<? super T, ? extends U> getValueF,
             DistributedBinaryOperator<U> mergeF,
