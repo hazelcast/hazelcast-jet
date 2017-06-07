@@ -40,7 +40,7 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
-import static com.hazelcast.jet.stream.impl.StreamUtil.checkSerializable;
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 

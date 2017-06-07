@@ -33,6 +33,11 @@ import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InvalidClassException;
+import java.io.NotSerializableException;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -157,5 +162,37 @@ public final class Util {
     // opposite signs and result has opposite sign of left-hand operand
     public static boolean diffHadOverflow(long a, long b, long diff) {
         return ((a ^ b) & (a ^ diff)) < 0;
+    }
+
+    /**
+     * Checks, that {@code argument} implements {@link Serializable}.
+     * It also checks, if the {@code argument} is actually serializable by trying to serialize it.
+     * This will reveal early, if all it's fields are serializable.
+     *
+     * @param argument Object to check
+     * @param argumentName Argument name for the exception
+     * @throws IllegalArgumentException If {@code argument} is not serializable.
+     */
+    public static void checkSerializable(Object argument, String argumentName) {
+        if (argument != null) {
+            if (!(argument instanceof Serializable)) {
+                throw new IllegalArgumentException("\"" + argumentName + "\" must be serializable");
+            }
+            try  (ObjectOutputStream os  = new ObjectOutputStream(new NullOutputStream())) {
+                os.writeObject(argument);
+            } catch (NotSerializableException | InvalidClassException e) {
+                throw new IllegalArgumentException("\"" + argumentName + "\" must be serializable", e);
+            } catch (IOException e) {
+                // never really thrown, as the underlying stream never throws it
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    private static class NullOutputStream extends OutputStream {
+        @Override
+        public void write(int b) throws IOException {
+            // do nothing
+        }
     }
 }

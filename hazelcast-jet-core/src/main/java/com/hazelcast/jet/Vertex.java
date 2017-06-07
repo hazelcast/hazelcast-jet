@@ -26,7 +26,7 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import javax.annotation.Nonnull;
 import java.io.IOException;
 
-import static com.hazelcast.jet.stream.impl.StreamUtil.checkSerializable;
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
