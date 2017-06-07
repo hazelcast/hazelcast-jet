@@ -86,12 +86,12 @@ public final class StreamUtil {
     public static void checkSerializable(Object argument, String argumentName) {
         if (argument != null) {
             if (!(argument instanceof Serializable)) {
-                throw new IllegalArgumentException("Argument \"" + argumentName + "\" must be serializable");
+                throw new IllegalArgumentException("\"" + argumentName + "\" must be serializable");
             }
             try  (ObjectOutputStream os  = new ObjectOutputStream(new NullOutputStream())) {
                 os.writeObject(argument);
             } catch (NotSerializableException | InvalidClassException e) {
-                throw new IllegalArgumentException("Argument \"" + argumentName + "\" must be serializable", e);
+                throw new IllegalArgumentException("\"" + argumentName + "\" must be serializable", e);
             } catch (IOException e) {
                 // never really thrown, as the underlying stream never throws it
                 throw new RuntimeException(e);
