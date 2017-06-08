@@ -27,7 +27,6 @@ import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
-import com.hazelcast.test.annotation.Repeat;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -54,7 +53,6 @@ public class WriteSocketTest extends JetTestSupport {
     private static final int ITEM_COUNT = 1000;
 
     @Test
-    @Repeat(500)
     public void unitTest() throws Exception {
         AtomicInteger counter = new AtomicInteger();
         ServerSocket serverSocket = new ServerSocket(0);
