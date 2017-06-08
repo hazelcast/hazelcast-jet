@@ -27,6 +27,7 @@ import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
+import com.hazelcast.test.annotation.Repeat;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -42,8 +43,8 @@ import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static com.hazelcast.jet.processor.Sinks.writeSocket;
 import static com.hazelcast.jet.processor.Sources.readMap;
 import static java.util.stream.IntStream.range;
-import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 @Category(QuickTest.class)
@@ -53,11 +54,13 @@ public class WriteSocketTest extends JetTestSupport {
     private static final int ITEM_COUNT = 1000;
 
     @Test
+    @Repeat(500)
     public void unitTest() throws Exception {
         AtomicInteger counter = new AtomicInteger();
         ServerSocket serverSocket = new ServerSocket(0);
         new Thread(() -> uncheckRun(() -> {
             Socket socket = serverSocket.accept();
+            serverSocket.close();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
                 while (reader.readLine() != null) {
                     counter.incrementAndGet();
@@ -72,7 +75,6 @@ public class WriteSocketTest extends JetTestSupport {
         p.init(mock(Outbox.class), new ProcCtx(null, null, null, 0));
         p.process(0, inbox);
         p.complete();
-        serverSocket.close();
         assertTrueEventually(() -> assertTrue(counter.get() >= ITEM_COUNT));
         // wait a little to check, if the counter doesn't get too far
         Thread.sleep(500);
@@ -108,8 +110,8 @@ public class WriteSocketTest extends JetTestSupport {
         dag.edge(between(source, sink));
 
         jetInstance.newJob(dag).execute().get();
-        serverSocket.close();
         assertTrueEventually(() -> assertEquals(ITEM_COUNT, counter.get()));
+        serverSocket.close();
         // wait a little to check, if the counter doesn't get too far
         Thread.sleep(500);
         assertEquals(ITEM_COUNT, counter.get());
