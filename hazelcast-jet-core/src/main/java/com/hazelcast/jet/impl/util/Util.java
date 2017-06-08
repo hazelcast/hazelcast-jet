@@ -165,23 +165,23 @@ public final class Util {
     }
 
     /**
-     * Checks, that {@code argument} implements {@link Serializable}.
-     * It also checks, if the {@code argument} is actually serializable by trying to serialize it.
-     * This will reveal early, if all it's fields are serializable.
+     * Checks that the {@code object} implements {@link Serializable} and is
+     * correctly serializable by actually trying to serialize it. This will
+     * reveal some non-serializable field early.
      *
-     * @param argument Object to check
-     * @param argumentName Argument name for the exception
-     * @throws IllegalArgumentException If {@code argument} is not serializable.
+     * @param object object to check
+     * @param objectName object description for the exception
+     * @throws IllegalArgumentException if {@code object} is not serializable
      */
-    public static void checkSerializable(Object argument, String argumentName) {
-        if (argument != null) {
-            if (!(argument instanceof Serializable)) {
-                throw new IllegalArgumentException("\"" + argumentName + "\" must be serializable");
+    public static void checkSerializable(Object object, String objectName) {
+        if (object != null) {
+            if (!(object instanceof Serializable)) {
+                throw new IllegalArgumentException("\"" + objectName + "\" must be serializable");
             }
             try  (ObjectOutputStream os  = new ObjectOutputStream(new NullOutputStream())) {
-                os.writeObject(argument);
+                os.writeObject(object);
             } catch (NotSerializableException | InvalidClassException e) {
-                throw new IllegalArgumentException("\"" + argumentName + "\" must be serializable", e);
+                throw new IllegalArgumentException("\"" + objectName + "\" must be serializable", e);
             } catch (IOException e) {
                 // never really thrown, as the underlying stream never throws it
                 throw new RuntimeException(e);

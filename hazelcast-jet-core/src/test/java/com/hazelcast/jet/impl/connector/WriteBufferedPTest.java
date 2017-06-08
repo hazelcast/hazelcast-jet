@@ -120,21 +120,7 @@ public class WriteBufferedPTest extends JetTestSupport {
         );
     }
 
-    private static class MyAbstractProcessor extends AbstractProcessor {
-        @Override
-        public boolean complete() {
-            // sleep forever - we'll cancel the job
-            try {
-                Thread.sleep(Long.MAX_VALUE);
-            } catch (InterruptedException e) {
-                fail();
-            }
-            return false;
-        }
-    }
-
     private static class SleepForeverProcessor extends AbstractProcessor {
-
         SleepForeverProcessor() {
             setCooperative(false);
         }
