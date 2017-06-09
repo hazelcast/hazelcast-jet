@@ -76,13 +76,15 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
     private Address[] partitionOwners;
     private List<VertexDef> vertices = new ArrayList<>();
+
     private final Map<String, ConcurrentConveyor<Object>[]> localConveyorMap = new HashMap<>();
     private final Map<String, Map<Address, ConcurrentConveyor<Object>>> edgeSenderConveyorMap = new HashMap<>();
+    private final List<Processor> processors = new ArrayList<>();
+
     private PartitionArrangement ptionArrgmt;
 
     private NodeEngine nodeEngine;
     private long executionId;
-
 
     ExecutionPlan() {
     }
@@ -109,7 +111,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
                 // Disabled due to causing memory leak: it keeps referencing the p.getClass()
                 // and prevents the classloader from being unloaded.
-                // TODO re-enable once the fix is merged to Hazelcast and released
+                // TODO re-enable after 3.8.3 with PR #10725 is released
                 // String probePrefix = String.format("jet.job.%d.%s#%d", executionId, srcVertex.name(), processorIdx);
                 // ((NodeEngineImpl) nodeEngine).getMetricsRegistry().scanAndRegister(p, probePrefix);
 
@@ -121,6 +123,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                         ? new CooperativeProcessorTasklet(context, p, inboundStreams, outboundStreams)
                         : new BlockingProcessorTasklet(context, p, inboundStreams, outboundStreams)
                 );
+                processors.add(p);
                 processorIdx++;
             }
         }
@@ -389,5 +392,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         return inboundStreams;
     }
 
+    public List<Processor> getProcessors() {
+        return processors;
+    }
 }
 
