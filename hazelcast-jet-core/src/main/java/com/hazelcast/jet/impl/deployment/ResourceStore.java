@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.deployment;
 
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.IOUtil;
-import com.hazelcast.spi.impl.NodeEngineImpl;
+import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.util.UuidUtil;
 
 import java.io.BufferedInputStream;
@@ -51,7 +51,7 @@ public class ResourceStore {
     private final Map<String, ClassLoaderEntry> dataEntries = new ConcurrentHashMap<>();
     private final Map<String, ClassLoaderEntry> classEntries = new ConcurrentHashMap<>();
 
-    public ResourceStore(Path rootDir, NodeEngineImpl nodeEngine) {
+    public ResourceStore(Path rootDir, NodeEngine nodeEngine) {
         this.log = nodeEngine.getLogger(getClass());
         this.storageDirectory = uncheckCall(() -> Files.createTempDirectory(rootDir, "hazelcast-jet-resources"));
     }
