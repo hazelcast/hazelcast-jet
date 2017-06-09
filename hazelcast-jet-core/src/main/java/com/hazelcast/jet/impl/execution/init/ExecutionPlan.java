@@ -109,6 +109,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
                 // Disabled due to causing memory leak: it keeps referencing the p.getClass()
                 // and prevents the classloader from being unloaded.
+                // TODO re-enable once the fix is merged to Hazelcast and released
                 // String probePrefix = String.format("jet.job.%d.%s#%d", executionId, srcVertex.name(), processorIdx);
                 // ((NodeEngineImpl) nodeEngine).getMetricsRegistry().scanAndRegister(p, probePrefix);
 
