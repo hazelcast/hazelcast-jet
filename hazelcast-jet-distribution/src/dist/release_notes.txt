@@ -6,12 +6,25 @@ The label in the brackets refer to the respective module.
 
 
 1. New Features
-[core] Add support for debugging [426]
+[core][kafka] Infinite stream processing. This involves 
+
 [core] Bootstrapper script for submitting a JAR and running a DAG from it [421]
-[core][kafka] Infinite stream processing [390]
 [core] Added multiple socket suport to ReadSocketTextStreamP [354]
 [core] Introduced WriteSocketTextStreamP processor [358]
+[core] Exteded file Add WriteFileP [376]
+[core] Add batch file reader [373]
 [java.util.stream] java.util.stream support for ICache [360]
+
+[core] Tumbling and Sliding Windows with event-time semantics. [390][446]
+[core] Session Window support.
+[core][java.util.stream] ICache support was added, so you can use ICache as source and sink. java.util.stream can be used for ICache.
+[core] Streaming file reader and writer added allowing you to watch for file changes and process those in the streaming way. 
+* Socket connector was extended
+* Hazelcast version updated to 3.8.2. 
+
+[core] Hazelcast IMDG is now shaded in the Jet JAR. Shade Hazelcast JARs into Jet [367]
+* Hazelcast Jet tile for Pivotal Cloud Foundry was released
+[core] Add support for debugging [426]
 
 
 2. Enhancements 
@@ -65,15 +78,12 @@ The label in the brackets refer to the respective module.
 [core] JobFuture in Processor.Context [381]
 [core] Add mkdirs(), remove '[' from file name in WriteFileP [384]
 [core] Exploit new blocking outbox in StreamTextSocketP [378]
-[core] Add WriteFileP [376]
 [core] Outbox.offer instead of add  breaking-change [375]
 [core] Added jet-cache-manager to conceal cache-api [377]
 [core] Removed wrapper for CacheReader [374]
-[core] Add batch file reader [373]
 [core] Blocking processor tasklet [372]
 [core] Remove Processor#completeEdge  [370]
 [core] Util class cleanup [369]
-[core] Shade Hazelcast JARs into Jet [367]
 [core] Added buffered socket writer [363]
 [core] Minor refactor of BufferedWriterP [362]
 [core] Combined Map/Cache read/write processors [357]
