@@ -48,6 +48,7 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.PacketHandler;
 
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Map;
@@ -155,6 +156,9 @@ public class JetService
         if (context != null) {
             context.complete(error);
         }
+        classLoaders.remove(executionId);
+        ResourceStore store = resourceStores.remove(executionId);
+        store.destroy();
     }
 
     public JetInstance getJetInstance() {
@@ -171,7 +175,7 @@ public class JetService
 
     public ResourceStore getResourceStore(long executionId) {
         return resourceStores.computeIfAbsent(executionId,
-                k -> new ResourceStore(config.getInstanceConfig().getTempDir()));
+                k -> new ResourceStore(Paths.get(config.getInstanceConfig().getTempDir(), String.valueOf(executionId))));
     }
 
     public ClassLoader getClassLoader(long executionId) {

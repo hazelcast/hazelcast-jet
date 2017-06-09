@@ -37,6 +37,12 @@ import static com.hazelcast.jet.impl.config.XmlJetConfigBuilder.getClientConfig;
  */
 public final class Jet {
 
+    static {
+        // This cache interferes loading and unloading classes with JetClassLoader
+        // and needs to be disabled.
+        System.setProperty("hazelcast.compat.classloading.cache.disabled", "true");
+    }
+
     private Jet() {
     }
 

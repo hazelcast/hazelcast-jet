@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-
 package com.hazelcast.jet.impl.deployment;
 
+import com.hazelcast.jet.JetException;
+import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.Logger;
 import com.hazelcast.nio.IOUtil;
 import com.hazelcast.util.UuidUtil;
 
@@ -26,6 +28,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -34,25 +37,42 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
-import static com.hazelcast.jet.impl.util.Util.read;
+import static com.hazelcast.jet.impl.util.Util.readFully;
 
 public class ResourceStore {
 
+    private static final ILogger LOG = Logger.getLogger(ResourceStore.class);
     private static final int BUFFER_SIZE = 1024;
 
-    private final Path storageDirectory;
+    private Path storageDirectory;
 
     private final Map<ResourceDescriptor, File> resources = new ConcurrentHashMap<>();
     private final Map<String, ClassLoaderEntry> jarEntries = new ConcurrentHashMap<>();
     private final Map<String, ClassLoaderEntry> dataEntries = new ConcurrentHashMap<>();
     private final Map<String, ClassLoaderEntry> classEntries = new ConcurrentHashMap<>();
 
-    public ResourceStore(String storagePath) {
-        this.storageDirectory = createStorageDirectory(storagePath);
+    public ResourceStore(Path storagePath) {
+        if (Files.exists(storagePath)) {
+            // the directory should not be shared because we delete it at the end in destroy()
+            throw new JetException("Storage directory already exists: " + storagePath);
+        }
+        if (!storagePath.toFile().mkdirs()) {
+            throw new JetException("Could not create requested storage directory: " + storagePath);
+        }
+        this.storageDirectory = storagePath;
     }
 
     public void destroy() {
-        IOUtil.delete(storageDirectory.toFile());
+        try {
+            IOUtil.delete(storageDirectory.toFile());
+        } catch (Exception e) {
+            LOG.warning(e);
+        }
+        storageDirectory = null; // make this instance unusable
+        resources.clear();
+        jarEntries.clear();
+        dataEntries.clear();
+        classEntries.clear();
     }
 
     Map<String, ClassLoaderEntry> getJarEntries() {
@@ -84,10 +104,10 @@ public class ResourceStore {
                     loadJarStream(stream, resourceUri);
                     return;
                 case CLASS:
-                    classEntries.put(descriptor.getId(), new ClassLoaderEntry(read(stream), resourceUri));
+                    classEntries.put(descriptor.getId(), new ClassLoaderEntry(readFully(stream), resourceUri));
                     return;
                 case DATA:
-                    dataEntries.put(descriptor.getId(), new ClassLoaderEntry(read(stream), resourceUri));
+                    dataEntries.put(descriptor.getId(), new ClassLoaderEntry(readFully(stream), resourceUri));
                     return;
                 default:
                     throw new AssertionError("Unhandled resource type " + descriptor.getResourceKind());
@@ -117,7 +137,7 @@ public class ResourceStore {
                 }
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
                 byte[] buf = new byte[BUFFER_SIZE];
-                for (int len; (len = jis.read(buf)) > 0; ) {
+                for (int len; (len = jis.read(buf)) >= 0; ) {
                     out.write(buf, 0, len);
                 }
                 String name = jarEntry.getName();
@@ -129,18 +149,6 @@ public class ResourceStore {
                         String.format("jar:%s!/%s", uri, name));
                 jarEntries.put(name, entry);
             }
-        }
-    }
-
-    private static Path createStorageDirectory(String storagePath) {
-        try {
-            Path path = Paths.get(storagePath, "resources");
-            if (!path.toFile().mkdirs() && !path.toFile().exists()) {
-                throw new IOException("Could not create requested storage path " + path);
-            }
-            return path;
-        } catch (IOException e) {
-            throw rethrow(e);
         }
     }
 }

@@ -111,7 +111,7 @@ public final class Util {
     }
 
     @Nonnull
-    public static byte[] read(@Nonnull InputStream in) throws IOException {
+    public static byte[] readFully(@Nonnull InputStream in) throws IOException {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             byte[] b = new byte[BUFFER_SIZE];
             for (int len; (len = in.read(b)) != -1; ) {
