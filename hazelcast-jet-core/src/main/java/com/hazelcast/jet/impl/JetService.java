@@ -56,6 +56,8 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.hazelcast.jet.impl.util.Util.uncheckCall;
+
 public class JetService
         implements ManagedService, ConfigurableService<JetConfig>, PacketHandler, LiveOperationsTracker,
         CanCancelOperations, MembershipAwareService {
@@ -175,8 +177,8 @@ public class JetService
 
     public ResourceStore getResourceStore(long executionId) {
         return resourceStores.computeIfAbsent(executionId,
-                k -> new ResourceStore(Paths.get(config.getInstanceConfig().getTempDir(), String.valueOf(executionId))));
-    }
+                k -> uncheckCall(() -> new ResourceStore(Paths.get(config.getInstanceConfig().getTempDir()), nodeEngine)));
+}
 
     public ClassLoader getClassLoader(long executionId) {
         return classLoaders.computeIfAbsent(executionId, k -> AccessController.doPrivileged(

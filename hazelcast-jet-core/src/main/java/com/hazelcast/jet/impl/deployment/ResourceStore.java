@@ -16,10 +16,9 @@
 
 package com.hazelcast.jet.impl.deployment;
 
-import com.hazelcast.jet.JetException;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.logging.Logger;
 import com.hazelcast.nio.IOUtil;
+import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.util.UuidUtil;
 
 import java.io.BufferedInputStream;
@@ -38,11 +37,12 @@ import java.util.jar.JarInputStream;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.Util.readFully;
+import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 
 public class ResourceStore {
 
-    private static final ILogger LOG = Logger.getLogger(ResourceStore.class);
     private static final int BUFFER_SIZE = 1024;
+    private final ILogger log;
 
     private Path storageDirectory;
 
@@ -51,22 +51,16 @@ public class ResourceStore {
     private final Map<String, ClassLoaderEntry> dataEntries = new ConcurrentHashMap<>();
     private final Map<String, ClassLoaderEntry> classEntries = new ConcurrentHashMap<>();
 
-    public ResourceStore(Path storagePath) {
-        if (Files.exists(storagePath)) {
-            // the directory should not be shared because we delete it at the end in destroy()
-            throw new JetException("Storage directory already exists: " + storagePath);
-        }
-        if (!storagePath.toFile().mkdirs()) {
-            throw new JetException("Could not create requested storage directory: " + storagePath);
-        }
-        this.storageDirectory = storagePath;
+    public ResourceStore(Path rootDir, NodeEngineImpl nodeEngine) {
+        this.log = nodeEngine.getLogger(getClass());
+        this.storageDirectory = uncheckCall(() -> Files.createTempDirectory(rootDir, "hazelcast-jet-resources"));
     }
 
     public void destroy() {
         try {
             IOUtil.delete(storageDirectory.toFile());
         } catch (Exception e) {
-            LOG.warning(e);
+            log.warning(e);
         }
         storageDirectory = null; // make this instance unusable
         resources.clear();
