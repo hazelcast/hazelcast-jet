@@ -81,6 +81,11 @@ The label in the brackets refer to the respective module.
 [hadoop][kafka] Remove unnecessary dependencies from jet-kafka and jet-hadoop [371]
 [hadoop][kafka] Refactor Kafka & Hadoop processor factories [452]
 [kafka] Exploit new blocking outbox in StreamKafkaP [379]
+[code-samples] Use the new API in AggregateOperations
+[code-samples] Add session window sample
+[code-samples] Add single-stage version of StockExchange sample
+[code-samples] Follow rename oneToMany() -> isolated() 
+[code-samples] Follow refactorings in Jet
 
 3. Fixes
 [core] Fix WriteSocketTest.unitTest() [465]
@@ -103,6 +108,7 @@ The label in the brackets refer to the respective module.
 [core] jet requires JCache - 0.3.2-SNASHOT [366]
 [core] Removed Cache.Entry serializer [365]
 [core] Fix ResourceIterator and add test [361]
+[code-samples] Fix TF-IDF sample  bug
 
 
 ** Hazelcast Jet 0.3.1 **
