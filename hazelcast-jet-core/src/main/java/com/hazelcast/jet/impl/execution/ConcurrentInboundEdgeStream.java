@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.util.concurrent.ConcurrentConveyor;
 import com.hazelcast.internal.util.concurrent.Pipe;
-import com.hazelcast.jet.Punctuation;
+import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.jet.impl.util.SkewReductionPolicy;
@@ -74,7 +74,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             if (q == null) {
                 continue;
             }
-            Punctuation punc = drainUpToPunc(q, dest);
+            Watermark punc = drainUpToPunc(q, dest);
             if (puncDetector.isDone) {
                 conveyor.removeQueue(queueIndex);
                 continue;
@@ -86,7 +86,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
 
         long bottomPunct = skewReductionPolicy.bottomObservedPunc();
         if (bottomPunct > lastEmittedPunc) {
-            dest.add(new Punctuation(bottomPunct));
+            dest.add(new Watermark(bottomPunct));
             lastEmittedPunc = bottomPunct;
         }
 
@@ -95,11 +95,11 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
 
     /**
      * Drains the supplied queue into a {@code dest} collection, up to the next
-     * {@link Punctuation}. Also updates the {@code tracker} with new status.
+     * {@link Watermark}. Also updates the {@code tracker} with new status.
      *
      * @return the drained punctuation, if any; {@code null} otherwise
      */
-    private Punctuation drainUpToPunc(Pipe<Object> queue, Collection<Object> dest) {
+    private Watermark drainUpToPunc(Pipe<Object> queue, Collection<Object> dest) {
         puncDetector.reset(dest);
 
         int drainedCount = queue.drain(puncDetector);
@@ -110,12 +110,12 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     }
 
     /**
-     * Drains a concurrent conveyor's queue while watching for {@link Punctuation}s.
+     * Drains a concurrent conveyor's queue while watching for {@link Watermark}s.
      * When encountering a punctuation, prevents draining more items.
      */
     private static final class PunctuationDetector implements Predicate<Object> {
         Collection<Object> dest;
-        Punctuation punc;
+        Watermark punc;
         boolean isDone;
 
         void reset(Collection<Object> newDest) {
@@ -126,9 +126,9 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
 
         @Override
         public boolean test(Object o) {
-            if (o instanceof Punctuation) {
+            if (o instanceof Watermark) {
                 assert punc == null : "Received multiple Punctuations without a call to reset()";
-                punc = (Punctuation) o;
+                punc = (Watermark) o;
                 return false;
             }
             if (o == DONE_ITEM) {

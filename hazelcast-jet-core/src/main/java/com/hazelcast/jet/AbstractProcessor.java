@@ -269,28 +269,28 @@ public abstract class AbstractProcessor implements Processor {
      * @return {@code true} if this punctuation has now been processed,
      *         {@code false} otherwise.
      */
-    protected boolean tryProcessPunc(int ordinal, @Nonnull Punctuation punc) {
+    protected boolean tryProcessPunc(int ordinal, @Nonnull Watermark punc) {
         return tryEmit(punc);
     }
 
-    protected boolean tryProcessPunc0(@Nonnull Punctuation punc) {
+    protected boolean tryProcessPunc0(@Nonnull Watermark punc) {
         return tryProcessPunc(0, punc);
     }
 
-    protected boolean tryProcessPunc1(@Nonnull Punctuation punc) {
+    protected boolean tryProcessPunc1(@Nonnull Watermark punc) {
         return tryProcessPunc(1, punc);
     }
 
-    protected boolean tryProcessPunc2(@Nonnull Punctuation punc) {
+    protected boolean tryProcessPunc2(@Nonnull Watermark punc) {
         return tryProcessPunc(2, punc);
     }
 
-    protected boolean tryProcessPunc3(@Nonnull Punctuation punc) {
+    protected boolean tryProcessPunc3(@Nonnull Watermark punc) {
         return tryProcessPunc(3, punc);
     }
 
     @SuppressWarnings("checkstyle:magicnumber")
-    protected boolean tryProcessPunc4(@Nonnull Punctuation punc) {
+    protected boolean tryProcessPunc4(@Nonnull Watermark punc) {
         return tryProcessPunc(4, punc);
     }
 
@@ -542,8 +542,8 @@ public abstract class AbstractProcessor implements Processor {
 
     protected void process0(@Nonnull Inbox inbox) throws Exception {
         for (Object item; (item = inbox.peek()) != null; ) {
-            final boolean doneWithItem = item instanceof Punctuation
-                    ? tryProcessPunc0((Punctuation) item)
+            final boolean doneWithItem = item instanceof Watermark
+                    ? tryProcessPunc0((Watermark) item)
                     : tryProcess0(item);
             if (!doneWithItem) {
                 return;
@@ -554,8 +554,8 @@ public abstract class AbstractProcessor implements Processor {
 
     protected void process1(@Nonnull Inbox inbox) throws Exception {
         for (Object item; (item = inbox.peek()) != null; ) {
-            final boolean doneWithItem = item instanceof Punctuation
-                    ? tryProcessPunc1((Punctuation) item)
+            final boolean doneWithItem = item instanceof Watermark
+                    ? tryProcessPunc1((Watermark) item)
                     : tryProcess1(item);
             if (!doneWithItem) {
                 return;
@@ -566,8 +566,8 @@ public abstract class AbstractProcessor implements Processor {
 
     protected void process2(@Nonnull Inbox inbox) throws Exception {
         for (Object item; (item = inbox.peek()) != null; ) {
-            final boolean doneWithItem = item instanceof Punctuation
-                    ? tryProcessPunc2((Punctuation) item)
+            final boolean doneWithItem = item instanceof Watermark
+                    ? tryProcessPunc2((Watermark) item)
                     : tryProcess2(item);
             if (!doneWithItem) {
                 return;
@@ -578,8 +578,8 @@ public abstract class AbstractProcessor implements Processor {
 
     protected void process3(@Nonnull Inbox inbox) throws Exception {
         for (Object item; (item = inbox.peek()) != null; ) {
-            final boolean doneWithItem = item instanceof Punctuation
-                    ? tryProcessPunc3((Punctuation) item)
+            final boolean doneWithItem = item instanceof Watermark
+                    ? tryProcessPunc3((Watermark) item)
                     : tryProcess3(item);
             if (!doneWithItem) {
                 return;
@@ -590,8 +590,8 @@ public abstract class AbstractProcessor implements Processor {
 
     protected void process4(@Nonnull Inbox inbox) throws Exception {
         for (Object item; (item = inbox.peek()) != null; ) {
-            final boolean doneWithItem = item instanceof Punctuation
-                    ? tryProcessPunc4((Punctuation) item)
+            final boolean doneWithItem = item instanceof Watermark
+                    ? tryProcessPunc4((Watermark) item)
                     : tryProcess4(item);
             if (!doneWithItem) {
                 return;
@@ -602,8 +602,8 @@ public abstract class AbstractProcessor implements Processor {
 
     protected void processAny(int ordinal, @Nonnull Inbox inbox) throws Exception {
         for (Object item; (item = inbox.peek()) != null; ) {
-            final boolean doneWithItem = item instanceof Punctuation
-                    ? tryProcessPunc(ordinal, (Punctuation) item)
+            final boolean doneWithItem = item instanceof Watermark
+                    ? tryProcessPunc(ordinal, (Watermark) item)
                     : tryProcess(ordinal, item);
             if (!doneWithItem) {
                 return;

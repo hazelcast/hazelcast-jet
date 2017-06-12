@@ -51,7 +51,7 @@ import static org.mockito.Mockito.mock;
 public class AbstractProcessorTest {
 
     private static final String MOCK_ITEM = "x";
-    private static final Punctuation MOCK_PUNC = new Punctuation(17);
+    private static final Watermark MOCK_PUNC = new Watermark(17);
     private static final int OUTBOX_BUCKET_COUNT = 4;
     private static final int ORDINAL_0 = 0;
     private static final int ORDINAL_1 = 1;
@@ -573,7 +573,7 @@ public class AbstractProcessorTest {
         }
 
         @Override
-        protected boolean tryProcessPunc(int ordinal, @Nonnull Punctuation punc) {
+        protected boolean tryProcessPunc(int ordinal, @Nonnull Watermark punc) {
             receivedByTryProcessPuncN[ordinal] = punc;
             return true;
         }
@@ -584,7 +584,7 @@ public class AbstractProcessorTest {
             }
         }
 
-        void validateReceptionOfPunc(int ordinal, Punctuation punc) {
+        void validateReceptionOfPunc(int ordinal, Watermark punc) {
             for (int i = 0; i < receivedByTryProcessPuncN.length; i++) {
                 assertSame(i == ordinal ? punc : null, receivedByTryProcessPuncN[i]);
             }

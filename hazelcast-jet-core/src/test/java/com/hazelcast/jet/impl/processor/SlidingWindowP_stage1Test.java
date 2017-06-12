@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.Processor.Context;
-import com.hazelcast.jet.Punctuation;
+import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.StreamingTestSupport;
 import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.TimestampedEntry;
@@ -111,7 +111,7 @@ public class SlidingWindowP_stage1Test extends StreamingTestSupport {
     public void when_noEvents_then_punctsEmitted() {
         // Given
         ArrayDequeInbox inbox = new ArrayDequeInbox();
-        List<Punctuation> somePuncs = asList(
+        List<Watermark> somePuncs = asList(
                 punc(2),
                 punc(3),
                 punc(4),

@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.AggregateOperation;
-import com.hazelcast.jet.Punctuation;
+import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.Session;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.DistributedBiConsumer;
@@ -56,7 +56,7 @@ import static java.lang.System.arraycopy;
  * @param <R> type of the finished result
  */
 public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
-    private static final Punctuation COMPLETING_PUNC = new Punctuation(Long.MAX_VALUE);
+    private static final Watermark COMPLETING_PUNC = new Watermark(Long.MAX_VALUE);
 
     // exposed for testing, to check for memory leaks
     final Map<K, Windows> keyToWindows = new HashMap<>();
@@ -69,7 +69,7 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
     private final BiConsumer<? super A, ? super T> accumulateF;
     private final DistributedFunction<? super A, R> finishAccumulationF;
     private final DistributedBiConsumer<? super A, ? super A> combineAccF;
-    private final FlatMapper<Punctuation, Session<K, R>> expiredSessionFlatmapper;
+    private final FlatMapper<Watermark, Session<K, R>> expiredSessionFlatmapper;
 
     public SessionWindowP(
             long sessionTimeout,
@@ -98,7 +98,7 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
     }
 
     @Override
-    protected boolean tryProcessPunc0(@Nonnull Punctuation punc) {
+    protected boolean tryProcessPunc0(@Nonnull Watermark punc) {
         return expiredSessionFlatmapper.tryProcess(punc);
     }
 
@@ -107,7 +107,7 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
         return expiredSessionFlatmapper.tryProcess(COMPLETING_PUNC);
     }
 
-    private Traverser<Session<K, R>> expiredSessionTraverser(Punctuation punc) {
+    private Traverser<Session<K, R>> expiredSessionTraverser(Watermark punc) {
         List<K> distinctKeys = deadlineToKeys
                 .headMap(punc.timestamp())
                 .values().stream()

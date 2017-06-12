@@ -20,7 +20,7 @@ package com.hazelcast.jet;
  * A policy object that decides on the punctuation in a single data
  * (sub)stream. The timestamp of every observed item should be reported
  * to this object and it will respond with the current value of the
- * punctuation. Punctuation may also advance in the absence of observed
+ * punctuation. Watermark may also advance in the absence of observed
  * events; {@link #getCurrentPunctuation()} can be called at any
  * time to see this change.
  */

@@ -525,7 +525,7 @@ public final class Processors {
 
     /**
      * Returns a supplier of processor that inserts
-     * {@link com.hazelcast.jet.Punctuation punctuation} into a data
+     * {@link com.hazelcast.jet.Watermark punctuation} into a data
      * (sub)stream. The value of the punctuation is determined by a separate
      * policy object of type {@link PunctuationPolicy}.
      *

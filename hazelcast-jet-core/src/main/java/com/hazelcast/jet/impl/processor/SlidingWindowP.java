@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.AggregateOperation;
-import com.hazelcast.jet.Punctuation;
+import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
@@ -56,7 +56,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     private final Function<? super T, ?> getKeyF;
     private final AggregateOperation<? super T, A, R> aggrOp;
 
-    private final FlatMapper<Punctuation, Object> flatMapper;
+    private final FlatMapper<Watermark, Object> flatMapper;
 
     private long nextFrameTsToEmit = Long.MIN_VALUE;
     private final A emptyAcc;
@@ -92,7 +92,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     }
 
     @Override
-    protected boolean tryProcessPunc0(@Nonnull Punctuation punc) {
+    protected boolean tryProcessPunc0(@Nonnull Watermark punc) {
         return flatMapper.tryProcess(punc);
     }
 

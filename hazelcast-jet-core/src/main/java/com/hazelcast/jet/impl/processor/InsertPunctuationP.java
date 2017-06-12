@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
-import com.hazelcast.jet.Punctuation;
+import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.PunctuationPolicy;
 import com.hazelcast.jet.ResettableSingletonTraverser;
 import com.hazelcast.jet.Traverser;
@@ -64,7 +64,7 @@ public class InsertPunctuationP<T> extends AbstractProcessor {
         if (newPunc <= currPunc) {
             return true;
         }
-        boolean didEmit = tryEmit(new Punctuation(newPunc));
+        boolean didEmit = tryEmit(new Watermark(newPunc));
         if (didEmit) {
             currPunc = newPunc;
         }
@@ -86,7 +86,7 @@ public class InsertPunctuationP<T> extends AbstractProcessor {
         singletonTraverser.accept(item);
         if (newPunc > currPunc) {
             currPunc = newPunc;
-            return singletonTraverser.prepend(new Punctuation(currPunc));
+            return singletonTraverser.prepend(new Watermark(currPunc));
         }
         return singletonTraverser;
     }

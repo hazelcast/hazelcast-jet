@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AggregateOperations;
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.Punctuation;
+import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.Session;
 import com.hazelcast.jet.StreamingTestSupport;
 import com.hazelcast.jet.accumulator.LongAccumulator;
@@ -106,7 +106,7 @@ public class SessionWindowPTest extends StreamingTestSupport {
         // Given
         inbox.addAll(eventsWithKey("a"));
         // this punctuation will cause the first session to be emitted, but not the second
-        inbox.add(new Punctuation(25));
+        inbox.add(new Watermark(25));
 
         // When
         processor.process(0, inbox);
@@ -140,7 +140,7 @@ public class SessionWindowPTest extends StreamingTestSupport {
         Set<Session> expectedSessions = keys.stream()
                                             .flatMap(SessionWindowPTest::expectedSessions)
                                             .collect(toSet());
-        inbox.add(new Punctuation(100));
+        inbox.add(new Watermark(100));
 
         // When
         processor.process(0, inbox);
@@ -188,7 +188,7 @@ public class SessionWindowPTest extends StreamingTestSupport {
                 while (!processor.tryProcess0(entry(key, timestampBase + rnd.nextInt(spread)))) { }
             }
             if (idx % puncInterval == 0) {
-                Punctuation punc = new Punctuation(timestampBase - puncLag);
+                Watermark punc = new Watermark(timestampBase - puncLag);
                 int winCount = 0;
                 while (!processor.tryProcessPunc0(punc)) {
                     while (pollOutbox() != null) {
