@@ -36,7 +36,7 @@ public interface OutboundCollector {
     ProgressState offer(Object item);
 
     /**
-     * Offer a punctuation to this collector. Punctuations will be propagated to all sub-collectors
+     * Offer a watermark to this collector. Watermarks will be propagated to all sub-collectors
      * if the collector is a composite one.
      */
     ProgressState offerBroadcast(Object item);

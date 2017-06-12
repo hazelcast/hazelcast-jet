@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.Watermark;
-import com.hazelcast.jet.PunctuationPolicy;
+import com.hazelcast.jet.WatermarkPolicy;
 import com.hazelcast.jet.ResettableSingletonTraverser;
 import com.hazelcast.jet.Traverser;
 
@@ -28,18 +28,18 @@ import java.util.function.ToLongFunction;
 import static com.hazelcast.jet.Traversers.empty;
 
 /**
- * A processor that inserts punctuation into a data stream. See
- * {@link com.hazelcast.jet.processor.Processors#insertPunctuation(
+ * A processor that inserts watermark into a data stream. See
+ * {@link com.hazelcast.jet.processor.Processors#insertWatermark(
  *      com.hazelcast.jet.function.DistributedToLongFunction,
  *      com.hazelcast.jet.function.DistributedSupplier)
- * Processors.insertPunctuation()}.
+ * Processors.insertWatermark()}.
  *
  * @param <T> type of the stream item
  */
-public class InsertPunctuationP<T> extends AbstractProcessor {
+public class InsertWatermarkP<T> extends AbstractProcessor {
 
     private final ToLongFunction<T> getTimestampF;
-    private final PunctuationPolicy punctuationPolicy;
+    private final WatermarkPolicy watermarkPolicy;
     private final ResettableSingletonTraverser<Object> singletonTraverser;
     private final FlatMapper<Object, Object> flatMapper;
 
@@ -47,20 +47,20 @@ public class InsertPunctuationP<T> extends AbstractProcessor {
 
     /**
      * @param getTimestampF function that extracts the timestamp from the item
-     * @param punctuationPolicy the punctuation policy
+     * @param watermarkPolicy the watermark policy
      */
-    public InsertPunctuationP(@Nonnull ToLongFunction<T> getTimestampF,
-                       @Nonnull PunctuationPolicy punctuationPolicy
+    public InsertWatermarkP(@Nonnull ToLongFunction<T> getTimestampF,
+                       @Nonnull WatermarkPolicy watermarkPolicy
     ) {
         this.getTimestampF = getTimestampF;
-        this.punctuationPolicy = punctuationPolicy;
+        this.watermarkPolicy = watermarkPolicy;
         this.flatMapper = flatMapper(this::traverser);
         this.singletonTraverser = new ResettableSingletonTraverser<>();
     }
 
     @Override
     public boolean tryProcess() {
-        long newPunc = punctuationPolicy.getCurrentPunctuation();
+        long newPunc = watermarkPolicy.getCurrentWatermark();
         if (newPunc <= currPunc) {
             return true;
         }
@@ -82,7 +82,7 @@ public class InsertPunctuationP<T> extends AbstractProcessor {
             // drop late event
             return empty();
         }
-        long newPunc = punctuationPolicy.reportEvent(timestamp);
+        long newPunc = watermarkPolicy.reportEvent(timestamp);
         singletonTraverser.accept(item);
         if (newPunc > currPunc) {
             currPunc = newPunc;

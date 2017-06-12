@@ -143,7 +143,7 @@ public class SlidingWindowP_stage1Test extends StreamingTestSupport {
         long start = System.nanoTime();
         processor.complete();
         long processTime = System.nanoTime() - start;
-        // this is to test that there is no iteration from current punctuation up to Long.MAX_VALUE, which
+        // this is to test that there is no iteration from current watermark up to Long.MAX_VALUE, which
         // will take too long.
         assertTrue("process took too long: " + processTime, processTime < MILLISECONDS.toNanos(100));
         assertTrue(inbox.isEmpty());

@@ -22,18 +22,18 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import static com.hazelcast.jet.PunctuationPolicies.limitingLagAndDelay;
+import static com.hazelcast.jet.WatermarkPolicies.limitingLagAndDelay;
 import static org.junit.Assert.assertEquals;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
-public class PunctuationPolicies_limitingLagAndDelayTest {
+public class WatermarkPolicies_limitingLagAndDelayTest {
 
     private static final int MAX_RETAIN_MS = 8;
     private static final int TIMESTAMP_LAG = 8;
 
     private long time;
-    private PunctuationPolicy p = limitingLagAndDelay(TIMESTAMP_LAG, MAX_RETAIN_MS, 8, () -> time);
+    private WatermarkPolicy p = limitingLagAndDelay(TIMESTAMP_LAG, MAX_RETAIN_MS, 8, () -> time);
 
     @Test
     public void when_outOfOrderEvents_then_monotonicPunct() {
@@ -54,19 +54,19 @@ public class PunctuationPolicies_limitingLagAndDelayTest {
         time = 3;
         assertPunc(5, 13);
         time = 4;
-        assertEquals(5, p.getCurrentPunctuation());
+        assertEquals(5, p.getCurrentWatermark());
         time = 8;
-        assertEquals(10, p.getCurrentPunctuation());
+        assertEquals(10, p.getCurrentWatermark());
         time = 9;
-        assertEquals(11, p.getCurrentPunctuation());
+        assertEquals(11, p.getCurrentWatermark());
         time = 10;
-        assertEquals(12, p.getCurrentPunctuation());
+        assertEquals(12, p.getCurrentWatermark());
         time = 11;
-        assertEquals(13, p.getCurrentPunctuation());
+        assertEquals(13, p.getCurrentWatermark());
     }
 
     private void assertPunc(long expected, long timestamp) {
         assertEquals(expected, p.reportEvent(timestamp));
-        assertEquals(expected, p.getCurrentPunctuation());
+        assertEquals(expected, p.getCurrentWatermark());
     }
 }

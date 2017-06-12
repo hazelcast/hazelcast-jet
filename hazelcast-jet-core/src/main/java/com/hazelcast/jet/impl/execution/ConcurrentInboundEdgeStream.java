@@ -39,7 +39,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private final int priority;
     private final ConcurrentConveyor<Object> conveyor;
     private final ProgressTracker tracker = new ProgressTracker();
-    private final PunctuationDetector puncDetector = new PunctuationDetector();
+    private final WatermarkDetector puncDetector = new WatermarkDetector();
     private long lastEmittedPunc = Long.MIN_VALUE;
 
     private final SkewReductionPolicy skewReductionPolicy;
@@ -97,7 +97,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
      * Drains the supplied queue into a {@code dest} collection, up to the next
      * {@link Watermark}. Also updates the {@code tracker} with new status.
      *
-     * @return the drained punctuation, if any; {@code null} otherwise
+     * @return the drained watermark, if any; {@code null} otherwise
      */
     private Watermark drainUpToPunc(Pipe<Object> queue, Collection<Object> dest) {
         puncDetector.reset(dest);
@@ -111,9 +111,9 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
 
     /**
      * Drains a concurrent conveyor's queue while watching for {@link Watermark}s.
-     * When encountering a punctuation, prevents draining more items.
+     * When encountering a watermark, prevents draining more items.
      */
-    private static final class PunctuationDetector implements Predicate<Object> {
+    private static final class WatermarkDetector implements Predicate<Object> {
         Collection<Object> dest;
         Watermark punc;
         boolean isDone;
@@ -127,7 +127,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         @Override
         public boolean test(Object o) {
             if (o instanceof Watermark) {
-                assert punc == null : "Received multiple Punctuations without a call to reset()";
+                assert punc == null : "Received multiple Watermarks without a call to reset()";
                 punc = (Watermark) o;
                 return false;
             }

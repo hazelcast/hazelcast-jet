@@ -250,9 +250,9 @@ public class AbstractProcessorTest {
     }
 
     @Test
-    public void when_tryProcessPunc_then_passesOnPunc() {
+    public void when_tryProcessWm_then_passesOnPunc() {
         // When
-        boolean done = nothingOverriddenP.tryProcessPunc(ORDINAL_0, MOCK_PUNC);
+        boolean done = nothingOverriddenP.tryProcessWm(ORDINAL_0, MOCK_PUNC);
 
         // Then
         assertTrue(done);
@@ -260,9 +260,9 @@ public class AbstractProcessorTest {
     }
 
     @Test
-    public void when_tryProcessPunc0_then_delegatesToTryProcessPunc() throws Exception {
+    public void when_tryProcessWm0_then_delegatesToTryProcessPunc() throws Exception {
         // When
-        boolean done = p.tryProcessPunc0(MOCK_PUNC);
+        boolean done = p.tryProcessWm0(MOCK_PUNC);
 
         // Then
         assertTrue(done);
@@ -270,9 +270,9 @@ public class AbstractProcessorTest {
     }
 
     @Test
-    public void when_tryProcessPunc1_then_delegatesToTryProcessPunc() throws Exception {
+    public void when_tryProcessWm1_then_delegatesToTryProcessPunc() throws Exception {
         // When
-        boolean done = p.tryProcessPunc1(MOCK_PUNC);
+        boolean done = p.tryProcessWm1(MOCK_PUNC);
 
         // Then
         assertTrue(done);
@@ -280,9 +280,9 @@ public class AbstractProcessorTest {
     }
 
     @Test
-    public void when_tryProcessPunc2_then_delegatesToTryProcessPunc() throws Exception {
+    public void when_tryProcessWm2_then_delegatesToTryProcessPunc() throws Exception {
         // When
-        boolean done = p.tryProcessPunc2(MOCK_PUNC);
+        boolean done = p.tryProcessWm2(MOCK_PUNC);
 
         // Then
         assertTrue(done);
@@ -290,9 +290,9 @@ public class AbstractProcessorTest {
     }
 
     @Test
-    public void when_tryProcessPunc3_then_delegatesToTryProcessPunc() throws Exception {
+    public void when_tryProcessWm3_then_delegatesToTryProcessPunc() throws Exception {
         // When
-        boolean done = p.tryProcessPunc3(MOCK_PUNC);
+        boolean done = p.tryProcessWm3(MOCK_PUNC);
 
         // Then
         assertTrue(done);
@@ -300,9 +300,9 @@ public class AbstractProcessorTest {
     }
 
     @Test
-    public void when_tryProcessPunc4_then_delegatesToTryProcessPunc() throws Exception {
+    public void when_tryProcessWm4_then_delegatesToTryProcessPunc() throws Exception {
         // When
-        boolean done = p.tryProcessPunc4(MOCK_PUNC);
+        boolean done = p.tryProcessWm4(MOCK_PUNC);
 
         // Then
         assertTrue(done);
@@ -573,7 +573,7 @@ public class AbstractProcessorTest {
         }
 
         @Override
-        protected boolean tryProcessPunc(int ordinal, @Nonnull Watermark punc) {
+        protected boolean tryProcessWm(int ordinal, @Nonnull Watermark punc) {
             receivedByTryProcessPuncN[ordinal] = punc;
             return true;
         }

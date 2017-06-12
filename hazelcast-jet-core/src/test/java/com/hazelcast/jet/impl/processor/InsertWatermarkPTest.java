@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.Processor.Context;
-import com.hazelcast.jet.PunctuationPolicies;
+import com.hazelcast.jet.WatermarkPolicies;
 import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.test.HazelcastParallelClassRunner;
@@ -37,18 +37,18 @@ import static org.mockito.Mockito.mock;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
-public class InsertPunctuationPTest {
+public class InsertWatermarkPTest {
 
     private static final long LAG = 3;
 
     private MockClock clock;
-    private InsertPunctuationP<Item> p;
+    private InsertWatermarkP<Item> p;
     private ArrayDequeOutbox outbox;
     private List<String> resultToCheck = new ArrayList<>();
 
     public void setUp(int outboxCapacity) {
         clock = new MockClock(100);
-        p = new InsertPunctuationP<>(Item::getTimestamp, PunctuationPolicies.withFixedLag(LAG));
+        p = new InsertWatermarkP<>(Item::getTimestamp, WatermarkPolicies.withFixedLag(LAG));
 
         outbox = new ArrayDequeOutbox(new int[]{outboxCapacity}, new ProgressTracker());
         Context context = mock(Context.class);

@@ -105,7 +105,7 @@ public class SessionWindowPTest extends StreamingTestSupport {
     public void when_batchProcessing_then_flushEverything() {
         // Given
         inbox.addAll(eventsWithKey("a"));
-        // this punctuation will cause the first session to be emitted, but not the second
+        // this watermark will cause the first session to be emitted, but not the second
         inbox.add(new Watermark(25));
 
         // When
@@ -121,7 +121,7 @@ public class SessionWindowPTest extends StreamingTestSupport {
         long start = System.nanoTime();
         processor.complete();
         long processTime = System.nanoTime() - start;
-        // this is to test that there is no iteration from current punctuation up to Long.MAX_VALUE, which
+        // this is to test that there is no iteration from current watermark up to Long.MAX_VALUE, which
         // will take too long.
 
         // Then
@@ -190,7 +190,7 @@ public class SessionWindowPTest extends StreamingTestSupport {
             if (idx % puncInterval == 0) {
                 Watermark punc = new Watermark(timestampBase - puncLag);
                 int winCount = 0;
-                while (!processor.tryProcessPunc0(punc)) {
+                while (!processor.tryProcessWm0(punc)) {
                     while (pollOutbox() != null) {
                         winCount++;
                     }

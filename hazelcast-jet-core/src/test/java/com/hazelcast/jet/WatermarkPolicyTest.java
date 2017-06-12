@@ -26,11 +26,11 @@ import static org.junit.Assert.assertEquals;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
-public class PunctuationPolicyTest {
+public class WatermarkPolicyTest {
 
     private static final int MIN_STEP = 2;
     private long punc;
-    private PunctuationPolicy p = new PunctuationPolicy() {
+    private WatermarkPolicy p = new WatermarkPolicy() {
 
         @Override
         public long reportEvent(long timestamp) {
@@ -38,7 +38,7 @@ public class PunctuationPolicyTest {
         }
 
         @Override
-        public long getCurrentPunctuation() {
+        public long getCurrentWatermark() {
             return punc;
         }
     };
@@ -73,6 +73,6 @@ public class PunctuationPolicyTest {
     private void assertPunc(long actualPunc, long throttledPunc) {
         punc = actualPunc;
         assertEquals(throttledPunc, p.reportEvent(0));
-        assertEquals(throttledPunc, p.getCurrentPunctuation());
+        assertEquals(throttledPunc, p.getCurrentWatermark());
     }
 }

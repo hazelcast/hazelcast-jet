@@ -21,7 +21,7 @@ import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorSupplier;
-import com.hazelcast.jet.PunctuationPolicy;
+import com.hazelcast.jet.WatermarkPolicy;
 import com.hazelcast.jet.ResettableSingletonTraverser;
 import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.TimestampedEntry;
@@ -33,7 +33,7 @@ import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.impl.processor.AggregateP;
 import com.hazelcast.jet.impl.processor.GroupByKeyP;
-import com.hazelcast.jet.impl.processor.InsertPunctuationP;
+import com.hazelcast.jet.impl.processor.InsertWatermarkP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
 import com.hazelcast.jet.impl.processor.TransformP;
@@ -347,7 +347,7 @@ public final class Processors {
      * timestamp denoting the window's end time. This timestamp is equal to the
      * exclusive upper bound of timestamps belonging to the window.
      * <p>
-     * When the processor receives a punctuation with a given {@code puncVal},
+     * When the processor receives a watermark with a given {@code puncVal},
      * it emits the result of aggregation for all positions of the sliding
      * window with {@code windowTimestamp <= puncVal}. It computes the window
      * result by combining the partial results of the frames belonging to it
@@ -388,7 +388,7 @@ public final class Processors {
      * WindowDefinition#higherFrameTs(long)} maps the event timestamp to the
      * timestamp of the frame it belongs to.
      * <p>
-     * When the processor receives a punctuation with a given {@code puncVal},
+     * When the processor receives a watermark with a given {@code puncVal},
      * it emits the current accumulated state of all frames with {@code
      * timestamp <= puncVal} and deletes these frames from its storage.
      * The type of emitted items is {@link TimestampedEntry
@@ -429,7 +429,7 @@ public final class Processors {
      * the timestamp denoting the window's end time. This timestamp is equal to
      * the exclusive upper bound of timestamps belonging to the window.
      * <p>
-     * When the processor receives a punctuation with a given {@code puncVal},
+     * When the processor receives a watermark with a given {@code puncVal},
      * it emits the result of aggregation for all positions of the sliding
      * window with {@code windowTimestamp <= puncVal}. It computes the window
      * result by combining the partial results of the frames belonging to it
@@ -525,18 +525,18 @@ public final class Processors {
 
     /**
      * Returns a supplier of processor that inserts
-     * {@link com.hazelcast.jet.Watermark punctuation} into a data
-     * (sub)stream. The value of the punctuation is determined by a separate
-     * policy object of type {@link PunctuationPolicy}.
+     * {@link com.hazelcast.jet.Watermark watermark} into a data
+     * (sub)stream. The value of the watermark is determined by a separate
+     * policy object of type {@link WatermarkPolicy}.
      *
      * @param <T> the type of stream item
      */
     @Nonnull
-    public static <T> DistributedSupplier<Processor> insertPunctuation(
+    public static <T> DistributedSupplier<Processor> insertWatermark(
             @Nonnull DistributedToLongFunction<T> getTimestampF,
-            @Nonnull DistributedSupplier<PunctuationPolicy> newPuncPolicyF
+            @Nonnull DistributedSupplier<WatermarkPolicy> newPuncPolicyF
     ) {
-        return () -> new InsertPunctuationP<>(getTimestampF, newPuncPolicyF.get());
+        return () -> new InsertWatermarkP<>(getTimestampF, newPuncPolicyF.get());
     }
 
     /**

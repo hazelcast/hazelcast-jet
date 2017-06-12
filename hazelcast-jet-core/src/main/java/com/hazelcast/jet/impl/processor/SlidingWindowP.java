@@ -92,7 +92,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     }
 
     @Override
-    protected boolean tryProcessPunc0(@Nonnull Watermark punc) {
+    protected boolean tryProcessWm0(@Nonnull Watermark punc) {
         return flatMapper.tryProcess(punc);
     }
 
@@ -116,7 +116,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
             if (tsToKeyToAcc.isEmpty()) {
                 return Traversers.empty();
             }
-            // This is the first punctuation we are acting upon. Find the lowest frame
+            // This is the first watermark we are acting upon. Find the lowest frame
             // timestamp that can be emitted: at most the top existing timestamp lower
             // than punc, but even lower than that if there are older frames on record.
             // The above guarantees that the sliding window can be correctly

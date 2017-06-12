@@ -22,18 +22,18 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import static com.hazelcast.jet.PunctuationPolicies.limitingLagAndLull;
+import static com.hazelcast.jet.WatermarkPolicies.limitingLagAndLull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static org.junit.Assert.assertEquals;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
-public class PunctuationPolicies_limitingLagAndLullTest {
+public class WatermarkPolicies_limitingLagAndLullTest {
 
     private static final int MAX_LULL_MS = 3;
     private long currTime;
-    private PunctuationPolicy p = limitingLagAndLull(2, MAX_LULL_MS, () -> currTime);
+    private WatermarkPolicy p = limitingLagAndLull(2, MAX_LULL_MS, () -> currTime);
 
     @Test
     public void when_outOfOrderEvents_then_monotonicPunct() {
@@ -52,33 +52,33 @@ public class PunctuationPolicies_limitingLagAndLullTest {
 
         // When
         for (; currTime < maxLullNanos; currTime += 1_000_000) {
-            assertEquals(10, p.getCurrentPunctuation());
+            assertEquals(10, p.getCurrentWatermark());
         }
 
         // Then - punc increases
         for (; currTime <= 10_000_000; currTime += 1_000_000) {
             assertEquals("at time=" + currTime,
                     10 + NANOSECONDS.toMillis(currTime - maxLullNanos),
-                    p.getCurrentPunctuation());
+                    p.getCurrentWatermark());
         }
     }
 
     @Test
     public void when_noEventEver_then_increaseFromLongMinValue() {
         // Given
-        assertEquals(Long.MIN_VALUE, p.getCurrentPunctuation()); // initializes maxLullAt
+        assertEquals(Long.MIN_VALUE, p.getCurrentWatermark()); // initializes maxLullAt
         long maxLullNanos = MILLISECONDS.toNanos(MAX_LULL_MS);
 
         // When
         for (; currTime < maxLullNanos; currTime += 1_000_000) {
-            assertEquals(Long.MIN_VALUE, p.getCurrentPunctuation());
+            assertEquals(Long.MIN_VALUE, p.getCurrentWatermark());
         }
 
         // Then - punct increases
         for (; currTime <= 10_000_000; currTime += 1_000_000) {
             assertEquals("at time=" + currTime,
                     Long.MIN_VALUE + NANOSECONDS.toMillis(currTime - maxLullNanos),
-                    p.getCurrentPunctuation());
+                    p.getCurrentWatermark());
         }
     }
 }

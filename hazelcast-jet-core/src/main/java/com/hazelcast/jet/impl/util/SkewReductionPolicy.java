@@ -26,7 +26,7 @@ import static com.hazelcast.util.Preconditions.checkTrue;
 
 /**
  * A stream's <i>skew</i> is defined on a set of its substreams that are
- * being consumed in parallel: given the set of the punctuation values of
+ * being consumed in parallel: given the set of the watermark values of
  * each substream, it is the difference between the top and the bottom
  * value in that set. Stream skew has detrimental effects on at least one
  * of:
@@ -41,19 +41,19 @@ import static com.hazelcast.util.Preconditions.checkTrue;
  * </li></ol>
  * This class implements a policy to reduce the stream skew by managing the
  * priority of draining individual substream queues. As soon as a queue's
- * skew (the difference between its punctuation and the bottom punctuation)
+ * skew (the difference between its watermark and the bottom watermark)
  * reaches the configured {@code priorityDrainingThreshold}, it will be
  * drained only if no queue with a lower skew had any data. Furthermore,
  * when a queue exceeds the configured {@code maxSkew}, action will be
  * taken to prevent its further increase by either:
  * <ul><li>
- *     refusing to drain the advanced queues while waiting for the punctuation
+ *     refusing to drain the advanced queues while waiting for the watermark
  *     on the lagging queues to catch up until the skew is back below
  *     {@code maxSkew}, or
  * </li><li>
- *     force-advancing the punctuation beyond the lagging queues' punctuation,
+ *     force-advancing the watermark beyond the lagging queues' watermark,
  *     possibly causing items on those queues that wouldn't be late by their
- *     local punctuation, to be declared late anyway and dropped.
+ *     local watermark, to be declared late anyway and dropped.
  * </li></ul>
  * This class should be used in the loop that drains the queues, as
  * follows:
@@ -71,7 +71,7 @@ import static com.hazelcast.util.Preconditions.checkTrue;
  *     madeProgress)} to see whether to exit the loop.
  * </li><li>
  *     Call {@link #observePunc(int, long) observePunc(queueIndex, puncValue)}
- *     for every punctuation item received from any queue. If this method
+ *     for every watermark item received from any queue. If this method
  *     returns {@code true}, it means that the draining order was changed and
  *     the draining loop should exit.
  * </li></ol>
@@ -87,10 +87,11 @@ public class SkewReductionPolicy {
     private final boolean forceAdvancePunc;
 
     /**
-     * Creates a policy which does not stop draining from any queue under any condition
-     * and does not advance punctuation eagerly. The policy only sets the draining order for the queues
-     * by ordering them by their current punctuation value. The queue with the lowest punctuation
-     * value will have the drain order 0.
+     * Creates a policy which does not stop draining from any queue under any
+     * condition and does not advance watermark eagerly. The policy only sets
+     * the draining order for the queues by ordering them by their current
+     * watermark value. The queue with the lowest watermark value will have the
+     * drain order 0.
      */
     public SkewReductionPolicy(int numQueues) {
         this(numQueues, Long.MAX_VALUE, Long.MAX_VALUE, false);
@@ -115,7 +116,7 @@ public class SkewReductionPolicy {
     /**
      * Given the (variable) position of a queue in the draining order, returns
      * the (fixed) index of that queue in the array of all queues. Queues are
-     * ordered for draining by their punctuation (lowest first) so that the
+     * ordered for draining by their watermark (lowest first) so that the
      * least advanced queue is drained first.
      */
     public int toQueueIndex(int drainOrderIdx) {
@@ -123,17 +124,17 @@ public class SkewReductionPolicy {
     }
 
     /**
-     * Called to report the value of punctuation observed on the queue at
+     * Called to report the value of watermark observed on the queue at
      * {@code queueIndex}.
      *
-     * @return {@code true} if the queues were reordered by this punctuation
+     * @return {@code true} if the queues were reordered by this watermark
      */
     public boolean observePunc(int queueIndex, final long puncValue) {
         if (queuePuncs[queueIndex] >= puncValue) {
-            // this is possible if force-advancing the punctuation because we increase
-            // the queuePuncValue without receiving punctuation from that queue
+            // this is possible if force-advancing the watermark because we increase
+            // the queuePuncValue without receiving watermark from that queue
             if (!forceAdvancePunc) {
-                throw new JetException("Punctuations not monotonically increasing on queue: " +
+                throw new JetException("Watermarks not monotonically increasing on queue: " +
                         "last one=" + queuePuncs[queueIndex] + ", new one=" + puncValue);
             }
             return false;
@@ -158,7 +159,7 @@ public class SkewReductionPolicy {
      * The queue-draining loop drains the queues in the order specified by this
      * class and consults this method before going on to drain the next queue.
      * The method determines the skew of the queue the loop is about to drain:
-     * it is the difference between its punctuation and the bottom punctuation
+     * it is the difference between its watermark and the bottom watermark
      * (i.e., that of the first queue in the draining order). The policy will
      * signal to stop draining if:
      * <ol><li>
@@ -166,7 +167,7 @@ public class SkewReductionPolicy {
      *     configured "priority draining" skew threshold, or
      * </li><li>
      *     the queue has exceeded the configured {@code maxSkew} and the
-     *     configured policy is not to force-advance the punctuation.
+     *     configured policy is not to force-advance the watermark.
      * </li></ol>
      *
      * @param queueIndex the current position in the draining order
@@ -187,9 +188,9 @@ public class SkewReductionPolicy {
     }
 
     /**
-     * Reacts to the advancement of a queue's punctuation by repositioning
+     * Reacts to the advancement of a queue's watermark by repositioning
      * it in the drain order, so as to keep the drain order sorted by
-     * queue punctuation.
+     * queue watermark.
      *
      * @return whether the queue had to be repositioned
      */
