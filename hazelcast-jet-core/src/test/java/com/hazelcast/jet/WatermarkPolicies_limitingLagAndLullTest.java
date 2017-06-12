@@ -45,7 +45,7 @@ public class WatermarkPolicies_limitingLagAndLullTest {
     }
 
     @Test
-    public void when_eventsStop_then_puncIncreases() {
+    public void when_eventsStop_then_wmIncreases() {
         // Given - starting event
         assertEquals(10, p.reportEvent(12));
         long maxLullNanos = MILLISECONDS.toNanos(MAX_LULL_MS);
@@ -55,7 +55,7 @@ public class WatermarkPolicies_limitingLagAndLullTest {
             assertEquals(10, p.getCurrentWatermark());
         }
 
-        // Then - punc increases
+        // Then - wm increases
         for (; currTime <= 10_000_000; currTime += 1_000_000) {
             assertEquals("at time=" + currTime,
                     10 + NANOSECONDS.toMillis(currTime - maxLullNanos),
@@ -74,7 +74,7 @@ public class WatermarkPolicies_limitingLagAndLullTest {
             assertEquals(Long.MIN_VALUE, p.getCurrentWatermark());
         }
 
-        // Then - punct increases
+        // Then - wmt increases
         for (; currTime <= 10_000_000; currTime += 1_000_000) {
             assertEquals("at time=" + currTime,
                     Long.MIN_VALUE + NANOSECONDS.toMillis(currTime - maxLullNanos),

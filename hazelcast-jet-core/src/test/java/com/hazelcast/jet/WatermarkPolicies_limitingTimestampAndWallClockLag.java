@@ -48,14 +48,14 @@ public class WatermarkPolicies_limitingTimestampAndWallClockLag {
     }
 
     @Test
-    public void when_eventsStop_then_puncFollowsWallClock() {
+    public void when_eventsStop_then_wmFollowsWallClock() {
         for (currTimeMs = 100; currTimeMs < 110; currTimeMs++) {
             assertEquals(currTimeMs - WALL_CLOCK_LAG, p.reportEvent(0));
         }
     }
 
     @Test
-    public void when_noEventEver_then_puncFollowsWallClock() {
+    public void when_noEventEver_then_wmFollowsWallClock() {
         for (currTimeMs = 100; currTimeMs < 110; currTimeMs++) {
             assertEquals(currTimeMs - WALL_CLOCK_LAG, p.getCurrentWatermark());
         }

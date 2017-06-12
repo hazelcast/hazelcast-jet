@@ -89,13 +89,13 @@ public interface OutboundCollector {
         }
 
         @Override
-        public ProgressState offerBroadcast(Object punc) {
+        public ProgressState offerBroadcast(Object wm) {
             progTracker.reset();
             for (int i = 0; i < collectors.length; i++) {
                 if (broadcastTracker.get(i)) {
                     continue;
                 }
-                ProgressState result = collectors[i].offerBroadcast(punc);
+                ProgressState result = collectors[i].offerBroadcast(wm);
                 progTracker.mergeWith(result);
                 if (result.isDone()) {
                     broadcastTracker.set(i);

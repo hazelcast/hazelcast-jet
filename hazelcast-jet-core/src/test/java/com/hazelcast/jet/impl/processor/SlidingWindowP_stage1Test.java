@@ -76,17 +76,17 @@ public class SlidingWindowP_stage1Test extends StreamingTestSupport {
         inbox.addAll(asList(
                 entry(0L, 1L), // to frame 4
                 entry(1L, 1L), // to frame 4
-                punc(3), // does not close anything
-                punc(4), // closes frame 4
+                wm(3), // does not close anything
+                wm(4), // closes frame 4
                 entry(4L, 1L), // to frame 8
                 entry(5L, 1L), // to frame 8
                 entry(8L, 1L), // to frame 12
-                punc(6), // no effect
-                punc(7), // no effect
+                wm(6), // no effect
+                wm(7), // no effect
                 entry(8L, 1L), // to frame 12
-                punc(8), // closes frame 8
+                wm(8), // closes frame 8
                 entry(8L, 1L), // to frame 12
-                punc(21) // closes everything
+                wm(21) // closes everything
         ));
 
         // When
@@ -95,30 +95,30 @@ public class SlidingWindowP_stage1Test extends StreamingTestSupport {
 
         // Then
         assertOutbox(asList(
-                punc(3),
+                wm(3),
                 frame(4, 2),
-                punc(4),
-                punc(6),
-                punc(7),
+                wm(4),
+                wm(6),
+                wm(7),
                 frame(8, 2),
-                punc(8),
+                wm(8),
                 frame(12, 3),
-                punc(21)
+                wm(21)
         ));
     }
 
     @Test
-    public void when_noEvents_then_punctsEmitted() {
+    public void when_noEvents_then_wmtsEmitted() {
         // Given
         ArrayDequeInbox inbox = new ArrayDequeInbox();
         List<Watermark> someWms = asList(
-                punc(2),
-                punc(3),
-                punc(4),
-                punc(5),
-                punc(6),
-                punc(8),
-                punc(20)
+                wm(2),
+                wm(3),
+                wm(4),
+                wm(5),
+                wm(6),
+                wm(8),
+                wm(20)
         );
         inbox.addAll(someWms);
 
@@ -135,7 +135,7 @@ public class SlidingWindowP_stage1Test extends StreamingTestSupport {
         ArrayDequeInbox inbox = new ArrayDequeInbox();
         inbox.addAll(asList(
                 entry(0L, 1L), // to frame 4
-                punc(4) // closes frame 4
+                wm(4) // closes frame 4
         ));
 
         // When
@@ -151,7 +151,7 @@ public class SlidingWindowP_stage1Test extends StreamingTestSupport {
         // Then
         assertOutbox(asList(
                 frame(4, 1),
-                punc(4)
+                wm(4)
         ));
     }
 

@@ -347,9 +347,9 @@ public final class Processors {
      * timestamp denoting the window's end time. This timestamp is equal to the
      * exclusive upper bound of timestamps belonging to the window.
      * <p>
-     * When the processor receives a watermark with a given {@code puncVal},
+     * When the processor receives a watermark with a given {@code wmVal},
      * it emits the result of aggregation for all positions of the sliding
-     * window with {@code windowTimestamp <= puncVal}. It computes the window
+     * window with {@code windowTimestamp <= wmVal}. It computes the window
      * result by combining the partial results of the frames belonging to it
      * and finally applying the {@code finish} aggregation primitive. After this
      * it deletes from storage all the frames that trail behind the emitted
@@ -388,9 +388,9 @@ public final class Processors {
      * WindowDefinition#higherFrameTs(long)} maps the event timestamp to the
      * timestamp of the frame it belongs to.
      * <p>
-     * When the processor receives a watermark with a given {@code puncVal},
+     * When the processor receives a watermark with a given {@code wmVal},
      * it emits the current accumulated state of all frames with {@code
-     * timestamp <= puncVal} and deletes these frames from its storage.
+     * timestamp <= wmVal} and deletes these frames from its storage.
      * The type of emitted items is {@link TimestampedEntry
      * TimestampedEntry&lt;K, A>} so there is one item per key per frame.
      *
@@ -429,9 +429,9 @@ public final class Processors {
      * the timestamp denoting the window's end time. This timestamp is equal to
      * the exclusive upper bound of timestamps belonging to the window.
      * <p>
-     * When the processor receives a watermark with a given {@code puncVal},
+     * When the processor receives a watermark with a given {@code wmVal},
      * it emits the result of aggregation for all positions of the sliding
-     * window with {@code windowTimestamp <= puncVal}. It computes the window
+     * window with {@code windowTimestamp <= wmVal}. It computes the window
      * result by combining the partial results of the frames belonging to it
      * and finally applying the {@code finish} aggregation primitive. After this
      * it deletes from storage all the frames that trail behind the emitted

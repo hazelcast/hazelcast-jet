@@ -74,8 +74,8 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         this.aggrOp = aggrOp;
 
         this.flatMapper = flatMapper(
-                punc -> windowTraverserAndEvictor(punc.timestamp())
-                            .append(punc));
+                wm -> windowTraverserAndEvictor(wm.timestamp())
+                            .append(wm));
         this.emptyAcc = aggrOp.createAccumulatorF().get();
     }
 
@@ -92,8 +92,8 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     }
 
     @Override
-    protected boolean tryProcessWm0(@Nonnull Watermark punc) {
-        return flatMapper.tryProcess(punc);
+    protected boolean tryProcessWm0(@Nonnull Watermark wm) {
+        return flatMapper.tryProcess(wm);
     }
 
     @Override
@@ -118,7 +118,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
             }
             // This is the first watermark we are acting upon. Find the lowest frame
             // timestamp that can be emitted: at most the top existing timestamp lower
-            // than punc, but even lower than that if there are older frames on record.
+            // than wm, but even lower than that if there are older frames on record.
             // The above guarantees that the sliding window can be correctly
             // initialized using the "add leading/deduct trailing" approach because we
             // start from a window that covers at most one existing frame -- the lowest

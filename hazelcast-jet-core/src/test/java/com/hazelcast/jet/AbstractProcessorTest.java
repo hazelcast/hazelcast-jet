@@ -573,8 +573,8 @@ public class AbstractProcessorTest {
         }
 
         @Override
-        protected boolean tryProcessWm(int ordinal, @Nonnull Watermark punc) {
-            receivedByTryProcessWmN[ordinal] = punc;
+        protected boolean tryProcessWm(int ordinal, @Nonnull Watermark wm) {
+            receivedByTryProcessWmN[ordinal] = wm;
             return true;
         }
 
@@ -584,9 +584,9 @@ public class AbstractProcessorTest {
             }
         }
 
-        void validateReceptionOfWm(int ordinal, Watermark punc) {
+        void validateReceptionOfWm(int ordinal, Watermark wm) {
             for (int i = 0; i < receivedByTryProcessWmN.length; i++) {
-                assertSame(i == ordinal ? punc : null, receivedByTryProcessWmN[i]);
+                assertSame(i == ordinal ? wm : null, receivedByTryProcessWmN[i]);
             }
         }
     }

@@ -98,8 +98,8 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
     }
 
     @Override
-    protected boolean tryProcessWm0(@Nonnull Watermark punc) {
-        return expiredSessionFlatmapper.tryProcess(punc);
+    protected boolean tryProcessWm0(@Nonnull Watermark wm) {
+        return expiredSessionFlatmapper.tryProcess(wm);
     }
 
     @Override
@@ -107,18 +107,18 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
         return expiredSessionFlatmapper.tryProcess(COMPLETING_PUNC);
     }
 
-    private Traverser<Session<K, R>> expiredSessionTraverser(Watermark punc) {
+    private Traverser<Session<K, R>> expiredSessionTraverser(Watermark wm) {
         List<K> distinctKeys = deadlineToKeys
-                .headMap(punc.timestamp())
+                .headMap(wm.timestamp())
                 .values().stream()
                 .flatMap(Set::stream)
                 .distinct()
                 .collect(Collectors.toList());
 
-        deadlineToKeys.headMap(punc.timestamp()).clear();
+        deadlineToKeys.headMap(wm.timestamp()).clear();
 
         Stream<Session<K, R>> sessions = distinctKeys.stream()
-                .map(key -> keyToWindows.get(key).closeWindows(key, punc.timestamp()))
+                .map(key -> keyToWindows.get(key).closeWindows(key, wm.timestamp()))
                 .flatMap(List::stream);
 
         return traverseStream(sessions);
@@ -146,10 +146,10 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
             accumulateF.accept(resolveAcc(key, timestamp), event);
         }
 
-        List<Session<K, R>> closeWindows(K key, long punc) {
+        List<Session<K, R>> closeWindows(K key, long wm) {
             List<Session<K, R>> sessions = new ArrayList<>();
             int i = 0;
-            for (; i < size && ends[i] < punc; i++) {
+            for (; i < size && ends[i] < wm; i++) {
                 sessions.add(new Session<>(key, starts[i], ends[i], finishAccumulationF.apply(accs[i])));
             }
             if (i != size) {

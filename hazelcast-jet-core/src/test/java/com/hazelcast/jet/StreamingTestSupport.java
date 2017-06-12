@@ -30,7 +30,7 @@ public class StreamingTestSupport {
     public ArrayDequeInbox inbox = new ArrayDequeInbox();
     public ArrayDequeOutbox outbox = new ArrayDequeOutbox(new int[] {1024}, new ProgressTracker());
 
-    protected static Watermark punc(long timestamp) {
+    protected static Watermark wm(long timestamp) {
         return new Watermark(timestamp);
     }
 

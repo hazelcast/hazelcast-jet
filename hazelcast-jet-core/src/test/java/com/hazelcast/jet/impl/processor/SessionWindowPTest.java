@@ -178,19 +178,19 @@ public class SessionWindowPTest extends StreamingTestSupport {
         long eventsPerKey = eventCount / keyCount;
         int spread = 4000;
         int timestampStep = 20;
-        int puncLag = 2000;
-        long puncInterval = 100;
-        System.out.format("keyCount %,d eventsPerKey %,d puncInterval %,d%n", keyCount, eventsPerKey, puncInterval);
+        int wmLag = 2000;
+        long wmInterval = 100;
+        System.out.format("keyCount %,d eventsPerKey %,d wmInterval %,d%n", keyCount, eventsPerKey, wmInterval);
         for (long idx = 0; idx < eventsPerKey; idx++) {
             long timestampBase = idx * timestampStep;
             for (long key = (timestampBase / SESSION_TIMEOUT) % 2; key < keyCount; key += 2) {
                 while (!processor.tryProcess0(entry(key, timestampBase + rnd.nextInt(spread)))) { }
                 while (!processor.tryProcess0(entry(key, timestampBase + rnd.nextInt(spread)))) { }
             }
-            if (idx % puncInterval == 0) {
-                Watermark punc = new Watermark(timestampBase - puncLag);
+            if (idx % wmInterval == 0) {
+                Watermark wm = new Watermark(timestampBase - wmLag);
                 int winCount = 0;
-                while (!processor.tryProcessWm0(punc)) {
+                while (!processor.tryProcessWm0(wm)) {
                     while (pollOutbox() != null) {
                         winCount++;
                     }

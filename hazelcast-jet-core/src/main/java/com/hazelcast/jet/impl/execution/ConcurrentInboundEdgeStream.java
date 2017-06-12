@@ -39,7 +39,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private final int priority;
     private final ConcurrentConveyor<Object> conveyor;
     private final ProgressTracker tracker = new ProgressTracker();
-    private final WatermarkDetector puncDetector = new WatermarkDetector();
+    private final WatermarkDetector wmDetector = new WatermarkDetector();
     private long lastEmittedWm = Long.MIN_VALUE;
 
     private final SkewReductionPolicy skewReductionPolicy;
@@ -74,12 +74,12 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             if (q == null) {
                 continue;
             }
-            Watermark punc = drainUpToWm(q, dest);
-            if (puncDetector.isDone) {
+            Watermark wm = drainUpToWm(q, dest);
+            if (wmDetector.isDone) {
                 conveyor.removeQueue(queueIndex);
                 continue;
             }
-            if (punc != null && skewReductionPolicy.observeWm(queueIndex, punc.timestamp())) {
+            if (wm != null && skewReductionPolicy.observeWm(queueIndex, wm.timestamp())) {
                 break;
             }
         }
@@ -100,13 +100,13 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
      * @return the drained watermark, if any; {@code null} otherwise
      */
     private Watermark drainUpToWm(Pipe<Object> queue, Collection<Object> dest) {
-        puncDetector.reset(dest);
+        wmDetector.reset(dest);
 
-        int drainedCount = queue.drain(puncDetector);
-        tracker.mergeWith(ProgressState.valueOf(drainedCount > 0, puncDetector.isDone));
+        int drainedCount = queue.drain(wmDetector);
+        tracker.mergeWith(ProgressState.valueOf(drainedCount > 0, wmDetector.isDone));
 
-        puncDetector.dest = null;
-        return puncDetector.punc;
+        wmDetector.dest = null;
+        return wmDetector.wm;
     }
 
     /**
@@ -115,20 +115,20 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
      */
     private static final class WatermarkDetector implements Predicate<Object> {
         Collection<Object> dest;
-        Watermark punc;
+        Watermark wm;
         boolean isDone;
 
         void reset(Collection<Object> newDest) {
             dest = newDest;
-            punc = null;
+            wm = null;
             isDone = false;
         }
 
         @Override
         public boolean test(Object o) {
             if (o instanceof Watermark) {
-                assert punc == null : "Received multiple Watermarks without a call to reset()";
-                punc = (Watermark) o;
+                assert wm == null : "Received multiple Watermarks without a call to reset()";
+                wm = (Watermark) o;
                 return false;
             }
             if (o == DONE_ITEM) {

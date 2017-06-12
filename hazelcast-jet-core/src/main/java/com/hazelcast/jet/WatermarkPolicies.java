@@ -38,21 +38,21 @@ public final class WatermarkPolicies {
 
     private abstract static class WatermarkPolicyBase implements WatermarkPolicy {
 
-        private long punc = Long.MIN_VALUE;
+        private long wm = Long.MIN_VALUE;
 
         long makeWmAtLeast(long proposedWm) {
-            punc = max(punc, proposedWm);
-            return punc;
+            wm = max(wm, proposedWm);
+            return wm;
         }
 
         long advanceWmBy(long amount) {
-            punc += amount;
-            return punc;
+            wm += amount;
+            return wm;
         }
 
         @Override
         public long getCurrentWatermark() {
-            return punc;
+            return wm;
         }
     }
 
@@ -114,8 +114,8 @@ public final class WatermarkPolicies {
                 return applyMaxRetain(super.getCurrentWatermark());
             }
 
-            private long applyMaxRetain(long punc) {
-                return makeWmAtLeast(Math.max(punc, history.sample(nanoClock.getAsLong(), topTs)));
+            private long applyMaxRetain(long wm) {
+                return makeWmAtLeast(Math.max(wm, history.sample(nanoClock.getAsLong(), topTs)));
             }
         };
     }

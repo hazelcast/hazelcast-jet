@@ -70,7 +70,7 @@ import static com.hazelcast.util.Preconditions.checkTrue;
  *     #shouldStopDraining(int, boolean) shouldStopDraining(drainOrder,
  *     madeProgress)} to see whether to exit the loop.
  * </li><li>
- *     Call {@link #observeWm(int, long) observeWm(queueIndex, puncValue)}
+ *     Call {@link #observeWm(int, long) observeWm(queueIndex, wmValue)}
  *     for every watermark item received from any queue. If this method
  *     returns {@code true}, it means that the draining order was changed and
  *     the draining loop should exit.
@@ -129,18 +129,18 @@ public class SkewReductionPolicy {
      *
      * @return {@code true} if the queues were reordered by this watermark
      */
-    public boolean observeWm(int queueIndex, final long puncValue) {
-        if (queueWms[queueIndex] >= puncValue) {
+    public boolean observeWm(int queueIndex, final long wmValue) {
+        if (queueWms[queueIndex] >= wmValue) {
             // this is possible if force-advancing the watermark because we increase
             // the queueWmValue without receiving watermark from that queue
             if (!forceAdvanceWm) {
                 throw new JetException("Watermarks not monotonically increasing on queue: " +
-                        "last one=" + queueWms[queueIndex] + ", new one=" + puncValue);
+                        "last one=" + queueWms[queueIndex] + ", new one=" + wmValue);
             }
             return false;
         }
-        boolean didReorder = adjustDrainingOrder(queueIndex, puncValue);
-        queueWms[queueIndex] = puncValue;
+        boolean didReorder = adjustDrainingOrder(queueIndex, wmValue);
+        queueWms[queueIndex] = wmValue;
         forceAdvanceWmIfConfigured();
         return didReorder;
     }
@@ -194,9 +194,9 @@ public class SkewReductionPolicy {
      *
      * @return whether the queue had to be repositioned
      */
-    private boolean adjustDrainingOrder(int queueIndex, long puncValue) {
+    private boolean adjustDrainingOrder(int queueIndex, long wmValue) {
         int currPos = findCurrentDrainPos(queueIndex);
-        int newPos = findNewDrainPos(currPos, puncValue);
+        int newPos = findNewDrainPos(currPos, wmValue);
         if (newPos == currPos) {
             return false;
         }

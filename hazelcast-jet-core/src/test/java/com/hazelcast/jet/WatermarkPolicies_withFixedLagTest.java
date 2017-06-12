@@ -45,7 +45,7 @@ public class WatermarkPolicies_withFixedLagTest {
     }
 
     @Test
-    public void when_eventsStop_then_puncStops() {
+    public void when_eventsStop_then_wmStops() {
         // When - an event and nothing more
         p.reportEvent(LAG);
 

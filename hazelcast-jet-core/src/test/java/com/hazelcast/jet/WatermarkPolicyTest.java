@@ -29,22 +29,22 @@ import static org.junit.Assert.assertEquals;
 public class WatermarkPolicyTest {
 
     private static final int MIN_STEP = 2;
-    private long punc;
+    private long wm;
     private WatermarkPolicy p = new WatermarkPolicy() {
 
         @Override
         public long reportEvent(long timestamp) {
-            return punc;
+            return wm;
         }
 
         @Override
         public long getCurrentWatermark() {
-            return punc;
+            return wm;
         }
     };
 
     @Test
-    public void when_puncIncreasing_then_throttleByMinStep() {
+    public void when_wmIncreasing_then_throttleByMinStep() {
         p = p.throttleByMinStep(MIN_STEP);
         assertWm(2, 2);
         assertWm(3, 2);
@@ -56,7 +56,7 @@ public class WatermarkPolicyTest {
     }
 
     @Test
-    public void when_puncIncreasing_then_throttleByFrame() {
+    public void when_wmIncreasing_then_throttleByFrame() {
         WindowDefinition winDef = new WindowDefinition(3, 0, 1);
         p = p.throttleByFrame(winDef);
         assertWm(Long.MIN_VALUE, Long.MIN_VALUE);
@@ -71,7 +71,7 @@ public class WatermarkPolicyTest {
     }
 
     private void assertWm(long actualWm, long throttledWm) {
-        punc = actualWm;
+        wm = actualWm;
         assertEquals(throttledWm, p.reportEvent(0));
         assertEquals(throttledWm, p.getCurrentWatermark());
     }
