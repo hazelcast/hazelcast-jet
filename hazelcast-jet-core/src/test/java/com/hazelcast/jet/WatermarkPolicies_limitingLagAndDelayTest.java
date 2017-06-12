@@ -36,23 +36,23 @@ public class WatermarkPolicies_limitingLagAndDelayTest {
     private WatermarkPolicy p = limitingLagAndDelay(TIMESTAMP_LAG, MAX_RETAIN_MS, 8, () -> time);
 
     @Test
-    public void when_outOfOrderEvents_then_monotonicPunct() {
-        assertPunc(2, 10);
-        assertPunc(2, 9);
-        assertPunc(2, 8);
-        assertPunc(2, 7);
-        assertPunc(3, 11);
+    public void when_outOfOrderEvents_then_monotonicWmt() {
+        assertWm(2, 10);
+        assertWm(2, 9);
+        assertWm(2, 8);
+        assertWm(2, 7);
+        assertWm(3, 11);
     }
 
     @Test
     public void when_clockIncreasing_then_eventuallyCatchUp() {
-        assertPunc(2, 10);
+        assertWm(2, 10);
         time = 1;
-        assertPunc(3, 11);
+        assertWm(3, 11);
         time = 2;
-        assertPunc(4, 12);
+        assertWm(4, 12);
         time = 3;
-        assertPunc(5, 13);
+        assertWm(5, 13);
         time = 4;
         assertEquals(5, p.getCurrentWatermark());
         time = 8;
@@ -65,7 +65,7 @@ public class WatermarkPolicies_limitingLagAndDelayTest {
         assertEquals(13, p.getCurrentWatermark());
     }
 
-    private void assertPunc(long expected, long timestamp) {
+    private void assertWm(long expected, long timestamp) {
         assertEquals(expected, p.reportEvent(timestamp));
         assertEquals(expected, p.getCurrentWatermark());
     }

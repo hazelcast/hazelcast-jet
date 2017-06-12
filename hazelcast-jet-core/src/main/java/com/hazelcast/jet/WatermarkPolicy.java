@@ -54,28 +54,28 @@ public interface WatermarkPolicy {
     default WatermarkPolicy throttleByMinStep(long minStep) {
         return new WatermarkPolicy() {
 
-            private long nextPunc = Long.MIN_VALUE;
-            private long currPunc = Long.MIN_VALUE;
+            private long nextWm = Long.MIN_VALUE;
+            private long currWm = Long.MIN_VALUE;
 
             @Override
             public long reportEvent(long timestamp) {
-                long newPunc = WatermarkPolicy.this.reportEvent(timestamp);
-                return advanceThrottled(newPunc);
+                long newWm = WatermarkPolicy.this.reportEvent(timestamp);
+                return advanceThrottled(newWm);
             }
 
             @Override
             public long getCurrentWatermark() {
-                long newPunc = WatermarkPolicy.this.getCurrentWatermark();
-                return advanceThrottled(newPunc);
+                long newWm = WatermarkPolicy.this.getCurrentWatermark();
+                return advanceThrottled(newWm);
             }
 
-            private long advanceThrottled(long newPunc) {
-                if (newPunc < nextPunc) {
-                    return currPunc;
+            private long advanceThrottled(long newWm) {
+                if (newWm < nextWm) {
+                    return currWm;
                 }
-                nextPunc = newPunc + minStep;
-                currPunc = newPunc;
-                return newPunc;
+                nextWm = newWm + minStep;
+                currWm = newWm;
+                return newWm;
             }
         };
     }
@@ -99,7 +99,7 @@ public interface WatermarkPolicy {
      */
     default WatermarkPolicy throttleByFrame(WindowDefinition winDef) {
         return new WatermarkPolicy() {
-            private long lastPunc = Long.MIN_VALUE;
+            private long lastWm = Long.MIN_VALUE;
 
             @Override
             public long reportEvent(long timestamp) {
@@ -111,10 +111,10 @@ public interface WatermarkPolicy {
                 return advanceThrottled(WatermarkPolicy.this.getCurrentWatermark());
             }
 
-            private long advanceThrottled(long proposedPunc) {
-                return proposedPunc == lastPunc
-                        ? lastPunc
-                        : (lastPunc = winDef.floorFrameTs(proposedPunc));
+            private long advanceThrottled(long proposedWm) {
+                return proposedWm == lastWm
+                        ? lastWm
+                        : (lastWm = winDef.floorFrameTs(proposedWm));
             }
         };
     }

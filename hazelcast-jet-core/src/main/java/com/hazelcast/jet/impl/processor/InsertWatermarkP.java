@@ -43,7 +43,7 @@ public class InsertWatermarkP<T> extends AbstractProcessor {
     private final ResettableSingletonTraverser<Object> singletonTraverser;
     private final FlatMapper<Object, Object> flatMapper;
 
-    private long currPunc = Long.MIN_VALUE;
+    private long currWm = Long.MIN_VALUE;
 
     /**
      * @param getTimestampF function that extracts the timestamp from the item
@@ -60,13 +60,13 @@ public class InsertWatermarkP<T> extends AbstractProcessor {
 
     @Override
     public boolean tryProcess() {
-        long newPunc = watermarkPolicy.getCurrentWatermark();
-        if (newPunc <= currPunc) {
+        long newWm = watermarkPolicy.getCurrentWatermark();
+        if (newWm <= currWm) {
             return true;
         }
-        boolean didEmit = tryEmit(new Watermark(newPunc));
+        boolean didEmit = tryEmit(new Watermark(newWm));
         if (didEmit) {
-            currPunc = newPunc;
+            currWm = newWm;
         }
         return didEmit;
     }
@@ -78,15 +78,15 @@ public class InsertWatermarkP<T> extends AbstractProcessor {
 
     private Traverser<Object> traverser(Object item) {
         long timestamp = getTimestampF.applyAsLong((T) item);
-        if (timestamp < currPunc) {
+        if (timestamp < currWm) {
             // drop late event
             return empty();
         }
-        long newPunc = watermarkPolicy.reportEvent(timestamp);
+        long newWm = watermarkPolicy.reportEvent(timestamp);
         singletonTraverser.accept(item);
-        if (newPunc > currPunc) {
-            currPunc = newPunc;
-            return singletonTraverser.prepend(new Watermark(currPunc));
+        if (newWm > currWm) {
+            currWm = newWm;
+            return singletonTraverser.prepend(new Watermark(currWm));
         }
         return singletonTraverser;
     }

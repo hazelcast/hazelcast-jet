@@ -40,7 +40,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private final ConcurrentConveyor<Object> conveyor;
     private final ProgressTracker tracker = new ProgressTracker();
     private final WatermarkDetector puncDetector = new WatermarkDetector();
-    private long lastEmittedPunc = Long.MIN_VALUE;
+    private long lastEmittedWm = Long.MIN_VALUE;
 
     private final SkewReductionPolicy skewReductionPolicy;
 
@@ -74,20 +74,20 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             if (q == null) {
                 continue;
             }
-            Watermark punc = drainUpToPunc(q, dest);
+            Watermark punc = drainUpToWm(q, dest);
             if (puncDetector.isDone) {
                 conveyor.removeQueue(queueIndex);
                 continue;
             }
-            if (punc != null && skewReductionPolicy.observePunc(queueIndex, punc.timestamp())) {
+            if (punc != null && skewReductionPolicy.observeWm(queueIndex, punc.timestamp())) {
                 break;
             }
         }
 
-        long bottomPunct = skewReductionPolicy.bottomObservedPunc();
-        if (bottomPunct > lastEmittedPunc) {
-            dest.add(new Watermark(bottomPunct));
-            lastEmittedPunc = bottomPunct;
+        long bottomWmt = skewReductionPolicy.bottomObservedWm();
+        if (bottomWmt > lastEmittedWm) {
+            dest.add(new Watermark(bottomWmt));
+            lastEmittedWm = bottomWmt;
         }
 
         return tracker.toProgressState();
@@ -99,7 +99,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
      *
      * @return the drained watermark, if any; {@code null} otherwise
      */
-    private Watermark drainUpToPunc(Pipe<Object> queue, Collection<Object> dest) {
+    private Watermark drainUpToWm(Pipe<Object> queue, Collection<Object> dest) {
         puncDetector.reset(dest);
 
         int drainedCount = queue.drain(puncDetector);

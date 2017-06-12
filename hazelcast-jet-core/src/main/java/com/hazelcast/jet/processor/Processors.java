@@ -534,9 +534,9 @@ public final class Processors {
     @Nonnull
     public static <T> DistributedSupplier<Processor> insertWatermark(
             @Nonnull DistributedToLongFunction<T> getTimestampF,
-            @Nonnull DistributedSupplier<WatermarkPolicy> newPuncPolicyF
+            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF
     ) {
-        return () -> new InsertWatermarkP<>(getTimestampF, newPuncPolicyF.get());
+        return () -> new InsertWatermarkP<>(getTimestampF, newWmPolicyF.get());
     }
 
     /**

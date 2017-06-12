@@ -111,7 +111,7 @@ public class SlidingWindowP_stage1Test extends StreamingTestSupport {
     public void when_noEvents_then_punctsEmitted() {
         // Given
         ArrayDequeInbox inbox = new ArrayDequeInbox();
-        List<Watermark> somePuncs = asList(
+        List<Watermark> someWms = asList(
                 punc(2),
                 punc(3),
                 punc(4),
@@ -120,13 +120,13 @@ public class SlidingWindowP_stage1Test extends StreamingTestSupport {
                 punc(8),
                 punc(20)
         );
-        inbox.addAll(somePuncs);
+        inbox.addAll(someWms);
 
         // When
         processor.process(0, inbox);
 
         // Then
-        assertOutbox(somePuncs);
+        assertOutbox(someWms);
     }
 
     @Test

@@ -40,12 +40,12 @@ public final class WatermarkPolicies {
 
         private long punc = Long.MIN_VALUE;
 
-        long makePuncAtLeast(long proposedPunc) {
-            punc = max(punc, proposedPunc);
+        long makeWmAtLeast(long proposedWm) {
+            punc = max(punc, proposedWm);
             return punc;
         }
 
-        long advancePuncBy(long amount) {
+        long advanceWmBy(long amount) {
             punc += amount;
             return punc;
         }
@@ -72,7 +72,7 @@ public final class WatermarkPolicies {
         return new WatermarkPolicyBase() {
             @Override
             public long reportEvent(long timestamp) {
-                return makePuncAtLeast(timestamp - lag);
+                return makeWmAtLeast(timestamp - lag);
             }
         };
     }
@@ -115,7 +115,7 @@ public final class WatermarkPolicies {
             }
 
             private long applyMaxRetain(long punc) {
-                return makePuncAtLeast(Math.max(punc, history.sample(nanoClock.getAsLong(), topTs)));
+                return makeWmAtLeast(Math.max(punc, history.sample(nanoClock.getAsLong(), topTs)));
             }
         };
     }
@@ -155,7 +155,7 @@ public final class WatermarkPolicies {
             @Override
             public long reportEvent(long timestamp) {
                 updateFromWallClock();
-                return makePuncAtLeast(timestamp - timestampLag);
+                return makeWmAtLeast(timestamp - timestampLag);
             }
 
             @Override
@@ -164,7 +164,7 @@ public final class WatermarkPolicies {
             }
 
             private long updateFromWallClock() {
-                return makePuncAtLeast(wallClock.getAsLong() - wallClockLag);
+                return makeWmAtLeast(wallClock.getAsLong() - wallClockLag);
             }
         };
     }
@@ -210,7 +210,7 @@ public final class WatermarkPolicies {
             @Override
             public long reportEvent(long timestamp) {
                 maxLullAt = monotonicTimeMillis() + maxLullMs;
-                return makePuncAtLeast(timestamp - lag);
+                return makeWmAtLeast(timestamp - lag);
             }
 
             @Override
@@ -219,7 +219,7 @@ public final class WatermarkPolicies {
                 ensureInitialized(now);
                 long millisPastMaxLull = max(0, now - maxLullAt);
                 maxLullAt += millisPastMaxLull;
-                return advancePuncBy(millisPastMaxLull);
+                return advanceWmBy(millisPastMaxLull);
             }
 
             private void ensureInitialized(long now) {

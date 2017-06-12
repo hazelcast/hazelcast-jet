@@ -250,7 +250,7 @@ public class AbstractProcessorTest {
     }
 
     @Test
-    public void when_tryProcessWm_then_passesOnPunc() {
+    public void when_tryProcessWm_then_passesOnWm() {
         // When
         boolean done = nothingOverriddenP.tryProcessWm(ORDINAL_0, MOCK_PUNC);
 
@@ -260,59 +260,59 @@ public class AbstractProcessorTest {
     }
 
     @Test
-    public void when_tryProcessWm0_then_delegatesToTryProcessPunc() throws Exception {
+    public void when_tryProcessWm0_then_delegatesToTryProcessWm() throws Exception {
         // When
         boolean done = p.tryProcessWm0(MOCK_PUNC);
 
         // Then
         assertTrue(done);
-        p.validateReceptionOfPunc(ORDINAL_0, MOCK_PUNC);
+        p.validateReceptionOfWm(ORDINAL_0, MOCK_PUNC);
     }
 
     @Test
-    public void when_tryProcessWm1_then_delegatesToTryProcessPunc() throws Exception {
+    public void when_tryProcessWm1_then_delegatesToTryProcessWm() throws Exception {
         // When
         boolean done = p.tryProcessWm1(MOCK_PUNC);
 
         // Then
         assertTrue(done);
-        p.validateReceptionOfPunc(ORDINAL_1, MOCK_PUNC);
+        p.validateReceptionOfWm(ORDINAL_1, MOCK_PUNC);
     }
 
     @Test
-    public void when_tryProcessWm2_then_delegatesToTryProcessPunc() throws Exception {
+    public void when_tryProcessWm2_then_delegatesToTryProcessWm() throws Exception {
         // When
         boolean done = p.tryProcessWm2(MOCK_PUNC);
 
         // Then
         assertTrue(done);
-        p.validateReceptionOfPunc(ORDINAL_2, MOCK_PUNC);
+        p.validateReceptionOfWm(ORDINAL_2, MOCK_PUNC);
     }
 
     @Test
-    public void when_tryProcessWm3_then_delegatesToTryProcessPunc() throws Exception {
+    public void when_tryProcessWm3_then_delegatesToTryProcessWm() throws Exception {
         // When
         boolean done = p.tryProcessWm3(MOCK_PUNC);
 
         // Then
         assertTrue(done);
-        p.validateReceptionOfPunc(ORDINAL_3, MOCK_PUNC);
+        p.validateReceptionOfWm(ORDINAL_3, MOCK_PUNC);
     }
 
     @Test
-    public void when_tryProcessWm4_then_delegatesToTryProcessPunc() throws Exception {
+    public void when_tryProcessWm4_then_delegatesToTryProcessWm() throws Exception {
         // When
         boolean done = p.tryProcessWm4(MOCK_PUNC);
 
         // Then
         assertTrue(done);
-        p.validateReceptionOfPunc(ORDINAL_4, MOCK_PUNC);
+        p.validateReceptionOfWm(ORDINAL_4, MOCK_PUNC);
     }
 
     @Test
     public void when_process0ButOutboxFull_then_itemNotRemoved() throws Exception {
         // Given
-        resetInboxToTwoPuncs();
+        resetInboxToTwoWms();
 
         // When
         nothingOverriddenP.process0(inbox);
@@ -324,7 +324,7 @@ public class AbstractProcessorTest {
     @Test
     public void when_process1ButOutboxFull_then_itemNotRemoved() throws Exception {
         // Given
-        resetInboxToTwoPuncs();
+        resetInboxToTwoWms();
 
         // When
         nothingOverriddenP.process1(inbox);
@@ -336,7 +336,7 @@ public class AbstractProcessorTest {
     @Test
     public void when_process2ButOutboxFull_then_itemNotRemoved() throws Exception {
         // Given
-        resetInboxToTwoPuncs();
+        resetInboxToTwoWms();
 
         // When
         nothingOverriddenP.process2(inbox);
@@ -348,7 +348,7 @@ public class AbstractProcessorTest {
     @Test
     public void when_process3ButOutboxFull_then_itemNotRemoved() throws Exception {
         // Given
-        resetInboxToTwoPuncs();
+        resetInboxToTwoWms();
 
         // When
         nothingOverriddenP.process3(inbox);
@@ -360,7 +360,7 @@ public class AbstractProcessorTest {
     @Test
     public void when_process4ButOutboxFull_then_itemNotRemoved() throws Exception {
         // Given
-        resetInboxToTwoPuncs();
+        resetInboxToTwoWms();
 
         // When
         nothingOverriddenP.process4(inbox);
@@ -372,7 +372,7 @@ public class AbstractProcessorTest {
     @Test
     public void when_processAnyButOutboxFull_then_itemNotRemoved() throws Exception {
         // Given
-        resetInboxToTwoPuncs();
+        resetInboxToTwoWms();
 
         // When
         nothingOverriddenP.processAny(5, inbox);
@@ -381,7 +381,7 @@ public class AbstractProcessorTest {
         assertEquals(MOCK_PUNC, inbox.poll());
     }
 
-    private void resetInboxToTwoPuncs() {
+    private void resetInboxToTwoWms() {
         inbox.clear();
         inbox.add(MOCK_PUNC);
         inbox.add(MOCK_PUNC);
@@ -559,7 +559,7 @@ public class AbstractProcessorTest {
     private static class RegisteringMethodCallsP extends AbstractProcessor {
         boolean initCalled;
         Object[] receivedByTryProcessN = new Object[6];
-        Object[] receivedByTryProcessPuncN = new Object[6];
+        Object[] receivedByTryProcessWmN = new Object[6];
 
         @Override
         protected void init(@Nonnull Context context) {
@@ -574,7 +574,7 @@ public class AbstractProcessorTest {
 
         @Override
         protected boolean tryProcessWm(int ordinal, @Nonnull Watermark punc) {
-            receivedByTryProcessPuncN[ordinal] = punc;
+            receivedByTryProcessWmN[ordinal] = punc;
             return true;
         }
 
@@ -584,9 +584,9 @@ public class AbstractProcessorTest {
             }
         }
 
-        void validateReceptionOfPunc(int ordinal, Watermark punc) {
-            for (int i = 0; i < receivedByTryProcessPuncN.length; i++) {
-                assertSame(i == ordinal ? punc : null, receivedByTryProcessPuncN[i]);
+        void validateReceptionOfWm(int ordinal, Watermark punc) {
+            for (int i = 0; i < receivedByTryProcessWmN.length; i++) {
+                assertSame(i == ordinal ? punc : null, receivedByTryProcessWmN[i]);
             }
         }
     }

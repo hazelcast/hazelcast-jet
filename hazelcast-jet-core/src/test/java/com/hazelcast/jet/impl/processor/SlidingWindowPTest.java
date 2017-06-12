@@ -109,7 +109,7 @@ public class SlidingWindowPTest extends StreamingTestSupport {
     }
 
     @Test
-    public void when_noFramesReceived_then_onlyEmitPunc() {
+    public void when_noFramesReceived_then_onlyEmitWm() {
         // Given
         inbox.addAll(singletonList(
                 punc(1)

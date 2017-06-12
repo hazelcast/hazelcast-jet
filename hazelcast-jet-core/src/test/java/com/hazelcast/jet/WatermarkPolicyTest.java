@@ -46,33 +46,33 @@ public class WatermarkPolicyTest {
     @Test
     public void when_puncIncreasing_then_throttleByMinStep() {
         p = p.throttleByMinStep(MIN_STEP);
-        assertPunc(2, 2);
-        assertPunc(3, 2);
-        assertPunc(4, 4);
-        assertPunc(6, 6);
-        assertPunc(9, 9);
-        assertPunc(10, 9);
-        assertPunc(11, 11);
+        assertWm(2, 2);
+        assertWm(3, 2);
+        assertWm(4, 4);
+        assertWm(6, 6);
+        assertWm(9, 9);
+        assertWm(10, 9);
+        assertWm(11, 11);
     }
 
     @Test
     public void when_puncIncreasing_then_throttleByFrame() {
         WindowDefinition winDef = new WindowDefinition(3, 0, 1);
         p = p.throttleByFrame(winDef);
-        assertPunc(Long.MIN_VALUE, Long.MIN_VALUE);
-        assertPunc(2, 0);
-        assertPunc(3, 3);
-        assertPunc(4, 3);
-        assertPunc(5, 3);
-        assertPunc(6, 6);
-        assertPunc(13, 12);
-        assertPunc(14, 12);
-        assertPunc(15, 15);
+        assertWm(Long.MIN_VALUE, Long.MIN_VALUE);
+        assertWm(2, 0);
+        assertWm(3, 3);
+        assertWm(4, 3);
+        assertWm(5, 3);
+        assertWm(6, 6);
+        assertWm(13, 12);
+        assertWm(14, 12);
+        assertWm(15, 15);
     }
 
-    private void assertPunc(long actualPunc, long throttledPunc) {
-        punc = actualPunc;
-        assertEquals(throttledPunc, p.reportEvent(0));
-        assertEquals(throttledPunc, p.getCurrentWatermark());
+    private void assertWm(long actualWm, long throttledWm) {
+        punc = actualWm;
+        assertEquals(throttledWm, p.reportEvent(0));
+        assertEquals(throttledWm, p.getCurrentWatermark());
     }
 }

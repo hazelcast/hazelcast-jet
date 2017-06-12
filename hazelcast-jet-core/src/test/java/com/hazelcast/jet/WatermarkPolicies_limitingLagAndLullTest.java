@@ -36,7 +36,7 @@ public class WatermarkPolicies_limitingLagAndLullTest {
     private WatermarkPolicy p = limitingLagAndLull(2, MAX_LULL_MS, () -> currTime);
 
     @Test
-    public void when_outOfOrderEvents_then_monotonicPunct() {
+    public void when_outOfOrderEvents_then_monotonicWmt() {
         assertEquals(8, p.reportEvent(10));
         assertEquals(8, p.reportEvent(9));
         assertEquals(8, p.reportEvent(8));

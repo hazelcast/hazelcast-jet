@@ -70,7 +70,7 @@ import static com.hazelcast.util.Preconditions.checkTrue;
  *     #shouldStopDraining(int, boolean) shouldStopDraining(drainOrder,
  *     madeProgress)} to see whether to exit the loop.
  * </li><li>
- *     Call {@link #observePunc(int, long) observePunc(queueIndex, puncValue)}
+ *     Call {@link #observeWm(int, long) observeWm(queueIndex, puncValue)}
  *     for every watermark item received from any queue. If this method
  *     returns {@code true}, it means that the draining order was changed and
  *     the draining loop should exit.
@@ -79,12 +79,12 @@ import static com.hazelcast.util.Preconditions.checkTrue;
 public class SkewReductionPolicy {
 
     // package-visible for tests
-    final long[] queuePuncs;
+    final long[] queueWms;
     final int[] drainOrderToQIdx;
 
     private final long maxSkew;
     private final long priorityDrainingThreshold;
-    private final boolean forceAdvancePunc;
+    private final boolean forceAdvanceWm;
 
     /**
      * Creates a policy which does not stop draining from any queue under any
@@ -97,17 +97,17 @@ public class SkewReductionPolicy {
         this(numQueues, Long.MAX_VALUE, Long.MAX_VALUE, false);
     }
 
-    public SkewReductionPolicy(int numQueues, long maxSkew, long priorityDrainingThreshold, boolean forceAdvancePunc) {
+    public SkewReductionPolicy(int numQueues, long maxSkew, long priorityDrainingThreshold, boolean forceAdvanceWm) {
         checkNotNegative(maxSkew, "maxSkew must not be a negative number");
         checkNotNegative(priorityDrainingThreshold, "priorityDrainingThreshold must not be a negative number");
         checkTrue(priorityDrainingThreshold <= maxSkew, "priorityDrainingThreshold must be less than maxSkew");
 
         this.maxSkew = maxSkew;
         this.priorityDrainingThreshold = priorityDrainingThreshold;
-        this.forceAdvancePunc = forceAdvancePunc;
+        this.forceAdvanceWm = forceAdvanceWm;
 
-        queuePuncs = new long[numQueues];
-        Arrays.fill(queuePuncs, Long.MIN_VALUE);
+        queueWms = new long[numQueues];
+        Arrays.fill(queueWms, Long.MIN_VALUE);
 
         drainOrderToQIdx = new int[numQueues];
         Arrays.setAll(drainOrderToQIdx, i -> i);
@@ -129,29 +129,29 @@ public class SkewReductionPolicy {
      *
      * @return {@code true} if the queues were reordered by this watermark
      */
-    public boolean observePunc(int queueIndex, final long puncValue) {
-        if (queuePuncs[queueIndex] >= puncValue) {
+    public boolean observeWm(int queueIndex, final long puncValue) {
+        if (queueWms[queueIndex] >= puncValue) {
             // this is possible if force-advancing the watermark because we increase
-            // the queuePuncValue without receiving watermark from that queue
-            if (!forceAdvancePunc) {
+            // the queueWmValue without receiving watermark from that queue
+            if (!forceAdvanceWm) {
                 throw new JetException("Watermarks not monotonically increasing on queue: " +
-                        "last one=" + queuePuncs[queueIndex] + ", new one=" + puncValue);
+                        "last one=" + queueWms[queueIndex] + ", new one=" + puncValue);
             }
             return false;
         }
         boolean didReorder = adjustDrainingOrder(queueIndex, puncValue);
-        queuePuncs[queueIndex] = puncValue;
-        forceAdvancePuncIfConfigured();
+        queueWms[queueIndex] = puncValue;
+        forceAdvanceWmIfConfigured();
         return didReorder;
     }
 
-    private void forceAdvancePuncIfConfigured() {
-        if (!forceAdvancePunc) {
+    private void forceAdvanceWmIfConfigured() {
+        if (!forceAdvanceWm) {
             return;
         }
-        long newBottomPunc = subtractClamped(topObservedPunc(), maxSkew);
-        for (int i = 0; i < drainOrderToQIdx.length && queuePuncs[drainOrderToQIdx[i]] < newBottomPunc; i++) {
-            queuePuncs[drainOrderToQIdx[i]] = newBottomPunc;
+        long newBottomWm = subtractClamped(topObservedWm(), maxSkew);
+        for (int i = 0; i < drainOrderToQIdx.length && queueWms[drainOrderToQIdx[i]] < newBottomWm; i++) {
+            queueWms[drainOrderToQIdx[i]] = newBottomWm;
         }
     }
 
@@ -175,16 +175,16 @@ public class SkewReductionPolicy {
      * @return {@code false} if the draining should now stop; {@code true} otherwise
      */
     public boolean shouldStopDraining(int queueIndex, boolean madeProgress) {
-        long skew = subtractClamped(queuePuncs[queueIndex], queuePuncs[drainOrderToQIdx[0]]);
-        return (madeProgress && skew > priorityDrainingThreshold) || (!forceAdvancePunc && skew > maxSkew);
+        long skew = subtractClamped(queueWms[queueIndex], queueWms[drainOrderToQIdx[0]]);
+        return (madeProgress && skew > priorityDrainingThreshold) || (!forceAdvanceWm && skew > maxSkew);
     }
 
-    public long bottomObservedPunc() {
-        return queuePuncs[drainOrderToQIdx[0]];
+    public long bottomObservedWm() {
+        return queueWms[drainOrderToQIdx[0]];
     }
 
-    private long topObservedPunc() {
-        return queuePuncs[drainOrderToQIdx[drainOrderToQIdx.length - 1]];
+    private long topObservedWm() {
+        return queueWms[drainOrderToQIdx[drainOrderToQIdx.length - 1]];
     }
 
     /**
@@ -216,10 +216,10 @@ public class SkewReductionPolicy {
                 "Failed to find the queue index " + queueIndex + " in the drainOrder->queueIndex lookup table");
     }
 
-    private int findNewDrainPos(int currPos, long queuePunc) {
+    private int findNewDrainPos(int currPos, long queueWm) {
         int i = currPos + 1;
         for (; i < drainOrderToQIdx.length; i++) {
-            if (queuePuncs[drainOrderToQIdx[i]] >= queuePunc) {
+            if (queueWms[drainOrderToQIdx[i]] >= queueWm) {
                 break;
             }
         }
