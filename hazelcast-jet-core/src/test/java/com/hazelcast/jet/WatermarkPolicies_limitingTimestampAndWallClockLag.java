@@ -35,7 +35,7 @@ public class WatermarkPolicies_limitingTimestampAndWallClockLag {
     private WatermarkPolicy p = limitingTimestampAndWallClockLag(TIMESTAMP_LAG, WALL_CLOCK_LAG, () -> currTimeMs);
 
     @Test
-    public void when_outOfOrderEvents_then_monotonicWmt() {
+    public void when_outOfOrderEvents_then_monotonicWm() {
         // Given
         currTimeMs = -1_000_000;
 

@@ -84,10 +84,10 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             }
         }
 
-        long bottomWmt = skewReductionPolicy.bottomObservedWm();
-        if (bottomWmt > lastEmittedWm) {
-            dest.add(new Watermark(bottomWmt));
-            lastEmittedWm = bottomWmt;
+        long bottomWm = skewReductionPolicy.bottomObservedWm();
+        if (bottomWm > lastEmittedWm) {
+            dest.add(new Watermark(bottomWm));
+            lastEmittedWm = bottomWm;
         }
 
         return tracker.toProgressState();

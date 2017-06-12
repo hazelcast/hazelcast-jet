@@ -36,7 +36,7 @@ public class WatermarkPolicies_limitingLagAndDelayTest {
     private WatermarkPolicy p = limitingLagAndDelay(TIMESTAMP_LAG, MAX_RETAIN_MS, 8, () -> time);
 
     @Test
-    public void when_outOfOrderEvents_then_monotonicWmt() {
+    public void when_outOfOrderEvents_then_monotonicWm() {
         assertWm(2, 10);
         assertWm(2, 9);
         assertWm(2, 8);

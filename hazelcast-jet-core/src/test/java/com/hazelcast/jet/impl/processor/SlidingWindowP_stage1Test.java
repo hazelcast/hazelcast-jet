@@ -108,7 +108,7 @@ public class SlidingWindowP_stage1Test extends StreamingTestSupport {
     }
 
     @Test
-    public void when_noEvents_then_wmtsEmitted() {
+    public void when_noEvents_then_wmsEmitted() {
         // Given
         ArrayDequeInbox inbox = new ArrayDequeInbox();
         List<Watermark> someWms = asList(

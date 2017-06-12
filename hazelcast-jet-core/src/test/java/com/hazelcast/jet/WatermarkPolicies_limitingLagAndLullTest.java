@@ -36,7 +36,7 @@ public class WatermarkPolicies_limitingLagAndLullTest {
     private WatermarkPolicy p = limitingLagAndLull(2, MAX_LULL_MS, () -> currTime);
 
     @Test
-    public void when_outOfOrderEvents_then_monotonicWmt() {
+    public void when_outOfOrderEvents_then_monotonicWm() {
         assertEquals(8, p.reportEvent(10));
         assertEquals(8, p.reportEvent(9));
         assertEquals(8, p.reportEvent(8));
@@ -74,7 +74,7 @@ public class WatermarkPolicies_limitingLagAndLullTest {
             assertEquals(Long.MIN_VALUE, p.getCurrentWatermark());
         }
 
-        // Then - wmt increases
+        // Then - wm increases
         for (; currTime <= 10_000_000; currTime += 1_000_000) {
             assertEquals("at time=" + currTime,
                     Long.MIN_VALUE + NANOSECONDS.toMillis(currTime - maxLullNanos),

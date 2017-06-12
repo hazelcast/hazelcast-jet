@@ -33,7 +33,7 @@ public class WatermarkPolicies_withFixedLagTest {
     private WatermarkPolicy p = withFixedLag(LAG);
 
     @Test
-    public void when_outOfOrderEvents_then_monotonicWmt() {
+    public void when_outOfOrderEvents_then_monotonicWm() {
         for (int i = 0; i < 10; i++) {
             assertEquals(i - LAG, p.reportEvent(i));
 
