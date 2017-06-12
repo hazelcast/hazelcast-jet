@@ -56,7 +56,7 @@ import static java.lang.System.arraycopy;
  * @param <R> type of the finished result
  */
 public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
-    private static final Watermark COMPLETING_PUNC = new Watermark(Long.MAX_VALUE);
+    private static final Watermark COMPLETING_WM = new Watermark(Long.MAX_VALUE);
 
     // exposed for testing, to check for memory leaks
     final Map<K, Windows> keyToWindows = new HashMap<>();
@@ -104,7 +104,7 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
-        return expiredSessionFlatmapper.tryProcess(COMPLETING_PUNC);
+        return expiredSessionFlatmapper.tryProcess(COMPLETING_WM);
     }
 
     private Traverser<Session<K, R>> expiredSessionTraverser(Watermark wm) {
