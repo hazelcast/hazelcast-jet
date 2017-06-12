@@ -29,7 +29,7 @@ import static com.hazelcast.jet.Traversers.empty;
 
 /**
  * A processor that inserts watermark into a data stream. See
- * {@link com.hazelcast.jet.processor.Processors#insertWatermark(
+ * {@link com.hazelcast.jet.processor.Processors#insertWatermarks(
  *      com.hazelcast.jet.function.DistributedToLongFunction,
  *      com.hazelcast.jet.function.DistributedSupplier)
  * Processors.insertWatermark()}.

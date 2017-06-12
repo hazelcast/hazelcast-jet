@@ -525,14 +525,14 @@ public final class Processors {
 
     /**
      * Returns a supplier of processor that inserts
-     * {@link com.hazelcast.jet.Watermark watermark} into a data
+     * {@link com.hazelcast.jet.Watermark watermark items} into a data
      * (sub)stream. The value of the watermark is determined by a separate
      * policy object of type {@link WatermarkPolicy}.
      *
-     * @param <T> the type of stream item
+     * @param <T> the type of the stream item
      */
     @Nonnull
-    public static <T> DistributedSupplier<Processor> insertWatermark(
+    public static <T> DistributedSupplier<Processor> insertWatermarks(
             @Nonnull DistributedToLongFunction<T> getTimestampF,
             @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF
     ) {
