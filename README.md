@@ -66,21 +66,24 @@ Use Maven snippet:
 
 Maven snippet:
 ```xml
-<dependency>
-    <groupId>com.hazelcast.jet</groupId>
-    <artifactId>hazelcast-jet</artifactId>
-    <version>${hazelcast.jet.version}</version>
-</dependency>
-<repository>
-    <id>cloudbees-snapshot-repository</id>
-    <url>https://repository-hazelcast-l337.forge.cloudbees.com/snapshot/</url>
-    <releases>
-        <enabled>false</enabled>
-    </releases>
-    <snapshots>
-        <enabled>true</enabled>
-    </snapshots>
-</repository>
+<repositories>
+    <repository>
+        <id>snapshot-repository</id>
+        <name>Maven2 Snapshot Repository</name>
+        <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        <snapshots>
+            <enabled>true</enabled>
+            <updatePolicy>daily</updatePolicy>
+        </snapshots>
+    </repository>
+</repositories>
+<dependencies>
+    <dependency>
+        <groupId>com.hazelcast.jet</groupId>
+        <artifactId>hazelcast-jet</artifactId>
+        <version>${hazelcast.jet.version}</version>
+    </dependency>
+</dependencies>
 ```
 
 ### Building From Source
