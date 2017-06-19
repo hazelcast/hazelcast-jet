@@ -16,13 +16,18 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.pipeline.impl.PipelineImpl;
+import com.hazelcast.jet.pipeline.impl.TransformImpl;
 
-public interface Pipeline<E> {
+import java.util.Map.Entry;
 
-    <OUT> OUT apply(Transform<E, OUT> transform);
+public final class Sources {
 
-    static Pipeline<Void> create() {
-        return new PipelineImpl<>();
+    private Sources() {
+
     }
+
+    public static <K,V> Transform<Void, Pipeline<Entry<K,V>>> readMap(String mapName) {
+        return new TransformImpl<>();
+    }
+
 }

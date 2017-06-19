@@ -16,13 +16,22 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.pipeline.impl.PipelineImpl;
+import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.JetInstance;
 
-public interface Pipeline<E> {
+import static com.hazelcast.jet.Util.entry;
 
-    <OUT> OUT apply(Transform<E, OUT> transform);
+public class Test {
 
-    static Pipeline<Void> create() {
-        return new PipelineImpl<>();
+    public static void main(String[] args) {
+        JetInstance jet = Jet.newJetInstance();
+        Pipeline<Void> pipe = Pipeline.create();
+
+        pipe.apply(Sources.<String, String>readMap("map"))
+            .apply(Transforms.map(e -> entry(e.getKey(), e.getValue().toLowerCase())))
+            .apply(Sinks.writeMap("sink"));
+
+//        pipe.execute(jet);
+
     }
 }

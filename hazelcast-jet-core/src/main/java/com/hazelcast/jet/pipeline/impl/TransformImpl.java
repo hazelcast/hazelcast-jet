@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.pipeline.impl.PipelineImpl;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Transform;
 
-public interface Pipeline<E> {
+public class TransformImpl<IN, OUT> implements Transform<IN, OUT> {
 
-    <OUT> OUT apply(Transform<E, OUT> transform);
 
-    static Pipeline<Void> create() {
-        return new PipelineImpl<>();
+    @Override
+    public OUT apply(Pipeline<IN> in) {
+        return null;
     }
 }

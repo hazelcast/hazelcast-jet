@@ -16,13 +16,16 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.pipeline.impl.PipelineImpl;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.impl.TransformImpl;
 
-public interface Pipeline<E> {
+public final class Transforms {
 
-    <OUT> OUT apply(Transform<E, OUT> transform);
+    private Transforms() {
 
-    static Pipeline<Void> create() {
-        return new PipelineImpl<>();
+    }
+
+    public static <IN, OUT> Transform<IN, Pipeline<OUT>> map(DistributedFunction<IN, OUT> mapF) {
+        return new TransformImpl<>();
     }
 }
