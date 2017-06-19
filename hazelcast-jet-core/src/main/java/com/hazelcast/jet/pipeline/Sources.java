@@ -30,4 +30,8 @@ public final class Sources {
         return new TransformImpl<>();
     }
 
+    public static Transform<Void, Pipeline<String>> readFiles(String folder) {
+        return new TransformImpl<>();
+    }
+
 }

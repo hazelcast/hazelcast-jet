@@ -16,22 +16,30 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.jet.AggregateOperations;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 
-import static com.hazelcast.jet.Util.entry;
+import java.util.regex.Pattern;
 
-public class Test {
+import static com.hazelcast.jet.Traversers.traverseArray;
+import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
+
+public class PipelineWordCount {
 
     public static void main(String[] args) {
+
         JetInstance jet = Jet.newJetInstance();
         Pipeline<Void> pipe = Pipeline.create();
 
-        pipe.apply(Sources.<String, String>readMap("map"))
-            .apply(Transforms.map(e -> entry(e.getKey(), e.getValue().toLowerCase())))
+        final Pattern delimiter = Pattern.compile("\\W+");
+
+        pipe.apply(Sources.readFiles("books"))
+            .apply(Transforms.flatMap((String line) ->
+                    traverseArray(delimiter.split(line.toLowerCase())).filter(word -> !word.isEmpty())))
+            .apply(Transforms.groupBy(wholeItem(), AggregateOperations.counting()))
             .apply(Sinks.writeMap("sink"));
 
 //        pipe.execute(jet);
-
     }
 }

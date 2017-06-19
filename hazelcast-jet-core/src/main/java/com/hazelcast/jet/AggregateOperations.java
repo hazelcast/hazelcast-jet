@@ -56,7 +56,7 @@ public final class AggregateOperations {
      * Returns an operation that tracks the count of items in the window.
      */
     @Nonnull
-    public static AggregateOperation<Object, LongAccumulator, Long> counting() {
+    public static <T> AggregateOperation<T, LongAccumulator, Long> counting() {
         return AggregateOperation.of(
                 LongAccumulator::new,
                 (a, item) -> a.addExact(1),
