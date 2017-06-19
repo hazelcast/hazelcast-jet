@@ -19,7 +19,7 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.pipeline.impl.TransformImpl;
+import com.hazelcast.jet.pipeline.impl.PipelineImpl;
 
 import java.util.Map;
 
@@ -30,15 +30,15 @@ public final class Transforms {
     }
 
     public static <IN, OUT> Transform<IN, Pipeline<OUT>> map(DistributedFunction<IN, OUT> mapF) {
-        return new TransformImpl<>();
+        return in -> new PipelineImpl<>(in);
     }
 
     public static <IN, OUT> Transform<IN, Pipeline<OUT>> flatMap(DistributedFunction<IN, Traverser<OUT>> flatMapF) {
-        return new TransformImpl<>();
+        return in -> new PipelineImpl<>(in);
     }
 
     public static <IN, K, R> Transform<IN, Pipeline<Map.Entry<K, R>>> groupBy(DistributedFunction<IN, K> keyF,
                                                                               AggregateOperation<IN, ?, R> aggregation) {
-        return new TransformImpl<>();
+        return in -> new PipelineImpl<>(in);
     }
 }

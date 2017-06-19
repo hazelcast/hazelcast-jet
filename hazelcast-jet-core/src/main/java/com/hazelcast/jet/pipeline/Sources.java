@@ -16,9 +16,9 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.pipeline.impl.TransformImpl;
+import com.hazelcast.jet.pipeline.impl.SourceImpl;
 
-import java.util.Map.Entry;
+import java.util.Map;
 
 public final class Sources {
 
@@ -26,12 +26,12 @@ public final class Sources {
 
     }
 
-    public static <K,V> Transform<Void, Pipeline<Entry<K,V>>> readMap(String mapName) {
-        return new TransformImpl<>();
+    public static <K,V> Source<Map.Entry<K, V>> readMap(String mapName) {
+        return new SourceImpl<>();
     }
 
-    public static Transform<Void, Pipeline<String>> readFiles(String folder) {
-        return new TransformImpl<>();
+    public static Source<String> readFiles(String folder) {
+        return new SourceImpl<>();
     }
 
 }

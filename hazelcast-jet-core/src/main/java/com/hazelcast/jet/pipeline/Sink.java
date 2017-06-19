@@ -16,16 +16,5 @@
 
 package com.hazelcast.jet.pipeline;
 
-import java.util.Map.Entry;
-
-public final class Sinks {
-
-    private Sinks() {
-
-    }
-
-    public static <K,V> Transform<Entry<K,V>, Sink> writeMap(String mapName) {
-        return in -> null;
-    }
-
+public interface Sink {
 }

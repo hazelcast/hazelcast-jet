@@ -30,16 +30,17 @@ public class PipelineWordCount {
     public static void main(String[] args) {
 
         JetInstance jet = Jet.newJetInstance();
-        Pipeline<Void> pipe = Pipeline.create();
 
         final Pattern delimiter = Pattern.compile("\\W+");
 
-        pipe.apply(Sources.readFiles("books"))
-            .apply(Transforms.flatMap((String line) ->
-                    traverseArray(delimiter.split(line.toLowerCase())).filter(word -> !word.isEmpty())))
-            .apply(Transforms.groupBy(wholeItem(), AggregateOperations.counting()))
-            .apply(Sinks.writeMap("sink"));
+        Pipeline<String> books = Pipeline.create(Sources.readFiles("books"));
 
-//        pipe.execute(jet);
+        books
+                .apply(Transforms.flatMap((String line) ->
+                        traverseArray(delimiter.split(line.toLowerCase())).filter(word -> !word.isEmpty())))
+                .apply(Transforms.groupBy(wholeItem(), AggregateOperations.counting()))
+                .apply(Sinks.writeMap("sink"));
+
+        books.execute(jet);
     }
 }

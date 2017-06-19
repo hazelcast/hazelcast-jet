@@ -16,16 +16,25 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Transform;
 
 public class PipelineImpl<E> implements Pipeline<E> {
 
-    public PipelineImpl() {
+    private final Pipeline upstream;
+
+    public PipelineImpl(Pipeline upstream) {
+        this.upstream = upstream;
     }
 
     @Override
     public <OUT> OUT apply(Transform<E, OUT> transform) {
         return transform.apply(this);
+    }
+
+    @Override
+    public void execute(JetInstance jet) {
+
     }
 }

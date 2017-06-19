@@ -16,13 +16,16 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.pipeline.impl.PipelineImpl;
 
 public interface Pipeline<E> {
 
     <OUT> OUT apply(Transform<E, OUT> transform);
 
-    static Pipeline<Void> create() {
-        return new PipelineImpl<>();
+    void execute(JetInstance jet);
+
+    static <OUT> Pipeline<OUT> create(Source<OUT> source) {
+        return new PipelineImpl<>(null);
     }
 }

@@ -16,14 +16,8 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.Transform;
+import com.hazelcast.jet.pipeline.Source;
 
-public class TransformImpl<IN, OUT> implements Transform<IN, OUT> {
+public class SourceImpl<E> implements Source<E> {
 
-
-    @Override
-    public OUT apply(Pipeline<IN> in) {
-        return null;
-    }
 }
