@@ -19,17 +19,17 @@ package com.hazelcast.jet.stream.impl.source;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.ProcessorMetaSupplier;
 import com.hazelcast.jet.processor.Sources;
-import com.hazelcast.jet.stream.impl.pipeline.AbstractSourcePipeline;
+import com.hazelcast.jet.stream.impl.pipeline.AbstractSourcePipe;
 import com.hazelcast.jet.stream.impl.pipeline.StreamContext;
 
-import java.util.Map;
+import java.util.Map.Entry;
 
 
-public class MapSourcePipeline<K, V> extends AbstractSourcePipeline<Map.Entry<K, V>> {
+public class MapSourcePipe<K, V> extends AbstractSourcePipe<Entry<K, V>> {
 
     private final IMap<K, V> map;
 
-    public MapSourcePipeline(StreamContext context, IMap<K, V> map) {
+    public MapSourcePipe(StreamContext context, IMap<K, V> map) {
         super(context);
         this.map = map;
     }

@@ -30,12 +30,12 @@ import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.stream.impl.StreamUtil.uniqueVertexName;
 
-class TransformPipeline<E_IN, E_OUT> extends AbstractIntermediatePipeline<E_IN, E_OUT> {
+class TransformPipe<E_IN, E_OUT> extends AbstractIntermediatePipe<E_IN, E_OUT> {
 
     private final DistributedFunction<Traverser<E_IN>, Traverser<E_OUT>> transformer;
 
-    TransformPipeline(StreamContext context, Pipeline<E_IN> upstream,
-                      DistributedFunction<Traverser<E_IN>, Traverser<E_OUT>> transformer) {
+    TransformPipe(StreamContext context, Pipe<E_IN> upstream,
+                  DistributedFunction<Traverser<E_IN>, Traverser<E_OUT>> transformer) {
         super(context, upstream.isOrdered(), upstream);
         this.transformer = transformer;
     }
@@ -58,21 +58,21 @@ class TransformPipeline<E_IN, E_OUT> extends AbstractIntermediatePipeline<E_IN, 
     public DistributedStream<E_OUT> filter(DistributedPredicate<? super E_OUT> predicate) {
         // prevent capture of `this`
         DistributedFunction<Traverser<E_IN>, Traverser<E_OUT>> transformer = this.transformer;
-        return new TransformPipeline<>(context, upstream, t -> transformer.apply(t).filter(predicate));
+        return new TransformPipe<>(context, upstream, t -> transformer.apply(t).filter(predicate));
     }
 
     @Override
     public <R> DistributedStream<R> map(DistributedFunction<? super E_OUT, ? extends R> mapper) {
         // prevent capture of `this`
         DistributedFunction<Traverser<E_IN>, Traverser<E_OUT>> transformer = this.transformer;
-        return new TransformPipeline<>(context, upstream, t -> transformer.apply(t).map(mapper));
+        return new TransformPipe<>(context, upstream, t -> transformer.apply(t).map(mapper));
     }
 
     @Override
     public <R> DistributedStream<R> flatMap(DistributedFunction<? super E_OUT, ? extends Stream<? extends R>> mapper) {
         // prevent capture of `this`
         DistributedFunction<Traverser<E_IN>, Traverser<E_OUT>> transformer = this.transformer;
-        return new TransformPipeline<>(context, upstream,
+        return new TransformPipe<>(context, upstream,
                 t -> transformer.apply(t)
                                 .flatMap(item -> traverseStream(mapper.apply(item))));
     }

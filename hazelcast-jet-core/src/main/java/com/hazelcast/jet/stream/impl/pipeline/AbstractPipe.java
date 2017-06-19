@@ -57,16 +57,16 @@ import static com.hazelcast.jet.stream.impl.StreamUtil.uniqueListName;
 import static com.hazelcast.util.Preconditions.checkTrue;
 
 @SuppressWarnings(value = {"checkstyle:methodcount", "checkstyle:classfanoutcomplexity"})
-abstract class AbstractPipeline<E_OUT> implements Pipeline<E_OUT> {
+abstract class AbstractPipe<E_OUT> implements Pipe<E_OUT> {
 
     protected final StreamContext context;
     private final boolean isOrdered;
 
-    AbstractPipeline(StreamContext context) {
+    AbstractPipe(StreamContext context) {
         this(context, false);
     }
 
-    AbstractPipeline(StreamContext context, boolean isOrdered) {
+    AbstractPipe(StreamContext context, boolean isOrdered) {
         this.context = context;
         this.isOrdered = isOrdered;
     }
@@ -74,66 +74,66 @@ abstract class AbstractPipeline<E_OUT> implements Pipeline<E_OUT> {
     @Override
     public DistributedStream<E_OUT> filter(Predicate<? super E_OUT> predicate) {
         checkSerializable(predicate, "predicate");
-        return new TransformPipeline<>(context, this, t -> t.filter(predicate));
+        return new TransformPipe<>(context, this, t -> t.filter(predicate));
     }
 
     @Override
     public <R> DistributedStream<R> map(Function<? super E_OUT, ? extends R> mapper) {
         checkSerializable(mapper, "mapper");
-        return new TransformPipeline<>(context, this, t -> t.map(mapper));
+        return new TransformPipe<>(context, this, t -> t.map(mapper));
     }
 
     @Override
     public DistributedIntStream mapToInt(ToIntFunction<? super E_OUT> mapper) {
         checkSerializable(mapper, "mapper");
-        Pipeline<Integer> map = (Pipeline<Integer>) map(mapper::applyAsInt);
+        Pipe<Integer> map = (Pipe<Integer>) map(mapper::applyAsInt);
         return new IntPipeline(context, map);
     }
 
     @Override
     public DistributedLongStream mapToLong(ToLongFunction<? super E_OUT> mapper) {
         checkSerializable(mapper, "mapper");
-        Pipeline<Long> map = (Pipeline<Long>) map(mapper::applyAsLong);
-        return new LongPipeline(context, map);
+        Pipe<Long> map = (Pipe<Long>) map(mapper::applyAsLong);
+        return new LongPipe(context, map);
     }
 
     @Override
     public DistributedDoubleStream mapToDouble(ToDoubleFunction<? super E_OUT> mapper) {
         checkSerializable(mapper, "mapper");
-        Pipeline<Double> map = (Pipeline<Double>) map(mapper::applyAsDouble);
+        Pipe<Double> map = (Pipe<Double>) map(mapper::applyAsDouble);
         return new DoublePipeline(context, map);
     }
 
     @Override
     public <R> DistributedStream<R> flatMap(Function<? super E_OUT, ? extends Stream<? extends R>> mapper) {
         checkSerializable(mapper, "mapper");
-        return new TransformPipeline<>(context, this, t -> t.flatMap(item -> traverseStream(mapper.apply(item))));
+        return new TransformPipe<>(context, this, t -> t.flatMap(item -> traverseStream(mapper.apply(item))));
     }
 
     @Override
     public DistributedIntStream flatMapToInt(Function<? super E_OUT, ? extends IntStream> mapper) {
         checkSerializable(mapper, "mapper");
-        Pipeline<Integer> pipeline = (Pipeline<Integer>) flatMap(m -> mapper.apply(m).boxed());
+        Pipe<Integer> pipeline = (Pipe<Integer>) flatMap(m -> mapper.apply(m).boxed());
         return new IntPipeline(context, pipeline);
     }
 
     @Override
     public DistributedLongStream flatMapToLong(Function<? super E_OUT, ? extends LongStream> mapper) {
         checkSerializable(mapper, "mapper");
-        Pipeline<Long> pipeline = (Pipeline<Long>) flatMap(m -> mapper.apply(m).boxed());
-        return new LongPipeline(context, pipeline);
+        Pipe<Long> pipeline = (Pipe<Long>) flatMap(m -> mapper.apply(m).boxed());
+        return new LongPipe(context, pipeline);
     }
 
     @Override
     public DistributedDoubleStream flatMapToDouble(Function<? super E_OUT, ? extends DoubleStream> mapper) {
         checkSerializable(mapper, "mapper");
-        Pipeline<Double> pipeline = (Pipeline<Double>) flatMap(m -> mapper.apply(m).boxed());
+        Pipe<Double> pipeline = (Pipe<Double>) flatMap(m -> mapper.apply(m).boxed());
         return new DoublePipeline(context, pipeline);
     }
 
     @Override
     public DistributedStream<E_OUT> distinct() {
-        return new DistinctPipeline<>(context, this);
+        return new DistinctPipe<>(context, this);
     }
 
     @Override
@@ -144,23 +144,23 @@ abstract class AbstractPipeline<E_OUT> implements Pipeline<E_OUT> {
     @Override
     public final DistributedStream<E_OUT> sorted(Comparator<? super E_OUT> comparator) {
         checkSerializable(comparator, "comparator");
-        return new SortPipeline<>(this, context, comparator);
+        return new SortPipe<>(this, context, comparator);
     }
 
     @Override
     public DistributedStream<E_OUT> peek(Consumer<? super E_OUT> action) {
         checkSerializable(action, "action");
-        return new PeekPipeline<>(context, this, action);
+        return new PeekPipe<>(context, this, action);
     }
 
     @Override
     public DistributedStream<E_OUT> limit(long maxSize) {
-        return new LimitPipeline<>(context, this, maxSize);
+        return new LimitPipe<>(context, this, maxSize);
     }
 
     @Override
     public DistributedStream<E_OUT> skip(long n) {
-        return new SkipPipeline<>(context, this, n);
+        return new SkipPipe<>(context, this, n);
     }
 
     @Override
@@ -313,7 +313,7 @@ abstract class AbstractPipeline<E_OUT> implements Pipeline<E_OUT> {
     @Override
     public DistributedStream<E_OUT> unordered() {
         if (isOrdered()) {
-            return new UnorderedPipeline<>(context, this);
+            return new UnorderedPipe<>(context, this);
         }
         return this;
     }

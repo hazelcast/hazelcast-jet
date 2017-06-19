@@ -19,17 +19,17 @@ package com.hazelcast.jet.stream.impl.source;
 import com.hazelcast.cache.ICache;
 import com.hazelcast.jet.ProcessorMetaSupplier;
 import com.hazelcast.jet.processor.Sources;
-import com.hazelcast.jet.stream.impl.pipeline.AbstractSourcePipeline;
+import com.hazelcast.jet.stream.impl.pipeline.AbstractSourcePipe;
 import com.hazelcast.jet.stream.impl.pipeline.StreamContext;
 
 import java.util.Map.Entry;
 
 
-public class CacheSourcePipeline<K, V> extends AbstractSourcePipeline<Entry<K, V>> {
+public class CacheSourcePipe<K, V> extends AbstractSourcePipe<Entry<K, V>> {
 
     private final ICache<K, V> cache;
 
-    public CacheSourcePipeline(StreamContext context, ICache<K, V> cache) {
+    public CacheSourcePipe(StreamContext context, ICache<K, V> cache) {
         super(context);
         this.cache = cache;
     }

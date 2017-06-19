@@ -19,14 +19,14 @@ package com.hazelcast.jet.stream.impl.source;
 import com.hazelcast.core.IList;
 import com.hazelcast.jet.ProcessorMetaSupplier;
 import com.hazelcast.jet.processor.Sources;
-import com.hazelcast.jet.stream.impl.pipeline.AbstractSourcePipeline;
+import com.hazelcast.jet.stream.impl.pipeline.AbstractSourcePipe;
 import com.hazelcast.jet.stream.impl.pipeline.StreamContext;
 
-public class ListSourcePipeline<E> extends AbstractSourcePipeline<E> {
+public class ListSourcePipe<E> extends AbstractSourcePipe<E> {
 
     private final IList<E> list;
 
-    public ListSourcePipeline(StreamContext context, IList<E> list) {
+    public ListSourcePipe(StreamContext context, IList<E> list) {
         super(context);
         this.list = list;
     }

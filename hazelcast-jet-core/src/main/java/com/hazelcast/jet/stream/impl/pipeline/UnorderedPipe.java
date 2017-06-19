@@ -19,8 +19,8 @@ package com.hazelcast.jet.stream.impl.pipeline;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Vertex;
 
-class UnorderedPipeline<T> extends AbstractIntermediatePipeline<T, T> {
-    UnorderedPipeline(StreamContext context, Pipeline<T> upstream) {
+class UnorderedPipe<T> extends AbstractIntermediatePipe<T, T> {
+    UnorderedPipe(StreamContext context, Pipe<T> upstream) {
         super(context, false, upstream);
     }
 

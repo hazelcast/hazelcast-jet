@@ -27,11 +27,11 @@ import static com.hazelcast.jet.Edge.from;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.stream.impl.StreamUtil.uniqueListName;
 
-class PeekPipeline<T> extends AbstractIntermediatePipeline<T, T> {
+class PeekPipe<T> extends AbstractIntermediatePipe<T, T> {
 
     private final Consumer<? super T> consumer;
 
-    PeekPipeline(StreamContext context, Pipeline<T> upstream, Consumer<? super T> consumer) {
+    PeekPipe(StreamContext context, Pipe<T> upstream, Consumer<? super T> consumer) {
         super(context, upstream.isOrdered(), upstream);
         checkSerializable(consumer, "consumer");
         this.consumer = consumer;

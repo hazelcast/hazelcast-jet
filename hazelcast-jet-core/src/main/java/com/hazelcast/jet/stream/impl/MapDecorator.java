@@ -26,7 +26,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.stream.DistributedStream;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.jet.stream.impl.pipeline.StreamContext;
-import com.hazelcast.jet.stream.impl.source.MapSourcePipeline;
+import com.hazelcast.jet.stream.impl.source.MapSourcePipe;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.MapInterceptor;
 import com.hazelcast.map.QueryCache;
@@ -519,6 +519,6 @@ public class MapDecorator<K, V> implements IStreamMap<K, V> {
 
     @Override
     public DistributedStream<Entry<K, V>> stream() {
-        return new MapSourcePipeline<>(new StreamContext(instance), map);
+        return new MapSourcePipe<>(new StreamContext(instance), map);
     }
 }

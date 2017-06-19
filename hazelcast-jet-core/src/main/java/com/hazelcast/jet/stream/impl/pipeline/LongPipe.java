@@ -50,12 +50,12 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.stream.impl.StreamUtil.uniqueListName;
 
 @SuppressWarnings("checkstyle:methodcount")
-class LongPipeline implements DistributedLongStream {
+class LongPipe implements DistributedLongStream {
 
     private final StreamContext context;
-    private final Pipeline<Long> inner;
+    private final Pipe<Long> inner;
 
-    LongPipeline(StreamContext context, Pipeline<Long> inner) {
+    LongPipe(StreamContext context, Pipe<Long> inner) {
         this.context = context;
         this.inner = inner;
     }
@@ -84,14 +84,14 @@ class LongPipeline implements DistributedLongStream {
     public DistributedIntStream mapToInt(LongToIntFunction mapper) {
         checkSerializable(mapper, "mapper");
         DistributedStream<Integer> stream = inner.map(mapper::applyAsInt);
-        return new IntPipeline(context, (Pipeline<Integer>) stream);
+        return new IntPipeline(context, (Pipe<Integer>) stream);
     }
 
     @Override
     public DistributedDoubleStream mapToDouble(LongToDoubleFunction mapper) {
         checkSerializable(mapper, "mapper");
         DistributedStream<Double> stream = inner.map(mapper::applyAsDouble);
-        return new DoublePipeline(context, (Pipeline<Double>) stream);
+        return new DoublePipeline(context, (Pipe<Double>) stream);
     }
 
     @Override
@@ -305,7 +305,7 @@ class LongPipeline implements DistributedLongStream {
     }
 
     private DistributedLongStream wrap(Stream<Long> pipeline) {
-        return new LongPipeline(context, (Pipeline<Long>) pipeline);
+        return new LongPipe(context, (Pipe<Long>) pipeline);
     }
 
     private static OptionalLong toOptionalLong(Optional<Long> optional) {

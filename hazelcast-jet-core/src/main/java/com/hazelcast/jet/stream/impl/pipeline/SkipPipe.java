@@ -17,34 +17,35 @@
 package com.hazelcast.jet.stream.impl.pipeline;
 
 import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.Edge;
 import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.stream.impl.processor.SortP;
-
-import java.util.Comparator;
+import com.hazelcast.jet.stream.impl.processor.SkipP;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.stream.impl.StreamUtil.uniqueVertexName;
 
-class SortPipeline<T> extends AbstractIntermediatePipeline<T, T> {
+class SkipPipe<T> extends AbstractIntermediatePipe<T, T> {
+    private final long skip;
 
-    private final Comparator<? super T> comparator;
-
-    SortPipeline(Pipeline<T> upstream, StreamContext context, Comparator<? super T> comparator) {
-        super(context, true, upstream);
-        this.comparator = comparator;
+    SkipPipe(StreamContext context, Pipe<T> upstream, long skip) {
+        super(context, upstream.isOrdered(), upstream);
+        this.skip = skip;
     }
 
     @Override
     public Vertex buildDAG(DAG dag) {
         Vertex previous = upstream.buildDAG(dag);
         // required final for lambda variable capture
-        final Comparator<? super T> comparator = this.comparator;
-        Vertex sorter = dag.newVertex(uniqueVertexName("sort"), () -> new SortP<>(comparator)).localParallelism(1);
-        dag.edge(between(previous, sorter)
-                .distributed()
-                .allToOne()
-        );
+        final long skip = this.skip;
+        Vertex skipVertex = dag.newVertex(uniqueVertexName("skip"), () -> new SkipP(skip)).localParallelism(1);
 
-        return sorter;
+        Edge edge = between(previous, skipVertex);
+
+        // if upstream is not ordered, we need to shuffle data to one node
+        if (!upstream.isOrdered()) {
+            edge = edge.distributed().allToOne();
+        }
+        dag.edge(edge);
+        return skipVertex;
     }
 }

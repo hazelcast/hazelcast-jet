@@ -20,9 +20,9 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.ProcessorMetaSupplier;
 import com.hazelcast.jet.Vertex;
 
-public abstract class AbstractSourcePipeline<E_OUT> extends AbstractPipeline<E_OUT> {
+public abstract class AbstractSourcePipe<E_OUT> extends AbstractPipe<E_OUT> {
 
-    protected AbstractSourcePipeline(StreamContext context) {
+    protected AbstractSourcePipe(StreamContext context) {
         super(context);
     }
 
