@@ -22,6 +22,9 @@ import com.hazelcast.config.AbstractConfigBuilder;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.InvalidConfigurationException;
 import com.hazelcast.config.XmlConfigBuilder;
+import com.hazelcast.instance.BuildInfo;
+import com.hazelcast.instance.BuildInfoProvider;
+import com.hazelcast.instance.JetBuildInfo;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
@@ -130,8 +133,9 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
 
     @Override
     protected String getReleaseVersion() {
-        //TODO: replace with BuildInfoProvider
-        return "0.3";
+        BuildInfo buildInfo = BuildInfoProvider.getBuildInfo();
+        JetBuildInfo jetBuildInfo = buildInfo.getJetBuildInfo();
+        return jetBuildInfo.getVersion().substring(0, 3);
     }
 
     private void parseAndBuildConfig(InputStream in) throws Exception {
@@ -145,6 +149,10 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
         process(root);
         schemaValidation(root.getOwnerDocument());
         handleConfig(root);
+    }
+
+    public String getNamespaceType() {
+        return "jet-config";
     }
 
     private void handleConfig(Element docElement) throws Exception {
