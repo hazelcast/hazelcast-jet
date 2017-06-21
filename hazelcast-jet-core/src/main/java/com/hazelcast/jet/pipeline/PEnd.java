@@ -16,17 +16,8 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.pipeline.impl.PipelineImpl;
-
-public interface Pipeline {
-
-    <E> PCollection<E> drawFrom(Source<E> source);
-
-    void execute(JetInstance jet);
-
-    static Pipeline create() {
-        return new PipelineImpl();
-    }
-
+/**
+ * Javadoc pending.
+ */
+public interface PEnd {
 }

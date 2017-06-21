@@ -18,8 +18,13 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.impl.FlatmapTransform;
+import com.hazelcast.jet.pipeline.impl.GroupByTransform;
+import com.hazelcast.jet.pipeline.impl.MapTransform;
 import com.hazelcast.jet.pipeline.impl.PipelineImpl;
+import com.hazelcast.jet.pipeline.impl.SlidingWindowTransform;
 
 import java.util.Map;
 
@@ -29,16 +34,26 @@ public final class Transforms {
 
     }
 
-    public static <IN, OUT> Transform<IN, Pipeline<OUT>> map(DistributedFunction<IN, OUT> mapF) {
-        return in -> new PipelineImpl<>(in);
+    public static <E, R> Transform<E, R> map(DistributedFunction<E, R> mapF) {
+        return new MapTransform<>(mapF);
     }
 
-    public static <IN, OUT> Transform<IN, Pipeline<OUT>> flatMap(DistributedFunction<IN, Traverser<OUT>> flatMapF) {
-        return in -> new PipelineImpl<>(in);
+    public static <E, R> Transform<E, R> flatMap(DistributedFunction<E, Traverser<R>> flatMapF) {
+        return new FlatmapTransform<>(flatMapF);
     }
 
-    public static <IN, K, R> Transform<IN, Pipeline<Map.Entry<K, R>>> groupBy(DistributedFunction<IN, K> keyF,
-                                                                              AggregateOperation<IN, ?, R> aggregation) {
-        return in -> new PipelineImpl<>(in);
+    public static <E, K, R> Transform<E, Map.Entry<K, R>> groupBy(
+            DistributedFunction<E, K> keyF,
+            AggregateOperation<E, ?, R> aggregation
+    ) {
+        return new GroupByTransform<>(keyF, aggregation);
+    }
+
+    public static <IN, K, R> Transform<IN, Map.Entry<K, R>> slidingWindow(
+            DistributedFunction<IN, K> keyF,
+            WindowDefinition wDef,
+            AggregateOperation<IN, ?, R> aggregation
+    ) {
+        return new SlidingWindowTransform<>(keyF, wDef, aggregation);
     }
 }

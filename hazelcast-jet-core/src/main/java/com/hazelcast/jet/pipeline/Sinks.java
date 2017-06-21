@@ -24,8 +24,8 @@ public final class Sinks {
 
     }
 
-    public static <K,V> Transform<Entry<K,V>, Sink> writeMap(String mapName) {
-        return in -> null;
+    public static Sink writeMap(String mapName) {
+        return null;
     }
 
 }

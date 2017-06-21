@@ -26,7 +26,7 @@ public final class Sources {
 
     }
 
-    public static <K,V> Source<Map.Entry<K, V>> readMap(String mapName) {
+    public static <K, V> Source<Map.Entry<K, V>> readMap(String mapName) {
         return new SourceImpl<>();
     }
 
@@ -34,4 +34,7 @@ public final class Sources {
         return new SourceImpl<>();
     }
 
+    public static <T> Source<T> streamKafka() {
+        return new SourceImpl<>();
+    }
 }

@@ -14,19 +14,25 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.pipeline.impl.PipelineImpl;
+import com.hazelcast.jet.pipeline.PCollection;
+import com.hazelcast.jet.pipeline.PEnd;
+import com.hazelcast.jet.pipeline.Sink;
+import com.hazelcast.jet.pipeline.Transform;
 
-public interface Pipeline {
+/**
+ * Javadoc pending.
+ */
+public class PCollectionImpl<E> implements PCollection<E> {
 
-    <E> PCollection<E> drawFrom(Source<E> source);
-
-    void execute(JetInstance jet);
-
-    static Pipeline create() {
-        return new PipelineImpl();
+    @Override
+    public <R> PCollection<R> apply(Transform<E, R> transform) {
+        return new PCollectionImpl<R>();
     }
 
+    @Override
+    public PEnd drainTo(Sink sink) {
+        return new PEndImpl();
+    }
 }

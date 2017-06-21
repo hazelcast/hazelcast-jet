@@ -16,30 +16,22 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.AggregateOperations;
 import com.hazelcast.jet.Jet;
-import com.hazelcast.jet.JetInstance;
 
-import java.util.regex.Pattern;
+import java.util.Map.Entry;
 
-import static com.hazelcast.jet.Traversers.traverseArray;
-import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
+import static com.hazelcast.jet.AggregateOperations.counting;
+import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
+import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.pipeline.Sources.streamKafka;
+import static com.hazelcast.jet.pipeline.Transforms.slidingWindow;
 
-public class PipelineWordCount {
-
+public class PipelineStockMarket {
     public static void main(String[] args) {
-
-        JetInstance jet = Jet.newJetInstance();
-
-        final Pattern delimiter = Pattern.compile("\\W+");
-
         Pipeline p = Pipeline.create();
-        PCollection<String> c = p.drawFrom(Sources.readFiles("books"));
-        c.apply(Transforms.flatMap((String line) ->
-                traverseArray(delimiter.split(line.toLowerCase())).filter(word -> !word.isEmpty())))
-         .apply(Transforms.groupBy(wholeItem(), AggregateOperations.counting()))
+        PCollection<Entry<String, Long>> c = p.drawFrom(streamKafka());
+        c.apply(slidingWindow(entryKey(), slidingWindowDef(1, 1), counting()))
          .drainTo(Sinks.writeMap("sink"));
-
-        p.execute(jet);
+        p.execute(Jet.newJetInstance());
     }
 }

@@ -14,19 +14,12 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.pipeline.impl.PipelineImpl;
+import com.hazelcast.jet.pipeline.PEnd;
 
-public interface Pipeline {
-
-    <E> PCollection<E> drawFrom(Source<E> source);
-
-    void execute(JetInstance jet);
-
-    static Pipeline create() {
-        return new PipelineImpl();
-    }
-
+/**
+ * Javadoc pending.
+ */
+public class PEndImpl implements PEnd {
 }

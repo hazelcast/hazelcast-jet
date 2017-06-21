@@ -17,20 +17,19 @@
 package com.hazelcast.jet.pipeline.impl;
 
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.pipeline.PCollection;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Source;
 import com.hazelcast.jet.pipeline.Transform;
 
-public class PipelineImpl<E> implements Pipeline<E> {
+public class PipelineImpl implements Pipeline {
 
-    private final Pipeline upstream;
-
-    public PipelineImpl(Pipeline upstream) {
-        this.upstream = upstream;
+    public PipelineImpl() {
     }
 
     @Override
-    public <OUT> OUT apply(Transform<E, OUT> transform) {
-        return transform.apply(this);
+    public <E> PCollection<E> drawFrom(Source<E> source) {
+        return new PCollectionImpl<>();
     }
 
     @Override

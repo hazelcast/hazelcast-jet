@@ -16,17 +16,11 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.pipeline.impl.PipelineImpl;
+/**
+ * Javadoc pending.
+ */
+public interface PCollection<E> {
+    <R> PCollection<R> apply(Transform<E, R> transform);
 
-public interface Pipeline {
-
-    <E> PCollection<E> drawFrom(Source<E> source);
-
-    void execute(JetInstance jet);
-
-    static Pipeline create() {
-        return new PipelineImpl();
-    }
-
+    PEnd drainTo(Sink sink);
 }

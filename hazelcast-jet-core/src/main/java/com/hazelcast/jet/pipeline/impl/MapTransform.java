@@ -14,19 +14,18 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.pipeline.impl.PipelineImpl;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.Transform;
 
-public interface Pipeline {
+/**
+ * Javadoc pending.
+ */
+public class MapTransform<E, R> implements Transform<E, R> {
+    private final DistributedFunction<E, R> mapF;
 
-    <E> PCollection<E> drawFrom(Source<E> source);
-
-    void execute(JetInstance jet);
-
-    static Pipeline create() {
-        return new PipelineImpl();
+    public MapTransform(DistributedFunction<E, R> mapF) {
+        this.mapF = mapF;
     }
-
 }

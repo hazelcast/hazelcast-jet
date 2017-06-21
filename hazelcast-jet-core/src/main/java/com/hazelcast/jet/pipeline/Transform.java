@@ -17,5 +17,4 @@
 package com.hazelcast.jet.pipeline;
 
 public interface Transform<IN, OUT> {
-    OUT apply(Pipeline<IN> in);
 }

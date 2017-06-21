@@ -14,19 +14,24 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.pipeline.impl.PipelineImpl;
+import com.hazelcast.jet.AggregateOperation;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.Transform;
 
-public interface Pipeline {
+import java.util.Map;
+import java.util.Map.Entry;
 
-    <E> PCollection<E> drawFrom(Source<E> source);
+/**
+ * Javadoc pending.
+ */
+public class GroupByTransform<E, K, R> implements Transform<E, Entry<K, R>> {
+    private final DistributedFunction<E, K> keyF;
+    private final AggregateOperation<E, ?, R> aggregation;
 
-    void execute(JetInstance jet);
-
-    static Pipeline create() {
-        return new PipelineImpl();
+    public GroupByTransform(DistributedFunction<E, K> keyF, AggregateOperation<E, ?, R> aggregation) {
+        this.keyF = keyF;
+        this.aggregation = aggregation;
     }
-
 }
