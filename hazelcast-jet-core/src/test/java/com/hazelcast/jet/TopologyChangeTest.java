@@ -237,8 +237,8 @@ public class TopologyChangeTest extends JetTestSupport {
     }
 
     static final class StuckProcessor implements Processor {
-        volatile static CountDownLatch executionStarted;
-        volatile static CountDownLatch proceedLatch;
+        static volatile CountDownLatch executionStarted;
+        static volatile CountDownLatch proceedLatch;
 
         @Override
         public boolean complete() {
