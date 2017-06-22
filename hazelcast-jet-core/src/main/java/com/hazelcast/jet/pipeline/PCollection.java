@@ -19,7 +19,7 @@ package com.hazelcast.jet.pipeline;
 /**
  * Javadoc pending.
  */
-public interface PCollection<E> {
+public interface PCollection<E> extends PElement {
     <R> PCollection<R> apply(Transform<E, R> transform);
 
     PEnd drainTo(Sink sink);

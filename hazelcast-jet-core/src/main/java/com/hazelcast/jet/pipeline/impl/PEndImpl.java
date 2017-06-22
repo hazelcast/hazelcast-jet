@@ -17,9 +17,21 @@
 package com.hazelcast.jet.pipeline.impl;
 
 import com.hazelcast.jet.pipeline.PEnd;
+import com.hazelcast.jet.pipeline.Pipeline;
 
 /**
  * Javadoc pending.
  */
 public class PEndImpl implements PEnd {
+
+    private final Pipeline pipeline;
+
+    public PEndImpl(Pipeline pipeline) {
+        this.pipeline = pipeline;
+    }
+
+    @Override
+    public Pipeline getPipeline() {
+        return pipeline;
+    }
 }

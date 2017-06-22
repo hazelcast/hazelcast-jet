@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.jet.pipeline.impl.SinkImpl;
+
 import java.util.Map.Entry;
 
 public final class Sinks {
@@ -25,7 +27,7 @@ public final class Sinks {
     }
 
     public static Sink writeMap(String mapName) {
-        return null;
+        return new SinkImpl();
     }
 
 }

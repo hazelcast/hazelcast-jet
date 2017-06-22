@@ -29,8 +29,6 @@ public class PipelineWordCount {
 
     public static void main(String[] args) {
 
-        JetInstance jet = Jet.newJetInstance();
-
         final Pattern delimiter = Pattern.compile("\\W+");
 
         Pipeline p = Pipeline.create();
@@ -40,6 +38,6 @@ public class PipelineWordCount {
          .apply(Transforms.groupBy(wholeItem(), AggregateOperations.counting()))
          .drainTo(Sinks.writeMap("sink"));
 
-        p.execute(jet);
+        p.execute(null);
     }
 }

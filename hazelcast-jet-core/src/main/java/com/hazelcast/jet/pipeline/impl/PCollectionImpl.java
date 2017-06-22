@@ -18,6 +18,7 @@ package com.hazelcast.jet.pipeline.impl;
 
 import com.hazelcast.jet.pipeline.PCollection;
 import com.hazelcast.jet.pipeline.PEnd;
+import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Transform;
 
@@ -26,13 +27,24 @@ import com.hazelcast.jet.pipeline.Transform;
  */
 public class PCollectionImpl<E> implements PCollection<E> {
 
+    private final PipelineImpl pipeline;
+
+    public PCollectionImpl(PipelineImpl pipeline) {
+        this.pipeline = pipeline;
+    }
+
     @Override
     public <R> PCollection<R> apply(Transform<E, R> transform) {
-        return new PCollectionImpl<R>();
+        return pipeline.apply(this, transform);
     }
 
     @Override
     public PEnd drainTo(Sink sink) {
-        return new PEndImpl();
+        return pipeline.drainTo(this, sink);
+    }
+
+    @Override
+    public Pipeline getPipeline() {
+        return pipeline;
     }
 }

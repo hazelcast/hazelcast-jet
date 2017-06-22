@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.pipeline.impl;
 
-/**
- * Javadoc pending.
- */
-public interface PEnd extends PElement {
+import com.hazelcast.jet.pipeline.Sink;
+
+public class SinkImpl implements Sink {
 }

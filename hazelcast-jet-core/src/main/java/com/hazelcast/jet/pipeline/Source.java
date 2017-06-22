@@ -16,6 +16,6 @@
 
 package com.hazelcast.jet.pipeline;
 
-public interface Source<E> {
+public interface Source<E> extends PTransform {
 
 }

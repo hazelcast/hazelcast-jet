@@ -16,5 +16,5 @@
 
 package com.hazelcast.jet.pipeline;
 
-public interface Transform<IN, OUT> {
+public interface Transform<IN, OUT> extends PTransform {
 }

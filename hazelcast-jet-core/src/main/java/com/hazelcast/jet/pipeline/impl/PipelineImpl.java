@@ -18,22 +18,72 @@ package com.hazelcast.jet.pipeline.impl;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.pipeline.PCollection;
+import com.hazelcast.jet.pipeline.PElement;
+import com.hazelcast.jet.pipeline.PEnd;
+import com.hazelcast.jet.pipeline.PTransform;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Source;
 import com.hazelcast.jet.pipeline.Transform;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 public class PipelineImpl implements Pipeline {
+
+    private Map<PElement, List<PTransform>> inputMap = new HashMap<>();
+    private Map<PTransform, List<PElement>> outputMap = new HashMap<>();
 
     public PipelineImpl() {
     }
 
     @Override
     public <E> PCollection<E> drawFrom(Source<E> source) {
-        return new PCollectionImpl<>();
+        PCollectionImpl<E> output = new PCollectionImpl<>(this);
+        addOutput(source, output);
+        return output;
     }
 
     @Override
     public void execute(JetInstance jet) {
-
+        printDAG();
     }
+
+    <IN, OUT> PCollection<OUT> apply(PCollectionImpl<IN> input, Transform<IN, OUT> transform) {
+        PCollectionImpl<OUT> output = new PCollectionImpl<>(this);
+        addInput(input, transform);
+        addOutput(transform, output);
+        return output;
+    }
+
+    <E> PEnd drainTo(PCollectionImpl<E> input, Sink sink) {
+        PEndImpl pEnd = new PEndImpl(this);
+        addInput(input, sink);
+        return pEnd;
+    }
+
+    //TODO: ordinal
+    private void addInput(PElement input, PTransform transform) {
+        inputMap.computeIfAbsent(input, e -> new ArrayList<>()).add(transform);
+    }
+
+    //TODO: ordinal
+    private void addOutput(PTransform transform, PElement output) {
+        outputMap.computeIfAbsent(transform, e -> new ArrayList<>()).add(output);
+    }
+
+
+    private void printDAG() {
+        for (Entry<PTransform, List<PElement>> entry : outputMap.entrySet()) {
+            Set<PTransform> outputs = entry.getValue().stream()
+                                          .flatMap(e -> inputMap.get(e).stream()).collect(Collectors.toSet());
+            System.out.println(entry.getKey() + " -> " + outputs);
+        }
+    }
+
 }

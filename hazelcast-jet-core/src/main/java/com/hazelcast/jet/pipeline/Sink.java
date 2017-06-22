@@ -16,5 +16,5 @@
 
 package com.hazelcast.jet.pipeline;
 
-public interface Sink {
+public interface Sink extends PTransform {
 }
