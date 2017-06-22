@@ -17,9 +17,8 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.AggregateOperations;
-import com.hazelcast.jet.Jet;
-import com.hazelcast.jet.JetInstance;
 
+import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
@@ -33,11 +32,13 @@ public class PipelineWordCount {
 
         Pipeline p = Pipeline.create();
         PCollection<String> c = p.drawFrom(Sources.readFiles("books"));
-        c.apply(Transforms.flatMap((String line) ->
-                traverseArray(delimiter.split(line.toLowerCase())).filter(word -> !word.isEmpty())))
-         .apply(Transforms.groupBy(wholeItem(), AggregateOperations.counting()))
-         .drainTo(Sinks.writeMap("sink"));
+        PCollection<Entry<String, Long>> wordCounts = c.apply(Transforms.flatMap((String line) ->
+                traverseArray(delimiter.split(line.toLowerCase()))
+                        .filter(word -> !word.isEmpty()))).apply(Transforms.groupBy(wholeItem(), AggregateOperations.counting()));
+        wordCounts.drainTo(Sinks.writeMap("counts"));
 
+        wordCounts.apply(Transforms.groupBy(e -> true, AggregateOperations.summingLong(Entry::getValue)))
+                  .drainTo(Sinks.writeMap(""));
         p.execute(null);
     }
 }
