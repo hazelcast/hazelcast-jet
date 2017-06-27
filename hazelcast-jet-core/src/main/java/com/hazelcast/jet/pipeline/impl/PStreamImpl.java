@@ -16,8 +16,10 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.pipeline.PCollection;
+import com.hazelcast.jet.pipeline.PElement;
+import com.hazelcast.jet.pipeline.PStream;
 import com.hazelcast.jet.pipeline.PEnd;
+import com.hazelcast.jet.pipeline.PTransform;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Transform;
@@ -25,16 +27,14 @@ import com.hazelcast.jet.pipeline.Transform;
 /**
  * Javadoc pending.
  */
-public class PCollectionImpl<E> implements PCollection<E> {
+public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
 
-    private final PipelineImpl pipeline;
-
-    public PCollectionImpl(PipelineImpl pipeline) {
-        this.pipeline = pipeline;
+    PStreamImpl(PElement upstream, PTransform transform, PipelineImpl pipeline) {
+        super(upstream, transform, pipeline);
     }
 
     @Override
-    public <R> PCollection<R> apply(Transform<E, R> transform) {
+    public <R> PStream<R> apply(Transform<E, R> transform) {
         return pipeline.apply(this, transform);
     }
 

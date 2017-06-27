@@ -29,7 +29,7 @@ import static com.hazelcast.jet.pipeline.Transforms.slidingWindow;
 public class PipelineStockMarket {
     public static void main(String[] args) {
         Pipeline p = Pipeline.create();
-        PCollection<Entry<String, Long>> c = p.drawFrom(streamKafka());
+        PStream<Entry<String, Long>> c = p.drawFrom(streamKafka());
         c.apply(slidingWindow(entryKey(), slidingWindowDef(1, 1), counting()))
          .drainTo(Sinks.writeMap("sink"));
         p.execute(Jet.newJetInstance());

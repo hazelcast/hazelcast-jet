@@ -16,18 +16,18 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
+import com.hazelcast.jet.pipeline.PElement;
 import com.hazelcast.jet.pipeline.PEnd;
+import com.hazelcast.jet.pipeline.PTransform;
 import com.hazelcast.jet.pipeline.Pipeline;
 
 /**
  * Javadoc pending.
  */
-public class PEndImpl implements PEnd {
+public class PEndImpl extends AbstractPElement implements PEnd {
 
-    private final Pipeline pipeline;
-
-    public PEndImpl(Pipeline pipeline) {
-        this.pipeline = pipeline;
+    PEndImpl(PElement upstream, PTransform transform, PipelineImpl pipeline) {
+        super(upstream, transform, pipeline);
     }
 
     @Override

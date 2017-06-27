@@ -14,7 +14,20 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.pipeline.impl;
 
-public interface PTransform {
+import com.hazelcast.jet.pipeline.PElement;
+import com.hazelcast.jet.pipeline.PTransform;
+
+public abstract class AbstractPElement implements PElement {
+
+    protected final PElement upstream;
+    protected final PTransform transform;
+    protected final PipelineImpl pipeline;
+
+    AbstractPElement(PElement upstream, PTransform transform, PipelineImpl pipeline) {
+        this.upstream = upstream;
+        this.transform = transform;
+        this.pipeline = pipeline;
+    }
 }

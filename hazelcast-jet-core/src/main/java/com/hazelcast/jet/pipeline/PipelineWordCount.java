@@ -31,8 +31,8 @@ public class PipelineWordCount {
         final Pattern delimiter = Pattern.compile("\\W+");
 
         Pipeline p = Pipeline.create();
-        PCollection<String> c = p.drawFrom(Sources.readFiles("books"));
-        PCollection<Entry<String, Long>> wordCounts = c.apply(Transforms.flatMap((String line) ->
+        PStream<String> c = p.drawFrom(Sources.readFiles("books"));
+        PStream<Entry<String, Long>> wordCounts = c.apply(Transforms.flatMap((String line) ->
                 traverseArray(delimiter.split(line.toLowerCase()))
                         .filter(word -> !word.isEmpty()))).apply(Transforms.groupBy(wholeItem(), AggregateOperations.counting()));
         wordCounts.drainTo(Sinks.writeMap("counts"));

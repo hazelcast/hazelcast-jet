@@ -17,9 +17,8 @@
 package com.hazelcast.jet.pipeline.impl;
 
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.pipeline.PCollection;
-import com.hazelcast.jet.pipeline.PElement;
 import com.hazelcast.jet.pipeline.PEnd;
+import com.hazelcast.jet.pipeline.PStream;
 import com.hazelcast.jet.pipeline.PTransform;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
@@ -36,17 +35,14 @@ import java.util.stream.Collectors;
 
 public class PipelineImpl implements Pipeline {
 
-    private Map<PElement, List<PTransform>> inputMap = new HashMap<>();
-    private Map<PTransform, List<PElement>> outputMap = new HashMap<>();
+    private Map<AbstractPElement, List<AbstractPElement>> outgoingEdges = new HashMap<>();
 
     public PipelineImpl() {
     }
 
     @Override
-    public <E> PCollection<E> drawFrom(Source<E> source) {
-        PCollectionImpl<E> output = new PCollectionImpl<>(this);
-        addOutput(source, output);
-        return output;
+    public <E> PStream<E> drawFrom(Source<E> source) {
+        return new PStreamImpl<>(null, source, this);
     }
 
     @Override
@@ -54,35 +50,28 @@ public class PipelineImpl implements Pipeline {
         printDAG();
     }
 
-    <IN, OUT> PCollection<OUT> apply(PCollectionImpl<IN> input, Transform<IN, OUT> transform) {
-        PCollectionImpl<OUT> output = new PCollectionImpl<>(this);
-        addInput(input, transform);
-        addOutput(transform, output);
+    <IN, OUT> PStream<OUT> apply(PStreamImpl<IN> input, Transform<IN, OUT> transform) {
+        PStreamImpl<OUT> output = new PStreamImpl<>(input, transform, this);
+        addEdge(input, output);
         return output;
     }
 
-    <E> PEnd drainTo(PCollectionImpl<E> input, Sink sink) {
-        PEndImpl pEnd = new PEndImpl(this);
-        addInput(input, sink);
-        return pEnd;
+    <E> PEnd drainTo(PStreamImpl<E> input, Sink sink) {
+        PEndImpl output = new PEndImpl(input, sink, this);
+        addEdge(input, output);
+        return output;
     }
 
-    //TODO: ordinal
-    private void addInput(PElement input, PTransform transform) {
-        inputMap.computeIfAbsent(input, e -> new ArrayList<>()).add(transform);
-    }
-
-    //TODO: ordinal
-    private void addOutput(PTransform transform, PElement output) {
-        outputMap.computeIfAbsent(transform, e -> new ArrayList<>()).add(output);
+    private void addEdge(AbstractPElement source, AbstractPElement dest) {
+        outgoingEdges.computeIfAbsent(source, e -> new ArrayList<>()).add(dest);
     }
 
 
     private void printDAG() {
-        for (Entry<PTransform, List<PElement>> entry : outputMap.entrySet()) {
+        for (Entry<AbstractPElement, List<AbstractPElement>> entry : outgoingEdges.entrySet()) {
             Set<PTransform> outputs = entry.getValue().stream()
-                                          .flatMap(e -> inputMap.get(e).stream()).collect(Collectors.toSet());
-            System.out.println(entry.getKey() + " -> " + outputs);
+                                          .map(e -> e.transform).collect(Collectors.toSet());
+            System.out.println(entry.getKey().transform + " -> " + outputs);
         }
     }
 

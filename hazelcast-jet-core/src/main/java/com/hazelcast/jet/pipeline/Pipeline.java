@@ -21,7 +21,7 @@ import com.hazelcast.jet.pipeline.impl.PipelineImpl;
 
 public interface Pipeline {
 
-    <E> PCollection<E> drawFrom(Source<E> source);
+    <E> PStream<E> drawFrom(Source<E> source);
 
     void execute(JetInstance jet);
 
