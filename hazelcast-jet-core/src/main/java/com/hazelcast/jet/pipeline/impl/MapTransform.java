@@ -23,9 +23,9 @@ import com.hazelcast.jet.pipeline.Transform;
  * Javadoc pending.
  */
 public class MapTransform<E, R> implements Transform<E, R> {
-    private final DistributedFunction<E, R> mapF;
+    private final DistributedFunction<? super E, ? extends R> mapF;
 
-    public MapTransform(DistributedFunction<E, R> mapF) {
+    public MapTransform(DistributedFunction<? super E, ? extends R> mapF) {
         this.mapF = mapF;
     }
 }

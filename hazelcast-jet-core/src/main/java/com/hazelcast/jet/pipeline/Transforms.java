@@ -34,16 +34,16 @@ public final class Transforms {
 
     }
 
-    public static <E, R> Transform<E, R> map(DistributedFunction<E, R> mapF) {
+    public static <E, R> Transform<E, R> map(DistributedFunction<? super E, ? extends R> mapF) {
         return new MapTransform<>(mapF);
     }
 
-    public static <E, R> Transform<E, R> flatMap(DistributedFunction<E, Traverser<R>> flatMapF) {
+    public static <E, R> Transform<E, R> flatMap(DistributedFunction<? super E, Traverser<? extends R>> flatMapF) {
         return new FlatmapTransform<>(flatMapF);
     }
 
     public static <E, K, R> Transform<E, Map.Entry<K, R>> groupBy(
-            DistributedFunction<E, K> keyF,
+            DistributedFunction<? super E, ? extends K> keyF,
             AggregateOperation<E, ?, R> aggregation
     ) {
         return new GroupByTransform<>(keyF, aggregation);

@@ -31,14 +31,19 @@ public class PipelineWordCount {
         final Pattern delimiter = Pattern.compile("\\W+");
 
         Pipeline p = Pipeline.create();
-        PStream<String> c = p.drawFrom(Sources.readFiles("books"));
-        PStream<Entry<String, Long>> wordCounts = c.apply(Transforms.flatMap((String line) ->
-                traverseArray(delimiter.split(line.toLowerCase()))
-                        .filter(word -> !word.isEmpty()))).apply(Transforms.groupBy(wholeItem(), AggregateOperations.counting()));
+
+        PStream<String> books = p.drawFrom(Sources.readFiles("books"));
+
+        PStream<Entry<String, Long>> wordCounts = books
+                .flatMap((String line) -> traverseArray(delimiter.split(line.toLowerCase())).filter(word -> !word.isEmpty()))
+                .groupBy(wholeItem(), AggregateOperations.counting());
+
         wordCounts.drainTo(Sinks.writeMap("counts"));
 
-        wordCounts.apply(Transforms.groupBy(e -> true, AggregateOperations.summingLong(Entry::getValue)))
-                  .drainTo(Sinks.writeMap(""));
+        wordCounts
+                .groupBy(e -> true, AggregateOperations.summingLong(Entry::getValue))
+                .drainTo(Sinks.writeMap("totals"));
+
         p.execute(null);
     }
 }

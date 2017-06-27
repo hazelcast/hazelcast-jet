@@ -25,9 +25,9 @@ import com.hazelcast.jet.pipeline.Transform;
  * Javadoc pending.
  */
 public class FlatmapTransform<E, R> implements Transform<E, R> {
-    private final DistributedFunction<E, Traverser<R>> flatMapF;
+    private final DistributedFunction<? super E, Traverser<? extends R>> flatMapF;
 
-    public FlatmapTransform(DistributedFunction<E, Traverser<R>> flatMapF) {
+    public FlatmapTransform(DistributedFunction<? super E, Traverser<? extends R>> flatMapF) {
         this.flatMapF = flatMapF;
     }
 }

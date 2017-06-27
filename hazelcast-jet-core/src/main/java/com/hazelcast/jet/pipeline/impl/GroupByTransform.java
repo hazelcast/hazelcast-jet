@@ -27,10 +27,10 @@ import java.util.Map.Entry;
  * Javadoc pending.
  */
 public class GroupByTransform<E, K, R> implements Transform<E, Entry<K, R>> {
-    private final DistributedFunction<E, K> keyF;
+    private final DistributedFunction<? super E, ? extends K> keyF;
     private final AggregateOperation<E, ?, R> aggregation;
 
-    public GroupByTransform(DistributedFunction<E, K> keyF, AggregateOperation<E, ?, R> aggregation) {
+    public GroupByTransform(DistributedFunction<? super E, ? extends K> keyF, AggregateOperation<E, ?, R> aggregation) {
         this.keyF = keyF;
         this.aggregation = aggregation;
     }

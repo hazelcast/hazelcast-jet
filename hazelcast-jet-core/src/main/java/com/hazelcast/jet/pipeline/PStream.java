@@ -16,11 +16,31 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.jet.AggregateOperation;
+import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.function.DistributedFunction;
+
+import java.util.Map.Entry;
+
 /**
  * Javadoc pending.
  */
 public interface PStream<E> extends PElement {
-    <R> PStream<R> apply(Transform<E, R> transform);
+    <R> PStream<R> apply(Transform<? super E, ? extends R> transform);
 
     PEnd drainTo(Sink sink);
+
+    default <R> PStream<R> map(DistributedFunction<? super E, ? extends R> mapper) {
+        return apply(Transforms.map(mapper));
+    }
+
+    default <R> PStream<R> flatMap(DistributedFunction<? super E, Traverser<? extends R>> flatMapF) {
+        return apply(Transforms.flatMap(flatMapF));
+    }
+
+    default <K, R> PStream<Entry<K, R>> groupBy(DistributedFunction<? super E, ? extends K> keyF,
+                                                AggregateOperation<E, ?, R> aggregation
+    ) {
+        return apply(Transforms.groupBy(keyF, aggregation));
+    }
 }
