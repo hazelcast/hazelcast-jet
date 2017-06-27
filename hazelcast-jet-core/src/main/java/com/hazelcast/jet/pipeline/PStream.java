@@ -43,4 +43,8 @@ public interface PStream<E> extends PElement {
     ) {
         return apply(Transforms.groupBy(keyF, aggregation));
     }
+
+    default <E2> PStream2<E, E2> joinWith(PStream<E2> other) {
+        return null;
+    }
 }
