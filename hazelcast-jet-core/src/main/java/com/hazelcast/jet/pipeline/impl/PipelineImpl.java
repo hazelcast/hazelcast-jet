@@ -50,7 +50,7 @@ public class PipelineImpl implements Pipeline {
         printDAG();
     }
 
-    <IN, OUT> PStream<OUT> apply(PStreamImpl<IN> input, Transform<IN, OUT> transform) {
+    <IN, OUT> PStream<OUT> apply(PStreamImpl<IN> input, Transform<? super IN, OUT> transform) {
         PStreamImpl<OUT> output = new PStreamImpl<>(input, transform, this);
         addEdge(input, output);
         return output;

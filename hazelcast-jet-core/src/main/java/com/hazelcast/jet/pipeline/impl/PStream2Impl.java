@@ -16,35 +16,18 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.pipeline.PElement;
 import com.hazelcast.jet.pipeline.PStream;
-import com.hazelcast.jet.pipeline.PEnd;
-import com.hazelcast.jet.pipeline.PTransform;
-import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.Sink;
+import com.hazelcast.jet.pipeline.PStream2;
 import com.hazelcast.jet.pipeline.Transform;
 
 /**
  * Javadoc pending.
  */
-public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
-
-    PStreamImpl(PElement upstream, PTransform transform, PipelineImpl pipeline) {
-        super(upstream, transform, pipeline);
-    }
-
+public class PStream2Impl<E1, E2> implements PStream2<E1, E2> {
     @Override
-    public <R> PStream<R> apply(Transform<? super E, R> transform) {
-        return pipeline.apply(this, transform);
+    public <R> void apply(Transform<PStream2<E1, E2>, PStream<R>> transform) {
+
     }
 
-    @Override
-    public PEnd drainTo(Sink sink) {
-        return pipeline.drainTo(this, sink);
-    }
 
-    @Override
-    public Pipeline getPipeline() {
-        return pipeline;
-    }
 }

@@ -19,14 +19,12 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.impl.PStream2Impl;
 
 import java.util.Map.Entry;
 
-/**
- * Javadoc pending.
- */
 public interface PStream<E> extends PElement {
-    <R> PStream<R> apply(Transform<? super E, ? extends R> transform);
+    <R> PStream<R> apply(Transform<? super E, R> transform);
 
     PEnd drainTo(Sink sink);
 
@@ -45,6 +43,6 @@ public interface PStream<E> extends PElement {
     }
 
     default <E2> PStream2<E, E2> joinWith(PStream<E2> other) {
-        return null;
+        return new PStream2Impl<>();
     }
 }

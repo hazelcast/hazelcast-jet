@@ -34,7 +34,7 @@ public class PipelineHashJoin {
 
 
         trades.joinWith(products)
-              .hashJoin(Trade::getProduct, Product::getId)
+              .hashJoin(Trade::getProduct, Product::getId);
 
 
     }

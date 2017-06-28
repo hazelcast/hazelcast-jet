@@ -26,12 +26,12 @@ public interface PStream2<E1, E2> {
     <R> void apply(Transform<PStream2<E1, E2>, PStream<R>> transform);
 
     default <K> PStream<Tuple2<E1, E2>> hashJoin(DistributedFunction<E1, K> keyF, DistributedFunction<E2, K> keyF2) {
-
+        return null;
     }
 
     default <K,R> PStream<Entry<K, R>> coGroup(DistributedFunction<E1, K> keyF, DistributedFunction<E2, K> keyF2,
                                                AggregateOperation<Tuple2<E1, E2>, ?, R> aggregateOp) {
-
+        return null;
     }
 
 
