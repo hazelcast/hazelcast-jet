@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.PElement;
 import com.hazelcast.jet.pipeline.PStream;
 import com.hazelcast.jet.pipeline.PEnd;
@@ -23,19 +24,41 @@ import com.hazelcast.jet.pipeline.PTransform;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Transform;
+import com.hazelcast.jet.pipeline.Tuple2;
+import com.hazelcast.jet.pipeline.Tuple3;
 
 /**
  * Javadoc pending.
  */
 public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
 
-    PStreamImpl(PElement upstream, PTransform transform, PipelineImpl pipeline) {
+    public PStreamImpl(PElement upstream, PTransform transform, PipelineImpl pipeline) {
         super(upstream, transform, pipeline);
     }
 
     @Override
     public <R> PStream<R> apply(Transform<? super E, R> transform) {
         return pipeline.apply(this, transform);
+    }
+
+    @Override
+    public <K, E1> PStream<Tuple2<E, E1>> join(
+            DistributedFunction<E, K> thisKeyF,
+            PStream<E1> s1,
+            DistributedFunction<E1, K> key1F
+    ) {
+        return new PStreamImpl<>();
+    }
+
+    @Override
+    public <K, E1, E2> PStream<Tuple3<E, E1, E2>> join(
+            DistributedFunction<E, K> thisKeyF,
+            PStream<E1> s1,
+            DistributedFunction<E1, K> key1F,
+            PStream<E2> s2,
+            DistributedFunction<E2, K> key2F
+    ) {
+        return new PStreamImpl<>();
     }
 
     @Override

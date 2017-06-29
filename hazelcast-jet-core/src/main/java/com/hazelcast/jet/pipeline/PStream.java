@@ -20,6 +20,7 @@ import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.impl.PStream2Impl;
+import com.hazelcast.jet.pipeline.impl.PStreamImpl;
 
 import java.util.Map.Entry;
 
@@ -27,6 +28,24 @@ public interface PStream<E> extends PElement {
     <R> PStream<R> apply(Transform<? super E, R> transform);
 
     PEnd drainTo(Sink sink);
+
+    <K, E1> PStream<Tuple2<E, E1>> join(
+            DistributedFunction<E, K> thisKeyF,
+            PStream<E1> s1,
+            DistributedFunction<E1, K> key1F
+    );
+
+    <K, E1, E2> PStream<Tuple3<E, E1, E2>> join(
+            DistributedFunction<E, K> thisKeyF,
+            PStream<E1> s1,
+            DistributedFunction<E1, K> key1F,
+            PStream<E2> s2,
+            DistributedFunction<E2, K> key2F
+    );
+
+    static <K> JoinBuilder<K> joinBuilder() {
+        return new JoinBuilder<>();
+    }
 
     default <R> PStream<R> map(DistributedFunction<? super E, ? extends R> mapper) {
         return apply(Transforms.map(mapper));
