@@ -69,7 +69,8 @@ public class JetInstanceImpl extends AbstractJetInstance {
         @Override
         public Future<Void> execute() {
             long executionId = getIdGenerator().newId();
-            new ResourceUploader(JetInstanceImpl.this, executionId).uploadMetadata(config);
+            new ResourceUploader(JetInstanceImpl.this.getMap(JetService.METADATA_MAP_PREFIX + executionId))
+                    .uploadMetadata(config);
 
             Operation op = new ExecuteJobOperation(executionId, dag);
             return nodeEngine.getOperationService()

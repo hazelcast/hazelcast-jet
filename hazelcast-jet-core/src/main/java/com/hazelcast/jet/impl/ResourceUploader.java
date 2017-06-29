@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.nio.IOUtil;
@@ -35,19 +34,16 @@ import java.util.zip.DeflaterOutputStream;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
-public class ResourceUploader {
-
-    private static final int MAP_PUT_BATCH_SIZE_BYTES = 1 << 18; // 256kB
+class ResourceUploader {
 
     private final IMap<String, Object> targetMap;
     private final Map<String, byte[]> tmpMap = new HashMap<>();
-    private int tmpMapBytes;
 
-    public ResourceUploader(JetInstance instance, long executionId) {
-        targetMap = instance.getMap(JetService.METADATA_MAP_PREFIX + executionId);
+    ResourceUploader(IMap<String, Object> targetMap) {
+        this.targetMap = targetMap;
     }
 
-    public void uploadMetadata(JobConfig jobConfig) {
+    void uploadMetadata(JobConfig jobConfig) {
         if (!targetMap.isEmpty()) {
             throw new IllegalStateException("Map not empty: " + targetMap.getName());
         }
@@ -61,7 +57,7 @@ public class ResourceUploader {
                 }
             }
 
-            // finish the last batch
+            // now upload it all
             targetMap.putAll(tmpMap);
         } catch (Throwable e) {
             try {
@@ -93,7 +89,7 @@ public class ResourceUploader {
     private void readStreamAndPutCompressedToMap(InputStream in, String resourceId) throws IOException {
         String key = "res:" + resourceId;
         // ignore duplicates: the first resource in first jar takes precedence
-        if (targetMap.containsKey(key)) {
+        if (tmpMap.containsKey(key)) {
             return;
         }
 
@@ -101,13 +97,6 @@ public class ResourceUploader {
         DeflaterOutputStream compressor = new DeflaterOutputStream(baos);
         IOUtil.drainTo(in, compressor);
         compressor.close();
-        byte[] data = baos.toByteArray();
-
-        tmpMap.put(key, data);
-        tmpMapBytes += data.length;
-        if (tmpMapBytes >= MAP_PUT_BATCH_SIZE_BYTES) {
-            targetMap.putAll(tmpMap);
-            tmpMap.clear();
-        }
+        tmpMap.put(key, baos.toByteArray());
     }
 }

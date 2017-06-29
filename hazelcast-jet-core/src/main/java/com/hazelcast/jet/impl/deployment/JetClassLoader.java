@@ -17,16 +17,15 @@
 package com.hazelcast.jet.impl.deployment;
 
 import com.hazelcast.core.IMap;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.nio.IOUtil;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.zip.InflaterInputStream;
 
-import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 
 public class JetClassLoader extends ClassLoader {
 
@@ -44,17 +43,11 @@ public class JetClassLoader extends ClassLoader {
         }
         InputStream classBytesStream = resourceStream(name.replace('.', '/') + ".class");
         if (classBytesStream == null) {
-            throw new ClassNotFoundException(name);
+            throw new ClassNotFoundException(name + ". Add it using " + JobConfig.class.getSimpleName()
+                    + " or start all members with it on classpath");
         }
-
-        MorePublicByteArrayOutputStream os = new MorePublicByteArrayOutputStream();
-        try {
-            IOUtil.drainTo(classBytesStream, os);
-        } catch (IOException e) {
-            throw rethrow(e);
-        }
-
-        return defineClass(name, os.getInternalBuffer(), 0, os.size());
+        byte[] classBytes = uncheckCall(() -> IOUtil.toByteArray(classBytesStream));
+        return defineClass(name, classBytes, 0, classBytes.length);
     }
 
     @Override
@@ -88,12 +81,6 @@ public class JetClassLoader extends ClassLoader {
 
     public IMap<String, Object> getJobMetadataMap() {
         return jobMetadataMap;
-    }
-
-    private static class MorePublicByteArrayOutputStream extends ByteArrayOutputStream {
-        public byte[] getInternalBuffer() {
-            return this.buf;
-        }
     }
 
     private static boolean isEmpty(String className) {
