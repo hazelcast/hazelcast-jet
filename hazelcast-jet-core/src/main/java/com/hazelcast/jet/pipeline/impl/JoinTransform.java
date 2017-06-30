@@ -14,25 +14,20 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.PTransform;
 
-import java.util.Map.Entry;
+import java.util.List;
 
-public interface PStream2<E1, E2> {
+/**
+ * Javadoc pending.
+ */
+public class JoinTransform<K> implements PTransform {
+    private final List<DistributedFunction<?, K>> joinKeyFs;
 
-    <R> void apply(Transform<PStream2<E1, E2>, PStream<R>> transform);
-
-    default <K> PStream<Tuple2<E1, E2>> hashJoin(DistributedFunction<E1, K> keyF, DistributedFunction<E2, K> keyF2) {
-        return null;
+    public JoinTransform(List<DistributedFunction<?, K>> joinKeyFs) {
+        this.joinKeyFs = joinKeyFs;
     }
-
-    default <K,R> PStream<Entry<K, R>> coGroup(DistributedFunction<E1, K> keyF, DistributedFunction<E2, K> keyF2,
-                                               AggregateOperation<Tuple2<E1, E2>, ?, R> aggregateOp) {
-        return null;
-    }
-
-
 }

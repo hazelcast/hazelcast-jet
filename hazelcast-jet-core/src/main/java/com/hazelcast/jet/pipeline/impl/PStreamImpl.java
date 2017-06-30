@@ -18,8 +18,8 @@ package com.hazelcast.jet.pipeline.impl;
 
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.PElement;
-import com.hazelcast.jet.pipeline.PStream;
 import com.hazelcast.jet.pipeline.PEnd;
+import com.hazelcast.jet.pipeline.PStream;
 import com.hazelcast.jet.pipeline.PTransform;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
@@ -27,13 +27,22 @@ import com.hazelcast.jet.pipeline.Transform;
 import com.hazelcast.jet.pipeline.Tuple2;
 import com.hazelcast.jet.pipeline.Tuple3;
 
+import java.util.List;
+
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
+
 /**
  * Javadoc pending.
  */
 public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
 
-    public PStreamImpl(PElement upstream, PTransform transform, PipelineImpl pipeline) {
+    public PStreamImpl(List<PElement> upstream, PTransform transform, PipelineImpl pipeline) {
         super(upstream, transform, pipeline);
+    }
+
+    public PStreamImpl(PElement upstream, PTransform transform, PipelineImpl pipeline) {
+        super(singletonList(upstream), transform, pipeline);
     }
 
     @Override
@@ -43,22 +52,23 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
 
     @Override
     public <K, E1> PStream<Tuple2<E, E1>> join(
-            DistributedFunction<E, K> thisKeyF,
             PStream<E1> s1,
-            DistributedFunction<E1, K> key1F
+            DistributedFunction<E, K> thisKey1F,
+            DistributedFunction<E1, K> thatKey1F
     ) {
-        return new PStreamImpl<>();
+        return new PStreamImpl<>(asList(this, s1), new JoinTransform<>(asList(thisKey1F, thatKey1F)), pipeline);
     }
 
     @Override
-    public <K, E1, E2> PStream<Tuple3<E, E1, E2>> join(
-            DistributedFunction<E, K> thisKeyF,
+    public <K1, E1, K2, E2> PStream<Tuple3<E, E1, E2>> join(
             PStream<E1> s1,
-            DistributedFunction<E1, K> key1F,
+            DistributedFunction<E, K1> thisKey1F,
+            DistributedFunction<E1, K1> thatKey1F,
             PStream<E2> s2,
-            DistributedFunction<E2, K> key2F
+            DistributedFunction<E, K2> thisKey2F,
+            DistributedFunction<E2, K2> thatKey2F
     ) {
-        return new PStreamImpl<>();
+        return new PStreamImpl<>(asList(this, s1, s2), new JoinTransform<>(asList(thisKey1F, thatKey1F)), pipeline);
     }
 
     @Override

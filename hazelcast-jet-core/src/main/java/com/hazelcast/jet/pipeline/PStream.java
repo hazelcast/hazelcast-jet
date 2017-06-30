@@ -19,8 +19,6 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.pipeline.impl.PStream2Impl;
-import com.hazelcast.jet.pipeline.impl.PStreamImpl;
 
 import java.util.Map.Entry;
 
@@ -30,17 +28,18 @@ public interface PStream<E> extends PElement {
     PEnd drainTo(Sink sink);
 
     <K, E1> PStream<Tuple2<E, E1>> join(
-            DistributedFunction<E, K> thisKeyF,
             PStream<E1> s1,
-            DistributedFunction<E1, K> key1F
+            DistributedFunction<E, K> thisKey1F,
+            DistributedFunction<E1, K> thatKey1F
     );
 
-    <K, E1, E2> PStream<Tuple3<E, E1, E2>> join(
-            DistributedFunction<E, K> thisKeyF,
+    <K1, E1, K2, E2> PStream<Tuple3<E, E1, E2>> join(
             PStream<E1> s1,
-            DistributedFunction<E1, K> key1F,
+            DistributedFunction<E, K1> thisKey1F,
+            DistributedFunction<E1, K1> thatKey1F,
             PStream<E2> s2,
-            DistributedFunction<E2, K> key2F
+            DistributedFunction<E, K2> thisKey2F,
+            DistributedFunction<E2, K2> thatKey2F
     );
 
     static <K> JoinBuilder<K> joinBuilder() {
@@ -59,9 +58,5 @@ public interface PStream<E> extends PElement {
                                                 AggregateOperation<E, ?, R> aggregation
     ) {
         return apply(Transforms.groupBy(keyF, aggregation));
-    }
-
-    default <E2> PStream2<E, E2> joinWith(PStream<E2> other) {
-        return new PStream2Impl<>();
     }
 }
