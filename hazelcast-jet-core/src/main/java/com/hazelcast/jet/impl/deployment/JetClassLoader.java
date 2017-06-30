@@ -29,6 +29,8 @@ import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 
 public class JetClassLoader extends ClassLoader {
 
+    public static final String METADATA_RESOURCES_PREFIX = "res:";
+
     private final IMap<String, Object> jobMetadataMap;
 
     public JetClassLoader(IMap jobMetadataMap) {
@@ -56,7 +58,7 @@ public class JetClassLoader extends ClassLoader {
             return null;
         }
         // we distinguish between the case "resource found, but not accessible by URL" and "resource not found"
-        if (jobMetadataMap.containsKey("res:" + name)) {
+        if (jobMetadataMap.containsKey(METADATA_RESOURCES_PREFIX + name)) {
             throw new IllegalArgumentException("Resource not accessible by URL: " + name);
         }
         return null;
@@ -72,7 +74,7 @@ public class JetClassLoader extends ClassLoader {
 
     @SuppressWarnings("unchecked")
     private InputStream resourceStream(String name) {
-        byte[] classData = (byte[]) jobMetadataMap.get("res:" + name);
+        byte[] classData = (byte[]) jobMetadataMap.get(METADATA_RESOURCES_PREFIX + name);
         if (classData == null) {
             return null;
         }

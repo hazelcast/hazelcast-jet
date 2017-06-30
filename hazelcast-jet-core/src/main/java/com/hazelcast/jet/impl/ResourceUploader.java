@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
+import com.hazelcast.jet.impl.deployment.JetClassLoader;
 import com.hazelcast.nio.IOUtil;
 
 import java.io.BufferedInputStream;
@@ -87,7 +88,7 @@ class ResourceUploader {
     }
 
     private void readStreamAndPutCompressedToMap(InputStream in, String resourceId) throws IOException {
-        String key = "res:" + resourceId;
+        String key = JetClassLoader.METADATA_RESOURCES_PREFIX + resourceId;
         // ignore duplicates: the first resource in first jar takes precedence
         if (tmpMap.containsKey(key)) {
             return;
