@@ -23,9 +23,9 @@ import java.util.Map;
  * Javadoc pending.
  */
 public class KeyedTuple {
-    private final Map<TupleKey<?>, Object> components = new HashMap<>();
+    private final Map<TupleIndex<?>, Object> components = new HashMap<>();
 
-    public <E> E get(TupleKey<E> k) {
+    public <E> E get(TupleIndex<E> k) {
         return (E) components.get(k);
     }
 }

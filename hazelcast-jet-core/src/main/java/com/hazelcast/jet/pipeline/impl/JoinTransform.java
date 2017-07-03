@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.PTransform;
 
 import java.util.List;
@@ -24,10 +24,10 @@ import java.util.List;
 /**
  * Javadoc pending.
  */
-public class JoinTransform<K> implements PTransform {
-    private final List<DistributedFunction<?, K>> joinKeyFs;
+public class JoinTransform implements PTransform {
+    private final List<JoinClause> joinClauses;
 
-    public JoinTransform(List<DistributedFunction<?, K>> joinKeyFs) {
-        this.joinKeyFs = joinKeyFs;
+    public JoinTransform(List<JoinClause> joinClauses) {
+        this.joinClauses = joinClauses;
     }
 }

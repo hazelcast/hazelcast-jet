@@ -28,22 +28,16 @@ public interface PStream<E> extends PElement {
     PEnd drainTo(Sink sink);
 
     <K, E1> PStream<Tuple2<E, E1>> join(
-            PStream<E1> s1,
-            DistributedFunction<E, K> thisKey1F,
-            DistributedFunction<E1, K> thatKey1F
+            PStream<E1> s1, JoinClause<K, E, E1> clause
     );
 
     <K1, E1, K2, E2> PStream<Tuple3<E, E1, E2>> join(
-            PStream<E1> s1,
-            DistributedFunction<E, K1> thisKey1F,
-            DistributedFunction<E1, K1> thatKey1F,
-            PStream<E2> s2,
-            DistributedFunction<E, K2> thisKey2F,
-            DistributedFunction<E2, K2> thatKey2F
+            PStream<E1> s1, JoinClause<K1, E, E1> clause1,
+            PStream<E2> s2, JoinClause<K2, E, E2> clause2
     );
 
-    static <K> JoinBuilder<K> joinBuilder() {
-        return new JoinBuilder<>();
+    default JoinBuilder<E> joinBuilder() {
+        return new JoinBuilder<>(this);
     }
 
     default <R> PStream<R> map(DistributedFunction<? super E, ? extends R> mapper) {

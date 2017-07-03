@@ -21,17 +21,17 @@ import java.io.Serializable;
 /**
  * Javadoc pending.
  */
-public class TupleKey<E> implements Serializable {
+public class TupleIndex<E> implements Serializable {
     private final int index;
 
-    TupleKey(int index) {
+    TupleIndex(int index) {
         this.index = index;
     }
 
     @Override
     public boolean equals(Object obj) {
         return this == obj ||
-                obj instanceof TupleKey && this.index == ((TupleKey) obj).index;
+                obj instanceof TupleIndex && this.index == ((TupleIndex) obj).index;
     }
 
     @Override

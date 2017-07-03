@@ -33,6 +33,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static java.util.Collections.emptyList;
+
 public class PipelineImpl implements Pipeline {
 
     private Map<AbstractPElement, List<AbstractPElement>> outgoingEdges = new HashMap<>();
@@ -42,7 +44,7 @@ public class PipelineImpl implements Pipeline {
 
     @Override
     public <E> PStream<E> drawFrom(Source<E> source) {
-        return new PStreamImpl<>(null, source, this);
+        return new PStreamImpl<>(emptyList(), source, this);
     }
 
     @Override

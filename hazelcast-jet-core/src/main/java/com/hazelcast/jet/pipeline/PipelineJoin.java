@@ -18,7 +18,9 @@ package com.hazelcast.jet.pipeline;
 
 import java.util.Map.Entry;
 
-public class PipelineHashJoin {
+import static com.hazelcast.jet.pipeline.JoinClause.onKeys;
+
+public class PipelineJoin {
 
     public static void main(String[] args) {
 
@@ -32,11 +34,9 @@ public class PipelineHashJoin {
         PStream<Broker> brokers = p.drawFrom(Sources.<Integer, Broker>readMap("brokers"))
                                    .map(Entry::getValue);
 
-
-        trades.joinWith(products)
-              .hashJoin(Trade::getProduct, Product::getId);
-
-
+        PStream<Tuple3<Trade, Product, Broker>> joined = trades.join(
+                products, onKeys(Trade::getProduct, Product::getId),
+                brokers, onKeys(Trade::getBroker, Broker::getId));
     }
 
     private static class Trade {

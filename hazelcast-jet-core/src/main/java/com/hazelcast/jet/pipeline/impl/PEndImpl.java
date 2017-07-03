@@ -21,13 +21,15 @@ import com.hazelcast.jet.pipeline.PEnd;
 import com.hazelcast.jet.pipeline.PTransform;
 import com.hazelcast.jet.pipeline.Pipeline;
 
+import static java.util.Collections.singletonList;
+
 /**
  * Javadoc pending.
  */
 public class PEndImpl extends AbstractPElement implements PEnd {
 
     PEndImpl(PElement upstream, PTransform transform, PipelineImpl pipeline) {
-        super(upstream, transform, pipeline);
+        super(singletonList(upstream), transform, pipeline);
     }
 
     @Override

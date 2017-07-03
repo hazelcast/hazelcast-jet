@@ -16,35 +16,63 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.impl.JoinTransform;
 import com.hazelcast.jet.pipeline.impl.PStreamImpl;
+import com.hazelcast.jet.pipeline.impl.PipelineImpl;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import static java.util.stream.Collectors.toList;
+
 /**
  * Javadoc pending.
  */
-public class JoinBuilder<K> {
-    private final Map<TupleKey<?>, StreamWithKeyExtractor<?, K>> streams = new HashMap<>();
+public class JoinBuilder<E_LEFT> {
+    private final TupleIndex<E_LEFT> leftIndex;
+    private final Map<TupleIndex<?>, PStreamAndJoinClause<?, E_LEFT, ?>> pstreams = new HashMap<>();
 
-    public <E> TupleKey<E> add(PStream<E> s, DistributedFunction<E, K> keyF) {
-        TupleKey<E> k = new TupleKey<>(streams.size());
-        streams.put(k, new StreamWithKeyExtractor<>(s, keyF));
-        return k;
+    public JoinBuilder(PStream<E_LEFT> leftStream) {
+        // The first tuple component corresponds to the left pstream,
+        // for which there is join clause. This pstream is the implied
+        // left-hand side of all other join clauses.
+        this.leftIndex = add(leftStream, null);
+    }
+
+    public <K, E_RIGHT> TupleIndex<E_RIGHT> add(PStream<E_RIGHT> s, JoinClause<K, E_LEFT, E_RIGHT> clause) {
+        TupleIndex<E_RIGHT> ind = new TupleIndex<>(pstreams.size());
+        pstreams.put(ind, new PStreamAndJoinClause<>(s, clause));
+        return ind;
     }
 
     public PStream<KeyedTuple> build() {
-        return new PStreamImpl<>();
+        return new PStreamImpl<>(
+                pstreams.values().stream()
+                        .map(PStreamAndJoinClause::pstream)
+                        .collect(toList()),
+                new JoinTransform(pstreams.values().stream()
+                                          .skip(1)
+                                          .map(PStreamAndJoinClause::clause)
+                                          .collect(toList())),
+                (PipelineImpl) pstreams.get(leftIndex).pstream().getPipeline()
+        );
     }
 
-    private static class StreamWithKeyExtractor<E, K> {
-        PStream<E> s;
-        DistributedFunction<E, K> extractKeyF;
+    private static class PStreamAndJoinClause<K, E_LEFT, E_RIGHT> {
+        private final PStream<E_RIGHT> rightStream;
+        private final JoinClause<K, E_LEFT, E_RIGHT> clause;
 
-        StreamWithKeyExtractor(PStream<E> s, DistributedFunction<E, K> keyF) {
-            this.s = s;
-            this.extractKeyF = keyF;
+        PStreamAndJoinClause(PStream<E_RIGHT> rightStream, JoinClause<K, E_LEFT, E_RIGHT> clause) {
+            this.rightStream = rightStream;
+            this.clause = clause;
+        }
+
+        public PStream<E_RIGHT> pstream() {
+            return rightStream;
+        }
+
+        public JoinClause<K, E_LEFT, E_RIGHT> clause() {
+            return clause;
         }
     }
 }
