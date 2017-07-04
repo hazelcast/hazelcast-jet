@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.pipeline.JoinClause;
+import com.hazelcast.jet.pipeline.JoinOn;
 import com.hazelcast.jet.pipeline.PElement;
 import com.hazelcast.jet.pipeline.PEnd;
 import com.hazelcast.jet.pipeline.PStream;
@@ -53,19 +53,19 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
     @Override
     public <K, E1> PStream<Tuple2<E, E1>> join(
             PStream<E1> s1,
-            JoinClause<K, E, E1> clause
+            JoinOn<K, E, E1> joinOn
     ) {
-        return new PStreamImpl<>(asList(this, s1), new JoinTransform(singletonList(clause)), pipeline);
+        return new PStreamImpl<>(asList(this, s1), new JoinTransform(singletonList(joinOn)), pipeline);
     }
 
     @Override
     public <K1, E1, K2, E2> PStream<Tuple3<E, E1, E2>> join(
             PStream<E1> s1,
-            JoinClause<K1, E, E1> clause1,
+            JoinOn<K1, E, E1> joinOn1,
             PStream<E2> s2,
-            JoinClause<K2, E, E2> clause2
+            JoinOn<K2, E, E2> joinOn2
     ) {
-        return new PStreamImpl<>(asList(this, s1, s2), new JoinTransform(asList(clause1, clause2)), pipeline);
+        return new PStreamImpl<>(asList(this, s1, s2), new JoinTransform(asList(joinOn1, joinOn2)), pipeline);
     }
 
     @Override

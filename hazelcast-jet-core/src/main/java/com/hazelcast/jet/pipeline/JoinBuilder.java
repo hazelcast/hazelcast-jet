@@ -30,49 +30,49 @@ import static java.util.stream.Collectors.toList;
  */
 public class JoinBuilder<E_LEFT> {
     private final TupleIndex<E_LEFT> leftIndex;
-    private final Map<TupleIndex<?>, PStreamAndJoinClause<?, E_LEFT, ?>> pstreams = new HashMap<>();
+    private final Map<TupleIndex<?>, JoinClause<?, E_LEFT, ?>> pstreams = new HashMap<>();
 
-    public JoinBuilder(PStream<E_LEFT> leftStream) {
-        // The first tuple component corresponds to the left pstream,
-        // for which there is join clause. This pstream is the implied
-        // left-hand side of all other join clauses.
+    JoinBuilder(PStream<E_LEFT> leftStream) {
+        // The first tuple component is a special case that corresponds to
+        // the left pstream, for which there is no JoinOn. This pstream is
+        // the implied left-hand side of all join clauses.
         this.leftIndex = add(leftStream, null);
     }
 
-    public <K, E_RIGHT> TupleIndex<E_RIGHT> add(PStream<E_RIGHT> s, JoinClause<K, E_LEFT, E_RIGHT> clause) {
+    public <K, E_RIGHT> TupleIndex<E_RIGHT> add(PStream<E_RIGHT> s, JoinOn<K, E_LEFT, E_RIGHT> joinOn) {
         TupleIndex<E_RIGHT> ind = new TupleIndex<>(pstreams.size());
-        pstreams.put(ind, new PStreamAndJoinClause<>(s, clause));
+        pstreams.put(ind, new JoinClause<>(s, joinOn));
         return ind;
     }
 
     public PStream<KeyedTuple> build() {
         return new PStreamImpl<>(
                 pstreams.values().stream()
-                        .map(PStreamAndJoinClause::pstream)
+                        .map(JoinClause::pstream)
                         .collect(toList()),
                 new JoinTransform(pstreams.values().stream()
                                           .skip(1)
-                                          .map(PStreamAndJoinClause::clause)
+                                          .map(JoinClause::joinOn)
                                           .collect(toList())),
                 (PipelineImpl) pstreams.get(leftIndex).pstream().getPipeline()
         );
     }
 
-    private static class PStreamAndJoinClause<K, E_LEFT, E_RIGHT> {
-        private final PStream<E_RIGHT> rightStream;
-        private final JoinClause<K, E_LEFT, E_RIGHT> clause;
+    private static class JoinClause<K, E_LEFT, E_RIGHT> {
+        private final PStream<E_RIGHT> pstream;
+        private final JoinOn<K, E_LEFT, E_RIGHT> joinOn;
 
-        PStreamAndJoinClause(PStream<E_RIGHT> rightStream, JoinClause<K, E_LEFT, E_RIGHT> clause) {
-            this.rightStream = rightStream;
-            this.clause = clause;
+        JoinClause(PStream<E_RIGHT> pstream, JoinOn<K, E_LEFT, E_RIGHT> joinOn) {
+            this.pstream = pstream;
+            this.joinOn = joinOn;
         }
 
-        public PStream<E_RIGHT> pstream() {
-            return rightStream;
+        PStream<E_RIGHT> pstream() {
+            return pstream;
         }
 
-        public JoinClause<K, E_LEFT, E_RIGHT> clause() {
-            return clause;
+        JoinOn<K, E_LEFT, E_RIGHT> joinOn() {
+            return joinOn;
         }
     }
 }

@@ -28,12 +28,12 @@ public interface PStream<E> extends PElement {
     PEnd drainTo(Sink sink);
 
     <K, E1> PStream<Tuple2<E, E1>> join(
-            PStream<E1> s1, JoinClause<K, E, E1> clause
+            PStream<E1> s1, JoinOn<K, E, E1> clause
     );
 
     <K1, E1, K2, E2> PStream<Tuple3<E, E1, E2>> join(
-            PStream<E1> s1, JoinClause<K1, E, E1> clause1,
-            PStream<E2> s2, JoinClause<K2, E, E2> clause2
+            PStream<E1> s1, JoinOn<K1, E, E1> clause1,
+            PStream<E2> s2, JoinOn<K2, E, E2> clause2
     );
 
     default JoinBuilder<E> joinBuilder() {

@@ -21,11 +21,11 @@ import com.hazelcast.jet.function.DistributedFunction;
 /**
  * Javadoc pending.
  */
-public class JoinClause<K, E_LEFT, E_RIGHT> {
+public class JoinOn<K, E_LEFT, E_RIGHT> {
     private final DistributedFunction<E_LEFT, K> leftKeyFn;
     private final DistributedFunction<E_RIGHT, K> rightKeyFn;
 
-    private JoinClause(
+    private JoinOn(
             DistributedFunction<E_LEFT, K> leftKeyFn,
             DistributedFunction<E_RIGHT, K> rightKeyFn
     ) {
@@ -33,11 +33,11 @@ public class JoinClause<K, E_LEFT, E_RIGHT> {
         this.rightKeyFn = rightKeyFn;
     }
 
-    public static <K, E_LEFT, E_RIGHT> JoinClause<K, E_LEFT, E_RIGHT> onKeys(
+    public static <K, E_LEFT, E_RIGHT> JoinOn<K, E_LEFT, E_RIGHT> onKeys(
             DistributedFunction<E_LEFT, K> leftKeyFn,
             DistributedFunction<E_RIGHT, K> rightKeyFn
     ) {
-        return new JoinClause<>(leftKeyFn, rightKeyFn);
+        return new JoinOn<>(leftKeyFn, rightKeyFn);
     }
 
     public DistributedFunction<E_LEFT, K> leftKeyFn() {

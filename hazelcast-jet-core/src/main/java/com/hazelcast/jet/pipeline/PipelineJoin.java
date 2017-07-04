@@ -18,7 +18,7 @@ package com.hazelcast.jet.pipeline;
 
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.pipeline.JoinClause.onKeys;
+import static com.hazelcast.jet.pipeline.JoinOn.onKeys;
 
 public class PipelineJoin {
 

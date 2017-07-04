@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.pipeline.JoinClause;
+import com.hazelcast.jet.pipeline.JoinOn;
 import com.hazelcast.jet.pipeline.PTransform;
 
 import java.util.List;
@@ -25,9 +25,9 @@ import java.util.List;
  * Javadoc pending.
  */
 public class JoinTransform implements PTransform {
-    private final List<JoinClause> joinClauses;
+    private final List<JoinOn> joinOns;
 
-    public JoinTransform(List<JoinClause> joinClauses) {
-        this.joinClauses = joinClauses;
+    public JoinTransform(List<JoinOn> joinOns) {
+        this.joinOns = joinOns;
     }
 }
