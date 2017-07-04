@@ -14,33 +14,20 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.pipeline.impl;
 
-import java.io.Serializable;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.Transform;
+
+import java.util.List;
 
 /**
  * Javadoc pending.
  */
-public class TupleIndex<E> implements Serializable, Comparable<TupleIndex<?>> {
-    private final int index;
+public class CoGroupTransform<K> implements Transform {
+    private final List<DistributedFunction<?, K>> groupKeyFns;
 
-    TupleIndex(int index) {
-        this.index = index;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return this == obj ||
-                obj instanceof TupleIndex && this.index == ((TupleIndex) obj).index;
-    }
-
-    @Override
-    public int hashCode() {
-        return index;
-    }
-
-    @Override
-    public int compareTo(TupleIndex<?> that) {
-        return Integer.compare(this.index, that.index);
+    public CoGroupTransform(List<DistributedFunction<?, K>> groupKeyFns) {
+        this.groupKeyFns = groupKeyFns;
     }
 }

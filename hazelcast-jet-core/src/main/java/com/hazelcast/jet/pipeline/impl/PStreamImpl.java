@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
+import com.hazelcast.jet.AggregateOperation;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.JoinOn;
 import com.hazelcast.jet.pipeline.PElement;
 import com.hazelcast.jet.pipeline.PEnd;
@@ -66,6 +68,16 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
             JoinOn<K2, E, E2> joinOn2
     ) {
         return new PStreamImpl<>(asList(this, s1, s2), new JoinTransform(asList(joinOn1, joinOn2)), pipeline);
+    }
+
+    @Override
+    public <K, E1, R> PStream<R> coGroup(DistributedFunction<? super E, ? extends K> thisKeyF, PStream<E1> s1, DistributedFunction<? super E1, ? extends K> key1F, AggregateOperation<Tuple2<E, E1>, ?, R> aggrOp) {
+        return null;
+    }
+
+    @Override
+    public <K, E1, E2, R> PStream<R> coGroup(DistributedFunction<? super E, ? extends K> thisKeyF, PStream<E1> s1, DistributedFunction<? super E1, ? extends K> key1F, PStream<E2> s2, DistributedFunction<? super E2, ? extends K> key2F, AggregateOperation<Tuple3<E, E1, E2>, ?, R> aggrOp) {
+        return null;
     }
 
     @Override

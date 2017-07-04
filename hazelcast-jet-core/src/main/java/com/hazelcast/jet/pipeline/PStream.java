@@ -28,20 +28,39 @@ public interface PStream<E> extends PElement {
     PEnd drainTo(Sink sink);
 
     <K, E1> PStream<Tuple2<E, E1>> join(
-            PStream<E1> s1, JoinOn<K, E, E1> clause
+            PStream<E1> s1, JoinOn<K, E, E1> joinOn
     );
 
     <K1, E1, K2, E2> PStream<Tuple3<E, E1, E2>> join(
-            PStream<E1> s1, JoinOn<K1, E, E1> clause1,
-            PStream<E2> s2, JoinOn<K2, E, E2> clause2
+            PStream<E1> s1, JoinOn<K1, E, E1> joinOn1,
+            PStream<E2> s2, JoinOn<K2, E, E2> joinOn2
     );
 
     default JoinBuilder<E> joinBuilder() {
         return new JoinBuilder<>(this);
     }
 
-    default <R> PStream<R> map(DistributedFunction<? super E, ? extends R> mapper) {
-        return apply(Transforms.map(mapper));
+    <K, E1, R> PStream<R> coGroup(
+            DistributedFunction<? super E, ? extends K> thisKeyF,
+            PStream<E1> s1, DistributedFunction<? super E1, ? extends K> key1F,
+            AggregateOperation<Tuple2<E, E1>, ?, R> aggrOp
+    );
+
+    <K, E1, E2, R> PStream<R> coGroup(
+            DistributedFunction<? super E, ? extends K> thisKeyF,
+            PStream<E1> s1, DistributedFunction<? super E1, ? extends K> key1F,
+            PStream<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
+            AggregateOperation<Tuple3<E, E1, E2>, ?, R> aggrOp
+    );
+
+    default <K> CoGroupBuilder<K, E> coGroupBuilder(
+            DistributedFunction<? super E, K> thisKeyF
+    ) {
+        return new CoGroupBuilder<>(this, thisKeyF);
+    }
+
+    default <R> PStream<R> map(DistributedFunction<? super E, ? extends R> mapF) {
+        return apply(Transforms.map(mapF));
     }
 
     default <R> PStream<R> flatMap(DistributedFunction<? super E, Traverser<? extends R>> flatMapF) {

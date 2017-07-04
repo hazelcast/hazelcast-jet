@@ -22,40 +22,53 @@ import com.hazelcast.jet.pipeline.impl.PipelineImpl;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.stream.Stream;
 
+import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 
 /**
  * Javadoc pending.
  */
 public class JoinBuilder<E_LEFT> {
+    private final Map<TupleIndex<?>, JoinClause<?, E_LEFT, ?>> clauses = new HashMap<>();
+
+    // Holds the TupleIndex of the "left-hand" component of the join operation.
+    // This JoinClause instance is a special case which has no JoinOn.
+    // The pstream it holds is the implied left-hand side of all join clauses.
     private final TupleIndex<E_LEFT> leftIndex;
-    private final Map<TupleIndex<?>, JoinClause<?, E_LEFT, ?>> pstreams = new HashMap<>();
 
     JoinBuilder(PStream<E_LEFT> leftStream) {
-        // The first tuple component is a special case that corresponds to
-        // the left pstream, for which there is no JoinOn. This pstream is
-        // the implied left-hand side of all join clauses.
         this.leftIndex = add(leftStream, null);
     }
 
+    public TupleIndex<E_LEFT> leftIndex() {
+        return leftIndex;
+    }
+
     public <K, E_RIGHT> TupleIndex<E_RIGHT> add(PStream<E_RIGHT> s, JoinOn<K, E_LEFT, E_RIGHT> joinOn) {
-        TupleIndex<E_RIGHT> ind = new TupleIndex<>(pstreams.size());
-        pstreams.put(ind, new JoinClause<>(s, joinOn));
+        TupleIndex<E_RIGHT> ind = new TupleIndex<>(clauses.size());
+        clauses.put(ind, new JoinClause<>(s, joinOn));
         return ind;
     }
 
     public PStream<KeyedTuple> build() {
         return new PStreamImpl<>(
-                pstreams.values().stream()
-                        .map(JoinClause::pstream)
+                orderedClauses()
+                        .map(e -> e.getValue().pstream())
                         .collect(toList()),
-                new JoinTransform(pstreams.values().stream()
-                                          .skip(1)
-                                          .map(JoinClause::joinOn)
-                                          .collect(toList())),
-                (PipelineImpl) pstreams.get(leftIndex).pstream().getPipeline()
+                new JoinTransform(orderedClauses()
+                        .skip(1)
+                        .map(e -> e.getValue().joinOn())
+                        .collect(toList())),
+                (PipelineImpl) clauses.get(leftIndex).pstream().getPipeline()
         );
+    }
+
+    private Stream<Entry<TupleIndex<?>, JoinClause<?, E_LEFT, ?>>> orderedClauses() {
+        return clauses.entrySet().stream()
+                      .sorted(comparing(Entry::getKey));
     }
 
     private static class JoinClause<K, E_LEFT, E_RIGHT> {
