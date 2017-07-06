@@ -19,6 +19,8 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.tuple.Tuple2;
+import com.hazelcast.jet.pipeline.tuple.Tuple3;
 
 import java.util.Map.Entry;
 

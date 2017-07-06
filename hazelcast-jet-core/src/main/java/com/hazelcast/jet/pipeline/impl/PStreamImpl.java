@@ -26,8 +26,8 @@ import com.hazelcast.jet.pipeline.PTransform;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Transform;
-import com.hazelcast.jet.pipeline.Tuple2;
-import com.hazelcast.jet.pipeline.Tuple3;
+import com.hazelcast.jet.pipeline.tuple.Tuple2;
+import com.hazelcast.jet.pipeline.tuple.Tuple3;
 
 import java.util.List;
 

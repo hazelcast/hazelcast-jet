@@ -35,7 +35,7 @@ import static java.util.stream.Collectors.toList;
 public class CoGroupBuilder<K, E_LEFT> {
     private final Map<TupleIndex<?>, CoGroupClause<?, K>> clauses = new HashMap<>();
 
-    // Holds the TupleIndex of the "left-hand" component of the co-group
+    // Holds the TupleIndex of the left-hand component of the co-group
     // operation. This CoGroupClause instance is a special case which holds the
     // implied left-hand side of all co-group clauses.
     private final TupleIndex<E_LEFT> leftIndex;
@@ -57,10 +57,10 @@ public class CoGroupBuilder<K, E_LEFT> {
     public PStream<KeyedTuple> build() {
         return new PStreamImpl<>(
                 orderedClauses()
-                       .map(e -> e.getValue().pstream())
-                       .collect(toList()),
-                new CoGroupTransform<>(orderedClauses()
                         .skip(1)
+                        .map(e -> e.getValue().pstream())
+                        .collect(toList()),
+                new CoGroupTransform<>(orderedClauses()
                         .map(e -> e.getValue().groupKeyF())
                         .collect(toList())),
                 (PipelineImpl) clauses.get(leftIndex).pstream.getPipeline()
@@ -72,11 +72,9 @@ public class CoGroupBuilder<K, E_LEFT> {
                       .sorted(comparing(Entry::getKey));
     }
 
-
     private static class CoGroupClause<E, K> {
-        PStream<E> pstream;
-
-        DistributedFunction<? super E, K> groupKeyF;
+        private final PStream<E> pstream;
+        private final DistributedFunction<? super E, K> groupKeyF;
 
         CoGroupClause(PStream<E> pstream, DistributedFunction<? super E, K> groupKeyF) {
             this.pstream = pstream;
