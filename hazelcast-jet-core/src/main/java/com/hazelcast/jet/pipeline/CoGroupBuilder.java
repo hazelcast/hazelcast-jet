@@ -16,11 +16,14 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.impl.CoGroupTransform;
 import com.hazelcast.jet.pipeline.impl.PStreamImpl;
 import com.hazelcast.jet.pipeline.impl.PipelineImpl;
+import com.hazelcast.jet.pipeline.tuple.Tuple2;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -33,28 +36,32 @@ import static java.util.stream.Collectors.toList;
  * Javadoc pending.
  */
 public class CoGroupBuilder<K, E_LEFT> {
-    private final Map<TupleIndex<?>, CoGroupClause<?, K>> clauses = new HashMap<>();
+    private final Map<TupleTag<?>, CoGroupClause<?, K>> clauses = new HashMap<>();
 
-    // Holds the TupleIndex of the left-hand component of the co-group
-    // operation. This CoGroupClause instance is a special case which holds the
-    // implied left-hand side of all co-group clauses.
-    private final TupleIndex<E_LEFT> leftIndex;
+    private final TupleTag<K> keyTag;
 
-    CoGroupBuilder(PStream<E_LEFT> leftStream, DistributedFunction<? super E_LEFT, K> leftKeyF) {
-        this.leftIndex = add(leftStream, leftKeyF);
+    private final TupleTag<Collection<E_LEFT>> leftTag;
+
+    CoGroupBuilder(PStream<E_LEFT> s, DistributedFunction<? super E_LEFT, K> groupKeyF) {
+        this.keyTag = new TupleTag<>(0);
+        this.leftTag = add(s, groupKeyF);
     }
 
-    public TupleIndex<E_LEFT> leftIndex() {
-        return leftIndex;
+    public TupleTag<K> keyTag() {
+        return keyTag;
     }
 
-    public <E> TupleIndex<E> add(PStream<E> s, DistributedFunction<? super E, K> groupKeyF) {
-        TupleIndex<E> k = new TupleIndex<>(clauses.size());
-        clauses.put(k, new CoGroupClause<>(s, groupKeyF));
-        return k;
+    public TupleTag<Collection<E_LEFT>> leftTag() {
+        return leftTag;
     }
 
-    public PStream<KeyedTuple> build() {
+    public <E> TupleTag<Collection<E>> add(PStream<E> s, DistributedFunction<? super E, K> groupKeyF) {
+        TupleTag tag = new TupleTag(1 + clauses.size());
+        clauses.put(tag, new CoGroupClause<>(s, groupKeyF));
+        return (TupleTag<Collection<E>>) tag;
+    }
+
+    public <R> PStream<Tuple2<K, R>> build(AggregateOperation<TaggedTuple, ?, R> aggrOp) {
         return new PStreamImpl<>(
                 orderedClauses()
                         .skip(1)
@@ -62,12 +69,13 @@ public class CoGroupBuilder<K, E_LEFT> {
                         .collect(toList()),
                 new CoGroupTransform<>(orderedClauses()
                         .map(e -> e.getValue().groupKeyF())
-                        .collect(toList())),
-                (PipelineImpl) clauses.get(leftIndex).pstream.getPipeline()
+                        .collect(toList()),
+                        aggrOp),
+                (PipelineImpl) clauses.get(leftTag).pstream.getPipeline()
         );
     }
 
-    private Stream<Entry<TupleIndex<?>, CoGroupClause<?, K>>> orderedClauses() {
+    private Stream<Entry<TupleTag<?>, CoGroupClause<?, K>>> orderedClauses() {
         return clauses.entrySet().stream()
                       .sorted(comparing(Entry::getKey));
     }

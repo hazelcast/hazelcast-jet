@@ -21,7 +21,9 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
 import com.hazelcast.jet.pipeline.tuple.Tuple3;
+import com.hazelcast.jet.pipeline.tuple.Tuple4;
 
+import java.util.Collection;
 import java.util.Map.Entry;
 
 public interface PStream<E> extends PElement {
@@ -42,17 +44,17 @@ public interface PStream<E> extends PElement {
         return new JoinBuilder<>(this);
     }
 
-    <K, E1, R> PStream<R> coGroup(
+    <K, E1, R> PStream<Tuple2<K, R>> coGroup(
             DistributedFunction<? super E, ? extends K> thisKeyF,
             PStream<E1> s1, DistributedFunction<? super E1, ? extends K> key1F,
-            AggregateOperation<Tuple2<E, E1>, ?, R> aggrOp
+            AggregateOperation<Tuple3<K, Collection<E>, Collection<E1>>, ?, R> aggrOp
     );
 
-    <K, E1, E2, R> PStream<R> coGroup(
+    <K, E1, E2, R> PStream<Tuple2<K, R>> coGroup(
             DistributedFunction<? super E, ? extends K> thisKeyF,
             PStream<E1> s1, DistributedFunction<? super E1, ? extends K> key1F,
             PStream<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
-            AggregateOperation<Tuple3<E, E1, E2>, ?, R> aggrOp
+            AggregateOperation<Tuple4<K, Collection<E>, Collection<E1>, Collection<E2>>, ?, R> aggrOp
     );
 
     default <K> CoGroupBuilder<K, E> coGroupBuilder(

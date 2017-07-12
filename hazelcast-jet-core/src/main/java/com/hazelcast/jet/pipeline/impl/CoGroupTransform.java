@@ -16,7 +16,9 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
+import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.TaggedTuple;
 import com.hazelcast.jet.pipeline.Transform;
 
 import java.util.List;
@@ -24,10 +26,13 @@ import java.util.List;
 /**
  * Javadoc pending.
  */
-public class CoGroupTransform<K> implements Transform {
+public class CoGroupTransform<K, R> implements Transform {
     private final List<DistributedFunction<?, K>> groupKeyFns;
+    private final AggregateOperation<TaggedTuple, ?, R> aggrOp;
 
-    public CoGroupTransform(List<DistributedFunction<?, K>> groupKeyFns) {
+    public CoGroupTransform(List<DistributedFunction<?, K>> groupKeyFns,
+                            AggregateOperation<TaggedTuple, ?, R> aggrOp) {
         this.groupKeyFns = groupKeyFns;
+        this.aggrOp = aggrOp;
     }
 }

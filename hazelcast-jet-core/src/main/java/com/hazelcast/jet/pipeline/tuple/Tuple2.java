@@ -16,5 +16,39 @@
 
 package com.hazelcast.jet.pipeline.tuple;
 
+import java.util.Objects;
+
 public class Tuple2<E1, E2> {
+    private E1 f1;
+    private E2 f2;
+
+    public Tuple2(E1 f1, E2 f2) {
+        this.f1 = f1;
+        this.f2 = f2;
+    }
+
+    public E1 f1() {
+        return f1;
+    }
+
+    public E2 f2() {
+        return f2;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        final Tuple2 that;
+        return this == obj
+                || obj instanceof Tuple2
+                && Objects.equals(this.f1, (that = (Tuple2) obj).f1)
+                && Objects.equals(this.f2, that.f2);
+    }
+
+    @Override
+    public int hashCode() {
+        int hc = 17;
+        hc = 73 * hc + f1.hashCode();
+        hc = 73 * hc + f2.hashCode();
+        return hc;
+    }
 }

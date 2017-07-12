@@ -22,10 +22,10 @@ import java.util.Map;
 /**
  * Javadoc pending.
  */
-public class KeyedTuple {
-    private final Map<TupleIndex<?>, Object> components = new HashMap<>();
+public class TaggedTuple {
+    private final Map<TupleTag<?>, Object> components = new HashMap<>();
 
-    public <E> E get(TupleIndex<E> k) {
+    public <E> E get(TupleTag<E> k) {
         return (E) components.get(k);
     }
 }

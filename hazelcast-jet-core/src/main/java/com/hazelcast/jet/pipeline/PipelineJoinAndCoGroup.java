@@ -16,10 +16,12 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
 import com.hazelcast.jet.pipeline.tuple.Tuple3;
+import com.hazelcast.jet.pipeline.tuple.Tuple4;
 
-import java.util.List;
+import java.util.Collection;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.AggregateOperations.toList;
@@ -43,12 +45,12 @@ public class PipelineJoinAndCoGroup {
 
     private void joinBuild() {
         JoinBuilder<Trade> builder = trades.joinBuilder();
-        TupleIndex<Trade> tInd = builder.leftIndex();
-        TupleIndex<Product> pInd = builder.add(products, onKeys(Trade::productId, Product::id));
-        TupleIndex<Broker> bInd = builder.add(brokers, onKeys(Trade::brokerId, Broker::id));
+        TupleTag<Trade> tInd = builder.leftIndex();
+        TupleTag<Product> pInd = builder.add(products, onKeys(Trade::productId, Product::id));
+        TupleTag<Broker> bInd = builder.add(brokers, onKeys(Trade::brokerId, Broker::id));
 
-        PStream<KeyedTuple> joined = builder.build();
-        PStream<String> mapped = joined.map((KeyedTuple kt) -> {
+        PStream<TaggedTuple> joined = builder.build();
+        PStream<String> mapped = joined.map((TaggedTuple kt) -> {
             Trade trade = kt.get(tInd);
             Product product = kt.get(pInd);
             Broker broker = kt.get(bInd);
@@ -57,26 +59,61 @@ public class PipelineJoinAndCoGroup {
     }
 
     private void coGroupDirect() {
-        PStream<List<Tuple3<Trade, Product, Broker>>> grouped = trades.coGroup(
+        trades.coGroup(
                 Trade::classId,
                 products, Product::classId,
                 brokers, Broker::classId,
-                toList());
+                AggregateOperation.of(
+                        StringBuilder::new,
+                        (StringBuilder acc,
+                         Tuple4<Integer, Collection<Trade>, Collection<Product>, Collection<Broker>> tuple) -> {
+                            Integer key = tuple.f1();
+                            Collection<Trade> trades = tuple.f2();
+                            Collection<Product> products = tuple.f3();
+                            Collection<Broker> brokers = tuple.f4();
+                            acc.append(key)
+                               .append('|')
+                               .append(trades)
+                               .append('|')
+                               .append(products)
+                               .append('|')
+                               .append(brokers)
+                               .append('\n');
+                        },
+                        StringBuilder::append,
+                        null,
+                        StringBuilder::toString
+                ));
     }
 
     private void coGroupBuild() {
         CoGroupBuilder<Integer, Trade> builder = trades.coGroupBuilder(Trade::classId);
-        TupleIndex<Trade> tInd = builder.leftIndex();
-        TupleIndex<Product> pInd = builder.add(products, Product::classId);
-        TupleIndex<Broker> bInd = builder.add(brokers, Broker::classId);
+        TupleTag<Integer> keyTag = builder.keyTag();
+        TupleTag<Collection<Trade>> tInd = builder.leftTag();
+        TupleTag<Collection<Product>> pInd = builder.add(products, Product::classId);
+        TupleTag<Collection<Broker>> bInd = builder.add(brokers, Broker::classId);
 
-        PStream<KeyedTuple> grouped = builder.build();
-        PStream<String> mapped = grouped.map((KeyedTuple kt) -> {
-            Trade trade = kt.get(tInd);
-            Product product = kt.get(pInd);
-            Broker broker = kt.get(bInd);
-            return "" + trade + product + broker;
-        });
+        PStream<Tuple2<Integer, String>> grouped = builder.build(AggregateOperation.of(
+                StringBuilder::new,
+                (StringBuilder acc, TaggedTuple tt) -> {
+                    Integer key = tt.get(keyTag);
+                    Collection<Trade> trades = tt.get(tInd);
+                    Collection<Product> products = tt.get(pInd);
+                    Collection<Broker> brokers = tt.get(bInd);
+                    acc.append(key)
+                       .append('|')
+                       .append(trades)
+                       .append('|')
+                       .append(products)
+                       .append('|')
+                       .append(brokers)
+                       .append('\n');
+                },
+                StringBuilder::append,
+                null,
+                StringBuilder::toString
+        ));
+        grouped.map(Object::toString);
 
     }
 

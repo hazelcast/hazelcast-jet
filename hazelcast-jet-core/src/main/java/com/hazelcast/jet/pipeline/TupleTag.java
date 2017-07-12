@@ -21,17 +21,17 @@ import java.io.Serializable;
 /**
  * Javadoc pending.
  */
-public class TupleIndex<E> implements Serializable, Comparable<TupleIndex<?>> {
+public class TupleTag<E> implements Serializable, Comparable<TupleTag<?>> {
     private final int index;
 
-    TupleIndex(int index) {
+    TupleTag(int index) {
         this.index = index;
     }
 
     @Override
     public boolean equals(Object obj) {
         return this == obj ||
-                obj instanceof TupleIndex && this.index == ((TupleIndex) obj).index;
+                obj instanceof TupleTag && this.index == ((TupleTag) obj).index;
     }
 
     @Override
@@ -40,7 +40,7 @@ public class TupleIndex<E> implements Serializable, Comparable<TupleIndex<?>> {
     }
 
     @Override
-    public int compareTo(TupleIndex<?> that) {
+    public int compareTo(TupleTag<?> that) {
         return Integer.compare(this.index, that.index);
     }
 }
