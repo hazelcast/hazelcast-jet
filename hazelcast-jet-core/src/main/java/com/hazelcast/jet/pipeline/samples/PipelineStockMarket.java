@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.pipeline.samples;
 
 import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.pipeline.PStream;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
 
 import java.util.Map.Entry;
 

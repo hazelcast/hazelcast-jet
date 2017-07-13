@@ -29,6 +29,7 @@ import com.hazelcast.jet.pipeline.Transform;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
 import com.hazelcast.jet.pipeline.tuple.Tuple3;
 
+import java.util.Collection;
 import java.util.List;
 
 import static java.util.Arrays.asList;
@@ -71,12 +72,21 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
     }
 
     @Override
-    public <K, E1, R> PStream<R> coGroup(DistributedFunction<? super E, ? extends K> thisKeyF, PStream<E1> s1, DistributedFunction<? super E1, ? extends K> key1F, AggregateOperation<Tuple2<E, E1>, ?, R> aggrOp) {
+    public <K, E1, R> PStream<Tuple2<K, R>> coGroup(
+            DistributedFunction<? super E, ? extends K> thisKeyF,
+            PStream<E1> s1, DistributedFunction<? super E1, ? extends K> key1F,
+            AggregateOperation<Tuple2<Collection<E>, Collection<E1>>, ?, R> aggrOp
+    ) {
         return null;
     }
 
     @Override
-    public <K, E1, E2, R> PStream<R> coGroup(DistributedFunction<? super E, ? extends K> thisKeyF, PStream<E1> s1, DistributedFunction<? super E1, ? extends K> key1F, PStream<E2> s2, DistributedFunction<? super E2, ? extends K> key2F, AggregateOperation<Tuple3<E, E1, E2>, ?, R> aggrOp) {
+    public <K, E1, E2, R> PStream<Tuple2<K, R>> coGroup(
+            DistributedFunction<? super E, ? extends K> thisKeyF,
+            PStream<E1> s1, DistributedFunction<? super E1, ? extends K> key1F,
+            PStream<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
+            AggregateOperation<Tuple3<Collection<E>, Collection<E1>, Collection<E2>>, ?, R> aggrOp
+    ) {
         return null;
     }
 

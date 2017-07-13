@@ -14,10 +14,13 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.pipeline.cogroup;
 
 import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.PStream;
+import com.hazelcast.jet.pipeline.tuple.TaggedTuple;
+import com.hazelcast.jet.pipeline.tuple.TupleTag;
 import com.hazelcast.jet.pipeline.impl.CoGroupTransform;
 import com.hazelcast.jet.pipeline.impl.PStreamImpl;
 import com.hazelcast.jet.pipeline.impl.PipelineImpl;
@@ -38,17 +41,10 @@ import static java.util.stream.Collectors.toList;
 public class CoGroupBuilder<K, E_LEFT> {
     private final Map<TupleTag<?>, CoGroupClause<?, K>> clauses = new HashMap<>();
 
-    private final TupleTag<K> keyTag;
-
     private final TupleTag<Collection<E_LEFT>> leftTag;
 
-    CoGroupBuilder(PStream<E_LEFT> s, DistributedFunction<? super E_LEFT, K> groupKeyF) {
-        this.keyTag = new TupleTag<>(0);
+    public CoGroupBuilder(PStream<E_LEFT> s, DistributedFunction<? super E_LEFT, K> groupKeyF) {
         this.leftTag = add(s, groupKeyF);
-    }
-
-    public TupleTag<K> keyTag() {
-        return keyTag;
     }
 
     public TupleTag<Collection<E_LEFT>> leftTag() {
@@ -56,7 +52,7 @@ public class CoGroupBuilder<K, E_LEFT> {
     }
 
     public <E> TupleTag<Collection<E>> add(PStream<E> s, DistributedFunction<? super E, K> groupKeyF) {
-        TupleTag tag = new TupleTag(1 + clauses.size());
+        TupleTag tag = new TupleTag(clauses.size());
         clauses.put(tag, new CoGroupClause<>(s, groupKeyF));
         return (TupleTag<Collection<E>>) tag;
     }

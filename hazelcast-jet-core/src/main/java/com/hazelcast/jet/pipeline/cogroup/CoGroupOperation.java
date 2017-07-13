@@ -14,25 +14,29 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.impl;
+package com.hazelcast.jet.pipeline.cogroup;
 
-import com.hazelcast.jet.AggregateOperation;
+import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.pipeline.tuple.TaggedTuple;
-import com.hazelcast.jet.pipeline.Transform;
+import com.hazelcast.jet.pipeline.tuple.Tuple2;
 
-import java.util.List;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Javadoc pending.
  */
-public class CoGroupTransform<K, R> implements Transform {
-    private final List<DistributedFunction<?, K>> groupKeyFns;
-    private final AggregateOperation<TaggedTuple, ?, R> aggrOp;
+public interface CoGroupOperation<T1, T2, A, R> {
 
-    public CoGroupTransform(List<DistributedFunction<?, K>> groupKeyFns,
-                            AggregateOperation<TaggedTuple, ?, R> aggrOp) {
-        this.groupKeyFns = groupKeyFns;
-        this.aggrOp = aggrOp;
-    }
+    @Nonnull
+    DistributedFunction<Tuple2<Iterable<T1>, Iterable<T2>>, A> accumulateGroupF();
+
+    @Nonnull
+    DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF();
+
+    @Nullable
+    DistributedBiConsumer<? super A, ? super A> deductAccumulatorF();
+
+    @Nonnull
+    DistributedFunction<? super A, R> finishAccumulationF();
 }

@@ -14,17 +14,22 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.pipeline.samples;
 
 import com.hazelcast.jet.AggregateOperation;
+import com.hazelcast.jet.pipeline.JoinBuilder;
+import com.hazelcast.jet.pipeline.PStream;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.pipeline.cogroup.CoGroupBuilder;
+import com.hazelcast.jet.pipeline.tuple.TaggedTuple;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
 import com.hazelcast.jet.pipeline.tuple.Tuple3;
-import com.hazelcast.jet.pipeline.tuple.Tuple4;
+import com.hazelcast.jet.pipeline.tuple.TupleTag;
 
 import java.util.Collection;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.AggregateOperations.toList;
 import static com.hazelcast.jet.pipeline.JoinOn.onKeys;
 
 public class PipelineJoinAndCoGroup {
@@ -66,13 +71,11 @@ public class PipelineJoinAndCoGroup {
                 AggregateOperation.of(
                         StringBuilder::new,
                         (StringBuilder acc,
-                         Tuple4<Integer, Collection<Trade>, Collection<Product>, Collection<Broker>> tuple) -> {
-                            Integer key = tuple.f1();
-                            Collection<Trade> trades = tuple.f2();
-                            Collection<Product> products = tuple.f3();
-                            Collection<Broker> brokers = tuple.f4();
-                            acc.append(key)
-                               .append('|')
+                         Tuple3<Collection<Trade>, Collection<Product>, Collection<Broker>> tuple) -> {
+                            Collection<Trade> trades = tuple.f1();
+                            Collection<Product> products = tuple.f2();
+                            Collection<Broker> brokers = tuple.f3();
+                            acc.append('|')
                                .append(trades)
                                .append('|')
                                .append(products)
@@ -88,7 +91,6 @@ public class PipelineJoinAndCoGroup {
 
     private void coGroupBuild() {
         CoGroupBuilder<Integer, Trade> builder = trades.coGroupBuilder(Trade::classId);
-        TupleTag<Integer> keyTag = builder.keyTag();
         TupleTag<Collection<Trade>> tInd = builder.leftTag();
         TupleTag<Collection<Product>> pInd = builder.add(products, Product::classId);
         TupleTag<Collection<Broker>> bInd = builder.add(brokers, Broker::classId);
@@ -96,12 +98,10 @@ public class PipelineJoinAndCoGroup {
         PStream<Tuple2<Integer, String>> grouped = builder.build(AggregateOperation.of(
                 StringBuilder::new,
                 (StringBuilder acc, TaggedTuple tt) -> {
-                    Integer key = tt.get(keyTag);
                     Collection<Trade> trades = tt.get(tInd);
                     Collection<Product> products = tt.get(pInd);
                     Collection<Broker> brokers = tt.get(bInd);
-                    acc.append(key)
-                       .append('|')
+                    acc.append('|')
                        .append(trades)
                        .append('|')
                        .append(products)
@@ -113,8 +113,7 @@ public class PipelineJoinAndCoGroup {
                 null,
                 StringBuilder::toString
         ));
-        grouped.map(Object::toString);
-
+        PStream<String> mapped = grouped.map(Object::toString);
     }
 
     private static class Trade {
