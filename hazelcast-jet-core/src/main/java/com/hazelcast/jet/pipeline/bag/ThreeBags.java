@@ -14,23 +14,31 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.impl;
-
-import com.hazelcast.jet.AggregateOperation;
-import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.pipeline.Transform;
-
-import java.util.Map.Entry;
+package com.hazelcast.jet.pipeline.bag;
 
 /**
  * Javadoc pending.
  */
-public class GroupByTransform<E, K, R> implements Transform<E, Entry<K, R>> {
-    private final DistributedFunction<? super E, ? extends K> keyF;
-    private final AggregateOperation<E, ?, R> aggrOp;
+public class ThreeBags<E1, E2, E3> {
+    private final Iterable<E1> bag1;
+    private final Iterable<E2> bag2;
+    private final Iterable<E3> bag3;
 
-    public GroupByTransform(DistributedFunction<? super E, ? extends K> keyF, AggregateOperation<E, ?, R> aggrOp) {
-        this.keyF = keyF;
-        this.aggrOp = aggrOp;
+    public ThreeBags(Iterable<E1> bag1, Iterable<E2> bag2, Iterable<E3> bag3) {
+        this.bag1 = bag1;
+        this.bag2 = bag2;
+        this.bag3 = bag3;
+    }
+
+    public Iterable<E1> bag1() {
+        return bag1;
+    }
+
+    public Iterable<E2> bag2() {
+        return bag2;
+    }
+
+    public Iterable<E3> bag3() {
+        return bag3;
     }
 }

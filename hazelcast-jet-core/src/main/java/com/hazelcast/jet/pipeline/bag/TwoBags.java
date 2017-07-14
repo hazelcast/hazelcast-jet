@@ -14,33 +14,24 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.tuple;
-
-import java.io.Serializable;
+package com.hazelcast.jet.pipeline.bag;
 
 /**
  * Javadoc pending.
  */
-public class TupleTag<E> implements Serializable, Comparable<TupleTag<?>> {
-    private final int index;
+public class TwoBags<E1, E2> {
+    private final Iterable<E1> bag1;
+    private final Iterable<E2> bag2;
 
-    public TupleTag(int index) {
-        this.index = index;
+    public TwoBags(Iterable<E1> bag1, Iterable<E2> bag2) {
+        this.bag1 = bag1;
+        this.bag2 = bag2;
+    }
+    public Iterable<E1> bag1() {
+        return bag1;
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        return this == obj ||
-                obj instanceof TupleTag && this.index == ((TupleTag) obj).index;
-    }
-
-    @Override
-    public int hashCode() {
-        return index;
-    }
-
-    @Override
-    public int compareTo(TupleTag<?> that) {
-        return Integer.compare(this.index, that.index);
+    public Iterable<E2> bag2() {
+        return bag2;
     }
 }

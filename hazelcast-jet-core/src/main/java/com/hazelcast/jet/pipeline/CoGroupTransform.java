@@ -14,25 +14,34 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.impl;
+package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.pipeline.tuple.TaggedTuple;
-import com.hazelcast.jet.pipeline.Transform;
 
 import java.util.List;
 
 /**
  * Javadoc pending.
  */
-public class CoGroupTransform<K, R> implements Transform {
-    private final List<DistributedFunction<?, K>> groupKeyFns;
-    private final AggregateOperation<TaggedTuple, ?, R> aggrOp;
+public class CoGroupTransform<K, B, A, R> implements PTransform {
+    private final List<DistributedFunction<?, ? extends K>> groupKeyFns;
+    private final GroupAggregation<B, A, R> groupAggr;
+    private final Class bagsType;
 
-    public CoGroupTransform(List<DistributedFunction<?, K>> groupKeyFns,
-                            AggregateOperation<TaggedTuple, ?, R> aggrOp) {
+    public CoGroupTransform(List<DistributedFunction<?, ? extends K>> groupKeyFns,
+                            GroupAggregation<B, A, R> groupAggr,
+                            Class bagsType
+    ) {
         this.groupKeyFns = groupKeyFns;
-        this.aggrOp = aggrOp;
+        this.groupAggr = groupAggr;
+        this.bagsType = bagsType;
+    }
+
+    public List<DistributedFunction<?, ? extends K>> groupKeyFns() {
+        return groupKeyFns;
+    }
+
+    public GroupAggregation<B, A, R> groupAggr() {
+        return groupAggr;
     }
 }

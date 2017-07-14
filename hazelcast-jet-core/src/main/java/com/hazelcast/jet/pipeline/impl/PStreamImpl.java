@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.CoGroupTransform;
 import com.hazelcast.jet.pipeline.JoinOn;
 import com.hazelcast.jet.pipeline.PElement;
 import com.hazelcast.jet.pipeline.PEnd;
@@ -26,10 +26,11 @@ import com.hazelcast.jet.pipeline.PTransform;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Transform;
+import com.hazelcast.jet.pipeline.bag.ThreeBags;
+import com.hazelcast.jet.pipeline.bag.TwoBags;
+import com.hazelcast.jet.pipeline.GroupAggregation;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
-import com.hazelcast.jet.pipeline.tuple.Tuple3;
 
-import java.util.Collection;
 import java.util.List;
 
 import static java.util.Arrays.asList;
@@ -54,40 +55,43 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
     }
 
     @Override
-    public <K, E1> PStream<Tuple2<E, E1>> join(
-            PStream<E1> s1,
-            JoinOn<K, E, E1> joinOn
+    public <K, E2> PStream<TwoBags<E, E2>> join(
+            PStream<E2> s2, JoinOn<K, E, E2> joinOn
     ) {
-        return new PStreamImpl<>(asList(this, s1), new JoinTransform(singletonList(joinOn)), pipeline);
+        return new PStreamImpl<>(asList(this, s2), new JoinTransform(singletonList(joinOn)), pipeline);
     }
 
     @Override
-    public <K1, E1, K2, E2> PStream<Tuple3<E, E1, E2>> join(
-            PStream<E1> s1,
-            JoinOn<K1, E, E1> joinOn1,
-            PStream<E2> s2,
-            JoinOn<K2, E, E2> joinOn2
+    public <K2, E2, K3, E3> PStream<ThreeBags<E, E2, E3>> join(
+            PStream<E2> s2, JoinOn<K2, E, E2> joinOn1,
+            PStream<E3> s3, JoinOn<K3, E, E3> joinOn2
     ) {
-        return new PStreamImpl<>(asList(this, s1, s2), new JoinTransform(asList(joinOn1, joinOn2)), pipeline);
+        return new PStreamImpl<>(asList(this, s2, s3), new JoinTransform(asList(joinOn1, joinOn2)), pipeline);
     }
 
     @Override
-    public <K, E1, R> PStream<Tuple2<K, R>> coGroup(
+    public <K, A, E2, R> PStream<Tuple2<K, R>> coGroup(
             DistributedFunction<? super E, ? extends K> thisKeyF,
-            PStream<E1> s1, DistributedFunction<? super E1, ? extends K> key1F,
-            AggregateOperation<Tuple2<Collection<E>, Collection<E1>>, ?, R> aggrOp
-    ) {
-        return null;
-    }
-
-    @Override
-    public <K, E1, E2, R> PStream<Tuple2<K, R>> coGroup(
-            DistributedFunction<? super E, ? extends K> thisKeyF,
-            PStream<E1> s1, DistributedFunction<? super E1, ? extends K> key1F,
             PStream<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
-            AggregateOperation<Tuple3<Collection<E>, Collection<E1>, Collection<E2>>, ?, R> aggrOp
+            GroupAggregation<TwoBags<E, E2>, A, R> groupAggr
     ) {
-        return null;
+        return new PStreamImpl<>(
+                asList(this, s2),
+                new CoGroupTransform<>(asList(thisKeyF, key2F), groupAggr, TwoBags.class),
+                pipeline);
+    }
+
+    @Override
+    public <K, A, E2, E3, R> PStream<Tuple2<K, R>> coGroup(
+            DistributedFunction<? super E, ? extends K> thisKeyF,
+            PStream<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
+            PStream<E3> s3, DistributedFunction<? super E3, ? extends K> key3F,
+            GroupAggregation<ThreeBags<E, E2, E3>, A, R> groupAggr
+    ) {
+        return new PStreamImpl<>(
+                asList(this, s2, s3),
+                new CoGroupTransform<>(asList(thisKeyF, key2F), groupAggr, ThreeBags.class),
+                pipeline);
     }
 
     @Override

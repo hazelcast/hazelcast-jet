@@ -14,18 +14,33 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.tuple;
+package com.hazelcast.jet.pipeline.bag;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.io.Serializable;
 
 /**
  * Javadoc pending.
  */
-public class TaggedTuple {
-    private final Map<TupleTag<?>, Object> components = new HashMap<>();
+public class BagTag<E> implements Serializable, Comparable<BagTag<?>> {
+    private final int index;
 
-    public <E> E get(TupleTag<E> k) {
-        return (E) components.get(k);
+    public BagTag(int index) {
+        this.index = index;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return this == obj ||
+                obj instanceof BagTag && this.index == ((BagTag) obj).index;
+    }
+
+    @Override
+    public int hashCode() {
+        return index;
+    }
+
+    @Override
+    public int compareTo(BagTag<?> that) {
+        return Integer.compare(this.index, that.index);
     }
 }

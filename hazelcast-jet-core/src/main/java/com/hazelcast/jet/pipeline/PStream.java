@@ -19,49 +19,16 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.pipeline.cogroup.CoGroupBuilder;
+import com.hazelcast.jet.pipeline.bag.TwoBags;
+import com.hazelcast.jet.pipeline.bag.ThreeBags;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
-import com.hazelcast.jet.pipeline.tuple.Tuple3;
 
-import java.util.Collection;
 import java.util.Map.Entry;
 
 public interface PStream<E> extends PElement {
     <R> PStream<R> apply(Transform<? super E, R> transform);
 
     PEnd drainTo(Sink sink);
-
-    <K, E1> PStream<Tuple2<E, E1>> join(
-            PStream<E1> s1, JoinOn<K, E, E1> joinOn
-    );
-
-    <K1, E1, K2, E2> PStream<Tuple3<E, E1, E2>> join(
-            PStream<E1> s1, JoinOn<K1, E, E1> joinOn1,
-            PStream<E2> s2, JoinOn<K2, E, E2> joinOn2
-    );
-
-    default JoinBuilder<E> joinBuilder() {
-        return new JoinBuilder<>(this);
-    }
-
-    <K, E1, R> PStream<Tuple2<K, R>> coGroup(
-            DistributedFunction<? super E, ? extends K> thisKeyF,
-            PStream<E1> s1, DistributedFunction<? super E1, ? extends K> key1F,
-            AggregateOperation<Tuple2<Collection<E>, Collection<E1>>, ?, R> aggrOp
-    );
-
-    <K, E1, E2, R> PStream<Tuple2<K, R>> coGroup(
-            DistributedFunction<? super E, ? extends K> thisKeyF,
-            PStream<E1> s1, DistributedFunction<? super E1, ? extends K> key1F,
-            PStream<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
-            AggregateOperation<Tuple3<Collection<E>, Collection<E1>, Collection<E2>>, ?, R> aggrOp
-    );
-
-    default <K> CoGroupBuilder<K, E> coGroupBuilder(
-            DistributedFunction<? super E, K> thisKeyF
-    ) {
-        return new CoGroupBuilder<>(this, thisKeyF);
-    }
 
     default <R> PStream<R> map(DistributedFunction<? super E, ? extends R> mapF) {
         return apply(Transforms.map(mapF));
@@ -75,5 +42,37 @@ public interface PStream<E> extends PElement {
                                                 AggregateOperation<E, ?, R> aggregation
     ) {
         return apply(Transforms.groupBy(keyF, aggregation));
+    }
+
+    <K, E2> PStream<TwoBags<E, E2>> join(
+            PStream<E2> s1, JoinOn<K, E, E2> joinOn
+    );
+
+    <K2, E2, K3, E3> PStream<ThreeBags<E, E2, E3>> join(
+            PStream<E2> s1, JoinOn<K2, E, E2> joinOn1,
+            PStream<E3> s2, JoinOn<K3, E, E3> joinOn2
+    );
+
+    default JoinBuilder<E> joinBuilder() {
+        return new JoinBuilder<>(this);
+    }
+
+    <K, A, E2, R> PStream<Tuple2<K, R>> coGroup(
+            DistributedFunction<? super E, ? extends K> thisKeyF,
+            PStream<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
+            GroupAggregation<TwoBags<E, E2>, A, R> groupAggr
+    );
+
+    <K, A, E2, E3, R> PStream<Tuple2<K, R>> coGroup(
+            DistributedFunction<? super E, ? extends K> thisKeyF,
+            PStream<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
+            PStream<E3> s3, DistributedFunction<? super E3, ? extends K> key3F,
+            GroupAggregation<ThreeBags<E, E2, E3>, A, R> groupAggr
+    );
+
+    default <K> CoGroupBuilder<K, E> coGroupBuilder(
+            DistributedFunction<? super E, K> thisKeyF
+    ) {
+        return new CoGroupBuilder<>(this, thisKeyF);
     }
 }

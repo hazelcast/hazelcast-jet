@@ -20,10 +20,9 @@ import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.pipeline.impl.FlatmapTransform;
+import com.hazelcast.jet.pipeline.impl.FlatMapTransform;
 import com.hazelcast.jet.pipeline.impl.GroupByTransform;
 import com.hazelcast.jet.pipeline.impl.MapTransform;
-import com.hazelcast.jet.pipeline.impl.PipelineImpl;
 import com.hazelcast.jet.pipeline.impl.SlidingWindowTransform;
 
 import java.util.Map;
@@ -39,7 +38,7 @@ public final class Transforms {
     }
 
     public static <E, R> Transform<E, R> flatMap(DistributedFunction<? super E, Traverser<? extends R>> flatMapF) {
-        return new FlatmapTransform<>(flatMapF);
+        return new FlatMapTransform<>(flatMapF);
     }
 
     public static <E, K, R> Transform<E, Map.Entry<K, R>> groupBy(

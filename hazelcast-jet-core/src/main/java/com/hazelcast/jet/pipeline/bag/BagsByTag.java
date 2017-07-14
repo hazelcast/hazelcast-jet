@@ -14,20 +14,18 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.impl;
+package com.hazelcast.jet.pipeline.bag;
 
-import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.Transform;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Javadoc pending.
  */
-public class FlatmapTransform<E, R> implements Transform<E, R> {
-    private final DistributedFunction<? super E, Traverser<? extends R>> flatMapF;
+public class BagsByTag {
+    private final Map<BagTag<?>, Object> components = new HashMap<>();
 
-    public FlatmapTransform(DistributedFunction<? super E, Traverser<? extends R>> flatMapF) {
-        this.flatMapF = flatMapF;
+    public <E> Iterable<E> get(BagTag<E> k) {
+        return (Iterable<E>) components.get(k);
     }
 }

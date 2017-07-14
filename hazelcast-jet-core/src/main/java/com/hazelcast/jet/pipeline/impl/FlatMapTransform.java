@@ -14,29 +14,20 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.cogroup;
+package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.function.DistributedBiConsumer;
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.pipeline.tuple.Tuple2;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Transform;
 
 /**
  * Javadoc pending.
  */
-public interface CoGroupOperation<T1, T2, A, R> {
+public class FlatMapTransform<E, R> implements Transform<E, R> {
+    private final DistributedFunction<? super E, Traverser<? extends R>> flatMapF;
 
-    @Nonnull
-    DistributedFunction<Tuple2<Iterable<T1>, Iterable<T2>>, A> accumulateGroupF();
-
-    @Nonnull
-    DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF();
-
-    @Nullable
-    DistributedBiConsumer<? super A, ? super A> deductAccumulatorF();
-
-    @Nonnull
-    DistributedFunction<? super A, R> finishAccumulationF();
+    public FlatMapTransform(DistributedFunction<? super E, Traverser<? extends R>> flatMapF) {
+        this.flatMapF = flatMapF;
+    }
 }
