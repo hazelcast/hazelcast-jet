@@ -18,13 +18,12 @@ package com.hazelcast.jet.pipeline.impl;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.Transform;
+import com.hazelcast.jet.pipeline.UnaryTransform;
 
 /**
  * Javadoc pending.
  */
-public class FlatMapTransform<E, R> implements Transform<E, R> {
+public class FlatMapTransform<E, R> implements UnaryTransform<E, R> {
     private final DistributedFunction<? super E, Traverser<? extends R>> flatMapF;
 
     public FlatMapTransform(DistributedFunction<? super E, Traverser<? extends R>> flatMapF) {

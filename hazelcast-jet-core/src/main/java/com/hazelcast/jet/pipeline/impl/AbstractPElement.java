@@ -18,18 +18,24 @@ package com.hazelcast.jet.pipeline.impl;
 
 import com.hazelcast.jet.pipeline.PElement;
 import com.hazelcast.jet.pipeline.PTransform;
+import com.hazelcast.jet.pipeline.Pipeline;
 
 import java.util.List;
 
 public abstract class AbstractPElement implements PElement {
 
-    protected final List<PElement> upstream;
-    protected final PTransform transform;
-    protected final PipelineImpl pipeline;
+    private final List<PElement> upstream;
+    final PTransform transform;
+    final PipelineImpl pipeline;
 
     AbstractPElement(List<PElement> upstream, PTransform transform, PipelineImpl pipeline) {
         this.upstream = upstream;
         this.transform = transform;
         this.pipeline = pipeline;
+    }
+
+    @Override
+    public Pipeline getPipeline() {
+        return pipeline;
     }
 }

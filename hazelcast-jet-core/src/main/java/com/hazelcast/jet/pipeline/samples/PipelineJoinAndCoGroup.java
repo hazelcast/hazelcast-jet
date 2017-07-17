@@ -56,15 +56,15 @@ public class PipelineJoinAndCoGroup {
 
     private void joinBuild() {
         JoinBuilder<Trade> builder = trades.joinBuilder();
-        Tag<Trade> tInd = builder.leftTag();
-        Tag<Product> pInd = builder.add(products, onKeys(Trade::productId, Product::id));
-        Tag<Broker> bInd = builder.add(brokers, onKeys(Trade::brokerId, Broker::id));
+        Tag<Trade> tradeTag = builder.leftTag();
+        Tag<Product> productTag = builder.add(products, onKeys(Trade::productId, Product::id));
+        Tag<Broker> brokerTag = builder.add(brokers, onKeys(Trade::brokerId, Broker::id));
         PStream<BagsByTag> joined = builder.build();
 
         PStream<String> mapped = joined.map(bags -> {
-            Iterable<Trade> trades = bags.get(tInd);
-            Iterable<Product> products = bags.get(pInd);
-            Iterable<Broker> brokers = bags.get(bInd);
+            Iterable<Trade> trades = bags.get(tradeTag);
+            Iterable<Product> products = bags.get(productTag);
+            Iterable<Broker> brokers = bags.get(brokerTag);
             return "" + trades + products + brokers;
         });
     }

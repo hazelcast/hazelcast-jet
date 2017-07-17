@@ -17,6 +17,7 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.function.DistributedBiConsumer;
+import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.bag.BagsByTag;
 import com.hazelcast.jet.pipeline.bag.ThreeBags;
@@ -47,13 +48,14 @@ public interface GroupAggregation<B, A, R> {
     DistributedFunction<? super A, R> finishAccumulationF();
 
     static <E1, E2, A, R> GroupAggregation<TwoBags<E1, E2>, A, R> of(
-            DistributedFunction<TwoBags<E1, E2>, A> accumulateGroupF,
+            DistributedBiFunction<Iterable<E1>, Iterable<E2>, A> accumulateGroupF,
             DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF,
             DistributedBiConsumer<? super A, ? super A> deductAccumulatorF,
             DistributedFunction<? super A, R> finishAccumulationF
     ) {
         return new GroupAggregationImpl<>(
-                accumulateGroupF, combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
+                (TwoBags<E1, E2> bags) -> accumulateGroupF.apply(bags.bag1(), bags.bag2()),
+                combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
     }
 
     static <E1, E2, E3, A, R> GroupAggregation<ThreeBags<E1, E2, E3>, A, R> of3(

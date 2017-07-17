@@ -25,7 +25,7 @@ import com.hazelcast.jet.pipeline.impl.GroupByTransform;
 import com.hazelcast.jet.pipeline.impl.MapTransform;
 import com.hazelcast.jet.pipeline.impl.SlidingWindowTransform;
 
-import java.util.Map;
+import java.util.Map.Entry;
 
 public final class Transforms {
 
@@ -33,22 +33,22 @@ public final class Transforms {
 
     }
 
-    public static <E, R> Transform<E, R> map(DistributedFunction<? super E, ? extends R> mapF) {
+    public static <E, R> UnaryTransform<E, R> map(DistributedFunction<? super E, ? extends R> mapF) {
         return new MapTransform<>(mapF);
     }
 
-    public static <E, R> Transform<E, R> flatMap(DistributedFunction<? super E, Traverser<? extends R>> flatMapF) {
+    public static <E, R> UnaryTransform<E, R> flatMap(DistributedFunction<? super E, Traverser<? extends R>> flatMapF) {
         return new FlatMapTransform<>(flatMapF);
     }
 
-    public static <E, K, R> Transform<E, Map.Entry<K, R>> groupBy(
+    public static <E, K, R> UnaryTransform<E, Entry<K, R>> groupBy(
             DistributedFunction<? super E, ? extends K> keyF,
             AggregateOperation<E, ?, R> aggregation
     ) {
         return new GroupByTransform<>(keyF, aggregation);
     }
 
-    public static <IN, K, R> Transform<IN, Map.Entry<K, R>> slidingWindow(
+    public static <IN, K, R> UnaryTransform<IN, Entry<K, R>> slidingWindow(
             DistributedFunction<IN, K> keyF,
             WindowDefinition wDef,
             AggregateOperation<IN, ?, R> aggregation

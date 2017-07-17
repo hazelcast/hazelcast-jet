@@ -26,9 +26,7 @@ import com.hazelcast.jet.pipeline.tuple.Tuple2;
 import java.util.Map.Entry;
 
 public interface PStream<E> extends PElement {
-    <R> PStream<R> apply(Transform<? super E, R> transform);
-
-    PEnd drainTo(Sink sink);
+    <R> PStream<R> apply(UnaryTransform<? super E, R> unaryTransform);
 
     default <R> PStream<R> map(DistributedFunction<? super E, ? extends R> mapF) {
         return apply(Transforms.map(mapF));
@@ -38,10 +36,12 @@ public interface PStream<E> extends PElement {
         return apply(Transforms.flatMap(flatMapF));
     }
 
+    PEnd drainTo(Sink sink);
+
     default <K, R> PStream<Entry<K, R>> groupBy(DistributedFunction<? super E, ? extends K> keyF,
-                                                AggregateOperation<E, ?, R> aggregation
+                                                AggregateOperation<E, ?, R> aggrOp
     ) {
-        return apply(Transforms.groupBy(keyF, aggregation));
+        return apply(Transforms.groupBy(keyF, aggrOp));
     }
 
     <K, E2> PStream<TwoBags<E, E2>> join(

@@ -23,9 +23,8 @@ import com.hazelcast.jet.pipeline.PElement;
 import com.hazelcast.jet.pipeline.PEnd;
 import com.hazelcast.jet.pipeline.PStream;
 import com.hazelcast.jet.pipeline.PTransform;
-import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
-import com.hazelcast.jet.pipeline.Transform;
+import com.hazelcast.jet.pipeline.UnaryTransform;
 import com.hazelcast.jet.pipeline.bag.ThreeBags;
 import com.hazelcast.jet.pipeline.bag.TwoBags;
 import com.hazelcast.jet.pipeline.GroupAggregation;
@@ -50,8 +49,8 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
     }
 
     @Override
-    public <R> PStream<R> apply(Transform<? super E, R> transform) {
-        return pipeline.apply(this, transform);
+    public <R> PStream<R> apply(UnaryTransform<? super E, R> unaryTransform) {
+        return pipeline.apply(this, unaryTransform);
     }
 
     @Override
@@ -97,10 +96,5 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
     @Override
     public PEnd drainTo(Sink sink) {
         return pipeline.drainTo(this, sink);
-    }
-
-    @Override
-    public Pipeline getPipeline() {
-        return pipeline;
     }
 }

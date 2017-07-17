@@ -31,9 +31,4 @@ public class PEndImpl extends AbstractPElement implements PEnd {
     PEndImpl(PElement upstream, PTransform transform, PipelineImpl pipeline) {
         super(singletonList(upstream), transform, pipeline);
     }
-
-    @Override
-    public Pipeline getPipeline() {
-        return pipeline;
-    }
 }

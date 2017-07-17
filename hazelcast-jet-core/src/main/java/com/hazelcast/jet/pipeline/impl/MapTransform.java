@@ -17,12 +17,12 @@
 package com.hazelcast.jet.pipeline.impl;
 
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.pipeline.Transform;
+import com.hazelcast.jet.pipeline.UnaryTransform;
 
 /**
  * Javadoc pending.
  */
-public class MapTransform<E, R> implements Transform<E, R> {
+public class MapTransform<E, R> implements UnaryTransform<E, R> {
     private final DistributedFunction<? super E, ? extends R> mapF;
 
     public MapTransform(DistributedFunction<? super E, ? extends R> mapF) {

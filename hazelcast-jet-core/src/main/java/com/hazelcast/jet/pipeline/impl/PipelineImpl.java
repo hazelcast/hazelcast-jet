@@ -23,7 +23,7 @@ import com.hazelcast.jet.pipeline.PTransform;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Source;
-import com.hazelcast.jet.pipeline.Transform;
+import com.hazelcast.jet.pipeline.UnaryTransform;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,8 +52,8 @@ public class PipelineImpl implements Pipeline {
         printDAG();
     }
 
-    <IN, OUT> PStream<OUT> apply(PStreamImpl<IN> input, Transform<? super IN, OUT> transform) {
-        PStreamImpl<OUT> output = new PStreamImpl<>(input, transform, this);
+    <IN, OUT> PStream<OUT> apply(PStreamImpl<IN> input, UnaryTransform<? super IN, OUT> unaryTransform) {
+        PStreamImpl<OUT> output = new PStreamImpl<>(input, unaryTransform, this);
         addEdge(input, output);
         return output;
     }
@@ -72,7 +72,7 @@ public class PipelineImpl implements Pipeline {
     private void printDAG() {
         for (Entry<AbstractPElement, List<AbstractPElement>> entry : outgoingEdges.entrySet()) {
             Set<PTransform> outputs = entry.getValue().stream()
-                                          .map(e -> e.transform).collect(Collectors.toSet());
+                                           .map(e -> e.transform).collect(Collectors.toSet());
             System.out.println(entry.getKey().transform + " -> " + outputs);
         }
     }

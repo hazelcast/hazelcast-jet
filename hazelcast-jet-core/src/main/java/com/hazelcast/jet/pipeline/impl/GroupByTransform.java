@@ -18,14 +18,14 @@ package com.hazelcast.jet.pipeline.impl;
 
 import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.pipeline.Transform;
+import com.hazelcast.jet.pipeline.UnaryTransform;
 
 import java.util.Map.Entry;
 
 /**
  * Javadoc pending.
  */
-public class GroupByTransform<E, K, R> implements Transform<E, Entry<K, R>> {
+public class GroupByTransform<E, K, R> implements UnaryTransform<E, Entry<K, R>> {
     private final DistributedFunction<? super E, ? extends K> keyF;
     private final AggregateOperation<E, ?, R> aggrOp;
 
