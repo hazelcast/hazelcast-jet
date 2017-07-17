@@ -21,7 +21,7 @@ import com.hazelcast.jet.pipeline.bag.BagsByTag;
 import com.hazelcast.jet.pipeline.impl.PStreamImpl;
 import com.hazelcast.jet.pipeline.impl.PipelineImpl;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
-import com.hazelcast.jet.pipeline.bag.BagTag;
+import com.hazelcast.jet.pipeline.bag.Tag;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,22 +35,22 @@ import static java.util.stream.Collectors.toList;
  * Javadoc pending.
  */
 public class CoGroupBuilder<K, E_LEFT> {
-    private final Map<BagTag<?>, CoGroupClause<?, K>> clauses = new HashMap<>();
+    private final Map<Tag<?>, CoGroupClause<?, K>> clauses = new HashMap<>();
 
-    private final BagTag<E_LEFT> leftTag;
+    private final Tag<E_LEFT> leftTag;
 
     public CoGroupBuilder(PStream<E_LEFT> s, DistributedFunction<? super E_LEFT, K> groupKeyF) {
         this.leftTag = add(s, groupKeyF);
     }
 
-    public BagTag<E_LEFT> leftTag() {
+    public Tag<E_LEFT> leftTag() {
         return leftTag;
     }
 
-    public <E> BagTag<E> add(PStream<E> s, DistributedFunction<? super E, K> groupKeyF) {
-        BagTag tag = new BagTag(clauses.size());
+    public <E> Tag<E> add(PStream<E> s, DistributedFunction<? super E, K> groupKeyF) {
+        Tag tag = new Tag(clauses.size());
         clauses.put(tag, new CoGroupClause<>(s, groupKeyF));
-        return (BagTag<E>) tag;
+        return (Tag<E>) tag;
     }
 
     public <R> PStream<Tuple2<K, R>> build(GroupAggregation<BagsByTag, ?, R> cogOp) {
@@ -69,7 +69,7 @@ public class CoGroupBuilder<K, E_LEFT> {
         );
     }
 
-    private Stream<Entry<BagTag<?>, CoGroupClause<?, K>>> orderedClauses() {
+    private Stream<Entry<Tag<?>, CoGroupClause<?, K>>> orderedClauses() {
         return clauses.entrySet().stream()
                       .sorted(comparing(Entry::getKey));
     }

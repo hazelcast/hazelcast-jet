@@ -21,17 +21,17 @@ import java.io.Serializable;
 /**
  * Javadoc pending.
  */
-public class BagTag<E> implements Serializable, Comparable<BagTag<?>> {
+public class Tag<E> implements Serializable, Comparable<Tag<?>> {
     private final int index;
 
-    public BagTag(int index) {
+    public Tag(int index) {
         this.index = index;
     }
 
     @Override
     public boolean equals(Object obj) {
         return this == obj ||
-                obj instanceof BagTag && this.index == ((BagTag) obj).index;
+                obj instanceof Tag && this.index == ((Tag) obj).index;
     }
 
     @Override
@@ -40,7 +40,7 @@ public class BagTag<E> implements Serializable, Comparable<BagTag<?>> {
     }
 
     @Override
-    public int compareTo(BagTag<?> that) {
+    public int compareTo(Tag<?> that) {
         return Integer.compare(this.index, that.index);
     }
 }

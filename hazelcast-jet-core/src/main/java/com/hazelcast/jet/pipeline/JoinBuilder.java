@@ -20,7 +20,7 @@ import com.hazelcast.jet.pipeline.impl.JoinTransform;
 import com.hazelcast.jet.pipeline.impl.PStreamImpl;
 import com.hazelcast.jet.pipeline.impl.PipelineImpl;
 import com.hazelcast.jet.pipeline.bag.BagsByTag;
-import com.hazelcast.jet.pipeline.bag.BagTag;
+import com.hazelcast.jet.pipeline.bag.Tag;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -34,23 +34,23 @@ import static java.util.stream.Collectors.toList;
  * Javadoc pending.
  */
 public class JoinBuilder<E_LEFT> {
-    private final Map<BagTag<?>, JoinClause<?, E_LEFT, ?>> clauses = new HashMap<>();
+    private final Map<Tag<?>, JoinClause<?, E_LEFT, ?>> clauses = new HashMap<>();
 
     // Holds the TupleIndex of the "left-hand" component of the join operation.
     // This JoinClause instance is a special case which has no JoinOn.
     // The pstream it holds is the implied left-hand side of all join clauses.
-    private final BagTag<E_LEFT> leftIndex;
+    private final Tag<E_LEFT> leftIndex;
 
     JoinBuilder(PStream<E_LEFT> leftStream) {
         this.leftIndex = add(leftStream, null);
     }
 
-    public BagTag<E_LEFT> leftIndex() {
+    public Tag<E_LEFT> leftTag() {
         return leftIndex;
     }
 
-    public <K, E_RIGHT> BagTag<E_RIGHT> add(PStream<E_RIGHT> s, JoinOn<K, E_LEFT, E_RIGHT> joinOn) {
-        BagTag<E_RIGHT> ind = new BagTag<>(clauses.size());
+    public <K, E_RIGHT> Tag<E_RIGHT> add(PStream<E_RIGHT> s, JoinOn<K, E_LEFT, E_RIGHT> joinOn) {
+        Tag<E_RIGHT> ind = new Tag<>(clauses.size());
         clauses.put(ind, new JoinClause<>(s, joinOn));
         return ind;
     }
@@ -68,7 +68,7 @@ public class JoinBuilder<E_LEFT> {
         );
     }
 
-    private Stream<Entry<BagTag<?>, JoinClause<?, E_LEFT, ?>>> orderedClauses() {
+    private Stream<Entry<Tag<?>, JoinClause<?, E_LEFT, ?>>> orderedClauses() {
         return clauses.entrySet().stream()
                       .sorted(comparing(Entry::getKey));
     }

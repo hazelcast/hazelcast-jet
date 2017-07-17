@@ -23,9 +23,9 @@ import java.util.Map;
  * Javadoc pending.
  */
 public class BagsByTag {
-    private final Map<BagTag<?>, Object> components = new HashMap<>();
+    private final Map<Tag<?>, Object> components = new HashMap<>();
 
-    public <E> Iterable<E> get(BagTag<E> k) {
+    public <E> Iterable<E> get(Tag<E> k) {
         return (Iterable<E>) components.get(k);
     }
 }
