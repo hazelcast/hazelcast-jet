@@ -17,8 +17,8 @@
 package com.hazelcast.jet.pipeline.impl;
 
 import com.hazelcast.jet.pipeline.PElement;
-import com.hazelcast.jet.pipeline.PTransform;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.impl.transform.PTransform;
 
 import java.util.List;
 

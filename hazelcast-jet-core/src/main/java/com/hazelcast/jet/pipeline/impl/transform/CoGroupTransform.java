@@ -14,16 +14,17 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.pipeline.impl.transform;
 
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.GroupAggregation;
 
 import java.util.List;
 
 /**
  * Javadoc pending.
  */
-public class CoGroupTransform<K, B, A, R> implements PTransform {
+public class CoGroupTransform<K, B, A, R> implements JoinTransform {
     private final List<DistributedFunction<?, ? extends K>> groupKeyFns;
     private final GroupAggregation<B, A, R> groupAggr;
     private final Class bagsType;

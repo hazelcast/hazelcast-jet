@@ -19,6 +19,7 @@ package com.hazelcast.jet.pipeline.samples;
 import com.hazelcast.jet.pipeline.JoinBuilder;
 import com.hazelcast.jet.pipeline.PStream;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.bag.Tag;
 import com.hazelcast.jet.pipeline.bag.BagsByTag;
@@ -41,12 +42,20 @@ public class PipelineJoinAndCoGroup {
     private PStream<Broker> brokers = p.drawFrom(Sources.<Integer, Broker>readMap("brokers"))
                                        .map(Entry::getValue);
 
-    private void joinDirect() {
+
+    public static void main(String[] args) {
+        PipelineJoinAndCoGroup pipeline = new PipelineJoinAndCoGroup();
+        pipeline.coGroupBuild().drainTo(Sinks.writeMap("map"));
+
+        pipeline.p.execute(null);
+    }
+
+    private PStream<String> joinDirect() {
         PStream<ThreeBags<Trade, Product, Broker>> joined = trades.join(
                 products, onKeys(Trade::productId, Product::id),
                 brokers, onKeys(Trade::brokerId, Broker::id));
 
-        PStream<String> mapped = joined.map(bags -> {
+        return joined.map(bags -> {
             Iterable<Trade> trades = bags.bag1();
             Iterable<Product> products = bags.bag2();
             Iterable<Broker> brokers = bags.bag3();
@@ -54,14 +63,14 @@ public class PipelineJoinAndCoGroup {
         });
     }
 
-    private void joinBuild() {
+    private PStream<String> joinBuild() {
         JoinBuilder<Trade> builder = trades.joinBuilder();
         Tag<Trade> tradeTag = builder.leftTag();
         Tag<Product> productTag = builder.add(products, onKeys(Trade::productId, Product::id));
         Tag<Broker> brokerTag = builder.add(brokers, onKeys(Trade::brokerId, Broker::id));
         PStream<BagsByTag> joined = builder.build();
 
-        PStream<String> mapped = joined.map(bags -> {
+        return joined.map(bags -> {
             Iterable<Trade> trades = bags.get(tradeTag);
             Iterable<Product> products = bags.get(productTag);
             Iterable<Broker> brokers = bags.get(brokerTag);
@@ -69,8 +78,8 @@ public class PipelineJoinAndCoGroup {
         });
     }
 
-    private void coGroupDirect() {
-        PStream<Tuple2<Integer, String>> grouped = trades.coGroup(
+    private PStream<Tuple2<Integer, String>> coGroupDirect() {
+        return trades.coGroup(
                 Trade::classId,
                 products, Product::classId,
                 brokers, Broker::classId,
@@ -86,13 +95,13 @@ public class PipelineJoinAndCoGroup {
                 ));
     }
 
-    private void coGroupBuild() {
+    private PStream<Tuple2<Integer, String>> coGroupBuild() {
         CoGroupBuilder<Integer, Trade> builder = trades.coGroupBuilder(Trade::classId);
         Tag<Trade> tradeTag = builder.leftTag();
         Tag<Product> prodTag = builder.add(products, Product::classId);
         Tag<Broker> brokTag = builder.add(brokers, Broker::classId);
 
-        PStream<Tuple2<Integer, String>> grouped = builder.build(GroupAggregation.ofMany(
+        return builder.build(GroupAggregation.ofMany(
                 bags -> {
                     StringBuilder acc = new StringBuilder();
                     Iterable<Trade> trades = bags.get(tradeTag);

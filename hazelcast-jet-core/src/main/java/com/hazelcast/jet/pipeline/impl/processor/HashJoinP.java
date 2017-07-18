@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.processor;
+package com.hazelcast.jet.pipeline.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.pipeline.JoinOn;

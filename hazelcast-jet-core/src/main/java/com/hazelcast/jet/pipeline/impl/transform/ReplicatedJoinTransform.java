@@ -14,20 +14,19 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.impl;
+package com.hazelcast.jet.pipeline.impl.transform;
 
 import com.hazelcast.jet.pipeline.JoinOn;
-import com.hazelcast.jet.pipeline.PTransform;
 
 import java.util.List;
 
 /**
  * Javadoc pending.
  */
-public class JoinTransform implements PTransform {
+public class ReplicatedJoinTransform implements JoinTransform {
     private final List<JoinOn> joinOns;
 
-    public JoinTransform(List<JoinOn> joinOns) {
+    public ReplicatedJoinTransform(List<JoinOn> joinOns) {
         this.joinOns = joinOns;
     }
 }

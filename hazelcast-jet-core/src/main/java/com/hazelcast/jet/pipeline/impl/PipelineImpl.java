@@ -19,11 +19,12 @@ package com.hazelcast.jet.pipeline.impl;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.pipeline.PEnd;
 import com.hazelcast.jet.pipeline.PStream;
-import com.hazelcast.jet.pipeline.PTransform;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Source;
-import com.hazelcast.jet.pipeline.UnaryTransform;
+import com.hazelcast.jet.pipeline.impl.transform.JoinTransform;
+import com.hazelcast.jet.pipeline.impl.transform.PTransform;
+import com.hazelcast.jet.pipeline.impl.transform.UnaryTransform;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,13 +53,19 @@ public class PipelineImpl implements Pipeline {
         printDAG();
     }
 
-    <IN, OUT> PStream<OUT> apply(PStreamImpl<IN> input, UnaryTransform<? super IN, OUT> unaryTransform) {
+    public <IN, OUT> PStream<OUT> transform(PStreamImpl<IN> input, UnaryTransform<? super IN, OUT> unaryTransform) {
         PStreamImpl<OUT> output = new PStreamImpl<>(input, unaryTransform, this);
         addEdge(input, output);
         return output;
     }
 
-    <E> PEnd drainTo(PStreamImpl<E> input, Sink sink) {
+    public PStream join(List<PStream> upstream, JoinTransform joinTransform) {
+        PStreamImpl joined = new PStreamImpl(upstream, joinTransform, this);
+        upstream.forEach(u -> addEdge((PStreamImpl) u, joined));
+        return joined;
+    }
+
+    public <E> PEnd drainTo(PStreamImpl<E> input, Sink sink) {
         PEndImpl output = new PEndImpl(input, sink, this);
         addEdge(input, output);
         return output;
@@ -76,5 +83,6 @@ public class PipelineImpl implements Pipeline {
             System.out.println(entry.getKey().transform + " -> " + outputs);
         }
     }
+
 
 }

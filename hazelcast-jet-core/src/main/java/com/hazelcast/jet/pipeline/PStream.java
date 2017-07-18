@@ -21,6 +21,8 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.bag.TwoBags;
 import com.hazelcast.jet.pipeline.bag.ThreeBags;
+import com.hazelcast.jet.pipeline.impl.transform.Transforms;
+import com.hazelcast.jet.pipeline.impl.transform.UnaryTransform;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
 
 import java.util.Map.Entry;

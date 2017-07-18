@@ -16,13 +16,13 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.pipeline.impl.JoinTransform;
-import com.hazelcast.jet.pipeline.impl.PStreamImpl;
+import com.hazelcast.jet.pipeline.impl.transform.ReplicatedJoinTransform;
 import com.hazelcast.jet.pipeline.impl.PipelineImpl;
 import com.hazelcast.jet.pipeline.bag.BagsByTag;
 import com.hazelcast.jet.pipeline.bag.Tag;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Stream;
@@ -56,16 +56,16 @@ public class JoinBuilder<E_LEFT> {
     }
 
     public PStream<BagsByTag> build() {
-        return new PStreamImpl<>(
-                orderedClauses()
-                        .map(e -> e.getValue().pstream())
-                        .collect(toList()),
-                new JoinTransform(orderedClauses()
-                        .skip(1)
-                        .map(e -> e.getValue().joinOn())
-                        .collect(toList())),
-                (PipelineImpl) clauses.get(leftIndex).pstream().getPipeline()
-        );
+        List<PStream> upstream = orderedClauses()
+                .map(e -> e.getValue().pstream())
+                .collect(toList());
+        ReplicatedJoinTransform transform = new ReplicatedJoinTransform(orderedClauses()
+                .skip(1)
+                .map(e -> e.getValue().joinOn())
+                .collect(toList()));
+
+        PipelineImpl pipeline = (PipelineImpl) clauses.get(leftIndex).pstream().getPipeline();
+        return pipeline.join(upstream, transform);
     }
 
     private Stream<Entry<Tag<?>, JoinClause<?, E_LEFT, ?>>> orderedClauses() {

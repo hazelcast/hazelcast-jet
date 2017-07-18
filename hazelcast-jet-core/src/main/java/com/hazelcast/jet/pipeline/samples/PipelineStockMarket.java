@@ -27,7 +27,7 @@ import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.pipeline.Sources.streamKafka;
-import static com.hazelcast.jet.pipeline.Transforms.slidingWindow;
+import static com.hazelcast.jet.pipeline.impl.transform.Transforms.slidingWindow;
 
 public class PipelineStockMarket {
     public static void main(String[] args) {
