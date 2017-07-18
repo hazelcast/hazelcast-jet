@@ -20,8 +20,8 @@ import com.hazelcast.jet.impl.util.ProgressState;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
+import java.util.function.Consumer;
 
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.util.ProgressState.DONE;
@@ -52,7 +52,7 @@ public class MockInboundStream implements InboundEdgeStream {
     }
 
     @Override
-    public ProgressState drainTo(Collection<Object> dest) {
+    public ProgressState drainTo(Consumer<Object> dest) {
         if (done || dataIndex == mockData.size()) {
             return WAS_ALREADY_DONE;
         }
@@ -62,7 +62,7 @@ public class MockInboundStream implements InboundEdgeStream {
             if (item == DONE_ITEM) {
                 done = true;
             } else {
-                dest.add(item);
+                dest.accept(item);
             }
         }
         return done ? DONE : MADE_PROGRESS;

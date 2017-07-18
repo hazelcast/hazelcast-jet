@@ -79,6 +79,12 @@ public final class Contexts {
             return jobFuture;
         }
 
+        @Override
+        public boolean snapshottingEnabled() {
+            // TODO return real value
+            return false;
+        }
+
         public void initJobFuture(CompletableFuture<Void> jobFuture) {
             assert this.jobFuture == null : "jobFuture already initialized";
             this.jobFuture = jobFuture;
@@ -103,6 +109,12 @@ public final class Contexts {
         @Override
         public int localParallelism() {
             return perNodeParallelism;
+        }
+
+        @Override
+        public boolean snapshottingEnabled() {
+            // TODO return real value
+            return false;
         }
     }
 
@@ -131,6 +143,12 @@ public final class Contexts {
         @Override
         public int localParallelism() {
             return localParallelism;
+        }
+
+        @Override
+        public boolean snapshottingEnabled() {
+            // TODO return real value
+            return false;
         }
     }
 }

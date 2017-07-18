@@ -16,19 +16,19 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ProgressState;
+import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 
-import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.ExecutionService.IDLER;
 
 /**
@@ -36,14 +36,14 @@ import static com.hazelcast.jet.impl.execution.ExecutionService.IDLER;
  */
 public class BlockingProcessorTasklet extends ProcessorTaskletBase {
 
-    private final BlockingOutbox outbox;
     private CompletableFuture<?> jobFuture;
 
     public BlockingProcessorTasklet(
             ProcCtx context, Processor processor, List<InboundEdgeStream> instreams,
-            List<OutboundEdgeStream> outstreams
+            List<OutboundEdgeStream> outstreams, SnapshotState snapshotState,
+            Queue<Object> snapshotQueue, SerializationService serializationService
     ) {
-        super(context, processor, instreams, outstreams);
+        super(context, processor, instreams, outstreams, snapshotState, snapshotQueue, serializationService);
         Preconditions.checkFalse(processor.isCooperative(), "Processor is cooperative");
         outbox = new BlockingOutbox();
     }
@@ -57,42 +57,20 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
     public void init(CompletableFuture<Void> jobFuture) {
         super.init(jobFuture);
         this.jobFuture = jobFuture;
-        initProcessor(outbox, jobFuture);
     }
 
     @Override @Nonnull
     public ProgressState call() {
         try {
-            progTracker.reset();
-            if (inbox().isEmpty()) {
-                callNullaryProcess();
-                tryFillInbox();
-            } else {
-                progTracker.notDone();
-            }
-            if (progTracker.isDone()) {
-                complete();
-            } else if (!inbox().isEmpty()) {
-                processor.process(currInstream.ordinal(), inbox());
-            }
-            return progTracker.toProgressState();
+            return super.call();
         } catch (JobFutureCompleted e) {
             return ProgressState.DONE;
         }
     }
 
-    private void callNullaryProcess() {
-        if (!processor.tryProcess()) {
-            throw new JetException("Non-cooperative processor's tryProcess() returned false: " + processor);
-        }
-    }
-
-    private void complete() {
-        if (processor.complete()) {
-            outbox.add(DONE_ITEM);
-        } else {
-            progTracker.notDone();
-        }
+    @Override
+    protected void tryFlushOutbox() {
+        // do nothing: our outbox flushes automatically
     }
 
     private class BlockingOutbox implements Outbox {
@@ -132,7 +110,7 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
         private void submit(OutboundEdgeStream outstream, @Nonnull Object item) {
             OutboundCollector collector = outstream.getCollector();
             for (long idleCount = 0; ;) {
-                ProgressState result = (item instanceof Watermark || item instanceof DoneItem)
+                ProgressState result = (item instanceof Watermark || item instanceof DoneItem || item instanceof SnapshotBarrier)
                         ? collector.offerBroadcast(item)
                         : collector.offer(item);
                 if (result.isDone()) {

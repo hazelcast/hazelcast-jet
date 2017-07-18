@@ -16,9 +16,12 @@
 
 package com.hazelcast.jet;
 
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.query.Predicate;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -116,13 +119,22 @@ public interface Processor {
     /**
      * Tells whether this processor is able to participate in cooperative
      * multithreading. This means that each invocation of a processing method
-     * will take a reasonably small amount of time (up to a millisecond). A
-     * cooperative processor should not attempt any blocking I/O operations.
+     * will take a reasonably small amount of time (up to a millisecond).
+     * Violations will manifest themselves as increased latency due to slower
+     * switching of processors.
+     * <p>
+     * A cooperative processor should also not attempt any blocking operations,
+     * such as I/O operations, waiting for locks/semaphores or sleep
+     * operations. Violations to this rule will manifest themselves as less
+     * than 100% CPU usage under maximum load.
      * <p>
      * If this processor declares itself cooperative, it will get a
      * non-blocking, buffering outbox of limited capacity and share a thread
      * with other cooperative processors. Otherwise it will get an
      * auto-flushing, blocking outbox and run in a dedicated Java thread.
+     * <p>
+     * Processor instances on single vertex are allowed to return different
+     * value, but single processor instance must return constant value.
      * <p>
      * The default implementation returns {@code true}.
      */
@@ -130,6 +142,78 @@ public interface Processor {
         return true;
     }
 
+    /**
+     * Returns true, if the processor has state to save to snapshot. All
+     * processors on the same vertex must always return the same value.
+     */
+    default EStateType getStateType() {
+        return EStateType.STATELESS;
+    }
+
+    /**
+     * Store the state to the snapshot. Return {@code true}, if done, or {@code
+     * false}, if the method should be called again. Method is allowed to add
+     * items to outbox during this call.
+     * <p>
+     * The method will never be called, if the inbox is not empty after the
+     * {@link #process(int, Inbox)} method returns.
+     * After the inbox is done (this includes source processors), the method
+     * can be called anytime between {@link #complete()} calls. If a processor
+     * never returns from {@link #complete()} (which is allowed for
+     * non-cooperative processors), method will never be called.
+     * <p>
+     * Snapshot method will always be called on the same thread as other
+     * processing methods, so no synchronization is necessary.
+     * <p>
+     * If the processor {@link #isCooperative() is cooperative}, this method
+     * must also be cooperative. Calling {@code storage} satisfies this
+     * condition.
+     * <p>
+     * If {@code false} is returned, the method will be called again before any
+     * other methods are called.
+     * <p>
+     * After {@link #complete()} returned {@code true}, this method won't be
+     * called anymore.
+     */
+    default boolean saveSnapshot(SnapshotStorage storage) {
+        if (getStateType() != EStateType.STATELESS) {
+            throw new JetException("saveSnapshot() must be overridden for stateful processors");
+        }
+        return true;
+    }
+
+    /**
+     * Returns the predicate to use when restoring snapshot. Only used if
+     * {@link #getStateType()} is {@link EStateType#BROADCAST}.
+     */
+    @Nullable
+    default Predicate getSnapshotPredicate() {
+        return null;
+    }
+
+    /**
+     * Apply a key from a snapshot to processor’s internal state.
+     */
+    default void restoreSnapshotKey(Object key, Object value) {
+        throw new JetException("restoreSnapshotKey not overridden");
+    }
+
+    /**
+     * Called after all keys have been restored using {@link
+     * #restoreSnapshotKey(Object, Object)}.
+     */
+    default void finishSnapshotRestore() {
+    }
+
+    /**
+     * Clear entire state, that might have been restored using {@link
+     * #restoreSnapshotKey(Object, Object)}.
+     * <p>
+     * This will be used, if partition migration took place during restoring,
+     * in which case the process has to be started over.
+     */
+    default void clearState() {
+    }
 
     /**
      * Context passed to the processor in the
@@ -186,5 +270,43 @@ public interface Processor {
          */
         @Nonnull
         CompletableFuture<Void> jobFuture();
+
+        /**
+         * Returns true, if snapshots will be saved for this job.
+         */
+        boolean snapshottingEnabled();
+    }
+
+    /**
+     * Processor state types.
+     */
+    enum EStateType {
+        /**
+         * The processor has no state to store to snapshot. The {@link
+         * #saveSnapshot(SnapshotStorage)} and {@link #restoreSnapshotKey(
+         * Object, Object)} methods will never be called.
+         */
+        STATELESS,
+
+        /**
+         * The processor must be preceded with a {@link Edge#distributed()
+         * distributed} and {@link Edge#partitioned(DistributedFunction)
+         * partitioned} edge using default partitioner and partitioned by the
+         * same key as is used in snapshot.
+         * <p>
+         * Correct keys will be restored to each processor and saving and
+         * restoring the snapshot will be done locally (unless the
+         * partitioning in the HZ map changed since the job started), except
+         * for the backup copies of the snapshot.
+         */
+        PARTITIONED,
+
+        /**
+         * Entire snapshot will be restored to all processor instances. To
+         * limit the traffic, use {@link #getSnapshotPredicate()}. Use this
+         * option, if partitions of keys in the snapshot don't match the
+         * Hazelcast partitions of this processor.
+         */
+        BROADCAST
     }
 }

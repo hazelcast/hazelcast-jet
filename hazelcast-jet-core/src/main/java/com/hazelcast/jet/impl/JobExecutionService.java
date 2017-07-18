@@ -27,6 +27,8 @@ import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.ExecutionService;
 import com.hazelcast.jet.impl.execution.SenderTasklet;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
+import com.hazelcast.jet.impl.operation.DoSnapshotOperation;
+import com.hazelcast.jet.impl.operation.ExecuteOperation;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
@@ -188,10 +190,19 @@ public class JobExecutionService {
 
     public CompletionStage<Void> execute(Address coordinator, long jobId, long executionId,
                                          Consumer<CompletionStage<Void>> doneCallback) {
+        ExecutionContext executionContext = verifyAndGetExecutionContext(coordinator, jobId, executionId,
+                ExecuteOperation.class.getSimpleName());
+
+        logger.info("Start execution of " + formatIds(jobId, executionId) + " from coordinator " + coordinator);
+
+        return executionContext.execute(doneCallback);
+    }
+
+    private ExecutionContext verifyAndGetExecutionContext(Address coordinator, long jobId, long executionId, String operationName) {
         Address masterAddress = nodeEngine.getMasterAddress();
         if (!masterAddress.equals(coordinator)) {
-            throw new IllegalStateException("Coordinator " + coordinator + " cannot start " + formatIds(jobId, executionId)
-                    + ": it is not master, master is: " + masterAddress);
+            throw new IllegalStateException("Coordinator " + coordinator + " cannot run " + operationName + " "
+                    + formatIds(jobId, executionId) + ": it is not master, master is: " + masterAddress);
         }
 
         if (!nodeEngine.isRunning()) {
@@ -201,17 +212,15 @@ public class JobExecutionService {
         ExecutionContext executionContext = executionContexts.get(executionId);
         if (executionContext == null) {
             throw new IllegalStateException(formatIds(jobId, executionId)
-                    + " not found for coordinator " + coordinator + " for execution start");
+                    + " not found for coordinator " + coordinator + " for " + operationName);
         } else if (!executionContext.verify(coordinator, jobId)) {
             throw new IllegalStateException(formatIds(jobId, executionContext.getExecutionId())
                     + " originally from coordinator " + executionContext.getCoordinator()
-                    + " cannot be started by coordinator " + coordinator + " and execution " + idToString(executionId));
+                    + " cannot do " + operationName + " from coordinator " + coordinator + " and execution "
+                    + idToString(executionId));
         }
 
-        logger.info("Start execution of " + formatIds(jobId, executionId)
-                + " from coordinator " + coordinator);
-
-        return executionContext.execute(doneCallback);
+        return executionContext;
     }
 
     void completeExecution(long executionId, Throwable error) {
@@ -226,4 +235,10 @@ public class JobExecutionService {
         }
     }
 
+    public CompletionStage<Void> doSnapshotOnMember(Address coordinator, long jobId, long executionId, long snapshotId) {
+        ExecutionContext executionContext = verifyAndGetExecutionContext(coordinator, jobId, executionId,
+                DoSnapshotOperation.class.getSimpleName());
+
+        return executionContext.initiateSnapshot(snapshotId);
+    }
 }

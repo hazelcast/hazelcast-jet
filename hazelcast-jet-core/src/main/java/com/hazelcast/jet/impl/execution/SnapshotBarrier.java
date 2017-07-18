@@ -16,20 +16,16 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.jet.impl.util.ProgressState;
+public class SnapshotBarrier {
+    @SuppressWarnings("CheckStyle")
+    public final long snapshotId;
 
-import java.util.function.Consumer;
+    public SnapshotBarrier(long snapshotId) {
+        this.snapshotId = snapshotId;
+    }
 
-/**
- * The inbound side of a data stream corresponding to a single DAG edge identified by its ordinal. In the
- * {@code ProcessorTasklet} it corresponds to the target of an edge; in {@code SenderTasklet} it corresponds to the
- * origin of an edge.
- */
-public interface InboundEdgeStream {
-
-    int ordinal();
-
-    int priority();
-
-    ProgressState drainTo(Consumer<Object> dest);
+    @Override
+    public String toString() {
+        return "SnapshotBarrier{snapshotId=" + snapshotId + '}';
+    }
 }

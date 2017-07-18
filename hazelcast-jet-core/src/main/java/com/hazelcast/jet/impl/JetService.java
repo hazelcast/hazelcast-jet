@@ -52,6 +52,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class JetService
         implements ManagedService, ConfigurableService<JetConfig>, PacketHandler, LiveOperationsTracker,
@@ -71,6 +72,8 @@ public class JetService
     private JobRepository jobRepository;
     private JobCoordinationService jobCoordinationService;
     private JobExecutionService jobExecutionService;
+
+    private final AtomicInteger parallelAsyncOpsCounter = new AtomicInteger();
 
     public JetService(NodeEngine nodeEngine) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
@@ -216,4 +219,12 @@ public class JetService
         return jobCoordinationService.startOrJoinJob(jobId, dag, config);
     }
 
+
+    public AtomicInteger getParallelAsyncOpsCounter() {
+        return parallelAsyncOpsCounter;
+    }
+
+    public CompletionStage<Void> doSnapshotOnMember(Address coordinator, long jobId, long executionId, long snapshotId) {
+        return jobExecutionService.doSnapshotOnMember(coordinator, jobId, executionId, snapshotId);
+    }
 }

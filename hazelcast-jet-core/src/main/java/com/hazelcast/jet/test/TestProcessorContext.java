@@ -34,6 +34,7 @@ public class TestProcessorContext implements Processor.Context {
     private String vertexName = "testVertex";
     private int globalProcessorIndex;
     private CompletableFuture<Void> jobFuture = new CompletableFuture<>();
+    private boolean snapshottingEnabled;
 
     /**
      * Constructor with default values.
@@ -95,6 +96,15 @@ public class TestProcessorContext implements Processor.Context {
     @Override
     public CompletableFuture<Void> jobFuture() {
         return jobFuture;
+    }
+
+    @Override
+    public boolean snapshottingEnabled() {
+        return snapshottingEnabled;
+    }
+
+    public void setSnapshottingEnabled(boolean snapshottingEnabled) {
+        this.snapshottingEnabled = snapshottingEnabled;
     }
 
     /**

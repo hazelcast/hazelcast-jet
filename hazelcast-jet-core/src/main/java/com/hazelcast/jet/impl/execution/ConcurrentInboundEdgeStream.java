@@ -17,14 +17,13 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.util.concurrent.ConcurrentConveyor;
-import com.hazelcast.internal.util.concurrent.Pipe;
+import com.hazelcast.internal.util.concurrent.QueuedPipe;
 import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.jet.impl.util.SkewReductionPolicy;
-import com.hazelcast.util.function.Predicate;
 
-import java.util.Collection;
+import java.util.function.Consumer;
 
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 
@@ -39,16 +38,29 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private final int priority;
     private final ConcurrentConveyor<Object> conveyor;
     private final ProgressTracker tracker = new ProgressTracker();
-    private final WatermarkDetector wmDetector = new WatermarkDetector();
     private long lastEmittedWm = Long.MIN_VALUE;
+    private final boolean blockOnBarrier;
 
     private final SkewReductionPolicy skewReductionPolicy;
+    private final BarrierWatcher barrierWatcher;
+    private SnapshotBarrier barrierToDrain;
+    // TODO initialize to snapshot we are restoring from
+    private long barrierAt;
 
-    public ConcurrentInboundEdgeStream(ConcurrentConveyor<Object> conveyor, int ordinal, int priority) {
+    /**
+     * @param blockOnBarrier If true, queues won't be drained until the same
+     *     barrier is received from all of them. This will enforce exactly once
+     *     vs. at least once, if it is false.
+     */
+    public ConcurrentInboundEdgeStream(ConcurrentConveyor<Object> conveyor, int ordinal, int priority,
+                                       boolean blockOnBarrier) {
         this.conveyor = conveyor;
         this.ordinal = ordinal;
         this.priority = priority;
-        this.skewReductionPolicy = new SkewReductionPolicy(conveyor.queueCount());
+        this.blockOnBarrier = blockOnBarrier;
+
+        skewReductionPolicy = new SkewReductionPolicy(conveyor.queueCount());
+        barrierWatcher = new BarrierWatcher(conveyor.queueCount());
     }
 
     @Override
@@ -62,81 +74,79 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     }
 
     /**
-     * Drains the inbound queues into the {@code dest} collection. Some queues
-     * may be skipped, as decided by the {@link SkewReductionPolicy}.
+     * Drains multiple inbound queues into the {@code dest} collection.
+     *
+     * <p>Following rules apply:<ul>
+     *
+     * <li>{@link Watermark}s are handled specially: {@link SkewReductionPolicy}
+     * might decide to temporarily stop draining some queues, if they are
+     * ahead, or ignore watermark from some other, if they are too much behind.
+     * Generally, watermark is added to {@code dest} after it is received from
+     * all queues.
+     *
+     * <li>{@link SnapshotBarrier}s are handled specially, as directed by
+     * {@link BarrierWatcher}. Same barrier has to be received from all queues
+     * to be added to the {@code dest} collection. Queues which already had the
+     * barrier are not drained until all other have it, if {@link
+     * #blockOnBarrier} is true.
+     *
+     * <li>Furthermore, {@link SnapshotBarrier} is always added to {@code dest}
+     * as the only item in a separate call to this method.
+     * </ul>
      */
     @Override
-    public ProgressState drainTo(Collection<Object> dest) {
+    public ProgressState drainTo(Consumer<Object> dest) {
+        if (barrierToDrain != null) {
+            dest.accept(barrierToDrain);
+            barrierAt = barrierToDrain.snapshotId;
+            barrierToDrain = null;
+            return ProgressState.MADE_PROGRESS;
+        }
+
         tracker.reset();
         for (int drainOrderIdx = 0; drainOrderIdx < conveyor.queueCount(); drainOrderIdx++) {
             int queueIndex = skewReductionPolicy.toQueueIndex(drainOrderIdx);
-            final Pipe<Object> q = conveyor.queue(queueIndex);
+            final QueuedPipe<Object> q = conveyor.queue(queueIndex);
             if (q == null) {
                 continue;
             }
-            Watermark wm = drainUpToWm(q, dest);
-            if (wmDetector.isDone) {
-                conveyor.removeQueue(queueIndex);
+            tracker.notDone();
+            if (blockOnBarrier && barrierWatcher.isBlocked(queueIndex)) {
                 continue;
             }
-            if (wm != null && skewReductionPolicy.observeWm(queueIndex, wm.timestamp())) {
-                break;
+
+            for (Object item; (item = q.poll()) != null; ) {
+                tracker.madeProgress();
+                if (item == DONE_ITEM) {
+                    conveyor.removeQueue(queueIndex);
+                    long newBarrier = barrierWatcher.markQueueDone(queueIndex);
+                    if (newBarrier > barrierAt) {
+                        barrierToDrain = new SnapshotBarrier(newBarrier);
+                        // stop now, barrier will be added as the sole item in next call
+                        return tracker.toProgressState();
+                    }
+                    break;
+                }
+                if (item instanceof Watermark) {
+                    skewReductionPolicy.observeWm(queueIndex, ((Watermark) item).timestamp());
+                } else if (item instanceof SnapshotBarrier) {
+                    if (barrierWatcher.observe(queueIndex, ((SnapshotBarrier) item).snapshotId)) {
+                        barrierToDrain = (SnapshotBarrier) item;
+                        // stop now, barrier will be added as the sole item in next call
+                        return tracker.toProgressState();
+                    }
+                } else {
+                    dest.accept(item);
+                }
             }
         }
 
         long bottomWm = skewReductionPolicy.bottomObservedWm();
         if (bottomWm > lastEmittedWm) {
-            dest.add(new Watermark(bottomWm));
+            dest.accept(new Watermark(bottomWm));
             lastEmittedWm = bottomWm;
         }
 
         return tracker.toProgressState();
-    }
-
-    /**
-     * Drains the supplied queue into a {@code dest} collection, up to the next
-     * {@link Watermark}. Also updates the {@code tracker} with new status.
-     *
-     * @return the drained watermark, if any; {@code null} otherwise
-     */
-    private Watermark drainUpToWm(Pipe<Object> queue, Collection<Object> dest) {
-        wmDetector.reset(dest);
-
-        int drainedCount = queue.drain(wmDetector);
-        tracker.mergeWith(ProgressState.valueOf(drainedCount > 0, wmDetector.isDone));
-
-        wmDetector.dest = null;
-        return wmDetector.wm;
-    }
-
-    /**
-     * Drains a concurrent conveyor's queue while watching for {@link Watermark}s.
-     * When encountering a watermark, prevents draining more items.
-     */
-    private static final class WatermarkDetector implements Predicate<Object> {
-        Collection<Object> dest;
-        Watermark wm;
-        boolean isDone;
-
-        void reset(Collection<Object> newDest) {
-            dest = newDest;
-            wm = null;
-            isDone = false;
-        }
-
-        @Override
-        public boolean test(Object o) {
-            if (o instanceof Watermark) {
-                assert wm == null : "Received multiple Watermarks without a call to reset()";
-                wm = (Watermark) o;
-                return false;
-            }
-            if (o == DONE_ITEM) {
-                isDone = true;
-                return false;
-            }
-            dest.add(o);
-            return true;
-        }
     }
 }

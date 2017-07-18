@@ -57,7 +57,7 @@ public class ConcurrentInboundEdgeStreamTest {
         //noinspection unchecked
         ConcurrentConveyor<Object> conveyor = ConcurrentConveyor.concurrentConveyor(senderGone, q1, q2);
 
-        stream = new ConcurrentInboundEdgeStream(conveyor, 0, 0);
+        stream = new ConcurrentInboundEdgeStream(conveyor, 0, 0, true);
     }
 
     @Test
@@ -67,21 +67,21 @@ public class ConcurrentInboundEdgeStreamTest {
         q1.add(2);
         q1.add(DONE_ITEM);
         q2.add(6);
-        ProgressState progressState = stream.drainTo(list);
+        ProgressState progressState = stream.drainTo(list::add);
         assertEquals(Arrays.asList(1, 2, 6), list);
         assertEquals(MADE_PROGRESS, progressState);
 
         list.clear();
         q2.add(7);
         q2.add(DONE_ITEM);
-        progressState = stream.drainTo(list);
+        progressState = stream.drainTo(list::add);
         // emitter2 returned 7 and now both emitters are done
         assertEquals(Collections.singletonList(7), list);
         assertEquals(DONE, progressState);
 
         // both emitters are now done and made no progress since last call
         list.clear();
-        progressState = stream.drainTo(list);
+        progressState = stream.drainTo(list::add);
         assertEquals(0, list.size());
         assertEquals(ProgressState.WAS_ALREADY_DONE, progressState);
     }
@@ -94,7 +94,7 @@ public class ConcurrentInboundEdgeStreamTest {
         q1.add(DONE_ITEM);
         q2.add(6);
         q2.add(DONE_ITEM);
-        ProgressState progressState = stream.drainTo(list);
+        ProgressState progressState = stream.drainTo(list::add);
 
         // emitter1 returned 1 and 2; emitter2 returned 6
         // both are now done
@@ -107,13 +107,13 @@ public class ConcurrentInboundEdgeStreamTest {
         ArrayList<Object> list = new ArrayList<>();
         q1.add(DONE_ITEM);
         q2.add(DONE_ITEM);
-        ProgressState progressState = stream.drainTo(list);
+        ProgressState progressState = stream.drainTo(list::add);
 
         assertEquals(0, list.size());
         assertEquals(ProgressState.DONE, progressState);
 
         list.clear();
-        progressState = stream.drainTo(list);
+        progressState = stream.drainTo(list::add);
         assertEquals(0, list.size());
         assertEquals(ProgressState.WAS_ALREADY_DONE, progressState);
     }
@@ -123,13 +123,13 @@ public class ConcurrentInboundEdgeStreamTest {
         ArrayList<Object> list = new ArrayList<>();
         q2.add(1);
         q2.add(DONE_ITEM);
-        ProgressState progressState = stream.drainTo(list);
+        ProgressState progressState = stream.drainTo(list::add);
 
         assertEquals(Collections.singletonList(1), list);
         assertEquals(MADE_PROGRESS, progressState);
         // now emitter2 is done, emitter1 is not but has no progress
         list.clear();
-        progressState = stream.drainTo(list);
+        progressState = stream.drainTo(list::add);
         assertEquals(0, list.size());
         assertEquals(ProgressState.NO_PROGRESS, progressState);
 
@@ -137,12 +137,12 @@ public class ConcurrentInboundEdgeStreamTest {
         q1.add(DONE_ITEM);
 
         list.clear();
-        progressState = stream.drainTo(list);
+        progressState = stream.drainTo(list::add);
         assertEquals(0, list.size());
         assertEquals(ProgressState.DONE, progressState);
 
         list.clear();
-        progressState = stream.drainTo(list);
+        progressState = stream.drainTo(list::add);
         assertEquals(0, list.size());
         assertEquals(ProgressState.WAS_ALREADY_DONE, progressState);
     }

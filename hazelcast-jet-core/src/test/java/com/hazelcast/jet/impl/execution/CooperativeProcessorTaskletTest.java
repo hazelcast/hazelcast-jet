@@ -208,8 +208,9 @@ public class CooperativeProcessorTaskletTest {
     }
 
     private CooperativeProcessorTasklet createTasklet() {
+        // TODO
         final CooperativeProcessorTasklet t = new CooperativeProcessorTasklet(
-                context, processor, instreams, outstreams);
+                context, processor, instreams, outstreams, null, null, null);
         t.init(new CompletableFuture<>());
         return t;
     }

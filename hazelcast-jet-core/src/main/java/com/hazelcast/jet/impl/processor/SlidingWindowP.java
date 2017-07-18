@@ -16,12 +16,14 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.core.PartitionAware;
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.AggregateOperation;
-import com.hazelcast.jet.Watermark;
+import com.hazelcast.jet.SnapshotStorage;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
+import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 
@@ -33,6 +35,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.LongStream;
 
+import static com.hazelcast.jet.Traversers.traverseIterable;
+import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.function.DistributedComparator.naturalOrder;
 import static java.lang.Math.min;
 import static java.util.Collections.emptyMap;
@@ -55,23 +59,28 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     private final DistributedToLongFunction<? super T> getFrameTimestampF;
     private final Function<? super T, ?> getKeyF;
     private final AggregateOperation<? super T, A, R> aggrOp;
+    private final boolean isLastStage;
 
     private final FlatMapper<Watermark, Object> flatMapper;
 
     private long nextFrameTsToEmit = Long.MIN_VALUE;
     private final A emptyAcc;
-    private Traverser<Object> finalTraverser;
+    private Traverser<Object> flushTraverser;
+    private long topTs = Long.MIN_VALUE;
+    private Traverser<Entry<SnapshotKey, A>> snapshotTraverser;
 
     public SlidingWindowP(
             Function<? super T, ?> getKeyF,
             DistributedToLongFunction<? super T> getFrameTimestampF,
             WindowDefinition winDef,
-            AggregateOperation<? super T, A, R> aggrOp
+            AggregateOperation<? super T, A, R> aggrOp,
+            boolean isLastStage
     ) {
         this.wDef = winDef;
         this.getFrameTimestampF = getFrameTimestampF;
         this.getKeyF = getKeyF;
         this.aggrOp = aggrOp;
+        this.isLastStage = isLastStage;
 
         this.flatMapper = flatMapper(
                 wm -> windowTraverserAndEvictor(wm.timestamp())
@@ -88,6 +97,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         A acc = tsToKeyToAcc.computeIfAbsent(frameTimestamp, x -> new HashMap<>())
                             .computeIfAbsent(key, k -> aggrOp.createAccumulatorF().get());
         aggrOp.accumulateItemF().accept(acc, t);
+        topTs = Math.max(topTs, frameTimestamp);
         return true;
     }
 
@@ -98,17 +108,18 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
-        if (finalTraverser == null) {
+        return flushBuffers();
+    }
+
+    private boolean flushBuffers() {
+        if (flushTraverser == null) {
             if (tsToKeyToAcc.isEmpty()) {
                 return true;
             }
-            long topTs = tsToKeyToAcc
-                    .keySet().stream()
-                    .max(naturalOrder())
-                    .get();
-            finalTraverser = windowTraverserAndEvictor(topTs + wDef.frameLength());
+            flushTraverser = windowTraverserAndEvictor(topTs + wDef.frameLength())
+                    .onFirstNull(() -> flushTraverser = null);
         }
-        return emitFromTraverser(finalTraverser);
+        return emitFromTraverser(flushTraverser);
     }
 
     private Traverser<Object> windowTraverserAndEvictor(long endTsExclusive) {
@@ -133,7 +144,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         long rangeStart = nextFrameTsToEmit;
         nextFrameTsToEmit = wDef.higherFrameTs(endTsExclusive);
         return Traversers.traverseStream(range(rangeStart, nextFrameTsToEmit, wDef.frameLength()).boxed())
-                         .flatMap(frameTs -> Traversers.traverseIterable(computeWindow(frameTs).entrySet())
+                         .flatMap(frameTs -> traverseIterable(computeWindow(frameTs).entrySet())
                                .map(e -> new TimestampedEntry<>(
                                        frameTs, e.getKey(), aggrOp.finishAccumulationF().apply(e.getValue())))
                                .onFirstNull(() -> completeWindow(frameTs)));
@@ -184,5 +195,52 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         return start >= end
                 ? LongStream.empty()
                 : LongStream.iterate(start, n -> n + step).limit(1 + (end - start - 1) / step);
+    }
+
+    @Override
+    public EStateType getStateType() {
+        return EStateType.PARTITIONED;
+    }
+
+    @Override
+    public boolean saveSnapshot(SnapshotStorage storage) {
+        if (isLastStage) {
+            if (snapshotTraverser == null) {
+                snapshotTraverser = traverseIterable(tsToKeyToAcc.entrySet())
+                        .flatMap(entry -> traverseIterable(entry.getValue().entrySet())
+                                .map(entry2 -> entry(new SnapshotKey(entry.getKey(), entry2.getKey()), entry2.getValue()))
+                        )
+                        .onFirstNull(() -> snapshotTraverser = null);
+            }
+            return emitSnapshotFromTraverser(storage, snapshotTraverser);
+        } else {
+            return flushBuffers();
+        }
+    }
+
+    @Override
+    public void restoreSnapshotKey(Object key, Object value) {
+        Map.Entry<Long, Object> k = (Entry<Long, Object>) key;
+        tsToKeyToAcc.computeIfAbsent(k.getKey(), x -> new HashMap<>())
+                    .merge(key, (A) value, (o, n) -> {
+                        aggrOp.combineAccumulatorsF().accept(o, n);
+                        return o.equals(emptyAcc) ? null : o;
+                    });
+        topTs = Math.max(topTs, k.getKey());
+    }
+
+    private static class SnapshotKey implements PartitionAware<Object> {
+        final long timestamp;
+        final Object key;
+
+        private SnapshotKey(long timestamp, Object key) {
+            this.timestamp = timestamp;
+            this.key = key;
+        }
+
+        @Override
+        public Object getPartitionKey() {
+            return key;
+        }
     }
 }

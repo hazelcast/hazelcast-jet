@@ -125,6 +125,11 @@ public interface ProcessorMetaSupplier extends Serializable {
          * will be asked to create once deserialized on each member.
          */
         int localParallelism();
+
+        /**
+         * Returns true, if snapshots will be saved for this job.
+         */
+        boolean snapshottingEnabled();
     }
 
 }

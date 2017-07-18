@@ -370,8 +370,8 @@ public final class Processors {
                 getTimestampF,
                 timestampKind,
                 windowDef,
-                aggregateOperation
-        );
+                aggregateOperation,
+                true);
     }
 
     /**
@@ -414,8 +414,8 @@ public final class Processors {
                 getTimestampF,
                 timestampKind,
                 tumblingByFrame,
-                aggregateOperation.withFinish(identity())
-        );
+                aggregateOperation.withFinish(identity()),
+                false);
     }
 
     /**
@@ -449,12 +449,12 @@ public final class Processors {
             @Nonnull AggregateOperation<?, A, R> aggregateOperation
     ) {
         return aggregateByKeyAndWindow(
-                TimestampedEntry<K, A>::getKey,
+                TimestampedEntry::getKey,
                 TimestampedEntry::getTimestamp,
                 TimestampKind.FRAME,
                 windowDef,
-                withCombiningAccumulate(TimestampedEntry<K, A>::getValue, aggregateOperation)
-        );
+                withCombiningAccumulate(TimestampedEntry<K, A>::getValue, aggregateOperation),
+                true);
     }
 
     /**
@@ -468,6 +468,8 @@ public final class Processors {
      *                      event timestamp or the frame timestamp
      * @param windowDef definition of the window to compute
      * @param aggregateOperation aggregate operation to perform on each group in a window
+     * @param isLastStage if this is the last stage of multi-stage setup
+     *
      * @param <T> type of stream item
      * @param <K> type of grouping key
      * @param <A> type of the aggregate operation's accumulator
@@ -479,15 +481,16 @@ public final class Processors {
             @Nonnull DistributedToLongFunction<? super T> getTimestampF,
             @Nonnull TimestampKind timestampKind,
             @Nonnull WindowDefinition windowDef,
-            @Nonnull AggregateOperation<? super T, A, R> aggregateOperation
-    ) {
+            @Nonnull AggregateOperation<? super T, A, R> aggregateOperation,
+            boolean isLastStage) {
         return () -> new SlidingWindowP<T, A, R>(
                 getKeyF,
                 timestampKind == EVENT
                         ? item -> windowDef.higherFrameTs(getTimestampF.applyAsLong(item))
                         : getTimestampF,
                 windowDef,
-                aggregateOperation);
+                aggregateOperation,
+                isLastStage);
     }
 
     /**

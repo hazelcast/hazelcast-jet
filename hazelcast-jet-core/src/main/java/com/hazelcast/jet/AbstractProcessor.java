@@ -20,6 +20,7 @@ import com.hazelcast.logging.ILogger;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import java.util.Map.Entry;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
@@ -63,6 +64,7 @@ public abstract class AbstractProcessor implements Processor {
     private Outbox outbox;
 
     private Object pendingItem;
+    private Entry<?, ?> pendingSnapshotItem;
 
     /**
      * Specifies what this processor's {@link #isCooperative()} method will return.
@@ -390,6 +392,25 @@ public abstract class AbstractProcessor implements Processor {
         for (; item != null; item = traverser.next()) {
             if (!tryEmit(ordinal, item)) {
                 pendingItem = item;
+                return false;
+            }
+        }
+        return true;
+    }
+
+    protected <T extends Entry<?, ?>> boolean emitSnapshotFromTraverser(
+            SnapshotStorage storage, @Nonnull Traverser<T> traverser
+    ) {
+        Entry<?, ?> item;
+        if (pendingSnapshotItem != null) {
+            item = pendingSnapshotItem;
+            pendingSnapshotItem = null;
+        } else {
+            item = traverser.next();
+        }
+        for (; item != null; item = traverser.next()) {
+            if (!storage.offer(item.getKey(), item.getValue())) {
+                pendingSnapshotItem = item;
                 return false;
             }
         }

@@ -65,6 +65,7 @@ public class ExecutionContext {
 
     private final NodeEngine nodeEngine;
     private final ExecutionService execService;
+    private SnapshotState snapshotState;
 
     public ExecutionContext(NodeEngine nodeEngine, ExecutionService execService,
                             long jobId, long executionId, Address coordinator, Set<Address> participants) {
@@ -81,7 +82,9 @@ public class ExecutionContext {
         // available to be completed in the case of init failure
         procSuppliers = unmodifiableList(plan.getProcessorSuppliers());
         processors = plan.getProcessors();
-        plan.initialize(nodeEngine, executionId);
+        snapshotState = new SnapshotState();
+        plan.initialize(nodeEngine, jobId, executionId, snapshotState);
+        snapshotState.initStoreSnapshotTaskletsCount(plan.countStoreSnapshotTasklets());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
         senderMap = unmodifiableMap(plan.getSenderMap());
         tasklets = plan.getTasklets();
@@ -119,6 +122,14 @@ public class ExecutionContext {
         } finally {
             executionLock.unlock();
         }
+    }
+
+    public CompletionStage<Void> initiateSnapshot(long snapshotId) {
+        return snapshotState.startNewSnapshot(snapshotId);
+    }
+
+    public CompletionStage<Void> getJobFuture() {
+        return jobFuture;
     }
 
     public long getJobId() {

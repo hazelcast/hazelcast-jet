@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.coordination;
 
 import com.hazelcast.core.ExecutionCallback;
+import com.hazelcast.core.IMap;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.cluster.impl.MembersView;
@@ -24,18 +25,23 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.TopologyChangedException;
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.impl.execution.MasterSnapshotRecord;
 import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.operation.CompleteOperation;
+import com.hazelcast.jet.impl.operation.DoSnapshotOperation;
 import com.hazelcast.jet.impl.operation.ExecuteOperation;
 import com.hazelcast.jet.impl.operation.InitOperation;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
+import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.map.AbstractEntryProcessor;
 import com.hazelcast.spi.InternalCompletableFuture;
 import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -45,6 +51,8 @@ import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -67,6 +75,8 @@ import static java.util.stream.Collectors.toList;
 
 public class MasterContext {
 
+    private static final String SNAPSHOTS_MAP_NAME = "__jet.jobs.snapshots";
+
     private final NodeEngineImpl nodeEngine;
     private final JobCoordinationService coordinationService;
     private final ILogger logger;
@@ -78,6 +88,10 @@ public class MasterContext {
     private volatile long executionId;
     private volatile long jobStartTime;
     private volatile Map<MemberInfo, ExecutionPlan> executionPlanMap;
+
+    private volatile long masterSnapshotId;
+    private volatile ScheduledFuture<?> scheduledSnapshotFuture;
+    private volatile Set<String> statefulVertexIds;
 
     MasterContext(NodeEngineImpl nodeEngine, JobCoordinationService coordinationService, JobRecord jobRecord) {
         this.nodeEngine = nodeEngine;
@@ -249,13 +263,71 @@ public class MasterContext {
                     + ": status is " + status);
         }
 
+        statefulVertexIds = executionPlanMap.values().iterator().next().statefulVertexIds();
+
         jobStatus.set(RUNNING);
         logger.fine("Executing " + formatIds(jobId, executionId));
         Function<ExecutionPlan, Operation> operationCtor = plan -> new ExecuteOperation(jobId, executionId);
         invoke(operationCtor, this::onExecuteStepCompleted, completionFuture);
+
+        scheduleSnapshot();
+    }
+
+    private void scheduleSnapshot() {
+        // TODO take the snapshot delay from configuration
+        if (jobStatus.get() == RUNNING) {
+            scheduledSnapshotFuture = nodeEngine.getExecutionService().schedule("initiateSnapshot-" + executionId,
+                    this::initiateSnapshot, 5, TimeUnit.SECONDS);
+        }
+    }
+
+    private void initiateSnapshot() {
+        masterSnapshotId++;
+        LoggingUtil.logFine(logger, "Initiating snapshot %d for job %s", masterSnapshotId, idToString(jobId));
+        nodeEngine.getHazelcastInstance().getMap(SNAPSHOTS_MAP_NAME)
+                  .putIfAbsent(Arrays.asList(jobId, masterSnapshotId), new MasterSnapshotRecord(statefulVertexIds));
+        Function<ExecutionPlan, Operation> factory = plan -> new DoSnapshotOperation(jobId, executionId, masterSnapshotId);
+        invoke(factory, this::onSnapshotCompleted, completionFuture);
+    }
+
+    private void onSnapshotCompleted(Map<MemberInfo, Object> responses) {
+        // check, if all members were successful
+        for (Object r : responses.values()) {
+            if (r instanceof Throwable) {
+                logger.warning(DoSnapshotOperation.class.getSimpleName() + " for job " + jobId + ", execution "
+                        + executionId + " failed on some members: " + r, (Throwable) r);
+                // fail the job
+                completionFuture().completeExceptionally((Throwable) r);
+            }
+        }
+
+        // mark the record in the map as completed
+        IMap<Object, Object> map = nodeEngine.getHazelcastInstance().getMap(SNAPSHOTS_MAP_NAME);
+        long creationTime = (long) map.executeOnKey(Arrays.asList(jobId, masterSnapshotId),
+                new AbstractEntryProcessor<Object, MasterSnapshotRecord>() {
+                    @Override
+                    public Object process(Entry<Object, MasterSnapshotRecord> entry) {
+                        MasterSnapshotRecord msr = entry.getValue();
+                        msr.setComplete(true);
+                        entry.setValue(msr);
+                        return msr.getCreationTime();
+                    }
+                });
+
+        if (logger.isFineEnabled()) {
+            logger.fine(String.format("Snapshot %d for job %s completed in %dms", masterSnapshotId,
+                    idToString(jobId), System.currentTimeMillis() - creationTime));
+        }
+
+        // TODO delete older snapshots
+
+        scheduleSnapshot();
     }
 
     private void onExecuteStepCompleted(Map<MemberInfo, Object> responses) {
+        if (scheduledSnapshotFuture != null) {
+            scheduledSnapshotFuture.cancel(true);
+        }
         invokeComplete(getExecuteResult(responses));
     }
 

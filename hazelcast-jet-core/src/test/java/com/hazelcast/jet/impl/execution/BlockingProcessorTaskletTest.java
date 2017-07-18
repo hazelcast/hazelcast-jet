@@ -309,7 +309,8 @@ public class BlockingProcessorTaskletTest {
     // END BlockingOutbox tests
 
     private BlockingProcessorTasklet createTasklet() {
-        final BlockingProcessorTasklet t = new BlockingProcessorTasklet(context, processor, instreams, outstreams);
+        // TODO
+        final BlockingProcessorTasklet t = new BlockingProcessorTasklet(context, processor, instreams, outstreams, null, null, null);
         t.init(jobFuture);
         return t;
     }

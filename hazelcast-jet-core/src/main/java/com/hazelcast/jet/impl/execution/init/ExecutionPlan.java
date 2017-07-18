@@ -23,6 +23,7 @@ import com.hazelcast.jet.Edge.RoutingPolicy;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processor;
+import com.hazelcast.jet.Processor.EStateType;
 import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.JetService;
@@ -34,8 +35,11 @@ import com.hazelcast.jet.impl.execution.CooperativeProcessorTasklet;
 import com.hazelcast.jet.impl.execution.InboundEdgeStream;
 import com.hazelcast.jet.impl.execution.OutboundCollector;
 import com.hazelcast.jet.impl.execution.OutboundEdgeStream;
+import com.hazelcast.jet.impl.execution.ProcessorTaskletBase;
 import com.hazelcast.jet.impl.execution.ReceiverTasklet;
 import com.hazelcast.jet.impl.execution.SenderTasklet;
+import com.hazelcast.jet.impl.execution.SnapshotState;
+import com.hazelcast.jet.impl.execution.StoreSnapshotTasklet;
 import com.hazelcast.jet.impl.execution.Tasklet;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
@@ -53,6 +57,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -74,11 +79,12 @@ import static java.util.stream.Collectors.toMap;
 public class ExecutionPlan implements IdentifiedDataSerializable {
 
     private final List<Tasklet> tasklets = new ArrayList<>();
-    // dest vertex id --> dest ordinal --> sender addr -> receiver tasklet
+    /** dest vertex id --> dest ordinal --> sender addr -> receiver tasklet */
     private final Map<Integer, Map<Integer, Map<Address, ReceiverTasklet>>> receiverMap = new HashMap<>();
-    // dest vertex id --> dest ordinal --> dest addr --> sender tasklet
+    /** dest vertex id --> dest ordinal --> dest addr --> sender tasklet */
     private final Map<Integer, Map<Integer, Map<Address, SenderTasklet>>> senderMap = new HashMap<>();
 
+    /** Snapshot of partition table used to route items on partitioned edges */
     private Address[] partitionOwners;
 
     private List<VertexDef> vertices = new ArrayList<>();
@@ -106,7 +112,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         this.partitionOwners = partitionOwners;
     }
 
-    public void initialize(NodeEngine nodeEngine, long executionId) {
+    public void initialize(NodeEngine nodeEngine, long jobId, long executionId, SnapshotState snapshotState) {
         this.nodeEngine = nodeEngine;
         this.executionId = executionId;
         initProcSuppliers();
@@ -115,8 +121,25 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         this.ptionArrgmt = new PartitionArrangement(partitionOwners, nodeEngine.getThisAddress());
         JetInstance instance = getJetInstance(nodeEngine);
         for (VertexDef srcVertex : vertices) {
+            Collection<? extends Processor> processors = createProcessors(srcVertex, srcVertex.parallelism());
+
+            // create StoreSnapshotTasklet and the queues to it
+            QueuedPipe<Object>[] queues = null;
+            final boolean savesSnapshot = processors.iterator().next().getStateType() != EStateType.STATELESS;
+            if (savesSnapshot) {
+                queues = new QueuedPipe[srcVertex.parallelism()];
+                for (int i = 0; i < queues.length; i++) {
+                    // TODO configure queue capacity
+                    queues[i] = new OneToOneConcurrentArrayQueue<>(2000);
+                }
+                ConcurrentConveyor<Object> ssConveyor = concurrentConveyor(null, queues);
+                StoreSnapshotTasklet ssTasklet = new StoreSnapshotTasklet(snapshotState, jobId,
+                        new ConcurrentInboundEdgeStream(ssConveyor, 0, 0, true), nodeEngine, srcVertex.name());
+                tasklets.add(ssTasklet);
+            }
+
             int processorIdx = 0;
-            for (Processor p : createProcessors(srcVertex, srcVertex.parallelism())) {
+            for (Processor p : processors) {
                 ILogger logger =
                         nodeEngine.getLogger(p.getClass().getName() + '.' + srcVertex.name() + '#' + processorIdx);
                 ProcCtx context =
@@ -130,11 +153,15 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 // Also populates instance fields: senderMap, receiverMap, tasklets.
                 List<OutboundEdgeStream> outboundStreams = createOutboundEdgeStreams(srcVertex, processorIdx);
                 List<InboundEdgeStream> inboundStreams = createInboundEdgeStreams(srcVertex, processorIdx);
-                tasklets.add(p.isCooperative()
-                        ? new CooperativeProcessorTasklet(context, p, inboundStreams, outboundStreams)
-                        : new BlockingProcessorTasklet(context, p, inboundStreams, outboundStreams)
-                );
-                processors.add(p);
+                ProcessorTaskletBase processorTasklet = p.isCooperative()
+                        ? new CooperativeProcessorTasklet(context, p, inboundStreams, outboundStreams,
+                                snapshotState, savesSnapshot ? queues[processorIdx] : null,
+                                nodeEngine.getSerializationService())
+                        : new BlockingProcessorTasklet(context, p, inboundStreams, outboundStreams,
+                                snapshotState, savesSnapshot ? queues[processorIdx] : null,
+                                nodeEngine.getSerializationService());
+                tasklets.add(processorTasklet);
+                this.processors.add(p);
                 processorIdx++;
             }
         }
@@ -257,8 +284,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             for (Address destAddr : remoteMembers.get()) {
                 final ConcurrentConveyor<Object> conveyor = createConveyorArray(
                         1, edge.sourceVertex().parallelism(), edge.getConfig().getQueueSize())[0];
+                // TODO: blockOnBarrier depending on job configuration
                 final ConcurrentInboundEdgeStream inboundEdgeStream =
-                        new ConcurrentInboundEdgeStream(conveyor, edge.destOrdinal(), edge.priority());
+                        new ConcurrentInboundEdgeStream(conveyor, edge.destOrdinal(), edge.priority(), true);
                 final int destVertexId = edge.destVertex().vertexId();
                 final SenderTasklet t = new SenderTasklet(inboundEdgeStream, nodeEngine,
                         destAddr, executionId, destVertexId, edge.getConfig().getPacketSizeLimit());
@@ -398,14 +426,38 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         final List<InboundEdgeStream> inboundStreams = new ArrayList<>();
         for (EdgeDef inEdge : srcVertex.inboundEdges()) {
             // each tasklet has one input conveyor per edge
+            // TODO blockOnBarrier: take from vertex configuration
             final ConcurrentConveyor<Object> conveyor = localConveyorMap.get(inEdge.edgeId())[processorIdx];
-            inboundStreams.add(new ConcurrentInboundEdgeStream(conveyor, inEdge.destOrdinal(), inEdge.priority()));
+            inboundStreams.add(new ConcurrentInboundEdgeStream(conveyor, inEdge.destOrdinal(), inEdge.priority(), true));
         }
         return inboundStreams;
     }
 
     public List<Processor> getProcessors() {
         return processors;
+    }
+
+    public Set<String> statefulVertexIds() {
+        if (tasklets.isEmpty()) {
+            throw new IllegalStateException("tasklets not yet initialized");
+        }
+
+        Set<String> vertexIds = new HashSet<>();
+        for (Tasklet tasklet : tasklets) {
+            if (tasklet instanceof StoreSnapshotTasklet) {
+                String vertexId = ((StoreSnapshotTasklet) tasklet).getVertexId();
+                boolean res = vertexIds.add(vertexId);
+                assert res : "Duplicate vertex ID: " + vertexId;
+            }
+        }
+
+        return vertexIds;
+    }
+
+    public int countStoreSnapshotTasklets() {
+        int res = (int) tasklets.stream().filter(t -> t instanceof StoreSnapshotTasklet).count();
+        assert res == statefulVertexIds().size();
+        return res;
     }
 }
 

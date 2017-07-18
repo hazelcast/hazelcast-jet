@@ -16,9 +16,8 @@
 
 package com.hazelcast.jet.processor;
 
-import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorMetaSupplier;
-import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.jet.impl.connector.kafka.StreamKafkaP;
 import com.hazelcast.jet.impl.connector.kafka.WriteKafkaP;
 import com.hazelcast.util.Preconditions;
@@ -50,12 +49,12 @@ public final class KafkaProcessors {
      *                   group name, broker address and key/value deserializers
      * @param topics     the list of topics
      */
-    public static DistributedSupplier<Processor> streamKafka(Properties properties, String... topics) {
+    public static ProcessorSupplier streamKafka(Properties properties, String... topics) {
         Preconditions.checkPositive(topics.length, "At least one topic must be supplied");
         Preconditions.checkTrue(properties.containsKey("group.id"), "Properties should contain `group.id`");
         properties.put("enable.auto.commit", false);
 
-        return () -> new StreamKafkaP(properties, topics);
+        return new StreamKafkaP.Supplier(properties, topics);
     }
 
     /**

@@ -40,7 +40,7 @@ public interface WatermarkPolicy {
 
     /**
      * Called to get the current watermark in the absence of an observed
-     * event. The watermark may advance just based on the passage of time.
+     * event. The watermark may advance based just on the passage of time.
      */
     long getCurrentWatermark();
 }
