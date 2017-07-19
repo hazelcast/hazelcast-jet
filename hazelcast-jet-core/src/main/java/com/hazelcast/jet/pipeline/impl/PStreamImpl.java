@@ -27,7 +27,7 @@ import com.hazelcast.jet.pipeline.bag.TwoBags;
 import com.hazelcast.jet.pipeline.GroupAggregation;
 import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
 import com.hazelcast.jet.pipeline.impl.transform.PTransform;
-import com.hazelcast.jet.pipeline.impl.transform.ReplicatedJoinTransform;
+import com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform;
 import com.hazelcast.jet.pipeline.impl.transform.UnaryTransform;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
 
@@ -58,7 +58,7 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
     public <K, E2> PStream<TwoBags<E, E2>> join(
             PStream<E2> s2, JoinOn<K, E, E2> joinOn
     ) {
-        return pipeline.join(asList(this, s2), new ReplicatedJoinTransform(singletonList(joinOn)));
+        return pipeline.attach(asList(this, s2), new HashJoinTransform(singletonList(joinOn), TwoBags.class));
     }
 
     @Override
@@ -66,7 +66,7 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
             PStream<E2> s2, JoinOn<K2, E, E2> joinOn1,
             PStream<E3> s3, JoinOn<K3, E, E3> joinOn2
     ) {
-        return pipeline.join(asList(this, s2, s3), new ReplicatedJoinTransform(asList(joinOn1, joinOn2)));
+        return pipeline.attach(asList(this, s2, s3), new HashJoinTransform(asList(joinOn1, joinOn2), ThreeBags.class));
     }
 
     @Override
@@ -75,7 +75,7 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
             PStream<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
             GroupAggregation<TwoBags<E, E2>, A, R> groupAggr
     ) {
-        return pipeline.join( asList(this, s2),
+        return pipeline.attach(asList(this, s2),
                 new CoGroupTransform<>(asList(thisKeyF, key2F), groupAggr, TwoBags.class));
     }
 
@@ -86,7 +86,7 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
             PStream<E3> s3, DistributedFunction<? super E3, ? extends K> key3F,
             GroupAggregation<ThreeBags<E, E2, E3>, A, R> groupAggr
     ) {
-        return pipeline.join( asList(this, s2, s3),
+        return pipeline.attach(asList(this, s2, s3),
                 new CoGroupTransform<>(asList(thisKeyF, key2F, key3F), groupAggr, ThreeBags.class));
     }
 

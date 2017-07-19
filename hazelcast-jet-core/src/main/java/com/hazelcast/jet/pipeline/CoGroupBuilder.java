@@ -65,7 +65,7 @@ public class CoGroupBuilder<K, E_LEFT> {
                 BagsByTag.class
         );
         PipelineImpl pipeline = (PipelineImpl) clauses.get(leftTag).pstream.getPipeline();
-        return pipeline.join(upstream, transform);
+        return pipeline.attach(upstream, transform);
     }
 
     private Stream<Entry<Tag<?>, CoGroupClause<?, K>>> orderedClauses() {

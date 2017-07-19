@@ -23,10 +23,20 @@ import java.util.List;
 /**
  * Javadoc pending.
  */
-public class ReplicatedJoinTransform implements JoinTransform {
+public class HashJoinTransform implements JoinTransform {
     private final List<JoinOn> joinOns;
+    private final Class bagsType;
 
-    public ReplicatedJoinTransform(List<JoinOn> joinOns) {
+    public HashJoinTransform(List<JoinOn> joinOns, Class bagsType) {
         this.joinOns = joinOns;
+        this.bagsType = bagsType;
+    }
+
+    public List<JoinOn> joinOns() {
+        return joinOns;
+    }
+
+    public Class bagsType() {
+        return bagsType;
     }
 }

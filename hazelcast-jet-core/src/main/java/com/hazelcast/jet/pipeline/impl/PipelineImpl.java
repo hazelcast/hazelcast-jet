@@ -59,10 +59,10 @@ public class PipelineImpl implements Pipeline {
         return output;
     }
 
-    public PStream join(List<PStream> upstream, JoinTransform joinTransform) {
-        PStreamImpl joined = new PStreamImpl(upstream, joinTransform, this);
-        upstream.forEach(u -> addEdge((PStreamImpl) u, joined));
-        return joined;
+    public PStream attach(List<PStream> upstream, JoinTransform joinTransform) {
+        PStreamImpl attached = new PStreamImpl(upstream, joinTransform, this);
+        upstream.forEach(u -> addEdge((PStreamImpl) u, attached));
+        return attached;
     }
 
     public <E> PEnd drainTo(PStreamImpl<E> input, Sink sink) {
