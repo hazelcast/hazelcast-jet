@@ -20,6 +20,7 @@ import com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform;
 import com.hazelcast.jet.pipeline.impl.PipelineImpl;
 import com.hazelcast.jet.pipeline.bag.BagsByTag;
 import com.hazelcast.jet.pipeline.bag.Tag;
+import com.hazelcast.jet.pipeline.tuple.Tuple2;
 
 import java.util.HashMap;
 import java.util.List;
@@ -55,7 +56,7 @@ public class JoinBuilder<E_LEFT> {
         return ind;
     }
 
-    public PStream<BagsByTag> build() {
+    public PStream<Tuple2<E_LEFT, BagsByTag>> build() {
         List<PStream> upstream = orderedClauses()
                 .map(e -> e.getValue().pstream())
                 .collect(toList());

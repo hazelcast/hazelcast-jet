@@ -27,6 +27,7 @@ import com.hazelcast.jet.pipeline.bag.ThreeBags;
 import com.hazelcast.jet.pipeline.CoGroupBuilder;
 import com.hazelcast.jet.pipeline.GroupAggregation;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
+import com.hazelcast.jet.pipeline.tuple.Tuple3;
 
 import java.util.Map.Entry;
 
@@ -51,15 +52,15 @@ public class PipelineJoinAndCoGroup {
     }
 
     private PStream<String> joinDirect() {
-        PStream<ThreeBags<Trade, Product, Broker>> joined = trades.join(
+        PStream<Tuple3<Trade, Iterable<Product>, Iterable<Broker>>> joined = trades.join(
                 products, onKeys(Trade::productId, Product::id),
                 brokers, onKeys(Trade::brokerId, Broker::id));
 
-        return joined.map(bags -> {
-            Iterable<Trade> trades = bags.bag1();
-            Iterable<Product> products = bags.bag2();
-            Iterable<Broker> brokers = bags.bag3();
-            return "" + trades + products + brokers;
+        return joined.map(t -> {
+            Trade trade = t.f1();
+            Iterable<Product> products = t.f2();
+            Iterable<Broker> brokers = t.f3();
+            return "" + trade + products + brokers;
         });
     }
 
@@ -68,13 +69,14 @@ public class PipelineJoinAndCoGroup {
         Tag<Trade> tradeTag = builder.leftTag();
         Tag<Product> productTag = builder.add(products, onKeys(Trade::productId, Product::id));
         Tag<Broker> brokerTag = builder.add(brokers, onKeys(Trade::brokerId, Broker::id));
-        PStream<BagsByTag> joined = builder.build();
+        PStream<Tuple2<Trade, BagsByTag>> joined = builder.build();
 
-        return joined.map(bags -> {
-            Iterable<Trade> trades = bags.get(tradeTag);
+        return joined.map(t -> {
+            Trade trade = t.f1();
+            BagsByTag bags = t.f2();
             Iterable<Product> products = bags.get(productTag);
             Iterable<Broker> brokers = bags.get(brokerTag);
-            return "" + trades + products + brokers;
+            return "" + trade + products + brokers;
         });
     }
 

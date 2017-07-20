@@ -30,6 +30,7 @@ import com.hazelcast.jet.pipeline.impl.transform.PTransform;
 import com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform;
 import com.hazelcast.jet.pipeline.impl.transform.UnaryTransform;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
+import com.hazelcast.jet.pipeline.tuple.Tuple3;
 
 import java.util.List;
 
@@ -55,14 +56,14 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
     }
 
     @Override
-    public <K, E2> PStream<TwoBags<E, E2>> join(
+    public <K, E2> PStream<Tuple2<E, Iterable<E2>>> join(
             PStream<E2> s2, JoinOn<K, E, E2> joinOn
     ) {
         return pipeline.attach(asList(this, s2), new HashJoinTransform(singletonList(joinOn), TwoBags.class));
     }
 
     @Override
-    public <K2, E2, K3, E3> PStream<ThreeBags<E, E2, E3>> join(
+    public <K2, E2, K3, E3> PStream<Tuple3<E, Iterable<E2>, Iterable<E3>>> join(
             PStream<E2> s2, JoinOn<K2, E, E2> joinOn1,
             PStream<E3> s3, JoinOn<K3, E, E3> joinOn2
     ) {

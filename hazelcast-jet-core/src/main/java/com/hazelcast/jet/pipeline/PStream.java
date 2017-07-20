@@ -24,6 +24,7 @@ import com.hazelcast.jet.pipeline.bag.ThreeBags;
 import com.hazelcast.jet.pipeline.impl.transform.Transforms;
 import com.hazelcast.jet.pipeline.impl.transform.UnaryTransform;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
+import com.hazelcast.jet.pipeline.tuple.Tuple3;
 
 import java.util.Map.Entry;
 
@@ -46,11 +47,11 @@ public interface PStream<E> extends PElement {
         return apply(Transforms.groupBy(keyF, aggrOp));
     }
 
-    <K, E2> PStream<TwoBags<E, E2>> join(
+    <K, E2> PStream<Tuple2<E, Iterable<E2>>> join(
             PStream<E2> s1, JoinOn<K, E, E2> joinOn
     );
 
-    <K2, E2, K3, E3> PStream<ThreeBags<E, E2, E3>> join(
+    <K2, E2, K3, E3> PStream<Tuple3<E, Iterable<E2>, Iterable<E3>>> join(
             PStream<E2> s1, JoinOn<K2, E, E2> joinOn1,
             PStream<E3> s2, JoinOn<K3, E, E3> joinOn2
     );
