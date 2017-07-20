@@ -20,6 +20,7 @@ import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.AggregateOperationImpl;
+import com.hazelcast.jet.pipeline.bag.Tag;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -67,10 +68,23 @@ public interface AggregateOperation<T, A, R> extends Serializable {
     DistributedSupplier<A> createAccumulatorF();
 
     /**
-     * A primitive that updates the accumulator state to account for a new item.
+     * A primitive that updates the accumulator state to account for a new
+     * item. The default implementation is a synonym for
+     * {@link #accumulateItemF(Tag) accumulateItemF(Tag.leftTag())}.
      */
     @Nonnull
-    DistributedBiConsumer<? super A, T> accumulateItemF();
+    default DistributedBiConsumer<? super A, T> accumulateItemF() {
+        return accumulateItemF(Tag.leftTag());
+    }
+
+    /**
+     * A primitive that updates the accumulator state to account for a new
+     * item. This overload is used for co-grouping operations which aggregate
+     * over several data streams. The tag argument identifies which of the
+     * contributing streams the returned function will handle.
+     */
+    @Nonnull
+    <E> DistributedBiConsumer<? super A, T> accumulateItemF(Tag<E> tag);
 
     /**
      * A primitive that accepts two accumulators and updates the state of the
@@ -168,5 +182,10 @@ public interface AggregateOperation<T, A, R> extends Serializable {
         Objects.requireNonNull(finishAccumulationF);
         return new AggregateOperationImpl<>(
                 createAccumulatorF, accumulateItemF, combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
+    }
+
+    @Nonnull
+    static <A> AggregateOperationBuilder.Step1<A> withCreate(DistributedSupplier<A> createAccumulatorF) {
+        return new AggregateOperationBuilder.Step1<>(createAccumulatorF);
     }
 }

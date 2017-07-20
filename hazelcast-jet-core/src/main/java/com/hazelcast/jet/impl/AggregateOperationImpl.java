@@ -20,6 +20,7 @@ import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.pipeline.bag.Tag;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -58,6 +59,12 @@ public class AggregateOperationImpl<T, A, R> implements AggregateOperation<T, A,
     @Override @Nonnull
     public DistributedBiConsumer<? super A, T> accumulateItemF() {
         return accumulateItemF;
+    }
+
+    @Nonnull
+    @Override
+    public <E> DistributedBiConsumer<? super A, T> accumulateItemF(Tag<E> tag) {
+        return null;
     }
 
     @Override @Nonnull

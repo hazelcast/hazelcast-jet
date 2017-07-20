@@ -22,10 +22,23 @@ import java.io.Serializable;
  * Javadoc pending.
  */
 public class Tag<E> implements Serializable, Comparable<Tag<?>> {
+    private static final Tag LEFT_TAG = new Tag(0);
+    private static final Tag RIGHT_TAG = new Tag(1);
+
     private final int index;
 
     public Tag(int index) {
         this.index = index;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <E> Tag<E> leftTag() {
+        return LEFT_TAG;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <E> Tag<E> righttTag() {
+        return RIGHT_TAG;
     }
 
     @Override

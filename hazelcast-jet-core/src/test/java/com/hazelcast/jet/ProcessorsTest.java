@@ -296,13 +296,11 @@ public class ProcessorsTest {
     }
 
     private static <T> AggregateOperation<T, List<T>, String> aggregateToListAndString() {
-        return AggregateOperation.of(
-                ArrayList::new,
-                List::add,
-                List::addAll,
-                null,
-                Object::toString
-        );
+        return AggregateOperation
+                .<List<T>>withCreate(ArrayList::new)
+                .<T>andAccumulate(List::add)
+                .andCombine(List::addAll)
+                .andFinish(Object::toString);
     }
 
     private interface TwinConsumer<T> extends BiConsumer<T, T> { }

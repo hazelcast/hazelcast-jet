@@ -57,13 +57,12 @@ public final class AggregateOperations {
      */
     @Nonnull
     public static <T> AggregateOperation<T, LongAccumulator, Long> counting() {
-        return AggregateOperation.of(
-                LongAccumulator::new,
-                (a, item) -> a.addExact(1),
-                LongAccumulator::addExact,
-                LongAccumulator::subtract,
-                LongAccumulator::get
-        );
+        return AggregateOperation
+                .withCreate(LongAccumulator::new)
+                .andAccumulate((LongAccumulator a, T item) -> a.addExact(1))
+                .andCombine(LongAccumulator::addExact)
+                .andDeduct(LongAccumulator::subtract)
+                .andFinish(LongAccumulator::get);
     }
 
     /**
@@ -76,13 +75,12 @@ public final class AggregateOperations {
     public static <T> AggregateOperation<T, LongAccumulator, Long> summingLong(
             @Nonnull DistributedToLongFunction<T> mapToLongF
     ) {
-        return AggregateOperation.of(
-                LongAccumulator::new,
-                (a, item) -> a.addExact(mapToLongF.applyAsLong(item)),
-                LongAccumulator::addExact,
-                LongAccumulator::subtractExact,
-                LongAccumulator::get
-        );
+        return AggregateOperation
+                .withCreate(LongAccumulator::new)
+                .andAccumulate((LongAccumulator a, T item) -> a.addExact(mapToLongF.applyAsLong(item)))
+                .andCombine(LongAccumulator::addExact)
+                .andDeduct(LongAccumulator::subtractExact)
+                .andFinish(LongAccumulator::get);
     }
 
     /**
@@ -95,13 +93,12 @@ public final class AggregateOperations {
     public static <T> AggregateOperation<T, DoubleAccumulator, Double> summingDouble(
             @Nonnull DistributedToDoubleFunction<T> mapToDoubleF
     ) {
-        return AggregateOperation.of(
-                DoubleAccumulator::new,
-                (a, item) -> a.add(mapToDoubleF.applyAsDouble(item)),
-                DoubleAccumulator::add,
-                DoubleAccumulator::subtract,
-                DoubleAccumulator::get
-        );
+        return AggregateOperation
+                .withCreate(DoubleAccumulator::new)
+                .andAccumulate((DoubleAccumulator a, T item) -> a.add(mapToDoubleF.applyAsDouble(item)))
+                .andCombine(DoubleAccumulator::add)
+                .andDeduct(DoubleAccumulator::subtract)
+                .andFinish(DoubleAccumulator::get);
     }
 
     /**
@@ -133,21 +130,19 @@ public final class AggregateOperations {
     public static <T> AggregateOperation<T, MutableReference<T>, T> maxBy(
             @Nonnull DistributedComparator<? super T> comparator
     ) {
-        return AggregateOperation.of(
-                MutableReference::new,
-                (a, i) -> {
+        return AggregateOperation
+                .withCreate(MutableReference<T>::new)
+                .andAccumulate((MutableReference<T> a, T i) -> {
                     if (a.get() == null || comparator.compare(i, a.get()) > 0) {
                         a.set(i);
                     }
-                },
-                (a1, a2) -> {
+                })
+                .andCombine((a1, a2) -> {
                     if (a1.get() == null || comparator.compare(a1.get(), a2.get()) < 0) {
                         a1.set(a2.get());
                     }
-                },
-                null,
-                MutableReference::get
-        );
+                })
+                .andFinish(MutableReference::get);
     }
 
     /**
@@ -162,26 +157,25 @@ public final class AggregateOperations {
     ) {
         // accumulator.value1 is count
         // accumulator.value2 is sum
-        return AggregateOperation.of(
-                LongLongAccumulator::new,
-                (a, i) -> {
+        return AggregateOperation
+                .withCreate(LongLongAccumulator::new)
+                .andAccumulate((LongLongAccumulator a, T i) -> {
                     if (a.getValue1() == Long.MAX_VALUE) {
                         // this is a bit faster overflow check when we know that we are adding 1
                         throw new ArithmeticException("long overflow");
                     }
                     a.setValue1(a.getValue1() + 1);
                     a.setValue2(Math.addExact(a.getValue2(), mapToLongF.applyAsLong(i)));
-                },
-                (a1, a2) -> {
+                })
+                .andCombine((a1, a2) -> {
                     a1.setValue1(Math.addExact(a1.getValue1(), a2.getValue1()));
                     a1.setValue2(Math.addExact(a1.getValue2(), a2.getValue2()));
-                },
-                (a1, a2) -> {
+                })
+                .andDeduct((a1, a2) -> {
                     a1.setValue1(Math.subtractExact(a1.getValue1(), a2.getValue1()));
                     a1.setValue2(Math.subtractExact(a1.getValue2(), a2.getValue2()));
-                },
-                a -> (double) a.getValue2() / a.getValue1()
-        );
+                })
+                .andFinish(a -> (double) a.getValue2() / a.getValue1());
     }
 
     /**
@@ -196,26 +190,25 @@ public final class AggregateOperations {
     ) {
         // accumulator.value1 is count
         // accumulator.value2 is sum
-        return AggregateOperation.of(
-                LongDoubleAccumulator::new,
-                (a, i) -> {
+        return AggregateOperation
+                .withCreate(LongDoubleAccumulator::new)
+                .andAccumulate((LongDoubleAccumulator a, T i) -> {
                     if (a.getValue1() == Long.MAX_VALUE) {
                         // this is a bit faster overflow check when we know that we are adding 1
                         throw new ArithmeticException("long overflow");
                     }
                     a.setValue1(a.getValue1() + 1);
                     a.setValue2(a.getValue2() + mapToDoubleF.applyAsDouble(i));
-                },
-                (a1, a2) -> {
+                })
+                .andCombine((a1, a2) -> {
                     a1.setValue1(Math.addExact(a1.getValue1(), a2.getValue1()));
                     a1.setValue2(a1.getValue2() + a2.getValue2());
-                },
-                (a1, a2) -> {
+                })
+                .andDeduct((a1, a2) -> {
                     a1.setValue1(Math.subtractExact(a1.getValue1(), a2.getValue1()));
                     a1.setValue2(a1.getValue2() - a2.getValue2());
-                },
-                a -> a.getValue2() / a.getValue1()
-        );
+                })
+                .andFinish(a -> a.getValue2() / a.getValue1());
     }
 
     /**
@@ -230,13 +223,13 @@ public final class AggregateOperations {
             @Nonnull DistributedToLongFunction<T> getX,
             @Nonnull DistributedToLongFunction<T> getY
     ) {
-        return AggregateOperation.of(
-                LinTrendAccumulator::new,
-                (a, item) -> a.accumulate(getX.applyAsLong(item), getY.applyAsLong(item)),
-                LinTrendAccumulator::combine,
-                LinTrendAccumulator::deduct,
-                LinTrendAccumulator::finish
-        );
+        return AggregateOperation
+                .withCreate(LinTrendAccumulator::new)
+                .andAccumulate((LinTrendAccumulator a, T item) ->
+                        a.accumulate(getX.applyAsLong(item), getY.applyAsLong(item)))
+                .andCombine(LinTrendAccumulator::combine)
+                .andDeduct(LinTrendAccumulator::deduct)
+                .andFinish(LinTrendAccumulator::finish);
     }
 
     /**
@@ -253,40 +246,40 @@ public final class AggregateOperations {
     ) {
         AggregateOperation[] untypedOps = operations;
 
-        return AggregateOperation.of(
-                () -> {
+        return AggregateOperation
+                .withCreate(() -> {
                     List<Object> res = new ArrayList<>(untypedOps.length);
                     for (AggregateOperation untypedOp : untypedOps) {
                         res.add(untypedOp.createAccumulatorF().get());
                     }
                     return res;
-                },
-                (accs, item) -> {
+                })
+                .andAccumulate((List<Object> accs, T item) -> {
                     for (int i = 0; i < untypedOps.length; i++) {
                         untypedOps[i].accumulateItemF().accept(accs.get(i), item);
                     }
-                },
-                (accs1, accs2) -> {
+                })
+                .andCombine((accs1, accs2) -> {
                     for (int i = 0; i < untypedOps.length; i++) {
                         untypedOps[i].combineAccumulatorsF().accept(accs1.get(i), accs2.get(i));
                     }
-                },
-                // we can support deduct only if all operations do
-                Stream.of(untypedOps).allMatch(o -> o.deductAccumulatorF() != null)
-                        ? (accs1, accs2) -> {
-                            for (int i = 0; i < untypedOps.length; i++) {
-                                untypedOps[i].deductAccumulatorF().accept(accs1.get(i), accs2.get(i));
-                            }
-                        }
-                        : null,
-                accs -> {
+                })
+                .andDeduct(
+                        // we can support deduct only if all operations do
+                        Stream.of(untypedOps).allMatch(o -> o.deductAccumulatorF() != null)
+                                ? (accs1, accs2) -> {
+                                    for (int i = 0; i < untypedOps.length; i++) {
+                                        untypedOps[i].deductAccumulatorF().accept(accs1.get(i), accs2.get(i));
+                                    }
+                                }
+                                : null)
+                .andFinish(accs -> {
                     List<Object> res = new ArrayList<>(untypedOps.length);
                     for (int i = 0; i < untypedOps.length; i++) {
                         res.add(untypedOps[i].finishAccumulationF().apply(accs.get(i)));
                     }
                     return res;
-                }
-        );
+                });
     }
 
     /**
@@ -310,20 +303,22 @@ public final class AggregateOperations {
      * @param downstream an operation which will accept mapped values
      */
     public static <T, U, A, R>
-    AggregateOperation<T, ?, R> mapping(@Nonnull DistributedFunction<? super T, ? extends U> mapF,
-                               @Nonnull AggregateOperation<? super U, A, R> downstream) {
+    AggregateOperation<T, ?, R> mapping(
+            @Nonnull DistributedFunction<? super T, ? extends U> mapF,
+            @Nonnull AggregateOperation<? super U, A, R> downstream
+    ) {
         DistributedBiConsumer<? super A, ? super U> downstreamAccumulateF = downstream.accumulateItemF();
-        return AggregateOperation.of(
-                downstream.createAccumulatorF(),
-                (r, t) -> {
+        return AggregateOperation
+                .withCreate(downstream.createAccumulatorF())
+                .andAccumulate((A a, T t) -> {
                     U mapped = mapF.apply(t);
                     if (mapped != null) {
-                        downstreamAccumulateF.accept(r, mapped);
+                        downstreamAccumulateF.accept(a, mapped);
                     }
-                },
-                downstream.combineAccumulatorsF(),
-                downstream.deductAccumulatorF(),
-                downstream.finishAccumulationF());
+                })
+                .andCombine(downstream.combineAccumulatorsF())
+                .andDeduct(downstream.deductAccumulatorF())
+                .andFinish(downstream.finishAccumulationF());
     }
 
     /**
@@ -340,13 +335,13 @@ public final class AggregateOperations {
      *                          {@code Collection} of the appropriate type
      */
     public static <T, C extends Collection<T>> AggregateOperation<T, C, C> toCollection(
-            DistributedSupplier<C> createCollectionF) {
-        return AggregateOperation.of(
-                createCollectionF,
-                Collection::add,
-                Collection::addAll,
-                null,
-                identity());
+            DistributedSupplier<C> createCollectionF
+    ) {
+        return AggregateOperation
+                .withCreate(createCollectionF)
+                .andAccumulate(Collection<T>::add)
+                .andCombine(Collection::addAll)
+                .andFinish(identity());
     }
 
     /**
@@ -465,14 +460,12 @@ public final class AggregateOperations {
             DistributedSupplier<M> createMapF
     ) {
         DistributedBiConsumer<M, T> accumulateF =
-                (map, element) -> map.merge(getKeyF.apply(element),
-                    getValueF.apply(element), mergeF);
-        return AggregateOperation.of(
-                createMapF,
-                accumulateF,
-                mapMerger(mergeF),
-                null,
-                identity());
+                (map, element) -> map.merge(getKeyF.apply(element), getValueF.apply(element), mergeF);
+        return AggregateOperation
+                .withCreate(createMapF)
+                .andAccumulate(accumulateF)
+                .andCombine(mapMerger(mergeF))
+                .andFinish(identity());
     }
 
     private static <T> DistributedBinaryOperator<T> throwingMerger() {
@@ -482,7 +475,8 @@ public final class AggregateOperations {
     }
 
     private static <K, V, M extends Map<K, V>> DistributedBiConsumer<M, M> mapMerger(
-            DistributedBinaryOperator<V> mergeFunction) {
+            DistributedBinaryOperator<V> mergeFunction
+    ) {
         return (m1, m2) -> {
             for (Map.Entry<K, V> e : m2.entrySet()) {
                 m1.merge(e.getKey(), e.getValue(), mergeFunction);
@@ -525,11 +519,14 @@ public final class AggregateOperations {
             @Nonnull DistributedBinaryOperator<A> combineAccValuesF,
             @Nullable DistributedBinaryOperator<A> deductAccValueF
     ) {
-        return AggregateOperation.of(
-                () -> new MutableReference<>(emptyAccValue),
-                (a, t) -> a.set(combineAccValuesF.apply(a.get(), toAccValueF.apply(t))),
-                (a, b) -> a.set(combineAccValuesF.apply(a.get(), b.get())),
-                deductAccValueF != null ? (a, b) -> a.set(deductAccValueF.apply(a.get(), b.get())) : null,
-                MutableReference::get);
+        return AggregateOperation
+                .withCreate(() -> new MutableReference<>(emptyAccValue))
+                .andAccumulate((MutableReference<A> a, T t) ->
+                        a.set(combineAccValuesF.apply(a.get(), toAccValueF.apply(t))))
+                .andCombine((a, b) -> a.set(combineAccValuesF.apply(a.get(), b.get())))
+                .andDeduct(deductAccValueF != null
+                        ? (a, b) -> a.set(deductAccValueF.apply(a.get(), b.get()))
+                        : null)
+                .andFinish(MutableReference::get);
     }
 }

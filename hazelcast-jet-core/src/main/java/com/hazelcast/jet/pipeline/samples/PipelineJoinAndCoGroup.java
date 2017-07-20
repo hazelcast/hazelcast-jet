@@ -47,7 +47,6 @@ public class PipelineJoinAndCoGroup {
     public static void main(String[] args) {
         PipelineJoinAndCoGroup pipeline = new PipelineJoinAndCoGroup();
         pipeline.coGroupBuild().drainTo(Sinks.writeMap("map"));
-
         pipeline.p.execute(null);
     }
 
