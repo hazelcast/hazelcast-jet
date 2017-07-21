@@ -37,7 +37,7 @@ public class Tag<E> implements Serializable, Comparable<Tag<?>> {
     }
 
     @SuppressWarnings("unchecked")
-    public static <E> Tag<E> righttTag() {
+    public static <E> Tag<E> rightTag() {
         return RIGHT_TAG;
     }
 

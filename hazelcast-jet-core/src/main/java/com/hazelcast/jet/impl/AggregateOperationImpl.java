@@ -17,6 +17,8 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.jet.AggregateOperation;
+import com.hazelcast.jet.AggregateOperation2;
+import com.hazelcast.jet.AggregateOperation3;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -63,7 +65,7 @@ public class AggregateOperationImpl<T, A, R> implements AggregateOperation<T, A,
 
     @Nonnull
     @Override
-    public <E> DistributedBiConsumer<? super A, T> accumulateItemF(Tag<E> tag) {
+    public <E> DistributedBiConsumer<? super A, E> accumulateItemF(Tag<E> tag) {
         return null;
     }
 
@@ -80,5 +82,56 @@ public class AggregateOperationImpl<T, A, R> implements AggregateOperation<T, A,
     @Override @Nonnull
     public DistributedFunction<? super A, R> finishAccumulationF() {
         return finishAccumulationF;
+    }
+
+    public static class Arity2<T1, T2, A, R>
+            extends AggregateOperationImpl<T1, A, R>
+            implements AggregateOperation2<T1, T2, A, R> {
+
+        private final DistributedBiConsumer<? super A, T2> accumulateItemF2;
+
+        public Arity2(@Nonnull DistributedSupplier<A> createAccumulatorF,
+               @Nonnull DistributedBiConsumer<? super A, T1> accumulateItemF1,
+               @Nonnull DistributedBiConsumer<? super A, T2> accumulateItemF2,
+               @Nonnull DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF,
+               @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorF,
+               @Nonnull DistributedFunction<? super A, R> finishAccumulationF
+        ) {
+            super(createAccumulatorF, accumulateItemF1, combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
+            this.accumulateItemF2 = accumulateItemF2;
+        }
+
+        @Nonnull
+        @Override
+        public DistributedBiConsumer<? super A, T2> accumulateItemF2() {
+            return accumulateItemF2;
+        }
+    }
+
+    public static class Arity3<T1, T2, T3, A, R>
+            extends Arity2<T1, T2, A, R>
+            implements AggregateOperation3<T1, T2, T3, A, R> {
+
+        private final DistributedBiConsumer<? super A, T3> accumulateItemF3;
+
+        public Arity3(@Nonnull DistributedSupplier<A> createAccumulatorF,
+               @Nonnull DistributedBiConsumer<? super A, T1> accumulateItemF1,
+               @Nonnull DistributedBiConsumer<? super A, T2> accumulateItemF2,
+               @Nonnull DistributedBiConsumer<? super A, T3> accumulateItemF3,
+               @Nonnull DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF,
+               @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorF,
+               @Nonnull DistributedFunction<? super A, R> finishAccumulationF
+        ) {
+            super(createAccumulatorF,
+                    accumulateItemF1, accumulateItemF2,
+                    combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
+            this.accumulateItemF3 = accumulateItemF3;
+        }
+
+        @Nonnull
+        @Override
+        public DistributedBiConsumer<? super A, T3> accumulateItemF3() {
+            return accumulateItemF3;
+        }
     }
 }

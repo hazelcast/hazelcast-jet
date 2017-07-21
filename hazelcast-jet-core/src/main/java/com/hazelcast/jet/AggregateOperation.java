@@ -84,7 +84,7 @@ public interface AggregateOperation<T, A, R> extends Serializable {
      * contributing streams the returned function will handle.
      */
     @Nonnull
-    <E> DistributedBiConsumer<? super A, T> accumulateItemF(Tag<E> tag);
+    <E> DistributedBiConsumer<? super A, E> accumulateItemF(Tag<E> tag);
 
     /**
      * A primitive that accepts two accumulators and updates the state of the

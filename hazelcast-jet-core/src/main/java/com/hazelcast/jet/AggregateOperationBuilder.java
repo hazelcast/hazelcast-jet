@@ -33,61 +33,223 @@ public class AggregateOperationBuilder {
             this.createAccumulatorF = createAccumulatorF;
         }
 
-        public <T> Step2<T, A> andAccumulate(DistributedBiConsumer<? super A, T> accumulateItemF) {
-            return new Step2<>(this, accumulateItemF);
+        public <T1> Step2Arity1<T1, A> andAccumulate(DistributedBiConsumer<? super A, T1> accumulateItemF) {
+            return new Step2Arity1<>(this, accumulateItemF);
+        }
+
+        public <T1> Step2Arity1<T1, A> andAccumulate1(DistributedBiConsumer<? super A, T1> accumulateItemF1) {
+            return new Step2Arity1<>(this, accumulateItemF1);
         }
     }
 
-    public static class Step2<T, A> {
+    public static class Step2Arity1<T1, A> {
         final DistributedSupplier<A> createAccumulatorF;
-        final DistributedBiConsumer<? super A, T> accumulateItemF;
+        final DistributedBiConsumer<? super A, T1> accumulateItemF1;
 
-        Step2(Step1<A> step1, DistributedBiConsumer<? super A, T> accumulateItemF) {
+        Step2Arity1(Step1<A> step1,
+              DistributedBiConsumer<? super A, T1> accumulateItemF1
+        ) {
             this.createAccumulatorF = step1.createAccumulatorF;
-            this.accumulateItemF = accumulateItemF;
+            this.accumulateItemF1 = accumulateItemF1;
         }
 
-        public Step3<T, A> andCombine(DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF) {
-           return new Step3<>(this, combineAccumulatorsF);
+        public <T2> Step2Arity2<T1, T2, A> andAccumulate2(DistributedBiConsumer<? super A, T2> accumulateItemF2) {
+            return new Step2Arity2<>(this, accumulateItemF2);
+        }
+
+        public Step3Arity1<T1, A> andCombine(DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF) {
+            return new Step3Arity1<>(this, combineAccumulatorsF);
         }
     }
 
-    public static class Step3<T, A> {
+    public static class Step3Arity1<T1, A> {
         private final DistributedSupplier<A> createAccumulatorF;
-        private final DistributedBiConsumer<? super A, T> accumulateItemF;
+        private final DistributedBiConsumer<? super A, T1> accumulateItemF1;
         private final DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF;
 
-        Step3(Step2<T, A> step2, DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF) {
+        Step3Arity1(Step2Arity1<T1, A> step2, DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF) {
             this.createAccumulatorF = step2.createAccumulatorF;
-            this.accumulateItemF = step2.accumulateItemF;
+            this.accumulateItemF1 = step2.accumulateItemF1;
             this.combineAccumulatorsF = combineAccumulatorsF;
         }
 
-        public Step4<T, A> andDeduct(DistributedBiConsumer<? super A, ? super A> deductAccumulatorF) {
-            return new Step4<>(this, deductAccumulatorF);
+        public Step4Arity1<T1, A> andDeduct(DistributedBiConsumer<? super A, ? super A> deductAccumulatorF) {
+            return new Step4Arity1<>(this, deductAccumulatorF);
         }
 
-        public <R> AggregateOperationImpl<T, A, R> andFinish(DistributedFunction<? super A, R> finishAccumulationF) {
-            return new AggregateOperationImpl<>(createAccumulatorF, accumulateItemF,
-                    combineAccumulatorsF, null, finishAccumulationF);
+        public <R> AggregateOperation<T1, A, R> andFinish(
+                DistributedFunction<? super A, R> finishAccumulationF
+        ) {
+            return new AggregateOperationImpl<>(
+                    createAccumulatorF, accumulateItemF1, combineAccumulatorsF, null, finishAccumulationF);
         }
     }
 
-    public static class Step4<T, A> {
+    public static class Step4Arity1<T1, A> {
         private final DistributedSupplier<A> createAccumulatorF;
-        private final DistributedBiConsumer<? super A, T> accumulateItemF;
+        private final DistributedBiConsumer<? super A, T1> accumulateItemF1;
         private final DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF;
         private final DistributedBiConsumer<? super A, ? super A> deductAccumulatorF;
 
-        Step4(Step3<T, A> step3, DistributedBiConsumer<? super A, ? super A> deductAccumulatorF) {
+        Step4Arity1(Step3Arity1<T1, A> step3, DistributedBiConsumer<? super A, ? super A> deductAccumulatorF) {
             this.createAccumulatorF = step3.createAccumulatorF;
-            this.accumulateItemF = step3.accumulateItemF;
+            this.accumulateItemF1 = step3.accumulateItemF1;
             this.combineAccumulatorsF = step3.combineAccumulatorsF;
             this.deductAccumulatorF = deductAccumulatorF;
         }
 
-        public <R> AggregateOperationImpl<T, A, R> andFinish(DistributedFunction<? super A, R> finishAccumulationF) {
-            return new AggregateOperationImpl<>(createAccumulatorF, accumulateItemF,
+        public <R> AggregateOperation<T1, A, R> andFinish(DistributedFunction<? super A, R> finishAccumulationF) {
+            return new AggregateOperationImpl<>(createAccumulatorF, accumulateItemF1,
+                    combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
+        }
+    }
+
+    public static class Step2Arity2<T1, T2, A> {
+        final DistributedSupplier<A> createAccumulatorF;
+        final DistributedBiConsumer<? super A, T1> accumulateItemF1;
+        final DistributedBiConsumer<? super A, T2> accumulateItemF2;
+
+        Step2Arity2(Step2Arity1<T1, A> step1, DistributedBiConsumer<? super A, T2> accumulateItemF2) {
+            this.createAccumulatorF = step1.createAccumulatorF;
+            this.accumulateItemF1 = step1.accumulateItemF1;
+            this.accumulateItemF2 = accumulateItemF2;
+        }
+
+        public Step3Arity2<T1, T2, A> andCombine(DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF) {
+            return new Step3Arity2<>(this, combineAccumulatorsF);
+        }
+    }
+
+    public static class Step3Arity2<T1, T2, A> {
+        private final DistributedSupplier<A> createAccumulatorF;
+        private final DistributedBiConsumer<? super A, T1> accumulateItemF1;
+        private final DistributedBiConsumer<? super A, T2> accumulateItemF2;
+        private final DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF;
+
+        Step3Arity2(Step2Arity2<T1, T2, A> step2Arity2,
+                    DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF
+        ) {
+            this.createAccumulatorF = step2Arity2.createAccumulatorF;
+            this.accumulateItemF1 = step2Arity2.accumulateItemF1;
+            this.accumulateItemF2 = step2Arity2.accumulateItemF2;
+            this.combineAccumulatorsF = combineAccumulatorsF;
+        }
+
+        public Step4Arity2<T1, T2, A> andDeduct(DistributedBiConsumer<? super A, ? super A> deductAccumulatorF) {
+            return new Step4Arity2<>(this, deductAccumulatorF);
+        }
+
+        public <R> AggregateOperation2<T1, T2, A, R> andFinish(
+                DistributedFunction<? super A, R> finishAccumulationF
+        ) {
+            return new AggregateOperationImpl.Arity2<>(createAccumulatorF,
+                    accumulateItemF1, accumulateItemF2,
+                    combineAccumulatorsF, null, finishAccumulationF);
+        }
+    }
+
+    public static class Step4Arity2<T1, T2, A> {
+        private final DistributedSupplier<A> createAccumulatorF;
+        private final DistributedBiConsumer<? super A, T1> accumulateItemF1;
+        private final DistributedBiConsumer<? super A, T2> accumulateItemF2;
+        private final DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF;
+        private final DistributedBiConsumer<? super A, ? super A> deductAccumulatorF;
+
+        Step4Arity2(Step3Arity2<T1, T2, A> step3Arity2,
+                    DistributedBiConsumer<? super A, ? super A> deductAccumulatorF
+        ) {
+            this.createAccumulatorF = step3Arity2.createAccumulatorF;
+            this.accumulateItemF1 = step3Arity2.accumulateItemF1;
+            this.accumulateItemF2 = step3Arity2.accumulateItemF2;
+            this.combineAccumulatorsF = step3Arity2.combineAccumulatorsF;
+            this.deductAccumulatorF = deductAccumulatorF;
+        }
+
+        public <R> AggregateOperation2<T1, T2, A, R> andFinish(
+                DistributedFunction<? super A, R> finishAccumulationF
+        ) {
+            return new AggregateOperationImpl.Arity2<>(createAccumulatorF,
+                    accumulateItemF1, accumulateItemF2,
+                    combineAccumulatorsF, null, finishAccumulationF);
+        }
+    }
+
+    public static class Step2Arity3<T1, T2, T3, A> {
+        final DistributedSupplier<A> createAccumulatorF;
+        final DistributedBiConsumer<? super A, T1> accumulateItemF1;
+        final DistributedBiConsumer<? super A, T2> accumulateItemF2;
+        final DistributedBiConsumer<? super A, T3> accumulateItemF3;
+
+        Step2Arity3(Step1<A> step1,
+                    DistributedBiConsumer<? super A, T1> accumulateItemF1,
+                    DistributedBiConsumer<? super A, T2> accumulateItemF2,
+                    DistributedBiConsumer<? super A, T3> accumulateItemF3
+        ) {
+            this.createAccumulatorF = step1.createAccumulatorF;
+            this.accumulateItemF1 = accumulateItemF1;
+            this.accumulateItemF2 = accumulateItemF2;
+            this.accumulateItemF3 = accumulateItemF3;
+        }
+
+        public Step3Arity3<T1, T2, T3, A> andCombine(DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF) {
+            return new Step3Arity3<>(this, combineAccumulatorsF);
+        }
+    }
+
+    public static class Step3Arity3<T1, T2, T3, A> {
+        private final DistributedSupplier<A> createAccumulatorF;
+        private final DistributedBiConsumer<? super A, T1> accumulateItemF1;
+        private final DistributedBiConsumer<? super A, T2> accumulateItemF2;
+        private final DistributedBiConsumer<? super A, T3> accumulateItemF3;
+        private final DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF;
+
+        Step3Arity3(Step2Arity3<T1, T2, T3, A> step2Arity3,
+                    DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF
+        ) {
+            this.createAccumulatorF = step2Arity3.createAccumulatorF;
+            this.accumulateItemF1 = step2Arity3.accumulateItemF1;
+            this.accumulateItemF2 = step2Arity3.accumulateItemF2;
+            this.accumulateItemF3 = step2Arity3.accumulateItemF3;
+            this.combineAccumulatorsF = combineAccumulatorsF;
+        }
+
+        public Step4Arity3<T1, T2, T3, A> andDeduct(DistributedBiConsumer<? super A, ? super A> deductAccumulatorF) {
+            return new Step4Arity3<>(this, deductAccumulatorF);
+        }
+
+        public <R> AggregateOperation3<T1, T2, T3, A, R> andFinish(
+                DistributedFunction<? super A, R> finishAccumulationF
+        ) {
+            return new AggregateOperationImpl.Arity3<>(createAccumulatorF,
+                    accumulateItemF1, accumulateItemF2, accumulateItemF3,
+                    combineAccumulatorsF, null, finishAccumulationF);
+        }
+    }
+
+    public static class Step4Arity3<T1, T2, T3, A> {
+        private final DistributedSupplier<A> createAccumulatorF;
+        private final DistributedBiConsumer<? super A, T1> accumulateItemF1;
+        private final DistributedBiConsumer<? super A, T2> accumulateItemF2;
+        private final DistributedBiConsumer<? super A, T3> accumulateItemF3;
+        private final DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF;
+        private final DistributedBiConsumer<? super A, ? super A> deductAccumulatorF;
+
+        Step4Arity3(Step3Arity3<T1, T2, T3, A> step3Arity3,
+                    DistributedBiConsumer<? super A, ? super A> deductAccumulatorF
+        ) {
+            this.createAccumulatorF = step3Arity3.createAccumulatorF;
+            this.accumulateItemF1 = step3Arity3.accumulateItemF1;
+            this.accumulateItemF2 = step3Arity3.accumulateItemF2;
+            this.accumulateItemF3 = step3Arity3.accumulateItemF3;
+            this.combineAccumulatorsF = step3Arity3.combineAccumulatorsF;
+            this.deductAccumulatorF = deductAccumulatorF;
+        }
+
+        public <R> AggregateOperation3<T1, T2, T3, A, R> andFinish(
+                DistributedFunction<? super A, R> finishAccumulationF
+        ) {
+            return new AggregateOperationImpl.Arity3<>(createAccumulatorF,
+                    accumulateItemF1, accumulateItemF2, accumulateItemF3,
                     combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
         }
     }
