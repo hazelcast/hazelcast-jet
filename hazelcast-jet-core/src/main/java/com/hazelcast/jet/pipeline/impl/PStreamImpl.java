@@ -35,9 +35,9 @@ import com.hazelcast.jet.pipeline.tuple.Tuple3;
 
 import java.util.List;
 
+import static com.hazelcast.jet.pipeline.bag.Tag.tag0;
 import static com.hazelcast.jet.pipeline.bag.Tag.tag1;
 import static com.hazelcast.jet.pipeline.bag.Tag.tag2;
-import static com.hazelcast.jet.pipeline.bag.Tag.tag3;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
@@ -78,22 +78,22 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
     @Override
     public <K, A, E2, R> PStream<Tuple2<K, R>> coGroup(
             DistributedFunction<? super E, ? extends K> thisKeyF,
-            PStream<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
+            PStream<E2> s1, DistributedFunction<? super E2, ? extends K> key1F,
             AggregateOperation2<E, E2, A, R> aggrOp
     ) {
-        return pipeline.attach(asList(this, s2),
-                new CoGroupTransform<>(asList(thisKeyF, key2F), aggrOp, asList(tag1(), tag2())));
+        return pipeline.attach(asList(this, s1),
+                new CoGroupTransform<>(asList(thisKeyF, key1F), aggrOp, asList(tag0(), tag1())));
     }
 
     @Override
     public <K, A, E2, E3, R> PStream<Tuple2<K, R>> coGroup(
             DistributedFunction<? super E, ? extends K> thisKeyF,
-            PStream<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
-            PStream<E3> s3, DistributedFunction<? super E3, ? extends K> key3F,
+            PStream<E2> s1, DistributedFunction<? super E2, ? extends K> key1F,
+            PStream<E3> s2, DistributedFunction<? super E3, ? extends K> key2F,
             AggregateOperation3<E, E2, E3, A, R> aggrOp
     ) {
-        return pipeline.attach(asList(this, s2, s3),
-                new CoGroupTransform<>(asList(thisKeyF, key2F, key3F), aggrOp, asList(tag1(), tag2(), tag3())));
+        return pipeline.attach(asList(this, s1, s2),
+                new CoGroupTransform<>(asList(thisKeyF, key1F, key2F), aggrOp, asList(tag0(), tag1(), tag2())));
     }
 
     @Override

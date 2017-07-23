@@ -142,8 +142,8 @@ public interface AggregateOperation<A, R> extends Serializable {
      * {@code accumulate} primitives replaced by the supplied one.
      */
     @Nonnull
-    AggregateOperation<A, R> withAccumulatorsByTag(
-            @Nonnull Map<Tag, DistributedBiConsumer<? super A, ?>> accumulatorsByTag);
+    AggregateOperation<A, R> withAccumulateFsByTag(
+            @Nonnull Map<Tag, DistributedBiConsumer<? super A, ?>> accumulateFsByTag);
 
     @Nonnull
     <R1> AggregateOperation<A, R1> withFinish(
@@ -159,7 +159,7 @@ public interface AggregateOperation<A, R> extends Serializable {
      * aggregate operations:
      * <ul><li>
      *     For fixed arity use {@link
-     *     AggregateOperationBuilder#andAccumulate1(DistributedBiConsumer)
+     *     AggregateOperationBuilder#andAccumulate0(DistributedBiConsumer)
      *     builder.andAccumulate1()}, optionally followed by {@code andAccumulate2()},
      *     {@code andAccumulate3()}. The return type of these methods changes as the
      *     static types of the contributing streams are captured.

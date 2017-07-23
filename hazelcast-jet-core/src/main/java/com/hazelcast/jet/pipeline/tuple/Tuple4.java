@@ -21,17 +21,21 @@ import java.util.Objects;
 /**
  * Javadoc pending.
  */
-public class Tuple4<E1, E2, E3, E4> {
+public class Tuple4<E0, E1, E2, E3> {
+    private E0 f0;
     private E1 f1;
     private E2 f2;
     private E3 f3;
-    private E4 f4;
 
-    public Tuple4(E1 f1, E2 f2, E3 f3, E4 f4) {
+    public Tuple4(E0 f0, E1 f1, E2 f2, E3 f3) {
+        this.f0 = f0;
         this.f1 = f1;
         this.f2 = f2;
         this.f3 = f3;
-        this.f4 = f4;
+    }
+
+    public E0 f0() {
+        return f0;
     }
 
     public E1 f1() {
@@ -46,28 +50,24 @@ public class Tuple4<E1, E2, E3, E4> {
         return f3;
     }
 
-    public E4 f4() {
-        return f4;
-    }
-
     @Override
     public boolean equals(Object obj) {
         final Tuple4 that;
         return this == obj
                 || obj instanceof Tuple4
-                && Objects.equals(this.f1, (that = (Tuple4) obj).f1)
+                && Objects.equals(this.f0, (that = (Tuple4) obj).f0)
+                && Objects.equals(this.f1, that.f1)
                 && Objects.equals(this.f2, that.f2)
-                && Objects.equals(this.f3, that.f3)
-                && Objects.equals(this.f4, that.f4);
+                && Objects.equals(this.f3, that.f3);
     }
 
     @Override
     public int hashCode() {
         int hc = 17;
+        hc = 73 * hc + f0.hashCode();
         hc = 73 * hc + f1.hashCode();
         hc = 73 * hc + f2.hashCode();
         hc = 73 * hc + f3.hashCode();
-        hc = 73 * hc + f4.hashCode();
         return hc;
     }
 }

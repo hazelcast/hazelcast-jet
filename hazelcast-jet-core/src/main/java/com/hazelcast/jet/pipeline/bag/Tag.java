@@ -22,14 +22,19 @@ import java.io.Serializable;
  * Javadoc pending.
  */
 public class Tag<E> implements Serializable, Comparable<Tag<?>> {
-    public static final Tag TAG_1 = new Tag(0);
-    public static final Tag TAG_2 = new Tag(1);
-    public static final Tag TAG_3 = new Tag(2);
+    public static final Tag TAG_0 = new Tag(0);
+    public static final Tag TAG_1 = new Tag(1);
+    public static final Tag TAG_2 = new Tag(2);
 
     private final int index;
 
     public Tag(int index) {
         this.index = index;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> Tag<T> tag0() {
+        return TAG_0;
     }
 
     @SuppressWarnings("unchecked")
@@ -40,11 +45,6 @@ public class Tag<E> implements Serializable, Comparable<Tag<?>> {
     @SuppressWarnings("unchecked")
     public static <T> Tag<T> tag2() {
         return TAG_2;
-    }
-
-    @SuppressWarnings("unchecked")
-    public static <T> Tag<T> tag3() {
-        return TAG_3;
     }
 
     @Override

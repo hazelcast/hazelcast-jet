@@ -21,27 +21,27 @@ import java.util.Objects;
 /**
  * Javadoc pending.
  */
-public class Tuple3<E1, E2, E3> {
+public class Tuple3<E0, E1, E2> {
+    private E0 f0;
     private E1 f1;
     private E2 f2;
-    private E3 f3;
 
-    public Tuple3(E1 f1, E2 f2, E3 f3) {
+    public Tuple3(E0 f0, E1 f1, E2 f2) {
+        this.f0 = f0;
         this.f1 = f1;
         this.f2 = f2;
-        this.f3 = f3;
     }
 
-    public E1 f1() {
+    public E0 f1() {
+        return f0;
+    }
+
+    public E1 f2() {
         return f1;
     }
 
-    public E2 f2() {
+    public E2 f3() {
         return f2;
-    }
-
-    public E3 f3() {
-        return f3;
     }
 
     @Override
@@ -49,17 +49,17 @@ public class Tuple3<E1, E2, E3> {
         final Tuple3 that;
         return this == obj
                 || obj instanceof Tuple3
-                && Objects.equals(this.f1, (that = (Tuple3) obj).f1)
-                && Objects.equals(this.f2, that.f2)
-                && Objects.equals(this.f3, that.f3);
+                && Objects.equals(this.f0, (that = (Tuple3) obj).f0)
+                && Objects.equals(this.f1, that.f1)
+                && Objects.equals(this.f2, that.f2);
     }
 
     @Override
     public int hashCode() {
         int hc = 17;
+        hc = 73 * hc + f0.hashCode();
         hc = 73 * hc + f1.hashCode();
         hc = 73 * hc + f2.hashCode();
-        hc = 73 * hc + f3.hashCode();
         return hc;
     }
 }

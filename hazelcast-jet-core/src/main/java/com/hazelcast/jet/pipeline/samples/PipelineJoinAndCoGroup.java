@@ -73,8 +73,8 @@ public class PipelineJoinAndCoGroup {
         PStream<Tuple2<Trade, BagsByTag>> joined = builder.build();
 
         return joined.map(t -> {
-            Trade trade = t.f1();
-            BagsByTag bags = t.f2();
+            Trade trade = t.f0();
+            BagsByTag bags = t.f1();
             Iterable<Product> products = bags.bag(productTag);
             Iterable<Broker> brokers = bags.bag(brokerTag);
             return "" + trade + products + brokers;
@@ -88,9 +88,9 @@ public class PipelineJoinAndCoGroup {
                 brokers, Broker::classId,
                 AggregateOperation
                         .withCreate(ThreeBags<Trade, Product, Broker>::new)
-                        .<Trade> andAccumulate1((acc, trade) -> acc.bag1().add(trade))
-                        .<Product> andAccumulate2((acc, product) -> acc.bag2().add(product))
-                        .<Broker> andAccumulate3((acc, broker) -> acc.bag3().add(broker))
+                        .<Trade>andAccumulate0((acc, trade) -> acc.bag1().add(trade))
+                        .<Product>andAccumulate1((acc, product) -> acc.bag2().add(product))
+                        .<Broker>andAccumulate2((acc, broker) -> acc.bag3().add(broker))
                         .andCombine(ThreeBags::combineWith)
                         .andFinish(Object::toString));
     }

@@ -18,21 +18,21 @@ package com.hazelcast.jet.pipeline.tuple;
 
 import java.util.Objects;
 
-public class Tuple2<E1, E2> {
+public class Tuple2<E0, E1> {
+    private E0 f0;
     private E1 f1;
-    private E2 f2;
 
-    public Tuple2(E1 f1, E2 f2) {
+    public Tuple2(E0 f0, E1 f1) {
+        this.f0 = f0;
         this.f1 = f1;
-        this.f2 = f2;
+    }
+
+    public E0 f0() {
+        return f0;
     }
 
     public E1 f1() {
         return f1;
-    }
-
-    public E2 f2() {
-        return f2;
     }
 
     @Override
@@ -40,15 +40,15 @@ public class Tuple2<E1, E2> {
         final Tuple2 that;
         return this == obj
                 || obj instanceof Tuple2
-                && Objects.equals(this.f1, (that = (Tuple2) obj).f1)
-                && Objects.equals(this.f2, that.f2);
+                && Objects.equals(this.f0, (that = (Tuple2) obj).f0)
+                && Objects.equals(this.f1, that.f1);
     }
 
     @Override
     public int hashCode() {
         int hc = 17;
+        hc = 73 * hc + f0.hashCode();
         hc = 73 * hc + f1.hashCode();
-        hc = 73 * hc + f2.hashCode();
         return hc;
     }
 }

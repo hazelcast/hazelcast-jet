@@ -47,30 +47,30 @@ public interface PStream<E> extends PElement {
         return apply(Transforms.groupBy(keyF, aggrOp));
     }
 
-    <K, E2> PStream<Tuple2<E, Iterable<E2>>> join(
-            PStream<E2> s1, JoinOn<K, E, E2> joinOn
+    <K, E1> PStream<Tuple2<E, Iterable<E1>>> join(
+            PStream<E1> s1, JoinOn<K, E, E1> joinOn
     );
 
-    <K2, E2, K3, E3> PStream<Tuple3<E, Iterable<E2>, Iterable<E3>>> join(
-            PStream<E2> s1, JoinOn<K2, E, E2> joinOn1,
-            PStream<E3> s2, JoinOn<K3, E, E3> joinOn2
+    <K1, E1, K2, E2> PStream<Tuple3<E, Iterable<E1>, Iterable<E2>>> join(
+            PStream<E1> s1, JoinOn<K1, E, E1> joinOn1,
+            PStream<E2> s2, JoinOn<K2, E, E2> joinOn2
     );
 
     default JoinBuilder<E> joinBuilder() {
         return new JoinBuilder<>(this);
     }
 
-    <K, A, E2, R> PStream<Tuple2<K, R>> coGroup(
+    <K, A, E1, R> PStream<Tuple2<K, R>> coGroup(
             DistributedFunction<? super E, ? extends K> thisKeyF,
-            PStream<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
-            AggregateOperation2<E, E2, A, R> aggrOp
+            PStream<E1> s1, DistributedFunction<? super E1, ? extends K> key1F,
+            AggregateOperation2<E, E1, A, R> aggrOp
     );
 
-    <K, A, E2, E3, R> PStream<Tuple2<K, R>> coGroup(
+    <K, A, E1, E2, R> PStream<Tuple2<K, R>> coGroup(
             DistributedFunction<? super E, ? extends K> thisKeyF,
+            PStream<E1> s1, DistributedFunction<? super E1, ? extends K> key1F,
             PStream<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
-            PStream<E3> s3, DistributedFunction<? super E3, ? extends K> key3F,
-            AggregateOperation3<E, E2, E3, A, R> aggrOp
+            AggregateOperation3<E, E1, E2, A, R> aggrOp
     );
 
     default <K> CoGroupBuilder<K, E> coGroupBuilder(

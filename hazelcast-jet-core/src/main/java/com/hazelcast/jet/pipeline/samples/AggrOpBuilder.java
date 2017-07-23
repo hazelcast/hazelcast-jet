@@ -28,8 +28,8 @@ public class AggrOpBuilder {
     void build1() {
         AggregateOperation2<Integer, String, Holder2<Integer, String>, String> aggrOp = AggregateOperation
                 .withCreate(Holder2<Integer, String>::new)
-                .<Integer>andAccumulate1(Holder2::take1)
-                .<String>andAccumulate2(Holder2::take2)
+                .<Integer>andAccumulate0(Holder2::take1)
+                .<String>andAccumulate1(Holder2::take2)
                 .andCombine(Holder2::combine)
                 .andFinish(Object::toString);
     }

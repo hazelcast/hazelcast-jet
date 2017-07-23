@@ -27,42 +27,47 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Map;
 
+import static com.hazelcast.jet.pipeline.bag.Tag.TAG_0;
 import static com.hazelcast.jet.pipeline.bag.Tag.TAG_1;
 import static com.hazelcast.jet.pipeline.bag.Tag.TAG_2;
-import static com.hazelcast.jet.pipeline.bag.Tag.TAG_3;
+import static com.hazelcast.jet.pipeline.bag.Tag.tag0;
 import static com.hazelcast.jet.pipeline.bag.Tag.tag1;
 import static com.hazelcast.jet.pipeline.bag.Tag.tag2;
-import static com.hazelcast.jet.pipeline.bag.Tag.tag3;
 import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * Javadoc pending.
  */
-public class AggregateOperation3Impl<T1, T2, T3, A, R>
+public class AggregateOperation3Impl<T0, T1, T2, A, R>
         extends AggregateOperationImpl<A, R>
-        implements AggregateOperation3<T1, T2, T3, A, R> {
+        implements AggregateOperation3<T0, T1, T2, A, R> {
 
+    private final DistributedBiConsumer<? super A, ? super T0> accumulateItemF0;
     private final DistributedBiConsumer<? super A, ? super T1> accumulateItemF1;
     private final DistributedBiConsumer<? super A, ? super T2> accumulateItemF2;
-    private final DistributedBiConsumer<? super A, ? super T3> accumulateItemF3;
 
     public AggregateOperation3Impl(@Nonnull DistributedSupplier<A> createAccumulatorF,
+                                   @Nonnull DistributedBiConsumer<? super A, ? super T0> accumulateItemF0,
                                    @Nonnull DistributedBiConsumer<? super A, ? super T1> accumulateItemF1,
                                    @Nonnull DistributedBiConsumer<? super A, ? super T2> accumulateItemF2,
-                                   @Nonnull DistributedBiConsumer<? super A, ? super T3> accumulateItemF3,
                                    @Nonnull DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF,
                                    @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorF,
                                    @Nonnull DistributedFunction<? super A, R> finishAccumulationF
     ) {
         super(createAccumulatorF,
-                accumulatorsByTag(TAG_1, accumulateItemF1, TAG_2, accumulateItemF2, TAG_3, accumulateItemF3),
+                accumulatorsByTag(TAG_0, accumulateItemF0, TAG_1, accumulateItemF1, TAG_2, accumulateItemF2),
                 combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
+        checkNotNull(accumulateItemF0, "accumulateItemF0");
         checkNotNull(accumulateItemF1, "accumulateItemF1");
         checkNotNull(accumulateItemF2, "accumulateItemF2");
-        checkNotNull(accumulateItemF3, "accumulateItemF3");
+        this.accumulateItemF0 = accumulateItemF0;
         this.accumulateItemF1 = accumulateItemF1;
         this.accumulateItemF2 = accumulateItemF2;
-        this.accumulateItemF3 = accumulateItemF3;
+    }
+
+    @Nonnull @Override
+    public DistributedBiConsumer<? super A, ? super T0> accumulateItemF0() {
+        return accumulateItemF0;
     }
 
     @Nonnull @Override
@@ -76,54 +81,49 @@ public class AggregateOperation3Impl<T1, T2, T3, A, R>
     }
 
     @Nonnull @Override
-    public DistributedBiConsumer<? super A, ? super T3> accumulateItemF3() {
-        return accumulateItemF3;
-    }
-
-    @Nonnull @Override
     @SuppressWarnings("unchecked")
     public <T> DistributedBiConsumer<? super A, T> accumulateItemF(Tag<T> tag) {
         DistributedBiConsumer<? super A, ?> accF =
-                tag == TAG_1 ? accumulateItemF1
+                tag == TAG_0 ? accumulateItemF0
+              : tag == TAG_1 ? accumulateItemF1
               : tag == TAG_2 ? accumulateItemF2
-              : tag == TAG_3 ? accumulateItemF3
               : null;
         if (accF == null) {
             throw new IllegalArgumentException(
-                    "AggregateOperation3 recognizes only Tag.tag1(), Tag.tag2() and Tag.tag3()");
+                    "AggregateOperation3 recognizes only Tag.tag0(), Tag.tag1() and Tag.tag2()");
         }
         return (DistributedBiConsumer<? super A, T>) accF;
     }
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    public AggregateOperation<A, R> withAccumulatorsByTag(
-            @Nonnull Map<Tag, DistributedBiConsumer<? super A, ?>> accumulatorsByTag
+    public AggregateOperation<A, R> withAccumulateFsByTag(
+            @Nonnull Map<Tag, DistributedBiConsumer<? super A, ?>> accumulateFsByTag
     ) {
+        Tag<T0> tag0 = tag0();
         Tag<T1> tag1 = tag1();
         Tag<T2> tag2 = tag2();
-        Tag<T3> tag3 = tag3();
+        DistributedBiConsumer<? super A, T0> newAcc0 =
+                (DistributedBiConsumer<? super A, T0>) accumulateFsByTag.get(tag0);
         DistributedBiConsumer<? super A, T1> newAcc1 =
-                (DistributedBiConsumer<? super A, T1>) accumulatorsByTag.get(tag1);
+                (DistributedBiConsumer<? super A, T1>) accumulateFsByTag.get(tag1);
         DistributedBiConsumer<? super A, T2> newAcc2 =
-                (DistributedBiConsumer<? super A, T2>) accumulatorsByTag.get(tag2);
-        DistributedBiConsumer<? super A, T3> newAcc3 =
-                (DistributedBiConsumer<? super A, T3>) accumulatorsByTag.get(tag3);
-        if (newAcc1 == null || newAcc2 == null || newAcc3 == null || accumulatorsByTag.size() != 3) {
+                (DistributedBiConsumer<? super A, T2>) accumulateFsByTag.get(tag2);
+        if (newAcc0 == null || newAcc1 == null || newAcc2 == null || accumulateFsByTag.size() != 3) {
             throw new IllegalArgumentException("AggregateOperation3#withAccumulatorsByTag()" +
-                    " must get a map that has exactly two keys: Tag.tag1(), Tag.tag2() and Tag.tag3().");
+                    " must get a map that has exactly two keys: Tag.tag0(), Tag.tag1() and Tag.tag2().");
         }
         return new AggregateOperation3Impl<>(
-                createAccumulatorF(), newAcc1, newAcc2, newAcc3, combineAccumulatorsF(),
+                createAccumulatorF(), newAcc0, newAcc1, newAcc2, combineAccumulatorsF(),
                 deductAccumulatorF(), finishAccumulationF());
     }
 
     @Override
-    public <R1> AggregateOperation3<T1, T2, T3, A, R1> withFinish(
+    public <R1> AggregateOperation3<T0, T1, T2, A, R1> withFinish(
             @Nonnull DistributedFunction<? super A, R1> finishAccumulationF
     ) {
         return new AggregateOperation3Impl<>(
-                createAccumulatorF(), accumulateItemF1, accumulateItemF2, accumulateItemF3,
+                createAccumulatorF(), accumulateItemF0, accumulateItemF1, accumulateItemF2,
                 combineAccumulatorsF(), deductAccumulatorF(), finishAccumulationF);
     }
 }

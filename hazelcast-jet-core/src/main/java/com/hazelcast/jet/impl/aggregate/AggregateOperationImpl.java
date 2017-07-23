@@ -54,11 +54,11 @@ public class AggregateOperationImpl<A, R> extends AggregateOperationBase<A, R> i
     }
 
     @Nonnull @Override
-    public AggregateOperation<A, R> withAccumulatorsByTag(
-            @Nonnull Map<Tag, DistributedBiConsumer<? super A, ?>> accumulatorsByTag
+    public AggregateOperation<A, R> withAccumulateFsByTag(
+            @Nonnull Map<Tag, DistributedBiConsumer<? super A, ?>> accumulateFsByTag
     ) {
         return new AggregateOperationImpl<>(
-                createAccumulatorF(), accumulatorsByTag, combineAccumulatorsF(),
+                createAccumulatorF(), accumulateFsByTag, combineAccumulatorsF(),
                 deductAccumulatorF(), finishAccumulationF());
     }
 

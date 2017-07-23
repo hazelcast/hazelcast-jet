@@ -25,7 +25,7 @@ import javax.annotation.Nonnull;
 /**
  * Javadoc pending.
  */
-public interface AggregateOperation1<T1, A, R> extends AggregateOperation<A, R> {
+public interface AggregateOperation1<T0, A, R> extends AggregateOperation<A, R> {
 
     /**
      * A primitive that updates the accumulator state to account for a new
@@ -34,20 +34,20 @@ public interface AggregateOperation1<T1, A, R> extends AggregateOperation<A, R> 
      * accumulateItemF(Tag.leftTag())}.
      */
     @Nonnull
-    default DistributedBiConsumer<? super A, ? super T1> accumulateItemF1() {
-        return accumulateItemF(Tag.tag1());
+    default DistributedBiConsumer<? super A, ? super T0> accumulateItemF0() {
+        return accumulateItemF(Tag.tag0());
     }
 
     /**
-     * Synonym for {@link #accumulateItemF1()}.
+     * Synonym for {@link #accumulateItemF0()}.
      */
     @Nonnull
-    default DistributedBiConsumer<? super A, ? super T1> accumulateItemF() {
-        return accumulateItemF1();
+    default DistributedBiConsumer<? super A, ? super T0> accumulateItemF() {
+        return accumulateItemF0();
     }
 
     @Nonnull
-    <R1> AggregateOperation1<T1, A, R1> withFinish(
+    <R1> AggregateOperation1<T0, A, R1> withFinish(
             @Nonnull DistributedFunction<? super A, R1> finishAccumulationF
     );
 
