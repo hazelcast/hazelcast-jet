@@ -16,23 +16,25 @@
 
 package com.hazelcast.jet.pipeline.samples;
 
+import com.hazelcast.jet.aggregate.AggregateOperation;
+import com.hazelcast.jet.pipeline.CoGroupBuilder;
 import com.hazelcast.jet.pipeline.JoinBuilder;
 import com.hazelcast.jet.pipeline.PStream;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.pipeline.bag.Tag;
 import com.hazelcast.jet.pipeline.bag.BagsByTag;
+import com.hazelcast.jet.pipeline.bag.Tag;
 import com.hazelcast.jet.pipeline.bag.ThreeBags;
-import com.hazelcast.jet.pipeline.CoGroupBuilder;
-import com.hazelcast.jet.pipeline.GroupAggregation;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
 import com.hazelcast.jet.pipeline.tuple.Tuple3;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.pipeline.JoinOn.onKeys;
 
+@SuppressFBWarnings("DLS_DEAD_LOCAL_STORE")
 public class PipelineJoinAndCoGroup {
 
     private Pipeline p = Pipeline.create();
@@ -73,8 +75,8 @@ public class PipelineJoinAndCoGroup {
         return joined.map(t -> {
             Trade trade = t.f1();
             BagsByTag bags = t.f2();
-            Iterable<Product> products = bags.get(productTag);
-            Iterable<Broker> brokers = bags.get(brokerTag);
+            Iterable<Product> products = bags.bag(productTag);
+            Iterable<Broker> brokers = bags.bag(brokerTag);
             return "" + trade + products + brokers;
         });
     }
@@ -84,16 +86,13 @@ public class PipelineJoinAndCoGroup {
                 Trade::classId,
                 products, Product::classId,
                 brokers, Broker::classId,
-                GroupAggregation.of3(
-                        (ThreeBags<Trade, Product, Broker> bags) ->
-                                new StringBuilder()
-                                        .append(bags.bag1())
-                                        .append(bags.bag2())
-                                        .append(bags.bag3()),
-                        StringBuilder::append,
-                        null,
-                        StringBuilder::toString
-                ));
+                AggregateOperation
+                        .withCreate(ThreeBags<Trade, Product, Broker>::new)
+                        .<Trade> andAccumulate1((acc, trade) -> acc.bag1().add(trade))
+                        .<Product> andAccumulate2((acc, product) -> acc.bag2().add(product))
+                        .<Broker> andAccumulate3((acc, broker) -> acc.bag3().add(broker))
+                        .andCombine(ThreeBags::combineWith)
+                        .andFinish(Object::toString));
     }
 
     private PStream<Tuple2<Integer, String>> coGroupBuild() {
@@ -102,20 +101,14 @@ public class PipelineJoinAndCoGroup {
         Tag<Product> prodTag = builder.add(products, Product::classId);
         Tag<Broker> brokTag = builder.add(brokers, Broker::classId);
 
-        return builder.build(GroupAggregation.ofMany(
-                bags -> {
-                    StringBuilder acc = new StringBuilder();
-                    Iterable<Trade> trades = bags.get(tradeTag);
-                    Iterable<Product> products = bags.get(prodTag);
-                    Iterable<Broker> brokers = bags.get(brokTag);
-                    return acc.append(trades)
-                              .append(products)
-                              .append(brokers);
-                },
-                StringBuilder::append,
-                null,
-                StringBuilder::toString
-        ));
+        return builder.build(AggregateOperation
+                .withCreate(BagsByTag::new)
+                .andAccumulate(tradeTag, (acc, trade) -> acc.bag(tradeTag).add(trade))
+                .andAccumulate(prodTag, (acc, product) -> acc.bag(prodTag).add(product))
+                .andAccumulate(brokTag, (acc, broker) -> acc.bag(brokTag).add(broker))
+                .andCombine(BagsByTag::combineWith)
+                .andFinish(Object::toString)
+        );
     }
 
     private static class Trade {

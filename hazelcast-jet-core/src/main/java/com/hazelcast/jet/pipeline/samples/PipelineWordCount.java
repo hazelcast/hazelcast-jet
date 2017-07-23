@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.pipeline.samples;
 
-import com.hazelcast.jet.AggregateOperations;
+import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.pipeline.PStream;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;

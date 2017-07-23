@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
+import com.hazelcast.jet.aggregate.AggregateOperation2;
+import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.JoinOn;
 import com.hazelcast.jet.pipeline.PElement;
@@ -24,10 +26,9 @@ import com.hazelcast.jet.pipeline.PStream;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.bag.ThreeBags;
 import com.hazelcast.jet.pipeline.bag.TwoBags;
-import com.hazelcast.jet.pipeline.GroupAggregation;
 import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
-import com.hazelcast.jet.pipeline.impl.transform.PTransform;
 import com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform;
+import com.hazelcast.jet.pipeline.impl.transform.PTransform;
 import com.hazelcast.jet.pipeline.impl.transform.UnaryTransform;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
 import com.hazelcast.jet.pipeline.tuple.Tuple3;
@@ -40,6 +41,7 @@ import static java.util.Collections.singletonList;
 /**
  * Javadoc pending.
  */
+@SuppressWarnings("unchecked")
 public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
 
     public PStreamImpl(List<PElement> upstream, PTransform transform, PipelineImpl pipeline) {
@@ -74,10 +76,9 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
     public <K, A, E2, R> PStream<Tuple2<K, R>> coGroup(
             DistributedFunction<? super E, ? extends K> thisKeyF,
             PStream<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
-            GroupAggregation<TwoBags<E, E2>, A, R> groupAggr
+            AggregateOperation2<E, E2, A, R> aggrOp
     ) {
-        return pipeline.attach(asList(this, s2),
-                new CoGroupTransform<>(asList(thisKeyF, key2F), groupAggr, TwoBags.class));
+        return pipeline.attach(asList(this, s2), new CoGroupTransform<>(asList(thisKeyF, key2F), aggrOp));
     }
 
     @Override
@@ -85,10 +86,9 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
             DistributedFunction<? super E, ? extends K> thisKeyF,
             PStream<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
             PStream<E3> s3, DistributedFunction<? super E3, ? extends K> key3F,
-            GroupAggregation<ThreeBags<E, E2, E3>, A, R> groupAggr
+            AggregateOperation3<E, E2, E3, A, R> aggrOp
     ) {
-        return pipeline.attach(asList(this, s2, s3),
-                new CoGroupTransform<>(asList(thisKeyF, key2F, key3F), groupAggr, ThreeBags.class));
+        return pipeline.attach(asList(this, s2, s3), new CoGroupTransform<>(asList(thisKeyF, key2F, key3F), aggrOp));
     }
 
     @Override

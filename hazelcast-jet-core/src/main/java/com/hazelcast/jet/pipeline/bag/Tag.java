@@ -33,17 +33,17 @@ public class Tag<E> implements Serializable, Comparable<Tag<?>> {
     }
 
     @SuppressWarnings("unchecked")
-    public static <E> Tag<E> tag1() {
+    public static <T> Tag<T> tag1() {
         return TAG_1;
     }
 
     @SuppressWarnings("unchecked")
-    public static <E> Tag<E> tag2() {
+    public static <T> Tag<T> tag2() {
         return TAG_2;
     }
 
     @SuppressWarnings("unchecked")
-    public static <E> Tag<E> tag3() {
+    public static <T> Tag<T> tag3() {
         return TAG_3;
     }
 

@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet;
+package com.hazelcast.jet.aggregate;
 
 import com.hazelcast.jet.function.DistributedBiConsumer;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.bag.Tag;
 
 import javax.annotation.Nonnull;
@@ -30,7 +31,7 @@ public interface AggregateOperation3<T1, T2, T3, A, R> extends AggregateOperatio
      * A primitive that updates the accumulator state to account for a new
      * item coming from stream number 1 in a co-grouping operation. The default
      * implementation is a synonym for {@link #accumulateItemF(Tag)
-     * accumulateItemF(Tag.leftTag())}.
+     * accumulateItemF(Tag.tag1())}.
      */
     @Nonnull
     default DistributedBiConsumer<? super A, T1> accumulateItemF1() {
@@ -41,7 +42,7 @@ public interface AggregateOperation3<T1, T2, T3, A, R> extends AggregateOperatio
      * A primitive that updates the accumulator state to account for a new
      * item coming from stream number 2 in a co-grouping operation. The default
      * implementation is a synonym for {@link #accumulateItemF(Tag)
-     * accumulateItemF(Tag.rightTag())}.
+     * accumulateItemF(Tag.tag2())}.
      */
     @Nonnull
     default DistributedBiConsumer<? super A, T2> accumulateItemF2() {
@@ -50,8 +51,17 @@ public interface AggregateOperation3<T1, T2, T3, A, R> extends AggregateOperatio
 
     /**
      * A primitive that updates the accumulator state to account for a new
-     * item coming from stream number 3 in a co-grouping operation.
+     * item coming from stream number 3 in a co-grouping operation. The default
+     * implementation is a synonym for {@link #accumulateItemF(Tag)
+     * accumulateItemF(Tag.tag3())}.
      */
     @Nonnull
-    DistributedBiConsumer<? super A, T3> accumulateItemF3();
+    default DistributedBiConsumer<? super A, T3> accumulateItemF3() {
+        return accumulateItemF(Tag.tag3());
+    }
+
+    @Nonnull
+    <R1> AggregateOperation3<T1, T2, T3, A, R1> withFinish(
+            @Nonnull DistributedFunction<? super A, R1> finishAccumulationF
+    );
 }

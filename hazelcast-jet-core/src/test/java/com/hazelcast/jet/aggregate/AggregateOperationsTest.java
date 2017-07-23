@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet;
+package com.hazelcast.jet.aggregate;
 
 import com.hazelcast.jet.accumulator.DoubleAccumulator;
 import com.hazelcast.jet.accumulator.LinTrendAccumulator;
@@ -22,6 +22,7 @@ import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.accumulator.LongDoubleAccumulator;
 import com.hazelcast.jet.accumulator.LongLongAccumulator;
 import com.hazelcast.jet.accumulator.MutableReference;
+import com.hazelcast.jet.function.DistributedFunctions;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Rule;
@@ -38,21 +39,21 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import static com.hazelcast.jet.AggregateOperations.allOf;
-import static com.hazelcast.jet.AggregateOperations.averagingDouble;
-import static com.hazelcast.jet.AggregateOperations.averagingLong;
-import static com.hazelcast.jet.AggregateOperations.counting;
-import static com.hazelcast.jet.AggregateOperations.linearTrend;
-import static com.hazelcast.jet.AggregateOperations.mapping;
-import static com.hazelcast.jet.AggregateOperations.maxBy;
-import static com.hazelcast.jet.AggregateOperations.minBy;
-import static com.hazelcast.jet.AggregateOperations.reducing;
-import static com.hazelcast.jet.AggregateOperations.summingDouble;
-import static com.hazelcast.jet.AggregateOperations.summingLong;
-import static com.hazelcast.jet.AggregateOperations.toList;
-import static com.hazelcast.jet.AggregateOperations.toMap;
-import static com.hazelcast.jet.AggregateOperations.toSet;
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
+import static com.hazelcast.jet.aggregate.AggregateOperations.averagingDouble;
+import static com.hazelcast.jet.aggregate.AggregateOperations.averagingLong;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.jet.aggregate.AggregateOperations.linearTrend;
+import static com.hazelcast.jet.aggregate.AggregateOperations.mapping;
+import static com.hazelcast.jet.aggregate.AggregateOperations.maxBy;
+import static com.hazelcast.jet.aggregate.AggregateOperations.minBy;
+import static com.hazelcast.jet.aggregate.AggregateOperations.reducing;
+import static com.hazelcast.jet.aggregate.AggregateOperations.summingDouble;
+import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
+import static com.hazelcast.jet.aggregate.AggregateOperations.toList;
+import static com.hazelcast.jet.aggregate.AggregateOperations.toMap;
+import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
 import static com.hazelcast.jet.function.DistributedComparator.naturalOrder;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
@@ -139,10 +140,10 @@ public class AggregateOperationsTest {
     @Test
     public void when_linearTrend() {
         // Given
-        AggregateOperation<Entry<Long, Long>, LinTrendAccumulator, Double> op =
+        AggregateOperation1<Entry<Long, Long>, LinTrendAccumulator, Double> op =
                 linearTrend(Entry::getKey, Entry::getValue);
         Supplier<LinTrendAccumulator> newF = op.createAccumulatorF();
-        BiConsumer<? super LinTrendAccumulator, Entry<Long, Long>> accF = op.accumulateItemF();
+        BiConsumer<? super LinTrendAccumulator, ? super Entry<Long, Long>> accF = op.accumulateItemF();
         BiConsumer<? super LinTrendAccumulator, ? super LinTrendAccumulator> combineF = op.combineAccumulatorsF();
         BiConsumer<? super LinTrendAccumulator, ? super LinTrendAccumulator> deductF = op.deductAccumulatorF();
         Function<? super LinTrendAccumulator, Double> finishF = op.finishAccumulationF();
@@ -224,7 +225,7 @@ public class AggregateOperationsTest {
 
     @Test
     public void when_toMapDuplicateAccumulate_then_fail() {
-        AggregateOperation<Entry<Integer, Integer>, Map<Integer, Integer>, Map<Integer, Integer>> op =
+        AggregateOperation1<Entry<Integer, Integer>, Map<Integer, Integer>, Map<Integer, Integer>> op =
                 toMap(entryKey(), entryValue());
 
         Map<Integer, Integer> acc = op.createAccumulatorF().get();
@@ -236,7 +237,7 @@ public class AggregateOperationsTest {
 
     @Test
     public void when_toMapDuplicateCombine_then_fail() {
-        AggregateOperation<Entry<Integer, Integer>, Map<Integer, Integer>, Map<Integer, Integer>> op =
+        AggregateOperation1<Entry<Integer, Integer>, Map<Integer, Integer>, Map<Integer, Integer>> op =
                 toMap(entryKey(), entryValue());
 
         Map<Integer, Integer> acc1 = op.createAccumulatorF().get();
@@ -257,7 +258,7 @@ public class AggregateOperationsTest {
         combined.put(1, 3);
 
         validateOpWithoutDeduct(
-                toMap(entryKey(), entryValue(), Integer::sum),
+                toMap(DistributedFunctions.<Integer, Integer>entryKey(), entryValue(), Integer::sum),
                 identity(), entry(1, 1), entry(1, 2),
                 acced, combined, combined);
     }
@@ -302,7 +303,7 @@ public class AggregateOperationsTest {
     }
 
     private static <T, A, X, R> void validateOp(
-            AggregateOperation<T, A, R> op,
+            AggregateOperation1<T, A, R> op,
             Function<A, X> getAccValF,
             T item1,
             T item2,
@@ -351,7 +352,7 @@ public class AggregateOperationsTest {
     }
 
     private static <T, A, X, R> void validateOpWithoutDeduct(
-            AggregateOperation<T, A, R> op,
+            AggregateOperation1<T, A, R> op,
             Function<A, X> getAccValF,
             T item1,
             T item2,

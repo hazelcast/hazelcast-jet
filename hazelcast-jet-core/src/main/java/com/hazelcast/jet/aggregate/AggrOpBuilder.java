@@ -19,7 +19,10 @@ package com.hazelcast.jet.aggregate;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.impl.AggregateOperationImpl;
+import com.hazelcast.jet.impl.aggregate.AggregateOperation1Impl;
+import com.hazelcast.jet.impl.aggregate.AggregateOperation2Impl;
+import com.hazelcast.jet.impl.aggregate.AggregateOperation3Impl;
+import com.hazelcast.jet.impl.aggregate.AggregateOperationImpl;
 import com.hazelcast.jet.pipeline.bag.Tag;
 
 import java.util.HashMap;
@@ -28,10 +31,13 @@ import java.util.Map;
 /**
  * Javadoc pending.
  */
-public class AggregateOperationBuilder {
+public final class AggrOpBuilder {
+
+    private AggrOpBuilder() {
+    }
 
     public static class Step1<A> {
-        final DistributedSupplier<A> createAccumulatorF;
+        private final DistributedSupplier<A> createAccumulatorF;
 
         Step1(DistributedSupplier<A> createAccumulatorF) {
             this.createAccumulatorF = createAccumulatorF;
@@ -75,10 +81,8 @@ public class AggregateOperationBuilder {
             return this;
         }
 
-        public <R> AggregateOperation<T1, A, R> andFinish(
-                DistributedFunction<? super A, R> finishAccumulationF
-        ) {
-            return new AggregateOperationImpl<>(createAccumulatorF, accumulateItemF1,
+        public <R> AggregateOperation1<T1, A, R> andFinish(DistributedFunction<? super A, R> finishAccumulationF) {
+            return new AggregateOperation1Impl<>(createAccumulatorF, accumulateItemF1,
                     combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
         }
     }
@@ -110,20 +114,18 @@ public class AggregateOperationBuilder {
             return this;
         }
 
-        public <R> AggregateOperation2<T1, T2, A, R> andFinish(
-                DistributedFunction<? super A, R> finishAccumulationF
-        ) {
-            return new AggregateOperationImpl.Arity2<>(createAccumulatorF,
+        public <R> AggregateOperation2<T1, T2, A, R> andFinish(DistributedFunction<? super A, R> finishAccumulationF) {
+            return new AggregateOperation2Impl<>(createAccumulatorF,
                     accumulateItemF1, accumulateItemF2,
                     combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
         }
     }
 
     public static class Step2Arity3<T1, T2, T3, A> {
-        final DistributedSupplier<A> createAccumulatorF;
-        final DistributedBiConsumer<? super A, T1> accumulateItemF1;
-        final DistributedBiConsumer<? super A, T2> accumulateItemF2;
-        final DistributedBiConsumer<? super A, T3> accumulateItemF3;
+        private final DistributedSupplier<A> createAccumulatorF;
+        private final DistributedBiConsumer<? super A, T1> accumulateItemF1;
+        private final DistributedBiConsumer<? super A, T2> accumulateItemF2;
+        private final DistributedBiConsumer<? super A, T3> accumulateItemF3;
         private DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF;
         private DistributedBiConsumer<? super A, ? super A> deductAccumulatorF;
 
@@ -149,7 +151,7 @@ public class AggregateOperationBuilder {
         public <R> AggregateOperation3<T1, T2, T3, A, R> andFinish(
                 DistributedFunction<? super A, R> finishAccumulationF
         ) {
-            return new AggregateOperationImpl.Arity3<>(createAccumulatorF,
+            return new AggregateOperation3Impl<>(createAccumulatorF,
                     accumulateItemF1, accumulateItemF2, accumulateItemF3,
                     combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
         }
@@ -161,7 +163,7 @@ public class AggregateOperationBuilder {
         private DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF;
         private DistributedBiConsumer<? super A, ? super A> deductAccumulatorF;
 
-        public <T> Step2VarArity(
+        <T> Step2VarArity(
                 DistributedSupplier<A> createAccumulatorF,
                 Tag<T> tag,
                 DistributedBiConsumer<? super A, T> accumulateItemF
@@ -185,8 +187,8 @@ public class AggregateOperationBuilder {
             return this;
         }
 
-        public <R> AggregateOperation<?, A, R> andFinish(DistributedFunction<? super A, R> finishAccumulationF) {
-            return new AggregateOperationImpl<>(createAccumulatorF,
+        public <R> AggregateOperation<A, R> andFinish(DistributedFunction<? super A, R> finishAccumulationF) {
+            return new AggregateOperationImpl<>(createAccumulatorF, accumulatorsByTag,
                     combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
         }
     }

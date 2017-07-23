@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet;
+package com.hazelcast.jet.aggregate;
 
 import com.hazelcast.jet.function.DistributedBiConsumer;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.bag.Tag;
 
 import javax.annotation.Nonnull;
@@ -33,7 +34,24 @@ public interface AggregateOperation1<T1, A, R> extends AggregateOperation<A, R> 
      * accumulateItemF(Tag.leftTag())}.
      */
     @Nonnull
-    default DistributedBiConsumer<? super A, T1> accumulateItemF1() {
+    default DistributedBiConsumer<? super A, ? super T1> accumulateItemF1() {
         return accumulateItemF(Tag.tag1());
     }
+
+    /**
+     * Synonym for {@link #accumulateItemF1()}.
+     */
+    @Nonnull
+    default DistributedBiConsumer<? super A, ? super T1> accumulateItemF() {
+        return accumulateItemF1();
+    }
+
+    @Nonnull
+    <R1> AggregateOperation1<T1, A, R1> withFinish(
+            @Nonnull DistributedFunction<? super A, R1> finishAccumulationF
+    );
+
+    @Nonnull
+    <T_NEW> AggregateOperation1<T_NEW, A, R> withAccumulateItemF1(
+            DistributedBiConsumer<? super A, ? super T_NEW> accumulateItemF1);
 }

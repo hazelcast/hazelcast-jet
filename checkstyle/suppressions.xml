@@ -9,6 +9,7 @@
     <!-- TEMPORARY SUPPRESSION OF PROTOTYPE CODE -->
 
     <suppress checks="" files="com[\\/]hazelcast[\\/]jet[\\/]pipeline"/>
+    <suppress checks="" files="com[\\/]hazelcast[\\/]jet[\\/]aggregate"/>
 
 
     <!-- Files start with the license header -->

@@ -16,29 +16,42 @@
 
 package com.hazelcast.jet.pipeline.bag;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Javadoc pending.
  */
 public class ThreeBags<E1, E2, E3> {
-    private final Iterable<E1> bag1;
-    private final Iterable<E2> bag2;
-    private final Iterable<E3> bag3;
+    private final List<E1> bag1;
+    private final List<E2> bag2;
+    private final List<E3> bag3;
 
-    public ThreeBags(Iterable<E1> bag1, Iterable<E2> bag2, Iterable<E3> bag3) {
+    public ThreeBags() {
+        this(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+    }
+
+    public ThreeBags(List<E1> bag1, List<E2> bag2, List<E3> bag3) {
         this.bag1 = bag1;
         this.bag2 = bag2;
         this.bag3 = bag3;
     }
 
-    public Iterable<E1> bag1() {
+    public List<E1> bag1() {
         return bag1;
     }
 
-    public Iterable<E2> bag2() {
+    public List<E2> bag2() {
         return bag2;
     }
 
-    public Iterable<E3> bag3() {
+    public List<E3> bag3() {
         return bag3;
+    }
+
+    public void combineWith(ThreeBags<E1, E2, E3> that) {
+        bag1.addAll(that.bag1());
+        bag2.addAll(that.bag2());
+        bag3.addAll(that.bag3());
     }
 }

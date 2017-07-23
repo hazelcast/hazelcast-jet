@@ -23,7 +23,7 @@ import com.hazelcast.jet.pipeline.Sinks;
 
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.AggregateOperations.counting;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.pipeline.Sources.streamKafka;

@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
-import com.hazelcast.jet.AggregateOperation;
+import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.Traverser;
 
 import javax.annotation.Nonnull;
@@ -34,14 +34,14 @@ import static com.hazelcast.jet.Util.entry;
  */
 public class GroupByKeyP<T, K, A, R> extends AbstractProcessor {
     private final Function<? super T, ? extends K> getKeyF;
-    private final AggregateOperation<? super T, A, R> aggrOp;
+    private final AggregateOperation1<? super T, A, R> aggrOp;
 
     private final Map<K, A> groups = new HashMap<>();
     private final Traverser<Map.Entry<K, R>> resultTraverser;
 
     public GroupByKeyP(
             @Nonnull Function<? super T, ? extends K> getKeyF,
-            @Nonnull AggregateOperation<? super T, A, R> aggregateOperation
+            @Nonnull AggregateOperation1<? super T, A, R> aggregateOperation
     ) {
         this.getKeyF = getKeyF;
         this.aggrOp = aggregateOperation;

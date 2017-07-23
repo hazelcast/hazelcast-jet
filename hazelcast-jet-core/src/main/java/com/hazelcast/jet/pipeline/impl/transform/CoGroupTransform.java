@@ -16,33 +16,31 @@
 
 package com.hazelcast.jet.pipeline.impl.transform;
 
+import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.pipeline.GroupAggregation;
 
 import java.util.List;
 
 /**
  * Javadoc pending.
  */
-public class CoGroupTransform<K, B, A, R> implements JoinTransform {
+public class CoGroupTransform<K, A, R> implements JoinTransform {
     private final List<DistributedFunction<?, ? extends K>> groupKeyFns;
-    private final GroupAggregation<B, A, R> groupAggr;
-    private final Class bagsType;
+    private final AggregateOperation<A, R> aggregateOperation;
 
-    public CoGroupTransform(List<DistributedFunction<?, ? extends K>> groupKeyFns,
-                            GroupAggregation<B, A, R> groupAggr,
-                            Class bagsType
+    public CoGroupTransform(
+            List<DistributedFunction<?, ? extends K>> groupKeyFns,
+            AggregateOperation<A, R> aggregateOperation
     ) {
         this.groupKeyFns = groupKeyFns;
-        this.groupAggr = groupAggr;
-        this.bagsType = bagsType;
+        this.aggregateOperation = aggregateOperation;
     }
 
     public List<DistributedFunction<?, ? extends K>> groupKeyFns() {
         return groupKeyFns;
     }
 
-    public GroupAggregation<B, A, R> groupAggr() {
-        return groupAggr;
+    public AggregateOperation<A, R> aggregateOperation() {
+        return aggregateOperation;
     }
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet;
+package com.hazelcast.jet.aggregate;
 
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.QuickTest;
@@ -29,14 +29,14 @@ import org.junit.runners.Parameterized.UseParametersRunnerFactory;
 import java.util.Arrays;
 import java.util.Collection;
 
-import static com.hazelcast.jet.AggregateOperations.allOf;
-import static com.hazelcast.jet.AggregateOperations.averagingDouble;
-import static com.hazelcast.jet.AggregateOperations.averagingLong;
-import static com.hazelcast.jet.AggregateOperations.counting;
-import static com.hazelcast.jet.AggregateOperations.linearTrend;
-import static com.hazelcast.jet.AggregateOperations.reducing;
-import static com.hazelcast.jet.AggregateOperations.summingDouble;
-import static com.hazelcast.jet.AggregateOperations.summingLong;
+import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
+import static com.hazelcast.jet.aggregate.AggregateOperations.averagingDouble;
+import static com.hazelcast.jet.aggregate.AggregateOperations.averagingLong;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.jet.aggregate.AggregateOperations.linearTrend;
+import static com.hazelcast.jet.aggregate.AggregateOperations.reducing;
+import static com.hazelcast.jet.aggregate.AggregateOperations.summingDouble;
+import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -47,10 +47,10 @@ import static org.junit.Assert.assertTrue;
 public class AggregateOperations_accEqualityTest {
 
     @Parameter
-    public AggregateOperation<?, ?, ?> operation;
+    public AggregateOperation<?, ?> operation;
 
     @Parameters
-    public static Collection<AggregateOperation<?, ?, ?>> data() {
+    public static Collection<AggregateOperation<?, ?>> data() {
         return Arrays.asList(
                 counting(),
                 summingLong(Long::longValue),

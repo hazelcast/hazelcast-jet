@@ -16,12 +16,12 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.pipeline.bag.BagsByTag;
-import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
-import com.hazelcast.jet.pipeline.impl.PipelineImpl;
-import com.hazelcast.jet.pipeline.tuple.Tuple2;
 import com.hazelcast.jet.pipeline.bag.Tag;
+import com.hazelcast.jet.pipeline.impl.PipelineImpl;
+import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
+import com.hazelcast.jet.pipeline.tuple.Tuple2;
 
 import java.util.HashMap;
 import java.util.List;
@@ -54,15 +54,14 @@ public class CoGroupBuilder<K, E_LEFT> {
         return (Tag<E>) tag;
     }
 
-    public <R> PStream<Tuple2<K, R>> build(GroupAggregation<BagsByTag, ?, R> cogOp) {
+    public <A, R> PStream<Tuple2<K, R>> build(AggregateOperation<A, R> aggrOp) {
         List<PStream> upstream = orderedClauses()
                 .map(e -> e.getValue().pstream())
                 .collect(toList());
-        CoGroupTransform<K, BagsByTag, ?, R> transform = new CoGroupTransform<>(orderedClauses()
+        CoGroupTransform<K, A, R> transform = new CoGroupTransform<>(orderedClauses()
                 .map(e -> e.getValue().groupKeyF())
                 .collect(toList()),
-                cogOp,
-                BagsByTag.class
+                aggrOp
         );
         PipelineImpl pipeline = (PipelineImpl) clauses.get(leftTag).pstream.getPipeline();
         return pipeline.attach(upstream, transform);

@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet;
+package com.hazelcast.jet.aggregate;
 
 import com.hazelcast.jet.function.DistributedBiConsumer;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.bag.Tag;
 
 import javax.annotation.Nonnull;
@@ -47,4 +48,9 @@ public interface AggregateOperation2<T1, T2, A, R> extends AggregateOperation<A,
     default DistributedBiConsumer<? super A, T2> accumulateItemF2() {
         return accumulateItemF(Tag.tag2());
     }
+
+    @Nonnull
+    <R1> AggregateOperation2<T1, T2, A, R1> withFinish(
+            @Nonnull DistributedFunction<? super A, R1> finishAccumulationF
+    );
 }

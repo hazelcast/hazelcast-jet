@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.pipeline.impl.transform;
 
-import com.hazelcast.jet.AggregateOperation;
+import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedFunction;
 
 import java.util.Map.Entry;
@@ -26,9 +26,9 @@ import java.util.Map.Entry;
  */
 public class GroupByTransform<E, K, R> implements UnaryTransform<E, Entry<K, R>> {
     private final DistributedFunction<? super E, ? extends K> keyF;
-    private final AggregateOperation<E, ?, R> aggrOp;
+    private final AggregateOperation1<E, ?, R> aggrOp;
 
-    public GroupByTransform(DistributedFunction<? super E, ? extends K> keyF, AggregateOperation<E, ?, R> aggrOp) {
+    public GroupByTransform(DistributedFunction<? super E, ? extends K> keyF, AggregateOperation1<E, ?, R> aggrOp) {
         this.keyF = keyF;
         this.aggrOp = aggrOp;
     }

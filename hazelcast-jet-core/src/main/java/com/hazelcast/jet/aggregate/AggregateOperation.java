@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet;
+package com.hazelcast.jet.aggregate;
 
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -27,16 +27,19 @@ import java.io.Serializable;
 import java.util.Map;
 
 /**
- * Contains primitives needed to compute an aggregated result of
- * stream processing. The result is computed by maintaining a mutable
- * result container, called the <em>accumulator</em>, which is transformed
- * to the final result at the end of accumulation. The data items may come
- * from one or more inbound streams; there is a separate {@code accumulate}
- * function for each of them.
+ * Contains primitives needed to compute an aggregated result of stream
+ * processing. The result is computed by updating a mutable result
+ * container, called the <em>accumulator</em>, with data from each stream
+ * item and, after all items are processed, transforming the accumulator
+ * into the final result. The data items may come from one or more inbound
+ * streams; there is a separate {@code accumulate} function for each of
+ * them.
+ * <p>
+ * This is a summary of all the primitives involved:
  * <ol><li>
  *     {@link #createAccumulatorF() create} a new accumulator object
  * </li><li>
- *     {@link #accumulateItemF() accumulate} the data of an item by mutating
+ *     {@link #accumulateItemF(Tag) accumulate} the data of an item by mutating
  *     the accumulator
  * </li><li>
  *     {@link #combineAccumulatorsF() combine} the contents of the right-hand
@@ -50,23 +53,26 @@ import java.util.Map;
  * </li></ol>
  * The <em>deduct</em> primitive is optional. It is used in sliding window
  * aggregation, where it can significantly improve the performance.
- * <h3>Static type design</h3>
- * This interface covers the fully general case where contributing streams
- * are identified by <em>tags</em>. Since there can be any number of
- * streams, this interface has no type parameter for the stream item. The
- * tags themselves carry the type information, but there must be a runtime
- * check whether a given tag is registered with this aggregate operation.
- * <p>
- * There are specializations of this interface to up to three contributing
- * streams whose type is statically captured by this aggregate operation.
- * They are {@link AggregateOperation1}, {@link AggregateOperation2} and
- * {@link AggregateOperation3}. {@link AggregateOperationBuilder} will
- * automatically return the appropriate specialization, depending on which
- * {@code accumulate} primitives are provided to it.
  *
- * @param <T> the type of the stream item &mdash; contravariant
- * @param <A> the type of the accumulator &mdash; invariant
- * @param <R> the type of the final result &mdash; covariant
+ * <h3>Static type design</h3>
+ * This interface covers the fully general case with an arbitrary number of
+ * contributing streams, each identified by its <em>tag</em>. The static
+ * type system cannot capture a variable number of type parameters,
+ * therefore this interface has no type parameter describing the stream
+ * item. The tags themselves carry the type information, but there must be a
+ * runtime check whether a given tag is registered with this aggregate
+ * operation.
+ * <p>
+ * There are specializations of this interface for up to three contributing
+ * streams whose type they statically capture. They are {@link
+ * AggregateOperation1}, {@link AggregateOperation2} and {@link
+ * AggregateOperation3}. If you use the provided {@link
+ * #withCreate(DistributedSupplier) builder object}, it will automatically
+ * return the appropriate static type, depending on which {@code accumulate}
+ * primitives are provided to it.
+ *
+ * @param <A> the type of the accumulator
+ * @param <R> the type of the final result
  */
 public interface AggregateOperation<A, R> extends Serializable {
 
@@ -138,7 +144,38 @@ public interface AggregateOperation<A, R> extends Serializable {
             @Nonnull Map<Tag, DistributedBiConsumer<? super A, ?>> accumulatorsByTag);
 
     @Nonnull
-    static <A> AggregateOperationBuilder.Step1<A> withCreate(DistributedSupplier<A> createAccumulatorF) {
-        return new AggregateOperationBuilder.Step1<>(createAccumulatorF);
+    <R1> AggregateOperation<A, R1> withFinish(
+            @Nonnull DistributedFunction<? super A, R1> finishAccumulationF
+    );
+
+    /**
+     * Returns a builder object, initialized with the {@code create} primitive,
+     * that can be used to construct the definition of an aggregate operation
+     * in a step-by-step manner.
+     * <p>
+     * The same builder is used to construct both fixed- and variable-arity
+     * aggregate operations:
+     * <ul><li>
+     *     For fixed arity use {@link
+     *     AggrOpBuilder.Step1#andAccumulate1(DistributedBiConsumer)
+     *     builder.andAccumulate1()}, optionally followed by {@code andAccumulate2()},
+     *     {@code andAccumulate3()}. The return type of these methods changes as the
+     *     static types of the contributing streams are captured.
+     * </li><li>
+     *     For variable arity use {@link AggrOpBuilder.Step1#andAccumulate(Tag,
+     *     DistributedBiConsumer) builder.andAccumulate(tag)}.
+     * </li></ul>
+     * The {@code andFinish()} method returns the constructed aggregate operation.
+     * Its static type receives all the type parameters captured in the above
+     * method calls.
+     *
+     * @param createAccumulatorF the {@code create} primitive
+     * @param <A> the type of the accumulator
+     * @return the builder object whose static type represents the fact that it
+     *         has just the {@code create} primitive defined
+     */
+    @Nonnull
+    static <A> AggrOpBuilder.Step1<A> withCreate(DistributedSupplier<A> createAccumulatorF) {
+        return new AggrOpBuilder.Step1<>(createAccumulatorF);
     }
 }

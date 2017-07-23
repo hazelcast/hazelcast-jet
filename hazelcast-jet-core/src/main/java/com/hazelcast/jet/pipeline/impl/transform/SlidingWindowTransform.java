@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.pipeline.impl.transform;
 
-import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.WindowDefinition;
+import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedFunction;
 
 import java.util.Map.Entry;
@@ -28,14 +28,13 @@ import java.util.Map.Entry;
 public class SlidingWindowTransform<E, K, R> implements UnaryTransform<E, Entry<K, R>> {
     private final DistributedFunction<E, K> keyF;
     private final WindowDefinition wDef;
-    private final AggregateOperation<E, ?, R> aggregation;
+    private final AggregateOperation1<E, ?, R> aggrOp;
 
-    public SlidingWindowTransform(DistributedFunction<E, K> keyF,
-                                  WindowDefinition wDef,
-                                  AggregateOperation<E, ?, R> aggregation
+    public SlidingWindowTransform(
+            DistributedFunction<E, K> keyF, WindowDefinition wDef, AggregateOperation1<E, ?, R> aggrOp
     ) {
         this.keyF = keyF;
         this.wDef = wDef;
-        this.aggregation = aggregation;
+        this.aggrOp = aggrOp;
     }
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet;
+package com.hazelcast.jet.aggregate;
 
 import com.hazelcast.jet.accumulator.DoubleAccumulator;
 import com.hazelcast.jet.accumulator.LinTrendAccumulator;
@@ -56,7 +56,7 @@ public final class AggregateOperations {
      * Returns an operation that tracks the count of items in the window.
      */
     @Nonnull
-    public static <T> AggregateOperation<T, LongAccumulator, Long> counting() {
+    public static <T> AggregateOperation1<T, LongAccumulator, Long> counting() {
         return AggregateOperation
                 .withCreate(LongAccumulator::new)
                 .andAccumulate((LongAccumulator a, T item) -> a.addExact(1))
@@ -72,7 +72,7 @@ public final class AggregateOperations {
      * @param <T> Input item type
      */
     @Nonnull
-    public static <T> AggregateOperation<T, LongAccumulator, Long> summingLong(
+    public static <T> AggregateOperation1<T, LongAccumulator, Long> summingLong(
             @Nonnull DistributedToLongFunction<T> mapToLongF
     ) {
         return AggregateOperation
@@ -90,7 +90,7 @@ public final class AggregateOperations {
      * @param <T> Input item type
      */
     @Nonnull
-    public static <T> AggregateOperation<T, DoubleAccumulator, Double> summingDouble(
+    public static <T> AggregateOperation1<T, DoubleAccumulator, Double> summingDouble(
             @Nonnull DistributedToDoubleFunction<T> mapToDoubleF
     ) {
         return AggregateOperation
@@ -106,12 +106,12 @@ public final class AggregateOperations {
      * {@code comparator}.
      * <p>
      * The implementation doesn't have the <i>deduction function </i>. {@link
-     * AggregateOperation#deductAccumulatorF() See note here}.
+     * AggregateOperation1#deductAccumulatorF() See note here}.
      *
      * @param <T> Input item type
      */
     @Nonnull
-    public static <T> AggregateOperation<T, MutableReference<T>, T> minBy(
+    public static <T> AggregateOperation1<T, MutableReference<T>, T> minBy(
             @Nonnull DistributedComparator<? super T> comparator
     ) {
         return maxBy(comparator.reversed());
@@ -122,12 +122,12 @@ public final class AggregateOperations {
      * {@code comparator}.
      * <p>
      * The implementation doesn't have the <i>deduction function </i>. {@link
-     * AggregateOperation#deductAccumulatorF() See note here}.
+     * AggregateOperation1#deductAccumulatorF() See note here}.
      *
      * @param <T> Input item type
      */
     @Nonnull
-    public static <T> AggregateOperation<T, MutableReference<T>, T> maxBy(
+    public static <T> AggregateOperation1<T, MutableReference<T>, T> maxBy(
             @Nonnull DistributedComparator<? super T> comparator
     ) {
         return AggregateOperation
@@ -152,7 +152,7 @@ public final class AggregateOperations {
      * @param <T> Input item type
      */
     @Nonnull
-    public static <T> AggregateOperation<T, LongLongAccumulator, Double> averagingLong(
+    public static <T> AggregateOperation1<T, LongLongAccumulator, Double> averagingLong(
             @Nonnull DistributedToLongFunction<T> mapToLongF
     ) {
         // accumulator.value1 is count
@@ -160,9 +160,9 @@ public final class AggregateOperations {
         return AggregateOperation
                 .withCreate(LongLongAccumulator::new)
                 .andAccumulate((LongLongAccumulator a, T i) -> {
+                    // a bit faster check than in addExact, specialized for increment
                     if (a.getValue1() == Long.MAX_VALUE) {
-                        // this is a bit faster overflow check when we know that we are adding 1
-                        throw new ArithmeticException("long overflow");
+                        throw new ArithmeticException("Counter overflow");
                     }
                     a.setValue1(a.getValue1() + 1);
                     a.setValue2(Math.addExact(a.getValue2(), mapToLongF.applyAsLong(i)));
@@ -185,7 +185,7 @@ public final class AggregateOperations {
      * @param <T> Input item type
      */
     @Nonnull
-    public static <T> AggregateOperation<T, LongDoubleAccumulator, Double> averagingDouble(
+    public static <T> AggregateOperation1<T, LongDoubleAccumulator, Double> averagingDouble(
             @Nonnull DistributedToDoubleFunction<T> mapToDoubleF
     ) {
         // accumulator.value1 is count
@@ -193,9 +193,9 @@ public final class AggregateOperations {
         return AggregateOperation
                 .withCreate(LongDoubleAccumulator::new)
                 .andAccumulate((LongDoubleAccumulator a, T i) -> {
+                    // a bit faster check than in addExact, specialized for increment
                     if (a.getValue1() == Long.MAX_VALUE) {
-                        // this is a bit faster overflow check when we know that we are adding 1
-                        throw new ArithmeticException("long overflow");
+                        throw new ArithmeticException("Counter overflow");
                     }
                     a.setValue1(a.getValue1() + 1);
                     a.setValue2(a.getValue2() + mapToDoubleF.applyAsDouble(i));
@@ -219,7 +219,7 @@ public final class AggregateOperations {
      * extracted from each item by the two provided functions.
      */
     @Nonnull
-    public static <T> AggregateOperation<T, LinTrendAccumulator, Double> linearTrend(
+    public static <T> AggregateOperation1<T, LinTrendAccumulator, Double> linearTrend(
             @Nonnull DistributedToLongFunction<T> getX,
             @Nonnull DistributedToLongFunction<T> getY
     ) {
@@ -241,10 +241,10 @@ public final class AggregateOperations {
      * @param operations Operations to calculate.
      */
     @SafeVarargs @Nonnull
-    public static <T> AggregateOperation<T, List<Object>, List<Object>> allOf(
-            @Nonnull AggregateOperation<? super T, ?, ?> ... operations
+    public static <T> AggregateOperation1<T, List<Object>, List<Object>> allOf(
+            @Nonnull AggregateOperation1<? super T, ?, ?>... operations
     ) {
-        AggregateOperation[] untypedOps = operations;
+        AggregateOperation1[] untypedOps = operations;
 
         return AggregateOperation
                 .withCreate(() -> {
@@ -283,7 +283,7 @@ public final class AggregateOperations {
     }
 
     /**
-     * Adapts an {@code AggregateOperation} accepting elements of type {@code
+     * Adapts an {@code AggregateOperation1} accepting elements of type {@code
      * U} to one accepting elements of type {@code T} by applying a mapping
      * function to each input element before accumulation.
      * <p>
@@ -303,9 +303,9 @@ public final class AggregateOperations {
      * @param downstream an operation which will accept mapped values
      */
     public static <T, U, A, R>
-    AggregateOperation<T, ?, R> mapping(
+    AggregateOperation1<T, ?, R> mapping(
             @Nonnull DistributedFunction<? super T, ? extends U> mapF,
-            @Nonnull AggregateOperation<? super U, A, R> downstream
+            @Nonnull AggregateOperation1<? super U, A, R> downstream
     ) {
         DistributedBiConsumer<? super A, ? super U> downstreamAccumulateF = downstream.accumulateItemF();
         return AggregateOperation
@@ -322,7 +322,7 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns an {@code AggregateOperation} that accumulates the input
+     * Returns an {@code AggregateOperation1} that accumulates the input
      * elements into a new {@code Collection}. The {@code Collection} is
      * created by the provided factory.
      * <p>
@@ -334,7 +334,7 @@ public final class AggregateOperations {
      * @param createCollectionF a {@code Supplier} which returns a new, empty
      *                          {@code Collection} of the appropriate type
      */
-    public static <T, C extends Collection<T>> AggregateOperation<T, C, C> toCollection(
+    public static <T, C extends Collection<T>> AggregateOperation1<T, C, C> toCollection(
             DistributedSupplier<C> createCollectionF
     ) {
         return AggregateOperation
@@ -345,28 +345,28 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns an {@code AggregateOperation} that accumulates the input
+     * Returns an {@code AggregateOperation1} that accumulates the input
      * elements into a new {@code ArrayList}.
      *
      * @param <T> the type of the input elements
      */
-    public static <T> AggregateOperation<T, List<T>, List<T>> toList() {
+    public static <T> AggregateOperation1<T, List<T>, List<T>> toList() {
         return toCollection(ArrayList::new);
     }
 
     /**
-     * Returns an {@code AggregateOperation} that accumulates the input
+     * Returns an {@code AggregateOperation1} that accumulates the input
      * elements into a new {@code HashSet}.
      *
      * @param <T> the type of the input elements
      */
     public static <T>
-    AggregateOperation<T, ?, Set<T>> toSet() {
+    AggregateOperation1<T, ?, Set<T>> toSet() {
         return toCollection(HashSet::new);
     }
 
     /**
-     * Returns an {@code AggregateOperation} that accumulates elements
+     * Returns an {@code AggregateOperation1} that accumulates elements
      * into a {@code HashMap} whose keys and values are the result of applying
      * the provided mapping functions to the input elements.
      * <p>
@@ -387,7 +387,7 @@ public final class AggregateOperations {
      * @see #toMap(DistributedFunction, DistributedFunction,
      *      DistributedBinaryOperator, DistributedSupplier)
      */
-    public static <T, K, U> AggregateOperation<T, Map<K, U>, Map<K, U>> toMap(
+    public static <T, K, U> AggregateOperation1<T, Map<K, U>, Map<K, U>> toMap(
             DistributedFunction<? super T, ? extends K> getKeyF,
             DistributedFunction<? super T, ? extends U> getValueF
     ) {
@@ -395,7 +395,7 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns an {@code AggregateOperation} that accumulates elements
+     * Returns an {@code AggregateOperation1} that accumulates elements
      * into a {@code HashMap} whose keys and values are the result of applying
      * the provided mapping functions to the input elements.
      *
@@ -418,7 +418,7 @@ public final class AggregateOperations {
      * @see #toMap(DistributedFunction, DistributedFunction,
      *      DistributedBinaryOperator, DistributedSupplier)
      */
-    public static <T, K, U> AggregateOperation<T, Map<K, U>, Map<K, U>> toMap(
+    public static <T, K, U> AggregateOperation1<T, Map<K, U>, Map<K, U>> toMap(
             DistributedFunction<? super T, ? extends K> getKeyF,
             DistributedFunction<? super T, ? extends U> getValueF,
             DistributedBinaryOperator<U> mergeF
@@ -427,7 +427,7 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns an {@code AggregateOperation} that accumulates elements
+     * Returns an {@code AggregateOperation1} that accumulates elements
      * into a {@code Map} whose keys and values are the result of applying the
      * provided mapping functions to the input elements.
      * <p>
@@ -453,7 +453,7 @@ public final class AggregateOperations {
      * @see #toMap(DistributedFunction, DistributedFunction)
      * @see #toMap(DistributedFunction, DistributedFunction, DistributedBinaryOperator)
      */
-    public static <T, K, U, M extends Map<K, U>> AggregateOperation<T, M, M> toMap(
+    public static <T, K, U, M extends Map<K, U>> AggregateOperation1<T, M, M> toMap(
             DistributedFunction<? super T, ? extends K> getKeyF,
             DistributedFunction<? super T, ? extends U> getValueF,
             DistributedBinaryOperator<U> mergeF,
@@ -513,7 +513,7 @@ public final class AggregateOperations {
      * @param <A> type of the accumulated value
      */
     @Nonnull
-    public static <T, A> AggregateOperation<T, MutableReference<A>, A> reducing(
+    public static <T, A> AggregateOperation1<T, MutableReference<A>, A> reducing(
             @Nonnull A emptyAccValue,
             @Nonnull DistributedFunction<? super T, ? extends A> toAccValueF,
             @Nonnull DistributedBinaryOperator<A> combineAccValuesF,

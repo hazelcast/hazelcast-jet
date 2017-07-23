@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl;
+package com.hazelcast.jet.impl.aggregate;
 
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -29,7 +29,7 @@ abstract class AggregateOperationBase<A, R> {
     private final DistributedBiConsumer<? super A, ? super A> deductAccumulatorF;
     private final DistributedFunction<? super A, R> finishAccumulationF;
 
-    public AggregateOperationBase(
+    AggregateOperationBase(
             @Nonnull DistributedSupplier<A> createAccumulatorF,
             @Nonnull DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF,
             @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorF,
