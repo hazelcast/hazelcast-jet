@@ -27,7 +27,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Map;
 
+import static com.hazelcast.jet.pipeline.bag.Tag.TAG_1;
 import static com.hazelcast.jet.pipeline.bag.Tag.tag1;
+import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * Javadoc pending.
@@ -44,14 +46,24 @@ public class AggregateOperation1Impl<T1, A, R>
                                    @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorF,
                                    @Nonnull DistributedFunction<? super A, R> finishAccumulationF
     ) {
-        super(createAccumulatorF, accumulatorsByTag(tag1(), accumulateItemF1),
+        super(createAccumulatorF, accumulatorsByTag(TAG_1, accumulateItemF1),
                 combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
+        checkNotNull(accumulateItemF1, "accumulateItemF1");
         this.accumulateItemF1 = accumulateItemF1;
     }
 
     @Nonnull @Override
     public DistributedBiConsumer<? super A, ? super T1> accumulateItemF1() {
         return accumulateItemF1;
+    }
+
+    @Nonnull @Override
+    @SuppressWarnings("unchecked")
+    public <T> DistributedBiConsumer<? super A, T> accumulateItemF(Tag<T> tag) {
+        if (tag != TAG_1) {
+            throw new IllegalArgumentException("AggregateOperation1 recognizes only Tag.tag1()");
+        }
+        return (DistributedBiConsumer<? super A, T>) accumulateItemF1;
     }
 
     @Nonnull @Override

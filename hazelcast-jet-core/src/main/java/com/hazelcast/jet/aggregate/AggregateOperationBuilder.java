@@ -28,100 +28,109 @@ import com.hazelcast.jet.pipeline.bag.Tag;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.hazelcast.util.Preconditions.checkNotNull;
+
 /**
  * Javadoc pending.
  */
-public final class AggrOpBuilder {
+public final class AggregateOperationBuilder<A> {
 
-    private AggrOpBuilder() {
+    private final DistributedSupplier<A> createAccumulatorF;
+
+    AggregateOperationBuilder(DistributedSupplier<A> createAccumulatorF) {
+        this.createAccumulatorF = createAccumulatorF;
     }
 
-    public static class Step1<A> {
-        private final DistributedSupplier<A> createAccumulatorF;
-
-        Step1(DistributedSupplier<A> createAccumulatorF) {
-            this.createAccumulatorF = createAccumulatorF;
-        }
-
-        public <T1> Step2Arity1<T1, A> andAccumulate(DistributedBiConsumer<? super A, T1> accumulateItemF) {
-            return new Step2Arity1<>(createAccumulatorF, accumulateItemF);
-        }
-
-        public <T1> Step2Arity1<T1, A> andAccumulate1(DistributedBiConsumer<? super A, T1> accumulateItemF1) {
-            return new Step2Arity1<>(createAccumulatorF, accumulateItemF1);
-        }
-
-        public <T> Step2VarArity<A> andAccumulate(Tag<T> tag, DistributedBiConsumer<? super A, T> accumulateItemF) {
-            return new Step2VarArity<>(createAccumulatorF, tag, accumulateItemF);
-        }
+    public <T1> Arity1<T1, A> andAccumulate(DistributedBiConsumer<? super A, T1> accumulateItemF) {
+        checkNotNull(accumulateItemF, "accumulateItemF");
+        return new Arity1<>(createAccumulatorF, accumulateItemF);
     }
 
-    public static class Step2Arity1<T1, A> {
+    public <T1> Arity1<T1, A> andAccumulate1(DistributedBiConsumer<? super A, T1> accumulateItemF1) {
+        checkNotNull(accumulateItemF1, "accumulateItemF1");
+        return new Arity1<>(createAccumulatorF, accumulateItemF1);
+    }
+
+    public <T> VarArity<A> andAccumulate(Tag<T> tag, DistributedBiConsumer<? super A, T> accumulateItemF) {
+        checkNotNull(tag, "tag");
+        checkNotNull(accumulateItemF, "accumulateItemF");
+        return new VarArity<>(createAccumulatorF, tag, accumulateItemF);
+    }
+
+    public static class Arity1<T1, A> {
         private final DistributedSupplier<A> createAccumulatorF;
         private final DistributedBiConsumer<? super A, T1> accumulateItemF1;
         private DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF;
         private DistributedBiConsumer<? super A, ? super A> deductAccumulatorF;
 
-        Step2Arity1(DistributedSupplier<A> createAccumulatorF, DistributedBiConsumer<? super A, T1> accumulateItemF1) {
+        Arity1(DistributedSupplier<A> createAccumulatorF, DistributedBiConsumer<? super A, T1> accumulateItemF1) {
             this.createAccumulatorF = createAccumulatorF;
             this.accumulateItemF1 = accumulateItemF1;
         }
 
-        public <T2> Step2Arity2<T1, T2, A> andAccumulate2(DistributedBiConsumer<? super A, T2> accumulateItemF2) {
-            return new Step2Arity2<>(this, accumulateItemF2);
+        public <T2> Arity2<T1, T2, A> andAccumulate2(DistributedBiConsumer<? super A, T2> accumulateItemF2) {
+            checkNotNull(accumulateItemF2, "accumulateItemF2");
+            return new Arity2<>(this, accumulateItemF2);
         }
 
-        public Step2Arity1<T1, A> andCombine(DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF) {
+        public Arity1<T1, A> andCombine(DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF) {
+            checkNotNull(combineAccumulatorsF, "combineAccumulatorsF");
             this.combineAccumulatorsF = combineAccumulatorsF;
             return this;
         }
 
-        public Step2Arity1<T1, A> andDeduct(DistributedBiConsumer<? super A, ? super A> deductAccumulatorF) {
+        public Arity1<T1, A> andDeduct(DistributedBiConsumer<? super A, ? super A> deductAccumulatorF) {
+            checkNotNull(deductAccumulatorF, "deductAccumulatorF");
             this.deductAccumulatorF = deductAccumulatorF;
             return this;
         }
 
         public <R> AggregateOperation1<T1, A, R> andFinish(DistributedFunction<? super A, R> finishAccumulationF) {
+            checkNotNull(finishAccumulationF, "finishAccumulationF");
             return new AggregateOperation1Impl<>(createAccumulatorF, accumulateItemF1,
                     combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
         }
     }
 
-    public static class Step2Arity2<T1, T2, A> {
+    public static class Arity2<T1, T2, A> {
         private final DistributedSupplier<A> createAccumulatorF;
         private final DistributedBiConsumer<? super A, T1> accumulateItemF1;
         private final DistributedBiConsumer<? super A, T2> accumulateItemF2;
         private DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF;
         private DistributedBiConsumer<? super A, ? super A> deductAccumulatorF;
 
-        Step2Arity2(Step2Arity1<T1, A> step1, DistributedBiConsumer<? super A, T2> accumulateItemF2) {
+        Arity2(Arity1<T1, A> step1, DistributedBiConsumer<? super A, T2> accumulateItemF2) {
             this.createAccumulatorF = step1.createAccumulatorF;
             this.accumulateItemF1 = step1.accumulateItemF1;
             this.accumulateItemF2 = accumulateItemF2;
         }
 
-        public <T3> Step2Arity3<T1, T2, T3, A> andAccumulate3(DistributedBiConsumer<? super A, T3> accumulateItemF3) {
-            return new Step2Arity3<>(this, accumulateItemF3);
+        public <T3> Arity3<T1, T2, T3, A> andAccumulate3(DistributedBiConsumer<? super A, T3> accumulateItemF3) {
+            checkNotNull(accumulateItemF3, "accumulateItemF3");
+            return new Arity3<>(this, accumulateItemF3);
         }
 
-        public Step2Arity2<T1, T2, A> andCombine(DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF) {
+        public Arity2<T1, T2, A> andCombine(DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF) {
+            checkNotNull(combineAccumulatorsF, "combineAccumulatorsF");
             this.combineAccumulatorsF = combineAccumulatorsF;
             return this;
         }
 
-        public Step2Arity2<T1, T2, A> andDeduct(DistributedBiConsumer<? super A, ? super A> deductAccumulatorF) {
+        public Arity2<T1, T2, A> andDeduct(DistributedBiConsumer<? super A, ? super A> deductAccumulatorF) {
+            checkNotNull(deductAccumulatorF, "deductAccumulatorF");
             this.deductAccumulatorF = deductAccumulatorF;
             return this;
         }
 
         public <R> AggregateOperation2<T1, T2, A, R> andFinish(DistributedFunction<? super A, R> finishAccumulationF) {
+            checkNotNull(finishAccumulationF, "finishAccumulationF");
             return new AggregateOperation2Impl<>(createAccumulatorF,
                     accumulateItemF1, accumulateItemF2,
                     combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
         }
     }
 
-    public static class Step2Arity3<T1, T2, T3, A> {
+    public static class Arity3<T1, T2, T3, A> {
         private final DistributedSupplier<A> createAccumulatorF;
         private final DistributedBiConsumer<? super A, T1> accumulateItemF1;
         private final DistributedBiConsumer<? super A, T2> accumulateItemF2;
@@ -129,8 +138,8 @@ public final class AggrOpBuilder {
         private DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF;
         private DistributedBiConsumer<? super A, ? super A> deductAccumulatorF;
 
-        Step2Arity3(Step2Arity2<T1, T2, A> step2,
-                    DistributedBiConsumer<? super A, T3> accumulateItemF3
+        Arity3(Arity2<T1, T2, A> step2,
+               DistributedBiConsumer<? super A, T3> accumulateItemF3
         ) {
             this.createAccumulatorF = step2.createAccumulatorF;
             this.accumulateItemF1 = step2.accumulateItemF1;
@@ -138,12 +147,14 @@ public final class AggrOpBuilder {
             this.accumulateItemF3 = accumulateItemF3;
         }
 
-        public Step2Arity3<T1, T2, T3, A> andCombine(DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF) {
+        public Arity3<T1, T2, T3, A> andCombine(DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF) {
+            checkNotNull(combineAccumulatorsF, "combineAccumulatorsF");
             this.combineAccumulatorsF = combineAccumulatorsF;
             return this;
         }
 
-        public Step2Arity3<T1, T2, T3, A> andDeduct(DistributedBiConsumer<? super A, ? super A> deductAccumulatorF) {
+        public Arity3<T1, T2, T3, A> andDeduct(DistributedBiConsumer<? super A, ? super A> deductAccumulatorF) {
+            checkNotNull(deductAccumulatorF, "deductAccumulatorF");
             this.deductAccumulatorF = deductAccumulatorF;
             return this;
         }
@@ -151,19 +162,20 @@ public final class AggrOpBuilder {
         public <R> AggregateOperation3<T1, T2, T3, A, R> andFinish(
                 DistributedFunction<? super A, R> finishAccumulationF
         ) {
+            checkNotNull(finishAccumulationF, "finishAccumulationF");
             return new AggregateOperation3Impl<>(createAccumulatorF,
                     accumulateItemF1, accumulateItemF2, accumulateItemF3,
                     combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
         }
     }
 
-    public static class Step2VarArity<A> {
+    public static class VarArity<A> {
         private final DistributedSupplier<A> createAccumulatorF;
         private final Map<Tag, DistributedBiConsumer<? super A, ?>> accumulatorsByTag = new HashMap<>();
         private DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF;
         private DistributedBiConsumer<? super A, ? super A> deductAccumulatorF;
 
-        <T> Step2VarArity(
+        <T> VarArity(
                 DistributedSupplier<A> createAccumulatorF,
                 Tag<T> tag,
                 DistributedBiConsumer<? super A, T> accumulateItemF
@@ -172,22 +184,27 @@ public final class AggrOpBuilder {
             accumulatorsByTag.put(tag, accumulateItemF);
         }
 
-        public <T> Step2VarArity<A> andAccumulate(Tag<T> tag, DistributedBiConsumer<? super A, T> accumulateItemF) {
+        public <T> VarArity<A> andAccumulate(Tag<T> tag, DistributedBiConsumer<? super A, T> accumulateItemF) {
+            checkNotNull(tag, "tag");
+            checkNotNull(accumulateItemF, "accumulateItemF");
             accumulatorsByTag.put(tag, accumulateItemF);
             return this;
         }
 
-        public Step2VarArity<A> andCombine(DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF) {
+        public VarArity<A> andCombine(DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF) {
+            checkNotNull(combineAccumulatorsF, "combineAccumulatorsF");
             this.combineAccumulatorsF = combineAccumulatorsF;
             return this;
         }
 
-        public Step2VarArity<A> andDeduct(DistributedBiConsumer<? super A, ? super A> deductAccumulatorF) {
+        public VarArity<A> andDeduct(DistributedBiConsumer<? super A, ? super A> deductAccumulatorF) {
+            checkNotNull(deductAccumulatorF, "deductAccumulatorF");
             this.deductAccumulatorF = deductAccumulatorF;
             return this;
         }
 
         public <R> AggregateOperation<A, R> andFinish(DistributedFunction<? super A, R> finishAccumulationF) {
+            checkNotNull(finishAccumulationF, "finishAccumulationF");
             return new AggregateOperationImpl<>(createAccumulatorF, accumulatorsByTag,
                     combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
         }

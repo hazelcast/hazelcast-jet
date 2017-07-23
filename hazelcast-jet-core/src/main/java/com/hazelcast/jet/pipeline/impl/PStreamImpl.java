@@ -35,6 +35,9 @@ import com.hazelcast.jet.pipeline.tuple.Tuple3;
 
 import java.util.List;
 
+import static com.hazelcast.jet.pipeline.bag.Tag.tag1;
+import static com.hazelcast.jet.pipeline.bag.Tag.tag2;
+import static com.hazelcast.jet.pipeline.bag.Tag.tag3;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
@@ -78,7 +81,8 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
             PStream<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
             AggregateOperation2<E, E2, A, R> aggrOp
     ) {
-        return pipeline.attach(asList(this, s2), new CoGroupTransform<>(asList(thisKeyF, key2F), aggrOp));
+        return pipeline.attach(asList(this, s2),
+                new CoGroupTransform<>(asList(thisKeyF, key2F), aggrOp, asList(tag1(), tag2())));
     }
 
     @Override
@@ -88,7 +92,8 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
             PStream<E3> s3, DistributedFunction<? super E3, ? extends K> key3F,
             AggregateOperation3<E, E2, E3, A, R> aggrOp
     ) {
-        return pipeline.attach(asList(this, s2, s3), new CoGroupTransform<>(asList(thisKeyF, key2F, key3F), aggrOp));
+        return pipeline.attach(asList(this, s2, s3),
+                new CoGroupTransform<>(asList(thisKeyF, key2F, key3F), aggrOp, asList(tag1(), tag2(), tag3())));
     }
 
     @Override

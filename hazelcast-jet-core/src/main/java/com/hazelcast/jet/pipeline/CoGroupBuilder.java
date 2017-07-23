@@ -23,6 +23,7 @@ import com.hazelcast.jet.pipeline.impl.PipelineImpl;
 import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,8 +38,8 @@ import static java.util.stream.Collectors.toList;
  */
 public class CoGroupBuilder<K, E_LEFT> {
     private final Map<Tag<?>, CoGroupClause<?, K>> clauses = new HashMap<>();
-
     private final Tag<E_LEFT> leftTag;
+    private final List<Tag> tags = new ArrayList<>();
 
     public CoGroupBuilder(PStream<E_LEFT> s, DistributedFunction<? super E_LEFT, K> groupKeyF) {
         this.leftTag = add(s, groupKeyF);
@@ -51,6 +52,7 @@ public class CoGroupBuilder<K, E_LEFT> {
     public <E> Tag<E> add(PStream<E> s, DistributedFunction<? super E, K> groupKeyF) {
         Tag tag = new Tag(clauses.size());
         clauses.put(tag, new CoGroupClause<>(s, groupKeyF));
+        tags.add(tag);
         return (Tag<E>) tag;
     }
 
@@ -61,7 +63,8 @@ public class CoGroupBuilder<K, E_LEFT> {
         CoGroupTransform<K, A, R> transform = new CoGroupTransform<>(orderedClauses()
                 .map(e -> e.getValue().groupKeyF())
                 .collect(toList()),
-                aggrOp
+                aggrOp,
+                tags
         );
         PipelineImpl pipeline = (PipelineImpl) clauses.get(leftTag).pstream.getPipeline();
         return pipeline.attach(upstream, transform);

@@ -27,8 +27,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Map;
 
+import static com.hazelcast.jet.pipeline.bag.Tag.TAG_1;
+import static com.hazelcast.jet.pipeline.bag.Tag.TAG_2;
 import static com.hazelcast.jet.pipeline.bag.Tag.tag1;
 import static com.hazelcast.jet.pipeline.bag.Tag.tag2;
+import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * Javadoc pending.
@@ -48,20 +51,38 @@ public class AggregateOperation2Impl<T1, T2, A, R>
                                    @Nonnull DistributedFunction<? super A, R> finishAccumulationF
     ) {
         super(createAccumulatorF,
-                accumulatorsByTag(tag1(), accumulateItemF1, tag2(), accumulateItemF2),
+                accumulatorsByTag(TAG_1, accumulateItemF1, TAG_2, accumulateItemF2),
                 combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
+        checkNotNull(accumulateItemF1, "accumulateItemF1");
+        checkNotNull(accumulateItemF2, "accumulateItemF2");
         this.accumulateItemF1 = accumulateItemF1;
         this.accumulateItemF2 = accumulateItemF2;
     }
 
-    @Nonnull
-    @Override
-    public DistributedBiConsumer<? super A, T2> accumulateItemF2() {
+    @Nonnull @Override
+    public DistributedBiConsumer<? super A, ? super T1> accumulateItemF1() {
+        return accumulateItemF1;
+    }
+
+    @Nonnull @Override
+    public DistributedBiConsumer<? super A, ? super T2> accumulateItemF2() {
         return accumulateItemF2;
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
+    public <T> DistributedBiConsumer<? super A, T> accumulateItemF(Tag<T> tag) {
+        DistributedBiConsumer<? super A, ?> accF =
+                tag == TAG_1 ? accumulateItemF1
+              : tag == TAG_2 ? accumulateItemF2
+              : null;
+        if (accF == null) {
+            throw new IllegalArgumentException(
+                    "AggregateOperation2 recognizes only Tag.tag1() and Tag.tag2()");
+        }
+        return (DistributedBiConsumer<? super A, T>) accF;
+    }
+
+    @Nonnull @Override
     @SuppressWarnings("unchecked")
     public AggregateOperation<A, R> withAccumulatorsByTag(
             @Nonnull Map<Tag, DistributedBiConsumer<? super A, ?>> accumulatorsByTag

@@ -22,9 +22,9 @@ import java.io.Serializable;
  * Javadoc pending.
  */
 public class Tag<E> implements Serializable, Comparable<Tag<?>> {
-    private static final Tag TAG_1 = new Tag(0);
-    private static final Tag TAG_2 = new Tag(1);
-    private static final Tag TAG_3 = new Tag(2);
+    public static final Tag TAG_1 = new Tag(0);
+    public static final Tag TAG_2 = new Tag(1);
+    public static final Tag TAG_3 = new Tag(2);
 
     private final int index;
 

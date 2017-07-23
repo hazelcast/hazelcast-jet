@@ -26,6 +26,8 @@ import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.Map;
 
+import static com.hazelcast.util.Preconditions.checkNotNull;
+
 /**
  * Contains primitives needed to compute an aggregated result of stream
  * processing. The result is computed by updating a mutable result
@@ -157,12 +159,12 @@ public interface AggregateOperation<A, R> extends Serializable {
      * aggregate operations:
      * <ul><li>
      *     For fixed arity use {@link
-     *     AggrOpBuilder.Step1#andAccumulate1(DistributedBiConsumer)
+     *     AggregateOperationBuilder#andAccumulate1(DistributedBiConsumer)
      *     builder.andAccumulate1()}, optionally followed by {@code andAccumulate2()},
      *     {@code andAccumulate3()}. The return type of these methods changes as the
      *     static types of the contributing streams are captured.
      * </li><li>
-     *     For variable arity use {@link AggrOpBuilder.Step1#andAccumulate(Tag,
+     *     For variable arity use {@link AggregateOperationBuilder#andAccumulate(Tag,
      *     DistributedBiConsumer) builder.andAccumulate(tag)}.
      * </li></ul>
      * The {@code andFinish()} method returns the constructed aggregate operation.
@@ -175,7 +177,8 @@ public interface AggregateOperation<A, R> extends Serializable {
      *         has just the {@code create} primitive defined
      */
     @Nonnull
-    static <A> AggrOpBuilder.Step1<A> withCreate(DistributedSupplier<A> createAccumulatorF) {
-        return new AggrOpBuilder.Step1<>(createAccumulatorF);
+    static <A> AggregateOperationBuilder<A> withCreate(DistributedSupplier<A> createAccumulatorF) {
+        checkNotNull(createAccumulatorF, "createAccumulatorF");
+        return new AggregateOperationBuilder<>(createAccumulatorF);
     }
 }

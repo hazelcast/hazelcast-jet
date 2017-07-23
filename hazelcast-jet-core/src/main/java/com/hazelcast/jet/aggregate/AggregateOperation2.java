@@ -29,25 +29,17 @@ public interface AggregateOperation2<T1, T2, A, R> extends AggregateOperation<A,
 
     /**
      * A primitive that updates the accumulator state to account for a new
-     * item coming from stream number 1 in a co-grouping operation. The default
-     * implementation is a synonym for {@link #accumulateItemF(Tag)
-     * accumulateItemF(Tag.leftTag())}.
+     * item coming from stream number 1 in a co-grouping operation.
      */
     @Nonnull
-    default DistributedBiConsumer<? super A, T1> accumulateItemF1() {
-        return accumulateItemF(Tag.tag1());
-    }
+    DistributedBiConsumer<? super A, ? super T1> accumulateItemF1();
 
     /**
      * A primitive that updates the accumulator state to account for a new
-     * item coming from stream number 2 in a co-grouping operation. The default
-     * implementation is a synonym for {@link #accumulateItemF(Tag)
-     * accumulateItemF(Tag.rightTag())}.
+     * item coming from stream number 2 in a co-grouping operation.
      */
     @Nonnull
-    default DistributedBiConsumer<? super A, T2> accumulateItemF2() {
-        return accumulateItemF(Tag.tag2());
-    }
+    DistributedBiConsumer<? super A, ? super T2> accumulateItemF2();
 
     @Nonnull
     <R1> AggregateOperation2<T1, T2, A, R1> withFinish(

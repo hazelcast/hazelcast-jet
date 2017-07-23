@@ -19,9 +19,14 @@ package com.hazelcast.jet.impl.aggregate;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.pipeline.bag.Tag;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.HashMap;
+import java.util.Map;
+
+import static com.hazelcast.util.Preconditions.checkNotNull;
 
 abstract class AggregateOperationBase<A, R> {
     private final DistributedSupplier<A> createAccumulatorF;
@@ -35,6 +40,9 @@ abstract class AggregateOperationBase<A, R> {
             @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorF,
             @Nonnull DistributedFunction<? super A, R> finishAccumulationF
     ) {
+        checkNotNull(createAccumulatorF, "createAccumulatorF");
+        checkNotNull(createAccumulatorF, "combineAccumulatorsF");
+        checkNotNull(createAccumulatorF, "finishAccumulationF");
         this.createAccumulatorF = createAccumulatorF;
         this.combineAccumulatorsF = combineAccumulatorsF;
         this.deductAccumulatorF = deductAccumulatorF;
@@ -59,5 +67,16 @@ abstract class AggregateOperationBase<A, R> {
     @Nonnull
     public DistributedFunction<? super A, R> finishAccumulationF() {
         return finishAccumulationF;
+    }
+
+    @Nonnull
+    @SuppressWarnings("unchecked")
+    static <A> Map<Tag, DistributedBiConsumer<? super A, ?>> accumulatorsByTag(Object... tagsAndAccs) {
+        Map<Tag, DistributedBiConsumer<? super A, ?>> map = new HashMap<>();
+        for (int i = 0; i < tagsAndAccs.length;) {
+            map.put((Tag) tagsAndAccs[i++],
+                    (DistributedBiConsumer<? super A, ?>) tagsAndAccs[i++]);
+        }
+        return map;
     }
 }
