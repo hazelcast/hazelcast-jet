@@ -19,20 +19,20 @@ package com.hazelcast.jet;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.impl.AggregateOperationImpl;
 import com.hazelcast.jet.pipeline.bag.Tag;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
-import java.util.Objects;
+import java.util.Map;
 
 /**
  * Contains primitives needed to compute an aggregated result of
  * stream processing. The result is computed by maintaining a mutable
  * result container, called the <em>accumulator</em>, which is transformed
- * to the final result at the end of accumulation. These are the
- * primitives:
+ * to the final result at the end of accumulation. The data items may come
+ * from one or more inbound streams; there is a separate {@code accumulate}
+ * function for each of them.
  * <ol><li>
  *     {@link #createAccumulatorF() create} a new accumulator object
  * </li><li>
@@ -50,12 +50,25 @@ import java.util.Objects;
  * </li></ol>
  * The <em>deduct</em> primitive is optional. It is used in sliding window
  * aggregation, where it can significantly improve the performance.
+ * <h3>Static type design</h3>
+ * This interface covers the fully general case where contributing streams
+ * are identified by <em>tags</em>. Since there can be any number of
+ * streams, this interface has no type parameter for the stream item. The
+ * tags themselves carry the type information, but there must be a runtime
+ * check whether a given tag is registered with this aggregate operation.
+ * <p>
+ * There are specializations of this interface to up to three contributing
+ * streams whose type is statically captured by this aggregate operation.
+ * They are {@link AggregateOperation1}, {@link AggregateOperation2} and
+ * {@link AggregateOperation3}. {@link AggregateOperationBuilder} will
+ * automatically return the appropriate specialization, depending on which
+ * {@code accumulate} primitives are provided to it.
  *
  * @param <T> the type of the stream item &mdash; contravariant
  * @param <A> the type of the accumulator &mdash; invariant
  * @param <R> the type of the final result &mdash; covariant
  */
-public interface AggregateOperation<T, A, R> extends Serializable {
+public interface AggregateOperation<A, R> extends Serializable {
 
     /**
      * A primitive that returns a new accumulator. If the {@code deduct}
@@ -69,22 +82,11 @@ public interface AggregateOperation<T, A, R> extends Serializable {
 
     /**
      * A primitive that updates the accumulator state to account for a new
-     * item. The default implementation is a synonym for
-     * {@link #accumulateItemF(Tag) accumulateItemF(Tag.leftTag())}.
+     * item. The tag argument identifies which of the contributing streams
+     * in a co-group operation the returned function will handle.
      */
     @Nonnull
-    default DistributedBiConsumer<? super A, T> accumulateItemF() {
-        return accumulateItemF(Tag.leftTag());
-    }
-
-    /**
-     * A primitive that updates the accumulator state to account for a new
-     * item. This overload is used for co-grouping operations which aggregate
-     * over several data streams. The tag argument identifies which of the
-     * contributing streams the returned function will handle.
-     */
-    @Nonnull
-    <E> DistributedBiConsumer<? super A, E> accumulateItemF(Tag<E> tag);
+    <T> DistributedBiConsumer<? super A, T> accumulateItemF(Tag<T> tag);
 
     /**
      * A primitive that accepts two accumulators and updates the state of the
@@ -128,61 +130,12 @@ public interface AggregateOperation<T, A, R> extends Serializable {
     DistributedFunction<? super A, R> finishAccumulationF();
 
     /**
-     * Returns a copy of this aggregate operation with the {@code finish}
-     * primitive replaced by the supplied one.
-     *
-     * @param finishAccumulationF the {@code finish} primitive to use
-     * @param <R1> the result type of the {@code finish} primitive
-     */
-    default <R1> AggregateOperation<T, A, R1> withFinish(
-            @Nonnull DistributedFunction<? super A, R1> finishAccumulationF
-    ) {
-        return of(createAccumulatorF(), accumulateItemF(), combineAccumulatorsF(),
-                deductAccumulatorF(), finishAccumulationF);
-    }
-
-    /**
-     * Returns a copy of this aggregate operation with the {@code accumulate}
-     * primitive replaced by the supplied one.
-     *
-     * @param accumulateItemF the {@code combine} primitive to use
-     */
-    default <T1> AggregateOperation<T1, A, R> withAccumulate(
-            @Nonnull DistributedBiConsumer<A, T1> accumulateItemF
-    ) {
-        return of(createAccumulatorF(), accumulateItemF, combineAccumulatorsF(), deductAccumulatorF(),
-                finishAccumulationF());
-    }
-
-    /**
-     * Returns a new {@code AggregateOperation} object composed from the provided
-     * primitives.
-     *
-     * @param <T> the type of the stream item
-     * @param <A> the type of the accumulator object
-     * @param <R> the type of the final result
-     *
-     * @param createAccumulatorF see {@link #createAccumulatorF()}()
-     * @param accumulateItemF see {@link #accumulateItemF()}
-     * @param combineAccumulatorsF see {@link #combineAccumulatorsF()}
-     * @param deductAccumulatorF see {@link #deductAccumulatorF()}
-     * @param finishAccumulationF see {@link #finishAccumulationF()}
+     * Returns a copy of this aggregate operation with the map of
+     * {@code accumulate} primitives replaced by the supplied one.
      */
     @Nonnull
-    static <T, A, R> AggregateOperation<T, A, R> of(
-            @Nonnull DistributedSupplier<A> createAccumulatorF,
-            @Nonnull DistributedBiConsumer<? super A, T> accumulateItemF,
-            @Nonnull DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF,
-            @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorF,
-            @Nonnull DistributedFunction<? super A, R> finishAccumulationF
-    ) {
-        Objects.requireNonNull(createAccumulatorF);
-        Objects.requireNonNull(accumulateItemF);
-        Objects.requireNonNull(combineAccumulatorsF);
-        Objects.requireNonNull(finishAccumulationF);
-        return new AggregateOperationImpl<>(
-                createAccumulatorF, accumulateItemF, combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
-    }
+    AggregateOperation<A, R> withAccumulatorsByTag(
+            @Nonnull Map<Tag, DistributedBiConsumer<? super A, ?>> accumulatorsByTag);
 
     @Nonnull
     static <A> AggregateOperationBuilder.Step1<A> withCreate(DistributedSupplier<A> createAccumulatorF) {

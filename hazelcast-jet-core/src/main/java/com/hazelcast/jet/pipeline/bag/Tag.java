@@ -22,8 +22,9 @@ import java.io.Serializable;
  * Javadoc pending.
  */
 public class Tag<E> implements Serializable, Comparable<Tag<?>> {
-    private static final Tag LEFT_TAG = new Tag(0);
-    private static final Tag RIGHT_TAG = new Tag(1);
+    private static final Tag TAG_1 = new Tag(0);
+    private static final Tag TAG_2 = new Tag(1);
+    private static final Tag TAG_3 = new Tag(2);
 
     private final int index;
 
@@ -32,13 +33,18 @@ public class Tag<E> implements Serializable, Comparable<Tag<?>> {
     }
 
     @SuppressWarnings("unchecked")
-    public static <E> Tag<E> leftTag() {
-        return LEFT_TAG;
+    public static <E> Tag<E> tag1() {
+        return TAG_1;
     }
 
     @SuppressWarnings("unchecked")
-    public static <E> Tag<E> rightTag() {
-        return RIGHT_TAG;
+    public static <E> Tag<E> tag2() {
+        return TAG_2;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <E> Tag<E> tag3() {
+        return TAG_3;
     }
 
     @Override
