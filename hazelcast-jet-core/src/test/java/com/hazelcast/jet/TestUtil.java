@@ -16,10 +16,13 @@
 
 package com.hazelcast.jet;
 
+import com.hazelcast.jet.impl.JetService;
+
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
+import static com.hazelcast.test.HazelcastTestSupport.getNodeEngineImpl;
 import static org.junit.Assert.assertEquals;
 
 public final class TestUtil {
@@ -56,6 +59,10 @@ public final class TestUtil {
         if (!found) {
             assertEquals("expected exception not found in causes chain", expected, caught);
         }
+    }
+
+    public static JetService getJetService(JetInstance jetInstance) {
+        return getNodeEngineImpl(jetInstance.getHazelcastInstance()).getService(JetService.SERVICE_NAME);
     }
 
     public static final class DummyUncheckedTestException extends RuntimeException {

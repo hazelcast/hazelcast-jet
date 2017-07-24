@@ -19,10 +19,12 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.client.impl.HazelcastClientInstanceImpl;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.JetCancelJobCodec;
-import com.hazelcast.client.impl.protocol.codec.JetExecuteJobCodec;
+import com.hazelcast.client.impl.protocol.codec.JetJoinJobCodec;
 import com.hazelcast.client.spi.impl.ClientInvocation;
 import com.hazelcast.client.spi.impl.ClientInvocationFuture;
 import com.hazelcast.core.ExecutionCallback;
+import com.hazelcast.core.ICompletableFuture;
+import com.hazelcast.core.Member;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -31,13 +33,10 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
-import com.hazelcast.nio.serialization.Data;
 
 import javax.annotation.Nonnull;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.Set;
+import java.util.concurrent.*;
 
 public class JetClientInstanceImpl extends AbstractJetInstance {
 
@@ -59,7 +58,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
 
     @Override
     public Job newJob(DAG dag) {
-        return new JobImpl(dag);
+        return newJob(dag, new JobConfig());
     }
 
     @Override
@@ -67,35 +66,28 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         return new JobImpl(dag, config);
     }
 
-    private class JobImpl implements Job {
+    private class JobImpl extends AbstractJobImpl {
 
-        private final DAG dag;
-        private final JobConfig config;
-
-        protected JobImpl(DAG dag) {
-            this(dag, new JobConfig());
+        JobImpl(long jobId) {
+            super(JetClientInstanceImpl.this, jobId);
         }
 
-        protected JobImpl(DAG dag, JobConfig config) {
-            this.dag = dag;
-            this.config = config;
+        JobImpl(DAG dag, JobConfig config) {
+            super(JetClientInstanceImpl.this, dag, config);
         }
 
         @Override
-        public Future<Void> execute() {
-            long executionId = getIdGenerator().newId();
-            new ResourceUploader(client.getMap(JetService.METADATA_MAP_PREFIX + executionId))
-                    .uploadMetadata(config);
-
-            Data dagData = client.getSerializationService().toData(dag);
-            Address executionAddress = client.getPartitionService().getPartition(executionId).getOwner().getAddress();
-            ClientInvocation invocation = new ClientInvocation(client,
-                    JetExecuteJobCodec.encodeRequest(executionId, dagData), executionAddress);
-            return new ExecutionFuture(invocation.invoke(), executionId, executionAddress);
+        protected ICompletableFuture<Void> sendJoinJobOp() {
+            Set<Member> members = client.getCluster().getMembers();
+            Member master = members.iterator().next();
+            Address masterAddress = master.getAddress();
+            ClientMessage request = JetJoinJobCodec.encodeRequest(getJobId());
+            ClientInvocation invocation = new ClientInvocation(client, request, masterAddress);
+            return new ExecutionFuture(invocation.invoke(), getJobId(), masterAddress);
         }
     }
 
-    private final class ExecutionFuture implements Future<Void> {
+    private final class ExecutionFuture implements ICompletableFuture<Void> {
 
         private final ClientInvocationFuture future;
         private final long executionId;
@@ -150,5 +142,36 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
             future.get(timeout, unit);
             return null;
         }
+
+        @Override
+        public void andThen(ExecutionCallback<Void> callback) {
+            future.andThen(new ExecutionCallback<ClientMessage>() {
+                @Override
+                public void onResponse(ClientMessage response) {
+                    callback.onResponse(null);
+                }
+
+                @Override
+                public void onFailure(Throwable t) {
+                    callback.onFailure(t);
+                }
+            });
+        }
+
+        @Override
+        public void andThen(ExecutionCallback<Void> callback, Executor executor) {
+            future.andThen(new ExecutionCallback<ClientMessage>() {
+                @Override
+                public void onResponse(ClientMessage response) {
+                    callback.onResponse(null);
+                }
+
+                @Override
+                public void onFailure(Throwable t) {
+                    callback.onFailure(t);
+                }
+            }, executor);
+        }
+
     }
 }

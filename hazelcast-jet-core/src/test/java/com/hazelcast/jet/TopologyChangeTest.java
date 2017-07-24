@@ -16,9 +16,18 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.core.HazelcastInstanceNotActiveException;
+import com.hazelcast.internal.cluster.impl.ClusterDataSerializerHook;
+import com.hazelcast.internal.partition.impl.PartitionDataSerializerHook;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.impl.JobResult;
+import com.hazelcast.jet.impl.coordination.JobResultRepository;
+import com.hazelcast.jet.impl.coordination.MasterContext;
+import com.hazelcast.jet.impl.execution.init.JetImplDataSerializerHook;
 import com.hazelcast.spi.properties.GroupProperty;
+import com.hazelcast.test.AssertTask;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
@@ -38,18 +47,26 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import static com.hazelcast.internal.cluster.impl.ClusterDataSerializerHook.MEMBER_INFO_UPDATE;
+import static com.hazelcast.internal.partition.impl.PartitionDataSerializerHook.SHUTDOWN_REQUEST;
+import static com.hazelcast.jet.JobStatus.RUNNING;
+import static com.hazelcast.jet.JobStatus.STARTING;
+import static com.hazelcast.jet.TestUtil.getJetService;
+import static com.hazelcast.jet.impl.execution.init.JetImplDataSerializerHook.EXECUTE_OP;
+import static com.hazelcast.jet.impl.execution.init.JetImplDataSerializerHook.INIT_OP;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static com.hazelcast.test.PacketFiltersUtil.dropOperationsBetween;
+import static com.hazelcast.test.PacketFiltersUtil.resetPacketFiltersFrom;
+import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.Matchers.empty;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastSerialClassRunner.class)
 public class TopologyChangeTest extends JetTestSupport {
 
-    private static final int NODE_COUNT = 2;
+    private static final int NODE_COUNT = 3;
     private static final int PARALLELISM = 4;
 
     private static final int TIMEOUT_MILLIS = 8000;
@@ -59,6 +76,7 @@ public class TopologyChangeTest extends JetTestSupport {
 
     private JetInstance[] instances;
     private JetTestInstanceFactory factory;
+    private JetConfig config;
 
     @Before
     public void setup() {
@@ -70,7 +88,7 @@ public class TopologyChangeTest extends JetTestSupport {
         StuckProcessor.executionStarted = new CountDownLatch(NODE_COUNT * PARALLELISM);
 
         factory = new JetTestInstanceFactory();
-        JetConfig config = new JetConfig();
+        config = new JetConfig();
         config.getInstanceConfig().setCooperativeThreadCount(PARALLELISM);
         config.getHazelcastConfig().getProperties().put(GroupProperty.OPERATION_CALL_TIMEOUT_MILLIS.getName(),
                 Integer.toString(TIMEOUT_MILLIS));
@@ -78,8 +96,8 @@ public class TopologyChangeTest extends JetTestSupport {
     }
 
     @After
-    public void shutdown() {
-        factory.shutdownAll();
+    public void tearDown() {
+        factory.terminateAll();
     }
 
     @Test
@@ -126,61 +144,251 @@ public class TopologyChangeTest extends JetTestSupport {
     }
 
     @Test
-    public void when_removeExistingNodeDuringExecution_then_completeCalledWithError() throws Throwable {
+    public void when_nonCoordinatorLeavesDuringExecution_then_jobRestarts() throws Throwable {
         // Given
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(StuckProcessor::new, NODE_COUNT)));
 
         // When
-        try {
-            Future<Void> future = instances[0].newJob(dag).execute();
-            StuckProcessor.executionStarted.await();
-            instances[1].getHazelcastInstance().getLifecycleService().terminate();
-            StuckProcessor.proceedLatch.countDown();
+        Future<Void> future = instances[0].newJob(dag).execute();
+        StuckProcessor.executionStarted.await();
 
-            future.get();
-            fail("Job execution should fail");
-        } catch (ExecutionException exception) {
-            assertInstanceOf(TopologyChangedException.class, exception.getCause());
-        }
+        instances[1].getHazelcastInstance().getLifecycleService().terminate();
+        StuckProcessor.proceedLatch.countDown();
 
-        // Then
-        assertEquals(NODE_COUNT, MockSupplier.initCount.get());
+        future.get();
 
-        assertTrueEventually(() -> {
-            assertEquals(NODE_COUNT - 1, MockSupplier.completeCount.get());
-            assertEquals(NODE_COUNT - 1, MockSupplier.completeErrors.size());
-            for (int i = 0; i < NODE_COUNT - 1; i++) {
-                assertInstanceOf(TopologyChangedException.class, MockSupplier.completeErrors.get(i));
+        // upon non-coordinator member leave, remaining members restart and complete the job
+        final int count = NODE_COUNT * 2 - 1;
+        assertEquals(count, MockSupplier.initCount.get());
+
+        assertTrueEventually(new AssertTask() {
+            @Override
+            public void run() throws Exception {
+                assertEquals(count, MockSupplier.completeCount.get());
+                assertEquals(NODE_COUNT, MockSupplier.completeErrors.size());
+                for (int i = 0; i < MockSupplier.completeErrors.size(); i++) {
+                    Throwable error = MockSupplier.completeErrors.get(i);
+                    assertTrue(error instanceof TopologyChangedException || error instanceof HazelcastInstanceNotActiveException);
+                }
             }
         });
     }
 
     @Test
-    public void when_removeCallingNodeDuringExecution_then_completeCalledWithError() throws Throwable {
+    public void when_coordinatorLeavesDuringExecution_then_jobCompletes() throws Throwable {
         // Given
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(StuckProcessor::new, NODE_COUNT)));
 
         // When
+        Long jobId = null;
         try {
-            Future<Void> future = instances[0].newJob(dag).execute();
+            Job job = instances[0].newJob(dag);
+            Future<Void> future = job.execute();
+            jobId = job.getJobId();
             StuckProcessor.executionStarted.await();
+
             instances[0].getHazelcastInstance().getLifecycleService().terminate();
             StuckProcessor.proceedLatch.countDown();
+
             future.get();
-            fail("Job execution should fail");
-        } catch (Exception ignored) {
+            fail();
+        } catch (ExecutionException expected) {
+            assertTrue(expected.getCause() instanceof HazelcastInstanceNotActiveException);
         }
 
         // Then
-        assertEquals(NODE_COUNT, MockSupplier.initCount.get());
+        assertNotNull(jobId);
+        final long completedJobId = jobId;
 
-        assertTrueEventually(() -> {
-            assertEquals(NODE_COUNT - 1, MockSupplier.completeCount.get());
-            assertEquals(NODE_COUNT - 1, MockSupplier.completeErrors.size());
-            for (int i = 0; i < NODE_COUNT - 1; i++) {
-                assertInstanceOf(TopologyChangedException.class, MockSupplier.completeErrors.get(i));
+        JobResultRepository jobResultRepository = getJetService(instances[1]).getJobResultRepository();
+
+        assertTrueEventually(new AssertTask() {
+            @Override
+            public void run() throws Exception {
+                JobResult jobResult = jobResultRepository.getJobResult(completedJobId);
+                assertNotNull(jobResult);
+                assertTrue(jobResult.isSuccessful());
             }
         });
+
+        final int count = 2 * NODE_COUNT - 1;
+        assertEquals(count, MockSupplier.initCount.get());
+
+        assertTrueEventually(() -> {
+            assertEquals(count, MockSupplier.completeCount.get());
+            assertEquals(NODE_COUNT, MockSupplier.completeErrors.size());
+            for (int i = 0; i < MockSupplier.completeErrors.size(); i++) {
+                Throwable error = MockSupplier.completeErrors.get(i);
+                assertTrue(error instanceof TopologyChangedException || error instanceof HazelcastInstanceNotActiveException);
+            }
+        });
+    }
+
+    @Test
+    public void when_jobParticipantHasStaleMemberList_then_jobInitRetries() throws Throwable {
+        // Given
+        dropOperationsBetween(instances[0].getHazelcastInstance(), instances[1].getHazelcastInstance(), ClusterDataSerializerHook.F_ID, singletonList(MEMBER_INFO_UPDATE));
+        DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(TestProcessors.Identity::new, NODE_COUNT + 1)));
+
+
+        // When
+        factory.newMember(config);
+        Job job = instances[0].newJob(dag);
+        Future<Void> future = job.execute();
+
+
+        // Then
+        JetService jetService = getJetService(instances[0]);
+        MasterContext masterContext = jetService.getJobCoordinationService().getMasterContext(job.getJobId());
+        assertTrueAllTheTime(new AssertTask() {
+            @Override
+            public void run() throws Exception {
+                assertEquals(STARTING, masterContext.getJobStatus());
+            }
+        }, 5);
+
+        resetPacketFiltersFrom(instances[0].getHazelcastInstance());
+
+        future.get();
+    }
+
+    @Test
+    public void when_jobParticipantReceivesStaleInitOperation_then_jobRestarts() throws Throwable {
+        // Given
+        JetInstance newInstance = factory.newMember(config);
+        for (JetInstance instance : instances) {
+            assertClusterSizeEventually(NODE_COUNT + 1, instance.getHazelcastInstance());
+        }
+
+        dropOperationsBetween(instances[0].getHazelcastInstance(), instances[1].getHazelcastInstance(), JetImplDataSerializerHook.FACTORY_ID, singletonList(INIT_OP));
+
+        DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(TestProcessors.Identity::new, NODE_COUNT + 1)));
+
+        Job job = instances[0].newJob(dag);
+        Future<Void> future = job.execute();
+        JetService jetService = getJetService(instances[0]);
+
+        assertTrueEventually(new AssertTask() {
+            @Override
+            public void run() throws Exception {
+                assertFalse(jetService.getJobCoordinationService().getMasterContexts().isEmpty());
+            }
+        });
+
+        MasterContext masterContext = jetService.getJobCoordinationService().getMasterContext(job.getJobId());
+
+        assertTrueEventually(new AssertTask() {
+            @Override
+            public void run() throws Exception {
+                assertEquals(STARTING, masterContext.getJobStatus());
+            }
+        });
+
+
+        // When
+        long executionId = masterContext.getExecutionId();
+        newInstance.getHazelcastInstance().getLifecycleService().terminate();
+        for (JetInstance instance : instances) {
+            assertClusterSizeEventually(NODE_COUNT, instance.getHazelcastInstance());
+        }
+
+        resetPacketFiltersFrom(instances[0].getHazelcastInstance());
+
+
+        // Then
+        future.get();
+        assertNotEquals(executionId, masterContext.getExecutionId());
+    }
+
+    @Test
+    public void when_nodeIsShuttingDownDuringInit_then_jobRestarts() throws Throwable {
+        // Given that newInstance will have a long shutdown process
+        for (JetInstance instance : instances) {
+            warmUpPartitions(instance.getHazelcastInstance());
+        }
+
+        dropOperationsBetween(instances[1].getHazelcastInstance(), instances[0].getHazelcastInstance(),
+                PartitionDataSerializerHook.F_ID, singletonList(SHUTDOWN_REQUEST));
+        dropOperationsBetween(instances[0].getHazelcastInstance(), instances[1].getHazelcastInstance(), JetImplDataSerializerHook.FACTORY_ID, singletonList(INIT_OP));
+
+        // When the second node starts its shutdown after the job is submitted
+        DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(TestProcessors.Identity::new, NODE_COUNT - 1)));
+
+        Job job = instances[0].newJob(dag);
+        Future<Void> future = job.execute();
+
+        JetService jetService = getJetService(instances[0]);
+
+        assertTrueEventually(new AssertTask() {
+            @Override
+            public void run() throws Exception {
+                assertFalse(jetService.getJobCoordinationService().getMasterContexts().isEmpty());
+            }
+        });
+
+        spawn(instances[1]::shutdown);
+
+
+        // Then, it restarts until the shutting down node is gone
+        MasterContext masterContext = jetService.getJobCoordinationService().getMasterContext(job.getJobId());
+
+        assertTrueEventually(new AssertTask() {
+            @Override
+            public void run() throws Exception {
+                assertEquals(STARTING, masterContext.getJobStatus());
+            }
+        });
+
+        assertTrueAllTheTime(new AssertTask() {
+            @Override
+            public void run() throws Exception {
+                assertEquals(STARTING, masterContext.getJobStatus());
+            }
+        }, 5);
+
+        resetPacketFiltersFrom(instances[1].getHazelcastInstance());
+
+        future.get();
+    }
+
+    @Test
+    public void when_nodeIsShuttingDownAfterInit_then_jobRestarts() throws Throwable {
+        // Given that the second node has not received ExecuteOperation yet
+        for (JetInstance instance : instances) {
+            warmUpPartitions(instance.getHazelcastInstance());
+        }
+
+        dropOperationsBetween(instances[0].getHazelcastInstance(), instances[1].getHazelcastInstance(), JetImplDataSerializerHook.FACTORY_ID, singletonList(EXECUTE_OP));
+
+        DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(TestProcessors.Identity::new, NODE_COUNT - 1)));
+
+        Job job = instances[0].newJob(dag);
+        Future<Void> future = job.execute();
+
+        JetService jetService = getJetService(instances[0]);
+
+        assertTrueEventually(new AssertTask() {
+            @Override
+            public void run() throws Exception {
+                assertFalse(jetService.getJobCoordinationService().getMasterContexts().isEmpty());
+            }
+        });
+
+        MasterContext masterContext = jetService.getJobCoordinationService().getMasterContext(job.getJobId());
+
+        assertTrueEventually(new AssertTask() {
+            @Override
+            public void run() throws Exception {
+                assertEquals(RUNNING, masterContext.getJobStatus());
+            }
+        });
+
+        // When the second node shuts down during execution
+        instances[1].shutdown();
+
+
+        // Then, the job restarts and successfully completes
+        future.get();
     }
 
     static class MockSupplier implements ProcessorSupplier {
@@ -229,7 +437,13 @@ public class TopologyChangeTest extends JetTestSupport {
             if (!initCalled) {
                 throw new IllegalStateException("Complete called without calling init()");
             }
-            if (initCount.get() != nodeCount) {
+
+            if (completeCount.get() > initCount.get()) {
+                throw new IllegalStateException("Complete called " + completeCount.get() + " but init called "
+                        + initCount.get() + " times!");
+            }
+
+            if (initCount.get() < nodeCount) {
                 throw new IllegalStateException("Complete called without init being called on all the nodes! init count: "
                         + initCount.get() + " node count: " + nodeCount);
             }

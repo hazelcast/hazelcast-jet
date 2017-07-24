@@ -21,6 +21,10 @@ package com.hazelcast.jet;
  * while executing a job.
  */
 public class TopologyChangedException extends JetException {
+
+    public TopologyChangedException() {
+    }
+
     /**
      * Creates the exception with a message.
      */

@@ -39,6 +39,7 @@ import java.io.NotSerializableException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -82,6 +83,7 @@ public final class Util {
         void run() throws Exception;
     }
 
+    // TODO [basri] check usages
     @Nonnull
     public static List<Address> getRemoteMembers(@Nonnull NodeEngine engine) {
         final Member localMember = engine.getLocalMember();
@@ -195,5 +197,17 @@ public final class Util {
         public void write(int b) {
             // do nothing
         }
+    }
+
+    /*
+ * The random number generator used by this class to create random
+ * based UUIDs. In a holder class to defer initialization until needed.
+ */
+    private static class Holder {
+        static final SecureRandom numberGenerator = new SecureRandom();
+    }
+
+    public static long secureRandomNextLong() {
+        return Holder.numberGenerator.nextLong();
     }
 }

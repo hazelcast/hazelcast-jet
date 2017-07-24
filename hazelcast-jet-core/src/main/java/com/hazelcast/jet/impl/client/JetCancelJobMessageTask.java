@@ -31,7 +31,7 @@ public class JetCancelJobMessageTask extends AbstractJetMessageTask<RequestParam
 
     @Override
     protected void processMessage() {
-        getJetService().getClientInvocationRegistry().cancel(parameters.executionId);
+        getJetService().getClientInvocationRegistry().cancel(parameters.jobId);
         sendResponse(null);
     }
 

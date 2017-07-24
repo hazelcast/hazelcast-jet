@@ -18,9 +18,6 @@ package com.hazelcast.jet;
 
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.nio.Address;
-import com.hazelcast.nio.ObjectDataInput;
-import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.spi.properties.GroupProperty;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
@@ -33,7 +30,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -72,8 +69,8 @@ public class CancellationTest extends JetTestSupport {
     }
 
     @After
-    public void shutdown() {
-        factory.shutdownAll();
+    public void tearDown() {
+        factory.terminateAll();
     }
 
     @Test
@@ -302,34 +299,31 @@ public class CancellationTest extends JetTestSupport {
         }
     }
 
-    private static class SingleNodeFaultSupplier implements DataSerializable, ProcessorMetaSupplier {
+    private static class SingleNodeFaultSupplier implements ProcessorMetaSupplier {
 
-        private transient Address failOnAddress;
+        private String host;
+        private int port;
         private RuntimeException e;
 
         SingleNodeFaultSupplier(Address failOnAddress, RuntimeException e) {
             this.e = e;
-            this.failOnAddress = failOnAddress;
+            this.host = failOnAddress.getHost();
+            this.port = failOnAddress.getPort();
         }
 
         @Override @Nonnull
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
+            Address failOnAddress;
+            try {
+                failOnAddress = new Address(host, port);
+            } catch (UnknownHostException e) {
+                throw new RuntimeException(e);
+            }
+
             return address ->
                     ProcessorSupplier.of(address.equals(failOnAddress)
                             ? () -> new FaultyProcessor(e)
                             : StuckProcessor::new);
-        }
-
-        @Override
-        public void writeData(ObjectDataOutput objectDataOutput) throws IOException {
-            objectDataOutput.writeObject(failOnAddress);
-            objectDataOutput.writeObject(e);
-        }
-
-        @Override
-        public void readData(ObjectDataInput objectDataInput) throws IOException {
-            e = objectDataInput.readObject();
-            failOnAddress = objectDataInput.readObject();
         }
     }
 }

@@ -19,27 +19,17 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.SenderTasklet;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.nio.Address;
-import com.hazelcast.nio.BufferObjectDataInput;
-import com.hazelcast.nio.Connection;
-import com.hazelcast.nio.ObjectDataInput;
-import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.Packet;
+import com.hazelcast.nio.*;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 
-import static com.hazelcast.jet.impl.util.Util.createObjectDataInput;
-import static com.hazelcast.jet.impl.util.Util.createObjectDataOutput;
-import static com.hazelcast.jet.impl.util.Util.getMemberConnection;
-import static com.hazelcast.jet.impl.util.Util.getRemoteMembers;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static com.hazelcast.jet.impl.util.Util.uncheckRun;
+import static com.hazelcast.jet.impl.util.Util.*;
 import static com.hazelcast.nio.Packet.FLAG_JET_FLOW_CONTROL;
 import static com.hazelcast.nio.Packet.FLAG_URGENT;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -49,20 +39,18 @@ public class Networking {
 
     private final NodeEngineImpl nodeEngine;
     private final ILogger logger;
+    private final JobExecutionService jobExecutionService;
     private final ScheduledFuture<?> flowControlSender;
-    private final ConcurrentHashMap<Long, ExecutionContext> executionContexts;
 
-    Networking(
-            NodeEngine nodeEngine, ConcurrentHashMap<Long, ExecutionContext> executionContexts, int flowControlPeriodMs
-    ) {
+    Networking(NodeEngine nodeEngine, JobExecutionService jobExecutionService, int flowControlPeriodMs) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
-        this.executionContexts = executionContexts;
         this.logger = nodeEngine.getLogger(getClass());
+        this.jobExecutionService = jobExecutionService;
         this.flowControlSender = nodeEngine.getExecutionService().scheduleWithRepetition(
                 this::broadcastFlowControlPacket, 0, flowControlPeriodMs, MILLISECONDS);
     }
 
-    void destroy() {
+    void shutdown() {
         flowControlSender.cancel(false);
     }
 
@@ -79,11 +67,12 @@ public class Networking {
         long executionId = in.readLong();
         int vertexId = in.readInt();
         int ordinal = in.readInt();
-        executionContexts.get(executionId).handlePacket(vertexId, ordinal, packet.getConn().getEndPoint(), in);
+        ExecutionContext executionContext = jobExecutionService.getExecutionContext(executionId);
+        executionContext.handlePacket(vertexId, ordinal, packet.getConn().getEndPoint(), in);
     }
 
-    public static byte[] createStreamPacketHeader(
-            NodeEngine nodeEngine, long executionId, int destinationVertexId, int ordinal) {
+    public static byte[] createStreamPacketHeader(NodeEngine nodeEngine, long executionId,
+                                                  int destinationVertexId, int ordinal) {
         ObjectDataOutput out = createObjectDataOutput(nodeEngine);
         try {
             out.writeLong(executionId);
@@ -115,6 +104,7 @@ public class Networking {
     private byte[] createFlowControlPacket(Address member) throws IOException {
         final ObjectDataOutput out = createObjectDataOutput(nodeEngine);
         final boolean[] hasData = {false};
+        Map<Long, ExecutionContext> executionContexts = jobExecutionService.getExecutionContexts();
         out.writeInt(executionContexts.size());
         executionContexts.forEach((execId, exeCtx) -> uncheckRun(() -> {
             if (!exeCtx.isParticipating(member)) {
@@ -139,11 +129,9 @@ public class Networking {
         final int executionCtxCount = in.readInt();
         for (int j = 0; j < executionCtxCount; j++) {
             final long exeCtxId = in.readLong();
-            final Map<Integer, Map<Integer, Map<Address, SenderTasklet>>> senderMap =
-                    Optional.ofNullable(executionContexts)
-                            .map(exeCtxs -> exeCtxs.get(exeCtxId))
-                            .map(ExecutionContext::senderMap)
-                            .orElse(null);
+            final Map<Integer, Map<Integer, Map<Address, SenderTasklet>>> senderMap
+                    = jobExecutionService.getSenderMap(exeCtxId);
+
             if (senderMap == null) {
                 logMissingExeCtx(exeCtxId);
                 continue;

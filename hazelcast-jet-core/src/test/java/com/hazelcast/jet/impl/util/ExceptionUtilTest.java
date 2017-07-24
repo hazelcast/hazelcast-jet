@@ -101,7 +101,7 @@ public class ExceptionUtilTest extends JetTestSupport {
             assertThat(caught.toString(), containsString(ErrorGenerator.newException().toString()));
             TestUtil.assertExceptionInCauses(ErrorGenerator.newException(), caught);
         } finally {
-            factory.shutdownAll();
+            factory.terminateAll();
         }
     }
 

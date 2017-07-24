@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet;
 
+import javax.annotation.Nonnull;
 import java.util.concurrent.Future;
 
 /**
@@ -25,8 +26,27 @@ public interface Job {
     /**
      * Executes the job.
      *
-     * @return a future that can be inspected for job completion status
-     * and cancelled to prematurely end the job.
+     * @return a future that can be inspected for job completion status and
+     * cancelled to prematurely end the job.
+     *
+     * @throws IllegalStateException If the job was already started.
      */
+    @Nonnull
     Future<Void> execute();
+
+    /**
+     * Gets the future associated with the job, used to control the job.
+     *
+     * @throws IllegalStateException If the job was not started yet.
+     */
+    @Nonnull
+    Future<Void> getFuture();
+
+    /**
+     * Return the ID of this job.
+     *
+     * @throws IllegalStateException If the job was not started yet, and thus
+     * has no job id.
+     */
+    long getJobId();
 }

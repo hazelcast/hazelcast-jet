@@ -16,28 +16,24 @@
 
 package com.hazelcast.jet.impl;
 
+import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.instance.HazelcastInstanceImpl;
 import com.hazelcast.jet.DAG;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.impl.operation.ExecuteJobOperation;
-import com.hazelcast.logging.ILogger;
+import com.hazelcast.jet.impl.operation.JoinJobOperation;
+import com.hazelcast.nio.Address;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.Operation;
-
-import java.util.concurrent.Future;
 
 public class JetInstanceImpl extends AbstractJetInstance {
     private final NodeEngine nodeEngine;
     private final JetConfig config;
-    private final ILogger logger;
 
     public JetInstanceImpl(HazelcastInstanceImpl hazelcastInstance, JetConfig config) {
         super(hazelcastInstance);
         this.nodeEngine = hazelcastInstance.node.getNodeEngine();
-        this.logger = nodeEngine.getLogger(JetInstance.class);
         this.config = config;
     }
 
@@ -56,26 +52,23 @@ public class JetInstanceImpl extends AbstractJetInstance {
         return new JobImpl(dag, config);
     }
 
-    private class JobImpl implements Job {
+    private class JobImpl extends AbstractJobImpl {
 
-        private final DAG dag;
-        private final JobConfig config;
+        JobImpl(long jobId) {
+            super(JetInstanceImpl.this, jobId);
+        }
 
         JobImpl(DAG dag, JobConfig config) {
-            this.dag = dag;
-            this.config = config;
+            super(JetInstanceImpl.this, dag, config);
         }
 
         @Override
-        public Future<Void> execute() {
-            long executionId = getIdGenerator().newId();
-            new ResourceUploader(JetInstanceImpl.this.getMap(JetService.METADATA_MAP_PREFIX + executionId))
-                    .uploadMetadata(config);
-
-            Operation op = new ExecuteJobOperation(executionId, dag);
+        protected ICompletableFuture<Void> sendJoinJobOp() {
+            Operation op = new JoinJobOperation(getJobId());
+            Address masterAddress = nodeEngine.getMasterAddress();
             return nodeEngine.getOperationService()
-                             .createInvocationBuilder(JetService.SERVICE_NAME, op, nodeEngine.getThisAddress())
-                             .invoke();
+                                      .createInvocationBuilder(JetService.SERVICE_NAME, op, masterAddress)
+                                      .invoke();
         }
     }
 }

@@ -83,8 +83,8 @@ public class BackpressureTest extends JetTestSupport {
     }
 
     @After
-    public void afterClass() {
-        factory.shutdownAll();
+    public void tearDown() {
+        factory.terminateAll();
     }
 
     @Test

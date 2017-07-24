@@ -77,7 +77,7 @@ public class HazelcastRemoteConnectorTest extends JetTestSupport {
     @After
     public void after() throws Exception {
         Hazelcast.shutdownAll();
-        factory.shutdownAll();
+        factory.terminateAll();
     }
 
     @Test
