@@ -27,7 +27,6 @@ import java.io.IOException;
 public class JobRecord implements IdentifiedDataSerializable {
 
     private long jobId;
-
     private DAG dag;
 
     public JobRecord() {

@@ -1,6 +1,5 @@
 package com.hazelcast.jet.impl.coordination;
 
-import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.Member;
 import com.hazelcast.instance.Node;
@@ -9,7 +8,6 @@ import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.JobResult.JobResultKey;
 import com.hazelcast.jet.impl.execution.init.JetImplDataSerializerHook;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.nio.Address;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -17,7 +15,7 @@ import com.hazelcast.query.Predicate;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -26,86 +24,68 @@ import static java.util.stream.Collectors.toList;
 
 public class JobResultRepository {
 
-    private static final String JOB_RESULTS_MAP_NAME = "__jet_job_results";
-
-    private final HazelcastInstance instance;
+    private static final String JOB_RESULTS_MAP_NAME = "__jet.jobs.results";
 
     private final Node node;
-
     private final ILogger logger;
+    private final IMap<JobResultKey, JobResult> jobResults;
 
-    private final JobRepository jobRepository;
-
-    public JobResultRepository(NodeEngineImpl nodeEngine, JobRepository jobRepository) {
-        this.instance = nodeEngine.getHazelcastInstance();
+    public JobResultRepository(NodeEngineImpl nodeEngine) {
         this.node = nodeEngine.getNode();
         this.logger = nodeEngine.getLogger(getClass());
-        this.jobRepository = jobRepository;
+        this.jobResults = nodeEngine.getHazelcastInstance().getMap(JOB_RESULTS_MAP_NAME);
     }
 
-    public JobResult getJobResult(long jobId) {
-        IMap<JobResultKey, JobResult> jobResultsMap = getJobResultsMap();
-
-        JobResultKey key = new JobResultKey(jobId, node.getMasterAddress());
-        JobResult jobResult = jobResultsMap.get(key);
+    public JobResult getResult(long jobId) {
+        JobResultKey key = new JobResultKey(jobId, node.getThisUuid());
+        JobResult jobResult = jobResults.get(key);
 
         if (jobResult != null) {
             return jobResult;
         }
 
         ClusterServiceImpl clusterService = node.getClusterService();
-        List<Address> memberAddresses = clusterService.getMembers().stream().map(Member::getAddress).collect(toList());
+        List<String> memberAddresses = clusterService.getMembers().stream().map(Member::getUuid).collect(toList());
+        Collection<JobResult> results = this.jobResults.values(new NonMemberCoordinatorPredicate(memberAddresses));
 
-        Collection<JobResult> jobResults = jobResultsMap.values(new NonMemberCoordinatorPredicate(memberAddresses));
-
-        if (jobResults.isEmpty()) {
+        if (results.isEmpty()) {
             return null;
         }
 
-        if (jobResults.size() > 1) {
-            logger.info(jobResults.size() + " job result records are found for job: "
-                    + jobId + " -> " + jobResults);
+        if (results.size() > 1) {
+            logger.info(results.size() + " job result records are found for job: "
+                    + jobId + " -> " + results);
         }
 
-        return jobResults.iterator().next();
+        return results.iterator().next();
     }
 
-    private IMap<JobResultKey, JobResult> getJobResultsMap() {
-        return instance.getMap(JOB_RESULTS_MAP_NAME);
-    }
-
-    public void completeJob(JobResult jobResult) {
+    public void setResult(JobResult jobResult) {
         if (!(node.isMaster() && node.getThisAddress().equals(jobResult.getCoordinator()))) {
             throw new IllegalStateException("Cannot persist " + jobResult);
         }
-
-        long jobId = jobResult.getJobId();
-
-        IMap<JobResultKey, JobResult> jobResultsMap = getJobResultsMap();
-        JobResult curr = jobResultsMap.putIfAbsent(jobResult.getKey(), jobResult);
-
+        JobResult curr = jobResults.putIfAbsent(jobResult.getKey(), jobResult);
         if (curr != null) {
             throw new IllegalStateException(jobResult + " already exists in the job record results map!");
         }
-
-        jobRepository.removeJob(jobId);
     }
 
     public static class NonMemberCoordinatorPredicate
             implements Predicate<JobResultKey, JobResult>, IdentifiedDataSerializable {
 
-        private Collection<Address> members;
+        private Collection<String> members;
 
+        // for deserialization only
         public NonMemberCoordinatorPredicate() {
         }
 
-        public NonMemberCoordinatorPredicate(Collection<Address> members) {
+        public NonMemberCoordinatorPredicate(Collection<String> members) {
             this.members = members;
         }
 
         @Override
         public boolean apply(Map.Entry<JobResultKey, JobResult> mapEntry) {
-            return !members.contains(mapEntry.getKey().getCoordinator());
+            return !members.contains(mapEntry.getKey().getCoordinatorUUID());
         }
 
         @Override
@@ -120,21 +100,12 @@ public class JobResultRepository {
 
         @Override
         public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeInt(members.size());
-            for (Address member : members) {
-                member.writeData(out);
-            }
+            out.writeUTFArray((String[])members.toArray());
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
-            int count = in.readInt();
-            members = new ArrayList<>();
-            for (int i = 0; i < count; i++) {
-                Address member = new Address();
-                member.readData(in);
-                members.add(member);
-            }
+            members = Arrays.asList(in.readUTFArray());
         }
     }
 

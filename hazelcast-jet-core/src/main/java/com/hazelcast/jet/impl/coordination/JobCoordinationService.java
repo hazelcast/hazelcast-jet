@@ -13,7 +13,6 @@ import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.nio.Address;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.executionservice.InternalExecutionService;
 
@@ -60,10 +59,12 @@ public class JobCoordinationService {
                 0, JOB_SCANNER_TASK_PERIOD_IN_MILLIS, MILLISECONDS);
     }
 
+    // visible only for testing
     public Map<Long, MasterContext> getMasterContexts() {
         return new HashMap<>(masterContexts);
     }
 
+    // visible only for testing
     public MasterContext getMasterContext(long jobId) {
         return masterContexts.get(jobId);
     }
@@ -82,7 +83,7 @@ public class JobCoordinationService {
         MasterContext newMasterContext;
         coordinatorLock.lock();
         try {
-            JobResult jobResult = jobResultRepository.getJobResult(jobId);
+            JobResult jobResult = jobResultRepository.getResult(jobId);
             if (jobResult != null) {
                 logger.fine("Not starting job " + jobId + " since already completed -> " + jobResult);
                 return jobResult.asCompletableFuture();
@@ -109,8 +110,8 @@ public class JobCoordinationService {
         return newMasterContext.start();
     }
 
-    long generateRandomId() {
-        return jobRepository.newJobId();
+    long newId() {
+        return jobRepository.newId();
     }
 
     void scheduleRestart(long jobId) {
@@ -130,10 +131,10 @@ public class JobCoordinationService {
         try {
             if (masterContexts.remove(masterContext.getJobId(), masterContext)) {
                 long jobCreationTime = jobRepository.getJobCreationTime(jobId);
-                Address coordinator = nodeEngine.getThisAddress();
+                String coordinator = nodeEngine.getNode().getThisUuid();
                 JobResult jobResult = new JobResult(jobId, coordinator, jobCreationTime, completionTime, error);
-                jobResultRepository.completeJob(jobResult);
-
+                jobResultRepository.setResult(jobResult);
+                jobRepository.deleteJob(jobId);
                 logger.fine("Job " + jobId + " execution " + executionId + " is completed.");
             } else {
                 MasterContext existing = masterContexts.get(jobId);

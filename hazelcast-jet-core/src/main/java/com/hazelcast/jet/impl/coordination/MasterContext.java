@@ -93,7 +93,7 @@ public class MasterContext {
             return completionFuture;
         }
 
-        executionId = coordinationService.generateRandomId();
+        executionId = coordinationService.newId();
 
         logger.info("Start executing job " + jobId + " execution " + executionId + " status " + getJobStatus()
                 + " : " + dag);

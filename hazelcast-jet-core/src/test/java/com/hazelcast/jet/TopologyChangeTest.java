@@ -205,7 +205,7 @@ public class TopologyChangeTest extends JetTestSupport {
         assertTrueEventually(new AssertTask() {
             @Override
             public void run() throws Exception {
-                JobResult jobResult = jobResultRepository.getJobResult(completedJobId);
+                JobResult jobResult = jobResultRepository.getResult(completedJobId);
                 assertNotNull(jobResult);
                 assertTrue(jobResult.isSuccessful());
             }

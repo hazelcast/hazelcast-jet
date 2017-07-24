@@ -23,7 +23,7 @@ import java.util.zip.DeflaterOutputStream;
 
 public class JobRepository {
 
-    private static final String JOB_IDS_MAP_NAME = "__jet.jobs.ids";
+    private static final String IDS_MAP_NAME = "__jet.jobs.ids";
     private static final String RESOURCES_MAP_NAME = "__jet.jobs.resources";
     private static final String JOB_RECORDS_MAP_NAME = "__jet.jobs.records";
 
@@ -35,16 +35,19 @@ public class JobRepository {
 
     public JobRepository(HazelcastInstance instance) {
         this.instance = instance;
-        this.jobIds = instance.getMap(JOB_IDS_MAP_NAME);
+        this.jobIds = instance.getMap(IDS_MAP_NAME);
         this.jobs = instance.getMap(JOB_RECORDS_MAP_NAME);
     }
 
-    public long newJobId() {
-        long randomId;
+    /**
+     * Generate a new ID, guaranteed to be unique across the cluster
+     */
+    public long newId() {
+        long id;
         do {
-            randomId = Util.secureRandomNextLong();
-        } while (jobIds.putIfAbsent(randomId, randomId) != null);
-        return randomId;
+            id = Util.secureRandomNextLong();
+        } while (jobIds.putIfAbsent(id, id) != null);
+        return id;
     }
 
     public JobRecord newJobRecord(long jobId, DAG dag) {
@@ -71,7 +74,10 @@ public class JobRepository {
         return instance.getMap(RESOURCES_MAP_NAME + "." + jobId);
     }
 
-    public void removeJob(long jobId) {
+    /**
+     * Perform cleanup after job completion
+     */
+    public void deleteJob(long jobId) {
         jobs.remove(jobId);
         IMap<String, byte[]> jobResourcesMap = getJobResources(jobId);
         if (jobResourcesMap != null) {

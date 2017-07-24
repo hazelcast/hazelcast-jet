@@ -1,7 +1,6 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.jet.impl.execution.init.JetImplDataSerializerHook;
-import com.hazelcast.nio.Address;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -22,7 +21,7 @@ public class JobResult implements IdentifiedDataSerializable {
     public JobResult() {
     }
 
-    public JobResult(long jobId, Address coordinator, long creationTime, Long completionTime, Throwable failure) {
+    public JobResult(long jobId, String coordinator, long creationTime, Long completionTime, Throwable failure) {
         this.key = new JobResultKey(jobId, coordinator);
         this.creationTime = creationTime;
         this.completionTime = completionTime;
@@ -37,8 +36,8 @@ public class JobResult implements IdentifiedDataSerializable {
         return key.getJobId();
     }
 
-    public Address getCoordinator() {
-        return key.getCoordinator();
+    public String getCoordinator() {
+        return key.getCoordinatorUUID();
     }
 
     public long getCreationTime() {
@@ -119,23 +118,22 @@ public class JobResult implements IdentifiedDataSerializable {
     public static class JobResultKey implements IdentifiedDataSerializable {
 
         private long jobId;
-
-        private Address coordinator;
+        private String coordinatorUUID;
 
         public JobResultKey() {
         }
 
-        public JobResultKey(long jobId, Address coordinator) {
+        public JobResultKey(long jobId, String coordinatorUUID) {
             this.jobId = jobId;
-            this.coordinator = coordinator;
+            this.coordinatorUUID = coordinatorUUID;
         }
 
         public long getJobId() {
             return jobId;
         }
 
-        public Address getCoordinator() {
-            return coordinator;
+        public String getCoordinatorUUID() {
+            return coordinatorUUID;
         }
 
         @Override
@@ -149,13 +147,13 @@ public class JobResult implements IdentifiedDataSerializable {
 
             JobResultKey that = (JobResultKey) o;
 
-            return jobId == that.jobId && coordinator.equals(that.coordinator);
+            return jobId == that.jobId && coordinatorUUID.equals(that.coordinatorUUID);
         }
 
         @Override
         public int hashCode() {
             int result = (int) (jobId ^ (jobId >>> 32));
-            result = 31 * result + coordinator.hashCode();
+            result = 31 * result + coordinatorUUID.hashCode();
             return result;
         }
 
@@ -163,7 +161,7 @@ public class JobResult implements IdentifiedDataSerializable {
         public String toString() {
             return "JobResultKey{" +
                     "jobId=" + jobId +
-                    ", coordinator=" + coordinator +
+                    ", coordinatorUUID=" + coordinatorUUID +
                     '}';
         }
 
@@ -180,14 +178,13 @@ public class JobResult implements IdentifiedDataSerializable {
         @Override
         public void writeData(ObjectDataOutput out) throws IOException {
             out.writeLong(jobId);
-            coordinator.writeData(out);
+            out.writeUTF(coordinatorUUID);
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
             jobId = in.readLong();
-            coordinator = new Address();
-            coordinator.readData(in);
+            coordinatorUUID = in.readUTF();
         }
     }
 
