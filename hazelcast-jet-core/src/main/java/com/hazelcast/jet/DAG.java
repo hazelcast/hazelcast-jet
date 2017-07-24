@@ -157,6 +157,9 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
                     + (edge.getSourceOrdinal() == 0 && edge.getDestOrdinal() == 0
                             ? ", use Edge.from().to() to specify another ordinal" : ""));
         }
+        if (edge.getSource() == edge.getDestination()) {
+            throw new IllegalArgumentException("Attempted to add an edge from " + edge.getSourceName() + " to itself");
+        }
         edges.add(edge);
         return this;
     }
@@ -220,7 +223,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     }
 
     Collection<Vertex> validate() {
-        return new DagValidator().validate(verticesByName, edges);
+        return DagValidator.validate(verticesByName, edges);
     }
 
     private Vertex addVertex(Vertex vertex) {

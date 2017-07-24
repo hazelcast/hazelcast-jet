@@ -20,8 +20,8 @@ import com.hazelcast.jet.Edge;
 import com.hazelcast.jet.Vertex;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -30,25 +30,48 @@ import java.util.Set;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.util.Preconditions.checkTrue;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.unmodifiableMap;
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
 
 /**
  * Validates a DAG against cycles and other malformations.
  */
 public class DagValidator {
-    private final Deque<Vertex> topologicalVertexStack = new ArrayDeque<>();
+    // Consulted, but not updated, by the cycle detecting algorithm:
+    private final Map<String, List<Edge>> outboundEdgeMap;
+    private final Map<String, AnnotatedVertex> avMap;
 
-    public Collection<Vertex> validate(Map<String, Vertex> verticesByName, Set<Edge> edges) {
-        topologicalVertexStack.clear();
+    // Updated by the cycle detecting algorithm:
+    private final List<Vertex> reverseTopoOrder = new ArrayList<>();
+    private final Deque<AnnotatedVertex> avStack = new ArrayDeque<>();
+    private int nextIndex;
+
+    private DagValidator(Map<String, AnnotatedVertex> annotatedVertexMap, Map<String, List<Edge>> outboundEdgeMap) {
+        this.outboundEdgeMap = unmodifiableMap(outboundEdgeMap);
+        this.avMap = unmodifiableMap(annotatedVertexMap);
+    }
+
+    /**
+     * @return vertices in reverse topological order
+     */
+    public static List<Vertex> validate(Map<String, Vertex> verticesByName, Set<Edge> edges) {
         checkTrue(!verticesByName.isEmpty(), "DAG must contain at least one vertex");
-        Map<String, List<Edge>> outgoingEdgeMap = edges.stream().collect(groupingBy(Edge::getSourceName));
-        validateOutboundEdgeOrdinals(outgoingEdgeMap);
         validateInboundEdgeOrdinals(edges.stream().collect(groupingBy(Edge::getDestName)));
-        detectCycles(outgoingEdgeMap,
-                verticesByName.entrySet().stream()
-                              .collect(toMap(Entry::getKey, v -> new AnnotatedVertex(v.getValue()))));
-        return topologicalVertexStack;
+
+        Map<String, AnnotatedVertex> annotatedVertexMap = verticesByName
+                .entrySet().stream()
+                .collect(toMap(Entry::getKey, v -> new AnnotatedVertex(v.getValue())));
+        Map<String, List<Edge>> outboundEdgeMap = edges.stream().collect(groupingBy(Edge::getSourceName));
+        return new DagValidator(annotatedVertexMap, outboundEdgeMap).validate();
+    }
+
+    private List<Vertex> validate() {
+        validateOutboundEdgeOrdinals();
+        detectCycles();
+        return reverseTopoOrder;
     }
 
     private static void validateInboundEdgeOrdinals(Map<String, List<Edge>> incomingEdgeMap) {
@@ -65,8 +88,8 @@ public class DagValidator {
         }
     }
 
-    private static void validateOutboundEdgeOrdinals(Map<String, List<Edge>> outgoingEdgeMap) {
-        for (Map.Entry<String, List<Edge>> entry : outgoingEdgeMap.entrySet()) {
+    private void validateOutboundEdgeOrdinals() {
+        for (Map.Entry<String, List<Edge>> entry : outboundEdgeMap.entrySet()) {
             String vertex = entry.getKey();
             int[] ordinals = entry.getValue().stream().mapToInt(Edge::getSourceOrdinal).sorted().toArray();
             for (int i = 0; i < ordinals.length; i++) {
@@ -79,85 +102,67 @@ public class DagValidator {
         }
     }
 
-    // Adaptation of Tarjan's algorithm for connected components.
+    // Part of Tarjan's algorithm that identifies strongly connected components
+    // of a directed graph.
     // http://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
-    private void detectCycles(Map<String, List<Edge>> edgeMap, Map<String, AnnotatedVertex> vertexMap)
-            throws IllegalArgumentException {
-        // boxed integer so it is passed by reference.
-        Integer nextIndex = 0;
-        Deque<AnnotatedVertex> stack = new ArrayDeque<>();
-        for (AnnotatedVertex av : vertexMap.values()) {
-            if (av.index == -1) {
-                assert stack.isEmpty();
-                strongConnect(av, vertexMap, edgeMap, stack, nextIndex);
+    private void detectCycles() {
+        for (AnnotatedVertex av : avMap.values()) {
+            if (av.index != -1) {
+                continue;
+            }
+            assert avStack.isEmpty();
+            strongConnect(av);
+        }
+    }
+
+    private void strongConnect(AnnotatedVertex thisAv) {
+        thisAv.index = nextIndex;
+        thisAv.lowlink = nextIndex;
+        nextIndex++;
+        avStack.addLast(thisAv);
+        thisAv.isOnStack = true;
+
+        for (Edge outEdge : outEdges(thisAv)) {
+            AnnotatedVertex outAv = avMap.get(outEdge.getDestName());
+            if (outAv.index == -1) {
+                strongConnect(outAv);
+                thisAv.lowlink = Math.min(thisAv.lowlink, outAv.lowlink);
+            } else if (outAv.isOnStack) {
+                // This already means there is a cycle, but we'll proceed with the
+                // algorithm until the full cycle can be displayed.
+                thisAv.lowlink = Math.min(thisAv.lowlink, outAv.index);
+            }
+        }
+        if (thisAv.lowlink == thisAv.index) {
+            AnnotatedVertex popped = avStack.removeLast();
+            popped.isOnStack = false;
+            if (popped == thisAv) {
+                // No cycles detected involving thisAv. Add it to the output vertex list.
+                reverseTopoOrder.add(thisAv.v);
+            } else {
+                // A vertex other than thisAv was left on the stack. This indicates there is
+                // a cycle. It consists of all the nodes from the top of the stack to thisAv.
+                throw new IllegalArgumentException("DAG contains a cycle: " + cycleToString(popped));
             }
         }
     }
 
-    // part of Tarjan's algorithm for connected components.
-    // http://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
-    private void strongConnect(
-            AnnotatedVertex av,
-            Map<String, AnnotatedVertex> vertexMap,
-            Map<String, List<Edge>> edgeMap,
-            Deque<AnnotatedVertex> stack, Integer nextIndex) throws IllegalArgumentException {
-        av.index = nextIndex;
-        av.lowlink = nextIndex;
-        nextIndex++;
-        stack.addLast(av);
-        av.onstack = true;
+    private List<Edge> outEdges(AnnotatedVertex thisAv) {
+        return outboundEdgeMap.getOrDefault(thisAv.v.getName(), emptyList());
+    }
 
-        List<Edge> edges = edgeMap.get(av.v.getName());
-
-        if (edges != null) {
-            for (Edge e : edgeMap.get(av.v.getName())) {
-                AnnotatedVertex outVertex = vertexMap.get(e.getDestName());
-
-                if (outVertex.index == -1) {
-                    strongConnect(outVertex, vertexMap, edgeMap, stack, nextIndex);
-                    av.lowlink = Math.min(av.lowlink, outVertex.lowlink);
-                } else if (outVertex.onstack) {
-                    // strongly connected component detected, but we will wait till later so
-                    // that the full cycle can be displayed. Update lowlink in case outputVertex
-                    // should be considered the root of this component.
-                    av.lowlink = Math.min(av.lowlink, outVertex.index);
-                }
-            }
-        }
-
-        if (av.lowlink == av.index) {
-            AnnotatedVertex pop = stack.removeLast();
-            pop.onstack = false;
-            if (pop != av) {
-                // there was something on the stack other than this "av".
-                // this indicates there is a scc/cycle. It comprises all nodes from top of stack to "av"
-                StringBuilder message = new StringBuilder();
-                message.append(av.v.getName()).append(" <- ");
-                for (; pop != av; pop = stack.removeLast()) {
-                    message.append(pop.v.getName()).append(" <- ");
-                    pop.onstack = false;
-                }
-                message.append(av.v.getName());
-                throw new IllegalArgumentException("DAG contains a cycle: " + message);
-            } else {
-                // detect self-cycle
-                if (edgeMap.containsKey(pop.v.getName())) {
-                    for (Edge edge : edgeMap.get(pop.v.getName())) {
-                        if (edge.getDestName().equals(pop.v.getName())) {
-                            throw new IllegalArgumentException("DAG contains a self-cycle on vertex:" + pop.v.getName());
-                        }
-                    }
-                }
-            }
-            topologicalVertexStack.addLast(av.v);
-        }
+    // Destructive operation, corrupts avStack
+    private String cycleToString(AnnotatedVertex popped) {
+        avStack.addLast(popped);
+        avStack.addLast(avStack.getFirst());
+        return avStack.stream().map(av -> av.v.getName()).collect(joining(" -> "));
     }
 
     private static final class AnnotatedVertex {
         Vertex v;
         int index;
         int lowlink;
-        boolean onstack;
+        boolean isOnStack;
 
         private AnnotatedVertex(Vertex v) {
             this.v = v;
