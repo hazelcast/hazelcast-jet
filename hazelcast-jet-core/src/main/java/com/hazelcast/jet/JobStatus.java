@@ -21,12 +21,34 @@ package com.hazelcast.jet;
  */
 public enum JobStatus {
 
-    NOT_FOUND,
+    /**
+     * Javadoc pending
+     */
     NOT_STARTED,
+
+    /**
+     * Javadoc pending
+     */
     STARTING,
+
+    /**
+     * Javadoc pending
+     */
     RUNNING,
+
+    /**
+     * Javadoc pending
+     */
     RESTARTING,
+
+    /**
+     * Javadoc pending
+     */
     FAILED,
+
+    /**
+     * Javadoc pending
+     */
     COMPLETED
 
 }
