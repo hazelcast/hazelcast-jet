@@ -127,9 +127,9 @@ public class JetService
 
     @Override
     public void shutdown(boolean terminate) {
+        jobExecutionService.shutdown();
         networking.shutdown();
         executionService.shutdown();
-        jobExecutionService.shutdown();
     }
 
     @Override

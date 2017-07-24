@@ -38,8 +38,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import static com.hazelcast.util.executor.ExecutorType.CACHED;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -56,7 +54,7 @@ public class JobCoordinationService {
     private final JobRepository jobRepository;
     private final JobResultRepository jobResultRepository;
 
-    private final Lock coordinatorLock = new ReentrantLock();
+    private final Object lock = new Object();
     private final ConcurrentMap<Long, MasterContext> masterContexts = new ConcurrentHashMap<>();
 
     public JobCoordinationService(NodeEngineImpl nodeEngine, JetConfig config,
@@ -97,8 +95,7 @@ public class JobCoordinationService {
         }
 
         MasterContext newMasterContext;
-        coordinatorLock.lock();
-        try {
+        synchronized (lock) {
             JobResult jobResult = jobResultRepository.getResult(jobId);
             if (jobResult != null) {
                 logger.fine("Not starting job " + jobId + " since already completed -> " + jobResult);
@@ -119,8 +116,6 @@ public class JobCoordinationService {
             masterContexts.put(jobId, newMasterContext);
 
             logger.info("Starting new job " + jobId);
-        } finally {
-            coordinatorLock.unlock();
         }
 
         return newMasterContext.start();
@@ -142,30 +137,29 @@ public class JobCoordinationService {
     }
 
     void completeJob(MasterContext masterContext, long completionTime, Throwable error) {
-        coordinatorLock.lock();
-        long jobId = masterContext.getJobId();
-        long executionId = masterContext.getExecutionId();
-        try {
-            if (masterContexts.remove(masterContext.getJobId(), masterContext)) {
-                long jobCreationTime = jobRepository.getJobCreationTime(jobId);
-                String coordinator = nodeEngine.getNode().getThisUuid();
-                JobResult jobResult = new JobResult(jobId, coordinator, jobCreationTime, completionTime, error);
-                jobResultRepository.setResult(jobResult);
-                jobRepository.deleteJob(jobId);
-                logger.fine("Job " + jobId + " execution " + executionId + " is completed.");
-            } else {
-                MasterContext existing = masterContexts.get(jobId);
-                if (existing != null) {
-                    logger.severe("Different master context found to complete job " + jobId
-                            + " execution " + executionId + " master context execution " + existing.getExecutionId());
+        synchronized (lock) {
+            long jobId = masterContext.getJobId(), executionId = masterContext.getExecutionId();
+            try {
+                if (masterContexts.remove(masterContext.getJobId(), masterContext)) {
+                    long jobCreationTime = jobRepository.getJobCreationTime(jobId);
+                    String coordinator = nodeEngine.getNode().getThisUuid();
+                    JobResult jobResult = new JobResult(jobId, coordinator, jobCreationTime, completionTime, error);
+                    jobResultRepository.setResult(jobResult);
+                    jobRepository.deleteJob(jobId);
+
+                    logger.fine("Job " + jobId + " execution " + executionId + " is completed.");
                 } else {
-                    logger.severe("No master context found to complete job " + jobId + " execution " + executionId);
+                    MasterContext existing = masterContexts.get(jobId);
+                    if (existing != null) {
+                        logger.severe("Different master context found to complete job " + jobId
+                                + " execution " + executionId + " master context execution " + existing.getExecutionId());
+                    } else {
+                        logger.severe("No master context found to complete job " + jobId + " execution " + executionId);
+                    }
                 }
+            } catch (Exception e) {
+                logger.severe("Completion of job " + jobId + " execution " + executionId + " is failed.", e);
             }
-        } catch (Exception e) {
-            logger.severe("Completion of job " + jobId + " execution " + executionId + " is failed.", e);
-        } finally {
-            coordinatorLock.unlock();
         }
     }
 
