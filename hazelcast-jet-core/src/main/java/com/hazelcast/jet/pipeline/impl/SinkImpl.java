@@ -19,4 +19,14 @@ package com.hazelcast.jet.pipeline.impl;
 import com.hazelcast.jet.pipeline.Sink;
 
 public class SinkImpl implements Sink {
+    private final String name;
+
+    public SinkImpl(String name) {
+        this.name = name;
+    }
+
+    @Override
+    public String toString() {
+        return "DrainTo " + name;
+    }
 }

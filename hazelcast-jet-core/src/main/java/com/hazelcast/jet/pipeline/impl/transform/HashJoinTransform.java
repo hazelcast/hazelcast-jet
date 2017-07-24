@@ -25,18 +25,17 @@ import java.util.List;
  */
 public class HashJoinTransform implements JoinTransform {
     private final List<JoinOn> joinOns;
-    private final Class bagsType;
 
-    public HashJoinTransform(List<JoinOn> joinOns, Class bagsType) {
+    public HashJoinTransform(List<JoinOn> joinOns) {
         this.joinOns = joinOns;
-        this.bagsType = bagsType;
     }
 
     public List<JoinOn> joinOns() {
         return joinOns;
     }
 
-    public Class bagsType() {
-        return bagsType;
+    @Override
+    public String toString() {
+        return (joinOns.size() + 1) + "-way HashJoin";
     }
 }

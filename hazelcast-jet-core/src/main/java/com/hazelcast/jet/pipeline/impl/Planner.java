@@ -14,27 +14,16 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.pipeline.impl.SourceImpl;
+import com.hazelcast.jet.pipeline.Pipeline;
 
-import java.util.Map;
+/**
+ * Javadoc pending.
+ */
+public class Planner {
 
-public final class Sources {
-
-    private Sources() {
-
-    }
-
-    public static <K, V> Source<Map.Entry<K, V>> readMap(String mapName) {
-        return new SourceImpl<>("IMap");
-    }
-
-    public static Source<String> readFiles(String folder) {
-        return new SourceImpl<>("files");
-    }
-
-    public static <T> Source<T> streamKafka() {
-        return new SourceImpl<>("Kafka");
+    void toDag(Pipeline pipeline) {
+        PipelineImpl p = (PipelineImpl) pipeline;
     }
 }

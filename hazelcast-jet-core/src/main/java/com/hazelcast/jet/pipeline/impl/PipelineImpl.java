@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.pipeline.PEnd;
 import com.hazelcast.jet.pipeline.PStream;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -26,6 +26,7 @@ import com.hazelcast.jet.pipeline.impl.transform.JoinTransform;
 import com.hazelcast.jet.pipeline.impl.transform.PTransform;
 import com.hazelcast.jet.pipeline.impl.transform.UnaryTransform;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -38,7 +39,7 @@ import static java.util.Collections.emptyList;
 
 public class PipelineImpl implements Pipeline {
 
-    private Map<AbstractPElement, List<AbstractPElement>> outgoingEdges = new HashMap<>();
+    private Map<AbstractPElement, List<AbstractPElement>> outboundEdges = new HashMap<>();
 
     public PipelineImpl() {
     }
@@ -48,9 +49,10 @@ public class PipelineImpl implements Pipeline {
         return new PStreamImpl<>(emptyList(), source, this);
     }
 
-    @Override
-    public void execute(JetInstance jet) {
+    @Nonnull @Override
+    public DAG toDag() {
         printDAG();
+        return new DAG();
     }
 
     public <IN, OUT> PStream<OUT> transform(PStreamImpl<IN> input, UnaryTransform<? super IN, OUT> unaryTransform) {
@@ -59,7 +61,7 @@ public class PipelineImpl implements Pipeline {
         return output;
     }
 
-    public PStream attach(List<PStream> upstream, JoinTransform joinTransform) {
+    public PStream join(List<PStream> upstream, JoinTransform joinTransform) {
         PStreamImpl attached = new PStreamImpl(upstream, joinTransform, this);
         upstream.forEach(u -> addEdge((PStreamImpl) u, attached));
         return attached;
@@ -72,12 +74,12 @@ public class PipelineImpl implements Pipeline {
     }
 
     private void addEdge(AbstractPElement source, AbstractPElement dest) {
-        outgoingEdges.computeIfAbsent(source, e -> new ArrayList<>()).add(dest);
+        outboundEdges.computeIfAbsent(source, e -> new ArrayList<>()).add(dest);
     }
 
 
     private void printDAG() {
-        for (Entry<AbstractPElement, List<AbstractPElement>> entry : outgoingEdges.entrySet()) {
+        for (Entry<AbstractPElement, List<AbstractPElement>> entry : outboundEdges.entrySet()) {
             Set<PTransform> outputs = entry.getValue().stream()
                                            .map(e -> e.transform).collect(Collectors.toSet());
             System.out.println(entry.getKey().transform + " -> " + outputs);

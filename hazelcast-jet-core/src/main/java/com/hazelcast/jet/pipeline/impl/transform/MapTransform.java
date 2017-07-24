@@ -27,4 +27,9 @@ public class MapTransform<E, R> implements UnaryTransform<E, R> {
     public MapTransform(DistributedFunction<? super E, ? extends R> mapF) {
         this.mapF = mapF;
     }
+
+    @Override
+    public String toString() {
+        return "Map";
+    }
 }

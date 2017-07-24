@@ -47,9 +47,9 @@ public class PipelineJoinAndCoGroup {
 
 
     public static void main(String[] args) {
-        PipelineJoinAndCoGroup pipeline = new PipelineJoinAndCoGroup();
-        pipeline.coGroupBuild().drainTo(Sinks.writeMap("map"));
-        pipeline.p.execute(null);
+        PipelineJoinAndCoGroup sample = new PipelineJoinAndCoGroup();
+        sample.coGroupBuild().drainTo(Sinks.writeMap("map"));
+        sample.p.toDag();
     }
 
     private PStream<String> joinDirect() {
@@ -67,7 +67,6 @@ public class PipelineJoinAndCoGroup {
 
     private PStream<String> joinBuild() {
         JoinBuilder<Trade> builder = trades.joinBuilder();
-        Tag<Trade> tradeTag = builder.leftTag();
         Tag<Product> productTag = builder.add(products, onKeys(Trade::productId, Product::id));
         Tag<Broker> brokerTag = builder.add(brokers, onKeys(Trade::brokerId, Broker::id));
         PStream<Tuple2<Trade, BagsByTag>> joined = builder.build();

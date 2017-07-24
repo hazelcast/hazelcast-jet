@@ -51,4 +51,9 @@ public class CoGroupTransform<K, A, R> implements JoinTransform {
     public List<Tag> tags() {
         return tags;
     }
+
+    @Override
+    public String toString() {
+        return tags().size() + "-way CoGroup";
+    }
 }

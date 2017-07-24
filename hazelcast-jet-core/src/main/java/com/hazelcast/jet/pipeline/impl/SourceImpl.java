@@ -19,5 +19,14 @@ package com.hazelcast.jet.pipeline.impl;
 import com.hazelcast.jet.pipeline.Source;
 
 public class SourceImpl<E> implements Source<E> {
+    private final String name;
 
+    public SourceImpl(String name) {
+        this.name = name;
+    }
+
+    @Override
+    public String toString() {
+        return "DrawFrom " + name;
+    }
 }

@@ -37,4 +37,9 @@ public class SlidingWindowTransform<E, K, R> implements UnaryTransform<E, Entry<
         this.wDef = wDef;
         this.aggrOp = aggrOp;
     }
+
+    @Override
+    public String toString() {
+        return "SlidingWindow";
+    }
 }

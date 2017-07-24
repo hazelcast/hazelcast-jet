@@ -81,11 +81,11 @@ public class HashJoinP<K> extends AbstractProcessor {
         return tryEmit(new Tuple2<>(item, bags));
     }
 
-    private K leftKey(int ordinal, Object item) {
-        return joinOns.get(ordinal).leftKeyFn().apply(item);
-    }
-
     private List<Object> lookupBag(int ordinal, Object item) {
         return lookupTables.get(ordinal).getOrDefault(leftKey(ordinal, item), emptyList());
+    }
+
+    private K leftKey(int ordinal, Object item) {
+        return joinOns.get(ordinal).leftKeyFn().apply(item);
     }
 }

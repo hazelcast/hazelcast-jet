@@ -24,8 +24,6 @@ import com.hazelcast.jet.pipeline.PElement;
 import com.hazelcast.jet.pipeline.PEnd;
 import com.hazelcast.jet.pipeline.PStream;
 import com.hazelcast.jet.pipeline.Sink;
-import com.hazelcast.jet.pipeline.bag.ThreeBags;
-import com.hazelcast.jet.pipeline.bag.TwoBags;
 import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
 import com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform;
 import com.hazelcast.jet.pipeline.impl.transform.PTransform;
@@ -64,7 +62,7 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
     public <K, E2> PStream<Tuple2<E, Iterable<E2>>> join(
             PStream<E2> s2, JoinOn<K, E, E2> joinOn
     ) {
-        return pipeline.attach(asList(this, s2), new HashJoinTransform(singletonList(joinOn), TwoBags.class));
+        return pipeline.join(asList(this, s2), new HashJoinTransform(singletonList(joinOn)));
     }
 
     @Override
@@ -72,7 +70,7 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
             PStream<E2> s2, JoinOn<K2, E, E2> joinOn1,
             PStream<E3> s3, JoinOn<K3, E, E3> joinOn2
     ) {
-        return pipeline.attach(asList(this, s2, s3), new HashJoinTransform(asList(joinOn1, joinOn2), ThreeBags.class));
+        return pipeline.join(asList(this, s2, s3), new HashJoinTransform(asList(joinOn1, joinOn2)));
     }
 
     @Override
@@ -81,7 +79,7 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
             PStream<E2> s1, DistributedFunction<? super E2, ? extends K> key1F,
             AggregateOperation2<E, E2, A, R> aggrOp
     ) {
-        return pipeline.attach(asList(this, s1),
+        return pipeline.join(asList(this, s1),
                 new CoGroupTransform<>(asList(thisKeyF, key1F), aggrOp, asList(tag0(), tag1())));
     }
 
@@ -92,7 +90,7 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
             PStream<E3> s2, DistributedFunction<? super E3, ? extends K> key2F,
             AggregateOperation3<E, E2, E3, A, R> aggrOp
     ) {
-        return pipeline.attach(asList(this, s1, s2),
+        return pipeline.join(asList(this, s1, s2),
                 new CoGroupTransform<>(asList(thisKeyF, key1F, key2F), aggrOp, asList(tag0(), tag1(), tag2())));
     }
 

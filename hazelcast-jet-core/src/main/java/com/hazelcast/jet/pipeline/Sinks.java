@@ -23,11 +23,10 @@ import java.util.Map.Entry;
 public final class Sinks {
 
     private Sinks() {
-
     }
 
     public static Sink writeMap(String mapName) {
-        return new SinkImpl();
+        return new SinkImpl("IMap " + mapName);
     }
 
 }

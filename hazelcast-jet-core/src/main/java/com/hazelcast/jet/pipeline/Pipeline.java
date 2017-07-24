@@ -16,15 +16,27 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.pipeline.impl.PipelineImpl;
 
+import javax.annotation.Nonnull;
+import java.util.concurrent.Future;
+
 public interface Pipeline {
 
-    <E> PStream<E> drawFrom(Source<E> source);
+    @Nonnull
+    <E> PStream<E> drawFrom(@Nonnull Source<E> source);
 
-    void execute(JetInstance jet);
+    @Nonnull
+    default Future<Void> execute(@Nonnull JetInstance jet) {
+        return jet.newJob(toDag()).execute();
+    }
 
+    @Nonnull
+    DAG toDag();
+
+    @Nonnull
     static Pipeline create() {
         return new PipelineImpl();
     }

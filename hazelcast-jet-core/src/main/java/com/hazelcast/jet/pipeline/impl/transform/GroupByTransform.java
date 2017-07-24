@@ -32,4 +32,9 @@ public class GroupByTransform<E, K, R> implements UnaryTransform<E, Entry<K, R>>
         this.keyF = keyF;
         this.aggrOp = aggrOp;
     }
+
+    @Override
+    public String toString() {
+        return "GroupBy";
+    }
 }

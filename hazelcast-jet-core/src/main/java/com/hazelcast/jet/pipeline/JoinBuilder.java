@@ -37,17 +37,13 @@ import static java.util.stream.Collectors.toList;
 public class JoinBuilder<E_LEFT> {
     private final Map<Tag<?>, JoinClause<?, E_LEFT, ?>> clauses = new HashMap<>();
 
-    // Holds the TupleIndex of the "left-hand" component of the join operation.
+    // Holds the TupleTag of the "left-hand" component of the join operation.
     // This JoinClause instance is a special case which has no JoinOn.
     // The pstream it holds is the implied left-hand side of all join clauses.
-    private final Tag<E_LEFT> leftIndex;
+    private final Tag<E_LEFT> leftTag;
 
     JoinBuilder(PStream<E_LEFT> leftStream) {
-        this.leftIndex = add(leftStream, null);
-    }
-
-    public Tag<E_LEFT> leftTag() {
-        return leftIndex;
+        this.leftTag = add(leftStream, null);
     }
 
     public <K, E_RIGHT> Tag<E_RIGHT> add(PStream<E_RIGHT> s, JoinOn<K, E_LEFT, E_RIGHT> joinOn) {
@@ -56,6 +52,7 @@ public class JoinBuilder<E_LEFT> {
         return ind;
     }
 
+    @SuppressWarnings("unchecked")
     public PStream<Tuple2<E_LEFT, BagsByTag>> build() {
         List<PStream> upstream = orderedClauses()
                 .map(e -> e.getValue().pstream())
@@ -64,11 +61,10 @@ public class JoinBuilder<E_LEFT> {
                 orderedClauses()
                         .skip(1)
                         .map(e -> e.getValue().joinOn())
-                        .collect(toList()),
-                BagsByTag.class);
-
-        PipelineImpl pipeline = (PipelineImpl) clauses.get(leftIndex).pstream().getPipeline();
-        return pipeline.attach(upstream, transform);
+                        .collect(toList())
+        );
+        PipelineImpl pipeline = (PipelineImpl) clauses.get(leftTag).pstream().getPipeline();
+        return pipeline.join(upstream, transform);
     }
 
     private Stream<Entry<Tag<?>, JoinClause<?, E_LEFT, ?>>> orderedClauses() {

@@ -28,4 +28,9 @@ public class FlatMapTransform<E, R> implements UnaryTransform<E, R> {
     public FlatMapTransform(DistributedFunction<? super E, Traverser<? extends R>> flatMapF) {
         this.flatMapF = flatMapF;
     }
+
+    @Override
+    public String toString() {
+        return "FlatMap";
+    }
 }
