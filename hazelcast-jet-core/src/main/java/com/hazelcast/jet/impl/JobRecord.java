@@ -24,16 +24,16 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import java.io.IOException;
 
-public class StartableJob implements IdentifiedDataSerializable {
+public class JobRecord implements IdentifiedDataSerializable {
 
     private long jobId;
 
     private DAG dag;
 
-    public StartableJob() {
+    public JobRecord() {
     }
 
-    public StartableJob(long jobId, DAG dag) {
+    public JobRecord(long jobId, DAG dag) {
         this.jobId = jobId;
         this.dag = dag;
     }
@@ -53,7 +53,7 @@ public class StartableJob implements IdentifiedDataSerializable {
 
     @Override
     public int getId() {
-        return JetImplDataSerializerHook.STARTABLE_JOB;
+        return JetImplDataSerializerHook.JOB_RECORD;
     }
 
     @Override

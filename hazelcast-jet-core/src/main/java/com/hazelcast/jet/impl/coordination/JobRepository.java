@@ -6,7 +6,7 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
-import com.hazelcast.jet.impl.StartableJob;
+import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.nio.IOUtil;
 
@@ -17,80 +17,79 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.zip.DeflaterOutputStream;
 
 public class JobRepository {
 
-    private static final String RANDOM_IDS_MAP_NAME = "__jet_random_ids";
-
-    private static final String RESOURCES_MAP_NAME = "__jet_job_resources";
-
-    private static final String STARTABLE_JOBS_MAP_NAME = "__jet_startable_jobs";
+    private static final String JOB_IDS_MAP_NAME = "__jet.jobs.ids";
+    private static final String RESOURCES_MAP_NAME = "__jet.jobs.resources";
+    private static final String JOB_RECORDS_MAP_NAME = "__jet.jobs.records";
 
     // TODO [basri] we should be able to configure backup counts of internal imaps
 
     private final HazelcastInstance instance;
-
+    private final IMap<Long, Long> jobIds;
+    private final IMap<Long, JobRecord> jobs;
 
     public JobRepository(HazelcastInstance instance) {
         this.instance = instance;
+        this.jobIds = instance.getMap(JOB_IDS_MAP_NAME);
+        this.jobs = instance.getMap(JOB_RECORDS_MAP_NAME);
     }
 
-    public long generateRandomId() {
-        IMap<Long, Long> randomIdsMap = getRandomIdsMap();
+    public long newJobId() {
         long randomId;
         do {
             randomId = Util.secureRandomNextLong();
-        } while (randomIdsMap.putIfAbsent(randomId, randomId) != null);
-
+        } while (jobIds.putIfAbsent(randomId, randomId) != null);
         return randomId;
     }
 
-    private IMap<Long, Long> getRandomIdsMap() {
-        return instance.getMap(RANDOM_IDS_MAP_NAME);
-    }
-
-    public StartableJob createStartableJob(long jobId, DAG dag) {
-        StartableJob startableJob = new StartableJob(jobId, dag);
-        IMap<Long, StartableJob> startableJobsMap = getStartableJobsMap();
-        StartableJob prev = startableJobsMap.putIfAbsent(jobId, startableJob);
+    public JobRecord newJobRecord(long jobId, DAG dag) {
+        JobRecord jobRecord = new JobRecord(jobId, dag);
+        IMap<Long, JobRecord> jobRecords = getJobs();
+        JobRecord prev = jobRecords.putIfAbsent(jobId, jobRecord);
         if (prev != null) {
-            throw new IllegalStateException("Cannot create new startable job with id: " + jobId
+            throw new IllegalStateException("Cannot create new job record with id: " + jobId
                     + " because another job for same id already exists with dag: " + prev.getDag());
         }
 
-        return startableJob;
+        return jobRecord;
     }
 
-    private IMap<Long, StartableJob> getStartableJobsMap() {
-        return instance.getMap(STARTABLE_JOBS_MAP_NAME);
+    public IMap<Long, JobRecord> getJobs() {
+        return jobs;
     }
 
-    public Set<Long> getAllStartableJobIds() {
-        IMap<Long, StartableJob> startableJobsMap = getStartableJobsMap();
-        return startableJobsMap.keySet();
+    public JobRecord getJob(long jobId) {
+       return jobs.get(jobId);
     }
 
-    public StartableJob getStartableJob(long jobId) {
-        IMap<Long, StartableJob> startableJobsMap = getStartableJobsMap();
-        return startableJobsMap.get(jobId);
+    public IMap<String, byte[]> getJobResources(long jobId) {
+        return instance.getMap(RESOURCES_MAP_NAME + "." + jobId);
     }
 
-    public long getJobCreationTimeOrFail(long jobId) {
-        IMap<Long, StartableJob> startableJobsMap = getStartableJobsMap();
-        EntryView<Long, StartableJob> entryView = startableJobsMap.getEntryView(jobId);
+    public void removeJob(long jobId) {
+        jobs.remove(jobId);
+        IMap<String, byte[]> jobResourcesMap = getJobResources(jobId);
+        if (jobResourcesMap != null) {
+            jobResourcesMap.clear();
+            jobResourcesMap.destroy();
+        }
+    }
+
+    public long getJobCreationTime(long jobId) throws IllegalArgumentException {
+        EntryView<Long, JobRecord> entryView = jobs.getEntryView(jobId);
         if (entryView != null) {
             return entryView.getCreationTime();
         }
-
         throw new IllegalArgumentException("Job creation time not found for job id: " + jobId);
     }
 
     public void uploadJobResources(long jobId, JobConfig jobConfig) {
-        IMap<String, byte[]> jobResourcesMap = getJobResourcesMap(jobId);
+        IMap<String, byte[]> jobResourcesMap = getJobResources(jobId);
         for (ResourceConfig rc : jobConfig.getResourceConfigs()) {
             Map<String, byte[]> tmpMap = new HashMap<>();
             if (rc.isArchive()) {
@@ -114,28 +113,7 @@ public class JobRepository {
         }
     }
 
-    private IMap<String, byte[]> getJobResourcesMap(long jobId) {
-        return instance.getMap(RESOURCES_MAP_NAME + "_" + jobId);
-    }
 
-    public void removeStartableJobAndResources(long jobId) {
-        IMap<Long, StartableJob> startableJobsMap = getStartableJobsMap();
-        startableJobsMap.remove(jobId);
-
-        IMap<String, byte[]> jobResourcesMap = getJobResourcesMap(jobId);
-        jobResourcesMap.clear();
-        jobResourcesMap.destroy();
-    }
-
-    public boolean containsJobResource(long jobId, String resourceId) {
-        IMap<String, byte[]> jobResourcesMap = getJobResourcesMap(jobId);
-        return jobResourcesMap.containsKey(resourceId);
-    }
-
-    public byte[] getJobResource(long jobId, String resourceId) {
-        IMap<String, byte[]> jobResourcesMap = getJobResourcesMap(jobId);
-        return jobResourcesMap.get(resourceId);
-    }
 
     /**
      * Unzips the Jar archive and processes individual entries using

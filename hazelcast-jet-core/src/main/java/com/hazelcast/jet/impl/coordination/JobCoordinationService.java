@@ -1,5 +1,6 @@
 package com.hazelcast.jet.impl.coordination;
 
+import com.hazelcast.core.IMap;
 import com.hazelcast.instance.Node;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.MembersView;
@@ -8,7 +9,7 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.JobResult;
-import com.hazelcast.jet.impl.StartableJob;
+import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder;
 import com.hazelcast.logging.ILogger;
@@ -18,7 +19,6 @@ import com.hazelcast.spi.impl.executionservice.InternalExecutionService;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -56,7 +56,7 @@ public class JobCoordinationService {
     public void init() {
         InternalExecutionService executionService = nodeEngine.getExecutionService();
         executionService.register(COORDINATOR_EXECUTOR_NAME, 2, Integer.MAX_VALUE, CACHED);
-        executionService.scheduleWithRepetition(COORDINATOR_EXECUTOR_NAME, this::scanStartableJobs,
+        executionService.scheduleWithRepetition(COORDINATOR_EXECUTOR_NAME, this::scanJobs,
                 0, JOB_SCANNER_TASK_PERIOD_IN_MILLIS, MILLISECONDS);
     }
 
@@ -88,8 +88,8 @@ public class JobCoordinationService {
                 return jobResult.asCompletableFuture();
             }
 
-            StartableJob startableJob = jobRepository.getStartableJob(jobId);
-            if (startableJob == null) {
+            JobRecord jobRecord = jobRepository.getJob(jobId);
+            if (jobRecord == null) {
                 throw new IllegalStateException("Job " + jobId + " not found");
             }
 
@@ -98,7 +98,7 @@ public class JobCoordinationService {
                 return currentMasterContext.getCompletionFuture();
             }
 
-            newMasterContext = new MasterContext(nodeEngine, this, jobId, startableJob.getDag());
+            newMasterContext = new MasterContext(nodeEngine, this, jobId, jobRecord.getDag());
             masterContexts.put(jobId, newMasterContext);
 
             logger.info("Starting new job " + jobId);
@@ -110,7 +110,7 @@ public class JobCoordinationService {
     }
 
     long generateRandomId() {
-        return jobRepository.generateRandomId();
+        return jobRepository.newJobId();
     }
 
     void scheduleRestart(long jobId) {
@@ -129,7 +129,7 @@ public class JobCoordinationService {
         long jobId = masterContext.getJobId(), executionId = masterContext.getExecutionId();
         try {
             if (masterContexts.remove(masterContext.getJobId(), masterContext)) {
-                long jobCreationTime = jobRepository.getJobCreationTimeOrFail(jobId);
+                long jobCreationTime = jobRepository.getJobCreationTime(jobId);
                 Address coordinator = nodeEngine.getThisAddress();
                 JobResult jobResult = new JobResult(jobId, coordinator, jobCreationTime, completionTime, error);
                 jobResultRepository.completeJob(jobResult);
@@ -165,20 +165,20 @@ public class JobCoordinationService {
         }
     }
 
-    private void scanStartableJobs() {
+    private void scanJobs() {
         if (!shouldStartJobs()) {
             return;
         }
 
-        Set<Long> jobIds = jobRepository.getAllStartableJobIds();
-        if (jobIds.isEmpty()) {
+        IMap<Long, JobRecord> jobs = jobRepository.getJobs();
+        if (jobs.isEmpty()) {
             return;
         }
 
         try {
-            jobIds.forEach(this::startOrJoinJob);
+            jobs.keySet().forEach(this::startOrJoinJob);
         } catch (Exception e) {
-            logger.severe("Scanning startable jobs is failed", e);
+            logger.severe("Scanning jobs is failed", e);
         }
     }
 

@@ -171,7 +171,7 @@ public class JetService
     }
 
     public ClassLoader getClassLoader(long jobId) {
-        PrivilegedAction<JetClassLoader> action = () -> new JetClassLoader(jobRepository, jobId);
+        PrivilegedAction<JetClassLoader> action = () -> new JetClassLoader(jobRepository.getJobResources(jobId));
         return jobExecutionService.getClassLoader(jobId, action);
     }
 

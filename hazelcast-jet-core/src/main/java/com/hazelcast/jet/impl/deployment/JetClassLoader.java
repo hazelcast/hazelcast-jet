@@ -23,19 +23,18 @@ import com.hazelcast.nio.IOUtil;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.Map;
 import java.util.zip.InflaterInputStream;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 
 public class JetClassLoader extends ClassLoader {
 
-    private final JobRepository jobRepository;
-    private final long jobId;
+    private final Map<String, byte[]> resources;
 
-    public JetClassLoader(JobRepository jobRepository, long jobId) {
+    public JetClassLoader(Map<String, byte[]> resources) {
         super(JetClassLoader.class.getClassLoader());
-        this.jobRepository = jobRepository;
-        this.jobId = jobId;
+        this.resources = resources;
     }
 
     @Override
@@ -58,7 +57,7 @@ public class JetClassLoader extends ClassLoader {
             return null;
         }
         // we distinguish between the case "resource found, but not accessible by URL" and "resource not found"
-        if (jobRepository.containsJobResource(jobId, name)) {
+        if (!resources.containsKey(name)) {
             throw new IllegalArgumentException("Resource not accessible by URL: " + name);
         }
         return null;
@@ -74,7 +73,7 @@ public class JetClassLoader extends ClassLoader {
 
     @SuppressWarnings("unchecked")
     private InputStream resourceStream(String name) {
-        byte[] classData = jobRepository.getJobResource(jobId, name);
+        byte[] classData = resources.get(name);
         if (classData == null) {
             return null;
         }

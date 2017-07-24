@@ -118,7 +118,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
         }
 
         JetService jetService = getJetService(instance);
-        assertNull(jetService.getJobRepository().getStartableJob(job.getJobId()));
+        assertNull(jetService.getJobRepository().getJob(job.getJobId()));
         JobResult jobResult = jetService.getJobResultRepository().getJobResult(job.getJobId());
         assertNotNull(jobResult);
         assertTrue(jobResult.isSuccessful());
@@ -154,7 +154,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
 
         assertNotNull(job);
         JetService jetService = getJetService(instance);
-        assertNull(jetService.getJobRepository().getStartableJob(job.getJobId()));
+        assertNull(jetService.getJobRepository().getJob(job.getJobId()));
         JobResult jobResult = jetService.getJobResultRepository().getJobResult(job.getJobId());
         assertNotNull(jobResult);
         assertFalse(jobResult.isSuccessful());
@@ -193,7 +193,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
 
         assertNotNull(job);
         JetService jetService = getJetService(instance);
-        assertNull(jetService.getJobRepository().getStartableJob(job.getJobId()));
+        assertNull(jetService.getJobRepository().getJob(job.getJobId()));
         JobResult jobResult = jetService.getJobResultRepository().getJobResult(job.getJobId());
         assertNotNull(jobResult);
         assertFalse(jobResult.isSuccessful());

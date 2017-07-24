@@ -59,9 +59,9 @@ public abstract class AbstractJobImpl implements Job {
             throw new IllegalStateException("Job already started");
         }
 
-        jobId = jobRepository.generateRandomId();
+        jobId = jobRepository.newJobId();
         jobRepository.uploadJobResources(jobId, config);
-        jobRepository.createStartableJob(jobId, dag);
+        jobRepository.newJobRecord(jobId, dag);
 
         dag = null;
         config = null;

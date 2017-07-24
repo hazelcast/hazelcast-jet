@@ -21,7 +21,7 @@ import com.hazelcast.internal.serialization.impl.FactoryIdHelper;
 import com.hazelcast.jet.impl.coordination.JobResultRepository.NonMemberCoordinatorPredicate;
 import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.JobResult.JobResultKey;
-import com.hazelcast.jet.impl.StartableJob;
+import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.operation.CompleteOperation;
 import com.hazelcast.jet.impl.operation.ExecuteOperation;
 import com.hazelcast.jet.impl.operation.InitOperation;
@@ -37,7 +37,7 @@ public final class JetImplDataSerializerHook implements DataSerializerHook {
     public static final int EXECUTION_PLAN = 0;
     public static final int VERTEX_DEF = 1;
     public static final int EDGE_DEF = 2;
-    public static final int STARTABLE_JOB = 3;
+    public static final int JOB_RECORD = 3;
     public static final int JOB_RESULT = 4;
     public static final int JOB_RESULT_KEY = 5;
     public static final int NON_MEMBER_COORDINATOR_PREDICATE = 6;
@@ -68,8 +68,8 @@ public final class JetImplDataSerializerHook implements DataSerializerHook {
                     return new EdgeDef();
                 case VERTEX_DEF:
                     return new VertexDef();
-                case STARTABLE_JOB:
-                    return new StartableJob();
+                case JOB_RECORD:
+                    return new JobRecord();
                 case JOB_RESULT:
                     return new JobResult();
                 case JOB_RESULT_KEY:

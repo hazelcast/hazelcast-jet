@@ -88,7 +88,7 @@ public class JobResultRepository {
             throw new IllegalStateException(jobResult + " already exists in the job record results map!");
         }
 
-        jobRepository.removeStartableJobAndResources(jobId);
+        jobRepository.removeJob(jobId);
     }
 
     public static class NonMemberCoordinatorPredicate

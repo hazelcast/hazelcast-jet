@@ -53,23 +53,15 @@ import static java.util.stream.Collectors.toList;
 public class MasterContext {
 
     private final NodeEngineImpl nodeEngine;
-
     private final JobCoordinationService coordinationService;
-
     private final ILogger logger;
-
     private final long jobId;
-
     private final DAG dag;
-
     private final CompletableFuture<Throwable> completionFuture = new CompletableFuture<>();
-
     private final AtomicReference<JobStatus> jobStatus = new AtomicReference<>(NOT_STARTED);
 
     private volatile long executionId;
-
     private volatile long jobStartTime;
-
     private volatile Map<MemberInfo, ExecutionPlan> executionPlanMap;
 
     MasterContext(NodeEngineImpl nodeEngine, JobCoordinationService coordinationService, long jobId, DAG dag) {
