@@ -23,7 +23,7 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobResult;
-import com.hazelcast.jet.impl.coordination.JobResultRepository;
+import com.hazelcast.jet.impl.coordination.JobCoordinationService;
 import com.hazelcast.jet.impl.coordination.MasterContext;
 import com.hazelcast.jet.impl.execution.init.JetImplDataSerializerHook;
 import com.hazelcast.test.AssertTask;
@@ -242,12 +242,12 @@ public class TopologyChangeTest extends JetTestSupport {
         assertNotNull(jobId);
         final long completedJobId = jobId;
 
-        JobResultRepository jobResultRepository = getJetService(instances[1]).getJobResultRepository();
+        JobCoordinationService coordService = getJetService(instances[1]).getJobCoordinationService();
 
         assertTrueEventually(new AssertTask() {
             @Override
             public void run() throws Exception {
-                JobResult jobResult = jobResultRepository.getResult(completedJobId);
+                JobResult jobResult = coordService.getResult(completedJobId);
                 assertNotNull(jobResult);
                 assertTrue(jobResult.isSuccessful());
             }

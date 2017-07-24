@@ -26,34 +26,29 @@ import java.util.concurrent.CompletableFuture;
 
 public class JobResult implements IdentifiedDataSerializable {
 
-    private JobResultKey key;
-
+    private String coordinatorUUID;
+    private long jobId;
     private long creationTime;
-
     private long completionTime;
-
     private Throwable failure;
 
     public JobResult() {
     }
 
     public JobResult(long jobId, String coordinatorUUID, long creationTime, Long completionTime, Throwable failure) {
-        this.key = new JobResultKey(jobId, coordinatorUUID);
+        this.jobId = jobId;
+        this.coordinatorUUID = coordinatorUUID;
         this.creationTime = creationTime;
         this.completionTime = completionTime;
         this.failure = failure;
     }
 
-    public JobResultKey getKey() {
-        return key;
-    }
-
     public long getJobId() {
-        return key.getJobId();
+        return jobId;
     }
 
     public String getCoordinatorUUID() {
-        return key.getCoordinatorUUID();
+        return coordinatorUUID;
     }
 
     public long getCreationTime() {
@@ -88,20 +83,37 @@ public class JobResult implements IdentifiedDataSerializable {
             return false;
         }
 
-        JobResult that = (JobResult) o;
+        JobResult jobResult = (JobResult) o;
 
-        return key.equals(that.key);
+        if (jobId != jobResult.jobId) {
+            return false;
+        }
+        if (creationTime != jobResult.creationTime) {
+            return false;
+        }
+        if (completionTime != jobResult.completionTime) {
+            return false;
+        }
+        if (!coordinatorUUID.equals(jobResult.coordinatorUUID)) {
+            return false;
+        }
+        return failure.equals(jobResult.failure);
     }
 
-    @Override
-    public int hashCode() {
-        return key.hashCode();
+    @Override public int hashCode() {
+        int result = coordinatorUUID.hashCode();
+        result = 31 * result + (int) (jobId ^ (jobId >>> 32));
+        result = 31 * result + (int) (creationTime ^ (creationTime >>> 32));
+        result = 31 * result + (int) (completionTime ^ (completionTime >>> 32));
+        result = 31 * result + failure.hashCode();
+        return result;
     }
 
     @Override
     public String toString() {
         return "JobResult{" +
-                "key=" + key +
+                "coordinatorUUID='" + coordinatorUUID + '\'' +
+                ", jobId=" + jobId +
                 ", creationTime=" + creationTime +
                 ", completionTime=" + completionTime +
                 ", failure=" + failure +
@@ -120,7 +132,8 @@ public class JobResult implements IdentifiedDataSerializable {
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        key.writeData(out);
+        out.writeLong(jobId);
+        out.writeUTF(coordinatorUUID);
         out.writeLong(creationTime);
         out.writeLong(completionTime);
         out.writeObject(failure);
@@ -128,84 +141,11 @@ public class JobResult implements IdentifiedDataSerializable {
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        key = new JobResultKey();
-        key.readData(in);
+        jobId = in.readLong();
+        coordinatorUUID = in.readUTF();
         creationTime = in.readLong();
         completionTime = in.readLong();
         failure = in.readObject();
-    }
-
-    public static class JobResultKey implements IdentifiedDataSerializable {
-
-        private long jobId;
-        private String coordinatorUUID;
-
-        public JobResultKey() {
-        }
-
-        public JobResultKey(long jobId, String coordinatorUUID) {
-            this.jobId = jobId;
-            this.coordinatorUUID = coordinatorUUID;
-        }
-
-        public long getJobId() {
-            return jobId;
-        }
-
-        public String getCoordinatorUUID() {
-            return coordinatorUUID;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-
-            JobResultKey that = (JobResultKey) o;
-
-            return jobId == that.jobId && coordinatorUUID.equals(that.coordinatorUUID);
-        }
-
-        @Override
-        public int hashCode() {
-            int result = (int) (jobId ^ (jobId >>> 32));
-            result = 31 * result + coordinatorUUID.hashCode();
-            return result;
-        }
-
-        @Override
-        public String toString() {
-            return "JobResultKey{" +
-                    "jobId=" + jobId +
-                    ", coordinatorUUID=" + coordinatorUUID +
-                    '}';
-        }
-
-        @Override
-        public int getFactoryId() {
-            return JetImplDataSerializerHook.FACTORY_ID;
-        }
-
-        @Override
-        public int getId() {
-            return JetImplDataSerializerHook.JOB_RESULT_KEY;
-        }
-
-        @Override
-        public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeLong(jobId);
-            out.writeUTF(coordinatorUUID);
-        }
-
-        @Override
-        public void readData(ObjectDataInput in) throws IOException {
-            jobId = in.readLong();
-            coordinatorUUID = in.readUTF();
-        }
     }
 
 }

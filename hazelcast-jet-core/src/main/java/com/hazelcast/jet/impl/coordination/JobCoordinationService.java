@@ -45,6 +45,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 public class JobCoordinationService {
 
     private static final String COORDINATOR_EXECUTOR_NAME = "jet:coordinator";
+    private static final String JOB_RESULTS_MAP_NAME = "__jet.jobs.results";
 
     private static final long JOB_SCANNER_TASK_PERIOD_IN_MILLIS = TimeUnit.SECONDS.toMillis(1);
 
@@ -52,18 +53,17 @@ public class JobCoordinationService {
     private final JetConfig config;
     private final ILogger logger;
     private final JobRepository jobRepository;
-    private final JobResultRepository jobResultRepository;
-
     private final Object lock = new Object();
     private final ConcurrentMap<Long, MasterContext> masterContexts = new ConcurrentHashMap<>();
+    private final IMap<Long, JobResult> jobResults;
 
     public JobCoordinationService(NodeEngineImpl nodeEngine, JetConfig config,
-                                  JobRepository jobRepository, JobResultRepository jobResultRepository) {
+                                  JobRepository jobRepository) {
         this.nodeEngine = nodeEngine;
         this.config = config;
         this.logger = nodeEngine.getLogger(getClass());
         this.jobRepository = jobRepository;
-        this.jobResultRepository = jobResultRepository;
+        this.jobResults = nodeEngine.getHazelcastInstance().getMap(JOB_RESULTS_MAP_NAME);
     }
 
     public void init() {
@@ -96,7 +96,7 @@ public class JobCoordinationService {
 
         MasterContext newMasterContext;
         synchronized (lock) {
-            JobResult jobResult = jobResultRepository.getResult(jobId);
+            JobResult jobResult = jobResults.get(jobId);
             if (jobResult != null) {
                 logger.fine("Not starting job " + jobId + " since already completed -> " + jobResult);
                 return jobResult.asCompletableFuture();
@@ -138,15 +138,18 @@ public class JobCoordinationService {
 
     void completeJob(MasterContext masterContext, long completionTime, Throwable error) {
         synchronized (lock) {
-            long jobId = masterContext.getJobId(), executionId = masterContext.getExecutionId();
+            long jobId = masterContext.getJobId();
+            long executionId = masterContext.getExecutionId();
             try {
                 if (masterContexts.remove(masterContext.getJobId(), masterContext)) {
                     long jobCreationTime = jobRepository.getJobCreationTime(jobId);
                     String coordinator = nodeEngine.getNode().getThisUuid();
                     JobResult jobResult = new JobResult(jobId, coordinator, jobCreationTime, completionTime, error);
-                    jobResultRepository.setResult(jobResult);
+                    JobResult prev = jobResults.putIfAbsent(jobId, jobResult);
+                    if (prev != null) {
+                        throw new IllegalStateException(jobResult + " already exists in the job record results map!");
+                    }
                     jobRepository.deleteJob(jobId);
-
                     logger.fine("Job " + jobId + " execution " + executionId + " is completed.");
                 } else {
                     MasterContext existing = masterContexts.get(jobId);
@@ -207,4 +210,8 @@ public class JobCoordinationService {
                 && !partitionService.hasOnGoingMigrationLocal();
     }
 
+    // visible for testing
+    public JobResult getResult(long jobId) {
+        return jobResults.get(jobId);
+    }
 }
