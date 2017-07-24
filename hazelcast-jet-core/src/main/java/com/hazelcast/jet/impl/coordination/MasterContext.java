@@ -34,8 +34,12 @@ import com.hazelcast.spi.InternalCompletableFuture;
 import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,7 +48,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import static com.hazelcast.jet.JobStatus.*;
+import static com.hazelcast.jet.JobStatus.COMPLETED;
+import static com.hazelcast.jet.JobStatus.FAILED;
+import static com.hazelcast.jet.JobStatus.NOT_STARTED;
+import static com.hazelcast.jet.JobStatus.RESTARTING;
+import static com.hazelcast.jet.JobStatus.RUNNING;
+import static com.hazelcast.jet.JobStatus.STARTING;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isJobRestartRequired;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static java.util.stream.Collectors.partitioningBy;
@@ -189,9 +198,9 @@ public class MasterContext {
 
     private Map<Boolean, List<Entry<MemberInfo, Object>>> groupResponses(Map<MemberInfo, Object> responses) {
         return responses
-                    .entrySet()
-                    .stream()
-                    .collect(partitioningBy(e -> e.getValue() instanceof Throwable));
+                .entrySet()
+                .stream()
+                .collect(partitioningBy(e -> e.getValue() instanceof Throwable));
     }
 
     private boolean isJobRestartRequiredFailure(Object response) {
@@ -347,13 +356,13 @@ public class MasterContext {
             MemberInfo member = e.getKey();
             Operation op = opCtor.apply(e.getValue());
             InternalCompletableFuture<Object> future = nodeEngine.getOperationService()
-                    .createInvocationBuilder(JetService.SERVICE_NAME, op, member.getAddress())
-                    .setDoneCallback(() -> {
-                        if (doneLatch.decrementAndGet() == 0) {
-                            doneFuture.complete(null);
-                        }
-                    })
-                    .invoke();
+                         .createInvocationBuilder(JetService.SERVICE_NAME, op, member.getAddress())
+                         .setDoneCallback(() -> {
+                             if (doneLatch.decrementAndGet() == 0) {
+                                 doneFuture.complete(null);
+                             }
+                         })
+                         .invoke();
             futures.put(member, future);
         }
     }

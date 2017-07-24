@@ -33,7 +33,15 @@ import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.Packet;
-import com.hazelcast.spi.*;
+import com.hazelcast.spi.CanCancelOperations;
+import com.hazelcast.spi.ConfigurableService;
+import com.hazelcast.spi.LiveOperations;
+import com.hazelcast.spi.LiveOperationsTracker;
+import com.hazelcast.spi.ManagedService;
+import com.hazelcast.spi.MemberAttributeServiceEvent;
+import com.hazelcast.spi.MembershipAwareService;
+import com.hazelcast.spi.MembershipServiceEvent;
+import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.PacketHandler;
 
@@ -130,7 +138,9 @@ public class JetService
 
     public void initExecution(long jobId, long executionId, Address coordinator, int coordinatorMemberListVersion,
                               Set<MemberInfo> participants, ExecutionPlan plan) {
-        jobExecutionService.initExecution(jobId, executionId, coordinator, coordinatorMemberListVersion, participants, plan);
+        jobExecutionService.initExecution(
+                jobId, executionId, coordinator, coordinatorMemberListVersion, participants, plan
+        );
     }
 
     public CompletionStage<Void> execute(Address coordinator, long jobId, long executionId,

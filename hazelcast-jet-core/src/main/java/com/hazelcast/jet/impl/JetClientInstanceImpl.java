@@ -36,7 +36,10 @@ import com.hazelcast.nio.Address;
 
 import javax.annotation.Nonnull;
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class JetClientInstanceImpl extends AbstractJetInstance {
 

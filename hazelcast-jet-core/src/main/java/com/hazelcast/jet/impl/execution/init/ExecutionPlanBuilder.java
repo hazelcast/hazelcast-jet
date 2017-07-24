@@ -18,14 +18,24 @@ package com.hazelcast.jet.impl.execution.init;
 
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.MembersView;
-import com.hazelcast.jet.*;
+import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.Edge;
+import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.ProcessorMetaSupplier;
+import com.hazelcast.jet.ProcessorSupplier;
+import com.hazelcast.jet.TopologyChangedException;
+import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.impl.execution.init.Contexts.MetaSupplierCtx;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.partition.IPartitionService;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
 

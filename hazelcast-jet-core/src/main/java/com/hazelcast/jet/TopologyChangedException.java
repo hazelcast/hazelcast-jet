@@ -22,6 +22,9 @@ package com.hazelcast.jet;
  */
 public class TopologyChangedException extends JetException {
 
+    /**
+     * Creates the exception
+     */
     public TopologyChangedException() {
     }
 

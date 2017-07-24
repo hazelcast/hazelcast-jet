@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.deployment;
 
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.impl.coordination.JobRepository;
 import com.hazelcast.nio.IOUtil;
 
 import java.io.ByteArrayInputStream;

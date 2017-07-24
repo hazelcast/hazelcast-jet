@@ -19,7 +19,12 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.SenderTasklet;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.nio.*;
+import com.hazelcast.nio.Address;
+import com.hazelcast.nio.BufferObjectDataInput;
+import com.hazelcast.nio.Connection;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.Packet;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
@@ -29,7 +34,11 @@ import java.util.Optional;
 import java.util.concurrent.ScheduledFuture;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static com.hazelcast.jet.impl.util.Util.*;
+import static com.hazelcast.jet.impl.util.Util.createObjectDataInput;
+import static com.hazelcast.jet.impl.util.Util.createObjectDataOutput;
+import static com.hazelcast.jet.impl.util.Util.getMemberConnection;
+import static com.hazelcast.jet.impl.util.Util.getRemoteMembers;
+import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static com.hazelcast.nio.Packet.FLAG_JET_FLOW_CONTROL;
 import static com.hazelcast.nio.Packet.FLAG_URGENT;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;

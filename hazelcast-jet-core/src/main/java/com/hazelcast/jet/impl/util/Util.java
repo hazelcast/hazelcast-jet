@@ -204,10 +204,10 @@ public final class Util {
  * based UUIDs. In a holder class to defer initialization until needed.
  */
     private static class Holder {
-        static final SecureRandom numberGenerator = new SecureRandom();
+        static final SecureRandom NUMBER_GENERATOR = new SecureRandom();
     }
 
     public static long secureRandomNextLong() {
-        return Holder.numberGenerator.nextLong();
+        return Holder.NUMBER_GENERATOR.nextLong();
     }
 }

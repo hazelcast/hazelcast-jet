@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hazelcast.jet.impl.coordination;
 
 import com.hazelcast.core.IMap;
@@ -8,8 +24,8 @@ import com.hazelcast.internal.partition.impl.InternalPartitionServiceImpl;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.JobRecord;
+import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder;
 import com.hazelcast.logging.ILogger;
@@ -121,13 +137,14 @@ public class JobCoordinationService {
             nodeEngine.getExecutionService().schedule(COORDINATOR_EXECUTOR_NAME, () -> restartJob(jobId),
                     JOB_SCANNER_TASK_PERIOD_IN_MILLIS, MILLISECONDS);
         } else {
-            logger.severe("Master context for job " + jobId + " not found to schedule restart" );
+            logger.severe("Master context for job " + jobId + " not found to schedule restart");
         }
     }
 
     void completeJob(MasterContext masterContext, long completionTime, Throwable error) {
         coordinatorLock.lock();
-        long jobId = masterContext.getJobId(), executionId = masterContext.getExecutionId();
+        long jobId = masterContext.getJobId();
+        long executionId = masterContext.getExecutionId();
         try {
             if (masterContexts.remove(masterContext.getJobId(), masterContext)) {
                 long jobCreationTime = jobRepository.getJobCreationTime(jobId);
@@ -162,7 +179,7 @@ public class JobCoordinationService {
         if (masterContext != null) {
             masterContext.start();
         } else {
-            logger.severe("Master context for job " + jobId + " not found to restart" );
+            logger.severe("Master context for job " + jobId + " not found to restart");
         }
     }
 
