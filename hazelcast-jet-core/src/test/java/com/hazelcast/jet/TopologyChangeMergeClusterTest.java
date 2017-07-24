@@ -60,7 +60,7 @@ public class TopologyChangeMergeClusterTest extends JetSplitBrainTestSupport {
         // Given
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(StuckProcessor::new, NODE_COUNT / 2)));
 
-        future = firstBrain[0].newJob(dag).execute();
+        future = firstBrain[0].newJob(dag).getFuture();
         StuckProcessor.executionStarted.await();
     }
 

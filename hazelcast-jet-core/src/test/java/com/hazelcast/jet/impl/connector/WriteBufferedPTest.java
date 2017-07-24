@@ -94,7 +94,7 @@ public class WriteBufferedPTest extends JetTestSupport {
 
             dag.edge(Edge.between(source, sink));
 
-            Future<Void> future = instance.newJob(dag).execute();
+            Future<Void> future = instance.newJob(dag).getFuture();
             // wait for the job to initialize
             Thread.sleep(500);
             future.cancel(true);

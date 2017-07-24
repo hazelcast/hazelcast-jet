@@ -17,22 +17,13 @@
 package com.hazelcast.jet;
 
 import javax.annotation.Nonnull;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 /**
  * A Jet computation job created from a {@link DAG}, ready to be executed.
  */
 public interface Job {
-    /**
-     * Executes the job.
-     *
-     * @return a future that can be inspected for job completion status and
-     * cancelled to prematurely end the job.
-     *
-     * @throws IllegalStateException If the job was already started.
-     */
-    @Nonnull
-    Future<Void> execute();
 
     /**
      * Gets the future associated with the job, used to control the job.
@@ -42,6 +33,8 @@ public interface Job {
     @Nonnull
     Future<Void> getFuture();
 
+    void join() throws InterruptedException, ExecutionException;
+
     /**
      * Return the ID of this job.
      *
@@ -49,4 +42,5 @@ public interface Job {
      * has no job id.
      */
     long getJobId();
+
 }

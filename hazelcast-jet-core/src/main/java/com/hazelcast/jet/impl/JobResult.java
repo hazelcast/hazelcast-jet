@@ -37,8 +37,8 @@ public class JobResult implements IdentifiedDataSerializable {
     public JobResult() {
     }
 
-    public JobResult(long jobId, String coordinator, long creationTime, Long completionTime, Throwable failure) {
-        this.key = new JobResultKey(jobId, coordinator);
+    public JobResult(long jobId, String coordinatorUUID, long creationTime, Long completionTime, Throwable failure) {
+        this.key = new JobResultKey(jobId, coordinatorUUID);
         this.creationTime = creationTime;
         this.completionTime = completionTime;
         this.failure = failure;
@@ -52,7 +52,7 @@ public class JobResult implements IdentifiedDataSerializable {
         return key.getJobId();
     }
 
-    public String getCoordinator() {
+    public String getCoordinatorUUID() {
         return key.getCoordinatorUUID();
     }
 

@@ -44,19 +44,19 @@ public class JetInstanceImpl extends AbstractJetInstance {
 
     @Override
     public Job newJob(DAG dag) {
-        return newJob(dag, new JobConfig());
+        JobImpl job = new JobImpl(dag, new JobConfig());
+        job.execute();
+        return job;
     }
 
     @Override
     public Job newJob(DAG dag, JobConfig config) {
-        return new JobImpl(dag, config);
+        JobImpl job = new JobImpl(dag, config);
+        job.execute();
+        return job;
     }
 
     private class JobImpl extends AbstractJobImpl {
-
-        JobImpl(long jobId) {
-            super(JetInstanceImpl.this, jobId);
-        }
 
         JobImpl(DAG dag, JobConfig config) {
             super(JetInstanceImpl.this, dag, config);

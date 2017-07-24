@@ -77,7 +77,7 @@ public class JobResultRepository {
     }
 
     public void setResult(JobResult jobResult) {
-        if (!(node.isMaster() && node.getThisAddress().equals(jobResult.getCoordinator()))) {
+        if (!(node.isMaster() && node.getThisUuid().equals(jobResult.getCoordinatorUUID()))) {
             throw new IllegalStateException("Cannot persist " + jobResult);
         }
         JobResult curr = jobResults.putIfAbsent(jobResult.getKey(), jobResult);
@@ -116,7 +116,7 @@ public class JobResultRepository {
 
         @Override
         public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeUTFArray((String[]) members.toArray());
+            out.writeUTFArray(members.toArray(new String[]{}));
         }
 
         @Override

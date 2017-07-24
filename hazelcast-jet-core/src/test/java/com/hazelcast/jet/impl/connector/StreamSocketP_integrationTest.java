@@ -90,7 +90,7 @@ public class StreamSocketP_integrationTest extends JetTestSupport {
             dag.edge(between(producer, consumer));
 
             // When
-            Future<Void> job = instance.newJob(dag).execute();
+            Future<Void> job = instance.newJob(dag).getFuture();
             IList<Object> list = instance.getList("consumer");
 
             assertTrueEventually(() -> assertEquals(2, list.size()));
@@ -127,7 +127,7 @@ public class StreamSocketP_integrationTest extends JetTestSupport {
                     .vertex(sink)
                     .edge(between(producer, sink));
 
-            Future<Void> job = instance.newJob(dag).execute();
+            Future<Void> job = instance.newJob(dag).getFuture();
             acceptationLatch.await();
             job.cancel(true);
 

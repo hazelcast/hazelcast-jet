@@ -61,7 +61,6 @@ import java.util.stream.IntStream;
 import static com.hazelcast.internal.util.concurrent.ConcurrentConveyor.concurrentConveyor;
 import static com.hazelcast.jet.impl.execution.OutboundCollector.compositeCollector;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
-import static com.hazelcast.jet.impl.util.Util.getRemoteMembers;
 import static com.hazelcast.jet.impl.util.Util.readList;
 import static com.hazelcast.jet.impl.util.Util.writeList;
 import static java.util.stream.Collectors.toList;
@@ -241,20 +240,35 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         assert edge.isDistributed() : "Edge is not distributed";
         return edgeSenderConveyorMap.computeIfAbsent(edge.edgeId(), x -> {
             final Map<Address, ConcurrentConveyor<Object>> addrToConveyor = new HashMap<>();
-            for (Address destAddr : getRemoteMembers(nodeEngine)) {
-                final ConcurrentConveyor<Object> conveyor =
-                        createConveyorArray(1, edge.sourceVertex().parallelism(), edge.getConfig().getQueueSize())[0];
-                final ConcurrentInboundEdgeStream inboundEdgeStream =
-                        new ConcurrentInboundEdgeStream(conveyor, edge.destOrdinal(), edge.priority());
-                final int destVertexId = edge.destVertex().vertexId();
-                final SenderTasklet t = new SenderTasklet(inboundEdgeStream, nodeEngine,
-                        destAddr, executionId, destVertexId, edge.getConfig().getPacketSizeLimit());
-                senderMap.computeIfAbsent(destVertexId, xx -> new HashMap<>())
-                         .computeIfAbsent(edge.destOrdinal(), xx -> new HashMap<>())
-                         .put(destAddr, t);
-                tasklets.add(t);
-                addrToConveyor.put(destAddr, conveyor);
-            }
+            Arrays.stream(partitionOwners)
+                  .filter(p -> !p.equals(nodeEngine.getThisAddress()))
+                  .forEach(destAddr -> {
+                      final ConcurrentConveyor<Object> conveyor =
+                              createConveyorArray(1, edge.sourceVertex().parallelism(), edge.getConfig().getQueueSize())[0];
+                      final ConcurrentInboundEdgeStream inboundEdgeStream = new ConcurrentInboundEdgeStream(conveyor, edge.destOrdinal(), edge.priority());
+                      final int destVertexId = edge.destVertex().vertexId();
+                      final SenderTasklet t = new SenderTasklet(inboundEdgeStream, nodeEngine,
+                              destAddr, executionId, destVertexId, edge.getConfig().getPacketSizeLimit());
+                      senderMap.computeIfAbsent(destVertexId, xx -> new HashMap<>())
+                               .computeIfAbsent(edge.destOrdinal(), xx -> new HashMap<>())
+                               .put(destAddr, t);
+                      tasklets.add(t);
+                      addrToConveyor.put(destAddr, conveyor);
+            });
+//            for (Address destAddr : getRemoteMembers(nodeEngine)) {
+//                final ConcurrentConveyor<Object> conveyor =
+//                        createConveyorArray(1, edge.sourceVertex().parallelism(), edge.getConfig().getQueueSize())[0];
+//                final ConcurrentInboundEdgeStream inboundEdgeStream =
+//                        new ConcurrentInboundEdgeStream(conveyor, edge.destOrdinal(), edge.priority());
+//                final int destVertexId = edge.destVertex().vertexId();
+//                final SenderTasklet t = new SenderTasklet(inboundEdgeStream, nodeEngine,
+//                        destAddr, executionId, destVertexId, edge.getConfig().getPacketSizeLimit());
+//                senderMap.computeIfAbsent(destVertexId, xx -> new HashMap<>())
+//                         .computeIfAbsent(edge.destOrdinal(), xx -> new HashMap<>())
+//                         .put(destAddr, t);
+//                tasklets.add(t);
+//                addrToConveyor.put(destAddr, conveyor);
+//            }
             return addrToConveyor;
         });
     }

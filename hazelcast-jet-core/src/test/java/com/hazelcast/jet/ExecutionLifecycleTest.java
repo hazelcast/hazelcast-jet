@@ -106,7 +106,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
 
         // When
         Job job = instance.newJob(dag);
-        job.execute().get();
+        job.join();
 
         // Then
         assertEquals(NODE_COUNT, MockSupplier.initCount.get());
@@ -135,7 +135,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
         Job job = null;
         try {
             job = instance.newJob(dag);
-            job.execute().get();
+            job.join();
             fail("Job execution should fail");
         } catch (ExecutionException expected) {
             Throwable cause = peel(expected);
@@ -172,7 +172,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
         Job job = null;
         try {
             job = instance.newJob(dag);
-            job.execute().get();
+            job.join();
             fail("Job execution should fail");
         } catch (ExecutionException expected) {
             assertExceptionInCauses(e, expected);
@@ -207,7 +207,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
 
         // When
         try {
-            Future<Void> future = instance.newJob(dag).execute();
+            Future<Void> future = instance.newJob(dag).getFuture();
             StuckProcessor.executionStarted.await();
             future.cancel(true);
             future.get();
@@ -274,7 +274,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
         DAG dag = new DAG().vertex(new Vertex("test", new FailingOnCompleteSupplier(Identity::new)));
 
         // When
-        Future<Void> future = instance.newJob(dag).execute();
+        Future<Void> future = instance.newJob(dag).getFuture();
 
         // Then
         future.get();

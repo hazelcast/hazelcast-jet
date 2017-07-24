@@ -28,6 +28,7 @@ import com.hazelcast.jet.impl.coordination.JobRepository;
 import javax.annotation.Nonnull;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 public abstract class AbstractJobImpl implements Job {
@@ -38,13 +39,6 @@ public abstract class AbstractJobImpl implements Job {
     private DAG dag;
     private JobConfig config;
 
-    AbstractJobImpl(JetInstance jetInstance, long jobId) {
-        this.jobRepository = new JobRepository(jetInstance.getHazelcastInstance());
-        this.jobId = jobId;
-        this.dag = null;
-        this.config = null;
-    }
-
     AbstractJobImpl(JetInstance jetInstance, DAG dag, JobConfig config) {
         this.jobRepository = new JobRepository(jetInstance.getHazelcastInstance());
         this.jobId = null;
@@ -52,9 +46,7 @@ public abstract class AbstractJobImpl implements Job {
         this.config = config;
     }
 
-    @Nonnull
-    @Override
-    public Future<Void> execute() {
+    public void execute() {
         if (jobId != null) {
             throw new IllegalStateException("Job already started");
         }
@@ -74,8 +66,6 @@ public abstract class AbstractJobImpl implements Job {
                 callback.cancel();
             }
         });
-
-        return future;
     }
 
     @Nonnull
@@ -86,6 +76,11 @@ public abstract class AbstractJobImpl implements Job {
         }
 
         return future;
+    }
+
+    @Override
+    public void join() throws InterruptedException, ExecutionException {
+        getFuture().get();
     }
 
     protected abstract ICompletableFuture<Void> sendJoinJobOp();

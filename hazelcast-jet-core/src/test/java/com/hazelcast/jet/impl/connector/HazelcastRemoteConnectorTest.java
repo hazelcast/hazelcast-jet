@@ -141,6 +141,6 @@ public class HazelcastRemoteConnectorTest extends JetTestSupport {
     }
 
     private void executeAndWait(DAG dag) {
-        assertCompletesEventually(jet.newJob(dag).execute());
+        assertCompletesEventually(jet.newJob(dag).getFuture());
     }
 }

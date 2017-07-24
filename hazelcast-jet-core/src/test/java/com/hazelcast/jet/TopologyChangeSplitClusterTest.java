@@ -59,7 +59,7 @@ public class TopologyChangeSplitClusterTest extends JetSplitBrainTestSupport {
     protected void onBeforeSplitBrainCreated(JetInstance[] instances) throws Exception {
         // Given
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(StuckProcessor::new, NODE_COUNT)));
-        future = instances[0].newJob(dag).execute();
+        future = instances[0].newJob(dag).getFuture();
         StuckProcessor.executionStarted.await();
     }
 

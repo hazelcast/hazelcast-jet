@@ -123,7 +123,7 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
                     .edge(between(slidingWin, sink).isolated());
         }
 
-        Future<Void> future = instance.newJob(dag).execute();
+        Future<Void> future = instance.newJob(dag).getFuture();
 
         if (isBatch) {
             future.get();

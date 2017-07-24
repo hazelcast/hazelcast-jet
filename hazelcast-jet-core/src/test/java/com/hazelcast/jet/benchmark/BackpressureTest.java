@@ -110,7 +110,7 @@ public class BackpressureTest extends JetTestSupport {
                 .distributed().partitioned(wholeItem(), (x, y) -> ptionOwnedByMember2))
            .edge(between(hiccup, sink));
 
-        uncheckCall(jet1.newJob(dag).execute()::get);
+        uncheckCall(jet1.newJob(dag).getFuture()::get);
         assertCounts(jet1.getMap("counts"));
     }
 

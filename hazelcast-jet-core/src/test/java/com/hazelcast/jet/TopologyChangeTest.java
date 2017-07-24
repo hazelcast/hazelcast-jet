@@ -148,7 +148,7 @@ public class TopologyChangeTest extends JetTestSupport {
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(StuckProcessor::new, nodeCount)));
 
         // When
-        Future<Void> future = instances[0].newJob(dag).execute();
+        Future<Void> future = instances[0].newJob(dag).getFuture();
         StuckProcessor.executionStarted.await();
         factory.newMember();
         StuckProcessor.proceedLatch.countDown();
@@ -169,7 +169,7 @@ public class TopologyChangeTest extends JetTestSupport {
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(StuckProcessor::new, nodeCount)));
 
         // When
-        Future<Void> future = instances[0].newJob(dag).execute();
+        Future<Void> future = instances[0].newJob(dag).getFuture();
         StuckProcessor.executionStarted.await();
         JetInstance instance = factory.newMember();
         instance.shutdown();
@@ -191,7 +191,7 @@ public class TopologyChangeTest extends JetTestSupport {
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(StuckProcessor::new, nodeCount)));
 
         // When
-        Future<Void> future = instances[0].newJob(dag).execute();
+        Future<Void> future = instances[0].newJob(dag).getFuture();
         StuckProcessor.executionStarted.await();
 
         instances[2].getHazelcastInstance().getLifecycleService().terminate();
@@ -225,7 +225,7 @@ public class TopologyChangeTest extends JetTestSupport {
         Long jobId = null;
         try {
             Job job = instances[0].newJob(dag);
-            Future<Void> future = job.execute();
+            Future<Void> future = job.getFuture();
             jobId = job.getJobId();
             StuckProcessor.executionStarted.await();
 
@@ -276,7 +276,7 @@ public class TopologyChangeTest extends JetTestSupport {
         // When
         factory.newMember(config);
         Job job = instances[0].newJob(dag);
-        Future<Void> future = job.execute();
+        Future<Void> future = job.getFuture();
 
 
         // Then
@@ -307,7 +307,7 @@ public class TopologyChangeTest extends JetTestSupport {
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(TestProcessors.Identity::new, nodeCount + 1)));
 
         Job job = instances[0].newJob(dag);
-        Future<Void> future = job.execute();
+        Future<Void> future = job.getFuture();
         JetService jetService = getJetService(instances[0]);
 
         assertTrueEventually(new AssertTask() {
@@ -357,7 +357,7 @@ public class TopologyChangeTest extends JetTestSupport {
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(TestProcessors.Identity::new, nodeCount - 1)));
 
         Job job = instances[0].newJob(dag);
-        Future<Void> future = job.execute();
+        Future<Void> future = job.getFuture();
 
         JetService jetService = getJetService(instances[0]);
 
@@ -405,7 +405,7 @@ public class TopologyChangeTest extends JetTestSupport {
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(TestProcessors.Identity::new, nodeCount - 1)));
 
         Job job = instances[0].newJob(dag);
-        Future<Void> future = job.execute();
+        Future<Void> future = job.getFuture();
 
         JetService jetService = getJetService(instances[0]);
 

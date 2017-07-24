@@ -33,7 +33,7 @@ public final class TestUtil {
 
     public static void executeAndPeel(Job job) throws Throwable {
         try {
-            job.execute().get();
+            job.join();
         } catch (InterruptedException | ExecutionException e) {
             throw peel(e);
         }
