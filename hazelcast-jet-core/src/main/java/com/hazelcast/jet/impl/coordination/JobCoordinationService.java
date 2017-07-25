@@ -54,7 +54,6 @@ public class JobCoordinationService {
     private final JetConfig config;
     private final ILogger logger;
     private final JobRepository jobRepository;
-    private final Object lock = new Object();
     private final ConcurrentMap<Long, MasterContext> masterContexts = new ConcurrentHashMap<>();
     private final IMap<Long, JobResult> jobResults;
 
@@ -95,47 +94,48 @@ public class JobCoordinationService {
                     + nodeEngine.getClusterService().getMasterAddress());
         }
 
-        MasterContext newMasterContext;
-        synchronized (lock) {
-            JobResult jobResult = jobResults.get(jobId);
-            if (jobResult != null) {
-                logger.fine("Not starting job " + jobId + " since already completed -> " + jobResult);
-                return jobResult.asCompletableFuture();
-            }
-
-            JobRecord jobRecord = jobRepository.getJob(jobId);
-            if (jobRecord == null) {
-                throw new IllegalStateException("Job " + jobId + " not found");
-            }
-
-            MasterContext currentMasterContext = masterContexts.get(jobId);
-            if (currentMasterContext != null) {
-                return currentMasterContext.getCompletionFuture();
-            }
-
-            newMasterContext = new MasterContext(nodeEngine, this, jobId, jobRecord.getDag());
-            masterContexts.put(jobId, newMasterContext);
-
-            logger.info("Starting new job " + jobId);
+        MasterContext previousMasterContext = masterContexts.get(jobId);
+        if (previousMasterContext != null) {
+            return previousMasterContext.getCompletionFuture();
         }
 
-        return newMasterContext.start();
+        JobResult jobResult = jobResults.get(jobId);
+        if (jobResult != null) {
+            logger.fine("Not starting job " + jobId + " since already completed -> " + jobResult);
+            return jobResult.asCompletableFuture();
+        }
+
+        JobRecord jobRecord = jobRepository.getJob(jobId);
+        if (jobRecord == null) {
+            throw new IllegalStateException("Job " + jobId + " not found");
+        }
+
+        MasterContext masterContext = new MasterContext(nodeEngine, this, jobId, jobRecord.getDag());
+        previousMasterContext = masterContexts.putIfAbsent(jobId, masterContext);
+        if (previousMasterContext != null) {
+            return previousMasterContext.getCompletionFuture();
+        }
+
+        logger.info("Starting new job " + jobId);
+        return masterContext.start();
     }
 
     public JobStatus getJobStatus(long jobId) {
-        synchronized (lock) {
+        MasterContext currentMasterContext = masterContexts.get(jobId);
+        if (currentMasterContext != null) {
+            return currentMasterContext.getJobStatus();
+        }
+
+        JobRecord jobRecord = jobRepository.getJob(jobId);
+        if (jobRecord == null) {
             JobResult jobResult = jobResults.get(jobId);
             if (jobResult != null) {
                 return jobResult.isSuccessfulOrCancelled() ? JobStatus.COMPLETED : JobStatus.FAILED;
-            }
-
-            JobRecord jobRecord = jobRepository.getJob(jobId);
-            if (jobRecord == null) {
+            } else {
                 throw new IllegalStateException("Job " + jobId + " not found");
             }
-
-            MasterContext currentMasterContext = masterContexts.get(jobId);
-            return currentMasterContext != null ? currentMasterContext.getJobStatus() : JobStatus.NOT_STARTED;
+        } else {
+            return JobStatus.NOT_STARTED;
         }
     }
 
@@ -155,28 +155,26 @@ public class JobCoordinationService {
     }
 
     void completeJob(MasterContext masterContext, long completionTime, Throwable error) {
-        synchronized (lock) {
-            long jobId = masterContext.getJobId();
-            long executionId = masterContext.getExecutionId();
-            if (masterContexts.remove(masterContext.getJobId(), masterContext)) {
-                long jobCreationTime = jobRepository.getJobCreationTime(jobId);
-                String coordinator = nodeEngine.getNode().getThisUuid();
-                JobResult jobResult = new JobResult(jobId, coordinator, jobCreationTime, completionTime, error);
-                JobResult prev = jobResults.putIfAbsent(jobId, jobResult);
-                if (prev != null) {
-                    throw new IllegalStateException(jobResult + " already exists in the " + JOB_RESULTS_MAP_NAME
-                            + " map");
-                }
-                jobRepository.deleteJob(jobId);
-                logger.fine("Job " + jobId + ", execution " + executionId + " is completed");
+        long jobId = masterContext.getJobId();
+        long executionId = masterContext.getExecutionId();
+        long jobCreationTime = jobRepository.getJobCreationTime(jobId);
+        String coordinator = nodeEngine.getNode().getThisUuid();
+        JobResult jobResult = new JobResult(jobId, coordinator, jobCreationTime, completionTime, error);
+        JobResult prev = jobResults.putIfAbsent(jobId, jobResult);
+        if (prev != null) {
+            throw new IllegalStateException(jobResult + " already exists in the " + JOB_RESULTS_MAP_NAME
+                    + " map");
+        }
+        jobRepository.deleteJob(jobId);
+        if (masterContexts.remove(masterContext.getJobId(), masterContext)) {
+            logger.fine("Job " + jobId + ", execution " + executionId + " is completed");
+        } else {
+            MasterContext existing = masterContexts.get(jobId);
+            if (existing != null) {
+                logger.severe("Different master context found to complete job " + jobId + ", execution "
+                        + executionId + ", master context execution " + existing.getExecutionId());
             } else {
-                MasterContext existing = masterContexts.get(jobId);
-                if (existing != null) {
-                    logger.severe("Different master context found to complete job " + jobId + ", execution "
-                            + executionId + ", master context execution " + existing.getExecutionId());
-                } else {
-                    logger.severe("No master context found to complete job " + jobId + ", execution " + executionId);
-                }
+                logger.severe("No master context found to complete job " + jobId + ", execution " + executionId);
             }
         }
     }
