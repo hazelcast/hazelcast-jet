@@ -20,12 +20,17 @@ import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.instance.HazelcastInstanceImpl;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.impl.operation.GetJobStatusOperation;
 import com.hazelcast.jet.impl.operation.JoinJobOperation;
 import com.hazelcast.nio.Address;
+import com.hazelcast.spi.InternalCompletableFuture;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.Operation;
+
+import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
 public class JetInstanceImpl extends AbstractJetInstance {
     private final NodeEngine nodeEngine;
@@ -69,6 +74,22 @@ public class JetInstanceImpl extends AbstractJetInstance {
             return nodeEngine.getOperationService()
                                       .createInvocationBuilder(JetService.SERVICE_NAME, op, masterAddress)
                                       .invoke();
+        }
+
+        @Override
+        public JobStatus getJobStatus() {
+            try {
+                Operation op = new GetJobStatusOperation(getJobId());
+                Address masterAddress = nodeEngine.getMasterAddress();
+                InternalCompletableFuture<JobStatus> f = nodeEngine.getOperationService()
+                                                                   .createInvocationBuilder(JetService.SERVICE_NAME,
+                                                                           op, masterAddress)
+                                                                   .invoke();
+
+                return f.get();
+            } catch (Throwable t) {
+                throw rethrow(t);
+            }
         }
     }
 }

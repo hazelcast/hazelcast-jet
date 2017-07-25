@@ -24,6 +24,7 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
 public class JobResult implements IdentifiedDataSerializable {
@@ -63,6 +64,9 @@ public class JobResult implements IdentifiedDataSerializable {
 
     public boolean isSuccessful() {
         return (failure == null);
+    }
+    public boolean isSuccessfulOrCancelled() {
+        return (failure == null || failure instanceof CancellationException);
     }
 
     public Throwable getFailure() {

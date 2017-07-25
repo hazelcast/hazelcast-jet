@@ -22,6 +22,7 @@ import com.hazelcast.instance.HazelcastInstanceImpl;
 import com.hazelcast.instance.JetBuildInfo;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.coordination.JobCoordinationService;
 import com.hazelcast.jet.impl.coordination.JobRepository;
@@ -147,6 +148,10 @@ public class JetService
 
     public void completeExecution(long executionId, Throwable error) {
         jobExecutionService.completeExecution(executionId, error);
+    }
+
+    public JobStatus getJobStatus(long jobId) {
+        return jobCoordinationService.getJobStatus(jobId);
     }
 
     public JetInstance getJetInstance() {

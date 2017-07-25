@@ -50,7 +50,6 @@ import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
@@ -206,6 +205,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
         assertNotNull(jobResult);
         assertFalse(jobResult.isSuccessful());
         assertTrue(jobResult.getFailure() instanceof RuntimeException);
+        assertEquals(JobStatus.FAILED, job.getJobStatus());
     }
 
     @Test
@@ -215,10 +215,10 @@ public class ExecutionLifecycleTest extends JetTestSupport {
 
         // When
         try {
-            Future<Void> future = instance.newJob(dag).getFuture();
+            Job job = instance.newJob(dag);
             StuckProcessor.executionStarted.await();
-            future.cancel(true);
-            future.get();
+            job.cancel();
+            job.join();
             fail("Job execution should fail");
         } catch (CancellationException ignored) {
         }
@@ -283,10 +283,11 @@ public class ExecutionLifecycleTest extends JetTestSupport {
         DAG dag = new DAG().vertex(new Vertex("test", new FailingOnCompleteSupplier(Identity::new)));
 
         // When
-        Future<Void> future = instance.newJob(dag).getFuture();
+        Job job = instance.newJob(dag);
 
         // Then
-        future.get();
+        job.join();
+        assertEquals(JobStatus.COMPLETED, job.getJobStatus());
     }
 
     private static class FailingOnCompleteSupplier implements ProcessorSupplier {

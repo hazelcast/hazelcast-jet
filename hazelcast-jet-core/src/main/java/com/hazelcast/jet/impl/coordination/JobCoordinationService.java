@@ -23,6 +23,7 @@ import com.hazelcast.internal.cluster.impl.MembersView;
 import com.hazelcast.internal.partition.impl.InternalPartitionServiceImpl;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.JobResult;
@@ -119,6 +120,23 @@ public class JobCoordinationService {
         }
 
         return newMasterContext.start();
+    }
+
+    public JobStatus getJobStatus(long jobId) {
+        synchronized (lock) {
+            JobResult jobResult = jobResults.get(jobId);
+            if (jobResult != null) {
+                return jobResult.isSuccessfulOrCancelled() ? JobStatus.COMPLETED : JobStatus.FAILED;
+            }
+
+            JobRecord jobRecord = jobRepository.getJob(jobId);
+            if (jobRecord == null) {
+                throw new IllegalStateException("Job " + jobId + " not found");
+            }
+
+            MasterContext currentMasterContext = masterContexts.get(jobId);
+            return currentMasterContext != null ? currentMasterContext.getJobStatus() : JobStatus.NOT_STARTED;
+        }
     }
 
     long newId() {

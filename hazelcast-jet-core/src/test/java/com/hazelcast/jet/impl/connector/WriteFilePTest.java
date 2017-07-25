@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.connector;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestSupport;
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.Vertex;
@@ -43,13 +44,12 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.processor.Sources.readList;
-import static com.hazelcast.jet.processor.Sinks.writeFile;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
+import static com.hazelcast.jet.processor.Sinks.writeFile;
+import static com.hazelcast.jet.processor.Sources.readList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -186,7 +186,7 @@ public class WriteFilePTest extends JetTestSupport {
                 .localParallelism(1);
         dag.edge(between(source, sink));
 
-        Future<Void> jobFuture = instance.newJob(dag).getFuture();
+        Job job = instance.newJob(dag);
         // wait, until the file is created
         assertTrueEventually(() -> assertTrue(Files.exists(file)));
         for (int i = 0; i < numItems; i++) {
@@ -198,7 +198,7 @@ public class WriteFilePTest extends JetTestSupport {
         }
 
         // wait for the job to finish
-        jobFuture.get();
+        job.join();
     }
 
     @Test
