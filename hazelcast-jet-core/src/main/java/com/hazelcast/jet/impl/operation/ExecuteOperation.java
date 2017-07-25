@@ -45,12 +45,12 @@ public class ExecuteOperation extends AsyncExecutionOperation  {
         JetService service = getService();
 
         executionFuture = service.execute(getCallerAddress(), jobId, executionId, f -> f.handle((r, error) -> error)
-                .thenAccept((value) -> {
+                .thenAccept(value -> {
                     if (value != null) {
-                        logger.fine("Execution of job " + jobId + " execution " + executionId
-                                + " completed with failure.", value);
+                        logger.fine("Execution of job " + jobId + ", execution " + executionId
+                                + " completed with failure", value);
                     } else {
-                        logger.fine("Execution of job " + jobId + " execution " + executionId + " completed.");
+                        logger.fine("Execution of job " + jobId + ", execution " + executionId + " completed");
                     }
 
                     doSendResponse(value);

@@ -65,8 +65,7 @@ public class InitOperation extends Operation implements IdentifiedDataSerializab
         JetService service = getService();
 
         Address caller = getCallerAddress();
-        logger.fine("Initializing execution plan for job " + jobId + " execution "
-                + executionId + " from " + caller + ".");
+        logger.fine("Initializing execution plan for job " + jobId + ", execution " + executionId + " from " + caller);
         ExecutionPlan plan = planSupplier.get();
         service.initExecution(jobId, executionId, caller, coordinatorMemberListVersion, participants, plan);
     }

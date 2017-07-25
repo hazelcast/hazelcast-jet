@@ -108,17 +108,17 @@ public class MasterContext {
                 + ": " + dag);
         ClusterServiceImpl clusterService = (ClusterServiceImpl) nodeEngine.getClusterService();
         MembersView membersView = clusterService.getMembershipManager().getMembersView();
-        logger.fine("Building execution plan for job " + jobId + " execution " + executionId);
+        logger.fine("Building execution plan for job " + jobId + ", execution " + executionId);
         try {
             executionPlanMap = coordinationService.createExecutionPlans(membersView, dag);
         } catch (TopologyChangedException e) {
-            logger.severe("Execution plan could not be created for job: " + jobId
+            logger.severe("Execution plans could not be created for job: " + jobId
                     + ", execution " + executionId, e);
             coordinationService.scheduleRestart(jobId);
             return completionFuture;
         }
 
-        logger.fine("Built execution plan for job " + jobId + ", execution " + executionId + '.');
+        logger.fine("Built execution plans for job " + jobId + ", execution " + executionId);
 
         Set<MemberInfo> participants = executionPlanMap.keySet();
 
@@ -282,11 +282,11 @@ public class MasterContext {
         if (failure == null) {
             jobStatus.set(COMPLETED);
             logger.info("Execution of job " + jobId + ", execution " + executionId
-                    + " completed in " + elapsed + " ms.");
+                    + " completed in " + elapsed + " ms");
         } else {
             jobStatus.set(FAILED);
             logger.warning("Execution of job " + jobId + ", execution " + executionId
-                    + " failed in " + elapsed + " ms.", failure);
+                    + " failed in " + elapsed + " ms", failure);
         }
 
         coordinationService.completeJob(this, completionTime, failure);

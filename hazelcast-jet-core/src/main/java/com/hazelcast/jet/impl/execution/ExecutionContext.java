@@ -59,7 +59,6 @@ public class ExecutionContext {
     private List<ProcessorSupplier> procSuppliers = emptyList();
     private List<Processor> processors = emptyList();
 
-
     private List<Tasklet> tasklets;
     private CompletionStage<Void> jobFuture;
 
@@ -148,8 +147,8 @@ public class ExecutionContext {
             try {
                 s.complete(error);
             } catch (Exception e) {
-                logger.severe("Complete of job " + jobId + " execution " + executionId
-                        + " encountered exception in processor", e);
+                logger.severe("Job " + jobId + ", execution " + executionId
+                        + " encountered an exception in ProcessorSupplier.complete(), ignoring it", e);
             }
         });
         MetricsRegistry metricsRegistry = ((NodeEngineImpl) nodeEngine).getMetricsRegistry();

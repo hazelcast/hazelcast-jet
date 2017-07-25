@@ -151,7 +151,7 @@ public class JobCoordinationService {
                                 + " map");
                     }
                     jobRepository.deleteJob(jobId);
-                    logger.fine("Job " + jobId + ", execution " + executionId + " is completed.");
+                    logger.fine("Job " + jobId + ", execution " + executionId + " is completed");
                 } else {
                     MasterContext existing = masterContexts.get(jobId);
                     if (existing != null) {
