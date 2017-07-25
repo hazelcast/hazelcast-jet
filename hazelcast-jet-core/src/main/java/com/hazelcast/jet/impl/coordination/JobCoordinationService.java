@@ -140,29 +140,25 @@ public class JobCoordinationService {
         synchronized (lock) {
             long jobId = masterContext.getJobId();
             long executionId = masterContext.getExecutionId();
-            try {
-                if (masterContexts.remove(masterContext.getJobId(), masterContext)) {
-                    long jobCreationTime = jobRepository.getJobCreationTime(jobId);
-                    String coordinator = nodeEngine.getNode().getThisUuid();
-                    JobResult jobResult = new JobResult(jobId, coordinator, jobCreationTime, completionTime, error);
-                    JobResult prev = jobResults.putIfAbsent(jobId, jobResult);
-                    if (prev != null) {
-                        throw new IllegalStateException(jobResult + " already exists in the " + JOB_RESULTS_MAP_NAME
-                                + " map");
-                    }
-                    jobRepository.deleteJob(jobId);
-                    logger.fine("Job " + jobId + ", execution " + executionId + " is completed");
-                } else {
-                    MasterContext existing = masterContexts.get(jobId);
-                    if (existing != null) {
-                        logger.severe("Different master context found to complete job " + jobId + ", execution "
-                                + executionId + ", master context execution " + existing.getExecutionId());
-                    } else {
-                        logger.severe("No master context found to complete job " + jobId + ", execution " + executionId);
-                    }
+            if (masterContexts.remove(masterContext.getJobId(), masterContext)) {
+                long jobCreationTime = jobRepository.getJobCreationTime(jobId);
+                String coordinator = nodeEngine.getNode().getThisUuid();
+                JobResult jobResult = new JobResult(jobId, coordinator, jobCreationTime, completionTime, error);
+                JobResult prev = jobResults.putIfAbsent(jobId, jobResult);
+                if (prev != null) {
+                    throw new IllegalStateException(jobResult + " already exists in the " + JOB_RESULTS_MAP_NAME
+                            + " map");
                 }
-            } catch (Exception e) {
-                logger.severe("Completion of job " + jobId + ", execution " + executionId + " failed", e);
+                jobRepository.deleteJob(jobId);
+                logger.fine("Job " + jobId + ", execution " + executionId + " is completed");
+            } else {
+                MasterContext existing = masterContexts.get(jobId);
+                if (existing != null) {
+                    logger.severe("Different master context found to complete job " + jobId + ", execution "
+                            + executionId + ", master context execution " + existing.getExecutionId());
+                } else {
+                    logger.severe("No master context found to complete job " + jobId + ", execution " + executionId);
+                }
             }
         }
     }

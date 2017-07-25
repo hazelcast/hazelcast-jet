@@ -28,7 +28,6 @@ import com.hazelcast.jet.impl.coordination.JobRepository;
 import javax.annotation.Nonnull;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 public abstract class AbstractJobImpl implements Job {
@@ -78,11 +77,6 @@ public abstract class AbstractJobImpl implements Job {
         return future;
     }
 
-    @Override
-    public void join() throws InterruptedException, ExecutionException {
-        getFuture().get();
-    }
-
     protected abstract ICompletableFuture<Void> sendJoinJobOp();
 
     @Override
@@ -103,7 +97,7 @@ public abstract class AbstractJobImpl implements Job {
 
         @Override
         public void onResponse(Void response) {
-            future.complete(null);
+            future.complete(response);
         }
 
         @Override

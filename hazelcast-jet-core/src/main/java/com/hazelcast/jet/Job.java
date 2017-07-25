@@ -16,8 +16,9 @@
 
 package com.hazelcast.jet;
 
+import com.hazelcast.jet.impl.util.Util;
+
 import javax.annotation.Nonnull;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 /**
@@ -33,13 +34,20 @@ public interface Job {
     @Nonnull
     Future<Void> getFuture();
 
-    void join() throws InterruptedException, ExecutionException;
+    /**
+     * Waits for the job to complete and throws exception if job completed with errors.
+     *
+     * Shorthand for <code>job.getFuture().get()</code>
+     */
+    default void join() {
+        Util.uncheckRun(() -> getFuture().get());
+    }
 
     /**
      * Return the ID of this job.
      *
      * @throws IllegalStateException If the job was not started yet, and thus
-     * has no job id.
+     *                               has no job id.
      */
     long getJobId();
 

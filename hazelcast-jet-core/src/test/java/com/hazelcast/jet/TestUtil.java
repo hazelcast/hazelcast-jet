@@ -19,7 +19,6 @@ package com.hazelcast.jet;
 import com.hazelcast.jet.impl.JetService;
 
 import java.util.Objects;
-import java.util.concurrent.ExecutionException;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.test.HazelcastTestSupport.getNodeEngineImpl;
@@ -34,7 +33,7 @@ public final class TestUtil {
     public static void executeAndPeel(Job job) throws Throwable {
         try {
             job.join();
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (Exception e) {
             throw peel(e);
         }
     }

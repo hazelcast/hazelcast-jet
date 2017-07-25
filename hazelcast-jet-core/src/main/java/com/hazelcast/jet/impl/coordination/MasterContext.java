@@ -34,6 +34,7 @@ import com.hazelcast.spi.InternalCompletableFuture;
 import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -273,13 +274,9 @@ public class MasterContext {
             return;
         }
 
-        if (failure instanceof CancellationException) {
-            failure = null;
-        }
-
         long elapsed = completionTime - jobStartTime;
 
-        if (failure == null) {
+        if (failure == null || failure instanceof CancellationException) {
             jobStatus.set(COMPLETED);
             logger.info("Execution of job " + jobId + ", execution " + executionId
                     + " completed in " + elapsed + " ms");
@@ -289,7 +286,12 @@ public class MasterContext {
                     + " failed in " + elapsed + " ms", failure);
         }
 
-        coordinationService.completeJob(this, completionTime, failure);
+        try {
+            coordinationService.completeJob(this, completionTime, failure);
+        } catch (RuntimeException e) {
+            logger.warning("Completion of job " + jobId + ", execution " + executionId
+                    + " failed in " + elapsed + " ms", failure);
+        }
         completionFuture.complete(failure);
     }
 

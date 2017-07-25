@@ -50,7 +50,6 @@ import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -146,7 +145,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
             job = instance.newJob(dag);
             job.join();
             fail("Job execution should fail");
-        } catch (ExecutionException expected) {
+        } catch (Exception expected) {
             Throwable cause = peel(expected);
             assertEquals(e.getMessage(), cause.getMessage());
         }
@@ -183,7 +182,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
             job = instance.newJob(dag);
             job.join();
             fail("Job execution should fail");
-        } catch (ExecutionException expected) {
+        } catch (Exception expected) {
             assertExceptionInCauses(e, expected);
             String expectedMessage = "vertex=" + vertexName + "";
             assertTrue("Error message does not contain vertex name.\nExpected: " + expectedMessage

@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.client;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.JetJoinJobCodec;
 import com.hazelcast.instance.Node;
-import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.operation.JoinJobOperation;
 import com.hazelcast.nio.Connection;
 import com.hazelcast.spi.InternalCompletableFuture;
@@ -34,8 +33,6 @@ public class JetJoinJobMessageTask extends AbstractJetMessageTask<JetJoinJobCode
 
     @Override
     protected Operation prepareOperation() {
-        JetService service = getService(JetService.SERVICE_NAME);
-        ClassLoader cl = service.getClassLoader(parameters.jobId);
         return new JoinJobOperation(parameters.jobId);
     }
 
