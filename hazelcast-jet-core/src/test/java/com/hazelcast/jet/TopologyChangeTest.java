@@ -82,6 +82,18 @@ public class TopologyChangeTest extends JetTestSupport {
 
     private static final int TIMEOUT_MILLIS = 8000;
 
+    @Parameterized.Parameter
+    public boolean[] liteMemberFlags;
+
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
+
+    private int nodeCount;
+
+    private JetInstance[] instances;
+    private JetTestInstanceFactory factory;
+    private JetConfig config;
+
     @Parameterized.Parameters
     public static Collection<boolean[]> parameters() {
         return Arrays.asList(new boolean[][]{
@@ -90,18 +102,6 @@ public class TopologyChangeTest extends JetTestSupport {
                 {false, true, false}
         });
     }
-
-    @Parameterized.Parameter
-    public boolean[] liteMemberFlags;
-
-    private int nodeCount;
-
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
-
-    private JetInstance[] instances;
-    private JetTestInstanceFactory factory;
-    private JetConfig config;
 
     @Before
     public void setup() {
@@ -210,7 +210,8 @@ public class TopologyChangeTest extends JetTestSupport {
                 assertEquals(nodeCount, MockSupplier.completeErrors.size());
                 for (int i = 0; i < MockSupplier.completeErrors.size(); i++) {
                     Throwable error = MockSupplier.completeErrors.get(i);
-                    assertTrue(error instanceof TopologyChangedException || error instanceof HazelcastInstanceNotActiveException);
+                    assertTrue(error instanceof TopologyChangedException
+                            || error instanceof HazelcastInstanceNotActiveException);
                 }
             }
         });
@@ -261,7 +262,8 @@ public class TopologyChangeTest extends JetTestSupport {
             assertEquals(nodeCount, MockSupplier.completeErrors.size());
             for (int i = 0; i < MockSupplier.completeErrors.size(); i++) {
                 Throwable error = MockSupplier.completeErrors.get(i);
-                assertTrue(error instanceof TopologyChangedException || error instanceof HazelcastInstanceNotActiveException);
+                assertTrue(error instanceof TopologyChangedException
+                        || error instanceof HazelcastInstanceNotActiveException);
             }
         });
     }
@@ -269,7 +271,8 @@ public class TopologyChangeTest extends JetTestSupport {
     @Test
     public void when_jobParticipantHasStaleMemberList_then_jobInitRetries() throws Throwable {
         // Given
-        dropOperationsBetween(instances[0].getHazelcastInstance(), instances[2].getHazelcastInstance(), ClusterDataSerializerHook.F_ID, singletonList(MEMBER_INFO_UPDATE));
+        dropOperationsBetween(instances[0].getHazelcastInstance(), instances[2].getHazelcastInstance(),
+                ClusterDataSerializerHook.F_ID, singletonList(MEMBER_INFO_UPDATE));
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(TestProcessors.Identity::new, nodeCount + 1)));
 
 
@@ -302,7 +305,8 @@ public class TopologyChangeTest extends JetTestSupport {
             assertClusterSizeEventually(NODE_COUNT + 1, instance.getHazelcastInstance());
         }
 
-        dropOperationsBetween(instances[0].getHazelcastInstance(), instances[2].getHazelcastInstance(), JetImplDataSerializerHook.FACTORY_ID, singletonList(INIT_OP));
+        dropOperationsBetween(instances[0].getHazelcastInstance(), instances[2].getHazelcastInstance(),
+                JetImplDataSerializerHook.FACTORY_ID, singletonList(INIT_OP));
 
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(TestProcessors.Identity::new, nodeCount + 1)));
 
@@ -351,7 +355,8 @@ public class TopologyChangeTest extends JetTestSupport {
 
         dropOperationsBetween(instances[2].getHazelcastInstance(), instances[0].getHazelcastInstance(),
                 PartitionDataSerializerHook.F_ID, singletonList(SHUTDOWN_REQUEST));
-        dropOperationsBetween(instances[0].getHazelcastInstance(), instances[2].getHazelcastInstance(), JetImplDataSerializerHook.FACTORY_ID, singletonList(INIT_OP));
+        dropOperationsBetween(instances[0].getHazelcastInstance(), instances[2].getHazelcastInstance(),
+                JetImplDataSerializerHook.FACTORY_ID, singletonList(INIT_OP));
 
         // When a job participant starts its shutdown after the job is submitted
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(TestProcessors.Identity::new, nodeCount - 1)));
@@ -400,7 +405,8 @@ public class TopologyChangeTest extends JetTestSupport {
             warmUpPartitions(instance.getHazelcastInstance());
         }
 
-        dropOperationsBetween(instances[0].getHazelcastInstance(), instances[2].getHazelcastInstance(), JetImplDataSerializerHook.FACTORY_ID, singletonList(EXECUTE_OP));
+        dropOperationsBetween(instances[0].getHazelcastInstance(), instances[2].getHazelcastInstance(),
+                JetImplDataSerializerHook.FACTORY_ID, singletonList(EXECUTE_OP));
 
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(TestProcessors.Identity::new, nodeCount - 1)));
 

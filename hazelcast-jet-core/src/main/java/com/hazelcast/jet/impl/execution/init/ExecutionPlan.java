@@ -243,9 +243,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             Arrays.stream(partitionOwners)
                   .filter(p -> !p.equals(nodeEngine.getThisAddress()))
                   .forEach(destAddr -> {
-                      final ConcurrentConveyor<Object> conveyor =
-                              createConveyorArray(1, edge.sourceVertex().parallelism(), edge.getConfig().getQueueSize())[0];
-                      final ConcurrentInboundEdgeStream inboundEdgeStream = new ConcurrentInboundEdgeStream(conveyor, edge.destOrdinal(), edge.priority());
+                      final ConcurrentConveyor<Object> conveyor = createConveyorArray(
+                              1, edge.sourceVertex().parallelism(), edge.getConfig().getQueueSize())[0];
+                      final ConcurrentInboundEdgeStream inboundEdgeStream =
+                              new ConcurrentInboundEdgeStream(conveyor, edge.destOrdinal(), edge.priority());
                       final int destVertexId = edge.destVertex().vertexId();
                       final SenderTasklet t = new SenderTasklet(inboundEdgeStream, nodeEngine,
                               destAddr, executionId, destVertexId, edge.getConfig().getPacketSizeLimit());

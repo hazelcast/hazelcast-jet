@@ -24,8 +24,8 @@ import com.hazelcast.jet.TestProcessors.ProcessorThatFailsInComplete;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.JetService;
-import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.JobResult;
+import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.impl.NodeEngineImpl;
@@ -47,7 +47,11 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
@@ -57,7 +61,12 @@ import static com.hazelcast.jet.TestUtil.getJetService;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static java.util.stream.Collectors.toList;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastSerialClassRunner.class)
@@ -247,7 +256,8 @@ public class ExecutionLifecycleTest extends JetTestSupport {
         int memberListVersion = membersView.getVersion();
 
         JetService jetService = getJetService(instance);
-        final Map<MemberInfo, ExecutionPlan> executionPlans = jetService.getJobCoordinationService().createExecutionPlans(membersView, dag);
+        final Map<MemberInfo, ExecutionPlan> executionPlans =
+                jetService.getJobCoordinationService().createExecutionPlans(membersView, dag);
         ExecutionPlan executionPlan = executionPlans.get(membersView.getMember(localAddress));
         long jobId = 0;
         long executionId = 1;
@@ -284,7 +294,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
 
         private final DistributedSupplier<Processor> supplier;
 
-        public FailingOnCompleteSupplier(DistributedSupplier<Processor> supplier) {
+        FailingOnCompleteSupplier(DistributedSupplier<Processor> supplier) {
             this.supplier = supplier;
         }
 
