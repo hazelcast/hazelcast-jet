@@ -35,7 +35,7 @@ import static java.util.stream.Collectors.toMap;
  * Computes a topological ordering of the vertices in a graph.
  * Validates against cycles.
  */
-public class TopologicalSorter<V> {
+public final class TopologicalSorter<V> {
     // Consulted, but not updated, by the cycle detecting algorithm:
     private final Map<TarjanVertex<V>, List<TarjanVertex<V>>> adjacencyMap;
     private final Function<V, String> vertexNameF;

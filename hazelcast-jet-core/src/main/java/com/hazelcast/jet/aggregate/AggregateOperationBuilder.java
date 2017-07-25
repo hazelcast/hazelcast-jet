@@ -80,7 +80,6 @@ public final class AggregateOperationBuilder<A> {
         }
 
         public Arity1<T0, A> andDeduct(DistributedBiConsumer<? super A, ? super A> deductAccumulatorF) {
-            checkNotNull(deductAccumulatorF, "deductAccumulatorF");
             this.deductAccumulatorF = deductAccumulatorF;
             return this;
         }
@@ -117,7 +116,6 @@ public final class AggregateOperationBuilder<A> {
         }
 
         public Arity2<T0, T1, A> andDeduct(DistributedBiConsumer<? super A, ? super A> deductAccumulatorF) {
-            checkNotNull(deductAccumulatorF, "deductAccumulatorF");
             this.deductAccumulatorF = deductAccumulatorF;
             return this;
         }
@@ -154,7 +152,6 @@ public final class AggregateOperationBuilder<A> {
         }
 
         public Arity3<T0, T1, T2, A> andDeduct(DistributedBiConsumer<? super A, ? super A> deductAccumulatorF) {
-            checkNotNull(deductAccumulatorF, "deductAccumulatorF");
             this.deductAccumulatorF = deductAccumulatorF;
             return this;
         }

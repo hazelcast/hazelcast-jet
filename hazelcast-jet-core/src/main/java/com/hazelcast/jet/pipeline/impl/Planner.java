@@ -25,5 +25,6 @@ public class Planner {
 
     void toDag(Pipeline pipeline) {
         PipelineImpl p = (PipelineImpl) pipeline;
+        p.hashCode();
     }
 }

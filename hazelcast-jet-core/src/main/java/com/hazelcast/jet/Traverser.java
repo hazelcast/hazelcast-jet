@@ -72,6 +72,10 @@ public interface Traverser<T> {
         };
     }
 
+    /**
+     * Returns a new traverser that will emit a prefix of the original traverser,
+     * up to the item for which the predicate fails (exclusive).
+     */
     @Nonnull
     default Traverser<T> takeWhile(@Nonnull Predicate<? super T> pred) {
         return new Traverser<T>() {
@@ -92,6 +96,10 @@ public interface Traverser<T> {
         };
     }
 
+    /**
+     * Returns a new traverser that will emit a suffix of the original traverser,
+     * starting from the item for which the predicate fails (inclusive).
+     */
     @Nonnull
     default Traverser<T> dropWhile(@Nonnull Predicate<? super T> pred) {
         return new Traverser<T>() {

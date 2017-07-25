@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.pipeline.samples;
 
+import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.pipeline.PStream;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -48,6 +49,6 @@ public class PipelineWordCount {
                 .groupBy(e -> true, AggregateOperations.summingLong(Entry::getValue))
                 .drainTo(Sinks.writeMap("totals"));
 
-        p.execute(null);
+        p.toDag();
     }
 }
