@@ -104,21 +104,21 @@ public class MasterContext {
 
         executionId = coordinationService.newId();
 
-        logger.info("Start executing job " + jobId + " execution " + executionId + " status " + getJobStatus()
-                + " : " + dag);
+        logger.info("Start executing job " + jobId + ", execution " + executionId + ", status " + getJobStatus()
+                + ": " + dag);
         ClusterServiceImpl clusterService = (ClusterServiceImpl) nodeEngine.getClusterService();
         MembersView membersView = clusterService.getMembershipManager().getMembersView();
         logger.fine("Building execution plan for job " + jobId + " execution " + executionId);
         try {
             executionPlanMap = coordinationService.createExecutionPlans(membersView, dag);
         } catch (TopologyChangedException e) {
-            logger.severe("Execution plans could not be created for job: " + jobId
-                    + " execution " + executionId, e);
+            logger.severe("Execution plan could not be created for job: " + jobId
+                    + ", execution " + executionId, e);
             coordinationService.scheduleRestart(jobId);
             return completionFuture;
         }
 
-        logger.fine("Built execution plan for job " + jobId + " execution " + executionId + '.');
+        logger.fine("Built execution plan for job " + jobId + ", execution " + executionId + '.');
 
         Set<MemberInfo> participants = executionPlanMap.keySet();
 
@@ -132,18 +132,18 @@ public class MasterContext {
     private boolean checkJobStatusForStart() {
         JobStatus status = getJobStatus();
         if (status == COMPLETED || status == FAILED) {
-            throw new IllegalStateException("Cannot init job: " + jobId + " since it already is " + status);
+            throw new IllegalStateException("Cannot init job " + jobId + ": it already is " + status);
         }
 
         if (completionFuture.isCancelled()) {
-            logger.fine("Skipping init because job " + jobId + " because is already cancelled.");
+            logger.fine("Skipping init job " + jobId + ": is already cancelled.");
             onCompleteStepCompleted(null);
             return true;
         }
 
         if (status == NOT_STARTED) {
             if (!jobStatus.compareAndSet(NOT_STARTED, STARTING)) {
-                logger.fine("Cannot init job: " + jobId + " someone else is just starting it");
+                logger.fine("Cannot init job " + jobId + ": someone else is just starting it");
                 return true;
             }
 
@@ -154,7 +154,7 @@ public class MasterContext {
 
         status = getJobStatus();
         if (!(status == STARTING || status == RESTARTING)) {
-            throw new IllegalStateException("Cannot init job: " + jobId + " since it is " + status);
+            throw new IllegalStateException("Cannot init job " + jobId + ": status is " + status);
         }
 
         return false;
@@ -172,7 +172,7 @@ public class MasterContext {
 
     private Throwable getInitResult(Map<MemberInfo, Object> responses) {
         if (completionFuture.isCancelled()) {
-            logger.fine("job " + jobId + " execution " + executionId + " to be cancelled after init");
+            logger.fine("job " + jobId + ", execution " + executionId + " to be cancelled after init");
             return new CancellationException();
         }
 
@@ -180,12 +180,12 @@ public class MasterContext {
         Collection<MemberInfo> successfulMembers = grouped.get(false).stream().map(Entry::getKey).collect(toList());
 
         if (successfulMembers.size() == executionPlanMap.size()) {
-            logger.fine("Init of job: " + jobId + " execution " + executionId + " is successful.");
+            logger.fine("Init of job " + jobId + ", execution " + executionId + " is successful.");
             return null;
         }
 
         List<Entry<MemberInfo, Object>> failures = grouped.get(true);
-        logger.fine("Init of job: " + jobId + " execution " + executionId + " failed with: " + failures);
+        logger.fine("Init of job " + jobId + ", execution " + executionId + " failed with: " + failures);
 
         return failures
                 .stream()
@@ -211,12 +211,12 @@ public class MasterContext {
         JobStatus status = getJobStatus();
 
         if (!(status == STARTING || status == RESTARTING)) {
-            throw new IllegalStateException("Cannot execute job " + jobId + " execution " + executionId
-                    + " since it is " + status);
+            throw new IllegalStateException("Cannot execute job " + jobId + ", execution " + executionId
+                    + ": status is " + status);
         }
 
         jobStatus.set(RUNNING);
-        logger.fine("Executing job: " + jobId + " execution " + executionId);
+        logger.fine("Executing job: " + jobId + ", execution " + executionId);
         Function<ExecutionPlan, Operation> operationCtor = plan -> new ExecuteOperation(jobId, executionId);
         invoke(operationCtor, this::onExecuteStepCompleted, completionFuture);
     }
@@ -227,7 +227,7 @@ public class MasterContext {
 
     private Throwable getExecuteResult(Map<MemberInfo, Object> responses) {
         if (completionFuture.isCancelled()) {
-            logger.fine("job " + jobId + " execution " + executionId + " to be cancelled after execute");
+            logger.fine("job " + jobId + ", execution " + executionId + " to be cancelled after execute");
             return new CancellationException();
         }
 
@@ -235,12 +235,12 @@ public class MasterContext {
         Collection<MemberInfo> successfulMembers = grouped.get(false).stream().map(Entry::getKey).collect(toList());
 
         if (successfulMembers.size() == executionPlanMap.size()) {
-            logger.fine("Execute of job: " + jobId + " execution " + executionId + " is successful.");
+            logger.fine("Execute of job " + jobId + ", execution " + executionId + " is successful.");
             return null;
         }
 
         List<Entry<MemberInfo, Object>> failures = grouped.get(true);
-        logger.fine("Execute of job: " + jobId + " execution " + executionId + " has failures: " + failures);
+        logger.fine("Execute of job " + jobId + ", execution " + executionId + " has failures: " + failures);
 
         return failures
                 .stream()
@@ -255,11 +255,11 @@ public class MasterContext {
         JobStatus status = getJobStatus();
 
         if (status == NOT_STARTED || status == COMPLETED || status == FAILED) {
-            throw new IllegalStateException("Cannot complete job " + jobId + " execution " + executionId
-                    + " since it is " + status);
+            throw new IllegalStateException("Cannot complete job " + jobId + ", execution " + executionId
+                    + ": status is " + status);
         }
 
-        logger.fine("Completing job " + jobId + " execution " + executionId);
+        logger.fine("Completing job " + jobId + ", execution " + executionId);
 
         Function<ExecutionPlan, Operation> operationCtor = plan -> new CompleteOperation(executionId, error);
         invoke(operationCtor, responses -> onCompleteStepCompleted(error), null);
@@ -281,11 +281,11 @@ public class MasterContext {
 
         if (failure == null) {
             jobStatus.set(COMPLETED);
-            logger.info("Execution of job " + jobId + " execution " + executionId
+            logger.info("Execution of job " + jobId + ", execution " + executionId
                     + " completed in " + elapsed + " ms.");
         } else {
             jobStatus.set(FAILED);
-            logger.warning("Execution of job " + jobId + " execution " + executionId
+            logger.warning("Execution of job " + jobId + ", execution " + executionId
                     + " failed in " + elapsed + " ms.", failure);
         }
 

@@ -147,21 +147,22 @@ public class JobCoordinationService {
                     JobResult jobResult = new JobResult(jobId, coordinator, jobCreationTime, completionTime, error);
                     JobResult prev = jobResults.putIfAbsent(jobId, jobResult);
                     if (prev != null) {
-                        throw new IllegalStateException(jobResult + " already exists in the job record results map!");
+                        throw new IllegalStateException(jobResult + " already exists in the " + JOB_RESULTS_MAP_NAME
+                                + " map");
                     }
                     jobRepository.deleteJob(jobId);
-                    logger.fine("Job " + jobId + " execution " + executionId + " is completed.");
+                    logger.fine("Job " + jobId + ", execution " + executionId + " is completed.");
                 } else {
                     MasterContext existing = masterContexts.get(jobId);
                     if (existing != null) {
-                        logger.severe("Different master context found to complete job " + jobId
-                                + " execution " + executionId + " master context execution " + existing.getExecutionId());
+                        logger.severe("Different master context found to complete job " + jobId + ", execution "
+                                + executionId + ", master context execution " + existing.getExecutionId());
                     } else {
-                        logger.severe("No master context found to complete job " + jobId + " execution " + executionId);
+                        logger.severe("No master context found to complete job " + jobId + ", execution " + executionId);
                     }
                 }
             } catch (Exception e) {
-                logger.severe("Completion of job " + jobId + " execution " + executionId + " is failed.", e);
+                logger.severe("Completion of job " + jobId + ", execution " + executionId + " failed", e);
             }
         }
     }
@@ -193,7 +194,7 @@ public class JobCoordinationService {
         try {
             jobs.keySet().forEach(this::startOrJoinJob);
         } catch (Exception e) {
-            logger.severe("Scanning jobs is failed", e);
+            logger.severe("Scanning jobs failed", e);
         }
     }
 

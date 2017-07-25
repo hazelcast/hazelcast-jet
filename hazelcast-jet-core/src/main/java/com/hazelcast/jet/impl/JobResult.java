@@ -22,6 +22,8 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.concurrent.CompletableFuture;
 
 public class JobResult implements IdentifiedDataSerializable {
@@ -114,8 +116,8 @@ public class JobResult implements IdentifiedDataSerializable {
         return "JobResult{" +
                 "coordinatorUUID='" + coordinatorUUID + '\'' +
                 ", jobId=" + jobId +
-                ", creationTime=" + creationTime +
-                ", completionTime=" + completionTime +
+                ", creationTime=" + Instant.ofEpochMilli(creationTime).atZone(ZoneId.systemDefault()) +
+                ", completionTime=" + Instant.ofEpochMilli(completionTime).atZone(ZoneId.systemDefault()) +
                 ", failure=" + failure +
                 '}';
     }

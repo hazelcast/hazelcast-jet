@@ -122,7 +122,7 @@ public final class ExecutionPlanBuilder {
             if ((member = membersView.getMember(address)) == null) {
                 // Address in partition table doesn't exist in member list,
                 // it has just left the cluster.
-                throw new TopologyChangedException("Topology changed! " + address + " is not member anymore!");
+                throw new TopologyChangedException("Topology changed, " + address + " is not member anymore");
             }
 
             // add member to known members

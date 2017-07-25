@@ -89,7 +89,7 @@ public class JetService
     @Override
     public void init(NodeEngine engine, Properties properties) {
         if (config == null) {
-            throw new IllegalStateException("JetConfig is not initialized!");
+            throw new IllegalStateException("JetConfig is not initialized");
         }
 
         jetInstance = new JetInstanceImpl((HazelcastInstanceImpl) engine.getHazelcastInstance(), config);
@@ -109,7 +109,7 @@ public class JetService
 
         JetBuildInfo jetBuildInfo = BuildInfoProvider.getBuildInfo().getJetBuildInfo();
         logger.info("Starting Jet " + jetBuildInfo.getVersion() + " (" + jetBuildInfo.getBuild() + " - " +
-                jetBuildInfo.getRevision() + ") ");
+                jetBuildInfo.getRevision() + ")");
         logger.info("Setting number of cooperative threads and default parallelism to "
                 + config.getInstanceConfig().getCooperativeThreadCount());
 
