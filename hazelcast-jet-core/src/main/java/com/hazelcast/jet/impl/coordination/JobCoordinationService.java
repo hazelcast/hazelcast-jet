@@ -88,7 +88,7 @@ public class JobCoordinationService {
                 config.getInstanceConfig().getCooperativeThreadCount());
     }
 
-    public CompletableFuture<Throwable> startOrJoinJob(long jobId) {
+    public CompletableFuture<Boolean> startOrJoinJob(long jobId) {
         if (!nodeEngine.getClusterService().isMaster()) {
             throw new JetException("Job cannot be started here. Master address: "
                     + nodeEngine.getClusterService().getMasterAddress());

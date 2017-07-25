@@ -26,7 +26,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 
 public class JoinJobOperation extends AsyncExecutionOperation implements IdentifiedDataSerializable {
 
-    private volatile CompletableFuture<Throwable> executionFuture;
+    private volatile CompletableFuture<Boolean> executionFuture;
 
     public JoinJobOperation() {
     }
@@ -39,10 +39,7 @@ public class JoinJobOperation extends AsyncExecutionOperation implements Identif
     protected void doRun() {
         JetService service = getService();
         executionFuture = service.startOrJoinJob(jobId);
-        executionFuture.whenComplete((t1, t2) -> {
-            Throwable response = t1 != null ? t1 : t2;
-            doSendResponse(peel(response));
-        });
+        executionFuture.whenComplete((r, t) -> doSendResponse(peel(t)));
     }
 
     @Override

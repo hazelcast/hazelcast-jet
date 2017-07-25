@@ -207,7 +207,7 @@ public class JetService
     public void memberAttributeChanged(MemberAttributeServiceEvent event) {
     }
 
-    public CompletableFuture<Throwable> startOrJoinJob(long jobId) {
+    public CompletableFuture<Boolean> startOrJoinJob(long jobId) {
         return jobCoordinationService.startOrJoinJob(jobId);
     }
 

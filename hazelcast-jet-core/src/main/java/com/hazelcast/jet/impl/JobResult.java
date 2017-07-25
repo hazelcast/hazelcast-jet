@@ -69,9 +69,13 @@ public class JobResult implements IdentifiedDataSerializable {
         return failure;
     }
 
-    public CompletableFuture<Throwable> asCompletableFuture() {
-        CompletableFuture<Throwable> future = new CompletableFuture<>();
-        future.complete(failure);
+    public CompletableFuture<Boolean> asCompletableFuture() {
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        if (failure == null) {
+            future.complete(true);
+        } else {
+            future.completeExceptionally(failure);
+        }
 
         return future;
     }
