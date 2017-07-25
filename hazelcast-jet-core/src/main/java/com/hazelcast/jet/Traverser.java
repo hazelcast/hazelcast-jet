@@ -72,6 +72,47 @@ public interface Traverser<T> {
         };
     }
 
+    @Nonnull
+    default Traverser<T> takeWhile(@Nonnull Predicate<? super T> pred) {
+        return new Traverser<T>() {
+            boolean predicateSatisfied = true;
+
+            @Override
+            public T next() {
+                if (!predicateSatisfied) {
+                    return null;
+                }
+                T t = Traverser.this.next();
+                predicateSatisfied = pred.test(t);
+                if (!predicateSatisfied) {
+                    return null;
+                }
+                return t;
+            }
+        };
+    }
+
+    @Nonnull
+    default Traverser<T> dropWhile(@Nonnull Predicate<? super T> pred) {
+        return new Traverser<T>() {
+            boolean predicateSatisfied;
+
+            @Override
+            public T next() {
+                if (!predicateSatisfied) {
+                    return Traverser.this.next();
+                }
+                for (T t; (t = Traverser.this.next()) != null; ) {
+                    predicateSatisfied = pred.test(t);
+                    if (!predicateSatisfied) {
+                        return t;
+                    }
+                }
+                return null;
+            }
+        };
+    }
+
     /**
      * Returns a traverser which appends an additional item to this traverser
      * after it returns the first {@code null} value.

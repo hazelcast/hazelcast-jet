@@ -20,6 +20,7 @@ import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.processor.Processors;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
+import org.hamcrest.Matchers;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -238,43 +239,27 @@ public class DAGTest {
     }
 
     @Test
-    public void reverseIteratorOrder() {
-        // Given
-        DAG dag = new DAG();
-        Vertex a = dag.newVertex("a", PROCESSOR_SUPPLIER);
-        Vertex b = dag.newVertex("b", PROCESSOR_SUPPLIER);
-        Vertex c = dag.newVertex("c", PROCESSOR_SUPPLIER);
-        dag.edge(from(a, 0).to(b, 0))
-           .edge(from(b, 0).to(c, 0))
-           .edge(from(a, 1).to(c, 1));
-
-        // When
-        Iterator<Vertex> iterator = dag.reverseIterator();
-        Vertex v1 = iterator.next();
-        Vertex v2 = iterator.next();
-        Vertex v3 = iterator.next();
-
-        // Then
-        assertEquals(c, v1);
-        assertEquals(b, v2);
-        assertEquals(a, v3);
-        assertEquals(false, iterator.hasNext());
-    }
-
-    @Test
     public void when_cycle_then_invalid() {
         // Given
         DAG dag = new DAG();
+        Vertex x = dag.newVertex("x", PROCESSOR_SUPPLIER);
+        Vertex y = dag.newVertex("y", PROCESSOR_SUPPLIER);
         Vertex a = dag.newVertex("a", PROCESSOR_SUPPLIER);
         Vertex b = dag.newVertex("b", PROCESSOR_SUPPLIER);
         Vertex c = dag.newVertex("c", PROCESSOR_SUPPLIER);
         dag.edge(between(a, b))
            .edge(between(b, c))
-           .edge(between(c, a));
+           .edge(between(c, a))
+           .edge(between(x, y))
+           .edge(from(y).to(a, 1));
 
         // Then
         exceptionRule.expect(IllegalArgumentException.class);
-        exceptionRule.expectMessage("a -> b -> c -> a");
+        exceptionRule.expectMessage(Matchers.anyOf(
+                Matchers.containsString("a -> b -> c -> a"),
+                Matchers.containsString("b -> c -> a -> b"),
+                Matchers.containsString("c -> a -> b -> c")
+        ));
 
         // When
         dag.validate();

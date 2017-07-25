@@ -15,9 +15,12 @@
     <!-- Files start with the license header -->
     <suppress checks="StrictDuplicateCode" files="\.java" lines="1-15"/>
 
-    <!-- Suppress checking of copyright notice -->
+    <!-- Files derived from the Agrona project -->
     <suppress checks="Header" files="com[\\/]hazelcast[\\/]internal[\\/]util[\\/]concurrent[\\/]update[\\/]"/>
     <suppress checks="OuterTypeNumber" files="AbstractConcurrentArrayQueue"/>
+
+    <!-- Suppress checking of copyright notice in a file derived from Apache Tez -->
+    <suppress checks="Header" files="TopologicalSorter"/>
 
     <!-- Exclude these packages from JavaDoc checks -->
     <suppress checks="JavadocMethod" files="JetException\.java"/>
