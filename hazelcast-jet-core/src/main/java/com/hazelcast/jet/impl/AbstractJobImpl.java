@@ -24,11 +24,15 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.coordination.JobRepository;
+import com.hazelcast.spi.exception.TargetDisconnectedException;
+import com.hazelcast.spi.exception.TargetNotMemberException;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
+
+import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 
 public abstract class AbstractJobImpl implements Job {
 
@@ -102,21 +106,26 @@ public abstract class AbstractJobImpl implements Job {
 
         @Override
         public void onFailure(Throwable t) {
-            // TODO [basri] should we check any other exception ???
-            if (t instanceof MemberLeftException) {
+            if (isRestartable(t)) {
                 synchronized (this) {
                     try {
                         ICompletableFuture<Void> invocationFuture = sendJoinJobOp();
-                        invocationFuture.andThen(this);
                         this.invocationFuture = invocationFuture;
+                        invocationFuture.andThen(this);
                     } catch (Exception e) {
-                        // TODO [basri]
                         future.completeExceptionally(e);
                     }
                 }
             } else {
                 future.completeExceptionally(t);
             }
+        }
+
+        private boolean isRestartable(Throwable t) {
+            Throwable cause = peel(t);
+            return cause  instanceof MemberLeftException
+                    || cause instanceof TargetDisconnectedException
+                    || cause instanceof TargetNotMemberException;
         }
 
         public synchronized void cancel() {

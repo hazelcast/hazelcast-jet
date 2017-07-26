@@ -21,6 +21,7 @@ import com.hazelcast.internal.cluster.impl.ClusterDataSerializerHook;
 import com.hazelcast.internal.partition.impl.PartitionDataSerializerHook;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.coordination.JobCoordinationService;
@@ -218,6 +219,22 @@ public class TopologyChangeTest extends JetTestSupport {
     }
 
     @Test
+    public void when_nonCoordinatorLeavesDuringExecution_then_clientStillGetsJobResult() throws Throwable {
+        // Given
+        JetClientInstanceImpl client = factory.newClient();
+        DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(StuckProcessor::new, nodeCount)));
+
+        // When
+        Job job = client.newJob(dag);
+        StuckProcessor.executionStarted.await();
+
+        instances[2].getHazelcastInstance().getLifecycleService().terminate();
+        StuckProcessor.proceedLatch.countDown();
+
+        job.join();
+    }
+
+    @Test
     public void when_coordinatorLeavesDuringExecution_then_jobCompletes() throws Throwable {
         // Given
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(StuckProcessor::new, nodeCount)));
@@ -266,6 +283,40 @@ public class TopologyChangeTest extends JetTestSupport {
                         || error instanceof HazelcastInstanceNotActiveException);
             }
         });
+    }
+
+    @Test
+    public void when_coordinatorLeavesDuringExecution_then_nonCoordinatorJobSubmitterStillGetsJobResult()
+            throws Throwable {
+        // Given
+        DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(StuckProcessor::new, nodeCount)));
+
+        // When
+        Job job = instances[1].newJob(dag);
+        StuckProcessor.executionStarted.await();
+
+        instances[0].getHazelcastInstance().getLifecycleService().terminate();
+        StuckProcessor.proceedLatch.countDown();
+
+        // Then
+        job.join();
+    }
+
+    @Test
+    public void when_coordinatorLeavesDuringExecution_then_clientStillGetsJobResult() throws Throwable {
+        // Given
+        JetClientInstanceImpl client = factory.newClient();
+        DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(StuckProcessor::new, nodeCount)));
+
+        // When
+        Job job = client.newJob(dag);
+        StuckProcessor.executionStarted.await();
+
+        instances[0].getHazelcastInstance().getLifecycleService().terminate();
+        StuckProcessor.proceedLatch.countDown();
+
+        // Then
+        job.join();
     }
 
     @Test
