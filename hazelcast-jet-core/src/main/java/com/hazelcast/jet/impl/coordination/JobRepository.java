@@ -147,16 +147,17 @@ public class JobRepository {
         // clean up completed jobs
         completedJobIds.forEach(this::deleteJob);
 
-        //
+        // clean up expired jobs which are not still running
         jobs.keySet()
             .stream()
             .filter(jobId -> !runningJobIds.contains(jobId))
             .filter(jobId -> {
-                EntryView<Long, JobRecord> entryView = jobs.getEntryView(jobId);
-                return entryView != null && isJobExpired(entryView.getCreationTime());
+                EntryView<Long, JobRecord> view = jobs.getEntryView(jobId);
+                return view != null && isJobExpired(view.getCreationTime());
             })
             .forEach(this::deleteJob);
 
+        // clean up expired resources
         instance.getDistributedObjects()
                 .stream()
                 .filter(this::isResourcesMap)
