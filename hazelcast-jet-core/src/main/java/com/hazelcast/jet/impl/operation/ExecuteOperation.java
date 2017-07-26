@@ -25,6 +25,8 @@ import com.hazelcast.nio.ObjectDataOutput;
 import java.io.IOException;
 import java.util.concurrent.CompletionStage;
 
+import static com.hazelcast.jet.impl.util.Util.formatIds;
+
 public class ExecuteOperation extends AsyncExecutionOperation  {
 
     private volatile CompletionStage<Void> executionFuture;
@@ -47,10 +49,10 @@ public class ExecuteOperation extends AsyncExecutionOperation  {
         executionFuture = service.execute(getCallerAddress(), jobId, executionId, f -> f.handle((r, error) -> error)
                 .thenAccept(value -> {
                     if (value != null) {
-                        logger.fine("Execution of job " + jobId + ", execution " + executionId
+                        logger.fine("Execution of " + formatIds(jobId, executionId)
                                 + " completed with failure", value);
                     } else {
-                        logger.fine("Execution of job " + jobId + ", execution " + executionId + " completed");
+                        logger.fine("Execution of " + formatIds(jobId, executionId) + " completed");
                     }
 
                     doSendResponse(value);

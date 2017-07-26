@@ -57,6 +57,7 @@ import static com.hazelcast.jet.JobStatus.RUNNING;
 import static com.hazelcast.jet.JobStatus.STARTING;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isJobRestartRequired;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
+import static com.hazelcast.jet.impl.util.Util.formatIds;
 import static java.util.stream.Collectors.partitioningBy;
 import static java.util.stream.Collectors.toList;
 
@@ -105,21 +106,20 @@ public class MasterContext {
 
         executionId = coordinationService.newId();
 
-        logger.info("Start executing job " + jobId + ", execution " + executionId + ", status " + getJobStatus()
+        logger.info("Start executing " + formatIds(jobId, executionId) + ", status " + getJobStatus()
                     + ": " + dag);
         ClusterServiceImpl clusterService = (ClusterServiceImpl) nodeEngine.getClusterService();
         MembersView membersView = clusterService.getMembershipManager().getMembersView();
-        logger.fine("Building execution plan for job " + jobId + ", execution " + executionId);
+        logger.fine("Building execution plan for " + formatIds(jobId, executionId));
         try {
             executionPlanMap = coordinationService.createExecutionPlans(membersView, dag);
         } catch (TopologyChangedException e) {
-            logger.severe("Execution plans could not be created for job: " + jobId
-                    + ", execution " + executionId, e);
+            logger.severe("Execution plans could not be created for " + formatIds(jobId, executionId), e);
             coordinationService.scheduleRestart(jobId);
             return completionFuture;
         }
 
-        logger.fine("Built execution plans for job " + jobId + ", execution " + executionId);
+        logger.fine("Built execution plans for " + formatIds(jobId, executionId));
 
         Set<MemberInfo> participants = executionPlanMap.keySet();
 
@@ -173,7 +173,7 @@ public class MasterContext {
 
     private Throwable getInitResult(Map<MemberInfo, Object> responses) {
         if (completionFuture.isCancelled()) {
-            logger.fine("job " + jobId + ", execution " + executionId + " to be cancelled after init");
+            logger.fine(formatIds(jobId, executionId) + " to be cancelled after init");
             return new CancellationException();
         }
 
@@ -181,12 +181,12 @@ public class MasterContext {
         Collection<MemberInfo> successfulMembers = grouped.get(false).stream().map(Entry::getKey).collect(toList());
 
         if (successfulMembers.size() == executionPlanMap.size()) {
-            logger.fine("Init of job " + jobId + ", execution " + executionId + " is successful.");
+            logger.fine("Init of " + formatIds(jobId, executionId) + " is successful.");
             return null;
         }
 
         List<Entry<MemberInfo, Object>> failures = grouped.get(true);
-        logger.fine("Init of job " + jobId + ", execution " + executionId + " failed with: " + failures);
+        logger.fine("Init of " + formatIds(jobId, executionId) + " failed with: " + failures);
 
         return failures
                 .stream()
@@ -212,12 +212,12 @@ public class MasterContext {
         JobStatus status = getJobStatus();
 
         if (!(status == STARTING || status == RESTARTING)) {
-            throw new IllegalStateException("Cannot execute job " + jobId + ", execution " + executionId
+            throw new IllegalStateException("Cannot execute " + formatIds(jobId, executionId)
                     + ": status is " + status);
         }
 
         jobStatus.set(RUNNING);
-        logger.fine("Executing job: " + jobId + ", execution " + executionId);
+        logger.fine("Executing " + formatIds(jobId, executionId));
         Function<ExecutionPlan, Operation> operationCtor = plan -> new ExecuteOperation(jobId, executionId);
         invoke(operationCtor, this::onExecuteStepCompleted, completionFuture);
     }
@@ -228,7 +228,7 @@ public class MasterContext {
 
     private Throwable getExecuteResult(Map<MemberInfo, Object> responses) {
         if (completionFuture.isCancelled()) {
-            logger.fine("job " + jobId + ", execution " + executionId + " to be cancelled after execute");
+            logger.fine(formatIds(jobId, executionId) + " to be cancelled after execute");
             return new CancellationException();
         }
 
@@ -236,12 +236,12 @@ public class MasterContext {
         Collection<MemberInfo> successfulMembers = grouped.get(false).stream().map(Entry::getKey).collect(toList());
 
         if (successfulMembers.size() == executionPlanMap.size()) {
-            logger.fine("Execute of job " + jobId + ", execution " + executionId + " is successful.");
+            logger.fine("Execute of " + formatIds(jobId, executionId) + " is successful.");
             return null;
         }
 
         List<Entry<MemberInfo, Object>> failures = grouped.get(true);
-        logger.fine("Execute of job " + jobId + ", execution " + executionId + " has failures: " + failures);
+        logger.fine("Execute of " + formatIds(jobId, executionId) + " has failures: " + failures);
 
         return failures
                 .stream()
@@ -256,11 +256,11 @@ public class MasterContext {
         JobStatus status = getJobStatus();
 
         if (status == NOT_STARTED || status == COMPLETED || status == FAILED) {
-            throw new IllegalStateException("Cannot complete job " + jobId + ", execution " + executionId
+            throw new IllegalStateException("Cannot complete " + formatIds(jobId, executionId)
                     + ": status is " + status);
         }
 
-        logger.fine("Completing job " + jobId + ", execution " + executionId);
+        logger.fine("Completing " + formatIds(jobId, executionId));
 
         Function<ExecutionPlan, Operation> operationCtor = plan -> new CompleteOperation(executionId, error);
         invoke(operationCtor, responses -> onCompleteStepCompleted(error), null);
@@ -278,18 +278,17 @@ public class MasterContext {
 
         if (failure == null || failure instanceof CancellationException) {
             jobStatus.set(COMPLETED);
-            logger.info("Execution of job " + jobId + ", execution " + executionId
-                    + " completed in " + elapsed + " ms");
+            logger.info("Execution of " + formatIds(jobId, executionId) + " completed in " + elapsed + " ms");
         } else {
             jobStatus.set(FAILED);
-            logger.warning("Execution of job " + jobId + ", execution " + executionId
+            logger.warning("Execution of " + formatIds(jobId, executionId)
                     + " failed in " + elapsed + " ms", failure);
         }
 
         coordinationService.completeJob(this, completionTime, failure)
                            .whenComplete((r, e) -> {
                                if (e != null) {
-                                   logger.warning("Completion of job " + jobId + ", execution " + executionId
+                                   logger.warning("Completion of " + formatIds(jobId, executionId)
                                            + " failed in " + elapsed + " ms", failure);
                                }
 

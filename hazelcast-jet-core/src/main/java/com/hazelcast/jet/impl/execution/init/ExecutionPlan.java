@@ -61,6 +61,7 @@ import java.util.stream.IntStream;
 import static com.hazelcast.internal.util.concurrent.ConcurrentConveyor.concurrentConveyor;
 import static com.hazelcast.jet.impl.execution.OutboundCollector.compositeCollector;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
+import static com.hazelcast.jet.impl.util.Util.idToString;
 import static com.hazelcast.jet.impl.util.Util.readList;
 import static com.hazelcast.jet.impl.util.Util.writeList;
 import static java.util.stream.Collectors.toList;
@@ -109,7 +110,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 ProcCtx context =
                         new ProcCtx(instance, logger, srcVertex.name(), processorIdx + srcVertex.getProcIdxOffset());
 
-                 String probePrefix = String.format("jet.job.%d.%s#%d", executionId, srcVertex.name(), processorIdx);
+                 String probePrefix = String.format("jet.job.%s.%s#%d", idToString(executionId), srcVertex.name(), processorIdx);
                  ((NodeEngineImpl) nodeEngine).getMetricsRegistry().scanAndRegister(p, probePrefix);
 
                 // createOutboundEdgeStreams() populates localConveyorMap and edgeSenderConveyorMap.

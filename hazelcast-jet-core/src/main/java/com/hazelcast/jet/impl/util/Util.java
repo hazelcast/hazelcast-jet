@@ -41,6 +41,7 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
@@ -51,6 +52,7 @@ import static java.util.stream.Collectors.toList;
 public final class Util {
 
     private static final int BUFFER_SIZE = 1 << 15;
+    private static final char[] ID_TEMPLATE = "0000-0000-0000-0000".toCharArray();
 
     private Util() {
     }
@@ -209,5 +211,22 @@ public final class Util {
 
     public static long secureRandomNextLong() {
         return Holder.NUMBER_GENERATOR.nextLong();
+    }
+
+    public static String formatIds(long jobId, long executionId) {
+        return "job " + idToString(jobId) + ", execution " + idToString(executionId);
+    }
+
+    @SuppressWarnings("checkstyle:magicnumber")
+    public static String idToString(long id) {
+        char[] buf = Arrays.copyOf(ID_TEMPLATE, ID_TEMPLATE.length);
+        String hexStr = Long.toHexString(id);
+        for (int i = hexStr.length() - 1, j = 18; i >= 0; i--, j--) {
+            buf[j] = hexStr.charAt(i);
+            if (j == 15 || j == 10 || j == 5) {
+                j--;
+            }
+        }
+        return new String(buf);
     }
 }

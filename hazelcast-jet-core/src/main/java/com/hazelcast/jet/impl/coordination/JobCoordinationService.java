@@ -45,6 +45,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
+import static com.hazelcast.jet.impl.util.Util.formatIds;
 import static com.hazelcast.util.executor.ExecutorType.CACHED;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -206,14 +207,14 @@ public class JobCoordinationService {
                             + " map");
                 }
                 jobRepository.deleteJob(jobId);
-                logger.fine("Job " + jobId + ", execution " + executionId + " is completed");
+                logger.fine(formatIds(jobId, executionId) + " is completed");
             } else {
                 MasterContext existing = masterContexts.get(jobId);
                 if (existing != null) {
-                    logger.severe("Different master context found to complete job " + jobId + ", execution "
-                            + executionId + ", master context execution " + existing.getExecutionId());
+                    logger.severe("Different master context found to complete " + formatIds(jobId, executionId)
+                            + ", master context execution " + existing.getExecutionId());
                 } else {
-                    logger.severe("No master context found to complete job " + jobId + ", execution " + executionId);
+                    logger.severe("No master context found to complete " + formatIds(jobId, executionId));
                 }
             }
         } catch (RuntimeException e) {

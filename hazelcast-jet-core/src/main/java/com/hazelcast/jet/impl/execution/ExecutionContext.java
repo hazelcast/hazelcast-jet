@@ -37,6 +37,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
+import static com.hazelcast.jet.impl.util.Util.formatIds;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableList;
@@ -147,7 +148,7 @@ public class ExecutionContext {
             try {
                 s.complete(error);
             } catch (Exception e) {
-                logger.severe("Job " + jobId + ", execution " + executionId
+                logger.severe(formatIds(jobId, executionId)
                         + " encountered an exception in ProcessorSupplier.complete(), ignoring it", e);
             }
         });
