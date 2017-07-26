@@ -21,12 +21,13 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Edge;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestSupport;
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.Processor.Context;
 import com.hazelcast.jet.ProcessorSupplier;
-import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.processor.Sinks;
 import com.hazelcast.test.HazelcastParallelClassRunner;
@@ -37,7 +38,6 @@ import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Future;
 
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
@@ -94,10 +94,10 @@ public class WriteBufferedPTest extends JetTestSupport {
 
             dag.edge(Edge.between(source, sink));
 
-            Future<Void> future = instance.newJob(dag).getFuture();
+            Job job = instance.newJob(dag);
             // wait for the job to initialize
             Thread.sleep(500);
-            future.cancel(true);
+            job.cancel();
 
             assertTrueEventually(() -> assertTrue("No \"dispose\", only: " + events, events.contains("dispose")), 60);
             System.out.println(events);

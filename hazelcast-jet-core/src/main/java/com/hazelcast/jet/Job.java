@@ -35,6 +35,13 @@ public interface Job {
     Future<Void> getFuture();
 
     /**
+     * Attempts to cancel execution of this job.
+     */
+    default boolean cancel() {
+        return getFuture().cancel(true);
+    }
+
+    /**
      * Waits for the job to complete and throws exception if job completed with errors.
      *
      * Shorthand for <code>job.getFuture().get()</code>
@@ -44,7 +51,12 @@ public interface Job {
     }
 
     /**
-     * Return the ID of this job.
+     * Returns the status of this job.
+     */
+    JobStatus getJobStatus();
+
+    /**
+     * Returns the ID of this job.
      *
      * @throws IllegalStateException If the job was not started yet, and thus
      *                               has no job id.

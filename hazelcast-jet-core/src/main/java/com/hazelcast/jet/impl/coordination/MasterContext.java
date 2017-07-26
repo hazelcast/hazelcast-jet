@@ -67,7 +67,7 @@ public class MasterContext {
     private final ILogger logger;
     private final long jobId;
     private final DAG dag;
-    private final CompletableFuture<Throwable> completionFuture = new CompletableFuture<>();
+    private final CompletableFuture<Boolean> completionFuture = new CompletableFuture<>();
     private final AtomicReference<JobStatus> jobStatus = new AtomicReference<>(NOT_STARTED);
 
     private volatile long executionId;
@@ -90,7 +90,7 @@ public class MasterContext {
         return executionId;
     }
 
-    public CompletableFuture<Throwable> getCompletionFuture() {
+    public CompletableFuture<Boolean> getCompletionFuture() {
         return completionFuture;
     }
 
@@ -98,7 +98,7 @@ public class MasterContext {
         return jobStatus.get();
     }
 
-    public CompletableFuture<Throwable> start() {
+    public CompletableFuture<Boolean> start() {
         if (checkJobStatusForStart()) {
             return completionFuture;
         }
@@ -265,7 +265,7 @@ public class MasterContext {
         invoke(operationCtor, responses -> onCompleteStepCompleted(error), null);
     }
 
-    private void onCompleteStepCompleted(Throwable failure) {
+    private void onCompleteStepCompleted(@Nullable Throwable failure) {
         long completionTime = System.currentTimeMillis();
 
         if (failure instanceof TopologyChangedException) {
@@ -291,7 +291,11 @@ public class MasterContext {
             logger.warning("Completion of job " + jobId + ", execution " + executionId
                     + " failed in " + elapsed + " ms", failure);
         }
-        completionFuture.complete(failure);
+        if (getJobStatus() == COMPLETED) {
+            completionFuture.complete(true);
+        } else {
+            completionFuture.completeExceptionally(failure);
+        }
     }
 
     private void invoke(Function<ExecutionPlan, Operation> operationCtor,
