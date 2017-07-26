@@ -21,12 +21,15 @@ import com.hazelcast.core.EntryView;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.nio.IOUtil;
+import com.hazelcast.spi.properties.HazelcastProperties;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -36,29 +39,35 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.zip.DeflaterOutputStream;
 
+import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_EXPIRATION_DURATION;
+
 public class JobRepository {
 
-    private static final String IDS_MAP_NAME = "__jet.jobs.ids";
-    private static final String RESOURCES_MAP_NAME_PREFIX = "__jet.jobs.resources.";
-    private static final String RESOURCE_MARKER = "__jet.jobId";
-    private static final String JOB_RECORDS_MAP_NAME = "__jet.jobs.records";
-    private static final long RESOURCE_MAP_EXPIRATION_TIME_IN_MILLIS = TimeUnit.HOURS.toMillis(1);
+    static final String IDS_MAP_NAME = "__jet.jobs.ids";
+    static final String RESOURCES_MAP_NAME_PREFIX = "__jet.jobs.resources.";
+    static final String RESOURCE_MARKER = "__jet.jobId";
+    static final String JOB_RECORDS_MAP_NAME = "__jet.jobs.records";
 
     // TODO [basri] we should be able to configure backup counts of internal imaps
+    // TODO [basri] there is no cleanup for ids yet
 
     private final HazelcastInstance instance;
+    private final JetConfig config;
     private final IMap<Long, Long> jobIds;
     private final IMap<Long, JobRecord> jobs;
+    private final long jobExpirationDurationInMillis;
 
-    public JobRepository(HazelcastInstance instance) {
-        this.instance = instance;
+    public JobRepository(JetInstance jetInstance) {
+        this.instance = jetInstance.getHazelcastInstance();
+        this.config = jetInstance.getConfig();
         this.jobIds = instance.getMap(IDS_MAP_NAME);
         this.jobs = instance.getMap(JOB_RECORDS_MAP_NAME);
+        HazelcastProperties properties = new HazelcastProperties(config.getProperties());
+        this.jobExpirationDurationInMillis = properties.getMillis(JOB_EXPIRATION_DURATION);
     }
 
     /**
@@ -96,26 +105,6 @@ public class JobRepository {
         return instance.getMap(RESOURCES_MAP_NAME_PREFIX + jobId);
     }
 
-    /**
-     * Perform cleanup after job completion
-     */
-    public void deleteJob(long jobId) {
-        jobs.remove(jobId);
-        IMap<String, Object> jobResourcesMap = getJobResources(jobId);
-        if (jobResourcesMap != null) {
-            jobResourcesMap.clear();
-            jobResourcesMap.destroy();
-        }
-    }
-
-    public long getJobCreationTime(long jobId) throws IllegalArgumentException {
-        EntryView<Long, JobRecord> entryView = jobs.getEntryView(jobId);
-        if (entryView != null) {
-            return entryView.getCreationTime();
-        }
-        throw new IllegalArgumentException("Job creation time not found for job id: " + jobId);
-    }
-
     public void uploadJobResources(long jobId, JobConfig jobConfig) {
         IMap<String, Object> jobResourcesMap = getJobResources(jobId);
         for (ResourceConfig rc : jobConfig.getResourceConfigs()) {
@@ -143,7 +132,27 @@ public class JobRepository {
         jobResourcesMap.put(RESOURCE_MARKER, RESOURCE_MARKER);
     }
 
-    public void cleanup(Set<Long> completedJobIds, Set<Long> runningJobIds) {
+    /**
+     * Perform cleanup after job completion
+     */
+    void deleteJob(long jobId) {
+        jobs.remove(jobId);
+        IMap<String, Object> jobResourcesMap = getJobResources(jobId);
+        if (jobResourcesMap != null) {
+            jobResourcesMap.clear();
+            jobResourcesMap.destroy();
+        }
+    }
+
+    long getJobCreationTime(long jobId) throws IllegalArgumentException {
+        EntryView<Long, JobRecord> entryView = jobs.getEntryView(jobId);
+        if (entryView != null) {
+            return entryView.getCreationTime();
+        }
+        throw new IllegalArgumentException("Job creation time not found for job id: " + jobId);
+    }
+
+    void cleanup(Set<Long> completedJobIds, Set<Long> runningJobIds) {
         // clean up completed jobs
         completedJobIds.forEach(this::deleteJob);
 
@@ -176,7 +185,8 @@ public class JobRepository {
     }
 
     private boolean isResourcesMap(DistributedObject obj) {
-        return MapService.SERVICE_NAME.equals(obj.getServiceName()) && obj.getName().startsWith(RESOURCES_MAP_NAME_PREFIX);
+        return MapService.SERVICE_NAME.equals(obj.getServiceName())
+                && obj.getName().startsWith(RESOURCES_MAP_NAME_PREFIX);
     }
 
     private long getJobIdFromResourcesMapName(String mapName) {
@@ -185,7 +195,7 @@ public class JobRepository {
     }
 
     private boolean isJobExpired(long creationTime) {
-        return (System.currentTimeMillis() - creationTime) >= RESOURCE_MAP_EXPIRATION_TIME_IN_MILLIS;
+        return (System.currentTimeMillis() - creationTime) >= jobExpirationDurationInMillis;
     }
 
     /**

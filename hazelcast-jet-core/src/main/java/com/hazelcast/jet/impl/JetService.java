@@ -97,7 +97,7 @@ public class JetService
         executionService = new ExecutionService(nodeEngine.getHazelcastInstance(),
                 config.getInstanceConfig().getCooperativeThreadCount());
 
-        jobRepository = new JobRepository(nodeEngine.getHazelcastInstance());
+        jobRepository = new JobRepository(jetInstance);
 
         jobCoordinationService = new JobCoordinationService(nodeEngine, config, jobRepository);
         jobExecutionService = new JobExecutionService(nodeEngine, executionService);

@@ -105,7 +105,8 @@ public class MasterContext {
 
         executionId = coordinationService.newId();
 
-        logger.info("Start executing job " + jobId + ", execution " + executionId + ", status " + getJobStatus() + ": " + dag);
+        logger.info("Start executing job " + jobId + ", execution " + executionId + ", status " + getJobStatus()
+                    + ": " + dag);
         ClusterServiceImpl clusterService = (ClusterServiceImpl) nodeEngine.getClusterService();
         MembersView membersView = clusterService.getMembershipManager().getMembersView();
         logger.fine("Building execution plan for job " + jobId + ", execution " + executionId);

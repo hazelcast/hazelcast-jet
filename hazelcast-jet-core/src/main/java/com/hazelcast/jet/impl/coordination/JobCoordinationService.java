@@ -33,6 +33,7 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.executionservice.InternalExecutionService;
+import com.hazelcast.spi.properties.HazelcastProperties;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -43,6 +44,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
 import static com.hazelcast.util.executor.ExecutorType.CACHED;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -51,7 +53,7 @@ public class JobCoordinationService {
 
     private static final String COORDINATOR_EXECUTOR_NAME = "jet:coordinator";
     private static final String JOB_RESULTS_MAP_NAME = "__jet.jobs.results";
-    private static final long JOB_SCANNER_TASK_PERIOD_IN_MILLIS = SECONDS.toMillis(1);
+    private static final long RETRY_DELAY_IN_MILLIS = SECONDS.toMillis(1);
     private static final long LOCK_ACQUIRE_ATTEMPT_TIMEOUT_IN_MILLIS = SECONDS.toMillis(1);
 
     private final NodeEngineImpl nodeEngine;
@@ -73,9 +75,11 @@ public class JobCoordinationService {
 
     public void init() {
         InternalExecutionService executionService = nodeEngine.getExecutionService();
+        HazelcastProperties properties = new HazelcastProperties(config.getProperties());
+        long jobScanPeriodInMillis = properties.getMillis(JOB_SCAN_PERIOD);
         executionService.register(COORDINATOR_EXECUTOR_NAME, 2, Integer.MAX_VALUE, CACHED);
         executionService.scheduleWithRepetition(COORDINATOR_EXECUTOR_NAME, this::scanJobs,
-                0, JOB_SCANNER_TASK_PERIOD_IN_MILLIS, MILLISECONDS);
+                jobScanPeriodInMillis, jobScanPeriodInMillis, MILLISECONDS);
     }
 
     // visible only for testing
@@ -167,7 +171,7 @@ public class JobCoordinationService {
         if (masterContext != null) {
             logger.fine("Scheduling master context restart for job " + jobId);
             nodeEngine.getExecutionService().schedule(COORDINATOR_EXECUTOR_NAME, () -> restartJob(jobId),
-                    JOB_SCANNER_TASK_PERIOD_IN_MILLIS, MILLISECONDS);
+                    RETRY_DELAY_IN_MILLIS, MILLISECONDS);
         } else {
             logger.severe("Master context for job " + jobId + " not found to schedule restart");
         }
@@ -185,7 +189,7 @@ public class JobCoordinationService {
             InternalExecutionService executionService = nodeEngine.getExecutionService();
             executionService.schedule(COORDINATOR_EXECUTOR_NAME,
                     () -> completeJob(masterContext, completionTime, error, future),
-                    JOB_SCANNER_TASK_PERIOD_IN_MILLIS, MILLISECONDS);
+                    RETRY_DELAY_IN_MILLIS, MILLISECONDS);
             return;
         }
 

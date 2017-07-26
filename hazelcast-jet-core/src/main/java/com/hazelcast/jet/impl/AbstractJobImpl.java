@@ -43,7 +43,7 @@ public abstract class AbstractJobImpl implements Job {
     private JobConfig config;
 
     AbstractJobImpl(JetInstance jetInstance, DAG dag, JobConfig config) {
-        this.jobRepository = new JobRepository(jetInstance.getHazelcastInstance());
+        this.jobRepository = new JobRepository(jetInstance);
         this.jobId = null;
         this.dag = dag;
         this.config = config;
