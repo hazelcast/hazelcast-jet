@@ -285,17 +285,19 @@ public class MasterContext {
                     + " failed in " + elapsed + " ms", failure);
         }
 
-        try {
-            coordinationService.completeJob(this, completionTime, failure);
-        } catch (RuntimeException e) {
-            logger.warning("Completion of job " + jobId + ", execution " + executionId
-                    + " failed in " + elapsed + " ms", failure);
-        }
-        if (getJobStatus() == COMPLETED) {
-            completionFuture.complete(true);
-        } else {
-            completionFuture.completeExceptionally(failure);
-        }
+        coordinationService.completeJob(this, completionTime, failure)
+                           .whenComplete((r, e) -> {
+                               if (e != null) {
+                                   logger.warning("Completion of job " + jobId + ", execution " + executionId
+                                           + " failed in " + elapsed + " ms", failure);
+                               }
+
+                               if (getJobStatus() == COMPLETED) {
+                                   completionFuture.complete(true);
+                               } else {
+                                   completionFuture.completeExceptionally(failure);
+                               }
+                           });
     }
 
     private void invoke(Function<ExecutionPlan, Operation> operationCtor,

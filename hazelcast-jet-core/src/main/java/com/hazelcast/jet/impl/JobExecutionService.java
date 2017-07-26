@@ -122,7 +122,7 @@ public class JobExecutionService {
 
     void initExecution(long jobId, long executionId, Address coordinator, int coordinatorMemberListVersion,
                        Set<MemberInfo> participants, ExecutionPlan plan) {
-        verifyCoordinator(jobId, executionId, coordinator, coordinatorMemberListVersion, participants);
+        verifyClusterInformation(jobId, executionId, coordinator, coordinatorMemberListVersion, participants);
 
         if (!nodeEngine.isRunning()) {
             throw new HazelcastInstanceNotActiveException();
@@ -157,8 +157,8 @@ public class JobExecutionService {
         logger.info("Execution plan for job " + jobId + ", execution " + executionId + " initialized");
     }
 
-    private void verifyCoordinator(long jobId, long executionId, Address coordinator,
-                                   int coordinatorMemberListVersion, Set<MemberInfo> participants) {
+    private void verifyClusterInformation(long jobId, long executionId, Address coordinator,
+                                          int coordinatorMemberListVersion, Set<MemberInfo> participants) {
         Address masterAddress = nodeEngine.getMasterAddress();
         if (!masterAddress.equals(coordinator)) {
             throw new IllegalStateException("Coordinator " + coordinator + " cannot initialize job " + jobId
@@ -169,6 +169,8 @@ public class JobExecutionService {
         MembershipManager membershipManager = clusterService.getMembershipManager();
         int localMemberListVersion = membershipManager.getMemberListVersion();
         if (coordinatorMemberListVersion > localMemberListVersion) {
+            assert masterAddress != nodeEngine.getThisAddress();
+
             nodeEngine.getOperationService().send(new TriggerMemberListPublishOp(), masterAddress);
             throw new RetryableHazelcastException("Cannot initialize job " + jobId + ", execution " + executionId
                     + " for coordinator " + coordinator + ": local member list version: " + localMemberListVersion

@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.coordination;
 
+import com.hazelcast.core.DistributedObject;
 import com.hazelcast.core.EntryView;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
@@ -24,6 +25,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.util.Util;
+import com.hazelcast.map.impl.MapService;
 import com.hazelcast.nio.IOUtil;
 
 import java.io.BufferedInputStream;
@@ -33,6 +35,8 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.zip.DeflaterOutputStream;
@@ -40,8 +44,10 @@ import java.util.zip.DeflaterOutputStream;
 public class JobRepository {
 
     private static final String IDS_MAP_NAME = "__jet.jobs.ids";
-    private static final String RESOURCES_MAP_NAME = "__jet.jobs.resources";
+    private static final String RESOURCES_MAP_NAME_PREFIX = "__jet.jobs.resources.";
+    private static final String RESOURCE_MARKER = "__jet.jobId";
     private static final String JOB_RECORDS_MAP_NAME = "__jet.jobs.records";
+    private static final long RESOURCE_MAP_EXPIRATION_TIME_IN_MILLIS = TimeUnit.HOURS.toMillis(1);
 
     // TODO [basri] we should be able to configure backup counts of internal imaps
 
@@ -86,8 +92,8 @@ public class JobRepository {
        return jobs.get(jobId);
     }
 
-    public IMap<String, byte[]> getJobResources(long jobId) {
-        return instance.getMap(RESOURCES_MAP_NAME + "." + jobId);
+    public <T> IMap<String, T> getJobResources(long jobId) {
+        return instance.getMap(RESOURCES_MAP_NAME_PREFIX + jobId);
     }
 
     /**
@@ -95,7 +101,7 @@ public class JobRepository {
      */
     public void deleteJob(long jobId) {
         jobs.remove(jobId);
-        IMap<String, byte[]> jobResourcesMap = getJobResources(jobId);
+        IMap<String, Object> jobResourcesMap = getJobResources(jobId);
         if (jobResourcesMap != null) {
             jobResourcesMap.clear();
             jobResourcesMap.destroy();
@@ -111,7 +117,7 @@ public class JobRepository {
     }
 
     public void uploadJobResources(long jobId, JobConfig jobConfig) {
-        IMap<String, byte[]> jobResourcesMap = getJobResources(jobId);
+        IMap<String, Object> jobResourcesMap = getJobResources(jobId);
         for (ResourceConfig rc : jobConfig.getResourceConfigs()) {
             Map<String, byte[]> tmpMap = new HashMap<>();
             if (rc.isArchive()) {
@@ -133,9 +139,53 @@ public class JobRepository {
             // now upload it all
             jobResourcesMap.putAll(tmpMap);
         }
+
+        jobResourcesMap.put(RESOURCE_MARKER, RESOURCE_MARKER);
     }
 
+    public void cleanup(Set<Long> completedJobIds, Set<Long> runningJobIds) {
+        // clean up completed jobs
+        completedJobIds.forEach(this::deleteJob);
 
+        //
+        jobs.keySet()
+            .stream()
+            .filter(jobId -> !runningJobIds.contains(jobId))
+            .filter(jobId -> {
+                EntryView<Long, JobRecord> entryView = jobs.getEntryView(jobId);
+                return entryView != null && isJobExpired(entryView.getCreationTime());
+            })
+            .forEach(this::deleteJob);
+
+        instance.getDistributedObjects()
+                .stream()
+                .filter(this::isResourcesMap)
+                .map(DistributedObject::getName)
+                .map(this::getJobIdFromResourcesMapName)
+                .filter(jobId -> !runningJobIds.contains(jobId))
+                .forEach(jobId -> {
+                    IMap<String, Object> resources = getJobResources(jobId);
+                    EntryView<String, Object> marker = resources.getEntryView(RESOURCE_MARKER);
+                    if (marker == null) {
+                        resources.putIfAbsent(RESOURCE_MARKER, RESOURCE_MARKER);
+                    } else if (isJobExpired(marker.getCreationTime())) {
+                        deleteJob(jobId);
+                    }
+                });
+    }
+
+    private boolean isResourcesMap(DistributedObject obj) {
+        return MapService.SERVICE_NAME.equals(obj.getServiceName()) && obj.getName().startsWith(RESOURCES_MAP_NAME_PREFIX);
+    }
+
+    private long getJobIdFromResourcesMapName(String mapName) {
+        String s = mapName.substring(RESOURCES_MAP_NAME_PREFIX.length());
+        return Long.parseLong(s);
+    }
+
+    private boolean isJobExpired(long creationTime) {
+        return (System.currentTimeMillis() - creationTime) >= RESOURCE_MAP_EXPIRATION_TIME_IN_MILLIS;
+    }
 
     /**
      * Unzips the Jar archive and processes individual entries using

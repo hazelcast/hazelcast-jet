@@ -106,6 +106,7 @@ public class TopologyChangeTest extends JetTestSupport {
 
     @Before
     public void setup() {
+        nodeCount = 0;
         for (boolean isLiteMember : liteMemberFlags) {
             if (!isLiteMember) {
                 nodeCount++;
