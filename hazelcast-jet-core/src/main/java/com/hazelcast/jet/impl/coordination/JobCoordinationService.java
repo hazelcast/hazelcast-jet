@@ -183,9 +183,9 @@ public class JobCoordinationService {
                              Throwable error, CompletableFuture<Boolean> future) {
         if (!tryLock()) {
             InternalExecutionService executionService = nodeEngine.getExecutionService();
-            executionService.scheduleWithRepetition(COORDINATOR_EXECUTOR_NAME,
+            executionService.schedule(COORDINATOR_EXECUTOR_NAME,
                     () -> completeJob(masterContext, completionTime, error, future),
-                    0, JOB_SCANNER_TASK_PERIOD_IN_MILLIS, MILLISECONDS);
+                    JOB_SCANNER_TASK_PERIOD_IN_MILLIS, MILLISECONDS);
             return;
         }
 
