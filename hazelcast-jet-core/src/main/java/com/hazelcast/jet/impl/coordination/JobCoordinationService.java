@@ -46,6 +46,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
 import static com.hazelcast.jet.impl.util.Util.formatIds;
+import static com.hazelcast.jet.impl.util.Util.idToString;
 import static com.hazelcast.util.executor.ExecutorType.CACHED;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -112,13 +113,13 @@ public class JobCoordinationService {
         try {
             JobResult jobResult = jobResults.get(jobId);
             if (jobResult != null) {
-                logger.fine("Not starting job " + jobId + " since already completed -> " + jobResult);
+                logger.fine("Not starting job " + idToString(jobId) + " since already completed -> " + jobResult);
                 return jobResult.asCompletableFuture();
             }
 
             JobRecord jobRecord = jobRepository.getJob(jobId);
             if (jobRecord == null) {
-                throw new IllegalStateException("Job " + jobId + " not found");
+                throw new IllegalStateException("Job " + idToString(jobId) + " not found");
             }
 
             masterContext = new MasterContext(nodeEngine, this, jobId, jobRecord.getDag());
@@ -130,7 +131,7 @@ public class JobCoordinationService {
             lock.unlock();
         }
 
-        logger.info("Starting new job " + jobId);
+        logger.info("Starting new job " + idToString(jobId));
         return masterContext.start();
     }
 
@@ -156,7 +157,7 @@ public class JobCoordinationService {
             if (jobResult != null) {
                 return jobResult.isSuccessfulOrCancelled() ? JobStatus.COMPLETED : JobStatus.FAILED;
             } else {
-                throw new IllegalStateException("Job " + jobId + " not found");
+                throw new IllegalStateException("Job " + idToString(jobId) + " not found");
             }
         } else {
             return JobStatus.NOT_STARTED;
@@ -170,11 +171,11 @@ public class JobCoordinationService {
     void scheduleRestart(long jobId) {
         MasterContext masterContext = masterContexts.get(jobId);
         if (masterContext != null) {
-            logger.fine("Scheduling master context restart for job " + jobId);
+            logger.fine("Scheduling master context restart for job " + idToString(jobId));
             nodeEngine.getExecutionService().schedule(COORDINATOR_EXECUTOR_NAME, () -> restartJob(jobId),
                     RETRY_DELAY_IN_MILLIS, MILLISECONDS);
         } else {
-            logger.severe("Master context for job " + jobId + " not found to schedule restart");
+            logger.severe("Master context for job " + idToString(jobId) + " not found to schedule restart");
         }
     }
 
@@ -212,7 +213,7 @@ public class JobCoordinationService {
                 MasterContext existing = masterContexts.get(jobId);
                 if (existing != null) {
                     logger.severe("Different master context found to complete " + formatIds(jobId, executionId)
-                            + ", master context execution " + existing.getExecutionId());
+                            + ", master context execution " + idToString(existing.getExecutionId()));
                 } else {
                     logger.severe("No master context found to complete " + formatIds(jobId, executionId));
                 }
@@ -237,7 +238,7 @@ public class JobCoordinationService {
         if (masterContext != null) {
             masterContext.start();
         } else {
-            logger.severe("Master context for job " + jobId + " not found to restart");
+            logger.severe("Master context for job " + idToString(jobId) + " not found to restart");
         }
     }
 

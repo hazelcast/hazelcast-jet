@@ -58,6 +58,7 @@ import static com.hazelcast.jet.JobStatus.STARTING;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isJobRestartRequired;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.Util.formatIds;
+import static com.hazelcast.jet.impl.util.Util.idToString;
 import static java.util.stream.Collectors.partitioningBy;
 import static java.util.stream.Collectors.toList;
 
@@ -133,18 +134,18 @@ public class MasterContext {
     private boolean checkJobStatusForStart() {
         JobStatus status = getJobStatus();
         if (status == COMPLETED || status == FAILED) {
-            throw new IllegalStateException("Cannot init job " + jobId + ": it already is " + status);
+            throw new IllegalStateException("Cannot init job " + idToString(jobId) + ": it already is " + status);
         }
 
         if (completionFuture.isCancelled()) {
-            logger.fine("Skipping init job " + jobId + ": is already cancelled.");
+            logger.fine("Skipping init job " + idToString(jobId) + ": is already cancelled.");
             onCompleteStepCompleted(null);
             return true;
         }
 
         if (status == NOT_STARTED) {
             if (!jobStatus.compareAndSet(NOT_STARTED, STARTING)) {
-                logger.fine("Cannot init job " + jobId + ": someone else is just starting it");
+                logger.fine("Cannot init job " + idToString(jobId) + ": someone else is just starting it");
                 return true;
             }
 
@@ -155,7 +156,7 @@ public class MasterContext {
 
         status = getJobStatus();
         if (!(status == STARTING || status == RESTARTING)) {
-            throw new IllegalStateException("Cannot init job " + jobId + ": status is " + status);
+            throw new IllegalStateException("Cannot init job " + idToString(jobId) + ": status is " + status);
         }
 
         return false;

@@ -44,6 +44,7 @@ import java.util.jar.JarInputStream;
 import java.util.zip.DeflaterOutputStream;
 
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_EXPIRATION_DURATION;
+import static com.hazelcast.jet.impl.util.Util.idToString;
 
 public class JobRepository {
 
@@ -86,7 +87,7 @@ public class JobRepository {
         IMap<Long, JobRecord> jobRecords = getJobs();
         JobRecord prev = jobRecords.putIfAbsent(jobId, jobRecord);
         if (prev != null) {
-            throw new IllegalStateException("Cannot create new job record with id: " + jobId
+            throw new IllegalStateException("Cannot create new job record with id: " + idToString(jobId)
                     + " because another job for same id already exists with dag: " + prev.getDag());
         }
 
@@ -149,7 +150,7 @@ public class JobRepository {
         if (entryView != null) {
             return entryView.getCreationTime();
         }
-        throw new IllegalArgumentException("Job creation time not found for job id: " + jobId);
+        throw new IllegalArgumentException("Job creation time not found for job id: " + idToString(jobId));
     }
 
     void cleanup(Set<Long> completedJobIds, Set<Long> runningJobIds) {

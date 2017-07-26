@@ -27,6 +27,8 @@ import java.time.ZoneId;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
+import static com.hazelcast.jet.impl.util.Util.idToString;
+
 public class JobResult implements IdentifiedDataSerializable {
 
     private String coordinatorUUID;
@@ -123,7 +125,7 @@ public class JobResult implements IdentifiedDataSerializable {
     public String toString() {
         return "JobResult{" +
                 "coordinatorUUID='" + coordinatorUUID + '\'' +
-                ", jobId=" + jobId +
+                ", jobId=" + idToString(jobId) +
                 ", creationTime=" + Instant.ofEpochMilli(creationTime).atZone(ZoneId.systemDefault()) +
                 ", completionTime=" + Instant.ofEpochMilli(completionTime).atZone(ZoneId.systemDefault()) +
                 ", failure=" + failure +

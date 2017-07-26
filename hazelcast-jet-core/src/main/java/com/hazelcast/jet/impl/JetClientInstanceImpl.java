@@ -45,6 +45,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static com.hazelcast.jet.impl.util.Util.idToString;
 
 public class JetClientInstanceImpl extends AbstractJetInstance {
 
@@ -140,7 +141,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
 
                 @Override
                 public void onFailure(Throwable throwable) {
-                    logger.warning("Error cancelling job with id " + executionId, throwable);
+                    logger.warning("Error cancelling job with executionId " + idToString(executionId), throwable);
                 }
             });
             return true;

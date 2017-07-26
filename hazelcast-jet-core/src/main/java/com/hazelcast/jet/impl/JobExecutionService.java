@@ -44,6 +44,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 
 import static com.hazelcast.jet.impl.util.Util.formatIds;
+import static com.hazelcast.jet.impl.util.Util.idToString;
 import static java.util.Collections.newSetFromMap;
 import static java.util.stream.Collectors.toSet;
 
@@ -140,7 +141,7 @@ public class JobExecutionService {
             executionContexts.values().stream()
                     .filter(e -> e.getJobId() == jobId)
                     .forEach(e -> logger.fine("Execution context for " + formatIds(jobId, executionId)
-                            + " for coordinator " + coordinator + " already exists with local execution " + e.getJobId()
+                            + " for coordinator " + coordinator + " already exists with local execution " + idToString(e.getJobId())
                             + " for coordinator " + e.getCoordinator()));
 
             throw new RetryableHazelcastException();
@@ -207,7 +208,7 @@ public class JobExecutionService {
         } else if (!executionContext.verify(coordinator, jobId)) {
             throw new IllegalStateException(formatIds(jobId, executionContext.getExecutionId())
                     + " originally from coordinator " + executionContext.getCoordinator()
-                    + " cannot be started by coordinator " + coordinator + " and execution " + executionId);
+                    + " cannot be started by coordinator " + coordinator + " and execution " + idToString(executionId));
         }
 
         logger.info("Start execution of " + formatIds(jobId, executionId)
@@ -224,7 +225,7 @@ public class JobExecutionService {
             executionContextJobIds.remove(executionContext.getJobId());
             logger.fine("Completed execution of " + formatIds(executionContext.getJobId(), executionId));
         } else {
-            logger.fine("Execution " + executionId + " not found for completion");
+            logger.fine("Execution " + idToString(executionId) + " not found for completion");
         }
     }
 

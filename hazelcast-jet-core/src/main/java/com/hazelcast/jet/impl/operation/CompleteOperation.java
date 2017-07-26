@@ -29,6 +29,7 @@ import com.hazelcast.spi.Operation;
 import java.io.IOException;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isJobRestartRequired;
+import static com.hazelcast.jet.impl.util.Util.idToString;
 import static com.hazelcast.spi.ExceptionAction.THROW_EXCEPTION;
 
 public class CompleteOperation extends Operation implements IdentifiedDataSerializable {
@@ -50,12 +51,13 @@ public class CompleteOperation extends Operation implements IdentifiedDataSerial
         JetService service = getService();
 
         Address callerAddress = getCallerAddress();
-        logger.fine("Completing execution " + executionId + " from caller: " + callerAddress + " with " + error);
+        logger.fine("Completing execution " + idToString(executionId) + " from caller: " + callerAddress
+                + " with " + error);
 
         Address masterAddress = getNodeEngine().getMasterAddress();
         if (!masterAddress.equals(callerAddress)) {
-            throw new IllegalStateException("Caller: " + callerAddress + " cannot complete execution " + executionId
-                    + " because it is not master: " + masterAddress);
+            throw new IllegalStateException("Caller " + callerAddress + " cannot complete execution of "
+                    + idToString(executionId) + " because it is not master. Master is: " + masterAddress);
         }
 
         service.completeExecution(executionId, error);
