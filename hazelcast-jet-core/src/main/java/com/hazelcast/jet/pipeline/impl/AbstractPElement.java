@@ -24,18 +24,27 @@ import java.util.List;
 
 public abstract class AbstractPElement implements PElement {
 
+    final PipelineImpl pipelineImpl;
     private final List<PElement> upstream;
-    final PTransform transform;
-    final PipelineImpl pipeline;
+    private final PTransform transform;
 
-    AbstractPElement(List<PElement> upstream, PTransform transform, PipelineImpl pipeline) {
+    AbstractPElement(List<PElement> upstream, PTransform transform, PipelineImpl pipelineImpl) {
         this.upstream = upstream;
         this.transform = transform;
-        this.pipeline = pipeline;
+        this.pipelineImpl = pipelineImpl;
     }
 
     @Override
     public Pipeline getPipeline() {
-        return pipeline;
+        return pipelineImpl;
+    }
+
+    public PTransform getTransform() {
+        return transform;
+    }
+
+    @Override
+    public String toString() {
+        return transform.toString();
     }
 }

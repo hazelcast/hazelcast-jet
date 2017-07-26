@@ -36,11 +36,11 @@ import static java.util.stream.Collectors.toMap;
  * Validates against cycles.
  */
 public final class TopologicalSorter<V> {
-    // Consulted, but not updated, by the cycle detecting algorithm:
+    // Consulted, but not updated, by the algorithm:
     private final Map<TarjanVertex<V>, List<TarjanVertex<V>>> adjacencyMap;
     private final Function<V, String> vertexNameF;
 
-    // Updated by the cycle detecting algorithm:
+    // Updated by the algorithm:
     private final ArrayDeque<V> topologicallySorted = new ArrayDeque<>();
     private final Deque<TarjanVertex<V>> tarjanStack = new ArrayDeque<>();
     private int nextIndex;
@@ -94,63 +94,85 @@ public final class TopologicalSorter<V> {
     // graph; this code just finds any SC component involving more than a
     // single vertex.
     private Iterable<V> go() {
-        for (TarjanVertex tv : adjacencyMap.keySet()) {
+        for (TarjanVertex<V> tv : adjacencyMap.keySet()) {
             if (tv.index != -1) {
                 continue;
             }
-            assert tarjanStack.isEmpty();
+            // The stack invariant:
+            // Vertices are placed on a stack in the order in which they are visited.
+            // When the depth-first search recursively visits a vertex v and its
+            // descendants, those vertices are not all necessarily popped from the
+            // stack when this recursive call returns. The invariant is that a vertex
+            // remains on the stack after it has been visited if and only if there is
+            // a path from it to some vertex earlier on the stack.
+            assert tarjanStack.isEmpty() : "Broken stack invariant";
             strongconnect(tv);
         }
         return topologicallySorted;
     }
 
-    // Method name identical to the one used in the Wikipedia article.
+    // method name identical to the one used in the Wikipedia article
     private void strongconnect(TarjanVertex<V> currTv) {
-        currTv.encounteredAtIndex(nextIndex++);
+        currTv.visitedAtIndex(nextIndex++);
         push(currTv);
         for (TarjanVertex<V> outTv : adjacencyMap.get(currTv)) {
+            if (outTv == currTv) {
+                throw new IllegalArgumentException(
+                        "Vertex " + vertexNameF.apply(currTv.v) + " is connected to itself");
+            }
             if (outTv.index == -1) {
+                // outTv not discovered yet, visit it...
                 strongconnect(outTv);
+                // ... and propagate lowlink computed for it to currTv
                 currTv.lowlink = min(currTv.lowlink, outTv.lowlink);
             } else if (outTv.onstack) {
-                // This already means there is a cycle, but we proceed with the
-                // algorithm until all the vertices of the cycle are identified.
+                // outTv is already on the stack => there is a cycle in the graph.
+                // Proceed with the algorithm until the full extent of the cycle
+                // is known.
                 currTv.lowlink = min(currTv.lowlink, outTv.index);
             }
         }
-        if (currTv.lowlink == currTv.index) {
-            TarjanVertex popped = pop();
-            if (popped == currTv) {
-                // No cycles detected involving currTv. Add it to the output vertex list.
-                topologicallySorted.addFirst(currTv.v);
-            } else {
-                // A vertex other than currTv was left on the stack, which means the
-                // algorithm found a strongly-connected component larger than a single
-                // vertex. There is a cycle in the graph, extending from the top of the
-                // stack to the occurence of currTv in it.
-                // At this point the algorithm is over. The following stack operations
-                // are not a part of it, their sole purpose is generating the desired
-                // error message.
-                while (tarjanStack.peekFirst() != currTv) {
-                    tarjanStack.removeFirst();
-                }
-                tarjanStack.addLast(popped);
-                tarjanStack.addLast(currTv);
-                throw new IllegalArgumentException("DAG contains a cycle: "
-                        + tarjanStack.stream()
-                                     .map(av -> vertexNameF.apply(av.v))
-                                     .collect(joining(" -> ")));
-            }
+        if (currTv.lowlink < currTv.index) {
+            // currTv has a path to some vertex that is already on the stack.
+            // Leave currTv on the stack and return.
+            return;
         }
+        assert currTv.lowlink == currTv.index : "Broken lowlink invariant";
+        // currTv is the root of an SC component. Find out if the component has
+        // more than one member.
+        TarjanVertex<V> popped = pop();
+        if (popped == currTv) {
+            // currTv was on the top of the stack => it is the sole member of its SC
+            // component => it is not involved in any cycles. Add it to the output
+            // list and return.
+            topologicallySorted.addFirst(currTv.v);
+            return;
+        }
+        // There are vertices on the stack beyond currTv => it is not the sole
+        // member of its SC component => it is involved in a cycle. Report an
+        // error with a list of all the members of the SC component.
+        //
+        // At this point the algorithm is over. The following stack operations
+        // are not a part of it, their sole purpose is generating the desired
+        // error message.
+        while (tarjanStack.peekFirst() != currTv) {
+            tarjanStack.removeFirst();
+        }
+        tarjanStack.addLast(popped);
+        tarjanStack.addLast(currTv);
+        throw new IllegalArgumentException("DAG contains a cycle: "
+                + tarjanStack.stream()
+                             .map(av -> vertexNameF.apply(av.v))
+                             .collect(joining(" -> ")));
     }
 
-    private void push(TarjanVertex thisTv) {
+    private void push(TarjanVertex<V> thisTv) {
         thisTv.onstack = true;
         tarjanStack.addLast(thisTv);
     }
 
-    private TarjanVertex pop() {
-        TarjanVertex popped = tarjanStack.removeLast();
+    private TarjanVertex<V> pop() {
+        TarjanVertex<V> popped = tarjanStack.removeLast();
         popped.onstack = false;
         return popped;
     }
@@ -167,7 +189,7 @@ public final class TopologicalSorter<V> {
             this.v = v;
         }
 
-        void encounteredAtIndex(int index) {
+        void visitedAtIndex(int index) {
             this.index = index;
             this.lowlink = index;
         }

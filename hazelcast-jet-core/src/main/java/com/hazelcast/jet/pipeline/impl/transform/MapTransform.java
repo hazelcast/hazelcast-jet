@@ -21,10 +21,10 @@ import com.hazelcast.jet.function.DistributedFunction;
 /**
  * Javadoc pending.
  */
-public class MapTransform<E, R> implements UnaryTransform<E, R> {
-    private final DistributedFunction<? super E, ? extends R> mapF;
+public class MapTransform<T, R> implements UnaryTransform<T, R> {
+    public final DistributedFunction<? super T, ? extends R> mapF;
 
-    public MapTransform(DistributedFunction<? super E, ? extends R> mapF) {
+    public MapTransform(DistributedFunction<? super T, ? extends R> mapF) {
         this.mapF = mapF;
     }
 

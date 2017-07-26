@@ -55,14 +55,14 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
 
     @Override
     public <R> PStream<R> apply(UnaryTransform<? super E, R> unaryTransform) {
-        return pipeline.transform(this, unaryTransform);
+        return pipelineImpl.transform(this, unaryTransform);
     }
 
     @Override
     public <K, E2> PStream<Tuple2<E, Iterable<E2>>> join(
             PStream<E2> s2, JoinOn<K, E, E2> joinOn
     ) {
-        return pipeline.join(asList(this, s2), new HashJoinTransform(singletonList(joinOn)));
+        return pipelineImpl.join(asList(this, s2), new HashJoinTransform(singletonList(joinOn)));
     }
 
     @Override
@@ -70,7 +70,7 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
             PStream<E2> s2, JoinOn<K2, E, E2> joinOn1,
             PStream<E3> s3, JoinOn<K3, E, E3> joinOn2
     ) {
-        return pipeline.join(asList(this, s2, s3), new HashJoinTransform(asList(joinOn1, joinOn2)));
+        return pipelineImpl.join(asList(this, s2, s3), new HashJoinTransform(asList(joinOn1, joinOn2)));
     }
 
     @Override
@@ -79,7 +79,7 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
             PStream<E2> s1, DistributedFunction<? super E2, ? extends K> key1F,
             AggregateOperation2<E, E2, A, R> aggrOp
     ) {
-        return pipeline.join(asList(this, s1),
+        return pipelineImpl.join(asList(this, s1),
                 new CoGroupTransform<>(asList(thisKeyF, key1F), aggrOp, asList(tag0(), tag1())));
     }
 
@@ -90,12 +90,12 @@ public class PStreamImpl<E> extends AbstractPElement implements PStream<E> {
             PStream<E3> s2, DistributedFunction<? super E3, ? extends K> key2F,
             AggregateOperation3<E, E2, E3, A, R> aggrOp
     ) {
-        return pipeline.join(asList(this, s1, s2),
+        return pipelineImpl.join(asList(this, s1, s2),
                 new CoGroupTransform<>(asList(thisKeyF, key1F, key2F), aggrOp, asList(tag0(), tag1(), tag2())));
     }
 
     @Override
     public PEnd drainTo(Sink sink) {
-        return pipeline.drainTo(this, sink);
+        return pipelineImpl.drainTo(this, sink);
     }
 }

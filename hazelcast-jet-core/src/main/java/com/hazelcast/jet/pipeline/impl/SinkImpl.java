@@ -25,6 +25,10 @@ public class SinkImpl implements Sink {
         this.name = name;
     }
 
+    public String name() {
+        return name;
+    }
+
     @Override
     public String toString() {
         return "DrainTo " + name;

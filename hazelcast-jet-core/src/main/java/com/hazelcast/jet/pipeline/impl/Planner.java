@@ -16,15 +16,47 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.pipeline.impl.processor.CoGroupP;
+import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
+import com.hazelcast.jet.pipeline.impl.transform.MapTransform;
+import com.hazelcast.jet.pipeline.impl.transform.PTransform;
+import com.hazelcast.jet.processor.Processors;
+import com.hazelcast.jet.processor.Sinks;
+import com.hazelcast.jet.processor.Sources;
 
-/**
- * Javadoc pending.
- */
+import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
+
 public class Planner {
 
-    void toDag(Pipeline pipeline) {
-        PipelineImpl p = (PipelineImpl) pipeline;
-        p.hashCode();
+    private PipelineImpl pipeline;
+
+    public Planner(PipelineImpl pipeline) {
+        this.pipeline = pipeline;
+    }
+
+    @SuppressWarnings("unchecked")
+    DAG createDag() {
+        Iterable<AbstractPElement> sorted = topologicalSort(pipeline.adjacencyMap, Object::toString);
+        System.out.println(sorted);
+        DAG dag = new DAG();
+        for (AbstractPElement pel : sorted) {
+            PTransform transform = pel.getTransform();
+            if (transform instanceof SourceImpl) {
+                SourceImpl source = (SourceImpl) transform;
+                dag.newVertex("source", Sources.readMap(source.name()));
+            } else if (transform instanceof MapTransform) {
+                MapTransform mapTransform = (MapTransform) transform;
+                dag.newVertex("map", Processors.map(mapTransform.mapF));
+            } else if (transform instanceof CoGroupTransform) {
+                CoGroupTransform coGroup = (CoGroupTransform) transform;
+                dag.newVertex("co-group", () -> new CoGroupP<>(
+                        coGroup.groupKeyFns(), coGroup.aggregateOperation(), coGroup.tags()));
+            } else if (transform instanceof SinkImpl) {
+                SinkImpl sink = (SinkImpl) transform;
+                dag.newVertex("sink", Sinks.writeMap(sink.name()));
+            }
+        }
+        return dag;
     }
 }

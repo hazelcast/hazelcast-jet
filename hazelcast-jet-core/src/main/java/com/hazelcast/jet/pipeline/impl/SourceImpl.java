@@ -25,6 +25,10 @@ public class SourceImpl<E> implements Source<E> {
         this.name = name;
     }
 
+    public String name() {
+        return name;
+    }
+
     @Override
     public String toString() {
         return "DrawFrom " + name;

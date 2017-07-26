@@ -23,7 +23,6 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Source;
 import com.hazelcast.jet.pipeline.impl.transform.JoinTransform;
-import com.hazelcast.jet.pipeline.impl.transform.PTransform;
 import com.hazelcast.jet.pipeline.impl.transform.UnaryTransform;
 
 import javax.annotation.Nonnull;
@@ -31,18 +30,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import static java.util.Collections.emptyList;
 
 public class PipelineImpl implements Pipeline {
 
-    private Map<AbstractPElement, List<AbstractPElement>> outboundEdges = new HashMap<>();
-
-    public PipelineImpl() {
-    }
+    final Map<AbstractPElement, List<AbstractPElement>> adjacencyMap = new HashMap<>();
 
     @Override
     public <E> PStream<E> drawFrom(Source<E> source) {
@@ -51,8 +44,7 @@ public class PipelineImpl implements Pipeline {
 
     @Nonnull @Override
     public DAG toDag() {
-        printDAG();
-        return new DAG();
+        return new Planner(this).createDag();
     }
 
     public <IN, OUT> PStream<OUT> transform(PStreamImpl<IN> input, UnaryTransform<? super IN, OUT> unaryTransform) {
@@ -74,17 +66,6 @@ public class PipelineImpl implements Pipeline {
     }
 
     private void addEdge(AbstractPElement source, AbstractPElement dest) {
-        outboundEdges.computeIfAbsent(source, e -> new ArrayList<>()).add(dest);
+        adjacencyMap.computeIfAbsent(source, e -> new ArrayList<>()).add(dest);
     }
-
-
-    private void printDAG() {
-        for (Entry<AbstractPElement, List<AbstractPElement>> entry : outboundEdges.entrySet()) {
-            Set<PTransform> outputs = entry.getValue().stream()
-                                           .map(e -> e.transform).collect(Collectors.toSet());
-            System.out.println(entry.getKey().transform + " -> " + outputs);
-        }
-    }
-
-
 }
