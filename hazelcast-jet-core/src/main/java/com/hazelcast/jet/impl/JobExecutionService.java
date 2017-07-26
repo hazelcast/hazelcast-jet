@@ -209,7 +209,7 @@ public class JobExecutionService {
                     + " cannot be started by coordinator " + coordinator + " and execution " + executionId);
         }
 
-        logger.info("Start execution of job " + jobId + ", execution  " + executionId
+        logger.info("Start execution of job " + jobId + ", execution " + executionId
                 + " from coordinator " + coordinator);
 
         return executionContext.execute(doneCallback);
