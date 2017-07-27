@@ -16,5 +16,7 @@
 
 package com.hazelcast.jet.pipeline.impl.transform;
 
-public interface PTransform {
+import java.io.Serializable;
+
+public interface PTransform extends Serializable {
 }

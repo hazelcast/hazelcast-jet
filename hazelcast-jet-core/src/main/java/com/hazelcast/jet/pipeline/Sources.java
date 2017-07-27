@@ -27,7 +27,7 @@ public final class Sources {
     }
 
     public static <K, V> Source<Map.Entry<K, V>> readMap(String mapName) {
-        return new SourceImpl<>("IMap");
+        return new SourceImpl<>("IMap " + mapName);
     }
 
     public static Source<String> readFiles(String folder) {

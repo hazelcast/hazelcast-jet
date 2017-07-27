@@ -49,7 +49,7 @@ public class PipelineJoinAndCoGroup {
     public static void main(String[] args) {
         PipelineJoinAndCoGroup sample = new PipelineJoinAndCoGroup();
         sample.coGroupBuild().drainTo(Sinks.writeMap("map"));
-        sample.p.toDag();
+        System.out.println(sample.p.toDag());
     }
 
     private PStream<String> joinDirect() {

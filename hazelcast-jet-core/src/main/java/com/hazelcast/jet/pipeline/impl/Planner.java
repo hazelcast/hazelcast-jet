@@ -17,8 +17,9 @@
 package com.hazelcast.jet.pipeline.impl;
 
 import com.hazelcast.jet.DAG;
-import com.hazelcast.jet.pipeline.Sink;
-import com.hazelcast.jet.pipeline.Source;
+import com.hazelcast.jet.Edge;
+import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.pipeline.PElement;
 import com.hazelcast.jet.pipeline.impl.processor.CoGroupP;
 import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
 import com.hazelcast.jet.pipeline.impl.transform.MapTransform;
@@ -26,13 +27,21 @@ import com.hazelcast.jet.pipeline.impl.transform.PTransform;
 import com.hazelcast.jet.processor.Processors;
 import com.hazelcast.jet.processor.Sinks;
 import com.hazelcast.jet.processor.Sources;
-import com.hazelcast.util.UuidUtil;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import static com.hazelcast.jet.Edge.between;
+import static com.hazelcast.jet.Edge.from;
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
+import static com.hazelcast.util.UuidUtil.newUnsecureUUID;
 
 public class Planner {
 
-    private PipelineImpl pipeline;
+    private final PipelineImpl pipeline;
+    private final DAG dag = new DAG();
+    private final Map<PElement, PlannerVertex> pel2vertex = new HashMap<>();
+
 
     public Planner(PipelineImpl pipeline) {
         this.pipeline = pipeline;
@@ -42,36 +51,59 @@ public class Planner {
     DAG createDag() {
         Iterable<AbstractPElement> sorted = topologicalSort(pipeline.adjacencyMap, Object::toString);
         System.out.println(sorted);
-        DAG dag = new DAG();
         for (AbstractPElement pel : sorted) {
-            PTransform transform = pel.getTransform();
+            PTransform transform = pel.transform;
             if (transform instanceof SourceImpl) {
                 SourceImpl source = (SourceImpl) transform;
-                dag.newVertex(sourceVertexName(source), Sources.readMap(source.name()));
+                addVertex(pel, new Vertex("source." + source.name(), Sources.readMap(source.name())));
             } else if (transform instanceof MapTransform) {
                 MapTransform mapTransform = (MapTransform) transform;
-                dag.newVertex(newVertexName("map"), Processors.map(mapTransform.mapF));
+                PlannerVertex pv = addVertex(pel,
+                        new Vertex("map." + randomSuffix(), Processors.map(mapTransform.mapF)));
+                addEdge(pel.upstream.get(0), pv);
             } else if (transform instanceof CoGroupTransform) {
                 CoGroupTransform coGroup = (CoGroupTransform) transform;
-                dag.newVertex("co-group", () -> new CoGroupP<>(
-                        coGroup.groupKeyFns(), coGroup.aggregateOperation(), coGroup.tags()));
+                PlannerVertex pv = addVertex(pel,
+                        new Vertex("co-group." + randomSuffix(),
+                                () -> new CoGroupP<>(coGroup.groupKeyFns(), coGroup.aggregateOperation(), coGroup.tags())));
+                for (PElement fromPel : pel.upstream) {
+                    addEdge(fromPel, pv);
+                }
             } else if (transform instanceof SinkImpl) {
                 SinkImpl sink = (SinkImpl) transform;
-                dag.newVertex(sinkVertexName(sink), Sinks.writeMap(sink.name()));
+                PlannerVertex pv = addVertex(pel, new Vertex("sink." + sink.name(), Sinks.writeMap(sink.name())));
+                addEdge(pel.upstream.get(0), pv);
             }
         }
         return dag;
     }
 
-    private static String newVertexName(String prefix) {
-        return prefix + '.' + (UuidUtil.newUnsecureUUID().toString().substring(8));
+    private PlannerVertex addVertex(PElement pel, Vertex v) {
+        dag.vertex(v);
+        PlannerVertex pv = new PlannerVertex(v);
+        pel2vertex.put(pel, pv);
+        return pv;
     }
 
-    private static String sourceVertexName(Source source) {
-        return "source." + source.name();
+    private Edge addEdge(PElement fromPel, PlannerVertex toPv) {
+        PlannerVertex fromPv = pel2vertex.get(fromPel);
+        Edge edge = from(fromPv.v, fromPv.availableOrdinal++).to(toPv.v, toPv.availableOrdinal++);
+        dag.edge(edge);
+        return edge;
     }
 
-    private static String sinkVertexName(Sink sink) {
-        return "sink." + sink.name();
+    private static String randomSuffix() {
+        String uuid = newUnsecureUUID().toString();
+        return uuid.substring(uuid.length() - 8, uuid.length());
+    }
+
+    private static class PlannerVertex {
+        Vertex v;
+
+        int availableOrdinal;
+
+        PlannerVertex(Vertex v) {
+            this.v = v;
+        }
     }
 }

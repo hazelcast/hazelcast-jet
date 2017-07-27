@@ -25,8 +25,8 @@ import java.util.List;
 public abstract class AbstractPElement implements PElement {
 
     final PipelineImpl pipelineImpl;
-    private final List<PElement> upstream;
-    private final PTransform transform;
+    final List<PElement> upstream;
+    final PTransform transform;
 
     AbstractPElement(List<PElement> upstream, PTransform transform, PipelineImpl pipelineImpl) {
         this.upstream = upstream;
@@ -37,10 +37,6 @@ public abstract class AbstractPElement implements PElement {
     @Override
     public Pipeline getPipeline() {
         return pipelineImpl;
-    }
-
-    public PTransform getTransform() {
-        return transform;
     }
 
     @Override

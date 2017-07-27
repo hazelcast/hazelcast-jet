@@ -73,6 +73,9 @@ public final class TopologicalSorter<V> {
                     .flatMap(List::stream)
                     .collect(toList())
                     .forEach(v -> adjacencyMap.putIfAbsent(v, emptyList()));
+
+        // decorate all the vertices with Tarjan vertices, which hold the
+        // metadata needed by the algorithm
         Map<V, TarjanVertex<V>> tarjanVertices =
                 adjacencyMap.keySet().stream()
                             .map(v -> entry(v, new TarjanVertex<>(v)))
