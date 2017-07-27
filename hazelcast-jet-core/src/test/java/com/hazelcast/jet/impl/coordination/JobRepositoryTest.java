@@ -75,7 +75,7 @@ public class JobRepositoryTest extends JetTestSupport {
     public void when_jobIsCompleted_then_expiredJobIsCleaned() {
         long jobIb = uploadResourcesForNewJob();
         DAG dag = new DAG();
-        jobRepository.newJobRecord(jobIb, dag);
+        jobRepository.newJobRecord(jobIb, dag, jobConfig);
 
         assertFalse(jobRepository.getJobResources(jobIb).isEmpty());
         assertNotNull(jobRepository.getJob(jobIb));
@@ -92,7 +92,7 @@ public class JobRepositoryTest extends JetTestSupport {
     public void when_jobIsRunning_then_expiredJobIsNotCleared() {
         long jobIb = uploadResourcesForNewJob();
         DAG dag = new DAG();
-        jobRepository.newJobRecord(jobIb, dag);
+        jobRepository.newJobRecord(jobIb, dag, jobConfig);
 
         assertFalse(jobRepository.getJobResources(jobIb).isEmpty());
         assertNotNull(jobRepository.getJob(jobIb));
@@ -110,7 +110,7 @@ public class JobRepositoryTest extends JetTestSupport {
         long jobIb = uploadResourcesForNewJob();
 
         DAG dag = new DAG();
-        jobRepository.newJobRecord(jobIb, dag);
+        jobRepository.newJobRecord(jobIb, dag, jobConfig);
 
         assertFalse(jobRepository.getJobResources(jobIb).isEmpty());
         assertNotNull(jobRepository.getJob(jobIb));

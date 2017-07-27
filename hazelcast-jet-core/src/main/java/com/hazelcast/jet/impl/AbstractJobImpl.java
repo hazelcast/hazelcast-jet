@@ -88,7 +88,7 @@ public abstract class AbstractJobImpl implements Job {
 
         jobId = jobRepository.newId();
         jobRepository.uploadJobResources(jobId, config);
-        jobRepository.newJobRecord(jobId, dag);
+        jobRepository.newJobRecord(jobId, dag, config);
 
         ICompletableFuture<Void> invocationFuture = sendJoinJobOp();
         JobCallback callback = new JobCallback(invocationFuture);

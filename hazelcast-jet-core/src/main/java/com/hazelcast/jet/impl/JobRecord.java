@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.execution.init.JetImplDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -28,13 +29,15 @@ public class JobRecord implements IdentifiedDataSerializable {
 
     private long jobId;
     private DAG dag;
+    private JobConfig config;
 
     public JobRecord() {
     }
 
-    public JobRecord(long jobId, DAG dag) {
+    public JobRecord(long jobId, DAG dag, JobConfig config) {
         this.jobId = jobId;
         this.dag = dag;
+        this.config = config;
     }
 
     public long getJobId() {
@@ -43,6 +46,10 @@ public class JobRecord implements IdentifiedDataSerializable {
 
     public DAG getDag() {
         return dag;
+    }
+
+    public JobConfig getConfig() {
+        return config;
     }
 
     @Override
@@ -59,6 +66,7 @@ public class JobRecord implements IdentifiedDataSerializable {
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeLong(jobId);
         dag.writeData(out);
+        out.writeObject(config);
     }
 
     @Override
@@ -66,5 +74,8 @@ public class JobRecord implements IdentifiedDataSerializable {
         jobId = in.readLong();
         dag = new DAG();
         dag.readData(in);
+        config = in.readObject();
     }
+
+
 }

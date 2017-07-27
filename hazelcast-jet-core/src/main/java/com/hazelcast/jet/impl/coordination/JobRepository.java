@@ -82,8 +82,8 @@ public class JobRepository {
         return id;
     }
 
-    public JobRecord newJobRecord(long jobId, DAG dag) {
-        JobRecord jobRecord = new JobRecord(jobId, dag);
+    public JobRecord newJobRecord(long jobId, DAG dag, JobConfig config) {
+        JobRecord jobRecord = new JobRecord(jobId, dag, config);
         IMap<Long, JobRecord> jobRecords = getJobs();
         JobRecord prev = jobRecords.putIfAbsent(jobId, jobRecord);
         if (prev != null) {
