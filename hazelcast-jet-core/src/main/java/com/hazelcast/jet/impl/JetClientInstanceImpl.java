@@ -68,14 +68,14 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     @Override
     public Job newJob(DAG dag) {
         JobImpl job = new JobImpl(dag, new JobConfig());
-        job.initialize();
+        job.init();
         return job;
     }
 
     @Override
     public Job newJob(DAG dag, JobConfig config) {
         JobImpl job = new JobImpl(dag, config);
-        job.initialize();
+        job.init();
         return job;
     }
 
@@ -86,7 +86,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         }
 
         @Override
-        protected ICompletableFuture<Void> sendJoinJobOp() {
+        protected ICompletableFuture<Void> sendJoinRequest() {
             Address masterAddress = getMasterAddress();
             ClientMessage request = JetJoinJobCodec.encodeRequest(getJobId());
             ClientInvocation invocation = new ClientInvocation(client, request, masterAddress);

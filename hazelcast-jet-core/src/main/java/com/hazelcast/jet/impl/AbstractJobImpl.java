@@ -71,7 +71,7 @@ public abstract class AbstractJobImpl implements Job {
         return future;
     }
 
-    protected abstract ICompletableFuture<Void> sendJoinJobOp();
+    protected abstract ICompletableFuture<Void> sendJoinRequest();
 
     @Override
     public long getJobId() {
@@ -81,7 +81,12 @@ public abstract class AbstractJobImpl implements Job {
         return jobId;
     }
 
-    void initialize() {
+    /**
+     * Create the job record and upload all the resources
+     *
+     * Also sends a JoinOp to ensure that the job is started as soon as possible
+     */
+    void init() {
         if (jobId != null) {
             throw new IllegalStateException("Job already started");
         }
@@ -90,7 +95,7 @@ public abstract class AbstractJobImpl implements Job {
         jobRepository.uploadJobResources(jobId, config);
         jobRepository.newJobRecord(jobId, dag, config);
 
-        ICompletableFuture<Void> invocationFuture = sendJoinJobOp();
+        ICompletableFuture<Void> invocationFuture = sendJoinRequest();
         JobCallback callback = new JobCallback(invocationFuture);
         invocationFuture.andThen(callback);
         future.whenComplete((aVoid, throwable) -> {
@@ -118,7 +123,7 @@ public abstract class AbstractJobImpl implements Job {
             if (isRestartable(t)) {
                 synchronized (this) {
                     try {
-                        ICompletableFuture<Void> invocationFuture = sendJoinJobOp();
+                        ICompletableFuture<Void> invocationFuture = sendJoinRequest();
                         this.invocationFuture = invocationFuture;
                         invocationFuture.andThen(this);
                     } catch (Exception e) {
