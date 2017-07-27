@@ -48,6 +48,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.LongSupplier;
 
 import static com.hazelcast.jet.JobStatus.COMPLETED;
 import static com.hazelcast.jet.JobStatus.FAILED;
@@ -92,47 +93,49 @@ public class MasterContext {
         return executionId;
     }
 
-    public CompletableFuture<Boolean> getCompletionFuture() {
+    CompletableFuture<Boolean> completionFuture() {
         return completionFuture;
     }
 
-    public JobStatus getJobStatus() {
+    public JobStatus jobStatus() {
         return jobStatus.get();
     }
 
-    public CompletableFuture<Boolean> start() {
-        if (checkJobStatusForStart()) {
-            return completionFuture;
+    void tryStartJob(LongSupplier idSupplier) {
+        if (!setJobStatusToStarting()) {
+            return;
         }
 
-        executionId = coordinationService.newId();
-
-        logger.info("Start executing " + formatIds(jobId, executionId) + ", status " + getJobStatus()
+        executionId = idSupplier.getAsLong();
+        logger.info("Start executing " + formatIds(jobId, executionId) + ", status " + jobStatus()
                     + ": " + dag);
-        ClusterServiceImpl clusterService = (ClusterServiceImpl) nodeEngine.getClusterService();
-        MembersView membersView = clusterService.getMembershipManager().getMembersView();
+        MembersView membersView = getMembersView();
         logger.fine("Building execution plan for " + formatIds(jobId, executionId));
         try {
             executionPlanMap = coordinationService.createExecutionPlans(membersView, dag);
         } catch (TopologyChangedException e) {
             logger.severe("Execution plans could not be created for " + formatIds(jobId, executionId), e);
             coordinationService.scheduleRestart(jobId);
-            return completionFuture;
+            return;
         }
 
         logger.fine("Built execution plans for " + formatIds(jobId, executionId));
-
         Set<MemberInfo> participants = executionPlanMap.keySet();
-
         Function<ExecutionPlan, Operation> operationCtor = plan ->
                 new InitOperation(jobId, executionId, membersView.getVersion(), participants, plan);
         invoke(operationCtor, this::onInitStepCompleted, null);
-
-        return completionFuture;
     }
 
-    private boolean checkJobStatusForStart() {
-        JobStatus status = getJobStatus();
+    private MembersView getMembersView() {
+        ClusterServiceImpl clusterService = (ClusterServiceImpl) nodeEngine.getClusterService();
+        return clusterService.getMembershipManager().getMembersView();
+    }
+
+    /**
+     * Set jobStatus to starting. Return false if job is already in started state.
+     */
+    private boolean setJobStatusToStarting() {
+        JobStatus status = jobStatus();
         if (status == COMPLETED || status == FAILED) {
             throw new IllegalStateException("Cannot init job " + idToString(jobId) + ": it already is " + status);
         }
@@ -140,13 +143,13 @@ public class MasterContext {
         if (completionFuture.isCancelled()) {
             logger.fine("Skipping init job " + idToString(jobId) + ": is already cancelled.");
             onCompleteStepCompleted(null);
-            return true;
+            return false;
         }
 
         if (status == NOT_STARTED) {
             if (!jobStatus.compareAndSet(NOT_STARTED, STARTING)) {
                 logger.fine("Cannot init job " + idToString(jobId) + ": someone else is just starting it");
-                return true;
+                return false;
             }
 
             jobStartTime = System.currentTimeMillis();
@@ -154,12 +157,12 @@ public class MasterContext {
             jobStatus.compareAndSet(RUNNING, RESTARTING);
         }
 
-        status = getJobStatus();
+        status = jobStatus();
         if (!(status == STARTING || status == RESTARTING)) {
             throw new IllegalStateException("Cannot init job " + idToString(jobId) + ": status is " + status);
         }
 
-        return false;
+        return true;
     }
 
     private void onInitStepCompleted(Map<MemberInfo, Object> responses) {
@@ -210,7 +213,7 @@ public class MasterContext {
     }
 
     private void invokeExecute() {
-        JobStatus status = getJobStatus();
+        JobStatus status = jobStatus();
 
         if (!(status == STARTING || status == RESTARTING)) {
             throw new IllegalStateException("Cannot execute " + formatIds(jobId, executionId)
@@ -254,7 +257,7 @@ public class MasterContext {
     }
 
     private void invokeComplete(Throwable error) {
-        JobStatus status = getJobStatus();
+        JobStatus status = jobStatus();
 
         if (status == NOT_STARTED || status == COMPLETED || status == FAILED) {
             throw new IllegalStateException("Cannot complete " + formatIds(jobId, executionId)
@@ -293,7 +296,7 @@ public class MasterContext {
                                            + " failed in " + elapsed + " ms", failure);
                                }
 
-                               if (getJobStatus() == COMPLETED) {
+                               if (jobStatus() == COMPLETED) {
                                    completionFuture.complete(true);
                                } else {
                                    completionFuture.completeExceptionally(failure);
@@ -321,10 +324,8 @@ public class MasterContext {
                 } catch (Exception e) {
                     val = peel(e);
                 }
-
                 responses.put(entry.getKey(), val);
             }
-
             completionCallback.accept(responses);
         });
 

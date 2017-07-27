@@ -122,7 +122,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 ProcCtx context =
                         new ProcCtx(instance, logger, srcVertex.name(), processorIdx + srcVertex.getProcIdxOffset());
 
-                 String probePrefix = String.format("jet.job.%s.%s#%d", idToString(executionId), srcVertex.name(), processorIdx);
+                 String probePrefix = String.format("jet.job.%s.%s#%d", idToString(executionId), srcVertex.name(),
+                         processorIdx);
                  ((NodeEngineImpl) nodeEngine).getMetricsRegistry().scanAndRegister(p, probePrefix);
 
                 // createOutboundEdgeStreams() populates localConveyorMap and edgeSenderConveyorMap.

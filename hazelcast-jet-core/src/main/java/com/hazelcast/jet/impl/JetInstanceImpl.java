@@ -34,6 +34,9 @@ import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
+/**
+ * Member-side {@code JetInstance} implementation
+ */
 public class JetInstanceImpl extends AbstractJetInstance {
     private final NodeEngine nodeEngine;
     private final JetConfig config;

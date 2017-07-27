@@ -374,7 +374,7 @@ public class TopologyChangeTest extends JetTestSupport {
         assertTrueEventually(new AssertTask() {
             @Override
             public void run() throws Exception {
-                assertEquals(STARTING, masterContext.getJobStatus());
+                assertEquals(STARTING, masterContext.jobStatus());
             }
         });
 

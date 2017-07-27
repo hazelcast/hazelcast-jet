@@ -138,8 +138,8 @@ public class JobExecutionService {
             executionContexts.values().stream()
                     .filter(e -> e.getJobId() == jobId)
                     .forEach(e -> logger.fine("Execution context for " + formatIds(jobId, executionId)
-                            + " for coordinator " + coordinator + " already exists with local execution " + idToString(e.getJobId())
-                            + " for coordinator " + e.getCoordinator()));
+                            + " for coordinator " + coordinator + " already exists with local execution " +
+                            idToString(e.getJobId()) + " for coordinator " + e.getCoordinator()));
 
             throw new RetryableHazelcastException();
         }

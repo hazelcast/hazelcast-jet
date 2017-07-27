@@ -47,6 +47,9 @@ import java.util.concurrent.TimeoutException;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.Util.idToString;
 
+/**
+ * Client-side {@code JetInstance} implementation
+ */
 public class JetClientInstanceImpl extends AbstractJetInstance {
 
     private final HazelcastClientInstanceImpl client;

@@ -113,7 +113,8 @@ public class JobCoordinationService {
         try {
             JobResult jobResult = jobResults.get(jobId);
             if (jobResult != null) {
-                logger.fine("Not starting job " + idToString(jobId) + " since already completed -> " + jobResult);
+                logger.fine("Not starting job " + idToString(jobId) + " since already completed with result: " +
+                        jobResult);
                 return jobResult.asCompletableFuture();
             }
 
@@ -123,22 +124,22 @@ public class JobCoordinationService {
             }
 
             masterContext = new MasterContext(nodeEngine, this, jobId, jobRecord.getDag());
-            MasterContext previousMasterContext = masterContexts.putIfAbsent(jobId, masterContext);
-            if (previousMasterContext != null) {
-                return previousMasterContext.getCompletionFuture();
+            MasterContext prev = masterContexts.putIfAbsent(jobId, masterContext);
+            if (prev != null) {
+                return prev.completionFuture();
             }
         } finally {
             lock.unlock();
         }
 
         logger.info("Starting new job " + idToString(jobId));
-        return masterContext.start();
+        masterContext.tryStartJob(jobRepository::newId);
+        return masterContext.completionFuture();
     }
 
     private boolean tryLock() {
         try {
             return lock.tryLock(LOCK_ACQUIRE_ATTEMPT_TIMEOUT_IN_MILLIS, MILLISECONDS);
-
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return false;
@@ -148,7 +149,7 @@ public class JobCoordinationService {
     public JobStatus getJobStatus(long jobId) {
         MasterContext currentMasterContext = masterContexts.get(jobId);
         if (currentMasterContext != null) {
-            return currentMasterContext.getJobStatus();
+            return currentMasterContext.jobStatus();
         }
 
         JobRecord jobRecord = jobRepository.getJob(jobId);
@@ -162,10 +163,6 @@ public class JobCoordinationService {
         } else {
             return JobStatus.NOT_STARTED;
         }
-    }
-
-    long newId() {
-        return jobRepository.newId();
     }
 
     void scheduleRestart(long jobId) {
@@ -236,7 +233,7 @@ public class JobCoordinationService {
 
         MasterContext masterContext = masterContexts.get(jobId);
         if (masterContext != null) {
-            masterContext.start();
+            masterContext.tryStartJob(jobRepository::newId);
         } else {
             logger.severe("Master context for job " + idToString(jobId) + " not found to restart");
         }
