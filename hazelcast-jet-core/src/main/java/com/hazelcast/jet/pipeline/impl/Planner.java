@@ -17,6 +17,8 @@
 package com.hazelcast.jet.pipeline.impl;
 
 import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.pipeline.Sink;
+import com.hazelcast.jet.pipeline.Source;
 import com.hazelcast.jet.pipeline.impl.processor.CoGroupP;
 import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
 import com.hazelcast.jet.pipeline.impl.transform.MapTransform;
@@ -24,6 +26,7 @@ import com.hazelcast.jet.pipeline.impl.transform.PTransform;
 import com.hazelcast.jet.processor.Processors;
 import com.hazelcast.jet.processor.Sinks;
 import com.hazelcast.jet.processor.Sources;
+import com.hazelcast.util.UuidUtil;
 
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
 
@@ -44,19 +47,31 @@ public class Planner {
             PTransform transform = pel.getTransform();
             if (transform instanceof SourceImpl) {
                 SourceImpl source = (SourceImpl) transform;
-                dag.newVertex("source", Sources.readMap(source.name()));
+                dag.newVertex(sourceVertexName(source), Sources.readMap(source.name()));
             } else if (transform instanceof MapTransform) {
                 MapTransform mapTransform = (MapTransform) transform;
-                dag.newVertex("map", Processors.map(mapTransform.mapF));
+                dag.newVertex(newVertexName("map"), Processors.map(mapTransform.mapF));
             } else if (transform instanceof CoGroupTransform) {
                 CoGroupTransform coGroup = (CoGroupTransform) transform;
                 dag.newVertex("co-group", () -> new CoGroupP<>(
                         coGroup.groupKeyFns(), coGroup.aggregateOperation(), coGroup.tags()));
             } else if (transform instanceof SinkImpl) {
                 SinkImpl sink = (SinkImpl) transform;
-                dag.newVertex("sink", Sinks.writeMap(sink.name()));
+                dag.newVertex(sinkVertexName(sink), Sinks.writeMap(sink.name()));
             }
         }
         return dag;
+    }
+
+    private static String newVertexName(String prefix) {
+        return prefix + '.' + (UuidUtil.newUnsecureUUID().toString().substring(8));
+    }
+
+    private static String sourceVertexName(Source source) {
+        return "source." + source.name();
+    }
+
+    private static String sinkVertexName(Sink sink) {
+        return "sink." + sink.name();
     }
 }

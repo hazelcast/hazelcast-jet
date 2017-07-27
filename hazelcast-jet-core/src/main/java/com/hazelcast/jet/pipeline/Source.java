@@ -19,5 +19,5 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.pipeline.impl.transform.PTransform;
 
 public interface Source<E> extends PTransform {
-
+    String name();
 }
