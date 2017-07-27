@@ -36,7 +36,6 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
@@ -92,10 +91,8 @@ public class JobExecutionService {
     }
 
     Map<Integer, Map<Integer, Map<Address, SenderTasklet>>> getSenderMap(long executionId) {
-        return Optional.ofNullable(executionContexts)
-                .map(exeCtxs -> exeCtxs.get(executionId))
-                .map(ExecutionContext::senderMap)
-                .orElse(null);
+        ExecutionContext ctx = executionContexts.get(executionId);
+        return ctx != null ? ctx.senderMap() : null;
     }
 
     void onMemberLeave(Address address) {
@@ -104,7 +101,7 @@ public class JobExecutionService {
                 .filter(exeCtx -> exeCtx.isCoordinatorOrParticipating(address))
                 .forEach(exeCtx -> {
                     String message = "Completing " + formatIds(exeCtx.getJobId(), exeCtx.getExecutionId())
-                            + " locally. Reason: " + address + " left...";
+                            + " locally. Reason: " + address + " left the cluster";
                     cancelAndComplete(exeCtx, message, new TopologyChangedException("Topology has been changed"));
                 });
     }
