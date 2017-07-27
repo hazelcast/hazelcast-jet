@@ -49,26 +49,16 @@ public abstract class AbstractJobImpl implements Job {
         this.config = config;
     }
 
-    public void execute() {
-        if (jobId != null) {
-            throw new IllegalStateException("Job already started");
-        }
+    @Nonnull
+    @Override
+    public JobConfig getConfig() {
+        return config;
+    }
 
-        jobId = jobRepository.newId();
-        jobRepository.uploadJobResources(jobId, config);
-        jobRepository.newJobRecord(jobId, dag);
-
-        dag = null;
-        config = null;
-
-        ICompletableFuture<Void> invocationFuture = sendJoinJobOp();
-        JobCallback callback = new JobCallback(invocationFuture);
-        invocationFuture.andThen(callback);
-        future.whenComplete((aVoid, throwable) -> {
-            if (throwable instanceof CancellationException) {
-                callback.cancel();
-            }
-        });
+    @Nonnull
+    @Override
+    public DAG getDAG() {
+        return dag;
     }
 
     @Nonnull
@@ -89,6 +79,25 @@ public abstract class AbstractJobImpl implements Job {
             throw new IllegalStateException("ID not yet assigned");
         }
         return jobId;
+    }
+
+    void initialize() {
+        if (jobId != null) {
+            throw new IllegalStateException("Job already started");
+        }
+
+        jobId = jobRepository.newId();
+        jobRepository.uploadJobResources(jobId, config);
+        jobRepository.newJobRecord(jobId, dag);
+
+        ICompletableFuture<Void> invocationFuture = sendJoinJobOp();
+        JobCallback callback = new JobCallback(invocationFuture);
+        invocationFuture.andThen(callback);
+        future.whenComplete((aVoid, throwable) -> {
+            if (throwable instanceof CancellationException) {
+                callback.cancel();
+            }
+        });
     }
 
     private class JobCallback implements ExecutionCallback<Void> {

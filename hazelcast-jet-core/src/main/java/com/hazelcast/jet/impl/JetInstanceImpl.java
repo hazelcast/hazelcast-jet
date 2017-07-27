@@ -30,6 +30,8 @@ import com.hazelcast.spi.InternalCompletableFuture;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.Operation;
 
+import javax.annotation.Nonnull;
+
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
 public class JetInstanceImpl extends AbstractJetInstance {
@@ -50,14 +52,14 @@ public class JetInstanceImpl extends AbstractJetInstance {
     @Override
     public Job newJob(DAG dag) {
         JobImpl job = new JobImpl(dag, new JobConfig());
-        job.execute();
+        job.initialize();
         return job;
     }
 
     @Override
     public Job newJob(DAG dag, JobConfig config) {
         JobImpl job = new JobImpl(dag, config);
-        job.execute();
+        job.initialize();
         return job;
     }
 
@@ -76,7 +78,7 @@ public class JetInstanceImpl extends AbstractJetInstance {
                                       .invoke();
         }
 
-        @Override
+        @Nonnull @Override
         public JobStatus getJobStatus() {
             try {
                 Operation op = new GetJobStatusOperation(getJobId());

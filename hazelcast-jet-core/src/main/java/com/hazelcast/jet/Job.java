@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet;
 
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.util.Util;
 
 import javax.annotation.Nonnull;
@@ -36,6 +37,8 @@ public interface Job {
 
     /**
      * Attempts to cancel execution of this job.
+     *
+     * Shorthand for <code>job.getFuture().cancel()</code>
      */
     default boolean cancel() {
         return getFuture().cancel(true);
@@ -51,8 +54,20 @@ public interface Job {
     }
 
     /**
+     * Gets the future associated with the job.
+     *
+     * @return a future that can be inspected for job completion status and cancelled to prematurely end the job.
+     *
+     * @deprecated Use {@link #getFuture()} instead. This method will be removed in the next release.
+     */
+    @Deprecated
+    default Future<Void> execute() {
+        return getFuture();
+    }
+    /**
      * Returns the status of this job.
      */
+    @Nonnull
     JobStatus getJobStatus();
 
     /**
@@ -62,5 +77,17 @@ public interface Job {
      *                               has no job id.
      */
     long getJobId();
+
+    /**
+     * Returns the config associated with this job
+     */
+    @Nonnull
+    JobConfig getConfig();
+
+    /**
+     * Returns the DAG associated with this job
+     */
+    @Nonnull
+    DAG getDAG();
 
 }

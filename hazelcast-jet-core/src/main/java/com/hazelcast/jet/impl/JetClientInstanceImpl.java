@@ -68,14 +68,14 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     @Override
     public Job newJob(DAG dag) {
         JobImpl job = new JobImpl(dag, new JobConfig());
-        job.execute();
+        job.initialize();
         return job;
     }
 
     @Override
     public Job newJob(DAG dag, JobConfig config) {
         JobImpl job = new JobImpl(dag, config);
-        job.execute();
+        job.initialize();
         return job;
     }
 
@@ -93,7 +93,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
             return new ExecutionFuture(invocation.invoke(), getJobId(), masterAddress);
         }
 
-        @Override
+        @Nonnull @Override
         public JobStatus getJobStatus() {
             Address masterAddress = getMasterAddress();
             ClientMessage request = JetGetJobStatusCodec.encodeRequest(getJobId());
