@@ -38,6 +38,7 @@ import static com.hazelcast.jet.impl.util.Util.createObjectDataInput;
 import static com.hazelcast.jet.impl.util.Util.createObjectDataOutput;
 import static com.hazelcast.jet.impl.util.Util.getMemberConnection;
 import static com.hazelcast.jet.impl.util.Util.getRemoteMembers;
+import static com.hazelcast.jet.impl.util.Util.idToString;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static com.hazelcast.nio.Packet.FLAG_JET_FLOW_CONTROL;
 import static com.hazelcast.nio.Packet.FLAG_URGENT;
@@ -137,12 +138,12 @@ public class Networking {
 
         final int executionCtxCount = in.readInt();
         for (int j = 0; j < executionCtxCount; j++) {
-            final long exeCtxId = in.readLong();
+            final long executionId = in.readLong();
             final Map<Integer, Map<Integer, Map<Address, SenderTasklet>>> senderMap
-                    = jobExecutionService.getSenderMap(exeCtxId);
+                    = jobExecutionService.getSenderMap(executionId);
 
             if (senderMap == null) {
-                logMissingExeCtx(exeCtxId);
+                logMissingExeCtx(executionId);
                 continue;
             }
             final int flowCtlMsgCount = in.readInt();
@@ -163,10 +164,10 @@ public class Networking {
         }
     }
 
-    private void logMissingExeCtx(long exeCtxId) {
+    private void logMissingExeCtx(long executionId) {
         if (logger.isFinestEnabled()) {
             logger.finest("Ignoring flow control message applying to non-existent execution context "
-                    + exeCtxId);
+                    + idToString(executionId));
         }
     }
 
