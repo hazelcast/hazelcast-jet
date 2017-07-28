@@ -32,7 +32,6 @@ import org.junit.runner.RunWith;
 
 import java.util.Properties;
 
-import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_EXPIRATION_DURATION;
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
@@ -59,11 +58,11 @@ public class JobRepositoryTest extends JetTestSupport {
     public void setup() {
         JetConfig config = new JetConfig();
         Properties properties = config.getProperties();
-        properties.setProperty(JOB_EXPIRATION_DURATION.getName(), Long.toString(JOB_EXPIRATION_TIME_IN_MILLIS));
         properties.setProperty(JOB_SCAN_PERIOD.getName(), Long.toString(JOB_SCAN_PERIOD_IN_MILLIS));
 
         instance = factory.newMember(config);
         jobRepository = new JobRepository(instance);
+        jobRepository.setJobExpirationDurationInMillis(JOB_EXPIRATION_TIME_IN_MILLIS);
     }
 
     @After

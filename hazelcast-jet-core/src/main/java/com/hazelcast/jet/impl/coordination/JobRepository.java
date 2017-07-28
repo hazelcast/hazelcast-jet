@@ -22,14 +22,12 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.nio.IOUtil;
-import com.hazelcast.spi.properties.HazelcastProperties;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -47,28 +45,29 @@ import java.util.zip.DeflaterOutputStream;
 import static com.hazelcast.jet.config.JetConfig.IDS_MAP_NAME;
 import static com.hazelcast.jet.config.JetConfig.JOB_RECORDS_MAP_NAME;
 import static com.hazelcast.jet.config.JetConfig.RESOURCES_MAP_NAME_PREFIX;
-import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_EXPIRATION_DURATION;
 import static com.hazelcast.jet.impl.util.Util.idToString;
+import static java.util.concurrent.TimeUnit.HOURS;
 
 public class JobRepository {
 
     static final String RESOURCE_MARKER = "__jet.jobId";
+    private static final long JOB_EXPIRATION_DURATION_IN_MILLIS = HOURS.toMillis(2);
 
     // TODO [basri] there is no cleanup for ids yet
 
     private final HazelcastInstance instance;
-    private final JetConfig config;
     private final IMap<Long, Long> jobIds;
     private final IMap<Long, JobRecord> jobs;
-    private final long jobExpirationDurationInMillis;
+    private long jobExpirationDurationInMillis = JOB_EXPIRATION_DURATION_IN_MILLIS;
 
     public JobRepository(JetInstance jetInstance) {
         this.instance = jetInstance.getHazelcastInstance();
-        this.config = jetInstance.getConfig();
         this.jobIds = instance.getMap(IDS_MAP_NAME);
         this.jobs = instance.getMap(JOB_RECORDS_MAP_NAME);
-        HazelcastProperties properties = new HazelcastProperties(config.getProperties());
-        this.jobExpirationDurationInMillis = properties.getMillis(JOB_EXPIRATION_DURATION);
+    }
+
+    void setJobExpirationDurationInMillis(long jobExpirationDurationInMillis) {
+        this.jobExpirationDurationInMillis = jobExpirationDurationInMillis;
     }
 
     /**

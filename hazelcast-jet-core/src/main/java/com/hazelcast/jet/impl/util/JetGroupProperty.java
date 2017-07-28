@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.util;
 
 import com.hazelcast.spi.properties.HazelcastProperty;
 
-import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -27,15 +26,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  */
 public final class JetGroupProperty {
 
-
     public static final HazelcastProperty JOB_SCAN_PERIOD
             = new HazelcastProperty("jet.job.scan.period", SECONDS.toMillis(1), MILLISECONDS);
-
-    /**
-     * If a job is not run before the job expiration duration passes, it is cleaned up.
-     */
-    public static final HazelcastProperty JOB_EXPIRATION_DURATION
-            = new HazelcastProperty("jet.job.expiration.duration", HOURS.toMillis(2), MILLISECONDS);
 
     private JetGroupProperty() {
     }
