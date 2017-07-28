@@ -20,6 +20,7 @@ import com.hazelcast.core.PartitionAware;
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.SnapshotStorage;
+import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
@@ -49,7 +50,7 @@ import static java.util.Collections.emptyMap;
  * @param <A> type of the frame accumulator object
  * @param <R> type of the finished result
  */
-public class SlidingWindowP<T, A, R> extends AbstractProcessor {
+public class SlidingWindowP<T, A, R> extends AbstractProcessor implements Snapshottable {
 
     // package-visible for testing
     final Map<Long, Map<Object, A>> tsToKeyToAcc = new HashMap<>();
@@ -198,8 +199,8 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     }
 
     @Override
-    public StateType getStateType() {
-        return StateType.PARTITIONED;
+    public boolean isPartitionedSnapshot() {
+        return true;
     }
 
     @Override
@@ -229,7 +230,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         topTs = Math.max(topTs, k.getKey());
     }
 
-    private static class SnapshotKey implements PartitionAware<Object> {
+    private final static class SnapshotKey implements PartitionAware<Object> {
         final long timestamp;
         final Object key;
 

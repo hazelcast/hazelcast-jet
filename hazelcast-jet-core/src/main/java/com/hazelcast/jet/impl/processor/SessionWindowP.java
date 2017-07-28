@@ -20,6 +20,7 @@ import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.Session;
 import com.hazelcast.jet.SnapshotStorage;
+import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Watermark;
@@ -66,7 +67,7 @@ import static java.lang.System.arraycopy;
  * @param <A> type of the accumulator object
  * @param <R> type of the finished result
  */
-public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
+public class SessionWindowP<T, K, A, R> extends AbstractProcessor implements Snapshottable {
     private static final Watermark COMPLETING_WM = new Watermark(Long.MAX_VALUE);
 
     // exposed for testing, to check for memory leaks
@@ -175,15 +176,15 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
     }
 
     @Override
-    public StateType getStateType() {
-        return StateType.PARTITIONED;
+    public boolean isPartitionedSnapshot() {
+        return true;
     }
 
-    void addEvent(Windows<A> w, K key, long timestamp, T event) {
+    private void addEvent(Windows<A> w, K key, long timestamp, T event) {
         accumulateF.accept(resolveAcc(w, key, timestamp), event);
     }
 
-    List<Session<K, R>> closeWindows(Windows<A> w, K key, long wm) {
+    private List<Session<K, R>> closeWindows(Windows<A> w, K key, long wm) {
         List<Session<K, R>> sessions = new ArrayList<>();
         int i = 0;
         for (; i < w.size && w.ends[i] < wm; i++) {

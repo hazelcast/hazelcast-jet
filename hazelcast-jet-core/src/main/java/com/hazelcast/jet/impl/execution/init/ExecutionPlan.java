@@ -24,6 +24,7 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorSupplier;
+import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.BlockingProcessorTasklet;
@@ -124,7 +125,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
             // create StoreSnapshotTasklet and the queues to it
             QueuedPipe<Object>[] queues = null;
-            final boolean savesSnapshot = processors.iterator().next().getStateType() != Processor.StateType.STATELESS;
+            final boolean savesSnapshot = processors.iterator().next() instanceof Snapshottable;
             if (savesSnapshot) {
                 queues = new QueuedPipe[srcVertex.parallelism()];
                 for (int i = 0; i < queues.length; i++) {

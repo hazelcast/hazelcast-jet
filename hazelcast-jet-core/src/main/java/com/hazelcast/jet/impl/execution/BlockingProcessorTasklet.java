@@ -102,15 +102,11 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
             return true;
         }
 
-        void add(@Nonnull Object item) {
-            boolean accepted = outbox.offer(item);
-            assert accepted : "Blocking outbox refused an item: " + item;
-        }
-
         private void submit(OutboundEdgeStream outstream, @Nonnull Object item) {
             OutboundCollector collector = outstream.getCollector();
             for (long idleCount = 0; ;) {
-                ProgressState result = (item instanceof Watermark || item instanceof DoneItem || item instanceof SnapshotBarrier)
+                ProgressState result = (item instanceof Watermark || item instanceof DoneItem
+                            || item instanceof SnapshotBarrier)
                         ? collector.offerBroadcast(item)
                         : collector.offer(item);
                 if (result.isDone()) {

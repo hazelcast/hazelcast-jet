@@ -16,12 +16,9 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.query.Predicate;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -143,79 +140,6 @@ public interface Processor {
     }
 
     /**
-     * Returns true, if the processor has state to save to snapshot. All
-     * processors on the same vertex must always return the same value.
-     */
-    default StateType getStateType() {
-        return StateType.STATELESS;
-    }
-
-    /**
-     * Store the state to the snapshot. Return {@code true}, if done, or {@code
-     * false}, if the method should be called again. Method is allowed to add
-     * items to outbox during this call.
-     * <p>
-     * The method will never be called, if the inbox is not empty after the
-     * {@link #process(int, Inbox)} method returns.
-     * After the inbox is done (this includes source processors), the method
-     * can be called anytime between {@link #complete()} calls. If a processor
-     * never returns from {@link #complete()} (which is allowed for
-     * non-cooperative processors), method will never be called.
-     * <p>
-     * Snapshot method will always be called on the same thread as other
-     * processing methods, so no synchronization is necessary.
-     * <p>
-     * If the processor {@link #isCooperative() is cooperative}, this method
-     * must also be cooperative. Calling {@code storage} satisfies this
-     * condition.
-     * <p>
-     * If {@code false} is returned, the method will be called again before any
-     * other methods are called.
-     * <p>
-     * After {@link #complete()} returned {@code true}, this method won't be
-     * called anymore.
-     */
-    default boolean saveSnapshot(SnapshotStorage storage) {
-        if (getStateType() != StateType.STATELESS) {
-            throw new JetException("saveSnapshot() must be overridden for stateful processors");
-        }
-        return true;
-    }
-
-    /**
-     * Returns the predicate to use when restoring snapshot. Only used if
-     * {@link #getStateType()} is {@link StateType#BROADCAST}.
-     */
-    @Nullable
-    default Predicate getSnapshotPredicate() {
-        return null;
-    }
-
-    /**
-     * Apply a key from a snapshot to processor’s internal state.
-     */
-    default void restoreSnapshotKey(Object key, Object value) {
-        throw new JetException("restoreSnapshotKey not overridden");
-    }
-
-    /**
-     * Called after all keys have been restored using {@link
-     * #restoreSnapshotKey(Object, Object)}.
-     */
-    default void finishSnapshotRestore() {
-    }
-
-    /**
-     * Clear entire state, that might have been restored using {@link
-     * #restoreSnapshotKey(Object, Object)}.
-     * <p>
-     * This will be used, if partition migration took place during restoring,
-     * in which case the process has to be started over.
-     */
-    default void clearState() {
-    }
-
-    /**
      * Context passed to the processor in the
      * {@link #init(Outbox, Processor.Context) init()} call.
      */
@@ -275,38 +199,5 @@ public interface Processor {
          * Returns true, if snapshots will be saved for this job.
          */
         boolean snapshottingEnabled();
-    }
-
-    /**
-     * Processor state types.
-     */
-    enum StateType {
-        /**
-         * The processor has no state to store to snapshot. The {@link
-         * #saveSnapshot(SnapshotStorage)} and {@link #restoreSnapshotKey(
-         * Object, Object)} methods will never be called.
-         */
-        STATELESS,
-
-        /**
-         * The processor must be preceded with a {@link Edge#distributed()
-         * distributed} and {@link Edge#partitioned(DistributedFunction)
-         * partitioned} edge using default partitioner and partitioned by the
-         * same key as is used in snapshot.
-         * <p>
-         * Correct keys will be restored to each processor and saving and
-         * restoring the snapshot will be done locally (unless the
-         * partitioning in the HZ map changed since the job started), except
-         * for the backup copies of the snapshot.
-         */
-        PARTITIONED,
-
-        /**
-         * Entire snapshot will be restored to all processor instances. To
-         * limit the traffic, use {@link #getSnapshotPredicate()}. Use this
-         * option, if partitions of keys in the snapshot don't match the
-         * Hazelcast partitions of this processor.
-         */
-        BROADCAST
     }
 }

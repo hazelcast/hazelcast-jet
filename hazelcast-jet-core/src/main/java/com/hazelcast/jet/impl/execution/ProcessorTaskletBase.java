@@ -20,6 +20,7 @@ import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.SnapshotStorage;
+import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.CircularListCursor;
@@ -48,10 +49,11 @@ import static java.util.stream.Collectors.toCollection;
 public abstract class ProcessorTaskletBase implements Tasklet {
 
     final ProgressTracker progTracker = new ProgressTracker();
-    final Processor processor;
     final OutboundEdgeStream[] outstreams;
-    InboundEdgeStream currInstream;
     Outbox outbox;
+    private final Processor processor;
+    private final Snapshottable snapshottable;
+    private InboundEdgeStream currInstream;
 
     private final ProcCtx context;
     private final ArrayDequeInbox inbox = new ArrayDequeInbox(progTracker);
@@ -76,6 +78,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         Preconditions.checkNotNull(processor, "processor");
         this.context = context;
         this.processor = processor;
+        this.snapshottable = processor instanceof Snapshottable ? (Snapshottable) processor : null;
         this.instreamGroupQueue = instreams
                 .stream()
                 .collect(groupingBy(InboundEdgeStream::priority, TreeMap::new, toCollection(ArrayList::new)))
@@ -149,7 +152,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         }
 
         if (state == ProcessorState.STATE_DO_SNAPSHOT) {
-            if (processor.saveSnapshot(snapshotStorage)) {
+            if (snapshottable.saveSnapshot(snapshotStorage)) {
                 state = ProcessorState.STATE_SNAPSHOT_BARRIER_TO_SNAPSHOT_QUEUE;
             } else {
                 progTracker.notDone();
@@ -206,8 +209,8 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                     progTracker.notDone();
                 }
             } else {
-                if (!inbox().isEmpty()) {
-                    processor.process(currInstream.ordinal(), inbox());
+                if (!inbox.isEmpty()) {
+                    processor.process(currInstream.ordinal(), inbox);
                 }
                 if (inbox.isEmpty()) {
                     state = ProcessorState.STATE_START_SNAPSHOT;
@@ -236,17 +239,13 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         return progTracker.toProgressState();
     }
 
-    Inbox inbox() {
-        return inbox;
-    }
-
     @Override
     public void init(CompletableFuture<Void> jobFuture) {
         context.initJobFuture(jobFuture);
         processor.init(outbox, context);
     }
 
-    void tryFillInbox() {
+    private void tryFillInbox() {
         if (instreamCursor == null) {
             return;
         }
@@ -292,42 +291,45 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         STATE_START_SNAPSHOT,
 
         /**
-         * Doing calls to {@link Processor#saveSnapshot(SnapshotStorage)} until it returns true
+         * Doing calls to {@link Snapshottable#saveSnapshot(SnapshotStorage)} until
+         * it returns true.
          */
         STATE_DO_SNAPSHOT,
 
         /**
-         * Waiting to accept the {@link SnapshotBarrier} by the queue
+         * Waiting to accept the {@link SnapshotBarrier} by the queue.
          */
         STATE_SNAPSHOT_BARRIER_TO_OUTBOX,
 
         /**
-         * Waiting to accept the {@link SnapshotBarrier} by the {@link #snapshotQueue}
+         * Waiting to accept the {@link SnapshotBarrier} by the {@link
+         * #snapshotQueue}.
          */
         STATE_SNAPSHOT_BARRIER_TO_SNAPSHOT_QUEUE,
 
         /**
-         * Doing calls to {@link Processor#tryProcess()} until it returns true
+         * Doing calls to {@link Processor#tryProcess()} until it returns true.
          */
         STATE_NULLARY_PROCESS,
 
         /**
-         * Doing calls to {@link Processor#process(int, Inbox)} until the inbox is empty or to {@link Processor#complete()} until it returns true
+         * Doing calls to {@link Processor#process(int, Inbox)} until the inbox is
+         * empty or to {@link Processor#complete()} until it returns true.
          */
         STATE_PROCESS_OR_COMPLETE,
 
         /**
-         * Waiting until outbox accepts DONE_ITEM
+         * Waiting until outbox accepts DONE_ITEM.
          */
         STATE_ADD_DONE_ITEM_OUTBOX,
 
         /**
-         * Waiting until snapshot storage accepts DONE_ITEM
+         * Waiting until snapshot storage accepts DONE_ITEM.
          */
         STATE_ADD_DONE_ITEM_SNAPSHOT,
 
         /**
-         * waiting to flush the outbox. This is a terminal state
+         * waiting to flush the outbox. This is a terminal state.
          */
         STATE_PROCESSOR_COMPLETED
     }
