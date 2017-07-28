@@ -60,7 +60,7 @@ public class CoGroupBuilder<K, E_LEFT> {
         List<PStream> upstream = orderedClauses()
                 .map(e -> e.getValue().pstream())
                 .collect(toList());
-        CoGroupTransform<K, A, R> transform = new CoGroupTransform<>(orderedClauses()
+        CoGroupTransform<K, A, R> transform = new CoGroupTransform<K, A, R>(orderedClauses()
                 .map(e -> e.getValue().groupKeyF())
                 .collect(toList()),
                 aggrOp,

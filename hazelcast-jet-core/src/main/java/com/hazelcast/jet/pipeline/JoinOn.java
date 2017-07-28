@@ -18,10 +18,12 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.function.DistributedFunction;
 
+import java.io.Serializable;
+
 /**
  * Javadoc pending.
  */
-public class JoinOn<K, E_LEFT, E_RIGHT> {
+public class JoinOn<K, E_LEFT, E_RIGHT> implements Serializable {
     private final DistributedFunction<E_LEFT, K> leftKeyFn;
     private final DistributedFunction<E_RIGHT, K> rightKeyFn;
 

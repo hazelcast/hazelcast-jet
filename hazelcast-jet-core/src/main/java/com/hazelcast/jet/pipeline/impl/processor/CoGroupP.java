@@ -26,6 +26,7 @@ import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
 
@@ -34,12 +35,12 @@ import static com.hazelcast.jet.Traversers.traverseIterable;
  */
 @SuppressWarnings("unchecked")
 public class CoGroupP<K, A, R> extends AbstractProcessor {
-    private final List<DistributedFunction<Object, ? extends K>> groupKeyFns;
+    private final List<DistributedFunction<?, ? extends K>> groupKeyFns;
     private final AggregateOperation<A, R> aggrOp;
     private final List<Tag> tags;
     private final Map<K, A> keyToAcc = new HashMap<>();
 
-    public CoGroupP(List<DistributedFunction<Object, ? extends K>> groupKeyFns,
+    public CoGroupP(List<DistributedFunction<?, ? extends K>> groupKeyFns,
                     AggregateOperation<A, R> aggrOp,
                     List<Tag> tags
     ) {
@@ -50,7 +51,9 @@ public class CoGroupP<K, A, R> extends AbstractProcessor {
 
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-        K key = groupKeyFns.get(ordinal).apply(item);
+        System.out.println("CoGroupP recv #" + ordinal + ": " + item);
+        Function<Object, ? extends K> keyF = (Function<Object, ? extends K>) groupKeyFns.get(ordinal);
+        K key = keyF.apply(item);
         A acc = keyToAcc.computeIfAbsent(key, k -> aggrOp.createAccumulatorF().get());
         aggrOp.accumulateItemF(tags.get(ordinal))
               .accept(acc, item);

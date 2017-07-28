@@ -16,6 +16,9 @@
 
 package com.hazelcast.jet.pipeline.samples;
 
+import com.hazelcast.core.IMap;
+import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.pipeline.CoGroupBuilder;
 import com.hazelcast.jet.pipeline.JoinBuilder;
@@ -30,28 +33,80 @@ import com.hazelcast.jet.pipeline.tuple.Tuple2;
 import com.hazelcast.jet.pipeline.tuple.Tuple3;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
+import java.io.Serializable;
 import java.util.Map.Entry;
 
+import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.pipeline.JoinOn.onKeys;
 
 @SuppressFBWarnings("DLS_DEAD_LOCAL_STORE")
 public class PipelineJoinAndCoGroup {
 
+    private static final String TRADES = "trades";
+    private static final String PRODUCTS = "products";
+    private static final String BROKERS = "brokers";
+    private static final String RESULT = "result";
+    private static final String RESULT_BROKER = "result_broker";
+
+    private final JetInstance jet;
     private Pipeline p = Pipeline.create();
-    private PStream<Trade> trades = p.drawFrom(Sources.<Integer, Trade>readMap("trades"))
+    private PStream<Trade> trades = p.drawFrom(Sources.<Integer, Trade>readMap(TRADES))
                                      .map(Entry::getValue);
-    private PStream<Product> products = p.drawFrom(Sources.<Integer, Product>readMap("products"))
+    private PStream<Product> products = p.drawFrom(Sources.<Integer, Product>readMap(PRODUCTS))
                                          .map(Entry::getValue);
-    private PStream<Broker> brokers = p.drawFrom(Sources.<Integer, Broker>readMap("brokers"))
+    private PStream<Broker> brokers = p.drawFrom(Sources.<Integer, Broker>readMap(BROKERS))
                                        .map(Entry::getValue);
 
+    private PipelineJoinAndCoGroup(JetInstance jet) {
+        this.jet = jet;
+    }
 
-    public static void main(String[] args) {
-        PipelineJoinAndCoGroup sample = new PipelineJoinAndCoGroup();
-        sample.coGroupBuild().drainTo(Sinks.writeMap("map"));
-        // This line added to test multiple outputs from a PElement
-        sample.trades.map(Trade::brokerId).drainTo(Sinks.writeMap("brokerId"));
-        System.out.println(sample.p.toDag());
+    public static void main(String[] args) throws Exception {
+        JetInstance jet = Jet.newJetInstance();
+        PipelineJoinAndCoGroup sample = new PipelineJoinAndCoGroup(jet);
+        try {
+            sample.prepareSampleData();
+            System.out.println("HZ instance: " + jet.getHazelcastInstance().getName());
+            printImap(jet.getMap(PRODUCTS));
+            printImap(jet.getMap(BROKERS));
+            printImap(jet.getMap(TRADES));
+            sample.coGroupDirect().drainTo(Sinks.writeMap(RESULT));
+            // This line added to test multiple outputs from a PElement
+            sample.trades.map(t -> entry(t.brokerId, t)).drainTo(Sinks.writeMap(RESULT_BROKER));
+
+            sample.p.execute(jet).get();
+
+            printImap(jet.getMap(RESULT));
+            printImap(jet.getMap(RESULT_BROKER));
+        } finally {
+            Jet.shutdownAll();
+        }
+    }
+
+    public static <K, V> void printImap(IMap<K, V> imap) {
+        StringBuilder sb = new StringBuilder();
+        System.out.println(imap.getName() + ':');
+        imap.forEach((k, v) -> sb.append(k).append("->").append(v).append('\n'));
+        System.out.println(sb);
+    }
+
+    private void prepareSampleData() {
+        IMap<Integer, Product> productMap = jet.getMap(PRODUCTS);
+        IMap<Integer, Broker> brokerMap = jet.getMap(BROKERS);
+        IMap<Integer, Trade> tradeMap = jet.getMap(TRADES);
+
+        int productId = 21;
+        int brokerId = 31;
+        int tradeId = 1;
+        for (int classId = 11; classId < 13; classId++) {
+            for (int i = 0; i < 2; i++) {
+                productMap.put(productId, new Product(classId, productId));
+                brokerMap.put(brokerId, new Broker(classId, brokerId));
+                tradeMap.put(tradeId++, new Trade(classId, productId, brokerId));
+                productId++;
+                brokerId++;
+            }
+        }
     }
 
     private PStream<String> joinDirect() {
@@ -112,11 +167,17 @@ public class PipelineJoinAndCoGroup {
         );
     }
 
-    private static class Trade {
+    private static class Trade implements Serializable {
 
         private int productId;
         private int brokerId;
         private int classId;
+
+        Trade(int classId, int productId, int brokerId) {
+            this.productId = productId;
+            this.brokerId = brokerId;
+            this.classId = classId;
+        }
 
         int productId() {
             return productId;
@@ -129,12 +190,22 @@ public class PipelineJoinAndCoGroup {
         int classId() {
             return classId;
         }
+
+        @Override
+        public String toString() {
+            return "Trade{productId=" + productId + ", brokerId=" + brokerId + ", classId=" + classId + '}';
+        }
     }
 
-    private static class Product {
+    private static class Product implements Serializable {
 
         private int id;
         private int classId;
+
+        Product(int classId, int id) {
+            this.id = id;
+            this.classId = classId;
+        }
 
         int id() {
             return id;
@@ -143,12 +214,22 @@ public class PipelineJoinAndCoGroup {
         int classId() {
             return classId;
         }
+
+        @Override
+        public String toString() {
+            return "Product{id=" + id + ", classId=" + classId + '}';
+        }
     }
 
-    private static class Broker {
+    private static class Broker implements Serializable {
 
         private int id;
         private int classId;
+
+        Broker(int classId, int id) {
+            this.id = id;
+            this.classId = classId;
+        }
 
         int id() {
             return id;
@@ -156,6 +237,11 @@ public class PipelineJoinAndCoGroup {
 
         int classId() {
             return classId;
+        }
+
+        @Override
+        public String toString() {
+            return "Broker{id=" + id + ", classId=" + classId + '}';
         }
     }
 }

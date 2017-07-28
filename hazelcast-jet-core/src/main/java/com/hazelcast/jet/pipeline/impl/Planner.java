@@ -19,6 +19,7 @@ package com.hazelcast.jet.pipeline.impl;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Edge;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.PElement;
 import com.hazelcast.jet.pipeline.impl.processor.CoGroupP;
 import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
@@ -29,9 +30,9 @@ import com.hazelcast.jet.processor.Sinks;
 import com.hazelcast.jet.processor.Sources;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
 import static com.hazelcast.util.UuidUtil.newUnsecureUUID;
@@ -55,24 +56,28 @@ public class Planner {
             PTransform transform = pel.transform;
             if (transform instanceof SourceImpl) {
                 SourceImpl source = (SourceImpl) transform;
-                addVertex(pel, new Vertex("source." + source.name(), Sources.readMap(source.name())));
+                addVertex(pel, new Vertex("source." + source.name(), Sources.readMap(source.name()))
+                        .localParallelism(1));
             } else if (transform instanceof MapTransform) {
                 MapTransform mapTransform = (MapTransform) transform;
                 PlannerVertex pv = addVertex(pel,
                         new Vertex("map." + randomSuffix(), Processors.map(mapTransform.mapF)));
                 addEdge(pel.upstream.get(0), pv, 0);
             } else if (transform instanceof CoGroupTransform) {
-                CoGroupTransform coGroup = (CoGroupTransform) transform;
-                PlannerVertex pv = addVertex(pel,
-                        new Vertex("co-group." + randomSuffix(), () -> new CoGroupP<>(
-                                coGroup.groupKeyFns(), coGroup.aggregateOperation(), coGroup.tags())));
+                CoGroupTransform<Object, Object, Object> coGroup = (CoGroupTransform) transform;
+                List<DistributedFunction<?, ?>> groupKeyFns = coGroup.groupKeyFns();
+                PlannerVertex pv = addVertex(pel, new Vertex("co-group." + randomSuffix(),
+                        () -> new CoGroupP<>(groupKeyFns, coGroup.aggregateOperation(), coGroup.tags())));
                 int destOrdinal = 0;
                 for (PElement fromPel : pel.upstream) {
-                    addEdge(fromPel, pv, destOrdinal++);
+                    Edge edge = addEdge(fromPel, pv, destOrdinal);
+                    edge.partitioned(groupKeyFns.get(destOrdinal));
+                    destOrdinal++;
                 }
             } else if (transform instanceof SinkImpl) {
                 SinkImpl sink = (SinkImpl) transform;
-                PlannerVertex pv = addVertex(pel, new Vertex("sink." + sink.name(), Sinks.writeMap(sink.name())));
+                PlannerVertex pv = addVertex(pel, new Vertex("sink." + sink.name(), Sinks.writeMap(sink.name()))
+                        .localParallelism(1));
                 addEdge(pel.upstream.get(0), pv, 0);
             }
         }
@@ -86,9 +91,11 @@ public class Planner {
         return pv;
     }
 
-    private void addEdge(PElement fromPel, PlannerVertex toPv, int destOrdinal) {
+    private Edge addEdge(PElement fromPel, PlannerVertex toPv, int destOrdinal) {
         PlannerVertex fromPv = pel2vertex.get(fromPel);
-        dag.edge(from(fromPv.v, fromPv.availableOrdinal++).to(toPv.v, destOrdinal));
+        Edge edge = from(fromPv.v, fromPv.availableOrdinal++).to(toPv.v, destOrdinal);
+        dag.edge(edge);
+        return edge;
     }
 
     private static String randomSuffix() {
