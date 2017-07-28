@@ -26,7 +26,6 @@ import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.CircularListCursor;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
-import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.util.Preconditions;
 
@@ -40,7 +39,6 @@ import java.util.Queue;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 
-import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.groupingBy;
@@ -94,38 +92,11 @@ public abstract class ProcessorTaskletBase implements Tasklet {
 
         instreamCursor = popInstreamGroup();
         completedSnapshotId = snapshotState != null ? snapshotState.getCurrentSnapshotId() : Long.MAX_VALUE;
-
-        // TODO blocking snapshotStorage for blocking processor, that will never return false from offer
-        if (snapshotQueue == null) {
-            snapshotStorage = null;
-        } else {
-            snapshotStorage = new SnapshotStorage() {
-                private Entry<Data, Data> pendingEntry;
-
-                @Override
-                public boolean offer(Object key, Object value) {
-                    if (pendingEntry != null) {
-                        if (!snapshotQueue.offer(pendingEntry)) {
-                            return false;
-                        }
-                    }
-
-                    // We serialize the key and value immediately to effectively clone them,
-                    // so the caller can modify them right after they are accepted by this method.
-                    // TODO use Map's partitioning strategy
-                    Data sKey = ProcessorTaskletBase.this.serializationService.toData(key);
-                    Data sValue = ProcessorTaskletBase.this.serializationService.toData(value);
-                    pendingEntry = entry(sKey, sValue);
-
-                    boolean success = snapshotQueue.offer(pendingEntry);
-                    if (success) {
-                        pendingEntry = null;
-                    }
-                    return success;
-                }
-            };
-        }
+        snapshotStorage = snapshotQueue == null ? null : createSnapshotStorage(snapshotQueue, serializationService);
     }
+
+    protected abstract SnapshotStorageImpl createSnapshotStorage(Queue<Object> snapshotQueue,
+                                                                 SerializationService serializationService);
 
     @Override @Nonnull
     public ProgressState call() {
@@ -333,5 +304,6 @@ public abstract class ProcessorTaskletBase implements Tasklet {
          */
         STATE_PROCESSOR_COMPLETED
     }
+
 }
 

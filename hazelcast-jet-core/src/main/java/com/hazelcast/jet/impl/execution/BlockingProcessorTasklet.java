@@ -37,6 +37,7 @@ import static com.hazelcast.jet.impl.execution.ExecutionService.IDLER;
 public class BlockingProcessorTasklet extends ProcessorTaskletBase {
 
     private CompletableFuture<?> jobFuture;
+    private BlockingSnapshotStorageImpl snapshotStorage;
 
     public BlockingProcessorTasklet(
             ProcCtx context, Processor processor, List<InboundEdgeStream> instreams,
@@ -57,6 +58,9 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
     public void init(CompletableFuture<Void> jobFuture) {
         super.init(jobFuture);
         this.jobFuture = jobFuture;
+        if (snapshotStorage != null) {
+            snapshotStorage.initJobFuture(jobFuture);
+        }
     }
 
     @Override @Nonnull
@@ -66,6 +70,11 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
         } catch (JobFutureCompleted e) {
             return ProgressState.DONE;
         }
+    }
+
+    @Override
+    protected SnapshotStorageImpl createSnapshotStorage(Queue<Object> snapshotQueue, SerializationService serializationService) {
+        return snapshotStorage = new BlockingSnapshotStorageImpl(serializationService, snapshotQueue);
     }
 
     @Override
@@ -124,6 +133,6 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
         }
     }
 
-    private static class JobFutureCompleted extends RuntimeException {
+    static class JobFutureCompleted extends RuntimeException {
     }
 }

@@ -44,6 +44,11 @@ public class CooperativeProcessorTasklet extends ProcessorTaskletBase {
     }
 
     @Override
+    protected SnapshotStorageImpl createSnapshotStorage(Queue<Object> snapshotQueue, SerializationService serializationService) {
+        return new SnapshotStorageImpl(serializationService, snapshotQueue);
+    }
+
+    @Override
     protected void tryFlushOutbox() {
         nextOutstream:
         for (int i = 0; i < outbox.bucketCount(); i++) {
