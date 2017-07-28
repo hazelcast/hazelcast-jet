@@ -16,7 +16,9 @@
 
 package com.hazelcast.jet.impl.execution;
 
-public class SnapshotBarrier {
+import java.io.Serializable;
+
+public class SnapshotBarrier implements Serializable {
     @SuppressWarnings("CheckStyle")
     public final long snapshotId;
 

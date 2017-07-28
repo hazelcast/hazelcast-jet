@@ -303,15 +303,7 @@ public class MasterContext {
         // mark the record in the map as completed
         IMap<Object, Object> map = nodeEngine.getHazelcastInstance().getMap(SNAPSHOTS_MAP_NAME);
         long creationTime = (long) map.executeOnKey(Arrays.asList(jobId, masterSnapshotId),
-                new AbstractEntryProcessor<Object, MasterSnapshotRecord>() {
-                    @Override
-                    public Object process(Entry<Object, MasterSnapshotRecord> entry) {
-                        MasterSnapshotRecord msr = entry.getValue();
-                        msr.setComplete(true);
-                        entry.setValue(msr);
-                        return msr.getCreationTime();
-                    }
-                });
+                new MarkRecordCompleteEntryProcessor());
 
         logger.info(String.format("Snapshot %d for job %s completed in %dms", masterSnapshotId,
                 idToString(jobId), System.currentTimeMillis() - creationTime));
@@ -474,4 +466,13 @@ public class MasterContext {
         }
     }
 
+    private static class MarkRecordCompleteEntryProcessor extends AbstractEntryProcessor<Object, MasterSnapshotRecord> {
+        @Override
+        public Object process(Entry<Object, MasterSnapshotRecord> entry) {
+            MasterSnapshotRecord msr = entry.getValue();
+            msr.setComplete(true);
+            entry.setValue(msr);
+            return msr.getCreationTime();
+        }
+    }
 }

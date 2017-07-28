@@ -111,10 +111,10 @@ public class ReceiverTasklet implements Tasklet {
             if (item == DONE_ITEM) {
                 receptionDone = true;
                 inbox.remove();
-                assert inbox.peek() == null : "Found something in the queue beyond the DONE_WM: " + inbox.remove();
+                assert inbox.peek() == null : "Found something in the queue beyond the DONE_ITEM: " + inbox.remove();
                 break;
             }
-            ProgressState outcome = item instanceof Watermark
+            ProgressState outcome = item instanceof Watermark || item instanceof SnapshotBarrier
                     ? collector.offerBroadcast(item)
                     : collector.offer(item, o.getPartitionId());
             if (!outcome.isDone()) {
