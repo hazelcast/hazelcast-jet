@@ -62,4 +62,9 @@ public class Tag<E> implements Serializable, Comparable<Tag<?>> {
     public int compareTo(Tag<?> that) {
         return Integer.compare(this.index, that.index);
     }
+
+    @Override
+    public String toString() {
+        return "Tag" + index;
+    }
 }

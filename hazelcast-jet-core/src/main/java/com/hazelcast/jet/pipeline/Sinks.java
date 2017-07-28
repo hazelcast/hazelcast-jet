@@ -26,7 +26,7 @@ public final class Sinks {
     }
 
     public static Sink writeMap(String mapName) {
-        return new SinkImpl("IMap " + mapName);
+        return new SinkImpl(mapName);
     }
 
 }

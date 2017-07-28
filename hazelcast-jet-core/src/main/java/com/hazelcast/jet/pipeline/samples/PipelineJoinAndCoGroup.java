@@ -34,6 +34,7 @@ import com.hazelcast.jet.pipeline.tuple.Tuple3;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
@@ -66,11 +67,10 @@ public class PipelineJoinAndCoGroup {
         PipelineJoinAndCoGroup sample = new PipelineJoinAndCoGroup(jet);
         try {
             sample.prepareSampleData();
-            System.out.println("HZ instance: " + jet.getHazelcastInstance().getName());
             printImap(jet.getMap(PRODUCTS));
             printImap(jet.getMap(BROKERS));
             printImap(jet.getMap(TRADES));
-            sample.coGroupDirect().drainTo(Sinks.writeMap(RESULT));
+            sample.coGroupBuild().drainTo(Sinks.writeMap(RESULT));
             // This line added to test multiple outputs from a PElement
             sample.trades.map(t -> entry(t.brokerId, t)).drainTo(Sinks.writeMap(RESULT_BROKER));
 
@@ -85,9 +85,9 @@ public class PipelineJoinAndCoGroup {
 
     public static <K, V> void printImap(IMap<K, V> imap) {
         StringBuilder sb = new StringBuilder();
-        System.out.println(imap.getName() + ':');
+        System.err.println(imap.getName() + ':');
         imap.forEach((k, v) -> sb.append(k).append("->").append(v).append('\n'));
-        System.out.println(sb);
+        System.err.println(sb);
     }
 
     private void prepareSampleData() {

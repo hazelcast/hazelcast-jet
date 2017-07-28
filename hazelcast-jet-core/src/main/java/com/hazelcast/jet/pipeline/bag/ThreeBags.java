@@ -31,7 +31,7 @@ public class ThreeBags<E1, E2, E3> {
         this(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
     }
 
-    public ThreeBags(List<E1> bag1, List<E2> bag2, List<E3> bag3) {
+    private ThreeBags(List<E1> bag1, List<E2> bag2, List<E3> bag3) {
         this.bag1 = bag1;
         this.bag2 = bag2;
         this.bag3 = bag3;
@@ -53,5 +53,10 @@ public class ThreeBags<E1, E2, E3> {
         bag1.addAll(that.bag1());
         bag2.addAll(that.bag2());
         bag3.addAll(that.bag3());
+    }
+
+    @Override
+    public String toString() {
+        return "ThreeBags{" + bag1 + ", " + bag2 + ", " + bag3 + '}';
     }
 }

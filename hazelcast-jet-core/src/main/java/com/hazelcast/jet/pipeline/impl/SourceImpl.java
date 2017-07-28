@@ -31,6 +31,6 @@ public class SourceImpl<E> implements Source<E> {
 
     @Override
     public String toString() {
-        return "DrawFrom " + name;
+        return "DrawFrom IMap " + name;
     }
 }

@@ -22,7 +22,6 @@ import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.impl.HazelcastClientProxy;
 import com.hazelcast.client.proxy.ClientMapProxy;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
 import com.hazelcast.core.Partition;
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.Processor;
@@ -45,7 +44,6 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.client.HazelcastClient.newHazelcastClient;
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.pipeline.samples.PipelineJoinAndCoGroup.printImap;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
@@ -60,11 +58,6 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
 
     private final Traverser<T> outputTraverser;
 
-    @Override
-    protected void init(@Nonnull Context context) throws Exception {
-        System.out.println("ReadWithPartitionIteratorP initializing");
-    }
-
     ReadWithPartitionIteratorP(Function<Integer, Iterator<T>> partitionToIterator,
                                List<Integer> partitions) {
         final CircularListCursor<Iterator<T>> iteratorCursor = new CircularListCursor<>(
@@ -75,9 +68,7 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
                 final Iterator<T> currIterator = iteratorCursor.value();
                 if (currIterator.hasNext()) {
                     iteratorCursor.advance();
-                    T next = currIterator.next();
-                    System.out.println("readMap: " + next);
-                    return next;
+                    return currIterator.next();
                 }
                 iteratorCursor.remove();
             } while (iteratorCursor.advance());
@@ -91,13 +82,8 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
 
     public static <T> ProcessorMetaSupplier readMap(String mapName, int fetchSize) {
         return new LocalClusterMetaSupplier<T>(
-                hz -> partition -> {
-                    IMap<Object, Object> imap = hz.getMap(mapName);
-                    System.out.println("in readMap, HZ instance: " + hz.getName());
-                    printImap(imap);
-                    return ((MapProxyImpl) imap)
-                            .iterator(fetchSize, partition, PREFETCH_VALUES);
-                });
+                instance -> partition -> ((MapProxyImpl) instance.getMap(mapName))
+                        .iterator(fetchSize, partition, PREFETCH_VALUES));
     }
 
     public static ProcessorMetaSupplier readMap(String mapName, ClientConfig clientConfig) {

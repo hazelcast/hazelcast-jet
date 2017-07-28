@@ -16,8 +16,10 @@
 
 package com.hazelcast.jet.pipeline.bag;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -26,15 +28,25 @@ import java.util.Map;
 public class BagsByTag {
     private final Map<Tag<?>, Collection> components = new HashMap<>();
 
+    @SuppressWarnings("unchecked")
     public <E> Collection<E> bag(Tag<E> k) {
-        return (Collection<E>) components.get(k);
+        return (Collection<E>) components.computeIfAbsent(k, x -> new ArrayList<>());
     }
 
     public <E> void put(Tag<E> t, Collection<E> bag) {
         components.put(t, bag);
     }
 
-    public void combineWith(BagsByTag bagsByTag) {
+    @SuppressWarnings("unchecked")
+    public void combineWith(BagsByTag that) {
+        components.forEach((k, v) -> components.merge(k, that.components.get(k), (thisBag, thatBag) -> {
+            thisBag.addAll(thatBag);
+            return thisBag;
+        }));
+    }
 
+    @Override
+    public String toString() {
+        return "BagsByTag " + components.toString();
     }
 }

@@ -16,9 +16,10 @@
 
 package com.hazelcast.jet.pipeline.tuple;
 
+import java.util.Map;
 import java.util.Objects;
 
-public class Tuple2<E0, E1> {
+public class Tuple2<E0, E1> implements Map.Entry<E0, E1> {
     private E0 f0;
     private E1 f1;
 
@@ -36,6 +37,21 @@ public class Tuple2<E0, E1> {
     }
 
     @Override
+    public E0 getKey() {
+        return f0;
+    }
+
+    @Override
+    public E1 getValue() {
+        return f1;
+    }
+
+    @Override
+    public E1 setValue(E1 value) {
+        throw new UnsupportedOperationException("Tuple2 is immutable");
+    }
+
+    @Override
     public boolean equals(Object obj) {
         final Tuple2 that;
         return this == obj
@@ -46,9 +62,7 @@ public class Tuple2<E0, E1> {
 
     @Override
     public int hashCode() {
-        int hc = 17;
-        hc = 73 * hc + f0.hashCode();
-        hc = 73 * hc + f1.hashCode();
-        return hc;
+        // This implementation is specified by Map.Entry and must not be changed
+        return  f0.hashCode() ^ f1.hashCode();
     }
 }

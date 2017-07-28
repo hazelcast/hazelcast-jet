@@ -51,7 +51,6 @@ public class CoGroupP<K, A, R> extends AbstractProcessor {
 
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-        System.out.println("CoGroupP recv #" + ordinal + ": " + item);
         Function<Object, ? extends K> keyF = (Function<Object, ? extends K>) groupKeyFns.get(ordinal);
         K key = keyF.apply(item);
         A acc = keyToAcc.computeIfAbsent(key, k -> aggrOp.createAccumulatorF().get());

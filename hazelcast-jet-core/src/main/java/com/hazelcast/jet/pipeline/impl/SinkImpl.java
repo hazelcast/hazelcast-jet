@@ -31,6 +31,6 @@ public class SinkImpl implements Sink {
 
     @Override
     public String toString() {
-        return "DrainTo " + name;
+        return "DrainTo IMap " + name;
     }
 }
