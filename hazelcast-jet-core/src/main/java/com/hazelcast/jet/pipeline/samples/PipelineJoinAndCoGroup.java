@@ -49,6 +49,8 @@ public class PipelineJoinAndCoGroup {
     public static void main(String[] args) {
         PipelineJoinAndCoGroup sample = new PipelineJoinAndCoGroup();
         sample.coGroupBuild().drainTo(Sinks.writeMap("map"));
+        // This line added to test multiple outputs from a PElement
+        sample.trades.map(Trade::brokerId).drainTo(Sinks.writeMap("brokerId"));
         System.out.println(sample.p.toDag());
     }
 

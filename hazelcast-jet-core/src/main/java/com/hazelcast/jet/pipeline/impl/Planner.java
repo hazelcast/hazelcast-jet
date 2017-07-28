@@ -60,19 +60,20 @@ public class Planner {
                 MapTransform mapTransform = (MapTransform) transform;
                 PlannerVertex pv = addVertex(pel,
                         new Vertex("map." + randomSuffix(), Processors.map(mapTransform.mapF)));
-                addEdge(pel.upstream.get(0), pv);
+                addEdge(pel.upstream.get(0), pv, 0);
             } else if (transform instanceof CoGroupTransform) {
                 CoGroupTransform coGroup = (CoGroupTransform) transform;
                 PlannerVertex pv = addVertex(pel,
-                        new Vertex("co-group." + randomSuffix(),
-                                () -> new CoGroupP<>(coGroup.groupKeyFns(), coGroup.aggregateOperation(), coGroup.tags())));
+                        new Vertex("co-group." + randomSuffix(), () -> new CoGroupP<>(
+                                coGroup.groupKeyFns(), coGroup.aggregateOperation(), coGroup.tags())));
+                int destOrdinal = 0;
                 for (PElement fromPel : pel.upstream) {
-                    addEdge(fromPel, pv);
+                    addEdge(fromPel, pv, destOrdinal++);
                 }
             } else if (transform instanceof SinkImpl) {
                 SinkImpl sink = (SinkImpl) transform;
                 PlannerVertex pv = addVertex(pel, new Vertex("sink." + sink.name(), Sinks.writeMap(sink.name())));
-                addEdge(pel.upstream.get(0), pv);
+                addEdge(pel.upstream.get(0), pv, 0);
             }
         }
         return dag;
@@ -85,11 +86,9 @@ public class Planner {
         return pv;
     }
 
-    private Edge addEdge(PElement fromPel, PlannerVertex toPv) {
+    private void addEdge(PElement fromPel, PlannerVertex toPv, int destOrdinal) {
         PlannerVertex fromPv = pel2vertex.get(fromPel);
-        Edge edge = from(fromPv.v, fromPv.availableOrdinal++).to(toPv.v, toPv.availableOrdinal++);
-        dag.edge(edge);
-        return edge;
+        dag.edge(from(fromPv.v, fromPv.availableOrdinal++).to(toPv.v, destOrdinal));
     }
 
     private static String randomSuffix() {
@@ -104,6 +103,11 @@ public class Planner {
 
         PlannerVertex(Vertex v) {
             this.v = v;
+        }
+
+        @Override
+        public String toString() {
+            return v.toString();
         }
     }
 }
