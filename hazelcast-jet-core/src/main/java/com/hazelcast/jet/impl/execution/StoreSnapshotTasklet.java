@@ -127,9 +127,9 @@ public class StoreSnapshotTasklet implements Tasklet {
             ProgressState inputQueueResult = inboundEdgeStream.drainTo(item -> {
                 progTracker.madeProgress();
                 if (item instanceof SnapshotStartBarrier) {
-                    currentSnapshotId = ((SnapshotStartBarrier) item).snapshotId;
+                    currentSnapshotId = ((SnapshotStartBarrier) item).snapshotId();
                 } else if (item instanceof SnapshotBarrier) {
-                    completedSnapshotId = ((SnapshotBarrier) item).snapshotId;
+                    completedSnapshotId = ((SnapshotBarrier) item).snapshotId();
                 } else {
                     haveUnsentEntries = true;
                     Entry<Data, Data> entry = (Entry<Data, Data>) item;

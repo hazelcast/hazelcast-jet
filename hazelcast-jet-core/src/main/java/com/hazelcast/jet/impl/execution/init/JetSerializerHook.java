@@ -17,13 +17,15 @@
 package com.hazelcast.jet.impl.execution.init;
 
 import com.hazelcast.internal.serialization.impl.SerializationConstants;
+import com.hazelcast.jet.TimestampedEntry;
+import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.accumulator.DoubleAccumulator;
 import com.hazelcast.jet.accumulator.LinTrendAccumulator;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.accumulator.LongDoubleAccumulator;
 import com.hazelcast.jet.accumulator.LongLongAccumulator;
 import com.hazelcast.jet.accumulator.MutableReference;
-import com.hazelcast.jet.TimestampedEntry;
+import com.hazelcast.jet.impl.execution.SnapshotBarrier;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.Serializer;
@@ -56,6 +58,8 @@ public final class JetSerializerHook {
     public static final int LIN_TREND_ACC = -307;
     public static final int LONG_LONG_ACC = -308;
     public static final int LONG_DOUBLE_ACC = -309;
+    public static final int WATERMARK = -310;
+    public static final int SNAPSHOT_BARRIER = -311;
 
     // reserved for hadoop module: -380 to -390
 
@@ -421,6 +425,80 @@ public final class JetSerializerHook {
                 @Override
                 public LongDoubleAccumulator read(ObjectDataInput in) throws IOException {
                     return new LongDoubleAccumulator(in.readLong(), in.readDouble());
+                }
+            };
+        }
+
+        @Override
+        public boolean isOverwritable() {
+            return true;
+        }
+    }
+
+    public static final class WatermarkSerializer implements SerializerHook<Watermark> {
+
+        @Override
+        public Class<Watermark> getSerializationType() {
+            return Watermark.class;
+        }
+
+        @Override
+        public Serializer createSerializer() {
+            return new StreamSerializer<Watermark>() {
+                @Override
+                public int getTypeId() {
+                    return WATERMARK;
+                }
+
+                @Override
+                public void destroy() {
+                }
+
+                @Override
+                public void write(ObjectDataOutput out, Watermark object) throws IOException {
+                    out.writeLong(object.timestamp());
+                }
+
+                @Override
+                public Watermark read(ObjectDataInput in) throws IOException {
+                    return new Watermark(in.readLong());
+                }
+            };
+        }
+
+        @Override
+        public boolean isOverwritable() {
+            return true;
+        }
+    }
+
+    public static final class SnapshotBarrierSerializer implements SerializerHook<SnapshotBarrier> {
+
+        @Override
+        public Class<SnapshotBarrier> getSerializationType() {
+            return SnapshotBarrier.class;
+        }
+
+        @Override
+        public Serializer createSerializer() {
+            return new StreamSerializer<SnapshotBarrier>() {
+                @Override
+                public int getTypeId() {
+                    return SNAPSHOT_BARRIER;
+                }
+
+                @Override
+                public void destroy() {
+                }
+
+                @Override
+                public void write(ObjectDataOutput out, SnapshotBarrier object) throws IOException {
+                    out.writeLong(object.snapshotId());
+                }
+
+                @Override
+                public SnapshotBarrier read(ObjectDataInput in) throws IOException {
+                    return new SnapshotBarrier(in.readLong());
                 }
             };
         }

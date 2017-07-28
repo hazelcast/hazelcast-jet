@@ -7,4 +7,6 @@ com.hazelcast.jet.impl.execution.init.JetSerializerHook$MutableReferenceSerializ
 com.hazelcast.jet.impl.execution.init.JetSerializerHook$LinTrendAccSerializer
 com.hazelcast.jet.impl.execution.init.JetSerializerHook$LongLongAccSerializer
 com.hazelcast.jet.impl.execution.init.JetSerializerHook$LongDoubleAccSerializer
+com.hazelcast.jet.impl.execution.init.JetSerializerHook$WatermarkSerializer
+com.hazelcast.jet.impl.execution.init.JetSerializerHook$SnapshotBarrierSerializer
 com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject$Hook

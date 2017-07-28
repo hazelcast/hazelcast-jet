@@ -191,7 +191,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                 // this case, proceed to process the snapshot
                 if (inbox.size() == 1 && inbox.peek() instanceof SnapshotBarrier) {
                     SnapshotBarrier barrier = (SnapshotBarrier) inbox.remove();
-                    requestedSnapshotId = barrier.snapshotId;
+                    requestedSnapshotId = barrier.snapshotId();
                     state = snapshotQueue == null
                             ? ProcessorState.STATE_SNAPSHOT_BARRIER_TO_OUTBOX
                             : ProcessorState.STATE_START_SNAPSHOT;

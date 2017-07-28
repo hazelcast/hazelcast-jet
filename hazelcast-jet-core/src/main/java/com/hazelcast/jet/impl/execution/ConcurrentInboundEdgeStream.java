@@ -96,9 +96,9 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
      */
     @Override
     public ProgressState drainTo(Consumer<Object> dest) {
-        if (barrierToDrain != null && barrierToDrain.snapshotId < Long.MAX_VALUE) {
+        if (barrierToDrain != null && barrierToDrain.snapshotId() < Long.MAX_VALUE) {
             dest.accept(barrierToDrain);
-            barrierAt = barrierToDrain.snapshotId;
+            barrierAt = barrierToDrain.snapshotId();
             barrierToDrain = null;
             return ProgressState.MADE_PROGRESS;
         }
@@ -131,7 +131,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                 if (item instanceof Watermark) {
                     skewReductionPolicy.observeWm(queueIndex, ((Watermark) item).timestamp());
                 } else if (item instanceof SnapshotBarrier) {
-                    if (barrierWatcher.observe(queueIndex, ((SnapshotBarrier) item).snapshotId)) {
+                    if (barrierWatcher.observe(queueIndex, ((SnapshotBarrier) item).snapshotId())) {
                         barrierToDrain = (SnapshotBarrier) item;
                         // stop now, barrier will be added as the sole item in next call
                         return ProgressState.MADE_PROGRESS;

@@ -17,11 +17,14 @@
 package com.hazelcast.jet.impl.execution;
 
 public class SnapshotStartBarrier {
-    @SuppressWarnings("CheckStyle")
-    public final long snapshotId;
+    private final long snapshotId;
 
     public SnapshotStartBarrier(long snapshotId) {
         this.snapshotId = snapshotId;
+    }
+
+    public long snapshotId() {
+        return snapshotId;
     }
 
     @Override
