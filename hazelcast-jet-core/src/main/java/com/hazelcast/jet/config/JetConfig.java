@@ -29,9 +29,24 @@ import static java.util.Arrays.asList;
  */
 public class JetConfig {
 
+    /**
+     * Name of internal IMap which stores job ids
+     */
     public static final String IDS_MAP_NAME = "__jet.jobs.ids";
+
+    /**
+     * Name of internal IMap which stores job resources
+     */
     public static final String RESOURCES_MAP_NAME_PREFIX = "__jet.jobs.resources.";
+
+    /**
+     * Name of internal IMap which stores job records
+     */
     public static final String JOB_RECORDS_MAP_NAME = "__jet.jobs.records";
+
+    /**
+     * Name of internal IMap which stores job results
+     */
     public static final String JOB_RESULTS_MAP_NAME = "__jet.jobs.results";
 
     /**
@@ -108,6 +123,9 @@ public class JetConfig {
         return this;
     }
 
+    /**
+     * Sets the backup count which is used for storing job metadata objects
+     */
     public JetConfig setJobMetadataBackupCount(int newBackupCount) {
         if (newBackupCount < 0) {
             throw new IllegalArgumentException("backup-count can't be smaller than 0");
@@ -121,6 +139,9 @@ public class JetConfig {
         return this;
     }
 
+    /**
+     * Returns the backup count which is used for storing job metadata objects
+     */
     public int getJobMetadataBackupCount() {
         return jobMetadataBackupCount;
     }
