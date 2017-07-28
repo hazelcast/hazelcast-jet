@@ -20,9 +20,12 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Edge;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.impl.processor.GroupByKeyP;
 import com.hazelcast.jet.pipeline.PElement;
 import com.hazelcast.jet.pipeline.impl.processor.CoGroupP;
 import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
+import com.hazelcast.jet.pipeline.impl.transform.FlatMapTransform;
+import com.hazelcast.jet.pipeline.impl.transform.GroupByTransform;
 import com.hazelcast.jet.pipeline.impl.transform.MapTransform;
 import com.hazelcast.jet.pipeline.impl.transform.PTransform;
 import com.hazelcast.jet.processor.Processors;
@@ -63,7 +66,23 @@ public class Planner {
                 PlannerVertex pv = addVertex(pel,
                         new Vertex("map." + randomSuffix(), Processors.map(mapTransform.mapF)));
                 addEdge(pel.upstream.get(0), pv, 0);
-            } else if (transform instanceof CoGroupTransform) {
+            } else if (transform instanceof FlatMapTransform) {
+                FlatMapTransform flatMapTransform = (FlatMapTransform) transform;
+                PlannerVertex pv = addVertex(pel,
+                        new Vertex("flat-map." + randomSuffix(), Processors.flatMap(flatMapTransform.flatMapF())));
+                addEdge(pel.upstream.get(0), pv, 0);
+            } else if (transform instanceof GroupByTransform) {
+                GroupByTransform<Object, Object, Object> groupBy = (GroupByTransform) transform;
+                PlannerVertex pv = addVertex(pel, new Vertex("group-by." + randomSuffix(),
+                        () -> new GroupByKeyP<>(groupBy.keyF(), groupBy.aggregateOperation())));
+                int destOrdinal = 0;
+                for (PElement fromPel : pel.upstream) {
+                    Edge edge = addEdge(fromPel, pv, destOrdinal);
+                    edge.partitioned(groupBy.keyF());
+                    destOrdinal++;
+                }
+            }
+            else if (transform instanceof CoGroupTransform) {
                 CoGroupTransform<Object, Object, Object> coGroup = (CoGroupTransform) transform;
                 List<DistributedFunction<?, ?>> groupKeyFns = coGroup.groupKeyFns();
                 PlannerVertex pv = addVertex(pel, new Vertex("co-group." + randomSuffix(),
@@ -79,6 +98,8 @@ public class Planner {
                 PlannerVertex pv = addVertex(pel, new Vertex("sink." + sink.name(), Sinks.writeMap(sink.name()))
                         .localParallelism(1));
                 addEdge(pel.upstream.get(0), pv, 0);
+            } else {
+                throw new IllegalArgumentException("Unknown transform " + transform);
             }
         }
         return dag;

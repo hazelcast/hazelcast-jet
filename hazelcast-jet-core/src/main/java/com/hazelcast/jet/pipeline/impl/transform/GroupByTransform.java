@@ -37,4 +37,12 @@ public class GroupByTransform<E, K, R> implements UnaryTransform<E, Entry<K, R>>
     public String toString() {
         return "GroupBy";
     }
+
+    public DistributedFunction<? super E, ? extends K> keyF() {
+        return keyF;
+    }
+
+    public AggregateOperation1<E, ?, R> aggregateOperation() {
+        return aggrOp;
+    }
 }
