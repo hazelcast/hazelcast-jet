@@ -124,7 +124,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                     if (newBarrier > barrierAt) {
                         barrierToDrain = new SnapshotBarrier(newBarrier);
                         // stop now, barrier will be added as the sole item in next call
-                        return tracker.toProgressState();
+                        return ProgressState.MADE_PROGRESS;
                     }
                     break;
                 }
@@ -134,7 +134,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                     if (barrierWatcher.observe(queueIndex, ((SnapshotBarrier) item).snapshotId)) {
                         barrierToDrain = (SnapshotBarrier) item;
                         // stop now, barrier will be added as the sole item in next call
-                        return tracker.toProgressState();
+                        return ProgressState.MADE_PROGRESS;
                     }
                 } else {
                     dest.accept(item);

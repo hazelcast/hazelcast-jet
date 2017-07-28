@@ -33,7 +33,6 @@ import com.hazelcast.jet.impl.operation.DoSnapshotOperation;
 import com.hazelcast.jet.impl.operation.ExecuteOperation;
 import com.hazelcast.jet.impl.operation.InitOperation;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
-import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.AbstractEntryProcessor;
 import com.hazelcast.spi.InternalCompletableFuture;
@@ -283,7 +282,7 @@ public class MasterContext {
 
     private void initiateSnapshot() {
         masterSnapshotId++;
-        LoggingUtil.logFine(logger, "Initiating snapshot %d for job %s", masterSnapshotId, idToString(jobId));
+        logger.info(String.format("Initiating snapshot %d for job %s", masterSnapshotId, idToString(jobId)));
         nodeEngine.getHazelcastInstance().getMap(SNAPSHOTS_MAP_NAME)
                   .putIfAbsent(Arrays.asList(jobId, masterSnapshotId), new MasterSnapshotRecord(statefulVertexIds));
         Function<ExecutionPlan, Operation> factory = plan -> new DoSnapshotOperation(jobId, executionId, masterSnapshotId);
@@ -314,10 +313,8 @@ public class MasterContext {
                     }
                 });
 
-        if (logger.isFineEnabled()) {
-            logger.fine(String.format("Snapshot %d for job %s completed in %dms", masterSnapshotId,
-                    idToString(jobId), System.currentTimeMillis() - creationTime));
-        }
+        logger.info(String.format("Snapshot %d for job %s completed in %dms", masterSnapshotId,
+                idToString(jobId), System.currentTimeMillis() - creationTime));
 
         // TODO delete older snapshots
 

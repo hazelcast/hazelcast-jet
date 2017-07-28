@@ -146,8 +146,8 @@ public interface Processor {
      * Returns true, if the processor has state to save to snapshot. All
      * processors on the same vertex must always return the same value.
      */
-    default EStateType getStateType() {
-        return EStateType.STATELESS;
+    default StateType getStateType() {
+        return StateType.STATELESS;
     }
 
     /**
@@ -176,7 +176,7 @@ public interface Processor {
      * called anymore.
      */
     default boolean saveSnapshot(SnapshotStorage storage) {
-        if (getStateType() != EStateType.STATELESS) {
+        if (getStateType() != StateType.STATELESS) {
             throw new JetException("saveSnapshot() must be overridden for stateful processors");
         }
         return true;
@@ -184,7 +184,7 @@ public interface Processor {
 
     /**
      * Returns the predicate to use when restoring snapshot. Only used if
-     * {@link #getStateType()} is {@link EStateType#BROADCAST}.
+     * {@link #getStateType()} is {@link StateType#BROADCAST}.
      */
     @Nullable
     default Predicate getSnapshotPredicate() {
@@ -280,7 +280,7 @@ public interface Processor {
     /**
      * Processor state types.
      */
-    enum EStateType {
+    enum StateType {
         /**
          * The processor has no state to store to snapshot. The {@link
          * #saveSnapshot(SnapshotStorage)} and {@link #restoreSnapshotKey(

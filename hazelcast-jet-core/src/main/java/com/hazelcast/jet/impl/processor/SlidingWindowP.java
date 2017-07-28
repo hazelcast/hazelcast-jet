@@ -198,8 +198,8 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     }
 
     @Override
-    public EStateType getStateType() {
-        return EStateType.PARTITIONED;
+    public StateType getStateType() {
+        return StateType.PARTITIONED;
     }
 
     @Override

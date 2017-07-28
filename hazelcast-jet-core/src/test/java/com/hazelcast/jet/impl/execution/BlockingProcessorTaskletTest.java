@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.Inbox;
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
@@ -168,20 +167,6 @@ public class BlockingProcessorTaskletTest {
         assertTrue(processor.nullaryProcessCallCount > 0);
     }
 
-    @Test(expected = JetException.class)
-    public void when_nullaryProcessReturnsFalse_then_exception() {
-        // Given
-        MockInboundStream instream1 = new MockInboundStream(0, emptyList(), 1);
-        MockOutboundStream outstream1 = outstream(0);
-        instreams.add(instream1);
-        outstreams.add(outstream1);
-        processor.nullaryProcessCallCount = -1;
-        BlockingProcessorTasklet tasklet = createTasklet();
-
-        // When - Then fail
-        tasklet.call();
-    }
-
     @Test
     public void when_inboxNotEmpty_then_notDone() {
         // Given
@@ -310,7 +295,8 @@ public class BlockingProcessorTaskletTest {
 
     private BlockingProcessorTasklet createTasklet() {
         // TODO
-        final BlockingProcessorTasklet t = new BlockingProcessorTasklet(context, processor, instreams, outstreams, null, null, null);
+        final BlockingProcessorTasklet t = new BlockingProcessorTasklet(context, processor, instreams, outstreams,
+                new SnapshotState(), null, null);
         t.init(jobFuture);
         return t;
     }

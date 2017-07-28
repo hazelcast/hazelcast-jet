@@ -102,8 +102,8 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
     }
 
     @Override
-    public EStateType getStateType() {
-        return EStateType.BROADCAST;
+    public StateType getStateType() {
+        return StateType.BROADCAST;
     }
 
     @Override

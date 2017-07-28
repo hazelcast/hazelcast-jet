@@ -175,8 +175,8 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
     }
 
     @Override
-    public EStateType getStateType() {
-        return EStateType.PARTITIONED;
+    public StateType getStateType() {
+        return StateType.PARTITIONED;
     }
 
     void addEvent(Windows<A> w, K key, long timestamp, T event) {

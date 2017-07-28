@@ -23,7 +23,6 @@ import com.hazelcast.jet.Edge.RoutingPolicy;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.Processor.EStateType;
 import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.JetService;
@@ -125,7 +124,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
             // create StoreSnapshotTasklet and the queues to it
             QueuedPipe<Object>[] queues = null;
-            final boolean savesSnapshot = processors.iterator().next().getStateType() != EStateType.STATELESS;
+            final boolean savesSnapshot = processors.iterator().next().getStateType() != Processor.StateType.STATELESS;
             if (savesSnapshot) {
                 queues = new QueuedPipe[srcVertex.parallelism()];
                 for (int i = 0; i < queues.length; i++) {

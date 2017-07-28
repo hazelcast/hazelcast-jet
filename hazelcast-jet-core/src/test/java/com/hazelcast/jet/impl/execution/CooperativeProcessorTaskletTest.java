@@ -177,7 +177,8 @@ public class CooperativeProcessorTaskletTest {
         callUntil(tasklet, NO_PROGRESS);
 
         // Then
-        assertTrue(processor.nullaryProcessCallCountdown <= 0);
+        assertTrue("Expected: nullaryProcessCallCountdown<=0, was " + processor.nullaryProcessCallCountdown,
+                processor.nullaryProcessCallCountdown <= 0);
     }
 
     @Test
@@ -210,7 +211,7 @@ public class CooperativeProcessorTaskletTest {
     private CooperativeProcessorTasklet createTasklet() {
         // TODO
         final CooperativeProcessorTasklet t = new CooperativeProcessorTasklet(
-                context, processor, instreams, outstreams, null, null, null);
+                context, processor, instreams, outstreams, new SnapshotState(), null, null);
         t.init(new CompletableFuture<>());
         return t;
     }
