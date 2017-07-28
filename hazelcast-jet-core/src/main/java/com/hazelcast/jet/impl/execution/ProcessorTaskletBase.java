@@ -59,10 +59,10 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     private CircularListCursor<InboundEdgeStream> instreamCursor;
     private final SnapshotState snapshotState;
     private final Queue<Object> snapshotQueue;
-    private final SerializationService serializationService;
     private final SnapshotStorage snapshotStorage;
     private long completedSnapshotId;
     private long requestedSnapshotId;
+    private BarrierWatcher barrierWatcher;
 
     private ProcessorState state = ProcessorState.STATE_NULLARY_PROCESS;
 
@@ -88,11 +88,11 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                                     .toArray(OutboundEdgeStream[]::new);
         this.snapshotState = snapshotState;
         this.snapshotQueue = snapshotQueue;
-        this.serializationService = serializationService;
 
         instreamCursor = popInstreamGroup();
         completedSnapshotId = snapshotState != null ? snapshotState.getCurrentSnapshotId() : Long.MAX_VALUE;
         snapshotStorage = snapshotQueue == null ? null : createSnapshotStorage(snapshotQueue, serializationService);
+        barrierWatcher = new BarrierWatcher(instreams.size());
     }
 
     protected abstract SnapshotStorageImpl createSnapshotStorage(Queue<Object> snapshotQueue,
