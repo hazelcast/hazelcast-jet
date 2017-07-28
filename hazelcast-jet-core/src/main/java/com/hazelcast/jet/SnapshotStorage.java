@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet;
 
+import javax.annotation.CheckReturnValue;
+
 /**
  * Interface for saving snapshot to storage.
  */
@@ -26,15 +28,17 @@ public interface SnapshotStorage {
      * vertex.
      * <p>
      * If the {@code key} implements {@link com.hazelcast.core.PartitionAware}
-     * then it will be used to choose the target partition.
+     * then it will be used to choose the target partition, instead of the
+     * whole key.
      *
      * @return {@code true}, if the item was accepted by the queue. If {@code
-     * false} is returned the call should be retried later. For non-cooperative
-     * processor a blocking implementation is provided, that always returns
-     * {@code true}.
+     * false} is returned the call should be retried later <b>with the same key
+     * and value</b>. For non-cooperative processor a blocking implementation
+     * is provided, that always returns {@code true}.
      *
      * @throws IllegalArgumentException If a duplicate key is stored.
      * Implementation is allowed to throw it, but not required.
      */
+    @CheckReturnValue
     boolean offer(Object key, Object value);
 }

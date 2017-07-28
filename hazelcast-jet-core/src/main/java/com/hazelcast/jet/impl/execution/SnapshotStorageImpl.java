@@ -38,18 +38,15 @@ class SnapshotStorageImpl implements SnapshotStorage {
 
     @Override
     public boolean offer(Object key, Object value) {
-        if (pendingEntry != null) {
-            if (!snapshotQueue.offer(pendingEntry)) {
-                return false;
-            }
+        // pendingEntry is used to avoid duplicate serialization when the queue rejects the entry
+        if (pendingEntry == null) {
+            // We serialize the key and value immediately to effectively clone them,
+            // so the caller can modify them right after they are accepted by this method.
+            // TODO use Map's partitioning strategy
+            Data sKey = serializationService.toData(key);
+            Data sValue = serializationService.toData(value);
+            pendingEntry = entry(sKey, sValue);
         }
-
-        // We serialize the key and value immediately to effectively clone them,
-        // so the caller can modify them right after they are accepted by this method.
-        // TODO use Map's partitioning strategy
-        Data sKey = serializationService.toData(key);
-        Data sValue = serializationService.toData(value);
-        pendingEntry = entry(sKey, sValue);
 
         boolean success = snapshotQueue.offer(pendingEntry);
         if (success) {
