@@ -35,6 +35,7 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.executionservice.InternalExecutionService;
 import com.hazelcast.spi.properties.HazelcastProperties;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -44,6 +45,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static com.hazelcast.jet.config.JetConfig.JOB_RESULTS_MAP_NAME;
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
 import static com.hazelcast.jet.impl.util.Util.formatIds;
 import static com.hazelcast.jet.impl.util.Util.idToString;
@@ -54,7 +56,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public class JobCoordinationService {
 
     private static final String COORDINATOR_EXECUTOR_NAME = "jet:coordinator";
-    private static final String JOB_RESULTS_MAP_NAME = "__jet.jobs.results";
     private static final long RETRY_DELAY_IN_MILLIS = SECONDS.toMillis(1);
     private static final long LOCK_ACQUIRE_ATTEMPT_TIMEOUT_IN_MILLIS = SECONDS.toMillis(1);
 
@@ -247,12 +248,12 @@ public class JobCoordinationService {
         try {
             cleanupExpiredJobs();
 
-            IMap<Long, JobRecord> jobs = jobRepository.getJobs();
-            if (jobs.isEmpty()) {
+            Collection<Long> jobIds = jobRepository.getJobIds();
+            if (jobIds.isEmpty()) {
                 return;
             }
 
-            jobs.keySet().forEach(this::startOrJoinJob);
+            jobIds.forEach(this::startOrJoinJob);
         } catch (Exception e) {
             logger.severe("Scanning jobs failed", e);
         } finally {

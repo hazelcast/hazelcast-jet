@@ -17,13 +17,22 @@
 package com.hazelcast.jet.config;
 
 import com.hazelcast.config.Config;
+import com.hazelcast.config.MapConfig;
 
 import java.util.Properties;
+
+import static com.hazelcast.spi.partition.IPartition.MAX_BACKUP_COUNT;
+import static java.util.Arrays.asList;
 
 /**
  * Configuration object for a Jet instance.
  */
 public class JetConfig {
+
+    public static final String IDS_MAP_NAME = "__jet.jobs.ids";
+    public static final String RESOURCES_MAP_NAME_PREFIX = "__jet.jobs.resources.";
+    public static final String JOB_RECORDS_MAP_NAME = "__jet.jobs.records";
+    public static final String JOB_RESULTS_MAP_NAME = "__jet.jobs.results";
 
     /**
      * The default port number for the cluster auto-discovery mechanism's
@@ -35,6 +44,7 @@ public class JetConfig {
     private InstanceConfig instanceConfig = new InstanceConfig();
     private EdgeConfig defaultEdgeConfig = new EdgeConfig();
     private Properties properties = new Properties();
+    private int jobMetadataBackupCount = MapConfig.DEFAULT_BACKUP_COUNT;
 
     /**
      * Returns the configuration object for the underlying Hazelcast instance.
@@ -48,6 +58,7 @@ public class JetConfig {
      */
     public JetConfig setHazelcastConfig(Config config) {
         hazelcastConfig = config;
+        setJobMetadataBackupCount(jobMetadataBackupCount);
         return this;
     }
 
@@ -95,6 +106,23 @@ public class JetConfig {
     public JetConfig setDefaultEdgeConfig(EdgeConfig defaultEdgeConfig) {
         this.defaultEdgeConfig = defaultEdgeConfig;
         return this;
+    }
+
+    public JetConfig setJobMetadataBackupCount(int newBackupCount) {
+        if (newBackupCount < 0) {
+            throw new IllegalArgumentException("backup-count can't be smaller than 0");
+        } else if (newBackupCount > MAX_BACKUP_COUNT) {
+            throw new IllegalArgumentException("backup-count can't be larger than than " + MAX_BACKUP_COUNT);
+        }
+        String resourcesMapNameWildcard = RESOURCES_MAP_NAME_PREFIX + "*";
+        asList(IDS_MAP_NAME, JOB_RECORDS_MAP_NAME, resourcesMapNameWildcard, JOB_RESULTS_MAP_NAME).forEach(name ->
+                hazelcastConfig.getMapConfig(name).setBackupCount(newBackupCount));
+        this.jobMetadataBackupCount = newBackupCount;
+        return this;
+    }
+
+    public int getJobMetadataBackupCount() {
+        return jobMetadataBackupCount;
     }
 
     private static Config defaultHazelcastConfig() {

@@ -62,7 +62,6 @@ public class XmlConfigTest {
         assertDefaultMemberConfig(jetConfig.getHazelcastConfig());
     }
 
-
     @Test
     public void when_filePathSpecified_usesSpecifiedFile() throws IOException {
         // Given
@@ -178,6 +177,19 @@ public class XmlConfigTest {
         assertEquals("outboxCapacity", 998, edgeConfig.getOutboxCapacity());
         assertEquals("packetSizeLimit", 997, edgeConfig.getPacketSizeLimit());
         assertEquals("receiveWindowMultiplier", 996, edgeConfig.getReceiveWindowMultiplier());
+    }
+
+    @Test
+    public void when_jobMetadataBackupCount_usesSpecified() {
+        // Given
+        Properties properties = new Properties();
+        properties.put(XmlJetConfigLocator.HAZELCAST_JET_CONFIG_PROPERTY, "classpath:" + TEST_XML_1);
+
+        // When
+        JetConfig jetConfig = XmlJetConfigBuilder.getConfig(properties);
+
+        // Then
+        assertEquals("jobMetadataBackupCount", 4, jetConfig.getJobMetadataBackupCount());
     }
 
     private static void assertConfig(JetConfig jetConfig) {

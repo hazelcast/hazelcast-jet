@@ -36,6 +36,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -43,17 +44,16 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.zip.DeflaterOutputStream;
 
+import static com.hazelcast.jet.config.JetConfig.IDS_MAP_NAME;
+import static com.hazelcast.jet.config.JetConfig.JOB_RECORDS_MAP_NAME;
+import static com.hazelcast.jet.config.JetConfig.RESOURCES_MAP_NAME_PREFIX;
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_EXPIRATION_DURATION;
 import static com.hazelcast.jet.impl.util.Util.idToString;
 
 public class JobRepository {
 
-    static final String IDS_MAP_NAME = "__jet.jobs.ids";
-    static final String RESOURCES_MAP_NAME_PREFIX = "__jet.jobs.resources.";
     static final String RESOURCE_MARKER = "__jet.jobId";
-    static final String JOB_RECORDS_MAP_NAME = "__jet.jobs.records";
 
-    // TODO [basri] we should be able to configure backup counts of internal imaps
     // TODO [basri] there is no cleanup for ids yet
 
     private final HazelcastInstance instance;
@@ -84,8 +84,7 @@ public class JobRepository {
 
     public JobRecord newJobRecord(long jobId, DAG dag, JobConfig config) {
         JobRecord jobRecord = new JobRecord(jobId, dag, config);
-        IMap<Long, JobRecord> jobRecords = getJobs();
-        JobRecord prev = jobRecords.putIfAbsent(jobId, jobRecord);
+        JobRecord prev = jobs.putIfAbsent(jobId, jobRecord);
         if (prev != null) {
             throw new IllegalStateException("Cannot create new job record with id: " + idToString(jobId)
                     + " because another job for same id already exists with dag: " + prev.getDag());
@@ -94,8 +93,8 @@ public class JobRepository {
         return jobRecord;
     }
 
-    public IMap<Long, JobRecord> getJobs() {
-        return jobs;
+    public Collection<Long> getJobIds() {
+        return jobs.keySet();
     }
 
     public JobRecord getJob(long jobId) {
