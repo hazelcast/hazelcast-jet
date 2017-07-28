@@ -198,7 +198,8 @@ public class JobExecutionService {
         return executionContext.execute(doneCallback);
     }
 
-    private ExecutionContext verifyAndGetExecutionContext(Address coordinator, long jobId, long executionId, String operationName) {
+    private ExecutionContext verifyAndGetExecutionContext(Address coordinator, long jobId, long executionId,
+                                                          String operationName) {
         Address masterAddress = nodeEngine.getMasterAddress();
         if (!masterAddress.equals(coordinator)) {
             throw new IllegalStateException("Coordinator " + coordinator + " cannot run " + operationName + " "

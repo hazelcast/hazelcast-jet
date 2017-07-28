@@ -230,7 +230,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor implements Snapsh
         topTs = Math.max(topTs, k.getKey());
     }
 
-    private final static class SnapshotKey implements PartitionAware<Object> {
+    private static final class SnapshotKey implements PartitionAware<Object> {
         final long timestamp;
         final Object key;
 

@@ -62,6 +62,9 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
         return snapshottingEnabled;
     }
 
+    /**
+     * Sets if snapshotting is enabled for the job.
+     */
     public void setSnapshottingEnabled(boolean snapshottingEnabled) {
         this.snapshottingEnabled = snapshottingEnabled;
     }
