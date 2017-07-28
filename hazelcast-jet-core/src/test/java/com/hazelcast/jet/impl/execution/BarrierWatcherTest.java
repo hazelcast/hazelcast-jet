@@ -74,6 +74,12 @@ public class BarrierWatcherTest {
     }
 
     @Test
+    public void when_allQueuesDone_then_maxValue() {
+        assertEquals(0, bw.markQueueDone(0));
+        assertEquals(Long.MAX_VALUE, bw.markQueueDone(1));
+    }
+
+    @Test
     public void test_markQueueDoneWithoutAnyBarrier() {
         doAndCheck(1, 1, false, false, true);
         assertEquals(1, bw.markQueueDone(0));

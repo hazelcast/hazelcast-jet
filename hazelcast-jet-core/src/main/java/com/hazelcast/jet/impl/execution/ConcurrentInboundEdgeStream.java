@@ -96,7 +96,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
      */
     @Override
     public ProgressState drainTo(Consumer<Object> dest) {
-        if (barrierToDrain != null) {
+        if (barrierToDrain != null && barrierToDrain.snapshotId < Long.MAX_VALUE) {
             dest.accept(barrierToDrain);
             barrierAt = barrierToDrain.snapshotId;
             barrierToDrain = null;
@@ -110,7 +110,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             if (q == null) {
                 continue;
             }
-            tracker.notDone();
+            boolean done = false;
             if (blockOnBarrier && barrierWatcher.isBlocked(queueIndex)) {
                 continue;
             }
@@ -118,6 +118,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             for (Object item; (item = q.poll()) != null; ) {
                 tracker.madeProgress();
                 if (item == DONE_ITEM) {
+                    done = true;
                     conveyor.removeQueue(queueIndex);
                     long newBarrier = barrierWatcher.markQueueDone(queueIndex);
                     if (newBarrier > barrierAt) {
@@ -138,6 +139,10 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                 } else {
                     dest.accept(item);
                 }
+            }
+
+            if (!done) {
+                tracker.notDone();
             }
         }
 

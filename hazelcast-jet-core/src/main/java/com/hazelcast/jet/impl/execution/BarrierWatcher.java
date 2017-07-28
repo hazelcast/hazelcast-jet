@@ -28,7 +28,8 @@ public class BarrierWatcher {
      * Marks the queue as completed (after receiving {@link
      * DoneItem#DONE_ITEM}.
      *
-     * @return barrier at which all queues currently are
+     * @return barrier at which all queues currently are. Returns {@code
+     * Long.MAX_VALUE}, if the are all done.
      */
     public long markQueueDone(int queueIndex) {
         barrierAt[queueIndex] = Long.MAX_VALUE;
