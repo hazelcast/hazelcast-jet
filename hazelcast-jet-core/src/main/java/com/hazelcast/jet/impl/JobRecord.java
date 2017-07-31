@@ -16,11 +16,11 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.execution.init.JetImplDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import java.io.IOException;
@@ -28,28 +28,34 @@ import java.io.IOException;
 public class JobRecord implements IdentifiedDataSerializable {
 
     private long jobId;
-    private DAG dag;
+    private Data dag;
     private JobConfig config;
+    private int quorumSize;
 
     public JobRecord() {
     }
 
-    public JobRecord(long jobId, DAG dag, JobConfig config) {
+    public JobRecord(long jobId, Data dag, JobConfig config, int quorumSize) {
         this.jobId = jobId;
         this.dag = dag;
         this.config = config;
+        this.quorumSize = quorumSize;
     }
 
     public long getJobId() {
         return jobId;
     }
 
-    public DAG getDag() {
+    public Data getDag() {
         return dag;
     }
 
     public JobConfig getConfig() {
         return config;
+    }
+
+    public int getQuorumSize() {
+        return quorumSize;
     }
 
     @Override
@@ -65,16 +71,17 @@ public class JobRecord implements IdentifiedDataSerializable {
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeLong(jobId);
-        dag.writeData(out);
+        out.writeData(dag);
         out.writeObject(config);
+        out.writeInt(quorumSize);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
         jobId = in.readLong();
-        dag = new DAG();
-        dag.readData(in);
+        dag = in.readData();
         config = in.readObject();
+        quorumSize = in.readInt();
     }
 
 

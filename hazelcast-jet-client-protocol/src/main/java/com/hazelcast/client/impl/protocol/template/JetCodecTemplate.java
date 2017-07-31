@@ -19,12 +19,13 @@ package com.hazelcast.client.impl.protocol.template;
 import com.hazelcast.annotation.GenerateCodec;
 import com.hazelcast.annotation.Request;
 import com.hazelcast.client.impl.protocol.constants.ResponseMessageConst;
+import com.hazelcast.nio.serialization.Data;
 
 @GenerateCodec(id = TemplateConstants.JET_TEMPLATE_ID, name = "Jet", ns = "Jet")
 public interface JetCodecTemplate {
 
     @Request(id = 1, retryable = false, response = ResponseMessageConst.VOID)
-    void joinJob(long jobId);
+    void joinJob(long jobId, Data dag, Data jobConfig);
 
     @Request(id = 2, retryable = false, response = ResponseMessageConst.VOID)
     void cancelJob(long jobId);

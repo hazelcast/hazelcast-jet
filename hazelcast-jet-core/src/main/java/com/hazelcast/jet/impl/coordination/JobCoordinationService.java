@@ -16,8 +16,10 @@
 
 package com.hazelcast.jet.impl.coordination;
 
+import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.IMap;
 import com.hazelcast.instance.Node;
+import com.hazelcast.internal.cluster.ClusterService;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.MembersView;
 import com.hazelcast.internal.partition.impl.InternalPartitionServiceImpl;
@@ -25,18 +27,26 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.impl.JobExecutionService;
 import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.JobResult;
+import com.hazelcast.jet.impl.deployment.JetClassLoader;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.executionservice.InternalExecutionService;
 import com.hazelcast.spi.properties.HazelcastProperties;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
+import java.security.PrivilegedAction;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -45,6 +55,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static com.hazelcast.cluster.memberselector.MemberSelectors.DATA_MEMBER_SELECTOR;
 import static com.hazelcast.jet.config.JetConfig.JOB_RESULTS_MAP_NAME;
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
 import static com.hazelcast.jet.impl.util.Util.formatIds;
@@ -56,23 +67,25 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public class JobCoordinationService {
 
     private static final String COORDINATOR_EXECUTOR_NAME = "jet:coordinator";
-    private static final long RETRY_DELAY_IN_MILLIS = SECONDS.toMillis(1);
+    private static final long RETRY_DELAY_IN_MILLIS = SECONDS.toMillis(2);
     private static final long LOCK_ACQUIRE_ATTEMPT_TIMEOUT_IN_MILLIS = SECONDS.toMillis(1);
 
     private final NodeEngineImpl nodeEngine;
     private final JetConfig config;
     private final ILogger logger;
     private final JobRepository jobRepository;
+    private final JobExecutionService jobExecutionService;
     private final Lock lock = new ReentrantLock();
     private final ConcurrentMap<Long, MasterContext> masterContexts = new ConcurrentHashMap<>();
     private final IMap<Long, JobResult> jobResults;
 
     public JobCoordinationService(NodeEngineImpl nodeEngine, JetConfig config,
-                                  JobRepository jobRepository) {
+                                  JobRepository jobRepository, JobExecutionService jobExecutionService) {
         this.nodeEngine = nodeEngine;
         this.config = config;
         this.logger = nodeEngine.getLogger(getClass());
         this.jobRepository = jobRepository;
+        this.jobExecutionService = jobExecutionService;
         this.jobResults = nodeEngine.getHazelcastInstance().getMap(JOB_RESULTS_MAP_NAME);
     }
 
@@ -83,6 +96,11 @@ public class JobCoordinationService {
         executionService.register(COORDINATOR_EXECUTOR_NAME, 2, Integer.MAX_VALUE, CACHED);
         executionService.scheduleWithRepetition(COORDINATOR_EXECUTOR_NAME, this::scanJobs,
                 jobScanPeriodInMillis, jobScanPeriodInMillis, MILLISECONDS);
+    }
+
+    public ClassLoader getClassLoader(long jobId) {
+        PrivilegedAction<JetClassLoader> action = () -> new JetClassLoader(jobRepository.getJobResources(jobId));
+        return jobExecutionService.getClassLoader(jobId, action);
     }
 
     // visible only for testing
@@ -100,7 +118,7 @@ public class JobCoordinationService {
                 config.getInstanceConfig().getCooperativeThreadCount());
     }
 
-    public CompletableFuture<Boolean> startOrJoinJob(long jobId) {
+    public CompletableFuture<Boolean> startOrJoinJob(long jobId, Data dag, JobConfig config) {
         if (!nodeEngine.getClusterService().isMaster()) {
             throw new JetException("Job cannot be started here. Master address: "
                     + nodeEngine.getClusterService().getMasterAddress());
@@ -119,14 +137,14 @@ public class JobCoordinationService {
                 return jobResult.asCompletableFuture();
             }
 
-            JobRecord jobRecord = jobRepository.getJob(jobId);
-            if (jobRecord == null) {
-                throw new IllegalStateException("Job " + idToString(jobId) + " not found");
-            }
+            int quorumSize = config.isQuorumEnabled() ? getQuorumSize() : 0;
+            JobRecord jobRecord = new JobRecord(jobId, dag, config, quorumSize);
+            jobRepository.putNewJobRecord(jobRecord);
 
-            masterContext = new MasterContext(nodeEngine, this, jobId, jobRecord.getDag());
+            masterContext = new MasterContext(nodeEngine, this, jobRecord);
             MasterContext prev = masterContexts.putIfAbsent(jobId, masterContext);
             if (prev != null) {
+                logger.fine("Joining to already started job " + idToString(jobId));
                 return prev.completionFuture();
             }
         } finally {
@@ -138,6 +156,24 @@ public class JobCoordinationService {
         return masterContext.completionFuture();
     }
 
+    // called when the lock is acquired
+    private MasterContext createMasterContextIfJobNotStarted(JobRecord jobRecord) {
+        if (!nodeEngine.getClusterService().isMaster()) {
+            throw new JetException("Job cannot be started here. Master address: "
+                    + nodeEngine.getClusterService().getMasterAddress());
+        }
+
+        long jobId = jobRecord.getJobId();
+        if (jobResults.get(jobId) != null || masterContexts.containsKey(jobId)) {
+            return null;
+        }
+
+        MasterContext masterContext = new MasterContext(nodeEngine, this, jobRecord);
+        masterContexts.put(jobId, masterContext);
+
+        return masterContext;
+    }
+
     private boolean tryLock() {
         try {
             return lock.tryLock(LOCK_ACQUIRE_ATTEMPT_TIMEOUT_IN_MILLIS, MILLISECONDS);
@@ -145,6 +181,20 @@ public class JobCoordinationService {
             Thread.currentThread().interrupt();
             return false;
         }
+    }
+
+    private int getQuorumSize() {
+        int dataMemberCount = getDataMemberCount();
+        return (dataMemberCount / 2) + 1;
+    }
+
+    public boolean isQuorumPresent(int quorumSize) {
+        return getDataMemberCount() >= quorumSize;
+    }
+
+    private int getDataMemberCount() {
+        ClusterService clusterService = nodeEngine.getClusterService();
+        return clusterService.getMembers(DATA_MEMBER_SELECTOR).size();
     }
 
     public JobStatus getJobStatus(long jobId) {
@@ -240,25 +290,40 @@ public class JobCoordinationService {
         }
     }
 
+    @SuppressFBWarnings(value = "UC_USELESS_OBJECT", justification = "false positive findbugs warning")
     private void scanJobs() {
         if (!shouldStartJobs() || !tryLock()) {
             return;
         }
 
+        List<MasterContext> masterContextsToStart = new ArrayList<>();
         try {
             cleanupExpiredJobs();
 
-            Collection<Long> jobIds = jobRepository.getJobIds();
-            if (jobIds.isEmpty()) {
+            Collection<JobRecord> jobs = jobRepository.getJobRecords();
+            if (jobs.isEmpty()) {
                 return;
             }
 
-            jobIds.forEach(this::startOrJoinJob);
+            for (JobRecord job : jobs) {
+                MasterContext masterContext = createMasterContextIfJobNotStarted(job);
+                if (masterContext != null) {
+                    masterContextsToStart.add(masterContext);
+                }
+            }
         } catch (Exception e) {
+            if (e instanceof HazelcastInstanceNotActiveException) {
+                return;
+            }
             logger.severe("Scanning jobs failed", e);
         } finally {
             lock.unlock();
         }
+
+        masterContextsToStart.forEach(masterContext -> {
+            logger.info("Starting new job " + idToString(masterContext.getJobId()));
+            masterContext.tryStartJob(jobRepository::newId);
+        });
     }
 
     private boolean shouldStartJobs() {

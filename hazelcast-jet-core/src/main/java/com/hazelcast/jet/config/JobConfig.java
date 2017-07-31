@@ -31,7 +31,23 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
  */
 public class JobConfig implements Serializable {
 
+    private boolean quorumEnabled = true;
+
     private final List<ResourceConfig> resourceConfigs = new ArrayList<>();
+
+    /**
+     * TODO [basri] missing javadoc comment
+     */
+    public boolean isQuorumEnabled() {
+        return quorumEnabled;
+    }
+
+    /**
+     * TODO [basri] missing javadoc comment
+     */
+    public void setQuorumEnabled(boolean quorumEnabled) {
+        this.quorumEnabled = quorumEnabled;
+    }
 
     /**
      * Adds the supplied classes to the list of resources that will be

@@ -26,6 +26,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.operation.GetJobStatusOperation;
 import com.hazelcast.jet.impl.operation.JoinJobOperation;
 import com.hazelcast.nio.Address;
+import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.InternalCompletableFuture;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.Operation;
@@ -74,7 +75,8 @@ public class JetInstanceImpl extends AbstractJetInstance {
 
         @Override
         protected ICompletableFuture<Void> sendJoinRequest() {
-            Operation op = new JoinJobOperation(getJobId());
+            Data dag = nodeEngine.getSerializationService().toData(getDAG());
+            Operation op = new JoinJobOperation(getJobId(), dag, getConfig());
             Address masterAddress = nodeEngine.getMasterAddress();
             return nodeEngine.getOperationService()
                                       .createInvocationBuilder(JetService.SERVICE_NAME, op, masterAddress)

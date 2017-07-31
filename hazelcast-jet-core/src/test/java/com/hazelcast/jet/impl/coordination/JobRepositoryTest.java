@@ -22,6 +22,8 @@ import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.JetTestSupport;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.impl.JobRecord;
+import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
@@ -73,8 +75,9 @@ public class JobRepositoryTest extends JetTestSupport {
     @Test
     public void when_jobIsCompleted_then_expiredJobIsCleaned() {
         long jobIb = uploadResourcesForNewJob();
-        DAG dag = new DAG();
-        jobRepository.newJobRecord(jobIb, dag, jobConfig);
+        Data dag = createDAGData();
+        JobRecord jobRecord = createJobRecord(jobIb, dag);
+        jobRepository.putNewJobRecord(jobRecord);
 
         assertFalse(jobRepository.getJobResources(jobIb).isEmpty());
         assertNotNull(jobRepository.getJob(jobIb));
@@ -90,8 +93,9 @@ public class JobRepositoryTest extends JetTestSupport {
     @Test
     public void when_jobIsRunning_then_expiredJobIsNotCleared() {
         long jobIb = uploadResourcesForNewJob();
-        DAG dag = new DAG();
-        jobRepository.newJobRecord(jobIb, dag, jobConfig);
+        Data dag = createDAGData();
+        JobRecord jobRecord = createJobRecord(jobIb, dag);
+        jobRepository.putNewJobRecord(jobRecord);
 
         assertFalse(jobRepository.getJobResources(jobIb).isEmpty());
         assertNotNull(jobRepository.getJob(jobIb));
@@ -108,8 +112,9 @@ public class JobRepositoryTest extends JetTestSupport {
     public void when_jobExpires_then_jobIsCleared() {
         long jobIb = uploadResourcesForNewJob();
 
-        DAG dag = new DAG();
-        jobRepository.newJobRecord(jobIb, dag, jobConfig);
+        Data dag = createDAGData();
+        JobRecord jobRecord = createJobRecord(jobIb, dag);
+        jobRepository.putNewJobRecord(jobRecord);
 
         assertFalse(jobRepository.getJobResources(jobIb).isEmpty());
         assertNotNull(jobRepository.getJob(jobIb));
@@ -138,6 +143,14 @@ public class JobRepositoryTest extends JetTestSupport {
         jobConfig.addClass(DummyClass.class);
         jobRepository.uploadJobResources(jobIb, jobConfig);
         return jobIb;
+    }
+
+    private Data createDAGData() {
+        return getNodeEngineImpl(instance.getHazelcastInstance()).toData(new DAG());
+    }
+
+    private JobRecord createJobRecord(long jobIb, Data dag) {
+        return new JobRecord(jobIb, dag, jobConfig, 1);
     }
 
     private void sleepUntilJobExpires() {

@@ -77,7 +77,8 @@ import static org.junit.Assert.fail;
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 public class TopologyChangeTest extends JetTestSupport {
 
-    private static final int NODE_COUNT = 3;
+    // we have 4 nodes and at least 3 data members so the quorum size is 2. Therefore, only 1 member is killed in tests
+    private static final int NODE_COUNT = 4;
 
     private static final int PARALLELISM = 4;
 
@@ -97,10 +98,10 @@ public class TopologyChangeTest extends JetTestSupport {
 
     @Parameterized.Parameters
     public static Collection<boolean[]> parameters() {
-        return Arrays.asList(new boolean[][]{
-                {false, false, false},
-                {true, false, false},
-                {false, true, false}
+        return Arrays.asList(new boolean[][] {
+                {false, false, false, false},
+                {true, false, false, false},
+                {false, true, false, false}
         });
     }
 

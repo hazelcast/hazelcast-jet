@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.client;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.JetJoinJobCodec;
 import com.hazelcast.instance.Node;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.operation.JoinJobOperation;
 import com.hazelcast.nio.Connection;
 import com.hazelcast.spi.InternalCompletableFuture;
@@ -33,7 +34,8 @@ public class JetJoinJobMessageTask extends AbstractJetMessageTask<JetJoinJobCode
 
     @Override
     protected Operation prepareOperation() {
-        return new JoinJobOperation(parameters.jobId);
+        JobConfig jobConfig = nodeEngine.getSerializationService().toObject(parameters.jobConfig);
+        return new JoinJobOperation(parameters.jobId, parameters.dag, jobConfig);
     }
 
     @Override

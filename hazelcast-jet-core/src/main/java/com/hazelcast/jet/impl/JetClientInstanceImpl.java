@@ -36,6 +36,8 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
+import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.spi.serialization.SerializationService;
 
 import javax.annotation.Nonnull;
 import java.util.Set;
@@ -91,9 +93,15 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         @Override
         protected ICompletableFuture<Void> sendJoinRequest() {
             Address masterAddress = getMasterAddress();
-            ClientMessage request = JetJoinJobCodec.encodeRequest(getJobId());
-            ClientInvocation invocation = new ClientInvocation(client, request, masterAddress);
+            ClientInvocation invocation = new ClientInvocation(client, createJoinJobRequest(), masterAddress);
             return new ExecutionFuture(invocation.invoke(), getJobId(), masterAddress);
+        }
+
+        private ClientMessage createJoinJobRequest() {
+            SerializationService serializationService = client.getSerializationService();
+            Data dag = serializationService.toData(getDAG());
+            Data jobConfig = serializationService.toData(getConfig());
+            return JetJoinJobCodec.encodeRequest(getJobId(), dag, jobConfig);
         }
 
         @Nonnull @Override

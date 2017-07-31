@@ -24,15 +24,16 @@ import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.coordination.JobCoordinationService;
 import com.hazelcast.jet.impl.coordination.JobRepository;
-import com.hazelcast.jet.impl.deployment.JetClassLoader;
 import com.hazelcast.jet.impl.execution.ExecutionService;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.Packet;
+import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.CanCancelOperations;
 import com.hazelcast.spi.ConfigurableService;
 import com.hazelcast.spi.LiveOperations;
@@ -46,7 +47,6 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.PacketHandler;
 
 import java.io.IOException;
-import java.security.PrivilegedAction;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -99,8 +99,8 @@ public class JetService
 
         jobRepository = new JobRepository(jetInstance);
 
-        jobCoordinationService = new JobCoordinationService(nodeEngine, config, jobRepository);
         jobExecutionService = new JobExecutionService(nodeEngine, executionService);
+        jobCoordinationService = new JobCoordinationService(nodeEngine, config, jobRepository, jobExecutionService);
         networking = new Networking(engine, jobExecutionService, config.getInstanceConfig().getFlowControlPeriodMs());
 
         ClientEngineImpl clientEngine = engine.getService(ClientEngineImpl.SERVICE_NAME);
@@ -179,8 +179,7 @@ public class JetService
     }
 
     public ClassLoader getClassLoader(long jobId) {
-        PrivilegedAction<JetClassLoader> action = () -> new JetClassLoader(jobRepository.getJobResources(jobId));
-        return jobExecutionService.getClassLoader(jobId, action);
+        return jobCoordinationService.getClassLoader(jobId);
     }
 
     @Override
@@ -212,8 +211,8 @@ public class JetService
     public void memberAttributeChanged(MemberAttributeServiceEvent event) {
     }
 
-    public CompletableFuture<Boolean> startOrJoinJob(long jobId) {
-        return jobCoordinationService.startOrJoinJob(jobId);
+    public CompletableFuture<Boolean> startOrJoinJob(long jobId, Data dag, JobConfig config) {
+        return jobCoordinationService.startOrJoinJob(jobId, dag, config);
     }
 
 }

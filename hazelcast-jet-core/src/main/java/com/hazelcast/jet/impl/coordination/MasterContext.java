@@ -24,6 +24,7 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.TopologyChangedException;
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.operation.CompleteOperation;
 import com.hazelcast.jet.impl.operation.ExecuteOperation;
@@ -56,6 +57,7 @@ import static com.hazelcast.jet.JobStatus.NOT_STARTED;
 import static com.hazelcast.jet.JobStatus.RESTARTING;
 import static com.hazelcast.jet.JobStatus.RUNNING;
 import static com.hazelcast.jet.JobStatus.STARTING;
+import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isJobRestartRequired;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.Util.formatIds;
@@ -68,8 +70,8 @@ public class MasterContext {
     private final NodeEngineImpl nodeEngine;
     private final JobCoordinationService coordinationService;
     private final ILogger logger;
+    private final JobRecord jobRecord;
     private final long jobId;
-    private final DAG dag;
     private final CompletableFuture<Boolean> completionFuture = new CompletableFuture<>();
     private final AtomicReference<JobStatus> jobStatus = new AtomicReference<>(NOT_STARTED);
 
@@ -77,12 +79,12 @@ public class MasterContext {
     private volatile long jobStartTime;
     private volatile Map<MemberInfo, ExecutionPlan> executionPlanMap;
 
-    MasterContext(NodeEngineImpl nodeEngine, JobCoordinationService coordinationService, long jobId, DAG dag) {
+    MasterContext(NodeEngineImpl nodeEngine, JobCoordinationService coordinationService, JobRecord jobRecord) {
         this.nodeEngine = nodeEngine;
         this.coordinationService = coordinationService;
         this.logger = nodeEngine.getLogger(getClass());
-        this.jobId = jobId;
-        this.dag = dag;
+        this.jobRecord = jobRecord;
+        this.jobId = jobRecord.getJobId();
     }
 
     public long getJobId() {
@@ -106,13 +108,14 @@ public class MasterContext {
             return;
         }
 
+        if (scheduleRestartIfQuorumAbsent()) {
+            return;
+        }
+
         executionId = idSupplier.getAsLong();
-        logger.info("Start executing " + formatIds(jobId, executionId) + ", status " + jobStatus()
-                    + ": " + dag);
         MembersView membersView = getMembersView();
-        logger.fine("Building execution plan for " + formatIds(jobId, executionId));
         try {
-            executionPlanMap = coordinationService.createExecutionPlans(membersView, dag);
+            executionPlanMap = createExecutionPlans(membersView);
         } catch (TopologyChangedException e) {
             logger.severe("Execution plans could not be created for " + formatIds(jobId, executionId), e);
             coordinationService.scheduleRestart(jobId);
@@ -124,11 +127,6 @@ public class MasterContext {
         Function<ExecutionPlan, Operation> operationCtor = plan ->
                 new InitOperation(jobId, executionId, membersView.getVersion(), participants, plan);
         invoke(operationCtor, this::onInitStepCompleted, null);
-    }
-
-    private MembersView getMembersView() {
-        ClusterServiceImpl clusterService = (ClusterServiceImpl) nodeEngine.getClusterService();
-        return clusterService.getMembershipManager().getMembersView();
     }
 
     /**
@@ -163,6 +161,37 @@ public class MasterContext {
         }
 
         return true;
+    }
+
+    private boolean scheduleRestartIfQuorumAbsent() {
+        int quorumSize = jobRecord.getQuorumSize();
+        if (coordinationService.isQuorumPresent(quorumSize)) {
+            return false;
+        }
+
+        logger.fine("Rescheduling job " + idToString(jobId) + " restart since quorum size " + quorumSize
+                + " is not met");
+        coordinationService.scheduleRestart(jobId);
+        return true;
+    }
+
+    private MembersView getMembersView() {
+        ClusterServiceImpl clusterService = (ClusterServiceImpl) nodeEngine.getClusterService();
+        return clusterService.getMembershipManager().getMembersView();
+    }
+
+    private Map<MemberInfo, ExecutionPlan> createExecutionPlans(MembersView membersView) {
+        DAG dag = deserializeDAG();
+
+        logger.info("Start executing " + formatIds(jobId, executionId) + ", status " + jobStatus()
+                + ": " + dag);
+        logger.fine("Building execution plan for " + formatIds(jobId, executionId));
+        return coordinationService.createExecutionPlans(membersView, dag);
+    }
+
+    private DAG deserializeDAG() {
+        ClassLoader cl = coordinationService.getClassLoader(jobId);
+        return deserializeWithCustomClassLoader(nodeEngine.getSerializationService(), cl, jobRecord.getDag());
     }
 
     private void onInitStepCompleted(Map<MemberInfo, Object> responses) {

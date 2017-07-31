@@ -20,7 +20,6 @@ import com.hazelcast.core.DistributedObject;
 import com.hazelcast.core.EntryView;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
@@ -81,19 +80,17 @@ public class JobRepository {
         return id;
     }
 
-    public JobRecord newJobRecord(long jobId, DAG dag, JobConfig config) {
-        JobRecord jobRecord = new JobRecord(jobId, dag, config);
+    public void putNewJobRecord(JobRecord jobRecord) {
+        long jobId = jobRecord.getJobId();
         JobRecord prev = jobs.putIfAbsent(jobId, jobRecord);
         if (prev != null) {
             throw new IllegalStateException("Cannot create new job record with id: " + idToString(jobId)
                     + " because another job for same id already exists with dag: " + prev.getDag());
         }
-
-        return jobRecord;
     }
 
-    public Collection<Long> getJobIds() {
-        return jobs.keySet();
+    public Collection<JobRecord> getJobRecords() {
+        return jobs.values();
     }
 
     public JobRecord getJob(long jobId) {
