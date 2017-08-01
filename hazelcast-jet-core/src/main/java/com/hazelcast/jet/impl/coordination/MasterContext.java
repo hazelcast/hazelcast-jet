@@ -33,6 +33,7 @@ import com.hazelcast.jet.impl.operation.DoSnapshotOperation;
 import com.hazelcast.jet.impl.operation.ExecuteOperation;
 import com.hazelcast.jet.impl.operation.InitOperation;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.AbstractEntryProcessor;
 import com.hazelcast.spi.InternalCompletableFuture;
@@ -280,10 +281,19 @@ public class MasterContext {
     }
 
     private void initiateSnapshot() {
-        masterSnapshotId++;
-        logger.info(String.format("Initiating snapshot %d for job %s", masterSnapshotId, idToString(jobId)));
-        nodeEngine.getHazelcastInstance().getMap(SNAPSHOTS_MAP_NAME)
-                  .putIfAbsent(Arrays.asList(jobId, masterSnapshotId), new MasterSnapshotRecord(statefulVertexIds));
+        IMap<Object, Object> snapshotsMap = nodeEngine.getHazelcastInstance().getMap(SNAPSHOTS_MAP_NAME);
+
+        List<Long> key;
+        MasterSnapshotRecord value;
+        do {
+            do {
+                masterSnapshotId = Util.secureRandomNextLong();
+            } while (masterSnapshotId == 0); // 0 is reserved value
+            key = Arrays.asList(jobId, masterSnapshotId);
+            value = new MasterSnapshotRecord(statefulVertexIds, false);
+        } while (snapshotsMap.putIfAbsent(key, value) != null);
+
+        logger.info(String.format("Initiating snapshot %s for job %s", idToString(masterSnapshotId), idToString(jobId)));
         Function<ExecutionPlan, Operation> factory = plan -> new DoSnapshotOperation(jobId, executionId, masterSnapshotId);
         invoke(factory, this::onSnapshotCompleted, completionFuture);
     }
@@ -292,8 +302,8 @@ public class MasterContext {
         // check, if all members were successful
         for (Object r : responses.values()) {
             if (r instanceof Throwable) {
-                logger.warning(DoSnapshotOperation.class.getSimpleName() + " for job " + jobId + ", execution "
-                        + executionId + " failed on some members: " + r, (Throwable) r);
+                logger.warning(DoSnapshotOperation.class.getSimpleName() + " for " + formatIds(jobId, executionId)
+                        + " failed on some members: " + r, (Throwable) r);
                 // fail the job
                 completionFuture().completeExceptionally((Throwable) r);
             }
@@ -304,7 +314,7 @@ public class MasterContext {
         long creationTime = (long) map.executeOnKey(Arrays.asList(jobId, masterSnapshotId),
                 new MarkRecordCompleteEntryProcessor());
 
-        logger.info(String.format("Snapshot %d for job %s completed in %dms", masterSnapshotId,
+        logger.info(String.format("Snapshot %s for job %s completed in %dms", idToString(masterSnapshotId),
                 idToString(jobId), System.currentTimeMillis() - creationTime));
 
         // TODO delete older snapshots

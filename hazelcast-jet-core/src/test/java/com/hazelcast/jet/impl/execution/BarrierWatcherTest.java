@@ -21,6 +21,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 public class BarrierWatcherTest {
 
@@ -30,57 +31,55 @@ public class BarrierWatcherTest {
     private BarrierWatcher bw = new BarrierWatcher(2);
 
     @Test
-    public void test_barrierIncrementsOnAllQueues() {
+    public void test_barriersOnAllQueues() {
         doAndCheck(0, 1, false, true, false);
         doAndCheck(1, 1, true, false, false);
         doAndCheck(0, 2, false, true, false);
         doAndCheck(1, 2, true, false, false);
+        doAndCheck(0, -1, false, true, false);
+        doAndCheck(1, -1, true, false, false);
     }
 
     @Test
-    public void test_barrierIncrementsTwiceOnOneQueue() {
-        doAndCheck(0, 1, false, true, false);
-        doAndCheck(0, 2, false, true, false);
-        doAndCheck(1, 1, true, true, false);
-        doAndCheck(1, 2, true, false, false);
-    }
-
-    @Test
-    public void when_barrierDoesNotIncrement_then_error() {
+    public void when_duplicateBarrierBeforeReceivingFromAll_then_error() {
         bw.observe(0, 1);
         exception.expect(AssertionError.class);
         bw.observe(0, 1);
     }
 
     @Test
-    public void when_startAtZero_then_error() {
+    public void when_zeroBarrier_then_error() {
         exception.expect(AssertionError.class);
         bw.observe(0, 0);
     }
 
     @Test
-    public void test_skippedBarrier() {
-        doAndCheck(0, 2, false, true, false);
-        doAndCheck(1, 1, true, true, false);
-        doAndCheck(1, 2, true, false, false);
+    public void when_differentBarrierOnQueues_then_error() {
+        bw.observe(0, 1);
+        exception.expect(AssertionError.class);
+        bw.observe(1, 2);
     }
 
     @Test
-    public void test_markQueueDone() {
+    public void test_markQueueDoneWithBarriersFromAll() {
         doAndCheck(0, 1, false, true, false);
         doAndCheck(1, 1, true, false, false);
-        assertEquals(1, bw.markQueueDone(0));
+        assertEquals(0, bw.markQueueDone(0));
         doAndCheck(1, 2, true, false, false);
     }
 
     @Test
-    public void when_allQueuesDone_then_maxValue() {
+    public void test_markQueueDoneWithNoBarrier() {
         assertEquals(0, bw.markQueueDone(0));
-        assertEquals(Long.MAX_VALUE, bw.markQueueDone(1));
+        assertFalse(bw.isBlocked(0));
+        assertFalse(bw.isBlocked(1));
+        assertEquals(0, bw.markQueueDone(1));
+        assertFalse(bw.isBlocked(0));
+        assertFalse(bw.isBlocked(1));
     }
 
     @Test
-    public void test_markQueueDoneWithoutAnyBarrier() {
+    public void test_markQueueDoneWithSomeBarriers() {
         doAndCheck(1, 1, false, false, true);
         assertEquals(1, bw.markQueueDone(0));
         doAndCheck(1, 2, true, false, false);

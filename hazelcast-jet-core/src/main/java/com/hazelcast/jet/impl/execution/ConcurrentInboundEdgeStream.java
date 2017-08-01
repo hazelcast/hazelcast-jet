@@ -44,8 +44,6 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private final SkewReductionPolicy skewReductionPolicy;
     private final BarrierWatcher barrierWatcher;
     private SnapshotBarrier barrierToDrain;
-    // TODO initialize to snapshot we are restoring from
-    private long barrierAt;
 
     /**
      * @param blockOnBarrier If true, queues won't be drained until the same
@@ -96,9 +94,8 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
      */
     @Override
     public ProgressState drainTo(Consumer<Object> dest) {
-        if (barrierToDrain != null && barrierToDrain.snapshotId() < Long.MAX_VALUE) {
+        if (barrierToDrain != null) {
             dest.accept(barrierToDrain);
-            barrierAt = barrierToDrain.snapshotId();
             barrierToDrain = null;
             return ProgressState.MADE_PROGRESS;
         }
@@ -121,7 +118,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                     done = true;
                     conveyor.removeQueue(queueIndex);
                     long newBarrier = barrierWatcher.markQueueDone(queueIndex);
-                    if (newBarrier > barrierAt) {
+                    if (newBarrier != 0) {
                         barrierToDrain = new SnapshotBarrier(newBarrier);
                         // stop now, barrier will be added as the sole item in next call
                         return ProgressState.MADE_PROGRESS;

@@ -16,60 +16,73 @@
 
 package com.hazelcast.jet.impl.execution;
 
-public class BarrierWatcher {
+import java.util.BitSet;
 
-    private final long[] barrierAt;
+class BarrierWatcher {
 
-    public BarrierWatcher(int queueCount) {
-        barrierAt = new long[queueCount];
+    private final BitSet barrierReceived;
+    private int numAwaiting;
+    private int numQueuesNotDone;
+    private long currentSnapshotId;
+
+    BarrierWatcher(int queueCount) {
+        barrierReceived = new BitSet(queueCount);
+        numQueuesNotDone = queueCount;
+        numAwaiting = numQueuesNotDone;
     }
 
     /**
      * Marks the queue as completed (after receiving {@link
      * DoneItem#DONE_ITEM}.
      *
-     * @return barrier at which all queues currently are. Returns {@code
-     * Long.MAX_VALUE}, if the are all done.
+     * @return snapshotId received from all other queues which can now be
+     * forwarded or 0, if some queues still expect barrier.
      */
-    public long markQueueDone(int queueIndex) {
-        barrierAt[queueIndex] = Long.MAX_VALUE;
-
-        // if this queue was the minimum queue and it was the only queue at this barrier, we'll forward it
-        long min = Long.MAX_VALUE;
-        for (long b : barrierAt) {
-            if (min > b) {
-                min = b;
+    long markQueueDone(int queueIndex) {
+        assert numQueuesNotDone > 0;
+        numQueuesNotDone--;
+        long previousSnapshotId = currentSnapshotId;
+        if (previousSnapshotId != 0) {
+            if (observe(queueIndex, currentSnapshotId)) {
+                return previousSnapshotId;
             }
+        } else {
+            numAwaiting--;
         }
-
-        return min;
+        return 0;
     }
 
     /**
      * @return true, iff the barrier can now be forwarded (has been received from all queues)
      */
-    public boolean observe(int queueIndex, long newBarrier) {
-        assert barrierAt[queueIndex] < newBarrier : "SnapshotId not monotonically increasing. Before: "
-                + barrierAt[queueIndex] + ", now: " + newBarrier;
+    boolean observe(int queueIndex, long newBarrier) {
+        assert currentSnapshotId == 0 || currentSnapshotId == newBarrier
+                : "Different barrier received from queues: expected: " + currentSnapshotId + ", got: " + newBarrier;
 
-        barrierAt[queueIndex] = newBarrier;
+        assert !barrierReceived.get(queueIndex) : "Barrier already received on queue";
 
-        return !isBlocked(queueIndex);
+        assert newBarrier != 0 : "snapshotId=0 is not allowed";
+
+        currentSnapshotId = newBarrier;
+
+        barrierReceived.set(queueIndex);
+        numAwaiting--;
+
+        if (numAwaiting == 0) {
+            barrierReceived.clear();
+            numAwaiting = numQueuesNotDone;
+            currentSnapshotId = 0;
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /**
      * @return true, iff the queue at {@code queueIndex} should be blocked, because it already had
      * the barrier we are expecting from all other queues.
      */
-    public boolean isBlocked(int queueIndex) {
-        if (barrierAt[queueIndex] == Long.MAX_VALUE) {
-            return false;
-        }
-        for (long b : barrierAt) {
-            if (b < barrierAt[queueIndex]) {
-                return true;
-            }
-        }
-        return false;
+    boolean isBlocked(int queueIndex) {
+        return barrierReceived.get(queueIndex);
     }
 }

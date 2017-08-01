@@ -49,8 +49,8 @@ public class DoSnapshotOperation extends AsyncExecutionOperation {
 
         executionFuture = service.doSnapshotOnMember(getCallerAddress(), jobId, executionId, snapshotId)
                 .whenComplete((r, v) -> {
-                    LoggingUtil.logFine(getLogger(), "Snapshot %d for job %s finished on member",
-                            snapshotId, idToString(jobId));
+                    LoggingUtil.logFine(getLogger(), "Snapshot %s for job %s finished on member",
+                            idToString(snapshotId), idToString(jobId));
                     doSendResponse(null);
                 });
     }

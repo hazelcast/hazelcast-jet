@@ -28,19 +28,21 @@ import java.util.Set;
 
 /**
  * A record stored in the {@link
- * com.hazelcast.jet.impl.coordination.MasterContext#SNAPSHOT_LIST_MAP_NAME}
+ * com.hazelcast.jet.impl.coordination.MasterContext#SNAPSHOTS_MAP_NAME}
  * map.
  */
 public class MasterSnapshotRecord implements IdentifiedDataSerializable {
     private long creationTime = System.currentTimeMillis();
     private boolean isComplete;
+    private boolean isUserInitiated;
     private Set<String> statefulVertexIds;
 
     public MasterSnapshotRecord() {
     }
 
-    public MasterSnapshotRecord(Set<String> statefulVertexIds) {
+    public MasterSnapshotRecord(Set<String> statefulVertexIds, boolean isUserInitiated) {
         this.statefulVertexIds = statefulVertexIds;
+        this.isUserInitiated = isUserInitiated;
     }
 
     public long getCreationTime() {
@@ -59,6 +61,13 @@ public class MasterSnapshotRecord implements IdentifiedDataSerializable {
         isComplete = complete;
     }
 
+    /**
+     * True, if the snapshot was user-initiated and thus is not automatically deleted.
+     */
+    public boolean isUserInitiated() {
+        return isUserInitiated;
+    }
+
     @Override
     public int getFactoryId() {
         return JetImplDataSerializerHook.FACTORY_ID;
@@ -73,6 +82,7 @@ public class MasterSnapshotRecord implements IdentifiedDataSerializable {
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeLong(creationTime);
         out.writeBoolean(isComplete);
+        out.writeBoolean(isUserInitiated);
         out.writeObject(statefulVertexIds);
     }
 
@@ -80,6 +90,7 @@ public class MasterSnapshotRecord implements IdentifiedDataSerializable {
     public void readData(ObjectDataInput in) throws IOException {
         creationTime = in.readLong();
         isComplete = in.readBoolean();
+        isUserInitiated = in.readBoolean();
         statefulVertexIds = in.readObject();
     }
 

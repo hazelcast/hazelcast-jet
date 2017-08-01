@@ -68,6 +68,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     private BarrierWatcher barrierWatcher;
 
     private ProcessorState state = ProcessorState.STATE_NULLARY_PROCESS;
+    private long pendingBarrier;
 
     ProcessorTaskletBase(ProcCtx context,
                          Processor processor,
@@ -230,6 +231,10 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         final InboundEdgeStream first = instreamCursor.value();
         ProgressState result;
         do {
+            if (pendingBarrier != 0) {
+                inbox.add(new SnapshotBarrier(pendingBarrier));
+                return;
+            }
             currInstream = instreamCursor.value();
             result = ProgressState.NO_PROGRESS;
             if (processingGuarantee == ProcessingGuarantee.EXACTLY_ONCE
@@ -239,6 +244,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
             result = currInstream.drainTo(inbox::add);
             progTracker.madeProgress(result.isMadeProgress());
             if (result.isDone()) {
+                pendingBarrier = barrierWatcher.markQueueDone(currInstream.ordinal());
                 instreamCursor.remove();
             }
             if (!instreamCursor.advance()) {
