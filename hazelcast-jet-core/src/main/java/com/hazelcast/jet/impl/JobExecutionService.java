@@ -70,10 +70,10 @@ public class JobExecutionService {
         this.executionService = executionService;
     }
 
-    public void shutdown() {
+    public void shutdown(String reason) {
         executionContexts.values().forEach(exeCtx -> {
             String message = "Completing " + formatIds(exeCtx.getJobId(), exeCtx.getExecutionId())
-                    + " locally. Reason: shutting down";
+                    + " locally. Reason: " + reason;
             cancelAndComplete(exeCtx, message, new HazelcastInstanceNotActiveException());
         });
     }
@@ -106,15 +106,15 @@ public class JobExecutionService {
                 });
     }
 
-    private void cancelAndComplete(ExecutionContext execCtx, String message, Throwable t) {
+    private void cancelAndComplete(ExecutionContext exeCtx, String message, Throwable t) {
         try {
-            execCtx.cancel().whenComplete((r, e) -> {
-                long executionId = execCtx.getExecutionId();
+            exeCtx.cancel().whenComplete((r, e) -> {
+                long executionId = exeCtx.getExecutionId();
                 logger.fine(message);
                 completeExecution(executionId, t);
             });
         } catch (Exception e) {
-            logger.severe("Local cancellation of " + formatIds(execCtx.getJobId(), execCtx.getExecutionId())
+            logger.severe("Local cancellation of " + formatIds(exeCtx.getJobId(), exeCtx.getExecutionId())
                     + " failed", e);
         }
     }

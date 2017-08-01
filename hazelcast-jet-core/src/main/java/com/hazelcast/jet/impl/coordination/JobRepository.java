@@ -24,6 +24,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.impl.JobRecord;
+import com.hazelcast.jet.impl.JobResourceKey;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.nio.IOUtil;
@@ -80,16 +81,18 @@ public class JobRepository {
         return id;
     }
 
-    public void putNewJobRecord(JobRecord jobRecord) {
+    void putNewJobRecord(JobRecord jobRecord) {
         long jobId = jobRecord.getJobId();
         JobRecord prev = jobs.putIfAbsent(jobId, jobRecord);
         if (prev != null) {
-            throw new IllegalStateException("Cannot create new job record with id: " + idToString(jobId)
-                    + " because another job for same id already exists with dag: " + prev.getDag());
+            if (!(prev.getDag().equals(jobRecord.getDag()) && prev.getConfig().equals(jobRecord.getConfig()))) {
+                throw new IllegalStateException("Cannot put job record for job " + idToString(jobId)
+                        + " because it already exists with a different dag or job config");
+            }
         }
     }
 
-    public Collection<JobRecord> getJobRecords() {
+    Collection<JobRecord> getJobRecords() {
         return jobs.values();
     }
 
@@ -97,24 +100,24 @@ public class JobRepository {
        return jobs.get(jobId);
     }
 
-    public <T> IMap<String, T> getJobResources(long jobId) {
+    <T> IMap<JobResourceKey, T> getJobResources(long jobId) {
         return instance.getMap(RESOURCES_MAP_NAME_PREFIX + jobId);
     }
 
     public void uploadJobResources(long jobId, JobConfig jobConfig) {
-        IMap<String, Object> jobResourcesMap = getJobResources(jobId);
+        IMap<JobResourceKey, Object> jobResourcesMap = getJobResources(jobId);
         for (ResourceConfig rc : jobConfig.getResourceConfigs()) {
-            Map<String, byte[]> tmpMap = new HashMap<>();
+            Map<JobResourceKey, byte[]> tmpMap = new HashMap<>();
             if (rc.isArchive()) {
                 try {
-                    loadJar(tmpMap, rc.getUrl());
+                    loadJar(jobId, tmpMap, rc.getUrl());
                 } catch (IOException e) {
                     // TODO basri: fix it
                     throw new RuntimeException(e);
                 }
             } else {
                 try {
-                    readStreamAndPutCompressedToMap(tmpMap, rc.getUrl().openStream(), rc.getId());
+                    readStreamAndPutCompressedToMap(jobId, tmpMap, rc.getUrl().openStream(), rc.getId());
                 } catch (IOException e) {
                     // TODO basri: fix it
                     throw new RuntimeException(e);
@@ -125,7 +128,12 @@ public class JobRepository {
             jobResourcesMap.putAll(tmpMap);
         }
 
-        jobResourcesMap.put(RESOURCE_MARKER, RESOURCE_MARKER);
+        jobResourcesMap.put(new JobResourceKey(jobId, RESOURCE_MARKER), jobId);
+    }
+
+    boolean isResourceUploadCompleted(long jobId) {
+        Object val = getJobResources(jobId).get(new JobResourceKey(jobId, RESOURCE_MARKER));
+        return (val instanceof Long && jobId == ((Long) val));
     }
 
     /**
@@ -133,7 +141,7 @@ public class JobRepository {
      */
     void deleteJob(long jobId) {
         jobs.remove(jobId);
-        IMap<String, Object> jobResourcesMap = getJobResources(jobId);
+        IMap<JobResourceKey, Object> jobResourcesMap = getJobResources(jobId);
         if (jobResourcesMap != null) {
             jobResourcesMap.clear();
             jobResourcesMap.destroy();
@@ -170,10 +178,11 @@ public class JobRepository {
                 .map(this::getJobIdFromResourcesMapName)
                 .filter(jobId -> !runningJobIds.contains(jobId))
                 .forEach(jobId -> {
-                    IMap<String, Object> resources = getJobResources(jobId);
-                    EntryView<String, Object> marker = resources.getEntryView(RESOURCE_MARKER);
+                    IMap<JobResourceKey, Object> resources = getJobResources(jobId);
+                    JobResourceKey markerKey = new JobResourceKey(jobId, RESOURCE_MARKER);
+                    EntryView<JobResourceKey, Object> marker = resources.getEntryView(markerKey);
                     if (marker == null) {
-                        resources.putIfAbsent(RESOURCE_MARKER, RESOURCE_MARKER);
+                        resources.putIfAbsent(markerKey, RESOURCE_MARKER);
                     } else if (isJobExpired(marker.getCreationTime())) {
                         deleteJob(jobId);
                     }
@@ -196,24 +205,25 @@ public class JobRepository {
 
     /**
      * Unzips the Jar archive and processes individual entries using
-     * {@link #readStreamAndPutCompressedToMap(Map, InputStream, String)}.
+     * {@link #readStreamAndPutCompressedToMap(long, Map, InputStream, String)}.
      */
-    private void loadJar(Map<String, byte[]> map, URL url) throws IOException {
+    private void loadJar(long jobId, Map<JobResourceKey, byte[]> map, URL url) throws IOException {
         try (JarInputStream jis = new JarInputStream(new BufferedInputStream(url.openStream()))) {
             JarEntry jarEntry;
             while ((jarEntry = jis.getNextJarEntry()) != null) {
                 if (jarEntry.isDirectory()) {
                     continue;
                 }
-                readStreamAndPutCompressedToMap(map, jis, jarEntry.getName());
+                readStreamAndPutCompressedToMap(jobId, map, jis, jarEntry.getName());
             }
         }
     }
 
-    private void readStreamAndPutCompressedToMap(Map<String, byte[]> map, InputStream in, String resourceId)
+    private void readStreamAndPutCompressedToMap(long jobId, Map<JobResourceKey, byte[]> map, InputStream in, String resourceId)
             throws IOException {
         // ignore duplicates: the first resource in first jar takes precedence
-        if (map.containsKey(resourceId)) {
+        JobResourceKey resourceKey = new JobResourceKey(jobId, resourceId);
+        if (map.containsKey(resourceKey)) {
             return;
         }
 
@@ -222,7 +232,7 @@ public class JobRepository {
             IOUtil.drainTo(in, compressor);
         }
 
-        map.put(resourceId, baos.toByteArray());
+        map.put(resourceKey, baos.toByteArray());
     }
 
 }

@@ -18,7 +18,9 @@ package com.hazelcast.jet.config;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.config.MapConfig;
+import com.hazelcast.map.merge.PutIfAbsentMapMergePolicy;
 
+import java.util.List;
 import java.util.Properties;
 
 import static com.hazelcast.spi.partition.IPartition.MAX_BACKUP_COUNT;
@@ -55,11 +57,17 @@ public class JetConfig {
      */
     public static final int DEFAULT_JET_MULTICAST_PORT = 54326;
 
+    /**
+     * The default backup count to be used for storing job metadata in Hazelcast maps
+     */
+    public static final int JOB_METADATA_DEFAULT_BACKUP_COUNT = MapConfig.DEFAULT_BACKUP_COUNT;
+
+
     private Config hazelcastConfig = defaultHazelcastConfig();
     private InstanceConfig instanceConfig = new InstanceConfig();
     private EdgeConfig defaultEdgeConfig = new EdgeConfig();
     private Properties properties = new Properties();
-    private int jobMetadataBackupCount = MapConfig.DEFAULT_BACKUP_COUNT;
+    private int jobMetadataBackupCount = JOB_METADATA_DEFAULT_BACKUP_COUNT;
 
     /**
      * Returns the configuration object for the underlying Hazelcast instance.
@@ -73,6 +81,7 @@ public class JetConfig {
      */
     public JetConfig setHazelcastConfig(Config config) {
         hazelcastConfig = config;
+        setInternalMapMergePolicies(config);
         setJobMetadataBackupCount(jobMetadataBackupCount);
         return this;
     }
@@ -132,9 +141,7 @@ public class JetConfig {
         } else if (newBackupCount > MAX_BACKUP_COUNT) {
             throw new IllegalArgumentException("backup-count can't be larger than than " + MAX_BACKUP_COUNT);
         }
-        String resourcesMapNameWildcard = RESOURCES_MAP_NAME_PREFIX + "*";
-        asList(IDS_MAP_NAME, JOB_RECORDS_MAP_NAME, resourcesMapNameWildcard, JOB_RESULTS_MAP_NAME).forEach(name ->
-                hazelcastConfig.getMapConfig(name).setBackupCount(newBackupCount));
+        internalJetMapNames().forEach(name -> hazelcastConfig.getMapConfig(name).setBackupCount(newBackupCount));
         this.jobMetadataBackupCount = newBackupCount;
         return this;
     }
@@ -151,6 +158,18 @@ public class JetConfig {
         config.getNetworkConfig().getJoin().getMulticastConfig().setMulticastPort(DEFAULT_JET_MULTICAST_PORT);
         config.getGroupConfig().setName("jet");
         config.getGroupConfig().setPassword("jet-pass");
+        setInternalMapMergePolicies(config);
         return config;
     }
+
+    private static void setInternalMapMergePolicies(Config config) {
+        String mergePolicy = PutIfAbsentMapMergePolicy.class.getName();
+        internalJetMapNames().forEach(name -> config.getMapConfig(name).setMergePolicy(mergePolicy));
+    }
+
+    private static List<String> internalJetMapNames() {
+        String resourcesMapNameWildcard = RESOURCES_MAP_NAME_PREFIX + "*";
+        return asList(IDS_MAP_NAME, JOB_RECORDS_MAP_NAME, resourcesMapNameWildcard, JOB_RESULTS_MAP_NAME);
+    }
+
 }

@@ -99,7 +99,7 @@ public class JobCoordinationService {
     }
 
     public ClassLoader getClassLoader(long jobId) {
-        PrivilegedAction<JetClassLoader> action = () -> new JetClassLoader(jobRepository.getJobResources(jobId));
+        PrivilegedAction<JetClassLoader> action = () -> new JetClassLoader(jobId, jobRepository.getJobResources(jobId));
         return jobExecutionService.getClassLoader(jobId, action);
     }
 
@@ -119,9 +119,19 @@ public class JobCoordinationService {
     }
 
     public CompletableFuture<Boolean> startOrJoinJob(long jobId, Data dag, JobConfig config) {
-        if (!nodeEngine.getClusterService().isMaster()) {
+        if (!isMaster()) {
             throw new JetException("Job cannot be started here. Master address: "
                     + nodeEngine.getClusterService().getMasterAddress());
+        }
+
+        // if we receive start job call but cannot find the resource marker there, it means either
+        // job is completed or resources are lost because of failures or there is an ongoing split-brain merge
+        if (!jobRepository.isResourceUploadCompleted(jobId)) {
+            CompletableFuture<Boolean> future = getCompletedJobFutureIfPresent(jobId);
+            if (future != null)
+                return future;
+
+            throw new RetryableHazelcastException();
         }
 
         if (!tryLock()) {
@@ -130,14 +140,12 @@ public class JobCoordinationService {
 
         MasterContext masterContext;
         try {
-            JobResult jobResult = jobResults.get(jobId);
-            if (jobResult != null) {
-                logger.fine("Not starting job " + idToString(jobId) + " since already completed with result: " +
-                        jobResult);
-                return jobResult.asCompletableFuture();
+            CompletableFuture<Boolean> future = getCompletedJobFutureIfPresent(jobId);
+            if (future != null) {
+                return future;
             }
 
-            int quorumSize = config.isQuorumEnabled() ? getQuorumSize() : 0;
+            int quorumSize = config.isSplitBrainProtectionEnabled() ? getQuorumSize() : 0;
             JobRecord jobRecord = new JobRecord(jobId, dag, config, quorumSize);
             jobRepository.putNewJobRecord(jobRecord);
 
@@ -156,9 +164,19 @@ public class JobCoordinationService {
         return masterContext.completionFuture();
     }
 
+    private CompletableFuture<Boolean> getCompletedJobFutureIfPresent(long jobId) {
+        JobResult jobResult = jobResults.get(jobId);
+        if (jobResult != null) {
+            logger.fine("Not starting job " + idToString(jobId) + " since already completed with result: " +
+                    jobResult);
+            return jobResult.asCompletableFuture();
+        }
+        return null;
+    }
+
     // called when the lock is acquired
     private MasterContext createMasterContextIfJobNotStarted(JobRecord jobRecord) {
-        if (!nodeEngine.getClusterService().isMaster()) {
+        if (!isMaster()) {
             throw new JetException("Job cannot be started here. Master address: "
                     + nodeEngine.getClusterService().getMasterAddress());
         }
@@ -188,7 +206,7 @@ public class JobCoordinationService {
         return (dataMemberCount / 2) + 1;
     }
 
-    public boolean isQuorumPresent(int quorumSize) {
+    boolean isQuorumPresent(int quorumSize) {
         return getDataMemberCount() >= quorumSize;
     }
 
@@ -327,11 +345,11 @@ public class JobCoordinationService {
     }
 
     private boolean shouldStartJobs() {
-        Node node = nodeEngine.getNode();
-        if (!(node.isMaster() && node.isRunning())) {
+        if (!(isMaster() && nodeEngine.isRunning())) {
             return false;
         }
 
+        Node node = nodeEngine.getNode();
         InternalPartitionServiceImpl partitionService = (InternalPartitionServiceImpl) node.getPartitionService();
         return partitionService.getPartitionStateManager().isInitialized()
                 && partitionService.isMigrationAllowed()
@@ -348,4 +366,9 @@ public class JobCoordinationService {
     public JobResult getResult(long jobId) {
         return jobResults.get(jobId);
     }
+
+    private boolean isMaster() {
+        return nodeEngine.getClusterService().isMaster();
+    }
+
 }

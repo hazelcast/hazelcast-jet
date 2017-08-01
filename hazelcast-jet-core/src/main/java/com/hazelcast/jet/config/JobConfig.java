@@ -31,22 +31,22 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
  */
 public class JobConfig implements Serializable {
 
-    private boolean quorumEnabled = true;
-
+    private boolean splitBrainProtectionEnabled = true;
     private final List<ResourceConfig> resourceConfigs = new ArrayList<>();
 
     /**
      * TODO [basri] missing javadoc comment
      */
-    public boolean isQuorumEnabled() {
-        return quorumEnabled;
+    public boolean isSplitBrainProtectionEnabled() {
+        return splitBrainProtectionEnabled;
     }
 
     /**
      * TODO [basri] missing javadoc comment
      */
-    public void setQuorumEnabled(boolean quorumEnabled) {
-        this.quorumEnabled = quorumEnabled;
+    public JobConfig setSplitBrainProtectionEnabled(boolean splitBrainProtectionEnabled) {
+        this.splitBrainProtectionEnabled = splitBrainProtectionEnabled;
+        return this;
     }
 
     /**
@@ -177,4 +177,29 @@ public class JobConfig implements Serializable {
         String urlFile = url.getPath();
         return urlFile.substring(urlFile.lastIndexOf('/') + 1, urlFile.length());
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        JobConfig jobConfig = (JobConfig) o;
+
+        if (splitBrainProtectionEnabled != jobConfig.splitBrainProtectionEnabled) {
+            return false;
+        }
+        return resourceConfigs.equals(jobConfig.resourceConfigs);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (splitBrainProtectionEnabled ? 1 : 0);
+        result = 31 * result + resourceConfigs.hashCode();
+        return result;
+    }
+
 }

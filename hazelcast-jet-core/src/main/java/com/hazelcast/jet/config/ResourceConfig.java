@@ -83,4 +83,32 @@ public class ResourceConfig implements Serializable {
     public String toString() {
         return "ResourceConfig{url=" + url + ", id='" + id + '\'' + ", isArchive=" + isArchive + '}';
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        ResourceConfig that = (ResourceConfig) o;
+
+        if (isArchive != that.isArchive) {
+            return false;
+        }
+        if (url != null ? !url.equals(that.url) : that.url != null) {
+            return false;
+        }
+        return id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = url != null ? url.hashCode() : 0;
+        result = 31 * result + id.hashCode();
+        result = 31 * result + (isArchive ? 1 : 0);
+        return result;
+    }
 }

@@ -125,13 +125,14 @@ public class JetService
 
     @Override
     public void shutdown(boolean terminate) {
-        jobExecutionService.shutdown();
+        jobExecutionService.shutdown("shutdown");
         networking.shutdown();
         executionService.shutdown();
     }
 
     @Override
     public void reset() {
+        jobExecutionService.shutdown("reset");
     }
 
     public void initExecution(long jobId, long executionId, Address coordinator, int coordinatorMemberListVersion,
