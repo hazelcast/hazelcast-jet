@@ -36,31 +36,31 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
 public interface ComputeStage<E> extends Stage {
-    <R> ComputeStage<R> apply(UnaryTransform<? super E, R> unaryTransform);
+    <R> ComputeStage<R> attach(UnaryTransform<? super E, R> unaryTransform);
 
-    <R> ComputeStage<R> apply(MultiTransform<R> multiTransform, List<ComputeStage> moreInputs);
+    <R> ComputeStage<R> attach(MultiTransform<R> multiTransform, List<ComputeStage> moreInputs);
 
     EndStage drainTo(Sink sink);
 
     default <R> ComputeStage<R> map(DistributedFunction<? super E, ? extends R> mapF) {
-        return apply(Transforms.map(mapF));
+        return attach(Transforms.map(mapF));
     }
 
     default <R> ComputeStage<R> flatMap(DistributedFunction<? super E, Traverser<? extends R>> flatMapF) {
-        return apply(Transforms.flatMap(flatMapF));
+        return attach(Transforms.flatMap(flatMapF));
     }
 
     default <K, R> ComputeStage<Entry<K, R>> groupBy(
             DistributedFunction<? super E, ? extends K> keyF, AggregateOperation1<E, ?, R> aggrOp
     ) {
-        return apply(Transforms.groupBy(keyF, aggrOp));
+        return attach(Transforms.groupBy(keyF, aggrOp));
     }
 
     @SuppressWarnings("unchecked")
     default <K, E1> ComputeStage<Tuple2<E, Iterable<E1>>> join(
             ComputeStage<E1> s1, JoinOn<K, E, E1> joinOn
     ) {
-        return apply(new HashJoinTransform(singletonList(joinOn)), singletonList(s1));
+        return attach(new HashJoinTransform(singletonList(joinOn)), singletonList(s1));
     }
 
     @SuppressWarnings("unchecked")
@@ -68,7 +68,7 @@ public interface ComputeStage<E> extends Stage {
             ComputeStage<E1> s1, JoinOn<K1, E, E1> joinOn1,
             ComputeStage<E2> s2, JoinOn<K2, E, E2> joinOn2
     ) {
-        return apply(new HashJoinTransform(asList(joinOn1, joinOn2)), asList(s1, s2));
+        return attach(new HashJoinTransform(asList(joinOn1, joinOn2)), asList(s1, s2));
     }
 
     default JoinBuilder<E> joinBuilder() {
@@ -81,7 +81,7 @@ public interface ComputeStage<E> extends Stage {
             ComputeStage<E1> s1, DistributedFunction<? super E1, ? extends K> key1F,
             AggregateOperation2<E, E1, A, R> aggrOp
     ) {
-        return apply(new CoGroupTransform<>(asList(thisKeyF, key1F), aggrOp, asList(tag0(), tag1())),
+        return attach(new CoGroupTransform<>(asList(thisKeyF, key1F), aggrOp, asList(tag0(), tag1())),
                 singletonList(s1));
     }
 
@@ -92,7 +92,7 @@ public interface ComputeStage<E> extends Stage {
             ComputeStage<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
             AggregateOperation3<E, E1, E2, A, R> aggrOp
     ) {
-        return apply(new CoGroupTransform<>(asList(thisKeyF, key1F, key2F), aggrOp, asList(tag0(), tag1(), tag2())),
+        return attach(new CoGroupTransform<>(asList(thisKeyF, key1F, key2F), aggrOp, asList(tag0(), tag1(), tag2())),
                 asList(s1, s2));
     }
 

@@ -59,12 +59,12 @@ public class ComputeStageImpl<E> extends AbstractStage implements ComputeStage<E
     }
 
     @Override
-    public <R> ComputeStage<R> apply(UnaryTransform<? super E, R> unaryTransform) {
+    public <R> ComputeStage<R> attach(UnaryTransform<? super E, R> unaryTransform) {
         return pipelineImpl.attach(this, unaryTransform);
     }
 
     @Override
-    public <R> ComputeStage<R> apply(MultiTransform<R> multiTransform, List<ComputeStage> otherInputs) {
+    public <R> ComputeStage<R> attach(MultiTransform<R> multiTransform, List<ComputeStage> otherInputs) {
         return pipelineImpl.attach(
                 Stream.concat(Stream.of(this), otherInputs.stream()).collect(toList()),
                 multiTransform);

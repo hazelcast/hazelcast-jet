@@ -26,7 +26,7 @@ import static java.util.Collections.singletonList;
 /**
  * Javadoc pending.
  */
-public class EndStageImpl extends AbstractStage implements EndStage {
+class EndStageImpl extends AbstractStage implements EndStage {
 
     EndStageImpl(Stage upstream, Sink transform, PipelineImpl pipeline) {
         super(singletonList(upstream), transform, pipeline);
