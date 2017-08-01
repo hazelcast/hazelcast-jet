@@ -25,8 +25,8 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.TopologyChangedException;
 import com.hazelcast.jet.impl.JetService;
-import com.hazelcast.jet.impl.execution.MasterSnapshotRecord;
 import com.hazelcast.jet.impl.JobRecord;
+import com.hazelcast.jet.impl.execution.MasterSnapshotRecord;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.operation.CompleteOperation;
 import com.hazelcast.jet.impl.operation.DoSnapshotOperation;
@@ -199,7 +199,7 @@ public class MasterContext {
         logger.info("Start executing " + formatIds(jobId, executionId) + ", status " + jobStatus()
                 + ": " + dag);
         logger.fine("Building execution plan for " + formatIds(jobId, executionId));
-        return coordinationService.createExecutionPlans(membersView, dag);
+        return coordinationService.createExecutionPlans(membersView, dag, jobRecord.getConfig());
     }
 
     private DAG deserializeDAG() {
@@ -273,10 +273,9 @@ public class MasterContext {
     }
 
     private void scheduleSnapshot() {
-        // TODO take the snapshot delay from configuration
-        if (jobStatus.get() == RUNNING) {
+        if (jobStatus.get() == RUNNING && jobRecord.getConfig().getSnapshotInterval() >= 0) {
             scheduledSnapshotFuture = nodeEngine.getExecutionService().schedule("initiateSnapshot-" + executionId,
-                    this::initiateSnapshot, 5, TimeUnit.SECONDS);
+                    this::initiateSnapshot, jobRecord.getConfig().getSnapshotInterval(), TimeUnit.MILLISECONDS);
         }
     }
 

@@ -26,6 +26,7 @@ import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.jet.TopologyChangedException;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.EdgeConfig;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.execution.init.Contexts.MetaSupplierCtx;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.NodeEngine;
@@ -51,8 +52,8 @@ public final class ExecutionPlanBuilder {
     }
 
     public static Map<MemberInfo, ExecutionPlan> createExecutionPlans(
-            NodeEngine nodeEngine, MembersView membersView, DAG dag, int defaultParallelism
-    ) {
+            NodeEngine nodeEngine, MembersView membersView, DAG dag, int defaultParallelism,
+            JobConfig jobConfig) {
         JetInstance instance = getJetInstance(nodeEngine);
         final Collection<MemberInfo> members = new HashSet<>(membersView.size());
         final Address[] partitionOwners = new Address[nodeEngine.getPartitionService().getPartitionCount()];
@@ -63,7 +64,7 @@ public final class ExecutionPlanBuilder {
         final boolean isJobDistributed = clusterSize > 1;
         final EdgeConfig defaultEdgeConfig = instance.getConfig().getDefaultEdgeConfig();
         final Map<MemberInfo, ExecutionPlan> plans =
-                members.stream().collect(toMap(m -> m, m -> new ExecutionPlan(partitionOwners)));
+                members.stream().collect(toMap(m -> m, m -> new ExecutionPlan(partitionOwners, jobConfig)));
         final Map<String, Integer> vertexIdMap = assignVertexIds(dag);
         for (Entry<String, Integer> entry : vertexIdMap.entrySet()) {
             final Vertex vertex = dag.getVertex(entry.getKey());
@@ -76,7 +77,8 @@ public final class ExecutionPlanBuilder {
             final List<EdgeDef> outbound = toEdgeDefs(dag.getOutboundEdges(vertex.getName()), defaultEdgeConfig,
                     e -> vertexIdMap.get(e.getDestName()), isJobDistributed);
             final ProcessorMetaSupplier metaSupplier = vertex.getSupplier();
-            metaSupplier.init(new MetaSupplierCtx(instance, totalParallelism, localParallelism));
+            metaSupplier.init(new MetaSupplierCtx(instance, totalParallelism, localParallelism,
+                    jobConfig.getSnapshotInterval() >= 0));
 
             Function<Address, ProcessorSupplier> procSupplierFn = metaSupplier.get(addresses);
             int procIdxOffset = 0;

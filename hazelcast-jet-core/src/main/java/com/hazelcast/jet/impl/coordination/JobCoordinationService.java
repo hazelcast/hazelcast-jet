@@ -113,9 +113,9 @@ public class JobCoordinationService {
         return masterContexts.get(jobId);
     }
 
-    public Map<MemberInfo, ExecutionPlan> createExecutionPlans(MembersView membersView, DAG dag) {
+    public Map<MemberInfo, ExecutionPlan> createExecutionPlans(MembersView membersView, DAG dag, JobConfig jobConfig) {
         return ExecutionPlanBuilder.createExecutionPlans(nodeEngine, membersView, dag,
-                config.getInstanceConfig().getCooperativeThreadCount());
+                config.getInstanceConfig().getCooperativeThreadCount(), jobConfig);
     }
 
     public CompletableFuture<Boolean> startOrJoinJob(long jobId, Data dag, JobConfig config) {

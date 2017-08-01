@@ -32,7 +32,6 @@ import java.util.Set;
  * map.
  */
 public class MasterSnapshotRecord implements IdentifiedDataSerializable {
-    // TODO
     private long creationTime = System.currentTimeMillis();
     private boolean isComplete;
     private Set<String> statefulVertexIds;

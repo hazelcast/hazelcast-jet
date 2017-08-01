@@ -37,12 +37,14 @@ public final class Contexts {
         private final String vertexName;
         private final int index;
         private CompletableFuture<Void> jobFuture;
+        private final boolean snapshottingEnabled;
 
-        public ProcCtx(JetInstance instance, ILogger logger, String vertexName, int index) {
+        public ProcCtx(JetInstance instance, ILogger logger, String vertexName, int index, boolean snapshottingEnabled) {
             this.instance = instance;
             this.logger = logger;
             this.vertexName = vertexName;
             this.index = index;
+            this.snapshottingEnabled = snapshottingEnabled;
         }
 
         @Nonnull
@@ -81,8 +83,7 @@ public final class Contexts {
 
         @Override
         public boolean snapshottingEnabled() {
-            // TODO return real value
-            return false;
+            return snapshottingEnabled;
         }
 
         public void initJobFuture(CompletableFuture<Void> jobFuture) {
@@ -94,10 +95,12 @@ public final class Contexts {
     static class ProcSupplierCtx implements ProcessorSupplier.Context {
         private final JetInstance instance;
         private final int perNodeParallelism;
+        private final boolean snapshottingEnabled;
 
-        ProcSupplierCtx(JetInstance instance, int perNodeParallelism) {
+        ProcSupplierCtx(JetInstance instance, int perNodeParallelism, boolean snapshottingEnabled) {
             this.instance = instance;
             this.perNodeParallelism = perNodeParallelism;
+            this.snapshottingEnabled = snapshottingEnabled;
         }
 
         @Nonnull
@@ -113,8 +116,7 @@ public final class Contexts {
 
         @Override
         public boolean snapshottingEnabled() {
-            // TODO return real value
-            return false;
+            return snapshottingEnabled;
         }
     }
 
@@ -122,11 +124,13 @@ public final class Contexts {
         private final JetInstance jetInstance;
         private final int totalParallelism;
         private final int localParallelism;
+        private final boolean snapshottingEnabled;
 
-        MetaSupplierCtx(JetInstance jetInstance, int totalParallelism, int localParallelism) {
+        MetaSupplierCtx(JetInstance jetInstance, int totalParallelism, int localParallelism, boolean snapshottingEnabled) {
             this.jetInstance = jetInstance;
             this.totalParallelism = totalParallelism;
             this.localParallelism = localParallelism;
+            this.snapshottingEnabled = snapshottingEnabled;
         }
 
         @Nonnull
@@ -147,8 +151,7 @@ public final class Contexts {
 
         @Override
         public boolean snapshottingEnabled() {
-            // TODO return real value
-            return false;
+            return snapshottingEnabled;
         }
     }
 }

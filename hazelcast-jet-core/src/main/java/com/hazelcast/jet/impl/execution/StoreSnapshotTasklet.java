@@ -64,7 +64,6 @@ public class StoreSnapshotTasklet implements Tasklet {
     private long currentSnapshotId = -1;
     private long completedSnapshotId = -1;
     private final AtomicInteger ourPendingAsyncOps = new AtomicInteger();
-    private boolean haveUnsentEntries;
 
     private final String vertexId;
     private volatile boolean inputExhausted;
@@ -123,6 +122,7 @@ public class StoreSnapshotTasklet implements Tasklet {
         }
 
         // drain input queues
+        boolean[] haveUnsentEntries = {false};
         if (!inputExhausted && (currentSnapshotId > completedSnapshotId || ourPendingAsyncOps.get() == 0)) {
             ProgressState inputQueueResult = inboundEdgeStream.drainTo(item -> {
                 progTracker.madeProgress();
@@ -131,7 +131,10 @@ public class StoreSnapshotTasklet implements Tasklet {
                 } else if (item instanceof SnapshotBarrier) {
                     completedSnapshotId = ((SnapshotBarrier) item).snapshotId();
                 } else {
-                    haveUnsentEntries = true;
+                    assert currentSnapshotId + 1 == completedSnapshotId : "Writing to snapshot even though there is no " +
+                            "snapshot in progress. currentSnapshotId=" + currentSnapshotId + ", completedSnapshotId="
+                            + completedSnapshotId;
+                    haveUnsentEntries[0] = true;
                     Entry<Data, Data> entry = (Entry<Data, Data>) item;
                     int partitionId = partitionService.getPartitionId(entry.getKey());
                     MapEntries entries = outputBuffer[partitionId];
@@ -148,7 +151,7 @@ public class StoreSnapshotTasklet implements Tasklet {
             }
         }
 
-        if (!haveUnsentEntries) {
+        if (!haveUnsentEntries[0]) {
             return progTracker.toProgressState();
         }
 

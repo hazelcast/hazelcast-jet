@@ -22,6 +22,7 @@ import com.hazelcast.internal.cluster.impl.MembersView;
 import com.hazelcast.jet.TestProcessors.Identity;
 import com.hazelcast.jet.TestProcessors.ProcessorThatFailsInComplete;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobResult;
@@ -256,7 +257,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
 
         JetService jetService = getJetService(instance);
         final Map<MemberInfo, ExecutionPlan> executionPlans =
-                jetService.getJobCoordinationService().createExecutionPlans(membersView, dag);
+                jetService.getJobCoordinationService().createExecutionPlans(membersView, dag, new JobConfig());
         ExecutionPlan executionPlan = executionPlans.get(membersView.getMember(localAddress));
         long jobId = 0;
         long executionId = 1;

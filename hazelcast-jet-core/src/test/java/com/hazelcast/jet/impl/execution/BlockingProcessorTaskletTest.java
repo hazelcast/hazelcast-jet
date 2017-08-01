@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.test.HazelcastParallelClassRunner;
@@ -63,7 +64,7 @@ public class BlockingProcessorTaskletTest {
     @Before
     public void setUp() {
         this.processor = new PassThroughProcessor();
-        this.context = new ProcCtx(null, null, null, 0);
+        this.context = new ProcCtx(null, null, null, 0, true);
         this.jobFuture = new CompletableFuture<>();
         this.mockInput = IntStream.range(0, MOCK_INPUT_SIZE).boxed().collect(toList());
         this.instreams = new ArrayList<>();
@@ -294,9 +295,8 @@ public class BlockingProcessorTaskletTest {
     // END BlockingOutbox tests
 
     private BlockingProcessorTasklet createTasklet() {
-        // TODO
         final BlockingProcessorTasklet t = new BlockingProcessorTasklet(context, processor, instreams, outstreams,
-                new SnapshotState(), null, null);
+                new SnapshotState(), null, null, ProcessingGuarantee.EXACTLY_ONCE);
         t.init(jobFuture);
         return t;
     }

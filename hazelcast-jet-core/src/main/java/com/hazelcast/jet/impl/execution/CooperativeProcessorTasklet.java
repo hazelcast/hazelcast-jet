@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.Watermark;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
 import com.hazelcast.jet.impl.util.ProgressState;
@@ -36,15 +37,18 @@ public class CooperativeProcessorTasklet extends ProcessorTaskletBase {
     public CooperativeProcessorTasklet(ProcCtx context, Processor processor,
                                        List<InboundEdgeStream> instreams, List<OutboundEdgeStream> outstreams,
                                        SnapshotState snapshotState, Queue<Object> snapshotQueue,
-                                       SerializationService serializationService) {
-        super(context, processor, instreams, outstreams, snapshotState, snapshotQueue, serializationService);
+                                       SerializationService serializationService,
+                                       ProcessingGuarantee processingGuarantee) {
+        super(context, processor, instreams, outstreams, snapshotState, snapshotQueue, serializationService,
+                processingGuarantee);
         Preconditions.checkTrue(processor.isCooperative(), "Processor is non-cooperative");
         int[] bucketCapacities = Stream.of(this.outstreams).mapToInt(OutboundEdgeStream::getOutboxCapacity).toArray();
         outbox = new ArrayDequeOutbox(bucketCapacities, progTracker);
     }
 
     @Override
-    protected SnapshotStorageImpl createSnapshotStorage(Queue<Object> snapshotQueue, SerializationService serializationService) {
+    protected SnapshotStorageImpl createSnapshotStorage(Queue<Object> snapshotQueue,
+                                                        SerializationService serializationService) {
         return new SnapshotStorageImpl(serializationService, snapshotQueue);
     }
 

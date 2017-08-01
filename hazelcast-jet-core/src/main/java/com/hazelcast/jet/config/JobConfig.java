@@ -32,7 +32,10 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 public class JobConfig implements Serializable {
 
     private boolean splitBrainProtectionEnabled = true;
-    private final List<ResourceConfig> resourceConfigs = new ArrayList<>();
+    private final transient List<ResourceConfig> resourceConfigs = new ArrayList<>();
+
+    private ProcessingGuarantee processingGuarantee = ProcessingGuarantee.EXACTLY_ONCE;
+    private long snapshotInterval = -1;
 
     /**
      * TODO [basri] missing javadoc comment
@@ -46,6 +49,41 @@ public class JobConfig implements Serializable {
      */
     public JobConfig setSplitBrainProtectionEnabled(boolean splitBrainProtectionEnabled) {
         this.splitBrainProtectionEnabled = splitBrainProtectionEnabled;
+        return this;
+    }
+
+    /**
+     * Return current {@link #setProcessingGuarantee(ProcessingGuarantee)
+     * processing guarantee}.
+     */
+    public ProcessingGuarantee getProcessingGuarantee() {
+        return processingGuarantee;
+    }
+
+    /**
+     * Set the processing guarantee, see {@link ProcessingGuarantee}.
+     * If this method is not called, {@link ProcessingGuarantee#EXACTLY_ONCE}
+     * is used.
+     */
+    public JobConfig setProcessingGuarantee(ProcessingGuarantee processingGuarantee) {
+        this.processingGuarantee = processingGuarantee;
+        return this;
+    }
+
+    /**
+     * Return current {@link #setSnapshotInterval(long) snapshot interval}.
+     */
+    public long getSnapshotInterval() {
+        return snapshotInterval;
+    }
+
+    /**
+     * Set the snapshot interval in milliseconds. Negative value means
+     * snapshots are disabled. This is the interval between completion of
+     * previous snapshot and the start of the new one.
+     */
+    public JobConfig setSnapshotInterval(long snapshotInterval) {
+        this.snapshotInterval = snapshotInterval;
         return this;
     }
 

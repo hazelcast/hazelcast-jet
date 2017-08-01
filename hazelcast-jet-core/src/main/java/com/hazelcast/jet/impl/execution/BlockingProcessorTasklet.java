@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.Watermark;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.spi.serialization.SerializationService;
@@ -42,9 +43,10 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
     public BlockingProcessorTasklet(
             ProcCtx context, Processor processor, List<InboundEdgeStream> instreams,
             List<OutboundEdgeStream> outstreams, SnapshotState snapshotState,
-            Queue<Object> snapshotQueue, SerializationService serializationService
-    ) {
-        super(context, processor, instreams, outstreams, snapshotState, snapshotQueue, serializationService);
+            Queue<Object> snapshotQueue, SerializationService serializationService,
+            ProcessingGuarantee processingGuarantee) {
+        super(context, processor, instreams, outstreams, snapshotState, snapshotQueue, serializationService,
+                processingGuarantee);
         Preconditions.checkFalse(processor.isCooperative(), "Processor is cooperative");
         outbox = new BlockingOutbox();
     }
@@ -73,7 +75,8 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
     }
 
     @Override
-    protected SnapshotStorageImpl createSnapshotStorage(Queue<Object> snapshotQueue, SerializationService serializationService) {
+    protected SnapshotStorageImpl createSnapshotStorage(Queue<Object> snapshotQueue,
+                                                        SerializationService serializationService) {
         return snapshotStorage = new BlockingSnapshotStorageImpl(serializationService, snapshotQueue);
     }
 

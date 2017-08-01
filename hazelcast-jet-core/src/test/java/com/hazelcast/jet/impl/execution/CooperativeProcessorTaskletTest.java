@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.test.HazelcastParallelClassRunner;
@@ -61,7 +62,7 @@ public class CooperativeProcessorTaskletTest {
     public void setUp() {
         this.mockInput = IntStream.range(0, MOCK_INPUT_SIZE).boxed().collect(toList());
         this.processor = new PassThroughProcessor();
-        this.context = new ProcCtx(null, null, null, 0);
+        this.context = new ProcCtx(null, null, null, 0, false);
         this.instreams = new ArrayList<>();
         this.outstreams = new ArrayList<>();
     }
@@ -209,9 +210,8 @@ public class CooperativeProcessorTaskletTest {
     }
 
     private CooperativeProcessorTasklet createTasklet() {
-        // TODO
-        final CooperativeProcessorTasklet t = new CooperativeProcessorTasklet(
-                context, processor, instreams, outstreams, new SnapshotState(), null, null);
+        final CooperativeProcessorTasklet t = new CooperativeProcessorTasklet(context, processor, instreams, outstreams,
+                new SnapshotState(), null, null, ProcessingGuarantee.EXACTLY_ONCE);
         t.init(new CompletableFuture<>());
         return t;
     }

@@ -19,10 +19,10 @@ package com.hazelcast.jet;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
 import com.hazelcast.jet.impl.util.ProgressTracker;
+import com.hazelcast.jet.test.TestProcessorContext;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
@@ -41,9 +41,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.NoSuchElementException;
 
+import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.processor.DiagnosticProcessors.peekInput;
 import static com.hazelcast.jet.processor.DiagnosticProcessors.peekOutput;
-import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -68,7 +68,7 @@ public class Processors_peekTest {
 
     private ArrayDequeInbox inbox;
     private ArrayDequeOutbox outbox;
-    private Processor.Context context;
+    private TestProcessorContext context;
     private ILogger logger;
 
     @Parameters(name = "toStringF={0}, shouldLogF={1}, processor={2}")
@@ -89,7 +89,7 @@ public class Processors_peekTest {
         inbox = new ArrayDequeInbox();
         outbox = new ArrayDequeOutbox(new int[]{128}, new ProgressTracker());
         logger = mock(ILogger.class);
-        context = new ProcCtx(null, logger, null, 0);
+        context = new TestProcessorContext().setLogger(logger);
     }
 
     private DistributedSupplier<Processor> procSupplier() {

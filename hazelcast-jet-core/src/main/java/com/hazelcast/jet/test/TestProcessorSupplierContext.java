@@ -36,8 +36,9 @@ public class TestProcessorSupplierContext implements ProcessorSupplier.Context {
     /**
      * Set the jet instance.
      */
-    public void setJetInstance(JetInstance jetInstance) {
+    public TestProcessorSupplierContext setJetInstance(JetInstance jetInstance) {
         this.jetInstance = jetInstance;
+        return this;
     }
 
     @Override
@@ -53,14 +54,16 @@ public class TestProcessorSupplierContext implements ProcessorSupplier.Context {
     /**
      * Sets if snapshotting is enabled for the job.
      */
-    public void setSnapshottingEnabled(boolean snapshottingEnabled) {
+    public TestProcessorSupplierContext setSnapshottingEnabled(boolean snapshottingEnabled) {
         this.snapshottingEnabled = snapshottingEnabled;
+        return this;
     }
 
     /**
      * Set local parallelism.
      */
-    public void setLocalParallelism(int localParallelism) {
+    public TestProcessorSupplierContext setLocalParallelism(int localParallelism) {
         this.localParallelism = localParallelism;
+        return this;
     }
 }

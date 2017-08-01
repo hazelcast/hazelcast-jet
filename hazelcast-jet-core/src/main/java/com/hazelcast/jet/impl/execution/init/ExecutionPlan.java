@@ -26,6 +26,8 @@ import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.BlockingProcessorTasklet;
 import com.hazelcast.jet.impl.execution.ConcurrentInboundEdgeStream;
@@ -87,6 +89,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     /** Snapshot of partition table used to route items on partitioned edges */
     private Address[] partitionOwners;
 
+    private JobConfig jobConfig;
     private List<VertexDef> vertices = new ArrayList<>();
 
     private final Map<String, ConcurrentConveyor<Object>[]> localConveyorMap = new HashMap<>();
@@ -108,8 +111,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     ExecutionPlan() {
     }
 
-    ExecutionPlan(Address[] partitionOwners) {
+    ExecutionPlan(Address[] partitionOwners, JobConfig jobConfig) {
         this.partitionOwners = partitionOwners;
+        this.jobConfig = jobConfig;
     }
 
     public void initialize(NodeEngine nodeEngine, long jobId, long executionId, SnapshotState snapshotState) {
@@ -143,7 +147,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 ILogger logger =
                         nodeEngine.getLogger(p.getClass().getName() + '.' + srcVertex.name() + '#' + processorIdx);
                 ProcCtx context =
-                        new ProcCtx(instance, logger, srcVertex.name(), processorIdx + srcVertex.getProcIdxOffset());
+                        new ProcCtx(instance, logger, srcVertex.name(), processorIdx + srcVertex.getProcIdxOffset(),
+                                jobConfig.getSnapshotInterval() >= 0);
 
                  String probePrefix = String.format("jet.job.%s.%s#%d", idToString(executionId), srcVertex.name(),
                          processorIdx);
@@ -156,10 +161,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 ProcessorTaskletBase processorTasklet = p.isCooperative()
                         ? new CooperativeProcessorTasklet(context, p, inboundStreams, outboundStreams,
                                 snapshotState, savesSnapshot ? queues[processorIdx] : null,
-                                nodeEngine.getSerializationService())
+                                nodeEngine.getSerializationService(), jobConfig.getProcessingGuarantee())
                         : new BlockingProcessorTasklet(context, p, inboundStreams, outboundStreams,
                                 snapshotState, savesSnapshot ? queues[processorIdx] : null,
-                                nodeEngine.getSerializationService());
+                                nodeEngine.getSerializationService(), jobConfig.getProcessingGuarantee());
                 tasklets.add(processorTasklet);
                 this.processors.add(p);
                 processorIdx++;
@@ -212,6 +217,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         for (Address address : partitionOwners) {
             out.writeObject(address);
         }
+        out.writeObject(jobConfig);
     }
 
     @Override
@@ -222,6 +228,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         for (int i = 0; i < len; i++) {
             partitionOwners[i] = in.readObject();
         }
+        jobConfig = in.readObject();
     }
 
     // End implementation of IdentifiedDataSerializable
@@ -229,7 +236,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     private void initProcSuppliers() {
         JetService service = nodeEngine.getService(JetService.SERVICE_NAME);
         vertices.forEach(v -> v.processorSupplier().init(
-                new ProcSupplierCtx(service.getJetInstance(), v.parallelism())));
+                new ProcSupplierCtx(service.getJetInstance(), v.parallelism(), jobConfig.getSnapshotInterval() >= 0)));
     }
 
     private void initDag() {
@@ -284,9 +291,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             for (Address destAddr : remoteMembers.get()) {
                 final ConcurrentConveyor<Object> conveyor = createConveyorArray(
                         1, edge.sourceVertex().parallelism(), edge.getConfig().getQueueSize())[0];
-                // TODO: blockOnBarrier depending on job configuration
                 final ConcurrentInboundEdgeStream inboundEdgeStream =
-                        new ConcurrentInboundEdgeStream(conveyor, edge.destOrdinal(), edge.priority(), true);
+                        new ConcurrentInboundEdgeStream(conveyor, edge.destOrdinal(), edge.priority(),
+                                jobConfig.getProcessingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE);
                 final int destVertexId = edge.destVertex().vertexId();
                 final SenderTasklet t = new SenderTasklet(inboundEdgeStream, nodeEngine,
                         destAddr, executionId, destVertexId, edge.getConfig().getPacketSizeLimit());
@@ -426,9 +433,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         final List<InboundEdgeStream> inboundStreams = new ArrayList<>();
         for (EdgeDef inEdge : srcVertex.inboundEdges()) {
             // each tasklet has one input conveyor per edge
-            // TODO blockOnBarrier: take from vertex configuration
             final ConcurrentConveyor<Object> conveyor = localConveyorMap.get(inEdge.edgeId())[processorIdx];
-            inboundStreams.add(new ConcurrentInboundEdgeStream(conveyor, inEdge.destOrdinal(), inEdge.priority(), true));
+            inboundStreams.add(new ConcurrentInboundEdgeStream(conveyor, inEdge.destOrdinal(), inEdge.priority(),
+                    jobConfig.getProcessingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE));
         }
         return inboundStreams;
     }

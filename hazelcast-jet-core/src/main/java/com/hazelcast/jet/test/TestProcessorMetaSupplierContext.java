@@ -36,8 +36,9 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
     /**
      * Set the jet instance.
      */
-    public void setJetInstance(JetInstance jetInstance) {
+    public TestProcessorMetaSupplierContext setJetInstance(JetInstance jetInstance) {
         this.jetInstance = jetInstance;
+        return this;
     }
 
     @Override
@@ -48,8 +49,9 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
     /**
      * Set total parallelism.
      */
-    public void setTotalParallelism(int totalParallelism) {
+    public TestProcessorMetaSupplierContext setTotalParallelism(int totalParallelism) {
         this.totalParallelism = totalParallelism;
+        return this;
     }
 
     @Override
@@ -65,14 +67,16 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
     /**
      * Sets if snapshotting is enabled for the job.
      */
-    public void setSnapshottingEnabled(boolean snapshottingEnabled) {
+    public TestProcessorMetaSupplierContext setSnapshottingEnabled(boolean snapshottingEnabled) {
         this.snapshottingEnabled = snapshottingEnabled;
+        return this;
     }
 
     /**
      * Set local parallelism.
      */
-    public void setLocalParallelism(int localParallelism) {
+    public TestProcessorMetaSupplierContext setLocalParallelism(int localParallelism) {
         this.localParallelism = localParallelism;
+        return this;
     }
 }

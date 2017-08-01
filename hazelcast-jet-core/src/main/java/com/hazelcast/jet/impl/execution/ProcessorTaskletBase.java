@@ -21,6 +21,7 @@ import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.SnapshotStorage;
 import com.hazelcast.jet.Snapshottable;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.CircularListCursor;
@@ -50,8 +51,10 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     final OutboundEdgeStream[] outstreams;
     Outbox outbox;
     private final Processor processor;
+    // casted #processor to Snapshottable or null, if #processor does not implement it
     private final Snapshottable snapshottable;
     private InboundEdgeStream currInstream;
+    private final ProcessingGuarantee processingGuarantee;
 
     private final ProcCtx context;
     private final ArrayDequeInbox inbox = new ArrayDequeInbox(progTracker);
@@ -72,7 +75,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                          List<OutboundEdgeStream> outstreams,
                          SnapshotState snapshotState,
                          Queue<Object> snapshotQueue,
-                         SerializationService serializationService) {
+                         SerializationService serializationService, ProcessingGuarantee processingGuarantee) {
         Preconditions.checkNotNull(processor, "processor");
         this.context = context;
         this.processor = processor;
@@ -88,6 +91,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                                     .toArray(OutboundEdgeStream[]::new);
         this.snapshotState = snapshotState;
         this.snapshotQueue = snapshotQueue;
+        this.processingGuarantee = processingGuarantee;
 
         instreamCursor = popInstreamGroup();
         completedSnapshotId = snapshotState != null ? snapshotState.getCurrentSnapshotId() : Long.MAX_VALUE;
@@ -162,11 +166,13 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                 // this case, proceed to process the snapshot
                 if (inbox.size() == 1 && inbox.peek() instanceof SnapshotBarrier) {
                     SnapshotBarrier barrier = (SnapshotBarrier) inbox.remove();
-                    requestedSnapshotId = barrier.snapshotId();
-                    state = snapshotQueue == null
-                            ? ProcessorState.STATE_SNAPSHOT_BARRIER_TO_OUTBOX
-                            : ProcessorState.STATE_START_SNAPSHOT;
-                    return call(); // recursive call
+                    if (barrierWatcher.observe(currInstream.ordinal(), requestedSnapshotId)) {
+                        requestedSnapshotId = barrier.snapshotId();
+                        state = snapshotQueue == null
+                                ? ProcessorState.STATE_SNAPSHOT_BARRIER_TO_OUTBOX
+                                : ProcessorState.STATE_START_SNAPSHOT;
+                        return call(); // recursive call
+                    }
                 }
             } else {
                 progTracker.notDone();
@@ -225,6 +231,11 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         ProgressState result;
         do {
             currInstream = instreamCursor.value();
+            result = ProgressState.NO_PROGRESS;
+            if (processingGuarantee == ProcessingGuarantee.EXACTLY_ONCE
+                    && barrierWatcher.isBlocked(currInstream.ordinal())) {
+                continue;
+            }
             result = currInstream.drainTo(inbox::add);
             progTracker.madeProgress(result.isMadeProgress());
             if (result.isDone()) {
