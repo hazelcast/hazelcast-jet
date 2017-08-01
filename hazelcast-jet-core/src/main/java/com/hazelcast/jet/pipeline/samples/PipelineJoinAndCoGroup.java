@@ -22,7 +22,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.pipeline.CoGroupBuilder;
 import com.hazelcast.jet.pipeline.JoinBuilder;
-import com.hazelcast.jet.pipeline.PStream;
+import com.hazelcast.jet.pipeline.ComputeStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -34,7 +34,6 @@ import com.hazelcast.jet.pipeline.tuple.Tuple3;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.io.Serializable;
-import java.util.Collection;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
@@ -51,12 +50,12 @@ public class PipelineJoinAndCoGroup {
 
     private final JetInstance jet;
     private Pipeline p = Pipeline.create();
-    private PStream<Trade> trades = p.drawFrom(Sources.<Integer, Trade>readMap(TRADES))
-                                     .map(Entry::getValue);
-    private PStream<Product> products = p.drawFrom(Sources.<Integer, Product>readMap(PRODUCTS))
-                                         .map(Entry::getValue);
-    private PStream<Broker> brokers = p.drawFrom(Sources.<Integer, Broker>readMap(BROKERS))
-                                       .map(Entry::getValue);
+    private ComputeStage<Trade> trades = p.drawFrom(Sources.<Integer, Trade>readMap(TRADES))
+                                          .map(Entry::getValue);
+    private ComputeStage<Product> products = p.drawFrom(Sources.<Integer, Product>readMap(PRODUCTS))
+                                              .map(Entry::getValue);
+    private ComputeStage<Broker> brokers = p.drawFrom(Sources.<Integer, Broker>readMap(BROKERS))
+                                            .map(Entry::getValue);
 
     private PipelineJoinAndCoGroup(JetInstance jet) {
         this.jet = jet;
@@ -109,8 +108,8 @@ public class PipelineJoinAndCoGroup {
         }
     }
 
-    private PStream<String> joinDirect() {
-        PStream<Tuple3<Trade, Iterable<Product>, Iterable<Broker>>> joined = trades.join(
+    private ComputeStage<String> joinDirect() {
+        ComputeStage<Tuple3<Trade, Iterable<Product>, Iterable<Broker>>> joined = trades.join(
                 products, onKeys(Trade::productId, Product::id),
                 brokers, onKeys(Trade::brokerId, Broker::id));
 
@@ -122,11 +121,11 @@ public class PipelineJoinAndCoGroup {
         });
     }
 
-    private PStream<String> joinBuild() {
+    private ComputeStage<String> joinBuild() {
         JoinBuilder<Trade> builder = trades.joinBuilder();
         Tag<Product> productTag = builder.add(products, onKeys(Trade::productId, Product::id));
         Tag<Broker> brokerTag = builder.add(brokers, onKeys(Trade::brokerId, Broker::id));
-        PStream<Tuple2<Trade, BagsByTag>> joined = builder.build();
+        ComputeStage<Tuple2<Trade, BagsByTag>> joined = builder.build();
 
         return joined.map(t -> {
             Trade trade = t.f0();
@@ -137,7 +136,7 @@ public class PipelineJoinAndCoGroup {
         });
     }
 
-    private PStream<Tuple2<Integer, String>> coGroupDirect() {
+    private ComputeStage<Tuple2<Integer, String>> coGroupDirect() {
         return trades.coGroup(
                 Trade::classId,
                 products, Product::classId,
@@ -151,7 +150,7 @@ public class PipelineJoinAndCoGroup {
                         .andFinish(Object::toString));
     }
 
-    private PStream<Tuple2<Integer, String>> coGroupBuild() {
+    private ComputeStage<Tuple2<Integer, String>> coGroupBuild() {
         CoGroupBuilder<Integer, Trade> builder = trades.coGroupBuilder(Trade::classId);
         Tag<Trade> tradeTag = builder.leftTag();
         Tag<Product> prodTag = builder.add(products, Product::classId);

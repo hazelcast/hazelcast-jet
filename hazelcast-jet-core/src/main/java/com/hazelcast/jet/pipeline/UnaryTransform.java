@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.impl.transform;
+package com.hazelcast.jet.pipeline;
 
-public interface JoinTransform extends PTransform {
+import com.hazelcast.jet.pipeline.Transform;
+
+public interface UnaryTransform<IN, OUT> extends Transform {
 }

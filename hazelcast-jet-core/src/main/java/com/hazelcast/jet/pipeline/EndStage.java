@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.impl.transform;
+package com.hazelcast.jet.pipeline;
 
-public interface UnaryTransform<IN, OUT> extends PTransform {
+/**
+ * Javadoc pending.
+ */
+public interface EndStage extends Stage {
 }

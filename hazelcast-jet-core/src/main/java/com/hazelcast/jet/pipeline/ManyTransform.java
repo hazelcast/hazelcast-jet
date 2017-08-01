@@ -14,20 +14,10 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.impl;
-
-import com.hazelcast.jet.pipeline.PElement;
-import com.hazelcast.jet.pipeline.PEnd;
-import com.hazelcast.jet.pipeline.impl.transform.PTransform;
-
-import static java.util.Collections.singletonList;
+package com.hazelcast.jet.pipeline;
 
 /**
  * Javadoc pending.
  */
-public class PEndImpl extends AbstractPElement implements PEnd {
-
-    PEndImpl(PElement upstream, PTransform transform, PipelineImpl pipeline) {
-        super(singletonList(upstream), transform, pipeline);
-    }
+public interface ManyTransform extends Transform {
 }

@@ -17,6 +17,7 @@
 package com.hazelcast.jet.pipeline.impl.transform;
 
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.UnaryTransform;
 
 /**
  * Javadoc pending.

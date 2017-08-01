@@ -42,19 +42,19 @@ public class JoinBuilder<E_LEFT> {
     // The pstream it holds is the implied left-hand side of all join clauses.
     private final Tag<E_LEFT> leftTag;
 
-    JoinBuilder(PStream<E_LEFT> leftStream) {
+    JoinBuilder(ComputeStage<E_LEFT> leftStream) {
         this.leftTag = add(leftStream, null);
     }
 
-    public <K, E_RIGHT> Tag<E_RIGHT> add(PStream<E_RIGHT> s, JoinOn<K, E_LEFT, E_RIGHT> joinOn) {
+    public <K, E_RIGHT> Tag<E_RIGHT> add(ComputeStage<E_RIGHT> s, JoinOn<K, E_LEFT, E_RIGHT> joinOn) {
         Tag<E_RIGHT> ind = new Tag<>(clauses.size());
         clauses.put(ind, new JoinClause<>(s, joinOn));
         return ind;
     }
 
     @SuppressWarnings("unchecked")
-    public PStream<Tuple2<E_LEFT, BagsByTag>> build() {
-        List<PStream> upstream = orderedClauses()
+    public ComputeStage<Tuple2<E_LEFT, BagsByTag>> build() {
+        List<ComputeStage> upstream = orderedClauses()
                 .map(e -> e.getValue().pstream())
                 .collect(toList());
         HashJoinTransform transform = new HashJoinTransform(
@@ -64,7 +64,7 @@ public class JoinBuilder<E_LEFT> {
                         .collect(toList())
         );
         PipelineImpl pipeline = (PipelineImpl) clauses.get(leftTag).pstream().getPipeline();
-        return pipeline.join(upstream, transform);
+        return pipeline.attach(upstream, transform);
     }
 
     private Stream<Entry<Tag<?>, JoinClause<?, E_LEFT, ?>>> orderedClauses() {
@@ -73,15 +73,15 @@ public class JoinBuilder<E_LEFT> {
     }
 
     private static class JoinClause<K, E_LEFT, E_RIGHT> {
-        private final PStream<E_RIGHT> pstream;
+        private final ComputeStage<E_RIGHT> pstream;
         private final JoinOn<K, E_LEFT, E_RIGHT> joinOn;
 
-        JoinClause(PStream<E_RIGHT> pstream, JoinOn<K, E_LEFT, E_RIGHT> joinOn) {
+        JoinClause(ComputeStage<E_RIGHT> pstream, JoinOn<K, E_LEFT, E_RIGHT> joinOn) {
             this.pstream = pstream;
             this.joinOn = joinOn;
         }
 
-        PStream<E_RIGHT> pstream() {
+        ComputeStage<E_RIGHT> pstream() {
             return pstream;
         }
 

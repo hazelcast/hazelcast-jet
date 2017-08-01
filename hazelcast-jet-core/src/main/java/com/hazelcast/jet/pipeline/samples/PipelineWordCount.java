@@ -19,7 +19,7 @@ package com.hazelcast.jet.pipeline.samples;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.aggregate.AggregateOperations;
-import com.hazelcast.jet.pipeline.PStream;
+import com.hazelcast.jet.pipeline.ComputeStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -39,9 +39,9 @@ public class PipelineWordCount {
 
         Pipeline p = Pipeline.create();
 
-        PStream<String> books = p.drawFrom(Sources.readFiles("books"));
+        ComputeStage<String> books = p.drawFrom(Sources.readFiles("books"));
 
-        PStream<Entry<String, Long>> wordCounts = books
+        ComputeStage<Entry<String, Long>> wordCounts = books
                 .flatMap((String line) -> traverseArray(delimiter.split(line.toLowerCase())).filter(word -> !word.isEmpty()))
                 .groupBy(wholeItem(), AggregateOperations.counting());
 

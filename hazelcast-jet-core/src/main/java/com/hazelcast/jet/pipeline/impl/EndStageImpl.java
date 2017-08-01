@@ -14,9 +14,21 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.pipeline.impl;
 
-public interface PElement {
+import com.hazelcast.jet.pipeline.Sink;
+import com.hazelcast.jet.pipeline.Stage;
+import com.hazelcast.jet.pipeline.EndStage;
+import com.hazelcast.jet.pipeline.Transform;
 
-    Pipeline getPipeline();
+import static java.util.Collections.singletonList;
+
+/**
+ * Javadoc pending.
+ */
+public class EndStageImpl extends AbstractStage implements EndStage {
+
+    EndStageImpl(Stage upstream, Sink transform, PipelineImpl pipeline) {
+        super(singletonList(upstream), transform, pipeline);
+    }
 }

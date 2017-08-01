@@ -17,13 +17,14 @@
 package com.hazelcast.jet.pipeline.impl;
 
 import com.hazelcast.jet.DAG;
-import com.hazelcast.jet.pipeline.PEnd;
-import com.hazelcast.jet.pipeline.PStream;
+import com.hazelcast.jet.pipeline.ManyTransform;
+import com.hazelcast.jet.pipeline.EndStage;
+import com.hazelcast.jet.pipeline.ComputeStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Source;
-import com.hazelcast.jet.pipeline.impl.transform.JoinTransform;
-import com.hazelcast.jet.pipeline.impl.transform.UnaryTransform;
+import com.hazelcast.jet.pipeline.Stage;
+import com.hazelcast.jet.pipeline.UnaryTransform;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -31,15 +32,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static java.util.Collections.emptyList;
-
 public class PipelineImpl implements Pipeline {
 
-    final Map<AbstractPElement, List<AbstractPElement>> adjacencyMap = new HashMap<>();
+    final Map<Stage, List<Stage>> adjacencyMap = new HashMap<>();
 
     @Override
-    public <E> PStream<E> drawFrom(Source<E> source) {
-        return new PStreamImpl<>(emptyList(), source, this);
+    public <E> ComputeStage<E> drawFrom(Source<E> source) {
+        return new ComputeStageImpl<>(source, this);
     }
 
     @Nonnull @Override
@@ -47,25 +46,28 @@ public class PipelineImpl implements Pipeline {
         return new Planner(this).createDag();
     }
 
-    public <IN, OUT> PStream<OUT> transform(PStreamImpl<IN> input, UnaryTransform<? super IN, OUT> unaryTransform) {
-        PStreamImpl<OUT> output = new PStreamImpl<>(input, unaryTransform, this);
-        addEdge(input, output);
+    <IN, OUT> ComputeStage<OUT> attach(
+            ComputeStage<IN> upstream, UnaryTransform<? super IN, OUT> unaryTransform
+    ) {
+        ComputeStageImpl<OUT> output = new ComputeStageImpl<>(upstream, unaryTransform, this);
+        connect(upstream, output);
         return output;
     }
 
-    public PStream join(List<PStream> upstream, JoinTransform joinTransform) {
-        PStreamImpl attached = new PStreamImpl(upstream, joinTransform, this);
-        upstream.forEach(u -> addEdge((PStreamImpl) u, attached));
+    public ComputeStage attach(List<ComputeStage> upstream, ManyTransform transform) {
+        ComputeStageImpl attached = new ComputeStageImpl(upstream, transform, this);
+        upstream.forEach(u -> connect(u, attached));
         return attached;
     }
 
-    public <E> PEnd drainTo(PStreamImpl<E> input, Sink sink) {
-        PEndImpl output = new PEndImpl(input, sink, this);
-        addEdge(input, output);
+    public <E> EndStage drainTo(ComputeStage<E> upstream, Sink sink) {
+        EndStageImpl output = new EndStageImpl(upstream, sink, this);
+        connect(upstream, output);
         return output;
     }
 
-    private void addEdge(AbstractPElement source, AbstractPElement dest) {
-        adjacencyMap.computeIfAbsent(source, e -> new ArrayList<>()).add(dest);
+    private void connect(ComputeStage upstream, Stage downstream) {
+        adjacencyMap.computeIfAbsent(upstream, e -> new ArrayList<>())
+                    .add(downstream);
     }
 }

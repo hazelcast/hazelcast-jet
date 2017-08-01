@@ -14,12 +14,17 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.impl.transform;
+package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.UnaryTransform;
+import com.hazelcast.jet.pipeline.impl.transform.FlatMapTransform;
+import com.hazelcast.jet.pipeline.impl.transform.GroupByTransform;
+import com.hazelcast.jet.pipeline.impl.transform.MapTransform;
+import com.hazelcast.jet.pipeline.impl.transform.SlidingWindowTransform;
 
 import java.util.Map.Entry;
 

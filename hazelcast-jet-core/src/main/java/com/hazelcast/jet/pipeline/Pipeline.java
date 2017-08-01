@@ -26,7 +26,7 @@ import java.util.concurrent.Future;
 public interface Pipeline {
 
     @Nonnull
-    <E> PStream<E> drawFrom(@Nonnull Source<E> source);
+    <E> ComputeStage<E> drawFrom(@Nonnull Source<E> source);
 
     @Nonnull
     default Future<Void> execute(@Nonnull JetInstance jet) {

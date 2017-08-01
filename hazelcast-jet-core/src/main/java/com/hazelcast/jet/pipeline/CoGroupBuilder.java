@@ -41,7 +41,7 @@ public class CoGroupBuilder<K, E_LEFT> {
     private final Tag<E_LEFT> leftTag;
     private final List<Tag> tags = new ArrayList<>();
 
-    public CoGroupBuilder(PStream<E_LEFT> s, DistributedFunction<? super E_LEFT, K> groupKeyF) {
+    public CoGroupBuilder(ComputeStage<E_LEFT> s, DistributedFunction<? super E_LEFT, K> groupKeyF) {
         this.leftTag = add(s, groupKeyF);
     }
 
@@ -49,15 +49,15 @@ public class CoGroupBuilder<K, E_LEFT> {
         return leftTag;
     }
 
-    public <E> Tag<E> add(PStream<E> s, DistributedFunction<? super E, K> groupKeyF) {
+    public <E> Tag<E> add(ComputeStage<E> s, DistributedFunction<? super E, K> groupKeyF) {
         Tag tag = new Tag(clauses.size());
         clauses.put(tag, new CoGroupClause<>(s, groupKeyF));
         tags.add(tag);
         return (Tag<E>) tag;
     }
 
-    public <A, R> PStream<Tuple2<K, R>> build(AggregateOperation<A, R> aggrOp) {
-        List<PStream> upstream = orderedClauses()
+    public <A, R> ComputeStage<Tuple2<K, R>> build(AggregateOperation<A, R> aggrOp) {
+        List<ComputeStage> upstream = orderedClauses()
                 .map(e -> e.getValue().pstream())
                 .collect(toList());
         CoGroupTransform<K, A, R> transform = new CoGroupTransform<K, A, R>(orderedClauses()
@@ -67,7 +67,7 @@ public class CoGroupBuilder<K, E_LEFT> {
                 tags
         );
         PipelineImpl pipeline = (PipelineImpl) clauses.get(leftTag).pstream.getPipeline();
-        return pipeline.join(upstream, transform);
+        return pipeline.attach(upstream, transform);
     }
 
     private Stream<Entry<Tag<?>, CoGroupClause<?, K>>> orderedClauses() {
@@ -76,15 +76,15 @@ public class CoGroupBuilder<K, E_LEFT> {
     }
 
     private static class CoGroupClause<E, K> {
-        private final PStream<E> pstream;
+        private final ComputeStage<E> pstream;
         private final DistributedFunction<? super E, K> groupKeyF;
 
-        CoGroupClause(PStream<E> pstream, DistributedFunction<? super E, K> groupKeyF) {
+        CoGroupClause(ComputeStage<E> pstream, DistributedFunction<? super E, K> groupKeyF) {
             this.pstream = pstream;
             this.groupKeyF = groupKeyF;
         }
 
-        PStream<E> pstream() {
+        ComputeStage<E> pstream() {
             return pstream;
         }
 

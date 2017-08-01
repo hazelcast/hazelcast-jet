@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.pipeline.impl.transform;
 
+import com.hazelcast.jet.pipeline.ManyTransform;
 import com.hazelcast.jet.pipeline.JoinOn;
 
 import java.util.List;
@@ -23,7 +24,7 @@ import java.util.List;
 /**
  * Javadoc pending.
  */
-public class HashJoinTransform implements JoinTransform {
+public class HashJoinTransform implements ManyTransform {
     private final List<JoinOn> joinOns;
 
     public HashJoinTransform(List<JoinOn> joinOns) {

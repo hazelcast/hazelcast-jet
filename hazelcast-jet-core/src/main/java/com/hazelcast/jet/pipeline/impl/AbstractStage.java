@@ -16,19 +16,19 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.pipeline.PElement;
+import com.hazelcast.jet.pipeline.Stage;
 import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.impl.transform.PTransform;
+import com.hazelcast.jet.pipeline.Transform;
 
 import java.util.List;
 
-public abstract class AbstractPElement implements PElement {
+public abstract class AbstractStage implements Stage {
 
     final PipelineImpl pipelineImpl;
-    final List<PElement> upstream;
-    final PTransform transform;
+    final List<Stage> upstream;
+    final Transform transform;
 
-    AbstractPElement(List<PElement> upstream, PTransform transform, PipelineImpl pipelineImpl) {
+    AbstractStage(List<Stage> upstream, Transform transform, PipelineImpl pipelineImpl) {
         this.upstream = upstream;
         this.transform = transform;
         this.pipelineImpl = pipelineImpl;

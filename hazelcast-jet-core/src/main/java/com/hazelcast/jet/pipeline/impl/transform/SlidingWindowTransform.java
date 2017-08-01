@@ -19,6 +19,7 @@ package com.hazelcast.jet.pipeline.impl.transform;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.UnaryTransform;
 
 import java.util.Map.Entry;
 

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.impl.transform;
+package com.hazelcast.jet.pipeline;
 
 import java.io.Serializable;
 
-public interface PTransform extends Serializable {
+public interface Transform extends Serializable {
 }

@@ -17,7 +17,7 @@
 package com.hazelcast.jet.pipeline.samples;
 
 import com.hazelcast.jet.Jet;
-import com.hazelcast.jet.pipeline.PStream;
+import com.hazelcast.jet.pipeline.ComputeStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 
@@ -27,12 +27,12 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.pipeline.Sources.streamKafka;
-import static com.hazelcast.jet.pipeline.impl.transform.Transforms.slidingWindow;
+import static com.hazelcast.jet.pipeline.Transforms.slidingWindow;
 
 public class PipelineStockMarket {
     public static void main(String[] args) {
         Pipeline p = Pipeline.create();
-        PStream<Entry<String, Long>> c = p.drawFrom(streamKafka());
+        ComputeStage<Entry<String, Long>> c = p.drawFrom(streamKafka());
         c.apply(slidingWindow(entryKey(), slidingWindowDef(1, 1), counting()))
          .drainTo(Sinks.writeMap("sink"));
         p.execute(Jet.newJetInstance());

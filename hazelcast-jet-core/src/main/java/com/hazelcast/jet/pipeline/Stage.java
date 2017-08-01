@@ -16,8 +16,7 @@
 
 package com.hazelcast.jet.pipeline;
 
-/**
- * Javadoc pending.
- */
-public interface PEnd extends PElement {
+public interface Stage {
+
+    Pipeline getPipeline();
 }

@@ -16,8 +16,6 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.pipeline.impl.transform.PTransform;
-
-public interface Sink extends PTransform {
+public interface Sink extends Transform {
     String name();
 }
