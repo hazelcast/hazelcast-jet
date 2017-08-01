@@ -19,5 +19,5 @@ package com.hazelcast.jet.pipeline;
 /**
  * Javadoc pending.
  */
-public interface ManyTransform extends Transform {
+public interface MultiTransform<R> extends Transform {
 }

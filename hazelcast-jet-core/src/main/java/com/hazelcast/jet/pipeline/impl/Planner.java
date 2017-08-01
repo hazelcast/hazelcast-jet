@@ -77,8 +77,7 @@ class Planner {
                         () -> new GroupByKeyP<>(groupBy.keyF(), groupBy.aggregateOperation())));
                 int destOrdinal = 0;
                 for (Stage fromStage : stage.upstream) {
-                    Edge edge = addEdge(fromStage, pv, destOrdinal);
-                    edge.partitioned(groupBy.keyF());
+                    addEdge(fromStage, pv, destOrdinal).partitioned(groupBy.keyF());
                     destOrdinal++;
                 }
             } else if (transform instanceof CoGroupTransform) {
@@ -87,9 +86,8 @@ class Planner {
                 PlannerVertex pv = addVertex(stage, new Vertex("co-group." + randomSuffix(),
                         () -> new CoGroupP<>(groupKeyFns, coGroup.aggregateOperation(), coGroup.tags())));
                 int destOrdinal = 0;
-                for (Stage fromPel : stage.upstream) {
-                    Edge edge = addEdge(fromPel, pv, destOrdinal);
-                    edge.partitioned(groupKeyFns.get(destOrdinal));
+                for (Stage fromStage : stage.upstream) {
+                    addEdge(fromStage, pv, destOrdinal).partitioned(groupKeyFns.get(destOrdinal));
                     destOrdinal++;
                 }
             } else if (transform instanceof SinkImpl) {

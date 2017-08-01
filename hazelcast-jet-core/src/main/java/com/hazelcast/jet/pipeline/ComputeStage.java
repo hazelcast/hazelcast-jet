@@ -21,13 +21,26 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
+import com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
 import com.hazelcast.jet.pipeline.tuple.Tuple3;
 
+import java.util.List;
 import java.util.Map.Entry;
+
+import static com.hazelcast.jet.pipeline.bag.Tag.tag0;
+import static com.hazelcast.jet.pipeline.bag.Tag.tag1;
+import static com.hazelcast.jet.pipeline.bag.Tag.tag2;
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 
 public interface ComputeStage<E> extends Stage {
     <R> ComputeStage<R> apply(UnaryTransform<? super E, R> unaryTransform);
+
+    <R> ComputeStage<R> apply(MultiTransform<R> multiTransform, List<ComputeStage> moreInputs);
+
+    EndStage drainTo(Sink sink);
 
     default <R> ComputeStage<R> map(DistributedFunction<? super E, ? extends R> mapF) {
         return apply(Transforms.map(mapF));
@@ -37,43 +50,53 @@ public interface ComputeStage<E> extends Stage {
         return apply(Transforms.flatMap(flatMapF));
     }
 
-    EndStage drainTo(Sink sink);
-
-    default <K, R> ComputeStage<Entry<K, R>> groupBy(DistributedFunction<? super E, ? extends K> keyF,
-                                                     AggregateOperation1<E, ?, R> aggrOp
+    default <K, R> ComputeStage<Entry<K, R>> groupBy(
+            DistributedFunction<? super E, ? extends K> keyF, AggregateOperation1<E, ?, R> aggrOp
     ) {
         return apply(Transforms.groupBy(keyF, aggrOp));
     }
 
-    <K, E1> ComputeStage<Tuple2<E, Iterable<E1>>> join(
+    @SuppressWarnings("unchecked")
+    default <K, E1> ComputeStage<Tuple2<E, Iterable<E1>>> join(
             ComputeStage<E1> s1, JoinOn<K, E, E1> joinOn
-    );
+    ) {
+        return apply(new HashJoinTransform(singletonList(joinOn)), singletonList(s1));
+    }
 
-    <K1, E1, K2, E2> ComputeStage<Tuple3<E, Iterable<E1>, Iterable<E2>>> join(
+    @SuppressWarnings("unchecked")
+    default <K1, E1, K2, E2> ComputeStage<Tuple3<E, Iterable<E1>, Iterable<E2>>> join(
             ComputeStage<E1> s1, JoinOn<K1, E, E1> joinOn1,
             ComputeStage<E2> s2, JoinOn<K2, E, E2> joinOn2
-    );
+    ) {
+        return apply(new HashJoinTransform(asList(joinOn1, joinOn2)), asList(s1, s2));
+    }
 
     default JoinBuilder<E> joinBuilder() {
         return new JoinBuilder<>(this);
     }
 
-    <K, A, E1, R> ComputeStage<Tuple2<K, R>> coGroup(
+    @SuppressWarnings("unchecked")
+    default <K, A, E1, R> ComputeStage<Tuple2<K, R>> coGroup(
             DistributedFunction<? super E, ? extends K> thisKeyF,
             ComputeStage<E1> s1, DistributedFunction<? super E1, ? extends K> key1F,
             AggregateOperation2<E, E1, A, R> aggrOp
-    );
+    ) {
+        return apply(new CoGroupTransform<>(asList(thisKeyF, key1F), aggrOp, asList(tag0(), tag1())),
+                singletonList(s1));
+    }
 
-    <K, A, E1, E2, R> ComputeStage<Tuple2<K, R>> coGroup(
+    @SuppressWarnings("unchecked")
+    default <K, A, E1, E2, R> ComputeStage<Tuple2<K, R>> coGroup(
             DistributedFunction<? super E, ? extends K> thisKeyF,
             ComputeStage<E1> s1, DistributedFunction<? super E1, ? extends K> key1F,
             ComputeStage<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
             AggregateOperation3<E, E1, E2, A, R> aggrOp
-    );
-
-    default <K> CoGroupBuilder<K, E> coGroupBuilder(
-            DistributedFunction<? super E, K> thisKeyF
     ) {
+        return apply(new CoGroupTransform<>(asList(thisKeyF, key1F, key2F), aggrOp, asList(tag0(), tag1(), tag2())),
+                asList(s1, s2));
+    }
+
+    default <K> CoGroupBuilder<K, E> coGroupBuilder(DistributedFunction<? super E, K> thisKeyF) {
         return new CoGroupBuilder<>(this, thisKeyF);
     }
 }

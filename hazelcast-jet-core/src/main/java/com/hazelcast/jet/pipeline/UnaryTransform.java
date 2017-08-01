@@ -16,7 +16,5 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.pipeline.Transform;
-
-public interface UnaryTransform<IN, OUT> extends Transform {
+public interface UnaryTransform<T, U> extends Transform {
 }

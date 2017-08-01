@@ -16,23 +16,21 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.pipeline.JoinOn;
+import com.hazelcast.jet.pipeline.ComputeStage;
+import com.hazelcast.jet.pipeline.EndStage;
+import com.hazelcast.jet.pipeline.MultiTransform;
+import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Source;
 import com.hazelcast.jet.pipeline.Stage;
-import com.hazelcast.jet.pipeline.EndStage;
-import com.hazelcast.jet.pipeline.ComputeStage;
-import com.hazelcast.jet.pipeline.Sink;
-import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
-import com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform;
 import com.hazelcast.jet.pipeline.Transform;
 import com.hazelcast.jet.pipeline.UnaryTransform;
+import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
-import com.hazelcast.jet.pipeline.tuple.Tuple3;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import static com.hazelcast.jet.pipeline.bag.Tag.tag0;
 import static com.hazelcast.jet.pipeline.bag.Tag.tag1;
@@ -40,6 +38,7 @@ import static com.hazelcast.jet.pipeline.bag.Tag.tag2;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toList;
 
 /**
  * Javadoc pending.
@@ -65,39 +64,10 @@ public class ComputeStageImpl<E> extends AbstractStage implements ComputeStage<E
     }
 
     @Override
-    public <K, E2> ComputeStage<Tuple2<E, Iterable<E2>>> join(
-            ComputeStage<E2> s2, JoinOn<K, E, E2> joinOn
-    ) {
-        return pipelineImpl.attach(asList(this, s2), new HashJoinTransform(singletonList(joinOn)));
-    }
-
-    @Override
-    public <K2, E2, K3, E3> ComputeStage<Tuple3<E, Iterable<E2>, Iterable<E3>>> join(
-            ComputeStage<E2> s2, JoinOn<K2, E, E2> joinOn1,
-            ComputeStage<E3> s3, JoinOn<K3, E, E3> joinOn2
-    ) {
-        return pipelineImpl.attach(asList(this, s2, s3), new HashJoinTransform(asList(joinOn1, joinOn2)));
-    }
-
-    @Override
-    public <K, A, E2, R> ComputeStage<Tuple2<K, R>> coGroup(
-            DistributedFunction<? super E, ? extends K> thisKeyF,
-            ComputeStage<E2> s1, DistributedFunction<? super E2, ? extends K> key1F,
-            AggregateOperation2<E, E2, A, R> aggrOp
-    ) {
-        return pipelineImpl.attach(asList(this, s1),
-                new CoGroupTransform<>(asList(thisKeyF, key1F), aggrOp, asList(tag0(), tag1())));
-    }
-
-    @Override
-    public <K, A, E2, E3, R> ComputeStage<Tuple2<K, R>> coGroup(
-            DistributedFunction<? super E, ? extends K> thisKeyF,
-            ComputeStage<E2> s1, DistributedFunction<? super E2, ? extends K> key1F,
-            ComputeStage<E3> s2, DistributedFunction<? super E3, ? extends K> key2F,
-            AggregateOperation3<E, E2, E3, A, R> aggrOp
-    ) {
-        return pipelineImpl.attach(asList(this, s1, s2),
-                new CoGroupTransform<>(asList(thisKeyF, key1F, key2F), aggrOp, asList(tag0(), tag1(), tag2())));
+    public <R> ComputeStage<R> apply(MultiTransform<R> multiTransform, List<ComputeStage> otherInputs) {
+        return pipelineImpl.attach(
+                Stream.concat(Stream.of(this), otherInputs.stream()).collect(toList()),
+                multiTransform);
     }
 
     @Override

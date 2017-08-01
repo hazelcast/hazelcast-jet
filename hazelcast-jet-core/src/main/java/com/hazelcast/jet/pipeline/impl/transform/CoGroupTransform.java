@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.pipeline.impl.transform;
 
-import com.hazelcast.jet.pipeline.ManyTransform;
+import com.hazelcast.jet.pipeline.MultiTransform;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.bag.Tag;
@@ -26,7 +26,7 @@ import java.util.List;
 /**
  * Javadoc pending.
  */
-public class CoGroupTransform<K, A, R> implements ManyTransform {
+public class CoGroupTransform<K, A, R> implements MultiTransform {
     private final List<DistributedFunction<?, ? extends K>> groupKeyFns;
     private final AggregateOperation<A, R> aggregateOperation;
     private final List<Tag> tags;

@@ -17,7 +17,7 @@
 package com.hazelcast.jet.pipeline.impl;
 
 import com.hazelcast.jet.DAG;
-import com.hazelcast.jet.pipeline.ManyTransform;
+import com.hazelcast.jet.pipeline.MultiTransform;
 import com.hazelcast.jet.pipeline.EndStage;
 import com.hazelcast.jet.pipeline.ComputeStage;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -54,7 +54,7 @@ public class PipelineImpl implements Pipeline {
         return output;
     }
 
-    public ComputeStage attach(List<ComputeStage> upstream, ManyTransform transform) {
+    public ComputeStage attach(List<ComputeStage> upstream, MultiTransform transform) {
         ComputeStageImpl attached = new ComputeStageImpl(upstream, transform, this);
         upstream.forEach(u -> connect(u, attached));
         return attached;
