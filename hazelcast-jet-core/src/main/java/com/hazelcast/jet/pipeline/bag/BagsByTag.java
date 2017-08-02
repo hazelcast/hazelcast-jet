@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.pipeline.bag;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -25,7 +26,7 @@ import java.util.Map;
 /**
  * Javadoc pending.
  */
-public class BagsByTag {
+public class BagsByTag implements Serializable {
     private final Map<Tag<?>, Collection> components = new HashMap<>();
 
     @SuppressWarnings("unchecked")

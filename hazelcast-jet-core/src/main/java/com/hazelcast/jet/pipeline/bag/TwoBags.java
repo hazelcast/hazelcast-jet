@@ -16,14 +16,17 @@
 
 package com.hazelcast.jet.pipeline.bag;
 
+import java.io.Serializable;
+import java.util.Collection;
+
 /**
  * Javadoc pending.
  */
-public class TwoBags<E1, E2> {
-    private final Iterable<E1> bag1;
-    private final Iterable<E2> bag2;
+public class TwoBags<E1, E2> implements Serializable {
+    private final Collection<E1> bag1;
+    private final Collection<E2> bag2;
 
-    public TwoBags(Iterable<E1> bag1, Iterable<E2> bag2) {
+    public TwoBags(Collection<E1> bag1, Collection<E2> bag2) {
         this.bag1 = bag1;
         this.bag2 = bag2;
     }

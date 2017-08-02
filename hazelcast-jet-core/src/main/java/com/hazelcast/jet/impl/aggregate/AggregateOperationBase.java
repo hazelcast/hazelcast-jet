@@ -23,12 +23,13 @@ import com.hazelcast.jet.pipeline.bag.Tag;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
 import static com.hazelcast.util.Preconditions.checkNotNull;
 
-abstract class AggregateOperationBase<A, R> {
+abstract class AggregateOperationBase<A, R> implements Serializable {
     private final DistributedSupplier<A> createAccumulatorF;
     private final DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF;
     private final DistributedBiConsumer<? super A, ? super A> deductAccumulatorF;

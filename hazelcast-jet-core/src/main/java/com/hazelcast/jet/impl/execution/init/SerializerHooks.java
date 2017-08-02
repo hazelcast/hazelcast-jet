@@ -37,7 +37,7 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
 
-public final class JetSerializerHook {
+public final class SerializerHooks {
 
     /**
      * Start of reserved space for Jet-specific serializers.
@@ -65,7 +65,7 @@ public final class JetSerializerHook {
      */
     public static final int JET_RESERVED_SPACE_END = SerializationConstants.JET_SERIALIZER_LAST;
 
-    private JetSerializerHook() {
+    private SerializerHooks() {
     }
 
     public static final class ObjectArray implements SerializerHook<Object[]> {
@@ -181,7 +181,7 @@ public final class JetSerializerHook {
 
                 @Override
                 public int getTypeId() {
-                    return JetSerializerHook.TIMESTAMPED_ENTRY;
+                    return SerializerHooks.TIMESTAMPED_ENTRY;
                 }
 
                 @Override

@@ -33,6 +33,7 @@ import static com.hazelcast.jet.pipeline.bag.Tag.tag0;
 import static com.hazelcast.jet.pipeline.bag.Tag.tag1;
 import static com.hazelcast.jet.pipeline.bag.Tag.tag2;
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
 public interface ComputeStage<E> extends Stage {
@@ -60,7 +61,7 @@ public interface ComputeStage<E> extends Stage {
     default <K, E1> ComputeStage<Tuple2<E, Iterable<E1>>> join(
             ComputeStage<E1> s1, JoinOn<K, E, E1> joinOn
     ) {
-        return attach(new HashJoinTransform(singletonList(joinOn)), singletonList(s1));
+        return attach(new HashJoinTransform(singletonList(joinOn), emptyList()), singletonList(s1));
     }
 
     @SuppressWarnings("unchecked")
@@ -68,7 +69,7 @@ public interface ComputeStage<E> extends Stage {
             ComputeStage<E1> s1, JoinOn<K1, E, E1> joinOn1,
             ComputeStage<E2> s2, JoinOn<K2, E, E2> joinOn2
     ) {
-        return attach(new HashJoinTransform(asList(joinOn1, joinOn2)), asList(s1, s2));
+        return attach(new HashJoinTransform(asList(joinOn1, joinOn2), emptyList()), asList(s1, s2));
     }
 
     default JoinBuilder<E> joinBuilder() {

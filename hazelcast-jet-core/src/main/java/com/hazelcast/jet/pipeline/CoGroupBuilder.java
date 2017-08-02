@@ -30,32 +30,34 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Stream;
 
+import static com.hazelcast.jet.pipeline.bag.Tag.tag;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 
 /**
  * Javadoc pending.
  */
-public class CoGroupBuilder<K, E_LEFT> {
+public class CoGroupBuilder<K, E0> {
     private final Map<Tag<?>, CoGroupClause<?, K>> clauses = new HashMap<>();
-    private final Tag<E_LEFT> leftTag;
     private final List<Tag> tags = new ArrayList<>();
 
-    public CoGroupBuilder(ComputeStage<E_LEFT> s, DistributedFunction<? super E_LEFT, K> groupKeyF) {
-        this.leftTag = add(s, groupKeyF);
+    CoGroupBuilder(ComputeStage<E0> s, DistributedFunction<? super E0, K> groupKeyF) {
+        add(s, groupKeyF);
     }
 
-    public Tag<E_LEFT> leftTag() {
-        return leftTag;
+    public Tag<E0> tag0() {
+        return Tag.tag0();
     }
 
+    @SuppressWarnings("unchecked")
     public <E> Tag<E> add(ComputeStage<E> s, DistributedFunction<? super E, K> groupKeyF) {
-        Tag tag = new Tag(clauses.size());
+        Tag tag = tag(clauses.size());
         clauses.put(tag, new CoGroupClause<>(s, groupKeyF));
         tags.add(tag);
         return (Tag<E>) tag;
     }
 
+    @SuppressWarnings("unchecked")
     public <A, R> ComputeStage<Tuple2<K, R>> build(AggregateOperation<A, R> aggrOp) {
         List<ComputeStage> upstream = orderedClauses()
                 .map(e -> e.getValue().pstream())
@@ -66,7 +68,7 @@ public class CoGroupBuilder<K, E_LEFT> {
                 aggrOp,
                 tags
         );
-        PipelineImpl pipeline = (PipelineImpl) clauses.get(leftTag).pstream.getPipeline();
+        PipelineImpl pipeline = (PipelineImpl) clauses.get(tag0()).pstream.getPipeline();
         return pipeline.attach(upstream, transform);
     }
 

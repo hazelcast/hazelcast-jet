@@ -111,7 +111,7 @@ public final class CustomClassLoadedObject {
 
         @Override
         public int getTypeId() {
-            return JetSerializerHook.CUSTOM_CLASS_LOADED_OBJECT;
+            return SerializerHooks.CUSTOM_CLASS_LOADED_OBJECT;
         }
 
         @Override

@@ -16,47 +16,49 @@
 
 package com.hazelcast.jet.pipeline.bag;
 
+import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
  * Javadoc pending.
  */
-public class ThreeBags<E1, E2, E3> {
-    private final List<E1> bag1;
-    private final List<E2> bag2;
-    private final List<E3> bag3;
+public class ThreeBags<E0, E1, E2> implements Serializable {
+    private final Collection<E0> bag0;
+    private final Collection<E1> bag1;
+    private final Collection<E2> bag2;
 
     public ThreeBags() {
         this(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
     }
 
-    private ThreeBags(List<E1> bag1, List<E2> bag2, List<E3> bag3) {
+    private ThreeBags(List<E0> bag0, List<E1> bag1, List<E2> bag2) {
+        this.bag0 = bag0;
         this.bag1 = bag1;
         this.bag2 = bag2;
-        this.bag3 = bag3;
     }
 
-    public List<E1> bag1() {
+    public Collection<E0> bag0() {
+        return bag0;
+    }
+
+    public Collection<E1> bag1() {
         return bag1;
     }
 
-    public List<E2> bag2() {
+    public Collection<E2> bag2() {
         return bag2;
     }
 
-    public List<E3> bag3() {
-        return bag3;
-    }
-
-    public void combineWith(ThreeBags<E1, E2, E3> that) {
+    public void combineWith(ThreeBags<E0, E1, E2> that) {
+        bag0.addAll(that.bag0());
         bag1.addAll(that.bag1());
         bag2.addAll(that.bag2());
-        bag3.addAll(that.bag3());
     }
 
     @Override
     public String toString() {
-        return "ThreeBags{" + bag1 + ", " + bag2 + ", " + bag3 + '}';
+        return "ThreeBags{" + bag0 + ", " + bag1 + ", " + bag2 + '}';
     }
 }

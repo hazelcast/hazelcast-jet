@@ -26,57 +26,58 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.stream.Stream;
 
+import static com.hazelcast.jet.pipeline.bag.Tag.tag;
+import static com.hazelcast.jet.pipeline.bag.Tag.tag0;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 
 /**
  * Javadoc pending.
  */
-public class JoinBuilder<E_LEFT> {
-    private final Map<Tag<?>, JoinClause<?, E_LEFT, ?>> clauses = new HashMap<>();
+public class JoinBuilder<E0> {
+    private final Map<Tag<?>, JoinClause<?, E0, ?>> clauses = new HashMap<>();
 
-    // Holds the TupleTag of the "left-hand" component of the join operation.
-    // This JoinClause instance is a special case which has no JoinOn.
-    // The pstream it holds is the implied left-hand side of all join clauses.
-    private final Tag<E_LEFT> leftTag;
-
-    JoinBuilder(ComputeStage<E_LEFT> leftStream) {
-        this.leftTag = add(leftStream, null);
+    JoinBuilder(ComputeStage<E0> leftStream) {
+        add(leftStream, null);
     }
 
-    public <K, E_RIGHT> Tag<E_RIGHT> add(ComputeStage<E_RIGHT> s, JoinOn<K, E_LEFT, E_RIGHT> joinOn) {
-        Tag<E_RIGHT> ind = new Tag<>(clauses.size());
-        clauses.put(ind, new JoinClause<>(s, joinOn));
-        return ind;
+    public <K, E_RIGHT> Tag<E_RIGHT> add(ComputeStage<E_RIGHT> s, JoinOn<K, E0, E_RIGHT> joinOn) {
+        Tag<E_RIGHT> tag = tag(clauses.size());
+        clauses.put(tag, new JoinClause<>(s, joinOn));
+        return tag;
     }
 
     @SuppressWarnings("unchecked")
-    public ComputeStage<Tuple2<E_LEFT, BagsByTag>> build() {
-        List<ComputeStage> upstream = orderedClauses()
-                .map(e -> e.getValue().pstream())
-                .collect(toList());
+    public ComputeStage<Tuple2<E0, BagsByTag>> build() {
+        List<Entry<Tag<?>, JoinClause<?, E0, ?>>> orderedClauses = orderedClauses();
+        List<ComputeStage> upstream = orderedClauses.stream()
+                                                    .map(e -> e.getValue().pstream())
+                                                    .collect(toList());
         HashJoinTransform transform = new HashJoinTransform(
-                orderedClauses()
-                        .skip(1)
-                        .map(e -> e.getValue().joinOn())
-                        .collect(toList())
+                orderedClauses.stream()
+                              .skip(1)
+                              .map(e -> e.getValue().joinOn())
+                              .collect(toList()),
+                orderedClauses.stream()
+                              .map(Entry::getKey)
+                              .collect(toList())
         );
-        PipelineImpl pipeline = (PipelineImpl) clauses.get(leftTag).pstream().getPipeline();
+        PipelineImpl pipeline = (PipelineImpl) clauses.get(tag0()).pstream().getPipeline();
         return pipeline.attach(upstream, transform);
     }
 
-    private Stream<Entry<Tag<?>, JoinClause<?, E_LEFT, ?>>> orderedClauses() {
+    private List<Entry<Tag<?>, JoinClause<?, E0, ?>>> orderedClauses() {
         return clauses.entrySet().stream()
-                      .sorted(comparing(Entry::getKey));
+                      .sorted(comparing(Entry::getKey))
+                      .collect(toList());
     }
 
-    private static class JoinClause<K, E_LEFT, E_RIGHT> {
+    private static class JoinClause<K, E0, E_RIGHT> {
         private final ComputeStage<E_RIGHT> pstream;
-        private final JoinOn<K, E_LEFT, E_RIGHT> joinOn;
+        private final JoinOn<K, E0, E_RIGHT> joinOn;
 
-        JoinClause(ComputeStage<E_RIGHT> pstream, JoinOn<K, E_LEFT, E_RIGHT> joinOn) {
+        JoinClause(ComputeStage<E_RIGHT> pstream, JoinOn<K, E0, E_RIGHT> joinOn) {
             this.pstream = pstream;
             this.joinOn = joinOn;
         }
@@ -85,7 +86,7 @@ public class JoinBuilder<E_LEFT> {
             return pstream;
         }
 
-        JoinOn<K, E_LEFT, E_RIGHT> joinOn() {
+        JoinOn<K, E0, E_RIGHT> joinOn() {
             return joinOn;
         }
     }

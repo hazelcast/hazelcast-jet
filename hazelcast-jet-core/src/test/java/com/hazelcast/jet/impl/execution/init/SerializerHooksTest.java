@@ -51,7 +51,7 @@ import static org.junit.Assert.assertNotSame;
 @RunWith(Parameterized.class)
 @Category({QuickTest.class, ParallelTest.class})
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
-public class JetSerializerHookTest {
+public class SerializerHooksTest {
 
     @Parameter
     public Object instance;

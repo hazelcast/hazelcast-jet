@@ -28,8 +28,15 @@ public class Tag<E> implements Serializable, Comparable<Tag<?>> {
 
     private final int index;
 
-    public Tag(int index) {
+    private Tag(int index) {
         this.index = index;
+    }
+
+    public static <T> Tag<T> tag(int index) {
+        return index == 0 ? TAG_0
+             : index == 1 ? TAG_1
+             : index == 2 ? TAG_2
+             : new Tag<>(index);
     }
 
     @SuppressWarnings("unchecked")
@@ -66,5 +73,12 @@ public class Tag<E> implements Serializable, Comparable<Tag<?>> {
     @Override
     public String toString() {
         return "Tag" + index;
+    }
+
+    private Object readResolve() {
+        return index == 0 ? TAG_0
+             : index == 1 ? TAG_1
+             : index == 2 ? TAG_2
+             : this;
     }
 }

@@ -21,8 +21,8 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.pipeline.CoGroupBuilder;
-import com.hazelcast.jet.pipeline.JoinBuilder;
 import com.hazelcast.jet.pipeline.ComputeStage;
+import com.hazelcast.jet.pipeline.JoinBuilder;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -33,8 +33,12 @@ import com.hazelcast.jet.pipeline.tuple.Tuple2;
 import com.hazelcast.jet.pipeline.tuple.Tuple3;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
-import java.io.Serializable;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.pipeline.JoinOn.onKeys;
@@ -57,36 +61,33 @@ public class PipelineJoinAndCoGroup {
     private ComputeStage<Broker> brokers = p.drawFrom(Sources.<Integer, Broker>readMap(BROKERS))
                                             .map(Entry::getValue);
 
+    private Tag<Trade> tradeTag;
+    private Tag<Product> productTag;
+    private Tag<Broker> brokerTag;
+
+    private final Map<Integer, Set<Trade>> class2trade = new HashMap<>();
+    private final Map<Integer, Set<Product>> class2product = new HashMap<>();
+    private final Map<Integer, Set<Broker>> class2broker = new HashMap<>();
+
     private PipelineJoinAndCoGroup(JetInstance jet) {
         this.jet = jet;
     }
 
     public static void main(String[] args) throws Exception {
         JetInstance jet = Jet.newJetInstance();
+        Jet.newJetInstance();
         PipelineJoinAndCoGroup sample = new PipelineJoinAndCoGroup(jet);
         try {
             sample.prepareSampleData();
-            printImap(jet.getMap(PRODUCTS));
-            printImap(jet.getMap(BROKERS));
-            printImap(jet.getMap(TRADES));
-            sample.coGroupBuild().drainTo(Sinks.writeMap(RESULT));
-            // This line added to test multiple outputs from a PElement
+            sample.coGroupDirect().drainTo(Sinks.writeMap(RESULT));
+            // This line added to test multiple outputs from a Stage
             sample.trades.map(t -> entry(t.brokerId, t)).drainTo(Sinks.writeMap(RESULT_BROKER));
-
-            sample.p.execute(jet).get();
-
-            printImap(jet.getMap(RESULT));
+            sample.execute();
             printImap(jet.getMap(RESULT_BROKER));
+            sample.validateCoGroupDirectResults();
         } finally {
             Jet.shutdownAll();
         }
-    }
-
-    public static <K, V> void printImap(IMap<K, V> imap) {
-        StringBuilder sb = new StringBuilder();
-        System.err.println(imap.getName() + ':');
-        imap.forEach((k, v) -> sb.append(k).append("->").append(v).append('\n'));
-        System.err.println(sb);
     }
 
     private void prepareSampleData() {
@@ -98,14 +99,29 @@ public class PipelineJoinAndCoGroup {
         int brokerId = 31;
         int tradeId = 1;
         for (int classId = 11; classId < 13; classId++) {
+            class2product.put(classId, new HashSet<>());
+            class2broker.put(classId, new HashSet<>());
+            class2trade.put(classId, new HashSet<>());
             for (int i = 0; i < 2; i++) {
-                productMap.put(productId, new Product(classId, productId));
-                brokerMap.put(brokerId, new Broker(classId, brokerId));
-                tradeMap.put(tradeId++, new Trade(classId, productId, brokerId));
+                Product prod = new Product(classId, productId);
+                Broker brok = new Broker(classId, brokerId);
+                Trade trad = new Trade(classId, productId, brokerId);
+
+                productMap.put(productId, prod);
+                brokerMap.put(brokerId, brok);
+                tradeMap.put(tradeId++, trad);
+
+                class2product.get(classId).add(prod);
+                class2broker.get(classId).add(brok);
+                class2trade.get(classId).add(trad);
+
                 productId++;
                 brokerId++;
             }
         }
+        printImap(productMap);
+        printImap(brokerMap);
+        printImap(tradeMap);
     }
 
     private ComputeStage<String> joinDirect() {
@@ -121,126 +137,94 @@ public class PipelineJoinAndCoGroup {
         });
     }
 
-    private ComputeStage<String> joinBuild() {
+    private ComputeStage<Entry<Integer, BagsByTag>> joinBuild() {
         JoinBuilder<Trade> builder = trades.joinBuilder();
-        Tag<Product> productTag = builder.add(products, onKeys(Trade::productId, Product::id));
-        Tag<Broker> brokerTag = builder.add(brokers, onKeys(Trade::brokerId, Broker::id));
+        productTag = builder.add(products, onKeys(Trade::productId, Product::id));
+        brokerTag = builder.add(brokers, onKeys(Trade::brokerId, Broker::id));
         ComputeStage<Tuple2<Trade, BagsByTag>> joined = builder.build();
-
-        return joined.map(t -> {
-            Trade trade = t.f0();
-            BagsByTag bags = t.f1();
-            Iterable<Product> products = bags.bag(productTag);
-            Iterable<Broker> brokers = bags.bag(brokerTag);
-            return "" + trade + products + brokers;
-        });
+        return joined.map(t -> entry(t.f0().productId(), t.f1()));
     }
 
-    private ComputeStage<Tuple2<Integer, String>> coGroupDirect() {
+    private void validateJoinBuildResults() {
+        IMap<Integer, BagsByTag> result = jet.getMap(RESULT);
+        for (int productId = 21; productId < 25; productId++) {
+            BagsByTag bags = result.get(productId);
+            Collection<Product> products = bags.bag(productTag);
+            Collection<Broker> brokers = bags.bag(brokerTag);
+        }
+
+    }
+
+    private ComputeStage<Tuple2<Integer, ThreeBags>> coGroupDirect() {
         return trades.coGroup(
                 Trade::classId,
                 products, Product::classId,
                 brokers, Broker::classId,
                 AggregateOperation
                         .withCreate(ThreeBags<Trade, Product, Broker>::new)
-                        .<Trade>andAccumulate0((acc, trade) -> acc.bag1().add(trade))
-                        .<Product>andAccumulate1((acc, product) -> acc.bag2().add(product))
-                        .<Broker>andAccumulate2((acc, broker) -> acc.bag3().add(broker))
+                        .<Trade>andAccumulate0((acc, trade) -> acc.bag0().add(trade))
+                        .<Product>andAccumulate1((acc, product) -> acc.bag1().add(product))
+                        .<Broker>andAccumulate2((acc, broker) -> acc.bag2().add(broker))
                         .andCombine(ThreeBags::combineWith)
-                        .andFinish(Object::toString));
+                        .andFinish(x -> x));
     }
 
-    private ComputeStage<Tuple2<Integer, String>> coGroupBuild() {
+    private void validateCoGroupDirectResults() {
+        IMap<Integer, ThreeBags<Trade, Product, Broker>> result = jet.getMap(RESULT);
+        printImap(result);
+        for (int classId = 11; classId < 13; classId++) {
+            ThreeBags<Trade, Product, Broker> bags = result.get(classId);
+            assertEqual(class2trade.get(classId), bags.bag0());
+            assertEqual(class2product.get(classId), bags.bag1());
+            assertEqual(class2broker.get(classId), bags.bag2());
+        }
+        System.err.println("CoGroupDirect results are valid");
+    }
+
+
+    private ComputeStage<Tuple2<Integer, BagsByTag>> coGroupBuild() {
         CoGroupBuilder<Integer, Trade> builder = trades.coGroupBuilder(Trade::classId);
-        Tag<Trade> tradeTag = builder.leftTag();
-        Tag<Product> prodTag = builder.add(products, Product::classId);
-        Tag<Broker> brokTag = builder.add(brokers, Broker::classId);
+        Tag<Trade> tradeTag = this.tradeTag = builder.tag0();
+        Tag<Product> productTag = this.productTag = builder.add(products, Product::classId);
+        Tag<Broker> brokerTag = this.brokerTag = builder.add(brokers, Broker::classId);
 
         return builder.build(AggregateOperation
                 .withCreate(BagsByTag::new)
                 .andAccumulate(tradeTag, (acc, trade) -> acc.bag(tradeTag).add(trade))
-                .andAccumulate(prodTag, (acc, product) -> acc.bag(prodTag).add(product))
-                .andAccumulate(brokTag, (acc, broker) -> acc.bag(brokTag).add(broker))
+                .andAccumulate(productTag, (acc, product) -> acc.bag(productTag).add(product))
+                .andAccumulate(brokerTag, (acc, broker) -> acc.bag(brokerTag).add(broker))
                 .andCombine(BagsByTag::combineWith)
-                .andFinish(Object::toString)
+                .andFinish(x -> x)
         );
     }
 
-    private static class Trade implements Serializable {
-
-        private int productId;
-        private int brokerId;
-        private int classId;
-
-        Trade(int classId, int productId, int brokerId) {
-            this.productId = productId;
-            this.brokerId = brokerId;
-            this.classId = classId;
+    private void validateCoGroupBuildResults() {
+        IMap<Integer, BagsByTag> result = jet.getMap(RESULT);
+        printImap(result);
+        for (int classId = 11; classId < 13; classId++) {
+            BagsByTag bags = result.get(classId);
+            assertEqual(class2trade.get(classId), bags.bag(tradeTag));
+            assertEqual(class2product.get(classId), bags.bag(productTag));
+            assertEqual(class2broker.get(classId), bags.bag(brokerTag));
         }
+        System.err.println("CoGroupBuild results are valid");
+    }
 
-        int productId() {
-            return productId;
-        }
+    private void execute() throws Exception {
+        p.execute(jet).get();
+    }
 
-        int brokerId() {
-            return brokerId;
-        }
-
-        int classId() {
-            return classId;
-        }
-
-        @Override
-        public String toString() {
-            return "Trade{productId=" + productId + ", brokerId=" + brokerId + ", classId=" + classId + '}';
+    private static <T> void assertEqual(Set<T> expected, Collection<T> actual) {
+        if (actual.size() != expected.size() || !expected.containsAll(actual)) {
+            throw new AssertionError("Mismatch: expected " + expected + "; actual " + actual);
         }
     }
 
-    private static class Product implements Serializable {
-
-        private int id;
-        private int classId;
-
-        Product(int classId, int id) {
-            this.id = id;
-            this.classId = classId;
-        }
-
-        int id() {
-            return id;
-        }
-
-        int classId() {
-            return classId;
-        }
-
-        @Override
-        public String toString() {
-            return "Product{id=" + id + ", classId=" + classId + '}';
-        }
+    private static <K, V> void printImap(IMap<K, V> imap) {
+        StringBuilder sb = new StringBuilder();
+        System.err.println(imap.getName() + ':');
+        imap.forEach((k, v) -> sb.append(k).append("->").append(v).append('\n'));
+        System.err.println(sb);
     }
 
-    private static class Broker implements Serializable {
-
-        private int id;
-        private int classId;
-
-        Broker(int classId, int id) {
-            this.id = id;
-            this.classId = classId;
-        }
-
-        int id() {
-            return id;
-        }
-
-        int classId() {
-            return classId;
-        }
-
-        @Override
-        public String toString() {
-            return "Broker{id=" + id + ", classId=" + classId + '}';
-        }
-    }
 }
