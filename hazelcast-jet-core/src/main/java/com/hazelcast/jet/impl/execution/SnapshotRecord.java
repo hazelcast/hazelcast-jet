@@ -26,23 +26,35 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Set;
 
+import static com.hazelcast.jet.impl.util.Util.idToString;
+
 /**
  * A record stored in the {@link
  * com.hazelcast.jet.impl.coordination.MasterContext#SNAPSHOTS_MAP_NAME}
  * map.
  */
-public class MasterSnapshotRecord implements IdentifiedDataSerializable {
+public class SnapshotRecord implements IdentifiedDataSerializable {
+    private long jobId;
     private long creationTime = System.currentTimeMillis();
     private boolean isComplete;
     private boolean isUserInitiated;
     private Set<String> statefulVertexIds;
 
-    public MasterSnapshotRecord() {
+    public SnapshotRecord() {
     }
 
-    public MasterSnapshotRecord(Set<String> statefulVertexIds, boolean isUserInitiated) {
+    public SnapshotRecord(long jobId, Set<String> statefulVertexIds, boolean isUserInitiated) {
+        this.jobId = jobId;
         this.statefulVertexIds = statefulVertexIds;
         this.isUserInitiated = isUserInitiated;
+    }
+
+    /**
+     * Return the jobId the snapshot was originally created for. Note that the
+     * snapshot might be used to start another job.
+     */
+    public long getJobId() {
+        return jobId;
     }
 
     public long getCreationTime() {
@@ -62,7 +74,8 @@ public class MasterSnapshotRecord implements IdentifiedDataSerializable {
     }
 
     /**
-     * True, if the snapshot was user-initiated and thus is not automatically deleted.
+     * True, if the snapshot was user-initiated and thus will not be
+     * automatically deleted.
      */
     public boolean isUserInitiated() {
         return isUserInitiated;
@@ -80,6 +93,7 @@ public class MasterSnapshotRecord implements IdentifiedDataSerializable {
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
+        out.writeLong(jobId);
         out.writeLong(creationTime);
         out.writeBoolean(isComplete);
         out.writeBoolean(isUserInitiated);
@@ -88,6 +102,7 @@ public class MasterSnapshotRecord implements IdentifiedDataSerializable {
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
+        jobId = in.readLong();
         creationTime = in.readLong();
         isComplete = in.readBoolean();
         isUserInitiated = in.readBoolean();
@@ -96,8 +111,9 @@ public class MasterSnapshotRecord implements IdentifiedDataSerializable {
 
     @Override
     public String toString() {
-        return "MasterSnapshotRecord{" +
-                "creationTime=" + Instant.ofEpochMilli(creationTime).atZone(ZoneId.systemDefault()).toLocalDateTime() +
+        return "SnapshotRecord{" +
+                "jobId=" + idToString(jobId) +
+                ", creationTime=" + Instant.ofEpochMilli(creationTime).atZone(ZoneId.systemDefault()).toLocalDateTime() +
                 ", isComplete=" + isComplete +
                 ", statefulVertexIds=" + statefulVertexIds +
                 '}';

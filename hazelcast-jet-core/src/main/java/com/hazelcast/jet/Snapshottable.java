@@ -108,18 +108,4 @@ public interface Snapshottable {
      */
     default void clearState() {
     }
-
-    public enum SnapshotResult {
-        /**
-         * Saving snapshot is not finished and the {@link
-         * #saveSnapshot(SnapshotStorage)} method should be called again.
-         */
-        NOT_DONE,
-
-        /**
-         * Saving snapshot can continue in asynchronous way.
-         */
-        DONE_ASYNC,
-        DONE;
-    }
 }

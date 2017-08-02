@@ -26,16 +26,18 @@ import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.TopologyChangedException;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobRecord;
-import com.hazelcast.jet.impl.execution.MasterSnapshotRecord;
+import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.operation.CompleteOperation;
 import com.hazelcast.jet.impl.operation.DoSnapshotOperation;
 import com.hazelcast.jet.impl.operation.ExecuteOperation;
 import com.hazelcast.jet.impl.operation.InitOperation;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
+import com.hazelcast.jet.impl.util.MaxByAggregator;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.AbstractEntryProcessor;
+import com.hazelcast.query.Predicates;
 import com.hazelcast.spi.InternalCompletableFuture;
 import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.impl.NodeEngineImpl;
@@ -89,7 +91,7 @@ public class MasterContext {
     private volatile long jobStartTime;
     private volatile Map<MemberInfo, ExecutionPlan> executionPlanMap;
 
-    private volatile long masterSnapshotId;
+    private volatile long currentSnapshotId;
     private volatile ScheduledFuture<?> scheduledSnapshotFuture;
     private volatile Set<String> statefulVertexIds;
 
@@ -136,11 +138,23 @@ public class MasterContext {
             return;
         }
 
+        long snapshotId = findUsableSnapshot();
+
         logger.fine("Built execution plans for " + formatIds(jobId, executionId));
         Set<MemberInfo> participants = executionPlanMap.keySet();
         Function<ExecutionPlan, Operation> operationCtor = plan ->
-                new InitOperation(jobId, executionId, membersView.getVersion(), participants, plan);
+                new InitOperation(jobId, executionId, membersView.getVersion(), participants, plan, snapshotId);
         invoke(operationCtor, this::onInitStepCompleted, null);
+    }
+
+    /**
+     * Return snapshotId of newest complete snapshot for this job.
+     */
+    private long findUsableSnapshot() {
+        IMap<Long, SnapshotRecord> snapshotsMap = nodeEngine.getHazelcastInstance().getMap(SNAPSHOTS_MAP_NAME);
+        Entry<Long, SnapshotRecord> newestSnapshot =
+                snapshotsMap.aggregate(new MaxByAggregator<>("creationTime"), Predicates.equal("jobId", jobId));
+        return newestSnapshot != null ? newestSnapshot.getKey() : 0;
     }
 
     /**
@@ -283,18 +297,16 @@ public class MasterContext {
     private void initiateSnapshot() {
         IMap<Object, Object> snapshotsMap = nodeEngine.getHazelcastInstance().getMap(SNAPSHOTS_MAP_NAME);
 
-        List<Long> key;
-        MasterSnapshotRecord value;
+        SnapshotRecord value;
         do {
             do {
-                masterSnapshotId = Util.secureRandomNextLong();
-            } while (masterSnapshotId == 0); // 0 is reserved value
-            key = Arrays.asList(jobId, masterSnapshotId);
-            value = new MasterSnapshotRecord(statefulVertexIds, false);
-        } while (snapshotsMap.putIfAbsent(key, value) != null);
+                currentSnapshotId = Util.secureRandomNextLong();
+            } while (currentSnapshotId == 0); // 0 is reserved value
+            value = new SnapshotRecord(jobId, statefulVertexIds, false);
+        } while (snapshotsMap.putIfAbsent(currentSnapshotId, value) != null);
 
-        logger.info(String.format("Initiating snapshot %s for job %s", idToString(masterSnapshotId), idToString(jobId)));
-        Function<ExecutionPlan, Operation> factory = plan -> new DoSnapshotOperation(jobId, executionId, masterSnapshotId);
+        logger.info(String.format("Initiating snapshot %s for job %s", idToString(currentSnapshotId), idToString(jobId)));
+        Function<ExecutionPlan, Operation> factory = plan -> new DoSnapshotOperation(jobId, executionId, currentSnapshotId);
         invoke(factory, this::onSnapshotCompleted, completionFuture);
     }
 
@@ -311,10 +323,10 @@ public class MasterContext {
 
         // mark the record in the map as completed
         IMap<Object, Object> map = nodeEngine.getHazelcastInstance().getMap(SNAPSHOTS_MAP_NAME);
-        long creationTime = (long) map.executeOnKey(Arrays.asList(jobId, masterSnapshotId),
+        long creationTime = (long) map.executeOnKey(Arrays.asList(jobId, currentSnapshotId),
                 new MarkRecordCompleteEntryProcessor());
 
-        logger.info(String.format("Snapshot %s for job %s completed in %dms", idToString(masterSnapshotId),
+        logger.info(String.format("Snapshot %s for job %s completed in %dms", idToString(currentSnapshotId),
                 idToString(jobId), System.currentTimeMillis() - creationTime));
 
         // TODO delete older snapshots
@@ -475,10 +487,10 @@ public class MasterContext {
         }
     }
 
-    private static class MarkRecordCompleteEntryProcessor extends AbstractEntryProcessor<Object, MasterSnapshotRecord> {
+    private static class MarkRecordCompleteEntryProcessor extends AbstractEntryProcessor<Object, SnapshotRecord> {
         @Override
-        public Object process(Entry<Object, MasterSnapshotRecord> entry) {
-            MasterSnapshotRecord msr = entry.getValue();
+        public Object process(Entry<Object, SnapshotRecord> entry) {
+            SnapshotRecord msr = entry.getValue();
             msr.setComplete(true);
             entry.setValue(msr);
             return msr.getCreationTime();
