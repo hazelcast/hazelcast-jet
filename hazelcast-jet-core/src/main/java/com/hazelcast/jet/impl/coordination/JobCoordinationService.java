@@ -264,7 +264,7 @@ public class JobCoordinationService {
     private void completeJob(MasterContext masterContext, long completionTime,
                              Throwable error, CompletableFuture<Boolean> future) {
         if (!tryLock()) {
-            logger.severe("Complete of job " + idToString(masterContext.getJobId()) + " is rescheduled.");
+            logger.fine("Complete of job " + idToString(masterContext.getJobId()) + " is rescheduled.");
             InternalExecutionService executionService = nodeEngine.getExecutionService();
             executionService.schedule(COORDINATOR_EXECUTOR_NAME,
                     () -> completeJob(masterContext, completionTime, error, future),
