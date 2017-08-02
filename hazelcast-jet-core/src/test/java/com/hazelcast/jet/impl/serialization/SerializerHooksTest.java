@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.execution.init;
+package com.hazelcast.jet.impl.serialization;
 
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
 import com.hazelcast.jet.accumulator.DoubleAccumulator;

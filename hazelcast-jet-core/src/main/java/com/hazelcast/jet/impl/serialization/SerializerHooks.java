@@ -14,16 +14,18 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.execution.init;
+package com.hazelcast.jet.impl.serialization;
 
 import com.hazelcast.internal.serialization.impl.SerializationConstants;
+import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.accumulator.DoubleAccumulator;
 import com.hazelcast.jet.accumulator.LinTrendAccumulator;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.accumulator.LongDoubleAccumulator;
 import com.hazelcast.jet.accumulator.LongLongAccumulator;
 import com.hazelcast.jet.accumulator.MutableReference;
-import com.hazelcast.jet.TimestampedEntry;
+import com.hazelcast.jet.pipeline.tuple.Tuple2;
+import com.hazelcast.jet.pipeline.tuple.Tuple3;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.Serializer;
@@ -56,6 +58,8 @@ public final class SerializerHooks {
     public static final int LIN_TREND_ACC = -307;
     public static final int LONG_LONG_ACC = -308;
     public static final int LONG_DOUBLE_ACC = -309;
+    public static final int TUPLE2 = -310;
+    public static final int TUPLE3 = -311;
 
     // reserved for hadoop module: -380 to -390
 
@@ -68,7 +72,7 @@ public final class SerializerHooks {
     private SerializerHooks() {
     }
 
-    public static final class ObjectArray implements SerializerHook<Object[]> {
+    public static final class ObjectArrayHook implements SerializerHook<Object[]> {
 
         @Override
         public Class<Object[]> getSerializationType() {
@@ -115,7 +119,7 @@ public final class SerializerHooks {
         }
     }
 
-    public static final class MapEntry implements SerializerHook<Map.Entry> {
+    public static final class MapEntryHook implements SerializerHook<Entry> {
 
         @Override
         public Class<Entry> getSerializationType() {
@@ -124,7 +128,7 @@ public final class SerializerHooks {
 
         @Override
         public Serializer createSerializer() {
-            return new StreamSerializer<Map.Entry>() {
+            return new StreamSerializer<Entry>() {
                 @Override
                 public int getTypeId() {
                     return MAP_ENTRY;
@@ -154,7 +158,7 @@ public final class SerializerHooks {
         }
     }
 
-    public static final class TimestampedEntrySerializer implements SerializerHook<TimestampedEntry> {
+    public static final class TimestampedEntryHook implements SerializerHook<TimestampedEntry> {
 
         @Override
         public Class<TimestampedEntry> getSerializationType() {
@@ -195,239 +199,79 @@ public final class SerializerHooks {
         }
     }
 
-    public static final class LongAccSerializer implements SerializerHook<LongAccumulator> {
+    public static final class Tuple2Hook implements SerializerHook<Tuple2> {
 
         @Override
-        public Class<LongAccumulator> getSerializationType() {
-            return LongAccumulator.class;
+        public Class<Tuple2> getSerializationType() {
+            return Tuple2.class;
         }
 
         @Override
         public Serializer createSerializer() {
-            return new StreamSerializer<LongAccumulator>() {
+            return new StreamSerializer<Tuple2>() {
+                @Override
+                public void write(ObjectDataOutput out, Tuple2 t) throws IOException {
+                    out.writeObject(t.f0());
+                    out.writeObject(t.f1());
+                }
+
+                @Override
+                public Tuple2 read(ObjectDataInput in) throws IOException {
+                    return new Tuple2<>(in.readObject(), in.readObject());
+                }
+
                 @Override
                 public int getTypeId() {
-                    return LONG_ACC;
-                }
-
-                @Override
-                public void destroy() {
-
-                }
-
-                @Override
-                public void write(ObjectDataOutput out, LongAccumulator object) throws IOException {
-                    out.writeLong(object.get());
-                }
-
-                @Override
-                public LongAccumulator read(ObjectDataInput in) throws IOException {
-                    return new LongAccumulator(in.readLong());
-                }
-            };
-        }
-
-        @Override
-        public boolean isOverwritable() {
-            return true;
-        }
-    }
-
-    public static final class DoubleAccSerializer implements SerializerHook<DoubleAccumulator> {
-
-        @Override
-        public Class<DoubleAccumulator> getSerializationType() {
-            return DoubleAccumulator.class;
-        }
-
-        @Override
-        public Serializer createSerializer() {
-            return new StreamSerializer<DoubleAccumulator>() {
-                @Override
-                public int getTypeId() {
-                    return DOUBLE_ACC;
-                }
-
-                @Override
-                public void destroy() {
-
-                }
-
-                @Override
-                public void write(ObjectDataOutput out, DoubleAccumulator object) throws IOException {
-                    out.writeDouble(object.get());
-                }
-
-                @Override
-                public DoubleAccumulator read(ObjectDataInput in) throws IOException {
-                    return new DoubleAccumulator(in.readDouble());
-                }
-            };
-        }
-
-        @Override
-        public boolean isOverwritable() {
-            return true;
-        }
-    }
-
-    public static final class MutableReferenceSerializer implements SerializerHook<MutableReference> {
-
-        @Override
-        public Class<MutableReference> getSerializationType() {
-            return MutableReference.class;
-        }
-
-        @Override
-        public Serializer createSerializer() {
-            return new StreamSerializer<MutableReference>() {
-                @Override
-                public int getTypeId() {
-                    return MUTABLE_REFERENCE;
-                }
-
-                @Override
-                public void destroy() {
-
-                }
-
-                @Override
-                public void write(ObjectDataOutput out, MutableReference object) throws IOException {
-                    out.writeObject(object.get());
-                }
-
-                @Override
-                public MutableReference read(ObjectDataInput in) throws IOException {
-                    return new MutableReference<>(in.readObject());
-                }
-            };
-        }
-
-        @Override
-        public boolean isOverwritable() {
-            return true;
-        }
-    }
-
-    public static final class LinTrendAccSerializer implements SerializerHook<LinTrendAccumulator> {
-
-        @Override
-        public Class<LinTrendAccumulator> getSerializationType() {
-            return LinTrendAccumulator.class;
-        }
-
-        @Override
-        public Serializer createSerializer() {
-            return new StreamSerializer<LinTrendAccumulator>() {
-                @Override
-                public int getTypeId() {
-                    return LIN_TREND_ACC;
+                    return SerializerHooks.TUPLE2;
                 }
 
                 @Override
                 public void destroy() {
                 }
-
-                @Override
-                public void write(ObjectDataOutput out, LinTrendAccumulator object) throws IOException {
-                    object.writeObject(out);
-                }
-
-                @Override
-                public LinTrendAccumulator read(ObjectDataInput in) throws IOException {
-                    return new LinTrendAccumulator(
-                            in.readLong(), readBigInt(in), readBigInt(in), readBigInt(in), readBigInt(in));
-                }
-
-                private BigInteger readBigInt(ObjectDataInput in) throws IOException {
-                    byte[] bytes = new byte[in.readUnsignedByte()];
-                    for (int i = 0; i < bytes.length; i++) {
-                        bytes[i] = in.readByte();
-                    }
-                    return new BigInteger(bytes);
-                }
             };
         }
 
-        @Override
-        public boolean isOverwritable() {
-            return true;
+        @Override public boolean isOverwritable() {
+            return false;
         }
     }
 
-    public static final class LongLongAccSerializer implements SerializerHook<LongLongAccumulator> {
+    public static final class Tuple3Hook implements SerializerHook<Tuple3> {
 
         @Override
-        public Class<LongLongAccumulator> getSerializationType() {
-            return LongLongAccumulator.class;
+        public Class<Tuple3> getSerializationType() {
+            return Tuple3.class;
         }
 
         @Override
         public Serializer createSerializer() {
-            return new StreamSerializer<LongLongAccumulator>() {
+            return new StreamSerializer<Tuple3>() {
+                @Override
+                public void write(ObjectDataOutput out, Tuple3 t) throws IOException {
+                    out.writeObject(t.f0());
+                    out.writeObject(t.f1());
+                    out.writeObject(t.f2());
+                }
+
+                @Override
+                public Tuple3 read(ObjectDataInput in) throws IOException {
+                    return new Tuple3<>(in.readObject(), in.readObject(), in.readObject());
+                }
+
                 @Override
                 public int getTypeId() {
-                    return LONG_LONG_ACC;
+                    return SerializerHooks.TUPLE3;
                 }
 
                 @Override
                 public void destroy() {
                 }
-
-                @Override
-                public void write(ObjectDataOutput out, LongLongAccumulator object) throws IOException {
-                    out.writeLong(object.getValue1());
-                    out.writeLong(object.getValue2());
-                }
-
-                @Override
-                public LongLongAccumulator read(ObjectDataInput in) throws IOException {
-                    return new LongLongAccumulator(in.readLong(), in.readLong());
-                }
             };
         }
 
-        @Override
-        public boolean isOverwritable() {
-            return true;
+        @Override public boolean isOverwritable() {
+            return false;
         }
     }
 
-    public static final class LongDoubleAccSerializer implements SerializerHook<LongDoubleAccumulator> {
-
-        @Override
-        public Class<LongDoubleAccumulator> getSerializationType() {
-            return LongDoubleAccumulator.class;
-        }
-
-        @Override
-        public Serializer createSerializer() {
-            return new StreamSerializer<LongDoubleAccumulator>() {
-                @Override
-                public int getTypeId() {
-                    return LONG_DOUBLE_ACC;
-                }
-
-                @Override
-                public void destroy() {
-                }
-
-                @Override
-                public void write(ObjectDataOutput out, LongDoubleAccumulator object) throws IOException {
-                    out.writeLong(object.getValue1());
-                    out.writeDouble(object.getValue2());
-                }
-
-                @Override
-                public LongDoubleAccumulator read(ObjectDataInput in) throws IOException {
-                    return new LongDoubleAccumulator(in.readLong(), in.readDouble());
-                }
-            };
-        }
-
-        @Override
-        public boolean isOverwritable() {
-            return true;
-        }
-    }
 }

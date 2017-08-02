@@ -28,7 +28,7 @@ import com.hazelcast.jet.pipeline.impl.processor.HashJoinP;
 import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
 import com.hazelcast.jet.pipeline.impl.transform.FlatMapTransform;
 import com.hazelcast.jet.pipeline.impl.transform.GroupByTransform;
-import com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform;
+import com.hazelcast.jet.pipeline.impl.transform.JoinTransform;
 import com.hazelcast.jet.pipeline.impl.transform.MapTransform;
 import com.hazelcast.jet.processor.Processors;
 import com.hazelcast.jet.processor.Sinks;
@@ -86,8 +86,8 @@ class Planner {
                 PlannerVertex pv = addVertex(stage, new Vertex("co-group." + randomSuffix(),
                         () -> new CoGroupP<>(groupKeyFns, coGroup.aggregateOperation(), coGroup.tags())));
                 addEdges(stage, pv,  e -> e.distributed().partitioned(groupKeyFns.get(e.getDestOrdinal())));
-            } else if (transform instanceof HashJoinTransform) {
-                HashJoinTransform hashJoin = (HashJoinTransform) transform;
+            } else if (transform instanceof JoinTransform) {
+                JoinTransform hashJoin = (JoinTransform) transform;
                 PlannerVertex pv = addVertex(stage, new Vertex("hash-join." + randomSuffix(),
                         () -> new HashJoinP(hashJoin.joinOns(), hashJoin.tags())));
                 addEdges(stage, pv, (e, ordinal) -> {

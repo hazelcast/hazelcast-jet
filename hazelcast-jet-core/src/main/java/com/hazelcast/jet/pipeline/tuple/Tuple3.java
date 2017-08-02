@@ -32,15 +32,15 @@ public class Tuple3<E0, E1, E2> {
         this.f2 = f2;
     }
 
-    public E0 f1() {
+    public E0 f0() {
         return f0;
     }
 
-    public E1 f2() {
+    public E1 f1() {
         return f1;
     }
 
-    public E2 f3() {
+    public E2 f2() {
         return f2;
     }
 
@@ -61,5 +61,10 @@ public class Tuple3<E0, E1, E2> {
         hc = 73 * hc + f1.hashCode();
         hc = 73 * hc + f2.hashCode();
         return hc;
+    }
+
+    @Override
+    public String toString() {
+        return "Tuple3{" + f0 + ", " + f1 + ", " + f2 + '}';
     }
 }

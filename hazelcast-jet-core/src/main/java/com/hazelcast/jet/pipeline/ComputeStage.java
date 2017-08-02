@@ -22,10 +22,11 @@ import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
-import com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform;
+import com.hazelcast.jet.pipeline.impl.transform.JoinTransform;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
 import com.hazelcast.jet.pipeline.tuple.Tuple3;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -58,18 +59,18 @@ public interface ComputeStage<E> extends Stage {
     }
 
     @SuppressWarnings("unchecked")
-    default <K, E1> ComputeStage<Tuple2<E, Iterable<E1>>> join(
+    default <K, E1> ComputeStage<Tuple2<E, Collection<E1>>> join(
             ComputeStage<E1> s1, JoinOn<K, E, E1> joinOn
     ) {
-        return attach(new HashJoinTransform(singletonList(joinOn), emptyList()), singletonList(s1));
+        return attach(new JoinTransform(singletonList(joinOn), emptyList()), singletonList(s1));
     }
 
     @SuppressWarnings("unchecked")
-    default <K1, E1, K2, E2> ComputeStage<Tuple3<E, Iterable<E1>, Iterable<E2>>> join(
+    default <K1, E1, K2, E2> ComputeStage<Tuple3<E, Collection<E1>, Collection<E2>>> join(
             ComputeStage<E1> s1, JoinOn<K1, E, E1> joinOn1,
             ComputeStage<E2> s2, JoinOn<K2, E, E2> joinOn2
     ) {
-        return attach(new HashJoinTransform(asList(joinOn1, joinOn2), emptyList()), asList(s1, s2));
+        return attach(new JoinTransform(asList(joinOn1, joinOn2), emptyList()), asList(s1, s2));
     }
 
     default JoinBuilder<E> joinBuilder() {

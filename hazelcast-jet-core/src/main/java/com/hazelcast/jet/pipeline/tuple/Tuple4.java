@@ -70,4 +70,9 @@ public class Tuple4<E0, E1, E2, E3> {
         hc = 73 * hc + f3.hashCode();
         return hc;
     }
+
+    @Override
+    public String toString() {
+        return "Tuple4{" + f0 + ", " + f1 + ", " + f2 + ", " + f3 + '}';
+    }
 }

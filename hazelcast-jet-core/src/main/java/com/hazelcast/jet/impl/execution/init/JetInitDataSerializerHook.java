@@ -21,7 +21,7 @@ import com.hazelcast.internal.serialization.impl.FactoryIdHelper;
 import com.hazelcast.nio.serialization.DataSerializableFactory;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
-public final class JetImplDataSerializerHook implements DataSerializerHook {
+public final class JetInitDataSerializerHook implements DataSerializerHook {
 
     public static final String JET_IMPL_DS_FACTORY = "hazelcast.serialization.ds.jet.impl";
     public static final int JET_IMPL_DS_FACTORY_ID = -10002;

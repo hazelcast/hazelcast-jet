@@ -65,4 +65,9 @@ public class Tuple2<E0, E1> implements Map.Entry<E0, E1> {
         // This implementation is specified by Map.Entry and must not be changed
         return  f0.hashCode() ^ f1.hashCode();
     }
+
+    @Override
+    public String toString() {
+        return "Tuple2{" + f0 + ", " + f1 + '}';
+    }
 }

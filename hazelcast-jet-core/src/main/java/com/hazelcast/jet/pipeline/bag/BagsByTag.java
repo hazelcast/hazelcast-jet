@@ -31,6 +31,11 @@ public class BagsByTag implements Serializable {
 
     @SuppressWarnings("unchecked")
     public <E> Collection<E> bag(Tag<E> k) {
+        return (Collection<E>) components.get(k);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <E> Collection<E> ensureBag(Tag<E> k) {
         return (Collection<E>) components.computeIfAbsent(k, x -> new ArrayList<>());
     }
 

@@ -66,11 +66,11 @@ import java.util.List;
  * succeeds at runtime, the tag's type parameter is used to propagate the
  * static type information to the type of bag's items.
  */
-public class HashJoinTransform<E0> implements MultiTransform {
+public class JoinTransform<E0> implements MultiTransform {
     private final List<JoinOn<?, E0, ?>> joinOns;
     private final List<Tag> tags;
 
-    public HashJoinTransform(@Nonnull List<JoinOn<?, E0, ?>> joinOns, @Nonnull List<Tag> tags) {
+    public JoinTransform(@Nonnull List<JoinOn<?, E0, ?>> joinOns, @Nonnull List<Tag> tags) {
         this.joinOns = joinOns;
         this.tags = tags;
     }

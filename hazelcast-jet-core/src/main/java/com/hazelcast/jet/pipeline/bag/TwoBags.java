@@ -22,19 +22,19 @@ import java.util.Collection;
 /**
  * Javadoc pending.
  */
-public class TwoBags<E1, E2> implements Serializable {
+public class TwoBags<E0, E1> implements Serializable {
+    private final Collection<E0> bag0;
     private final Collection<E1> bag1;
-    private final Collection<E2> bag2;
 
-    public TwoBags(Collection<E1> bag1, Collection<E2> bag2) {
+    public TwoBags(Collection<E0> bag0, Collection<E1> bag1) {
+        this.bag0 = bag0;
         this.bag1 = bag1;
-        this.bag2 = bag2;
     }
+    public Iterable<E0> bag0() {
+        return bag0;
+    }
+
     public Iterable<E1> bag1() {
         return bag1;
-    }
-
-    public Iterable<E2> bag2() {
-        return bag2;
     }
 }

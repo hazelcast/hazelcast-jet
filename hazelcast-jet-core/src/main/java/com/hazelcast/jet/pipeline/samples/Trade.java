@@ -23,14 +23,20 @@ import java.io.Serializable;
  */
 class Trade implements Serializable {
 
-    private int productId;
-    int brokerId;
-    private int classId;
+    private final int id;
+    private final int productId;
+    private final int brokerId;
+    private final int classId;
 
-    Trade(int classId, int productId, int brokerId) {
+    Trade(int id, int classId, int productId, int brokerId) {
+        this.id = id;
         this.productId = productId;
         this.brokerId = brokerId;
         this.classId = classId;
+    }
+
+    int id() {
+        return id;
     }
 
     int productId() {
@@ -49,7 +55,8 @@ class Trade implements Serializable {
     public boolean equals(Object obj) {
         Trade that;
         return obj instanceof Trade
-                && this.productId == (that = (Trade) obj).productId
+                && this.id == (that = (Trade) obj).id
+                && this.productId == that.productId
                 && this.brokerId == (that = (Trade) obj).brokerId
                 && this.classId == that.classId;
     }
@@ -57,6 +64,7 @@ class Trade implements Serializable {
     @Override
     public int hashCode() {
         int hc = 17;
+        hc = 73 * hc + id;
         hc = 73 * hc + productId;
         hc = 73 * hc + brokerId;
         hc = 73 * hc + classId;
@@ -65,6 +73,6 @@ class Trade implements Serializable {
 
     @Override
     public String toString() {
-        return "Trade{productId=" + productId + ", brokerId=" + brokerId + ", classId=" + classId + '}';
+        return "Trade{id=" + id + ", productId=" + productId + ", brokerId=" + brokerId + ", classId=" + classId + '}';
     }
 }

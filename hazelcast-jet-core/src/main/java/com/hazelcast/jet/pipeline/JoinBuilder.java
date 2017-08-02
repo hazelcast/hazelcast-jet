@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform;
+import com.hazelcast.jet.pipeline.impl.transform.JoinTransform;
 import com.hazelcast.jet.pipeline.impl.PipelineImpl;
 import com.hazelcast.jet.pipeline.bag.BagsByTag;
 import com.hazelcast.jet.pipeline.bag.Tag;
@@ -54,12 +54,13 @@ public class JoinBuilder<E0> {
         List<ComputeStage> upstream = orderedClauses.stream()
                                                     .map(e -> e.getValue().pstream())
                                                     .collect(toList());
-        HashJoinTransform transform = new HashJoinTransform(
+        JoinTransform transform = new JoinTransform(
                 orderedClauses.stream()
                               .skip(1)
                               .map(e -> e.getValue().joinOn())
                               .collect(toList()),
                 orderedClauses.stream()
+                              .skip(1)
                               .map(Entry::getKey)
                               .collect(toList())
         );
