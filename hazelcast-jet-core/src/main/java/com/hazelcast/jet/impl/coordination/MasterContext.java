@@ -118,7 +118,7 @@ public class MasterContext {
             executionPlanMap = createExecutionPlans(membersView);
         } catch (TopologyChangedException e) {
             logger.severe("Execution plans could not be created for " + formatIds(jobId, executionId), e);
-            coordinationService.scheduleRestart(jobId);
+            scheduleRestart();
             return;
         }
 
@@ -171,8 +171,13 @@ public class MasterContext {
 
         logger.fine("Rescheduling job " + idToString(jobId) + " restart since quorum size " + quorumSize
                 + " is not met");
-        coordinationService.scheduleRestart(jobId);
+        scheduleRestart();
         return true;
+    }
+
+    private void scheduleRestart() {
+        jobStatus.compareAndSet(RUNNING, RESTARTING);
+        coordinationService.scheduleRestart(jobId);
     }
 
     private MembersView getMembersView() {
@@ -303,7 +308,7 @@ public class MasterContext {
         long completionTime = System.currentTimeMillis();
 
         if (failure instanceof TopologyChangedException) {
-            coordinationService.scheduleRestart(jobId);
+            scheduleRestart();
             return;
         }
 

@@ -31,6 +31,7 @@ import java.util.concurrent.Future;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+// TODO [basri] delete this class
 @Category(QuickTest.class)
 @RunWith(HazelcastSerialClassRunner.class)
 public class TopologyChangeSplitClusterTest extends JetSplitBrainTestSupport {
@@ -38,11 +39,6 @@ public class TopologyChangeSplitClusterTest extends JetSplitBrainTestSupport {
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
     private Future<Void> future;
-
-    @Override
-    protected int[] brains() {
-        return new int[]{NODE_COUNT / 2, NODE_COUNT / 2};
-    }
 
     @Override
     protected void onBeforeSetup() {
