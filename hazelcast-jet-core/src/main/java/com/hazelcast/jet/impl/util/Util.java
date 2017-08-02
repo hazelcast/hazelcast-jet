@@ -85,7 +85,6 @@ public final class Util {
         void run() throws Exception;
     }
 
-    // TODO [basri] check usages
     @Nonnull
     public static List<Address> getRemoteMembers(@Nonnull NodeEngine engine) {
         final Member localMember = engine.getLocalMember();

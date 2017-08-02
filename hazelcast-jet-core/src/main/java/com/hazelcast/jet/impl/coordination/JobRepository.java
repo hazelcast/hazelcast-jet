@@ -84,11 +84,9 @@ public class JobRepository {
     void putNewJobRecord(JobRecord jobRecord) {
         long jobId = jobRecord.getJobId();
         JobRecord prev = jobs.putIfAbsent(jobId, jobRecord);
-        if (prev != null) {
-            if (!(prev.getDag().equals(jobRecord.getDag()) && prev.getConfig().equals(jobRecord.getConfig()))) {
-                throw new IllegalStateException("Cannot put job record for job " + idToString(jobId)
-                        + " because it already exists with a different dag or job config");
-            }
+        if (prev != null && !prev.getDag().equals(jobRecord.getDag())) {
+            throw new IllegalStateException("Cannot put job record for job " + idToString(jobId)
+                    + " because it already exists with a different dag");
         }
     }
 
@@ -117,7 +115,8 @@ public class JobRepository {
                 }
             } else {
                 try {
-                    readStreamAndPutCompressedToMap(jobId, tmpMap, rc.getUrl().openStream(), rc.getId());
+                    InputStream in = rc.getUrl().openStream();
+                    readStreamAndPutCompressedToMap(new JobResourceKey(jobId, rc.getId()), tmpMap, in);
                 } catch (IOException e) {
                     // TODO basri: fix it
                     throw new RuntimeException(e);
@@ -205,7 +204,7 @@ public class JobRepository {
 
     /**
      * Unzips the Jar archive and processes individual entries using
-     * {@link #readStreamAndPutCompressedToMap(long, Map, InputStream, String)}.
+     * {@link #readStreamAndPutCompressedToMap(JobResourceKey, Map, InputStream)}.
      */
     private void loadJar(long jobId, Map<JobResourceKey, byte[]> map, URL url) throws IOException {
         try (JarInputStream jis = new JarInputStream(new BufferedInputStream(url.openStream()))) {
@@ -214,15 +213,15 @@ public class JobRepository {
                 if (jarEntry.isDirectory()) {
                     continue;
                 }
-                readStreamAndPutCompressedToMap(jobId, map, jis, jarEntry.getName());
+                readStreamAndPutCompressedToMap(new JobResourceKey(jobId, jarEntry.getName()), map, jis);
             }
         }
     }
 
-    private void readStreamAndPutCompressedToMap(long jobId, Map<JobResourceKey, byte[]> map, InputStream in, String resourceId)
+    private void readStreamAndPutCompressedToMap(JobResourceKey resourceKey,
+                                                 Map<JobResourceKey, byte[]> map, InputStream in)
             throws IOException {
         // ignore duplicates: the first resource in first jar takes precedence
-        JobResourceKey resourceKey = new JobResourceKey(jobId, resourceId);
         if (map.containsKey(resourceKey)) {
             return;
         }
