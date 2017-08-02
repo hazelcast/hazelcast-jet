@@ -128,8 +128,9 @@ public class JobCoordinationService {
         // job is completed or resources are lost because of failures or there is an ongoing split-brain merge
         if (!jobRepository.isResourceUploadCompleted(jobId)) {
             CompletableFuture<Boolean> future = getCompletedJobFutureIfPresent(jobId);
-            if (future != null)
+            if (future != null) {
                 return future;
+            }
 
             throw new RetryableHazelcastException();
         }

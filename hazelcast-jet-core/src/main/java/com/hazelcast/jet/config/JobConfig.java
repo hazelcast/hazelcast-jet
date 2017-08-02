@@ -178,28 +178,4 @@ public class JobConfig implements Serializable {
         return urlFile.substring(urlFile.lastIndexOf('/') + 1, urlFile.length());
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        JobConfig jobConfig = (JobConfig) o;
-
-        if (splitBrainProtectionEnabled != jobConfig.splitBrainProtectionEnabled) {
-            return false;
-        }
-        return resourceConfigs.equals(jobConfig.resourceConfigs);
-    }
-
-    @Override
-    public int hashCode() {
-        int result = (splitBrainProtectionEnabled ? 1 : 0);
-        result = 31 * result + resourceConfigs.hashCode();
-        return result;
-    }
-
 }
