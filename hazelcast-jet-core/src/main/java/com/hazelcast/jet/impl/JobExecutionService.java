@@ -43,6 +43,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static com.hazelcast.jet.impl.util.Util.formatIds;
 import static com.hazelcast.jet.impl.util.Util.idToString;
@@ -72,11 +73,11 @@ public class JobExecutionService {
         this.executionService = executionService;
     }
 
-    public void shutdown(String reason) {
+    public void reset(String reason, Supplier<RuntimeException> exceptionSupplier) {
         executionContexts.values().forEach(exeCtx -> {
             String message = "Completing " + formatIds(exeCtx.getJobId(), exeCtx.getExecutionId())
                     + " locally. Reason: " + reason;
-            cancelAndComplete(exeCtx, message, new HazelcastInstanceNotActiveException());
+            cancelAndComplete(exeCtx, message, exceptionSupplier.get());
         });
     }
 

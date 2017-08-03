@@ -32,6 +32,7 @@ import static org.hamcrest.Matchers.empty;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
+// TODO [basri] delete this class
 @Category(QuickTest.class)
 @RunWith(HazelcastSerialClassRunner.class)
 public class TopologyChangeMergeClusterTest extends JetSplitBrainTestSupport {

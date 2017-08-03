@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-
+// TODO [basri] delete this class
 /**
  * A support class for high-level split-brain tests. It will form a
  * cluster, create a split-brain situation, and then heal the cluster

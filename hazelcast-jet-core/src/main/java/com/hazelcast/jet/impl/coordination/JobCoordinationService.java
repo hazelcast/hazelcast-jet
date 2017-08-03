@@ -98,6 +98,10 @@ public class JobCoordinationService {
                 jobScanPeriodInMillis, jobScanPeriodInMillis, MILLISECONDS);
     }
 
+    public void reset() {
+        masterContexts.clear();
+    }
+
     public ClassLoader getClassLoader(long jobId) {
         PrivilegedAction<JetClassLoader> action = () -> new JetClassLoader(jobId, jobRepository.getJobResources(jobId));
         return jobExecutionService.getClassLoader(jobId, action);
@@ -217,6 +221,11 @@ public class JobCoordinationService {
     }
 
     public JobStatus getJobStatus(long jobId) {
+        if (!isMaster()) {
+            throw new JetException("Job status cannot be queried here. Master address: "
+                    + nodeEngine.getClusterService().getMasterAddress());
+        }
+
         MasterContext currentMasterContext = masterContexts.get(jobId);
         if (currentMasterContext != null) {
             return currentMasterContext.jobStatus();
@@ -255,6 +264,7 @@ public class JobCoordinationService {
     private void completeJob(MasterContext masterContext, long completionTime,
                              Throwable error, CompletableFuture<Boolean> future) {
         if (!tryLock()) {
+            logger.fine("Complete of job " + idToString(masterContext.getJobId()) + " is rescheduled.");
             InternalExecutionService executionService = nodeEngine.getExecutionService();
             executionService.schedule(COORDINATOR_EXECUTOR_NAME,
                     () -> completeJob(masterContext, completionTime, error, future),

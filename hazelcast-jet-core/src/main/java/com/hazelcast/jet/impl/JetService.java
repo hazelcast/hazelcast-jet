@@ -17,12 +17,14 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.client.impl.ClientEngineImpl;
+import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.instance.BuildInfoProvider;
 import com.hazelcast.instance.HazelcastInstanceImpl;
 import com.hazelcast.instance.JetBuildInfo;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JobStatus;
+import com.hazelcast.jet.TopologyChangedException;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.coordination.JobCoordinationService;
@@ -128,14 +130,15 @@ public class JetService
 
     @Override
     public void shutdown(boolean terminate) {
-        jobExecutionService.shutdown("shutdown");
+        jobExecutionService.reset("shutdown", HazelcastInstanceNotActiveException::new);
         networking.shutdown();
         executionService.shutdown();
     }
 
     @Override
     public void reset() {
-        jobExecutionService.shutdown("reset");
+        jobCoordinationService.reset();
+        jobExecutionService.reset("reset", TopologyChangedException::new);
     }
 
     public void initExecution(long jobId, long executionId, Address coordinator, int coordinatorMemberListVersion,
