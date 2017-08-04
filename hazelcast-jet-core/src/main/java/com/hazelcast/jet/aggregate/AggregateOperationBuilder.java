@@ -29,6 +29,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static com.hazelcast.util.Preconditions.checkNotNull;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.IntStream.range;
 
 /**
  * Javadoc pending.
@@ -168,7 +170,7 @@ public final class AggregateOperationBuilder<A> {
 
     public static class VarArity<A> {
         private final DistributedSupplier<A> createAccumulatorF;
-        private final Map<Tag, DistributedBiConsumer<? super A, ?>> accumulateFsByTag = new HashMap<>();
+        private final Map<Integer, DistributedBiConsumer<? super A, ?>> accumulateFsByTag = new HashMap<>();
         private DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF;
         private DistributedBiConsumer<? super A, ? super A> deductAccumulatorF;
 
@@ -178,13 +180,15 @@ public final class AggregateOperationBuilder<A> {
                 DistributedBiConsumer<? super A, T> accumulateItemF
         ) {
             this.createAccumulatorF = createAccumulatorF;
-            accumulateFsByTag.put(tag, accumulateItemF);
+            accumulateFsByTag.put(tag.index(), accumulateItemF);
         }
 
         public <T> VarArity<A> andAccumulate(Tag<T> tag, DistributedBiConsumer<? super A, T> accumulateItemF) {
             checkNotNull(tag, "tag");
             checkNotNull(accumulateItemF, "accumulateItemF");
-            accumulateFsByTag.put(tag, accumulateItemF);
+            accumulateFsByTag.merge(tag.index(), accumulateItemF, (x, y) -> {
+                throw new IllegalArgumentException("Tag with index " + tag.index() + " already registered");
+            });
             return this;
         }
 
@@ -202,8 +206,23 @@ public final class AggregateOperationBuilder<A> {
 
         public <R> AggregateOperation<A, R> andFinish(DistributedFunction<? super A, R> finishAccumulationF) {
             checkNotNull(finishAccumulationF, "finishAccumulationF");
-            return new AggregateOperationImpl<>(createAccumulatorF, accumulateFsByTag,
+            return new AggregateOperationImpl<>(createAccumulatorF, packAccumulateFs(),
                     combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
+        }
+
+        private DistributedBiConsumer<? super A, ?>[] packAccumulateFs() {
+            int size = accumulateFsByTag.size();
+            @SuppressWarnings("unchecked")
+            DistributedBiConsumer<? super A, ?>[] accFs = new DistributedBiConsumer[size];
+            for (int i = 0; i < size; i++) {
+                accFs[i] = accumulateFsByTag.get(i);
+                if (accFs[i] == null) {
+                    throw new IllegalStateException("Registered tags' indices are "
+                            + accumulateFsByTag.keySet().stream().sorted().collect(toList())
+                            + " but should be " + range(0, size).boxed().collect(toList()));
+                }
+            }
+            return accFs;
         }
     }
 }

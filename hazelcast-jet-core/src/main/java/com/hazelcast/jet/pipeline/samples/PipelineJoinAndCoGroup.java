@@ -79,12 +79,12 @@ public class PipelineJoinAndCoGroup {
         PipelineJoinAndCoGroup sample = new PipelineJoinAndCoGroup(jet);
         try {
             sample.prepareSampleData();
-            sample.joinBuild().drainTo(Sinks.writeMap(RESULT));
+            sample.joinDirect().drainTo(Sinks.writeMap(RESULT));
             // This line added to test multiple outputs from a Stage
             sample.trades.map(t -> entry(t.brokerId(), t)).drainTo(Sinks.writeMap(RESULT_BROKER));
             sample.execute();
             printImap(jet.getMap(RESULT_BROKER));
-            sample.validateJoinBuildResults();
+            sample.validateJoinDirectResults();
         } finally {
             Jet.shutdownAll();
         }

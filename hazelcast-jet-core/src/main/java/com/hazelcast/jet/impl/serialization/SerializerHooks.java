@@ -18,12 +18,6 @@ package com.hazelcast.jet.impl.serialization;
 
 import com.hazelcast.internal.serialization.impl.SerializationConstants;
 import com.hazelcast.jet.TimestampedEntry;
-import com.hazelcast.jet.accumulator.DoubleAccumulator;
-import com.hazelcast.jet.accumulator.LinTrendAccumulator;
-import com.hazelcast.jet.accumulator.LongAccumulator;
-import com.hazelcast.jet.accumulator.LongDoubleAccumulator;
-import com.hazelcast.jet.accumulator.LongLongAccumulator;
-import com.hazelcast.jet.accumulator.MutableReference;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
 import com.hazelcast.jet.pipeline.tuple.Tuple3;
 import com.hazelcast.nio.ObjectDataInput;
@@ -33,7 +27,6 @@ import com.hazelcast.nio.serialization.SerializerHook;
 import com.hazelcast.nio.serialization.StreamSerializer;
 
 import java.io.IOException;
-import java.math.BigInteger;
 import java.util.Map;
 import java.util.Map.Entry;
 

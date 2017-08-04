@@ -94,7 +94,7 @@ public interface AggregateOperation<A, R> extends Serializable {
      * in a co-group operation the returned function will handle.
      */
     @Nonnull
-    <T> DistributedBiConsumer<? super A, T> accumulateItemF(Tag<T> tag);
+    <T> DistributedBiConsumer<? super A, ? super T> accumulateItemF(Tag<T> tag);
 
     /**
      * A primitive that accepts two accumulators and updates the state of the
@@ -142,8 +142,8 @@ public interface AggregateOperation<A, R> extends Serializable {
      * {@code accumulate} primitives replaced by the supplied one.
      */
     @Nonnull
-    AggregateOperation<A, R> withAccumulateFsByTag(
-            @Nonnull Map<Tag, DistributedBiConsumer<? super A, ?>> accumulateFsByTag);
+    AggregateOperation<A, R> withAccumulateItemFs(
+            @Nonnull DistributedBiConsumer<? super A, ?>[] accumulateFs);
 
     @Nonnull
     <R1> AggregateOperation<A, R1> withFinish(

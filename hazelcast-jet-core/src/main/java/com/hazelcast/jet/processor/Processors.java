@@ -266,7 +266,7 @@ public final class Processors {
             @Nonnull AggregateOperation1<T, A, R> aggregateOperation
     ) {
         return () -> new GroupByKeyP<>(Entry::getKey,
-                withCombiningAccumulate(Entry<Object, A>::getValue, aggregateOperation));
+                withCombiningAccumulate(aggregateOperation, Entry<Object, A>::getValue));
     }
 
     /**
@@ -335,7 +335,7 @@ public final class Processors {
     public static <T, A, R> DistributedSupplier<Processor> combine(
             @Nonnull AggregateOperation1<T, A, R> aggregateOperation
     ) {
-        return () -> new AggregateP<>(withCombiningAccumulate(identity(), aggregateOperation));
+        return () -> new AggregateP<>(withCombiningAccumulate(aggregateOperation, identity()));
     }
 
     /**
@@ -453,7 +453,7 @@ public final class Processors {
                 TimestampedEntry::getTimestamp,
                 TimestampKind.FRAME,
                 windowDef,
-                withCombiningAccumulate(TimestampedEntry<K, A>::getValue, aggregateOperation)
+                withCombiningAccumulate(aggregateOperation, TimestampedEntry<K, A>::getValue)
         );
     }
 
@@ -636,10 +636,9 @@ public final class Processors {
     }
 
     private static <T, A, R> AggregateOperation1<T, A, R> withCombiningAccumulate(
-            @Nonnull DistributedFunction<T, A> mapper,
-            @Nonnull AggregateOperation1<?, A, R> aggrOp
+            @Nonnull AggregateOperation1<?, A, R> aggrOp, @Nonnull DistributedFunction<T, A> mapper
     ) {
-        return aggrOp.withAccumulateItemF1((A acc, T item) ->
+        return aggrOp.withAccumulateItemF((A acc, T item) ->
                 aggrOp.combineAccumulatorsF().accept(acc, mapper.apply(item)));
     }
 

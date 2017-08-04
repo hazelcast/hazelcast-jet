@@ -29,22 +29,10 @@ public interface AggregateOperation1<T0, A, R> extends AggregateOperation<A, R> 
 
     /**
      * A primitive that updates the accumulator state to account for a new
-     * item coming from stream number 1 in a co-grouping operation. The default
-     * implementation is a synonym for {@link #accumulateItemF(Tag)
-     * accumulateItemF(Tag.leftTag())}.
+     * item.
      */
     @Nonnull
-    default DistributedBiConsumer<? super A, ? super T0> accumulateItemF0() {
-        return accumulateItemF(Tag.tag0());
-    }
-
-    /**
-     * Synonym for {@link #accumulateItemF0()}.
-     */
-    @Nonnull
-    default DistributedBiConsumer<? super A, ? super T0> accumulateItemF() {
-        return accumulateItemF0();
-    }
+    DistributedBiConsumer<? super A, ? super T0> accumulateItemF();
 
     @Nonnull
     <R1> AggregateOperation1<T0, A, R1> withFinish(
@@ -52,6 +40,6 @@ public interface AggregateOperation1<T0, A, R> extends AggregateOperation<A, R> 
     );
 
     @Nonnull
-    <T_NEW> AggregateOperation1<T_NEW, A, R> withAccumulateItemF1(
-            DistributedBiConsumer<? super A, ? super T_NEW> accumulateItemF1);
+    <T_NEW> AggregateOperation1<T_NEW, A, R> withAccumulateItemF(
+            DistributedBiConsumer<? super A, ? super T_NEW> accumulateItemF);
 }

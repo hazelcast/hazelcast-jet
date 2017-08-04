@@ -32,6 +32,10 @@ public class Tag<E> implements Serializable, Comparable<Tag<?>> {
         this.index = index;
     }
 
+    public int index() {
+        return index;
+    }
+
     public static <T> Tag<T> tag(int index) {
         return index == 0 ? TAG_0
              : index == 1 ? TAG_1

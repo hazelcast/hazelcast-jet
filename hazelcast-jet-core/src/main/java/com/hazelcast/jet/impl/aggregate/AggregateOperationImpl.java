@@ -24,41 +24,68 @@ import com.hazelcast.jet.pipeline.bag.Tag;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Map;
 
 import static com.hazelcast.util.Preconditions.checkNotNull;
 
-public class AggregateOperationImpl<A, R> extends AggregateOperationBase<A, R> implements AggregateOperation<A, R> {
-    private final Map<Tag, DistributedBiConsumer<? super A, ?>> accumulatorsByTag;
+public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R> {
+    final DistributedBiConsumer<? super A, ?>[] accumulateFs;
+    private final DistributedSupplier<A> createAccumulatorF;
+    private final DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF;
+    private final DistributedBiConsumer<? super A, ? super A> deductAccumulatorF;
+    private final DistributedFunction<? super A, R> finishAccumulationF;
 
     public AggregateOperationImpl(
             @Nonnull DistributedSupplier<A> createAccumulatorF,
-            @Nonnull Map<Tag, DistributedBiConsumer<? super A, ?>> accumulatorsByTag,
+            @Nonnull DistributedBiConsumer<? super A, ?>[] accumulateFs,
             @Nonnull DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF,
             @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorF,
             @Nonnull DistributedFunction<? super A, R> finishAccumulationF
     ) {
-        super(createAccumulatorF, combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
-        checkNotNull(accumulatorsByTag);
-        this.accumulatorsByTag = accumulatorsByTag;
+        for (Object f : accumulateFs) {
+            checkNotNull(f, "accumulateFs array contains a null slot");
+        }
+        this.createAccumulatorF = createAccumulatorF;
+        this.accumulateFs = accumulateFs.clone();
+        this.combineAccumulatorsF = combineAccumulatorsF;
+        this.deductAccumulatorF = deductAccumulatorF;
+        this.finishAccumulationF = finishAccumulationF;
+    }
+
+    @Nonnull
+    public DistributedSupplier<A> createAccumulatorF() {
+        return createAccumulatorF;
     }
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    public <T> DistributedBiConsumer<? super A, T> accumulateItemF(Tag<T> tag) {
-        DistributedBiConsumer<? super A, T> acc = (DistributedBiConsumer<? super A, T>) accumulatorsByTag.get(tag);
+    public <T> DistributedBiConsumer<? super A, ? super T> accumulateItemF(Tag<T> tag) {
+        DistributedBiConsumer<? super A, T> acc = (DistributedBiConsumer<? super A, T>) accumulateFs[tag.index()];
         if (acc == null) {
             throw new IllegalArgumentException("The provided tag is not registered with this AggregateOperation.");
         }
         return acc;
     }
 
+    @Nonnull
+    public DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF() {
+        return combineAccumulatorsF;
+    }
+
+    @Nullable
+    public DistributedBiConsumer<? super A, ? super A> deductAccumulatorF() {
+        return deductAccumulatorF;
+    }
+
+    @Nonnull
+    public DistributedFunction<? super A, R> finishAccumulationF() {
+        return finishAccumulationF;
+    }
+
     @Nonnull @Override
-    public AggregateOperation<A, R> withAccumulateFsByTag(
-            @Nonnull Map<Tag, DistributedBiConsumer<? super A, ?>> accumulateFsByTag
+    public AggregateOperation<A, R> withAccumulateItemFs(
+            @Nonnull DistributedBiConsumer<? super A, ?>[] accumulateFs
     ) {
-        return new AggregateOperationImpl<>(
-                createAccumulatorF(), accumulateFsByTag, combineAccumulatorsF(),
+        return new AggregateOperationImpl<>(createAccumulatorF(), accumulateFs, combineAccumulatorsF(),
                 deductAccumulatorF(), finishAccumulationF());
     }
 
@@ -66,8 +93,13 @@ public class AggregateOperationImpl<A, R> extends AggregateOperationBase<A, R> i
     public <R1> AggregateOperation<A, R1> withFinish(
             @Nonnull DistributedFunction<? super A, R1> finishAccumulationF
     ) {
-        return new AggregateOperationImpl<>(
-                createAccumulatorF(), accumulatorsByTag, combineAccumulatorsF(),
+        return new AggregateOperationImpl<>(createAccumulatorF(), accumulateFs, combineAccumulatorsF(),
                 deductAccumulatorF(), finishAccumulationF);
+    }
+
+    @Nonnull
+    @SuppressWarnings("unchecked")
+    static <A> DistributedBiConsumer<? super A, ?>[] accumulateFs(DistributedBiConsumer... accFs) {
+        return (DistributedBiConsumer<? super A, ?>[]) accFs;
     }
 }
