@@ -31,7 +31,7 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
  */
 public class JobConfig implements Serializable {
 
-    private boolean splitBrainProtectionEnabled = true;
+    private boolean splitBrainProtectionEnabled;
     private final List<ResourceConfig> resourceConfigs = new ArrayList<>();
 
     /**

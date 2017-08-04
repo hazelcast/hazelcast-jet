@@ -18,12 +18,15 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.ICompletableFuture;
+import com.hazelcast.core.LocalMemberResetException;
 import com.hazelcast.core.MemberLeftException;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.coordination.JobRepository;
+import com.hazelcast.nio.Address;
 import com.hazelcast.spi.exception.TargetDisconnectedException;
 import com.hazelcast.spi.exception.TargetNotMemberException;
 
@@ -71,7 +74,11 @@ public abstract class AbstractJobImpl implements Job {
         return future;
     }
 
-    protected abstract ICompletableFuture<Void> sendJoinRequest();
+    protected abstract Address getMasterAddress();
+
+    protected abstract ICompletableFuture<Void> sendJoinRequest(Address masterAddress);
+
+    protected abstract JobStatus sendJobStatusRequest();
 
     @Override
     public long getJobId() {
@@ -91,10 +98,16 @@ public abstract class AbstractJobImpl implements Job {
             throw new IllegalStateException("Job already started");
         }
 
+        Address masterAddress = getMasterAddress();
+        if (masterAddress == null) {
+            future.completeExceptionally(new IllegalStateException("Master address is null"));
+            return;
+        }
+
         jobId = jobRepository.newId();
         jobRepository.uploadJobResources(jobId, config);
 
-        ICompletableFuture<Void> invocationFuture = sendJoinRequest();
+        ICompletableFuture<Void> invocationFuture = sendJoinRequest(masterAddress);
         JobCallback callback = new JobCallback(invocationFuture);
         invocationFuture.andThen(callback);
         future.whenComplete((aVoid, throwable) -> {
@@ -102,6 +115,18 @@ public abstract class AbstractJobImpl implements Job {
                 callback.cancel();
             }
         });
+    }
+
+    public JobStatus getJobStatus() {
+        if (future.isCancelled()) {
+            return JobStatus.COMPLETED;
+        } else if (future.isCompletedExceptionally()) {
+            return JobStatus.FAILED;
+        } else if (future.isDone()) {
+            return JobStatus.COMPLETED;
+        }
+
+        return sendJobStatusRequest();
     }
 
     private class JobCallback implements ExecutionCallback<Void> {
@@ -118,16 +143,21 @@ public abstract class AbstractJobImpl implements Job {
         }
 
         @Override
-        public void onFailure(Throwable t) {
-            if (isRestartable(t)) {
-                synchronized (this) {
-                    try {
-                        ICompletableFuture<Void> invocationFuture = sendJoinRequest();
-                        this.invocationFuture = invocationFuture;
-                        invocationFuture.andThen(this);
-                    } catch (Exception e) {
-                        future.completeExceptionally(e);
+        public synchronized void onFailure(Throwable t) {
+            if (isSplitBrainMerge(t)) {
+                future.completeExceptionally(new CancellationException("Split brain merge"));
+            } else if (isRestartable(t)) {
+                try {
+                    Address masterAddress = getMasterAddress();
+                    if (masterAddress == null) {
+                        future.completeExceptionally(new IllegalStateException("Master address is null"));
+                        return;
                     }
+                    ICompletableFuture<Void> invocationFuture = sendJoinRequest(masterAddress);
+                    this.invocationFuture = invocationFuture;
+                    invocationFuture.andThen(this);
+                } catch (Exception e) {
+                    future.completeExceptionally(e);
                 }
             } else {
                 future.completeExceptionally(t);
@@ -139,6 +169,11 @@ public abstract class AbstractJobImpl implements Job {
             return cause  instanceof MemberLeftException
                     || cause instanceof TargetDisconnectedException
                     || cause instanceof TargetNotMemberException;
+        }
+
+        private boolean isSplitBrainMerge(Throwable t) {
+            Throwable cause = peel(t);
+            return (cause instanceof LocalMemberResetException);
         }
 
         public synchronized void cancel() {

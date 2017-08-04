@@ -24,7 +24,6 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.impl.JobRecord;
-import com.hazelcast.jet.impl.JobResourceKey;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.nio.IOUtil;
@@ -98,17 +97,17 @@ public class JobRepository {
        return jobs.get(jobId);
     }
 
-    <T> IMap<JobResourceKey, T> getJobResources(long jobId) {
+    <T> IMap<String, T> getJobResources(long jobId) {
         return instance.getMap(RESOURCES_MAP_NAME_PREFIX + jobId);
     }
 
     public void uploadJobResources(long jobId, JobConfig jobConfig) {
-        IMap<JobResourceKey, Object> jobResourcesMap = getJobResources(jobId);
+        IMap<String, Object> jobResourcesMap = getJobResources(jobId);
         for (ResourceConfig rc : jobConfig.getResourceConfigs()) {
-            Map<JobResourceKey, byte[]> tmpMap = new HashMap<>();
+            Map<String, byte[]> tmpMap = new HashMap<>();
             if (rc.isArchive()) {
                 try {
-                    loadJar(jobId, tmpMap, rc.getUrl());
+                    loadJar(tmpMap, rc.getUrl());
                 } catch (IOException e) {
                     // TODO basri: fix it
                     throw new RuntimeException(e);
@@ -116,7 +115,7 @@ public class JobRepository {
             } else {
                 try {
                     InputStream in = rc.getUrl().openStream();
-                    readStreamAndPutCompressedToMap(new JobResourceKey(jobId, rc.getId()), tmpMap, in);
+                    readStreamAndPutCompressedToMap(rc.getId(), tmpMap, in);
                 } catch (IOException e) {
                     // TODO basri: fix it
                     throw new RuntimeException(e);
@@ -127,12 +126,7 @@ public class JobRepository {
             jobResourcesMap.putAll(tmpMap);
         }
 
-        jobResourcesMap.put(new JobResourceKey(jobId, RESOURCE_MARKER), jobId);
-    }
-
-    boolean isResourceUploadCompleted(long jobId) {
-        Object val = getJobResources(jobId).get(new JobResourceKey(jobId, RESOURCE_MARKER));
-        return (val instanceof Long && jobId == ((Long) val));
+        jobResourcesMap.put(RESOURCE_MARKER, jobId);
     }
 
     /**
@@ -140,7 +134,7 @@ public class JobRepository {
      */
     void deleteJob(long jobId) {
         jobs.remove(jobId);
-        IMap<JobResourceKey, Object> jobResourcesMap = getJobResources(jobId);
+        IMap<String, Object> jobResourcesMap = getJobResources(jobId);
         if (jobResourcesMap != null) {
             jobResourcesMap.clear();
             jobResourcesMap.destroy();
@@ -169,6 +163,7 @@ public class JobRepository {
             })
             .forEach(this::deleteJob);
 
+        // TODO [basri] this is broken. proxies may not be present locally
         // clean up expired resources
         instance.getDistributedObjects()
                 .stream()
@@ -177,11 +172,10 @@ public class JobRepository {
                 .map(this::getJobIdFromResourcesMapName)
                 .filter(jobId -> !runningJobIds.contains(jobId))
                 .forEach(jobId -> {
-                    IMap<JobResourceKey, Object> resources = getJobResources(jobId);
-                    JobResourceKey markerKey = new JobResourceKey(jobId, RESOURCE_MARKER);
-                    EntryView<JobResourceKey, Object> marker = resources.getEntryView(markerKey);
+                    IMap<String, Object> resources = getJobResources(jobId);
+                    EntryView<String, Object> marker = resources.getEntryView(RESOURCE_MARKER);
                     if (marker == null) {
-                        resources.putIfAbsent(markerKey, RESOURCE_MARKER);
+                        resources.putIfAbsent(RESOURCE_MARKER, RESOURCE_MARKER);
                     } else if (isJobExpired(marker.getCreationTime())) {
                         deleteJob(jobId);
                     }
@@ -204,25 +198,25 @@ public class JobRepository {
 
     /**
      * Unzips the Jar archive and processes individual entries using
-     * {@link #readStreamAndPutCompressedToMap(JobResourceKey, Map, InputStream)}.
+     * {@link #readStreamAndPutCompressedToMap(String, Map, InputStream)}.
      */
-    private void loadJar(long jobId, Map<JobResourceKey, byte[]> map, URL url) throws IOException {
+    private void loadJar(Map<String, byte[]> map, URL url) throws IOException {
         try (JarInputStream jis = new JarInputStream(new BufferedInputStream(url.openStream()))) {
             JarEntry jarEntry;
             while ((jarEntry = jis.getNextJarEntry()) != null) {
                 if (jarEntry.isDirectory()) {
                     continue;
                 }
-                readStreamAndPutCompressedToMap(new JobResourceKey(jobId, jarEntry.getName()), map, jis);
+                readStreamAndPutCompressedToMap(jarEntry.getName(), map, jis);
             }
         }
     }
 
-    private void readStreamAndPutCompressedToMap(JobResourceKey resourceKey,
-                                                 Map<JobResourceKey, byte[]> map, InputStream in)
+    private void readStreamAndPutCompressedToMap(String resourceName,
+                                                 Map<String, byte[]> map, InputStream in)
             throws IOException {
         // ignore duplicates: the first resource in first jar takes precedence
-        if (map.containsKey(resourceKey)) {
+        if (map.containsKey(resourceName)) {
             return;
         }
 
@@ -231,7 +225,7 @@ public class JobRepository {
             IOUtil.drainTo(in, compressor);
         }
 
-        map.put(resourceKey, baos.toByteArray());
+        map.put(resourceName, baos.toByteArray());
     }
 
 }

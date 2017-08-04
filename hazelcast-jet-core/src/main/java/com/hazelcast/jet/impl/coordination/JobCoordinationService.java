@@ -99,11 +99,11 @@ public class JobCoordinationService {
     }
 
     public void reset() {
-        masterContexts.clear();
+        masterContexts.values().forEach(MasterContext::cancel);
     }
 
     public ClassLoader getClassLoader(long jobId) {
-        PrivilegedAction<JetClassLoader> action = () -> new JetClassLoader(jobId, jobRepository.getJobResources(jobId));
+        PrivilegedAction<JetClassLoader> action = () -> new JetClassLoader(jobRepository.getJobResources(jobId));
         return jobExecutionService.getClassLoader(jobId, action);
     }
 
@@ -128,26 +128,17 @@ public class JobCoordinationService {
                     + nodeEngine.getClusterService().getMasterAddress());
         }
 
-        // if we receive start job call but cannot find the resource marker there, it means either
-        // job is completed or resources are lost because of failures or there is an ongoing split-brain merge
-        if (!jobRepository.isResourceUploadCompleted(jobId)) {
-            CompletableFuture<Boolean> future = getCompletedJobFutureIfPresent(jobId);
-            if (future != null) {
-                return future;
-            }
-
-            throw new RetryableHazelcastException();
-        }
-
         if (!tryLock()) {
             throw new RetryableHazelcastException();
         }
 
         MasterContext masterContext;
         try {
-            CompletableFuture<Boolean> future = getCompletedJobFutureIfPresent(jobId);
-            if (future != null) {
-                return future;
+            JobResult jobResult = jobResults.get(jobId);
+            if (jobResult != null) {
+                logger.fine("Not starting job " + idToString(jobId) + " since already completed with result: " +
+                        jobResult);
+                return jobResult.asCompletableFuture();
             }
 
             int quorumSize = config.isSplitBrainProtectionEnabled() ? getQuorumSize() : 0;
@@ -169,23 +160,18 @@ public class JobCoordinationService {
         return masterContext.completionFuture();
     }
 
-    private CompletableFuture<Boolean> getCompletedJobFutureIfPresent(long jobId) {
-        JobResult jobResult = jobResults.get(jobId);
-        if (jobResult != null) {
-            logger.fine("Not starting job " + idToString(jobId) + " since already completed with result: " +
-                    jobResult);
-            return jobResult.asCompletableFuture();
+    // for testing
+    public CompletableFuture<Boolean> joinJobIfRunning(long jobId) {
+        MasterContext masterContext = masterContexts.get(jobId);
+        if (masterContext == null) {
+            throw new IllegalStateException("job " + idToString(jobId) + " is not running!");
         }
-        return null;
+
+        return masterContext.completionFuture();
     }
 
     // called when the lock is acquired
     private MasterContext createMasterContextIfJobNotStarted(JobRecord jobRecord) {
-        if (!isMaster()) {
-            throw new JetException("Job cannot be started here. Master address: "
-                    + nodeEngine.getClusterService().getMasterAddress());
-        }
-
         long jobId = jobRecord.getJobId();
         if (jobResults.get(jobId) != null || masterContexts.containsKey(jobId)) {
             return null;
@@ -306,13 +292,17 @@ public class JobCoordinationService {
     }
 
     private void restartJob(long jobId) {
-        if (!shouldStartJobs()) {
-            scheduleRestart(jobId);
-            return;
-        }
-
         MasterContext masterContext = masterContexts.get(jobId);
         if (masterContext != null) {
+            if (masterContext.isCancelled()) {
+                return;
+            }
+
+            if (!shouldStartJobs()) {
+                scheduleRestart(jobId);
+                return;
+            }
+
             masterContext.tryStartJob(jobRepository::newId);
         } else {
             logger.severe("Master context for job " + idToString(jobId) + " not found to restart");

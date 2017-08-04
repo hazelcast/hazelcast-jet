@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.execution.init;
 import com.hazelcast.internal.serialization.DataSerializerHook;
 import com.hazelcast.internal.serialization.impl.FactoryIdHelper;
 import com.hazelcast.jet.impl.JobRecord;
-import com.hazelcast.jet.impl.JobResourceKey;
 import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.operation.CompleteOperation;
 import com.hazelcast.jet.impl.operation.ExecuteOperation;
@@ -44,7 +43,6 @@ public final class JetImplDataSerializerHook implements DataSerializerHook {
     public static final int COMPLETE_OP = 7;
     public static final int JOIN_JOB_OP = 8;
     public static final int GET_JOB_STATUS_OP = 9;
-    public static final int JOB_RESOURCE_KEY = 10;
     public static final int FACTORY_ID = FactoryIdHelper.getFactoryId(JET_IMPL_DS_FACTORY, JET_IMPL_DS_FACTORY_ID);
 
 
@@ -83,8 +81,6 @@ public final class JetImplDataSerializerHook implements DataSerializerHook {
                     return new JoinJobOperation();
                 case GET_JOB_STATUS_OP:
                     return new GetJobStatusOperation();
-                case JOB_RESOURCE_KEY:
-                    return new JobResourceKey();
                 default:
                     throw new IllegalArgumentException("Unknown type id " + typeId);
             }

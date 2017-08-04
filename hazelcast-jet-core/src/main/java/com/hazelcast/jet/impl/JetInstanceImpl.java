@@ -30,8 +30,7 @@ import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.InternalCompletableFuture;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.Operation;
-
-import javax.annotation.Nonnull;
+import com.hazelcast.spi.OperationService;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
@@ -74,24 +73,26 @@ public class JetInstanceImpl extends AbstractJetInstance {
         }
 
         @Override
-        protected ICompletableFuture<Void> sendJoinRequest() {
+        protected Address getMasterAddress() {
+            return nodeEngine.getMasterAddress();
+        }
+
+        @Override
+        protected ICompletableFuture<Void> sendJoinRequest(Address masterAddress) {
             Data dag = nodeEngine.getSerializationService().toData(getDAG());
             Operation op = new JoinJobOperation(getJobId(), dag, getConfig());
-            Address masterAddress = nodeEngine.getMasterAddress();
             return nodeEngine.getOperationService()
                                       .createInvocationBuilder(JetService.SERVICE_NAME, op, masterAddress)
                                       .invoke();
         }
 
-        @Nonnull @Override
-        public JobStatus getJobStatus() {
+        @Override
+        protected JobStatus sendJobStatusRequest() {
             try {
                 Operation op = new GetJobStatusOperation(getJobId());
-                Address masterAddress = nodeEngine.getMasterAddress();
-                InternalCompletableFuture<JobStatus> f = nodeEngine.getOperationService()
-                                                                   .createInvocationBuilder(JetService.SERVICE_NAME,
-                                                                           op, masterAddress)
-                                                                   .invoke();
+                OperationService operationService = nodeEngine.getOperationService();
+                InternalCompletableFuture<JobStatus> f = operationService
+                        .createInvocationBuilder(JetService.SERVICE_NAME, op, getMasterAddress()).invoke();
 
                 return f.get();
             } catch (Throwable t) {

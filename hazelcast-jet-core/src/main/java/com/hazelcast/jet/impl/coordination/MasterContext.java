@@ -99,6 +99,14 @@ public class MasterContext {
         return completionFuture;
     }
 
+    public boolean cancel() {
+        return completionFuture.cancel(true);
+    }
+
+    public boolean isCancelled() {
+        return completionFuture.isCancelled();
+    }
+
     public JobStatus jobStatus() {
         return jobStatus.get();
     }
@@ -135,6 +143,7 @@ public class MasterContext {
     private boolean setJobStatusToStarting() {
         JobStatus status = jobStatus();
         if (status == COMPLETED || status == FAILED) {
+            // TODO [basri] fix it
             throw new IllegalStateException("Cannot init job " + idToString(jobId) + ": it already is " + status);
         }
 
@@ -157,6 +166,7 @@ public class MasterContext {
 
         status = jobStatus();
         if (!(status == STARTING || status == RESTARTING)) {
+            // TODO [basri] fix it
             throw new IllegalStateException("Cannot init job " + idToString(jobId) + ": status is " + status);
         }
 
@@ -250,6 +260,7 @@ public class MasterContext {
         JobStatus status = jobStatus();
 
         if (!(status == STARTING || status == RESTARTING)) {
+            // TODO [basri] fix it
             throw new IllegalStateException("Cannot execute " + formatIds(jobId, executionId)
                     + ": status is " + status);
         }
@@ -294,6 +305,7 @@ public class MasterContext {
         JobStatus status = jobStatus();
 
         if (status == NOT_STARTED || status == COMPLETED || status == FAILED) {
+            // TODO [basri] fix it
             throw new IllegalStateException("Cannot complete " + formatIds(jobId, executionId)
                     + ": status is " + status);
         }
