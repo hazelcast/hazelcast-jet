@@ -49,7 +49,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.LongSupplier;
 
 import static com.hazelcast.jet.JobStatus.COMPLETED;
 import static com.hazelcast.jet.JobStatus.FAILED;
@@ -111,7 +110,7 @@ public class MasterContext {
         return jobStatus.get();
     }
 
-    void tryStartJob(LongSupplier idSupplier) {
+    void tryStartJob(Function<Long, Long> executionIdSupplier) {
         if (!setJobStatusToStarting()) {
             return;
         }
@@ -120,7 +119,7 @@ public class MasterContext {
             return;
         }
 
-        executionId = idSupplier.getAsLong();
+        executionId = executionIdSupplier.apply(jobId);
         MembersView membersView = getMembersView();
         try {
             executionPlanMap = createExecutionPlans(membersView);

@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.coordination;
 
+import com.hazelcast.core.IMap;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
@@ -57,6 +58,8 @@ public class JobRepositoryTest extends JetTestSupport {
     private JobConfig jobConfig = new JobConfig();
     private JetInstance instance;
     private JobRepository jobRepository;
+    private IMap<Long, Long> jobIds;
+    private IMap<Long, JobRecord> jobs;
 
     @Before
     public void setup() {
@@ -67,6 +70,9 @@ public class JobRepositoryTest extends JetTestSupport {
         instance = factory.newMember(config);
         jobRepository = new JobRepository(instance);
         jobRepository.setJobExpirationDurationInMillis(JOB_EXPIRATION_TIME_IN_MILLIS);
+
+        jobIds = instance.getMap(JetConfig.IDS_MAP_NAME);
+        jobs = instance.getMap(JetConfig.JOB_RECORDS_MAP_NAME);
     }
 
     @After
@@ -75,32 +81,30 @@ public class JobRepositoryTest extends JetTestSupport {
     }
 
     @Test
-    public void when_jobIsCompleted_then_expiredJobIsCleaned() {
+    public void when_jobIsCompleted_then_jobIsCleanedUp() {
         long jobIb = uploadResourcesForNewJob();
         Data dag = createDAGData();
         JobRecord jobRecord = createJobRecord(jobIb, dag);
         jobRepository.putNewJobRecord(jobRecord);
-
-        assertFalse(jobRepository.getJobResources(jobIb).isEmpty());
-        assertNotNull(jobRepository.getJob(jobIb));
-
-        sleepUntilJobExpires();
+        long executionId1 = jobRepository.newExecutionId(jobIb);
+        long executionId2 = jobRepository.newExecutionId(jobIb);
 
         jobRepository.cleanup(singleton(jobIb), emptySet());
 
         assertNull(jobRepository.getJob(jobIb));
         assertTrue(jobRepository.getJobResources(jobIb).isEmpty());
+        assertFalse(jobIds.containsKey(executionId1));
+        assertFalse(jobIds.containsKey(executionId2));
     }
 
     @Test
-    public void when_jobIsRunning_then_expiredJobIsNotCleared() {
+    public void when_jobIsRunning_then_expiredJobIsNotCleanedUp() {
         long jobIb = uploadResourcesForNewJob();
         Data dag = createDAGData();
         JobRecord jobRecord = createJobRecord(jobIb, dag);
         jobRepository.putNewJobRecord(jobRecord);
-
-        assertFalse(jobRepository.getJobResources(jobIb).isEmpty());
-        assertNotNull(jobRepository.getJob(jobIb));
+        long executionId1 = jobRepository.newExecutionId(jobIb);
+        long executionId2 = jobRepository.newExecutionId(jobIb);
 
         sleepUntilJobExpires();
 
@@ -108,18 +112,19 @@ public class JobRepositoryTest extends JetTestSupport {
 
         assertNotNull(jobRepository.getJob(jobIb));
         assertFalse(jobRepository.getJobResources(jobIb).isEmpty());
+        assertTrue(jobIds.containsKey(executionId1));
+        assertTrue(jobIds.containsKey(executionId2));
     }
 
     @Test
-    public void when_jobExpires_then_jobIsCleared() {
+    public void when_jobExpires_then_jobIsCleanedUp() {
         long jobIb = uploadResourcesForNewJob();
 
         Data dag = createDAGData();
         JobRecord jobRecord = createJobRecord(jobIb, dag);
         jobRepository.putNewJobRecord(jobRecord);
-
-        assertFalse(jobRepository.getJobResources(jobIb).isEmpty());
-        assertNotNull(jobRepository.getJob(jobIb));
+        long executionId1 = jobRepository.newExecutionId(jobIb);
+        long executionId2 = jobRepository.newExecutionId(jobIb);
 
         sleepUntilJobExpires();
 
@@ -127,6 +132,8 @@ public class JobRepositoryTest extends JetTestSupport {
 
         assertNull(jobRepository.getJob(jobIb));
         assertTrue(jobRepository.getJobResources(jobIb).isEmpty());
+        assertFalse(jobIds.containsKey(executionId1));
+        assertFalse(jobIds.containsKey(executionId2));
     }
 
     @Test
@@ -138,6 +145,19 @@ public class JobRepositoryTest extends JetTestSupport {
         jobRepository.cleanup(emptySet(), emptySet());
 
         assertTrue(jobRepository.getJobResources(jobIb).isEmpty());
+    }
+
+    @Test
+    public void when_onlyJobRecordExists_then_jobRecordCleanedUpAfterItExpires() {
+        long jobId = 1;
+        JobRecord jobRecord = new JobRecord(jobId, null, null, 1);
+        jobRepository.putNewJobRecord(jobRecord);
+
+        sleepUntilJobExpires();
+
+        jobRepository.cleanup(emptySet(), emptySet());
+
+        assertTrue(jobs.isEmpty());
     }
 
     @Test

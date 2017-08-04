@@ -134,8 +134,6 @@ public class JobCoordinationService {
 
         MasterContext masterContext;
         try {
-            // TODO check job id. if not present, fail.
-
             JobResult jobResult = jobResults.get(jobId);
             if (jobResult != null) {
                 logger.fine("Not starting job " + idToString(jobId) + " since already completed with result: " +
@@ -158,7 +156,7 @@ public class JobCoordinationService {
         }
 
         logger.info("Starting new job " + idToString(jobId));
-        masterContext.tryStartJob(jobRepository::newId);
+        masterContext.tryStartJob(jobRepository::newExecutionId);
         return masterContext.completionFuture();
     }
 
@@ -264,7 +262,7 @@ public class JobCoordinationService {
             long jobId = masterContext.getJobId();
             long executionId = masterContext.getExecutionId();
             if (masterContexts.remove(masterContext.getJobId(), masterContext)) {
-                long jobCreationTime = jobRepository.getJobCreationTime(jobId);
+                long jobCreationTime = jobRepository.getJobCreationTimeOrFail(jobId);
                 String coordinator = nodeEngine.getNode().getThisUuid();
                 JobResult jobResult = new JobResult(jobId, coordinator, jobCreationTime, completionTime, error);
                 JobResult prev = jobResults.putIfAbsent(jobId, jobResult);
@@ -305,7 +303,7 @@ public class JobCoordinationService {
                 return;
             }
 
-            masterContext.tryStartJob(jobRepository::newId);
+            masterContext.tryStartJob(jobRepository::newExecutionId);
         } else {
             logger.severe("Master context for job " + idToString(jobId) + " not found to restart");
         }
@@ -319,8 +317,6 @@ public class JobCoordinationService {
 
         List<MasterContext> masterContextsToStart = new ArrayList<>();
         try {
-            cleanupExpiredJobs();
-
             Collection<JobRecord> jobs = jobRepository.getJobRecords();
             if (jobs.isEmpty()) {
                 return;
@@ -332,6 +328,8 @@ public class JobCoordinationService {
                     masterContextsToStart.add(masterContext);
                 }
             }
+
+            performCleanup();
         } catch (Exception e) {
             if (e instanceof HazelcastInstanceNotActiveException) {
                 return;
@@ -343,7 +341,7 @@ public class JobCoordinationService {
 
         masterContextsToStart.forEach(masterContext -> {
             logger.info("Starting new job " + idToString(masterContext.getJobId()));
-            masterContext.tryStartJob(jobRepository::newId);
+            masterContext.tryStartJob(jobRepository::newExecutionId);
         });
     }
 
@@ -359,7 +357,7 @@ public class JobCoordinationService {
                 && !partitionService.hasOnGoingMigrationLocal();
     }
 
-    private void cleanupExpiredJobs() {
+    private void performCleanup() {
         Set<Long> completedJobIds = jobResults.keySet();
         Set<Long> runningJobIds = masterContexts.keySet();
         jobRepository.cleanup(completedJobIds, runningJobIds);
