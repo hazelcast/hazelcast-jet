@@ -19,6 +19,7 @@ package com.hazelcast.jet.aggregate;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.impl.aggregate.AggregateOperation1Impl;
 import com.hazelcast.jet.pipeline.bag.Tag;
 
 import javax.annotation.Nonnull;
@@ -159,6 +160,18 @@ public interface AggregateOperation<A, R> extends Serializable {
     <R1> AggregateOperation<A, R1> withFinish(
             @Nonnull DistributedFunction<? super A, R1> finishAccumulationF
     );
+
+    @Nonnull
+    default <T> AggregateOperation1<T, A, R> withCombiningAccumulateF(
+            @Nonnull DistributedFunction<T, A> getAccF
+    ) {
+        return new AggregateOperation1Impl<>(
+                createAccumulatorF(),
+                (A acc, T item) -> combineAccumulatorsF().accept(acc, getAccF.apply(item)),
+                combineAccumulatorsF(),
+                deductAccumulatorF(),
+                finishAccumulationF());
+    }
 
     /**
      * Returns a builder object, initialized with the {@code create} primitive,

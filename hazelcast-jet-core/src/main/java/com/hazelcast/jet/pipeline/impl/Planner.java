@@ -20,10 +20,9 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Edge;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.impl.processor.CoGroupP;
+import com.hazelcast.jet.impl.processor.HashJoinP;
 import com.hazelcast.jet.pipeline.Stage;
 import com.hazelcast.jet.pipeline.Transform;
-import com.hazelcast.jet.impl.processor.HashJoinP;
 import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
 import com.hazelcast.jet.pipeline.impl.transform.FlatMapTransform;
 import com.hazelcast.jet.pipeline.impl.transform.GroupByTransform;
@@ -35,6 +34,7 @@ import com.hazelcast.jet.processor.SinkProcessors;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -77,19 +77,23 @@ class Planner {
                 addEdges(stage, pv.v);
             } else if (transform instanceof GroupByTransform) {
                 GroupByTransform<Object, Object, Object> groupBy = (GroupByTransform) transform;
-                String suffix = randomSuffix();
-                Vertex v1 = dag.newVertex("group-by." + suffix + ".stage1",
+                String name = "group-by-key." + randomSuffix() + ".stage";
+                Vertex v1 = dag.newVertex(name + '1',
                         Processors.accumulateByKey(groupBy.keyF(), groupBy.aggregateOperation()));
-                PlannerVertex pv2 = addVertex(stage, new Vertex("group-by." + suffix + ".stage2",
+                PlannerVertex pv2 = addVertex(stage, new Vertex(name + '2',
                         Processors.combineByKey(groupBy.aggregateOperation())));
                 addEdges(stage, v1, e -> e.partitioned(groupBy.keyF(), HASH_CODE));
                 dag.edge(between(v1, pv2.v).distributed().partitioned(groupBy.keyF()));
             } else if (transform instanceof CoGroupTransform) {
                 CoGroupTransform<Object, Object, Object> coGroup = (CoGroupTransform) transform;
-                List<DistributedFunction<?, ?>> groupKeyFns = coGroup.groupKeyFs();
-                PlannerVertex pv = addVertex(stage, new Vertex("co-group." + randomSuffix(),
-                        () -> new CoGroupP<>(groupKeyFns, coGroup.aggregateOperation())));
-                addEdges(stage, pv.v,  e -> e.distributed().partitioned(groupKeyFns.get(e.getDestOrdinal())));
+                List<DistributedFunction<?, ?>> groupKeyFs = coGroup.groupKeyFs();
+                String name = "cogroup-by-key." + randomSuffix() + ".stage";
+                Vertex v1 = dag.newVertex(name + '1',
+                        Processors.coAccumulateByKey(groupKeyFs, coGroup.aggregateOperation()));
+                PlannerVertex pv2 = addVertex(stage, new Vertex(name + '2',
+                        Processors.combineByKey(coGroup.aggregateOperation())));
+                addEdges(stage, v1, (e, ord) -> e.partitioned(groupKeyFs.get(ord), HASH_CODE));
+                dag.edge(between(v1, pv2.v).distributed().partitioned(Entry<Object, Object>::getKey));
             } else if (transform instanceof JoinTransform) {
                 JoinTransform hashJoin = (JoinTransform) transform;
                 PlannerVertex pv = addVertex(stage, new Vertex("hash-join." + randomSuffix(),

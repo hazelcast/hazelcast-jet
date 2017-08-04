@@ -17,6 +17,7 @@
 package com.hazelcast.jet.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
+import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Processor;
@@ -38,9 +39,11 @@ import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
 import com.hazelcast.jet.impl.processor.TransformP;
+import com.hazelcast.jet.pipeline.bag.Tag;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.TimestampKind.EVENT;
@@ -196,9 +199,6 @@ public final class Processors {
      * Returns a supplier of processor that groups items by key and performs
      * the provided aggregate operation on each group. After exhausting all
      * its input it emits one {@code Map.Entry<K, R>} per observed key.
-     * <p>
-     * Since the input to this processor must be bounded, its primary use case
-     * are batch jobs.
      *
      * @param getKeyF computes the key from the entry
      * @param aggregateOperation the aggregate operation to perform
@@ -220,13 +220,10 @@ public final class Processors {
     /**
      * Returns a supplier of the first-stage processor in a two-stage
      * group-and-aggregate setup. The processor groups items by the grouping
-     * key (as obtained from the given key-extracting function) and applies
-     * the {@link AggregateOperation1#accumulateItemF() accumulate} aggregation
-     * primitive to each group. After exhausting all its input it emits one
-     * {@code Map.Entry<K, A>} per observed key.
-     * <p>
-     * Since the input to this processor must be bounded, its primary use case
-     * are batch jobs.
+     * key (as obtained from the given key-extracting function) and applies the
+     * {@link AggregateOperation1#accumulateItemF()} accumulate} primitive to
+     * each group. After exhausting all its input it emits one {@code
+     * Map.Entry<K, A>} per observed key.
      *
      * @param getKeyF computes the key from the entry
      * @param aggrOp the aggregate operation to perform
@@ -243,6 +240,57 @@ public final class Processors {
     }
 
     /**
+     * Returns a supplier of processor that groups items by key and performs
+     * the provided aggregate operation on each group. After exhausting all
+     * its input it emits one {@code Map.Entry<K, R>} per observed key.
+     * <p>
+     * The processor accepts input from one or more inbound edges. The type of
+     * items may be different on each edge. For each edge a separate key
+     * extracting function must be supplied and the aggregate operation must
+     * contain a separate accumulation function for each edge.
+     *
+     * @param getKeyFs functions that compute the grouping key
+     * @param aggregateOperation the aggregate operation
+     * @param <K> type of key
+     * @param <A> type of accumulator returned from {@code aggregateOperation.
+     *            createAccumulatorF()}
+     * @param <R> type of the finished result returned from {@code aggregateOperation.
+     *            finishAccumulationF()}
+     */
+    @Nonnull
+    public static <K, A, R> DistributedSupplier<Processor> coAggregateByKey(
+            @Nonnull List<DistributedFunction<?, ? extends K>> getKeyFs,
+            @Nonnull AggregateOperation<A, R> aggregateOperation
+    ) {
+        return () -> new CoGroupP<>(getKeyFs, aggregateOperation);
+    }
+
+    /**
+     * Returns a supplier of the first-stage processor in a two-stage
+     * group-and-aggregate setup. The processor groups items by the grouping
+     * key and applies the {@link AggregateOperation#accumulateItemF(Tag)
+     * accumulate} primitive to each group. After exhausting all its input it
+     * emits one {@code Map.Entry<K, A>} per observed key.
+     * <p>
+     * The processor accepts input from one or more inbound edges. The type of
+     * items may be different on each edge. For each edge a separate key
+     * extracting function must be supplied and the aggregate operation must
+     * contain a separate accumulation function for each edge.
+     *
+     * @param getKeyFs functions that compute the grouping key
+     * @param aggrOp the aggregate operation to perform
+     * @param <K> type of key
+     * @param <A> type of accumulator returned from {@code aggrOp.createAccumulatorF()}
+     */
+    @Nonnull
+    public static <K, A> DistributedSupplier<Processor> coAccumulateByKey(
+            @Nonnull List<DistributedFunction<?, ? extends K>> getKeyFs,
+            @Nonnull AggregateOperation<A, ?> aggrOp
+    ) {
+        return () -> new CoGroupP<>(getKeyFs, aggrOp.withFinish(identity()));
+    }
+
+    /**
      * Returns a supplier of the second-stage processor in a two-stage
      * group-and-aggregate setup. It applies the {@link
      * AggregateOperation1#combineAccumulatorsF() combine} aggregation
@@ -254,18 +302,17 @@ public final class Processors {
      * Since the input to this processor must be bounded, its primary use case
      * are batch jobs.
      *
-     * @param aggregateOperation the aggregate operation to perform
+     * @param aggrOp the aggregate operation to perform
      * @param <A> type of accumulator returned from {@code
-     *            aggregateOperation.createAccumulatorF()}
-     * @param <R> type of the finished result returned from {@code aggregateOperation.
+     *            aggrOp.createAccumulatorF()}
+     * @param <R> type of the finished result returned from {@code aggrOp.
      *            finishAccumulationF()}
      */
     @Nonnull
-    public static <T, A, R> DistributedSupplier<Processor> combineByKey(
-            @Nonnull AggregateOperation1<T, A, R> aggregateOperation
+    public static <A, R> DistributedSupplier<Processor> combineByKey(
+            @Nonnull AggregateOperation<A, R> aggrOp
     ) {
-        return () -> new CoGroupP<>(Entry::getKey,
-                withCombiningAccumulate(aggregateOperation, Entry<Object, A>::getValue));
+        return () -> new CoGroupP<>(Entry::getKey, aggrOp.withCombiningAccumulateF(Entry<Object, A>::getValue));
     }
 
     /**
@@ -334,7 +381,7 @@ public final class Processors {
     public static <T, A, R> DistributedSupplier<Processor> combine(
             @Nonnull AggregateOperation1<T, A, R> aggrOp
     ) {
-        return () -> new AggregateP<>(withCombiningAccumulate(aggrOp, identity()));
+        return () -> new AggregateP<>(aggrOp.withCombiningAccumulateF(identity()));
     }
 
     /**
@@ -439,7 +486,7 @@ public final class Processors {
     ) {
         return aggregateByKeyAndWindow(
                 TimestampedEntry::getKey, TimestampedEntry::getTimestamp, TimestampKind.FRAME,
-                windowDef, withCombiningAccumulate(aggrOp, TimestampedEntry<K, A>::getValue)
+                windowDef, aggrOp.withCombiningAccumulateF(TimestampedEntry<K, A>::getValue)
         );
     }
 
@@ -619,13 +666,6 @@ public final class Processors {
             ((AbstractProcessor) p).setCooperative(false);
             return p;
         };
-    }
-
-    private static <T, A, R> AggregateOperation1<T, A, R> withCombiningAccumulate(
-            @Nonnull AggregateOperation1<?, A, R> aggrOp, @Nonnull DistributedFunction<T, A> mapper
-    ) {
-        return aggrOp.withAccumulateItemF((A acc, T item) ->
-                aggrOp.combineAccumulatorsF().accept(acc, mapper.apply(item)));
     }
 
     /** A no-operation processor. See {@link #noop()} */

@@ -18,25 +18,24 @@ package com.hazelcast.jet.aggregate;
 
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.pipeline.bag.Tag;
 
 import javax.annotation.Nonnull;
 
 /**
  * Javadoc pending.
  */
-public interface AggregateOperation1<T0, A, R> extends AggregateOperation<A, R> {
+public interface AggregateOperation1<T, A, R> extends AggregateOperation<A, R> {
 
     /**
      * A primitive that updates the accumulator state to account for a new
      * item.
      */
     @Nonnull
-    DistributedBiConsumer<? super A, ? super T0> accumulateItemF();
+    DistributedBiConsumer<? super A, ? super T> accumulateItemF();
 
     @Nonnull
-    <R1> AggregateOperation1<T0, A, R1> withFinish(
-            @Nonnull DistributedFunction<? super A, R1> finishAccumulationF
+    <R_NEW> AggregateOperation1<T, A, R_NEW> withFinish(
+            @Nonnull DistributedFunction<? super A, R_NEW> finishAccumulationF
     );
 
     @Nonnull
