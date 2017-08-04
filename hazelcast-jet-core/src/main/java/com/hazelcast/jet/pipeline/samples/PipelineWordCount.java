@@ -32,25 +32,30 @@ import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 
 public class PipelineWordCount {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
 
         JetInstance jet = Jet.newJetInstance();
-        final Pattern delimiter = Pattern.compile("\\W+");
+        try {
+            final Pattern delimiter = Pattern.compile("\\W+");
 
-        Pipeline p = Pipeline.create();
+            Pipeline p = Pipeline.create();
 
-        ComputeStage<String> books = p.drawFrom(Sources.readFiles("books"));
+            ComputeStage<String> books = p.drawFrom(Sources.readFiles("books"));
 
-        ComputeStage<Entry<String, Long>> wordCounts = books
-                .flatMap((String line) -> traverseArray(delimiter.split(line.toLowerCase())).filter(word -> !word.isEmpty()))
-                .groupBy(wholeItem(), AggregateOperations.counting());
+            ComputeStage<Entry<String, Long>> wordCounts = books
+                    .flatMap((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
+                            .filter(word -> !word.isEmpty()))
+                    .groupBy(wholeItem(), AggregateOperations.counting());
 
-        wordCounts.drainTo(Sinks.writeMap("counts"));
+            wordCounts.drainTo(Sinks.writeMap("counts"));
 
-        wordCounts
-                .groupBy(e -> true, AggregateOperations.summingLong(Entry::getValue))
-                .drainTo(Sinks.writeMap("totals"));
+            wordCounts
+                    .groupBy(e -> true, AggregateOperations.summingLong(Entry::getValue))
+                    .drainTo(Sinks.writeMap("totals"));
 
-        p.execute(jet);
+            p.execute(jet).get();
+        } finally {
+            Jet.shutdownAll();
+        }
     }
 }

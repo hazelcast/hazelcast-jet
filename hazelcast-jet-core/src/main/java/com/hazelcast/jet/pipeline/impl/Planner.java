@@ -20,7 +20,6 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Edge;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.impl.processor.GroupByKeyP;
 import com.hazelcast.jet.pipeline.Stage;
 import com.hazelcast.jet.pipeline.Transform;
 import com.hazelcast.jet.pipeline.impl.processor.CoGroupP;
@@ -31,8 +30,8 @@ import com.hazelcast.jet.pipeline.impl.transform.GroupByTransform;
 import com.hazelcast.jet.pipeline.impl.transform.JoinTransform;
 import com.hazelcast.jet.pipeline.impl.transform.MapTransform;
 import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.Sinks;
-import com.hazelcast.jet.processor.Sources;
+import com.hazelcast.jet.processor.SinkProcessors;
+import com.hazelcast.jet.processor.SourceProcessors;
 
 import java.util.HashMap;
 import java.util.List;
@@ -40,7 +39,9 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
+import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
+import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
 import static com.hazelcast.util.UuidUtil.newUnsecureUUID;
 
@@ -63,43 +64,47 @@ class Planner {
             Transform transform = stage.transform;
             if (transform instanceof SourceImpl) {
                 SourceImpl source = (SourceImpl) transform;
-                addVertex(stage, new Vertex("source." + source.name(), Sources.readMap(source.name()))
+                addVertex(stage, new Vertex("source." + source.name(), SourceProcessors.readMap(source.name()))
                         .localParallelism(1));
             } else if (transform instanceof MapTransform) {
                 MapTransform mapTransform = (MapTransform) transform;
                 PlannerVertex pv = addVertex(stage,
                         new Vertex("map." + randomSuffix(), Processors.map(mapTransform.mapF)));
-                addEdges(stage, pv);
+                addEdges(stage, pv.v);
             } else if (transform instanceof FlatMapTransform) {
                 FlatMapTransform flatMapTransform = (FlatMapTransform) transform;
                 PlannerVertex pv = addVertex(stage,
                         new Vertex("flat-map." + randomSuffix(), Processors.flatMap(flatMapTransform.flatMapF())));
-                addEdges(stage, pv);
+                addEdges(stage, pv.v);
             } else if (transform instanceof GroupByTransform) {
                 GroupByTransform<Object, Object, Object> groupBy = (GroupByTransform) transform;
-                PlannerVertex pv = addVertex(stage, new Vertex("group-by." + randomSuffix(),
-                        () -> new GroupByKeyP<>(groupBy.keyF(), groupBy.aggregateOperation())));
-                addEdges(stage, pv, e -> e.distributed().partitioned(groupBy.keyF()));
+                String suffix = randomSuffix();
+                Vertex v1 = dag.newVertex("group-by." + suffix + ".stage1",
+                        Processors.accumulateByKey(groupBy.keyF(), groupBy.aggregateOperation()));
+                PlannerVertex pv2 = addVertex(stage, new Vertex("group-by." + suffix + ".stage2",
+                        Processors.combineByKey(groupBy.aggregateOperation())));
+                addEdges(stage, v1, e -> e.partitioned(groupBy.keyF(), HASH_CODE));
+                dag.edge(between(v1, pv2.v).distributed().partitioned(groupBy.keyF()));
             } else if (transform instanceof CoGroupTransform) {
                 CoGroupTransform<Object, Object, Object> coGroup = (CoGroupTransform) transform;
                 List<DistributedFunction<?, ?>> groupKeyFns = coGroup.groupKeyFns();
                 PlannerVertex pv = addVertex(stage, new Vertex("co-group." + randomSuffix(),
                         () -> new CoGroupP<>(groupKeyFns, coGroup.aggregateOperation(), coGroup.tags())));
-                addEdges(stage, pv,  e -> e.distributed().partitioned(groupKeyFns.get(e.getDestOrdinal())));
+                addEdges(stage, pv.v,  e -> e.distributed().partitioned(groupKeyFns.get(e.getDestOrdinal())));
             } else if (transform instanceof JoinTransform) {
                 JoinTransform hashJoin = (JoinTransform) transform;
                 PlannerVertex pv = addVertex(stage, new Vertex("hash-join." + randomSuffix(),
                         () -> new HashJoinP(hashJoin.joinOns(), hashJoin.tags())));
-                addEdges(stage, pv, (e, ordinal) -> {
+                addEdges(stage, pv.v, (e, ordinal) -> {
                     if (ordinal > 0) {
                         e.distributed().broadcast().priority(-1);
                     }
                 });
             } else if (transform instanceof SinkImpl) {
                 SinkImpl sink = (SinkImpl) transform;
-                PlannerVertex pv = addVertex(stage, new Vertex("sink." + sink.name(), Sinks.writeMap(sink.name()))
+                PlannerVertex pv = addVertex(stage, new Vertex("sink." + sink.name(), SinkProcessors.writeMap(sink.name()))
                         .localParallelism(1));
-                addEdges(stage, pv);
+                addEdges(stage, pv.v);
             } else {
                 throw new IllegalArgumentException("Unknown transform " + transform);
             }
@@ -114,28 +119,23 @@ class Planner {
         return pv;
     }
 
-    private Edge addEdge(Stage fromStage, PlannerVertex toPv, int destOrdinal) {
-        PlannerVertex fromPv = stage2vertex.get(fromStage);
-        Edge edge = from(fromPv.v, fromPv.availableOrdinal++).to(toPv.v, destOrdinal);
-        dag.edge(edge);
-        return edge;
-    }
-
-    private void addEdges(AbstractStage stage, PlannerVertex pv, BiConsumer<Edge, Integer> configureEdgeF) {
+    private void addEdges(AbstractStage stage, Vertex toVertex, BiConsumer<Edge, Integer> configureEdgeF) {
         int destOrdinal = 0;
         for (Stage fromStage : stage.upstream) {
-            Edge edge = addEdge(fromStage, pv, destOrdinal);
+            PlannerVertex fromPv = stage2vertex.get(fromStage);
+            Edge edge = from(fromPv.v, fromPv.availableOrdinal++).to(toVertex, destOrdinal);
+            dag.edge(edge);
             configureEdgeF.accept(edge, destOrdinal);
             destOrdinal++;
         }
     }
 
-    private void addEdges(AbstractStage stage, PlannerVertex pv, Consumer<Edge> configureEdgeF) {
-        addEdges(stage, pv, (e, ord) -> configureEdgeF.accept(e));
+    private void addEdges(AbstractStage stage, Vertex toVertex, Consumer<Edge> configureEdgeF) {
+        addEdges(stage, toVertex, (e, ord) -> configureEdgeF.accept(e));
     }
 
-    private void addEdges(AbstractStage stage, PlannerVertex pv) {
-        addEdges(stage, pv, e -> {});
+    private void addEdges(AbstractStage stage, Vertex toVertex) {
+        addEdges(stage, toVertex, e -> {});
     }
 
     private static String randomSuffix() {

@@ -23,7 +23,6 @@ import java.util.Map;
 public final class Sources {
 
     private Sources() {
-
     }
 
     public static <K, V> Source<Map.Entry<K, V>> readMap(String mapName) {
