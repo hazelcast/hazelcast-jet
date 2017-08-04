@@ -20,6 +20,7 @@ import com.hazelcast.core.DistributedObject;
 import com.hazelcast.core.EntryView;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
@@ -101,7 +102,12 @@ public class JobRepository {
         return instance.getMap(RESOURCES_MAP_NAME_PREFIX + jobId);
     }
 
-    public void uploadJobResources(long jobId, JobConfig jobConfig) {
+    /**
+     * Uploads job resources and returns a unique job id generated for the job
+     */
+    public long uploadJobResources(JobConfig jobConfig) {
+        long jobId = newId();
+
         IMap<String, Object> jobResourcesMap = getJobResources(jobId);
         for (ResourceConfig rc : jobConfig.getResourceConfigs()) {
             Map<String, byte[]> tmpMap = new HashMap<>();
@@ -109,16 +115,18 @@ public class JobRepository {
                 try {
                     loadJar(tmpMap, rc.getUrl());
                 } catch (IOException e) {
-                    // TODO basri: fix it
-                    throw new RuntimeException(e);
+                    cleanupJobResourcesMap(jobResourcesMap);
+                    jobIds.remove(jobId);
+                    throw new JetException("Job resource upload failed", e);
                 }
             } else {
                 try {
                     InputStream in = rc.getUrl().openStream();
                     readStreamAndPutCompressedToMap(rc.getId(), tmpMap, in);
                 } catch (IOException e) {
-                    // TODO basri: fix it
-                    throw new RuntimeException(e);
+                    cleanupJobResourcesMap(jobResourcesMap);
+                    jobIds.remove(jobId);
+                    throw new JetException("Job resource upload failed", e);
                 }
             }
 
@@ -127,6 +135,8 @@ public class JobRepository {
         }
 
         jobResourcesMap.put(RESOURCE_MARKER, jobId);
+
+        return jobId;
     }
 
     /**
@@ -136,9 +146,13 @@ public class JobRepository {
         jobs.remove(jobId);
         IMap<String, Object> jobResourcesMap = getJobResources(jobId);
         if (jobResourcesMap != null) {
-            jobResourcesMap.clear();
-            jobResourcesMap.destroy();
+            cleanupJobResourcesMap(jobResourcesMap);
         }
+    }
+
+    private void cleanupJobResourcesMap(IMap<String, Object> jobResourcesMap) {
+        jobResourcesMap.clear();
+        jobResourcesMap.destroy();
     }
 
     long getJobCreationTime(long jobId) throws IllegalArgumentException {

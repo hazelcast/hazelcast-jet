@@ -54,19 +54,19 @@ public abstract class AbstractJobImpl implements Job {
 
     @Nonnull
     @Override
-    public JobConfig getConfig() {
+    public final JobConfig getConfig() {
         return config;
     }
 
     @Nonnull
     @Override
-    public DAG getDAG() {
+    public final DAG getDAG() {
         return dag;
     }
 
     @Nonnull
     @Override
-    public Future<Void> getFuture() {
+    public final Future<Void> getFuture() {
         if (jobId == null) {
             throw new IllegalStateException("Job not yet started, use execute()");
         }
@@ -81,7 +81,7 @@ public abstract class AbstractJobImpl implements Job {
     protected abstract JobStatus sendJobStatusRequest();
 
     @Override
-    public long getJobId() {
+    public final long getJobId() {
         if (jobId == null) {
             throw new IllegalStateException("ID not yet assigned");
         }
@@ -93,19 +93,17 @@ public abstract class AbstractJobImpl implements Job {
      *
      * Also sends a JoinOp to ensure that the job is started as soon as possible
      */
-    void init() {
+    final void init() {
         if (jobId != null) {
             throw new IllegalStateException("Job already started");
         }
 
         Address masterAddress = getMasterAddress();
         if (masterAddress == null) {
-            future.completeExceptionally(new IllegalStateException("Master address is null"));
-            return;
+            throw new IllegalStateException("Master address is null");
         }
 
-        jobId = jobRepository.newId();
-        jobRepository.uploadJobResources(jobId, config);
+        jobId = jobRepository.uploadJobResources(config);
 
         ICompletableFuture<Void> invocationFuture = sendJoinRequest(masterAddress);
         JobCallback callback = new JobCallback(invocationFuture);
@@ -117,7 +115,8 @@ public abstract class AbstractJobImpl implements Job {
         });
     }
 
-    public JobStatus getJobStatus() {
+    @Nonnull @Override
+    public final JobStatus getJobStatus() {
         if (future.isCancelled()) {
             return JobStatus.COMPLETED;
         } else if (future.isCompletedExceptionally()) {
@@ -145,14 +144,18 @@ public abstract class AbstractJobImpl implements Job {
         @Override
         public synchronized void onFailure(Throwable t) {
             if (isSplitBrainMerge(t)) {
-                future.completeExceptionally(new CancellationException("Split brain merge"));
+                String msg = "Job failed because the cluster is performing split-brain merge";
+                future.completeExceptionally(new CancellationException(msg));
             } else if (isRestartable(t)) {
                 try {
                     Address masterAddress = getMasterAddress();
                     if (masterAddress == null) {
-                        future.completeExceptionally(new IllegalStateException("Master address is null"));
+                        // job data will be cleaned up eventually by coordinator
+                        String msg = "Job failed because cannot talk to the coordinator node";
+                        future.completeExceptionally(new IllegalStateException(msg));
                         return;
                     }
+
                     ICompletableFuture<Void> invocationFuture = sendJoinRequest(masterAddress);
                     this.invocationFuture = invocationFuture;
                     invocationFuture.andThen(this);

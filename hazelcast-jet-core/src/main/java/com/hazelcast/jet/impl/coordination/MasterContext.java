@@ -143,8 +143,8 @@ public class MasterContext {
     private boolean setJobStatusToStarting() {
         JobStatus status = jobStatus();
         if (status == COMPLETED || status == FAILED) {
-            // TODO [basri] fix it
-            throw new IllegalStateException("Cannot init job " + idToString(jobId) + ": it already is " + status);
+            logger.severe("Cannot init job " + idToString(jobId) + ": it is already " + status);
+            return false;
         }
 
         if (completionFuture.isCancelled()) {
@@ -166,8 +166,8 @@ public class MasterContext {
 
         status = jobStatus();
         if (!(status == STARTING || status == RESTARTING)) {
-            // TODO [basri] fix it
-            throw new IllegalStateException("Cannot init job " + idToString(jobId) + ": status is " + status);
+            logger.severe("Cannot init job " + idToString(jobId) + ": status is " + status);
+            return false;
         }
 
         return true;
@@ -211,6 +211,15 @@ public class MasterContext {
 
     private void onInitStepCompleted(Map<MemberInfo, Object> responses) {
         Throwable error = getInitResult(responses);
+
+        if (error == null) {
+            JobStatus status = jobStatus();
+
+            if (!(status == STARTING || status == RESTARTING)) {
+                error = new IllegalStateException("Cannot execute " + formatIds(jobId, executionId)
+                        + ": status is " + status);
+            }
+        }
 
         if (error == null) {
             invokeExecute();
@@ -257,14 +266,6 @@ public class MasterContext {
     }
 
     private void invokeExecute() {
-        JobStatus status = jobStatus();
-
-        if (!(status == STARTING || status == RESTARTING)) {
-            // TODO [basri] fix it
-            throw new IllegalStateException("Cannot execute " + formatIds(jobId, executionId)
-                    + ": status is " + status);
-        }
-
         jobStatus.set(RUNNING);
         logger.fine("Executing " + formatIds(jobId, executionId));
         Function<ExecutionPlan, Operation> operationCtor = plan -> new ExecuteOperation(jobId, executionId);
@@ -304,19 +305,39 @@ public class MasterContext {
     private void invokeComplete(Throwable error) {
         JobStatus status = jobStatus();
 
-        if (status == NOT_STARTED || status == COMPLETED || status == FAILED) {
-            // TODO [basri] fix it
-            throw new IllegalStateException("Cannot complete " + formatIds(jobId, executionId)
-                    + ": status is " + status);
+        Throwable finalError;
+        if (status == STARTING || status == RESTARTING || status == RUNNING) {
+            logger.fine("Completing " + formatIds(jobId, executionId));
+            finalError = error;
+        } else {
+            if (error != null) {
+                logger.severe("Cannot properly complete failed " + formatIds(jobId, executionId)
+                        + ": status is " + status, error);
+            } else {
+                logger.severe("Cannot properly complete " + formatIds(jobId, executionId)
+                        + ": status is " + status);
+            }
+
+            finalError = new IllegalStateException("Job coordination failed.");
         }
 
-        logger.fine("Completing " + formatIds(jobId, executionId));
-
-        Function<ExecutionPlan, Operation> operationCtor = plan -> new CompleteOperation(executionId, error);
+        Function<ExecutionPlan, Operation> operationCtor = plan -> new CompleteOperation(executionId, finalError);
         invoke(operationCtor, responses -> onCompleteStepCompleted(error), null);
     }
 
     private void onCompleteStepCompleted(@Nullable Throwable failure) {
+        JobStatus status = jobStatus();
+        if (status == COMPLETED || status == FAILED) {
+            if (failure != null) {
+                logger.severe("Ignoring failure completion of " + idToString(jobId) + " because status is "
+                        + status, failure);
+            } else {
+                logger.severe("Ignoring completion of " + idToString(jobId) + " because status is " + status);
+            }
+
+            return;
+        }
+
         long completionTime = System.currentTimeMillis();
 
         if (failure instanceof TopologyChangedException) {

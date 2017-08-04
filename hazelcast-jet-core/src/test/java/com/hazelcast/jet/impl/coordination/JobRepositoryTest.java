@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.coordination;
 
 import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.JetTestSupport;
@@ -43,6 +44,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastSerialClassRunner.class)
@@ -138,11 +140,20 @@ public class JobRepositoryTest extends JetTestSupport {
         assertTrue(jobRepository.getJobResources(jobIb).isEmpty());
     }
 
+    @Test
+    public void when_jobResourceUploadFails_then_jobResourcesAreCleanedUp() {
+        jobConfig.addResource("invalid path");
+        try {
+            jobRepository.uploadJobResources(jobConfig);
+            fail();
+        } catch (JetException e) {
+            assertTrue(instance.getMap(JetConfig.IDS_MAP_NAME).isEmpty());
+        }
+    }
+
     private long uploadResourcesForNewJob() {
-        long jobIb = jobRepository.newId();
         jobConfig.addClass(DummyClass.class);
-        jobRepository.uploadJobResources(jobIb, jobConfig);
-        return jobIb;
+        return jobRepository.uploadJobResources(jobConfig);
     }
 
     private Data createDAGData() {

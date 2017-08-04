@@ -134,6 +134,8 @@ public class JobCoordinationService {
 
         MasterContext masterContext;
         try {
+            // TODO check job id. if not present, fail.
+
             JobResult jobResult = jobResults.get(jobId);
             if (jobResult != null) {
                 logger.fine("Not starting job " + idToString(jobId) + " since already completed with result: " +
