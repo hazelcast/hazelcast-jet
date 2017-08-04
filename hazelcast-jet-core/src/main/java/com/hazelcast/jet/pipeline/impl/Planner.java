@@ -23,7 +23,7 @@ import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.processor.CoGroupP;
 import com.hazelcast.jet.pipeline.Stage;
 import com.hazelcast.jet.pipeline.Transform;
-import com.hazelcast.jet.pipeline.impl.processor.HashJoinP;
+import com.hazelcast.jet.impl.processor.HashJoinP;
 import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
 import com.hazelcast.jet.pipeline.impl.transform.FlatMapTransform;
 import com.hazelcast.jet.pipeline.impl.transform.GroupByTransform;
