@@ -18,7 +18,7 @@ package com.hazelcast.jet.stream.impl.source;
 
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.ProcessorMetaSupplier;
-import com.hazelcast.jet.processor.Sources;
+import com.hazelcast.jet.processor.SourceProcessors;
 import com.hazelcast.jet.stream.impl.pipeline.AbstractSourcePipe;
 import com.hazelcast.jet.stream.impl.pipeline.StreamContext;
 
@@ -36,7 +36,7 @@ public class MapSourcePipe<K, V> extends AbstractSourcePipe<Entry<K, V>> {
 
     @Override
     protected ProcessorMetaSupplier getSourceMetaSupplier() {
-        return Sources.readMap(map.getName());
+        return SourceProcessors.readMap(map.getName());
     }
 
     @Override

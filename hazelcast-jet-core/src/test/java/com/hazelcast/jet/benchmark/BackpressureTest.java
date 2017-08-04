@@ -45,7 +45,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.processor.Processors.noop;
-import static com.hazelcast.jet.processor.Sinks.writeMap;
+import static com.hazelcast.jet.processor.SinkProcessors.writeMap;
 import static com.hazelcast.jet.Traversers.lazy;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Util.entry;

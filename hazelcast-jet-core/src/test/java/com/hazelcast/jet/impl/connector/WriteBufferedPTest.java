@@ -28,7 +28,7 @@ import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
-import com.hazelcast.jet.processor.Sinks;
+import com.hazelcast.jet.processor.SinkProcessors;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Test;
@@ -109,7 +109,7 @@ public class WriteBufferedPTest extends JetTestSupport {
     private ProcessorSupplier getLoggingBufferedWriter() {
         // returns a processor that will not write anywhere, just log the events instead
         List<String> localEvents = events;
-        return Sinks.writeBuffered(
+        return SinkProcessors.writeBuffered(
                 idx -> {
                     localEvents.add("new");
                     return null;

@@ -35,12 +35,12 @@ import org.junit.runner.RunWith;
 import java.util.concurrent.ExecutionException;
 
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.processor.Sources.readCache;
-import static com.hazelcast.jet.processor.Sources.readList;
-import static com.hazelcast.jet.processor.Sources.readMap;
-import static com.hazelcast.jet.processor.Sinks.writeCache;
-import static com.hazelcast.jet.processor.Sinks.writeList;
-import static com.hazelcast.jet.processor.Sinks.writeMap;
+import static com.hazelcast.jet.processor.SourceProcessors.readCache;
+import static com.hazelcast.jet.processor.SourceProcessors.readList;
+import static com.hazelcast.jet.processor.SourceProcessors.readMap;
+import static com.hazelcast.jet.processor.SinkProcessors.writeCache;
+import static com.hazelcast.jet.processor.SinkProcessors.writeList;
+import static com.hazelcast.jet.processor.SinkProcessors.writeMap;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 import static org.junit.Assert.assertEquals;
