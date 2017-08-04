@@ -27,17 +27,17 @@ import java.util.concurrent.CompletionStage;
 
 import static com.hazelcast.jet.impl.util.Util.idToString;
 
-public class DoSnapshotOperation extends AsyncExecutionOperation {
+public class SnapshotOperation extends AsyncExecutionOperation {
 
     private long executionId;
     private long snapshotId;
     private volatile CompletionStage<Void> executionFuture;
 
     // for deserialization
-    public DoSnapshotOperation() {
+    public SnapshotOperation() {
     }
 
-    public DoSnapshotOperation(long jobId, long executionId, long snapshotId) {
+    public SnapshotOperation(long jobId, long executionId, long snapshotId) {
         super(jobId);
         this.executionId = executionId;
         this.snapshotId = snapshotId;
@@ -50,7 +50,7 @@ public class DoSnapshotOperation extends AsyncExecutionOperation {
         executionFuture = service.doSnapshotOnMember(getCallerAddress(), jobId, executionId, snapshotId)
                 .whenComplete((r, v) -> {
                     LoggingUtil.logFine(getLogger(), "Snapshot %s for job %s finished on member",
-                            idToString(snapshotId), idToString(jobId));
+                            snapshotId, idToString(jobId));
                     doSendResponse(null);
                 });
     }
@@ -64,7 +64,7 @@ public class DoSnapshotOperation extends AsyncExecutionOperation {
 
     @Override
     public int getId() {
-        return JetImplDataSerializerHook.DO_SNAPSHOT_OP;
+        return JetImplDataSerializerHook.SNAPSHOT_OP;
     }
 
     @Override

@@ -27,7 +27,7 @@ import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.ExecutionService;
 import com.hazelcast.jet.impl.execution.SenderTasklet;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
-import com.hazelcast.jet.impl.operation.DoSnapshotOperation;
+import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.operation.ExecuteOperation;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
@@ -239,7 +239,7 @@ public class JobExecutionService {
 
     public CompletionStage<Void> doSnapshotOnMember(Address coordinator, long jobId, long executionId, long snapshotId) {
         ExecutionContext executionContext = verifyAndGetExecutionContext(coordinator, jobId, executionId,
-                DoSnapshotOperation.class.getSimpleName());
+                SnapshotOperation.class.getSimpleName());
 
         return executionContext.initiateSnapshot(snapshotId);
     }

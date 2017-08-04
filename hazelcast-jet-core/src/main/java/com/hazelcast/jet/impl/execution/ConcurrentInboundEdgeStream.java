@@ -82,7 +82,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
      * Generally, watermark is added to {@code dest} after it is received from
      * all queues.
      *
-     * <li>{@link SnapshotBarrier}s are handled specially, as directed by
+     * <li>{@link SnapshotBarrier}s are handled specially as directed by
      * {@link BarrierWatcher}. Same barrier has to be received from all queues
      * to be added to the {@code dest} collection. Queues which already had the
      * barrier are not drained until all other have it, if {@link

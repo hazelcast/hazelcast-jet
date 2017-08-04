@@ -24,6 +24,7 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Set;
 
 import static com.hazelcast.jet.impl.util.Util.idToString;
@@ -35,50 +36,42 @@ import static com.hazelcast.jet.impl.util.Util.idToString;
  */
 public class SnapshotRecord implements IdentifiedDataSerializable {
     private long jobId;
+    private long snapshotId;
     private long creationTime = System.currentTimeMillis();
     private boolean isComplete;
-    private boolean isUserInitiated;
-    private Set<String> statefulVertexIds;
+    private List<String> vertices;
 
     public SnapshotRecord() {
     }
 
-    public SnapshotRecord(long jobId, Set<String> statefulVertexIds, boolean isUserInitiated) {
+    public SnapshotRecord(long jobId, long snapshotId, List<String> vertices) {
         this.jobId = jobId;
-        this.statefulVertexIds = statefulVertexIds;
-        this.isUserInitiated = isUserInitiated;
+        this.snapshotId = snapshotId;
+        this.vertices = vertices;
     }
 
     /**
      * Return the jobId the snapshot was originally created for. Note that the
      * snapshot might be used to start another job.
      */
-    public long getJobId() {
+    public long jobId() {
         return jobId;
     }
 
-    public long getCreationTime() {
+    public long creationTime() {
         return creationTime;
     }
 
-    public Set<String> getStatefulVertexIds() {
-        return statefulVertexIds;
+    public List<String> vertices() {
+        return vertices;
     }
 
     public boolean isComplete() {
         return isComplete;
     }
 
-    public void setComplete(boolean complete) {
-        isComplete = complete;
-    }
-
-    /**
-     * True, if the snapshot was user-initiated and thus will not be
-     * automatically deleted.
-     */
-    public boolean isUserInitiated() {
-        return isUserInitiated;
+    public void complete() {
+        isComplete = true;
     }
 
     @Override
@@ -96,8 +89,7 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         out.writeLong(jobId);
         out.writeLong(creationTime);
         out.writeBoolean(isComplete);
-        out.writeBoolean(isUserInitiated);
-        out.writeObject(statefulVertexIds);
+        out.writeObject(vertices);
     }
 
     @Override
@@ -105,8 +97,7 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         jobId = in.readLong();
         creationTime = in.readLong();
         isComplete = in.readBoolean();
-        isUserInitiated = in.readBoolean();
-        statefulVertexIds = in.readObject();
+        vertices = in.readObject();
     }
 
     @Override
@@ -115,7 +106,11 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
                 "jobId=" + idToString(jobId) +
                 ", creationTime=" + Instant.ofEpochMilli(creationTime).atZone(ZoneId.systemDefault()).toLocalDateTime() +
                 ", isComplete=" + isComplete +
-                ", statefulVertexIds=" + statefulVertexIds +
+                ", vertices=" + vertices +
                 '}';
+    }
+
+    public long snapshotId() {
+        return snapshotId;
     }
 }

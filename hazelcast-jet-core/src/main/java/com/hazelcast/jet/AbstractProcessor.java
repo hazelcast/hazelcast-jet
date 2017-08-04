@@ -20,7 +20,9 @@ import com.hazelcast.logging.ILogger;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
@@ -379,18 +381,25 @@ public abstract class AbstractProcessor implements Processor {
      *
      * @param ordinal ordinal of the target bucket
      * @param traverser traverser over items to emit
+     * @param onEmit an optional consumer which will be called each time an item is added to the outbox
      * @return whether the traverser has been exhausted
      */
-    protected boolean emitFromTraverser(int ordinal, @Nonnull Traverser<?> traverser) {
-        Object item;
+    protected <E> boolean emitFromTraverser(
+            int ordinal, @Nonnull Traverser<E> traverser, @Nullable Consumer<? super E> onEmit
+    ) {
+        E item;
         if (pendingItem != null) {
-            item = pendingItem;
+            item = (E) pendingItem;
             pendingItem = null;
         } else {
             item = traverser.next();
         }
         for (; item != null; item = traverser.next()) {
-            if (!tryEmit(ordinal, item)) {
+            if (tryEmit(ordinal, item)) {
+                if (onEmit != null) {
+                    onEmit.accept(item);
+                }
+            } else {
                 pendingItem = item;
                 return false;
             }
@@ -398,6 +407,9 @@ public abstract class AbstractProcessor implements Processor {
         return true;
     }
 
+    /**
+     * Javadoc pending
+     */
     protected <T extends Entry<?, ?>> boolean emitSnapshotFromTraverser(
             SnapshotStorage storage, @Nonnull Traverser<T> traverser
     ) {
@@ -418,10 +430,31 @@ public abstract class AbstractProcessor implements Processor {
     }
 
     /**
-     * Convenience for {@link #emitFromTraverser(int, Traverser)} which emits to all ordinals.
+     * Convenience for {@link #emitFromTraverser(int, Traverser, Consumer)} which emits to all ordinals.
      */
     protected boolean emitFromTraverser(@Nonnull Traverser<?> traverser) {
-        return emitFromTraverser(-1, traverser);
+        return emitFromTraverser(-1, traverser, null);
+    }
+
+    /**
+     * Convenience for {@link #emitFromTraverser(int, Traverser, Consumer)} which emits to the specified ordinal.
+     */
+    protected boolean emitFromTraverser(int ordinal, @Nonnull Traverser<?> traverser) {
+        return emitFromTraverser(ordinal, traverser, null);
+    }
+
+    /**
+     * Convenience for {@link #emitFromTraverser(int[], Traverser, Consumer)} which emits to the specified ordinals.
+     */
+    protected boolean emitFromTraverser(int[] ordinals, @Nonnull Traverser<?> traverser) {
+        return emitFromTraverser(ordinals, traverser, null);
+    }
+
+    /**
+     * Convenience for {@link #emitFromTraverser(int, Traverser, Consumer)} which emits to all ordinals.
+     */
+    protected <E> boolean emitFromTraverser(@Nonnull Traverser<E> traverser, @Nullable Consumer<? super E> onEmit) {
+        return emitFromTraverser(-1, traverser, onEmit);
     }
 
     /**
@@ -438,12 +471,15 @@ public abstract class AbstractProcessor implements Processor {
      *
      * @param ordinals ordinals of the target bucket
      * @param traverser traverser over items to emit
+     * @param onEmit an optional consumer which will be called each time an item is added to the outbox
      * @return whether the traverser has been exhausted
      */
-    protected boolean emitFromTraverser(@Nonnull int[] ordinals, @Nonnull Traverser<?> traverser) {
-        Object item;
+    protected <E> boolean emitFromTraverser(
+            @Nonnull int[] ordinals, @Nonnull Traverser<E> traverser, @Nullable Consumer<? super E> onEmit
+    ) {
+        E item;
         if (pendingItem != null) {
-            item = pendingItem;
+            item = (E) pendingItem;
             pendingItem = null;
         } else {
             item = traverser.next();
@@ -496,7 +532,7 @@ public abstract class AbstractProcessor implements Processor {
      * supplies a {@code mapper} which takes an item and returns a traverser
      * over all output items that should be emitted. The {@link
      * #tryProcess(Object)} method obtains and passes the traverser to {@link
-     * #emitFromTraverser(int, Traverser)}.
+     * #emitFromTraverser(int, Traverser, Consumer)}.
      *
      * Example:
      * <pre>
@@ -545,7 +581,7 @@ public abstract class AbstractProcessor implements Processor {
 
         private boolean emit() {
             return outputOrdinals != null
-                    ? emitFromTraverser(outputOrdinals, outputTraverser)
+                    ? emitFromTraverser(outputOrdinals, outputTraverser, null)
                     : emitFromTraverser(outputTraverser);
         }
     }

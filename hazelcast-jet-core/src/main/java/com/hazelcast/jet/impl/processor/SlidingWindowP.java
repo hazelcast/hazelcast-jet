@@ -199,11 +199,6 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor implements Snapsh
     }
 
     @Override
-    public boolean isPartitionedSnapshot() {
-        return true;
-    }
-
-    @Override
     public boolean saveSnapshot(SnapshotStorage storage) {
         if (isLastStage) {
             if (snapshotTraverser == null) {

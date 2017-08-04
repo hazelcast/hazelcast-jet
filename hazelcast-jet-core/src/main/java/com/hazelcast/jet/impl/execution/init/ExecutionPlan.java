@@ -59,7 +59,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -138,7 +137,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 }
                 ConcurrentConveyor<Object> ssConveyor = concurrentConveyor(null, queues);
                 StoreSnapshotTasklet ssTasklet = new StoreSnapshotTasklet(snapshotState, jobId,
-                        new ConcurrentInboundEdgeStream(ssConveyor, 0, 0, true), nodeEngine, srcVertex.name());
+                        new ConcurrentInboundEdgeStream(ssConveyor, 0, 0, true),
+                        nodeEngine, srcVertex.name());
                 tasklets.add(ssTasklet);
             }
 
@@ -444,27 +444,11 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         return processors;
     }
 
-    public Set<String> statefulVertexIds() {
-        if (tasklets.isEmpty()) {
-            throw new IllegalStateException("tasklets not yet initialized");
-        }
-
-        Set<String> vertexIds = new HashSet<>();
-        for (Tasklet tasklet : tasklets) {
-            if (tasklet instanceof StoreSnapshotTasklet) {
-                String vertexId = ((StoreSnapshotTasklet) tasklet).getVertexId();
-                boolean res = vertexIds.add(vertexId);
-                assert res : "Duplicate vertex ID: " + vertexId;
-            }
-        }
-
-        return vertexIds;
-    }
-
-    public int countStoreSnapshotTasklets() {
-        int res = (int) tasklets.stream().filter(t -> t instanceof StoreSnapshotTasklet).count();
-        assert res == statefulVertexIds().size();
-        return res;
+    public List<String> snapshottableVertices() {
+        return tasklets.stream()
+                       .filter(t -> t instanceof StoreSnapshotTasklet)
+                       .map(t -> ((StoreSnapshotTasklet) t).vertexName())
+                       .collect(Collectors.toList());
     }
 }
 

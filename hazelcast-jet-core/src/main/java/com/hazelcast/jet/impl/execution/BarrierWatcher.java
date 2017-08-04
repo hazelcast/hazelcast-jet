@@ -20,10 +20,12 @@ import java.util.BitSet;
 
 class BarrierWatcher {
 
+    private static final int NO_SNAPSHOT = -1;
+
     private final BitSet barrierReceived;
     private int numAwaiting;
     private int numQueuesNotDone;
-    private long currentSnapshotId;
+    private long currentSnapshotId = NO_SNAPSHOT;
 
     BarrierWatcher(int queueCount) {
         barrierReceived = new BitSet(queueCount);
@@ -42,7 +44,7 @@ class BarrierWatcher {
         assert numQueuesNotDone > 0;
         numQueuesNotDone--;
         long previousSnapshotId = currentSnapshotId;
-        if (previousSnapshotId != 0) {
+        if (previousSnapshotId != NO_SNAPSHOT) {
             if (observe(queueIndex, currentSnapshotId)) {
                 return previousSnapshotId;
             }
@@ -56,7 +58,7 @@ class BarrierWatcher {
      * @return true, iff the barrier can now be forwarded (has been received from all queues)
      */
     boolean observe(int queueIndex, long newBarrier) {
-        assert currentSnapshotId == 0 || currentSnapshotId == newBarrier
+        assert currentSnapshotId == NO_SNAPSHOT || currentSnapshotId == newBarrier
                 : "Different barrier received from queues: expected: " + currentSnapshotId + ", got: " + newBarrier;
 
         assert !barrierReceived.get(queueIndex) : "Barrier already received on queue";

@@ -31,7 +31,7 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
  */
 public class JobConfig implements Serializable {
 
-    private boolean splitBrainProtectionEnabled = true;
+    private boolean splitBrainProtectionEnabled = false;
     private final transient List<ResourceConfig> resourceConfigs = new ArrayList<>();
 
     private ProcessingGuarantee processingGuarantee = ProcessingGuarantee.EXACTLY_ONCE;
@@ -71,7 +71,7 @@ public class JobConfig implements Serializable {
     }
 
     /**
-     * Return current {@link #setSnapshotInterval(long) snapshot interval}.
+     * Return current {@link #setSnapshotIntervalMillis(long) snapshot interval}.
      */
     public long getSnapshotInterval() {
         return snapshotInterval;
@@ -82,7 +82,7 @@ public class JobConfig implements Serializable {
      * snapshots are disabled. This is the interval between completion of
      * previous snapshot and the start of the new one.
      */
-    public JobConfig setSnapshotInterval(long snapshotInterval) {
+    public JobConfig setSnapshotIntervalMillis(long snapshotInterval) {
         this.snapshotInterval = snapshotInterval;
         return this;
     }

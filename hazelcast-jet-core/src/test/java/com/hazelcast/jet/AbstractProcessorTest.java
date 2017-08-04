@@ -407,6 +407,7 @@ public class AbstractProcessorTest {
         validateReceptionAtOrdinals(MOCK_ITEM, ORDINAL_1);
     }
 
+
     @Test
     public void when_tryEmitTo1And2_then_emittedTo1And2() {
         // When
@@ -464,7 +465,7 @@ public class AbstractProcessorTest {
         boolean done = p.emitFromTraverser(trav);
 
         // Then
-        assertTrue(done);
+        assertTrue("done", done);
         validateReceptionAtOrdinals(MOCK_ITEM, ALL_ORDINALS);
     }
 

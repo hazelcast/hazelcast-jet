@@ -20,7 +20,6 @@ public class SnapshotBarrier {
     private final long snapshotId;
 
     public SnapshotBarrier(long snapshotId) {
-        assert snapshotId != 0 : "snapshotId=0 is reserved";
         this.snapshotId = snapshotId;
     }
 

@@ -16,9 +16,7 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.query.Predicate;
-
-import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 
 /**
  * An interface to be implemented by a {@link Processor} that wants to do
@@ -27,29 +25,13 @@ import javax.annotation.Nullable;
 public interface Snapshottable {
 
     /**
-     * Returns, if the processors uses partitioned state.
+     * Returns the snapshot restore policy for the processor
      * <ul>
-     *
-     * <li><b>Partitioned state</b><br/>
-     * The processor must be preceded with a {@link Edge#distributed()
-     * distributed} and {@link
-     * Edge#partitioned(com.hazelcast.jet.function.DistributedFunction)
-     * partitioned} edge using default partitioner and partitioned by the
-     * same key as is used in the snapshot.
-     * <p>
-     * Correct keys will be restored to each processor and saving and
-     * restoring the snapshot will be done locally (except if the partitioning
-     * in the HZ map changed since the job started and except for the backup
-     * copies of the snapshot).
-     *
-     * <li><b>Broadcast state</b><br/>
-     * Entire snapshot will be restored to all processor instances. To
-     * limit the traffic, use {@link #getSnapshotPredicate()}. Use this
-     * option, if partitions of keys in the snapshot don't match the
-     * Hazelcast partitions of this processor.
-     *</ul>
      */
-    boolean isPartitionedSnapshot();
+    @Nonnull
+    default SnapshotRestorePolicy restorePolicy() {
+        return SnapshotRestorePolicy.PARTITIONED;
+    }
 
     /**
      * Store the state to the snapshot. Return {@code true} if done, or {@code
@@ -83,14 +65,6 @@ public interface Snapshottable {
      */
     void restoreSnapshotKey(Object key, Object value);
 
-    /**
-     * Returns the predicate to use when restoring snapshot. Only used if
-     * {@link #isPartitionedSnapshot()} returns {@code false}.
-     */
-    @Nullable
-    default Predicate getSnapshotPredicate() {
-        return null;
-    }
 
     /**
      * Called after all keys have been restored using {@link

@@ -23,7 +23,7 @@ import com.hazelcast.jet.impl.JobResourceKey;
 import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.operation.CompleteOperation;
-import com.hazelcast.jet.impl.operation.DoSnapshotOperation;
+import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.operation.ExecuteOperation;
 import com.hazelcast.jet.impl.operation.GetJobStatusOperation;
 import com.hazelcast.jet.impl.operation.InitOperation;
@@ -49,7 +49,7 @@ public final class JetImplDataSerializerHook implements DataSerializerHook {
     public static final int JOIN_JOB_OP = 8;
     public static final int GET_JOB_STATUS_OP = 9;
     public static final int JOB_RESOURCE_KEY = 10;
-    public static final int DO_SNAPSHOT_OP = 11;
+    public static final int SNAPSHOT_OP = 11;
     public static final int MASTER_SNAPSHOT_RECORD = 12;
     public static final int SESSION_WINDOW_P_WINDOWS = 13;
     public static final int MAX_BY_AGGREGATOR = 14;
@@ -94,8 +94,8 @@ public final class JetImplDataSerializerHook implements DataSerializerHook {
                     return new GetJobStatusOperation();
                 case JOB_RESOURCE_KEY:
                     return new JobResourceKey();
-                case DO_SNAPSHOT_OP:
-                    return new DoSnapshotOperation();
+                case SNAPSHOT_OP:
+                    return new SnapshotOperation();
                 case MASTER_SNAPSHOT_RECORD:
                     return new SnapshotRecord();
                 case SESSION_WINDOW_P_WINDOWS:

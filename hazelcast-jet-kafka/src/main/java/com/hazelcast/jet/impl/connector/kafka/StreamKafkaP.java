@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.connector.kafka;
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorSupplier;
+import com.hazelcast.jet.SnapshotRestorePolicy;
 import com.hazelcast.jet.SnapshotStorage;
 import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.Traverser;
@@ -102,9 +103,10 @@ public final class StreamKafkaP extends AbstractProcessor implements Snapshottab
         return false;
     }
 
-    @Override
-    public boolean isPartitionedSnapshot() {
-        return false;
+
+    @Nonnull @Override
+    public SnapshotRestorePolicy restorePolicy() {
+        return SnapshotRestorePolicy.BROADCAST;
     }
 
     @Override

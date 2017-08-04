@@ -175,11 +175,6 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor implements Sna
         }
     }
 
-    @Override
-    public boolean isPartitionedSnapshot() {
-        return true;
-    }
-
     private void addEvent(Windows<A> w, K key, long timestamp, T event) {
         accumulateF.accept(resolveAcc(w, key, timestamp), event);
     }

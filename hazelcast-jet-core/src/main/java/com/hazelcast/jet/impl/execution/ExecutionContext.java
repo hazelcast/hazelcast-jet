@@ -84,7 +84,7 @@ public class ExecutionContext {
         processors = plan.getProcessors();
         snapshotState = new SnapshotState();
         plan.initialize(nodeEngine, jobId, executionId, snapshotState);
-        snapshotState.initStoreSnapshotTaskletsCount(plan.countStoreSnapshotTasklets());
+        snapshotState.initStoreSnapshotTaskletsCount(plan.snapshottableVertices().size());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
         senderMap = unmodifiableMap(plan.getSenderMap());
         tasklets = plan.getTasklets();

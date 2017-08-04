@@ -65,17 +65,17 @@ public class StoreSnapshotTasklet implements Tasklet {
     private long completedSnapshotId = -1;
     private final AtomicInteger ourPendingAsyncOps = new AtomicInteger();
 
-    private final String vertexId;
+    private final String vertexName;
     private volatile boolean inputExhausted;
     private final AtomicReference<Throwable> firstFailure = new AtomicReference<>();
     private ExecutionCallback<Object> executionCallback;
 
     public StoreSnapshotTasklet(SnapshotState snapshotState, long jobId, InboundEdgeStream inboundEdgeStream,
-                                NodeEngine nodeEngine, String vertexId) {
+                                NodeEngine nodeEngine, String vertexName) {
         this.snapshotState = snapshotState;
         this.jobId = jobId;
         this.inboundEdgeStream = inboundEdgeStream;
-        this.vertexId = vertexId;
+        this.vertexName = vertexName;
         this.jetService = nodeEngine.getService(JetService.SERVICE_NAME);
 
         partitionService = nodeEngine.getPartitionService();
@@ -222,15 +222,15 @@ public class StoreSnapshotTasklet implements Tasklet {
     }
 
     private String mapName() {
-        return JET_SNAPSHOT_PREFIX + jobId + '.' + currentSnapshotId + '.' + vertexId;
+        return JET_SNAPSHOT_PREFIX + jobId + '.' + currentSnapshotId + '.' + vertexName;
     }
 
-    public String getVertexId() {
-        return vertexId;
+    public String vertexName() {
+        return vertexName;
     }
 
     @Override
     public String toString() {
-        return StoreSnapshotTasklet.class.getSimpleName() + ", vertex:" + vertexId;
+        return StoreSnapshotTasklet.class.getSimpleName() + ", vertex:" + vertexName;
     }
 }

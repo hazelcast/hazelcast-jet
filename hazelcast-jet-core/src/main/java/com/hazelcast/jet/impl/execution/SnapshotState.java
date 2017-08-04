@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.jet.impl.operation.SnapshotOperation;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -27,7 +29,7 @@ public class SnapshotState {
      * ID.
      */
     // is volatile because it will be read without synchronizing
-    private volatile long currentSnapshotId;
+    private volatile long currentSnapshotId = -1;
 
     /**
      * Current number of {@link StoreSnapshotTasklet}s in the job. It's
@@ -58,7 +60,7 @@ public class SnapshotState {
 
     /**
      * This method is called when the member received {@link
-     * com.hazelcast.jet.impl.operation.DoSnapshotOperation}.
+     * SnapshotOperation}.
      */
     public synchronized CompletableFuture<Void> startNewSnapshot(long snapshotId) {
         assert remainingProcessors.get() == 0
