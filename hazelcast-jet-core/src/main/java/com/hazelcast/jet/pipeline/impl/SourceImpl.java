@@ -16,21 +16,35 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
+import com.hazelcast.jet.ProcessorMetaSupplier;
+import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.jet.pipeline.Source;
 
 public class SourceImpl<E> implements Source<E> {
+
+    private final ProcessorMetaSupplier metaSupplier;
     private final String name;
 
-    public SourceImpl(String name) {
+    public SourceImpl(ProcessorMetaSupplier metaSupplier, String name) {
+        this.metaSupplier = metaSupplier;
         this.name = name;
     }
 
+    public SourceImpl(ProcessorSupplier supplier, String name) {
+        this(ProcessorMetaSupplier.of(supplier), name);
+    }
+
+    public ProcessorMetaSupplier metaSupplier() {
+        return metaSupplier;
+    }
+
+    @Override
     public String name() {
         return name;
     }
 
     @Override
     public String toString() {
-        return "DrawFrom IMap " + name;
+        return name;
     }
 }

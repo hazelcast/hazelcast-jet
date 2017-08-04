@@ -20,9 +20,9 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Edge;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.impl.processor.CoGroupP;
 import com.hazelcast.jet.pipeline.Stage;
 import com.hazelcast.jet.pipeline.Transform;
-import com.hazelcast.jet.pipeline.impl.processor.CoGroupP;
 import com.hazelcast.jet.pipeline.impl.processor.HashJoinP;
 import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
 import com.hazelcast.jet.pipeline.impl.transform.FlatMapTransform;
@@ -31,7 +31,6 @@ import com.hazelcast.jet.pipeline.impl.transform.JoinTransform;
 import com.hazelcast.jet.pipeline.impl.transform.MapTransform;
 import com.hazelcast.jet.processor.Processors;
 import com.hazelcast.jet.processor.SinkProcessors;
-import com.hazelcast.jet.processor.SourceProcessors;
 
 import java.util.HashMap;
 import java.util.List;
@@ -64,7 +63,7 @@ class Planner {
             Transform transform = stage.transform;
             if (transform instanceof SourceImpl) {
                 SourceImpl source = (SourceImpl) transform;
-                addVertex(stage, new Vertex("source." + source.name(), SourceProcessors.readMap(source.name()))
+                addVertex(stage, new Vertex(source.name(), source.metaSupplier())
                         .localParallelism(1));
             } else if (transform instanceof MapTransform) {
                 MapTransform mapTransform = (MapTransform) transform;
@@ -87,9 +86,9 @@ class Planner {
                 dag.edge(between(v1, pv2.v).distributed().partitioned(groupBy.keyF()));
             } else if (transform instanceof CoGroupTransform) {
                 CoGroupTransform<Object, Object, Object> coGroup = (CoGroupTransform) transform;
-                List<DistributedFunction<?, ?>> groupKeyFns = coGroup.groupKeyFns();
+                List<DistributedFunction<?, ?>> groupKeyFns = coGroup.groupKeyFs();
                 PlannerVertex pv = addVertex(stage, new Vertex("co-group." + randomSuffix(),
-                        () -> new CoGroupP<>(groupKeyFns, coGroup.aggregateOperation(), coGroup.tags())));
+                        () -> new CoGroupP<>(groupKeyFns, coGroup.aggregateOperation())));
                 addEdges(stage, pv.v,  e -> e.distributed().partitioned(groupKeyFns.get(e.getDestOrdinal())));
             } else if (transform instanceof JoinTransform) {
                 JoinTransform hashJoin = (JoinTransform) transform;
@@ -102,7 +101,8 @@ class Planner {
                 });
             } else if (transform instanceof SinkImpl) {
                 SinkImpl sink = (SinkImpl) transform;
-                PlannerVertex pv = addVertex(stage, new Vertex("sink." + sink.name(), SinkProcessors.writeMap(sink.name()))
+                PlannerVertex pv = addVertex(stage, new Vertex("sink." + sink.name(),
+                        SinkProcessors.writeMap(sink.name()))
                         .localParallelism(1));
                 addEdges(stage, pv.v);
             } else {

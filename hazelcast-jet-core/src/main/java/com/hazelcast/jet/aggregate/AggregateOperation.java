@@ -94,7 +94,17 @@ public interface AggregateOperation<A, R> extends Serializable {
      * in a co-group operation the returned function will handle.
      */
     @Nonnull
-    <T> DistributedBiConsumer<? super A, ? super T> accumulateItemF(Tag<T> tag);
+    default <T> DistributedBiConsumer<? super A, ? super T> accumulateItemF(Tag<T> tag) {
+        return accumulateItemF(tag.index());
+    }
+
+    /**
+     * A primitive that updates the accumulator state to account for a new
+     * item. The argument identifies the index of the contributing stream
+     * in a co-group operation the returned function will handle.
+     */
+    @Nonnull
+    <T> DistributedBiConsumer<? super A, ? super T> accumulateItemF(int index);
 
     /**
      * A primitive that accepts two accumulators and updates the state of the

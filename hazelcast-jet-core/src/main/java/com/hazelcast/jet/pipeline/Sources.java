@@ -17,8 +17,10 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.pipeline.impl.SourceImpl;
+import com.hazelcast.jet.processor.SourceProcessors;
 
 import java.util.Map;
+import java.util.Map.Entry;
 
 public final class Sources {
 
@@ -26,14 +28,14 @@ public final class Sources {
     }
 
     public static <K, V> Source<Map.Entry<K, V>> readMap(String mapName) {
-        return new SourceImpl<>(mapName);
+        return new SourceImpl<>(SourceProcessors.readMap(mapName), "readMap(" + mapName + ')');
     }
 
     public static Source<String> readFiles(String folder) {
-        return new SourceImpl<>("files");
+        return new SourceImpl<>(SourceProcessors.readFiles(folder), "readFiles(" + folder + ')');
     }
 
-    public static <T> Source<T> streamKafka() {
-        return new SourceImpl<>("Kafka");
+    public static Source<Entry<String, Long>> streamKafka() {
+        return new SourceImpl<>(SourceProcessors.readFiles("."), "fake-stream-kafka");
     }
 }

@@ -20,7 +20,6 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.pipeline.bag.Tag;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -58,12 +57,12 @@ public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R> {
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    public <T> DistributedBiConsumer<? super A, ? super T> accumulateItemF(Tag<T> tag) {
-        DistributedBiConsumer<? super A, T> acc = (DistributedBiConsumer<? super A, T>) accumulateFs[tag.index()];
-        if (acc == null) {
-            throw new IllegalArgumentException("The provided tag is not registered with this AggregateOperation.");
+    public <T> DistributedBiConsumer<? super A, ? super T> accumulateItemF(int index) {
+        if (index >= accumulateFs.length) {
+            throw new IllegalArgumentException("This AggregateOperation has " + accumulateFs.length
+                    + " accumulating functions, but was asked for function at index " + index);
         }
-        return acc;
+        return (DistributedBiConsumer<? super A, T>) accumulateFs[index];
     }
 
     @Nonnull

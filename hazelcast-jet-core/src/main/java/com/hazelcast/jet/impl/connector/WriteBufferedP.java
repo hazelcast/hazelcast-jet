@@ -24,7 +24,6 @@ import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedIntFunction;
-import com.hazelcast.jet.processor.SinkProcessors;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
@@ -58,7 +57,7 @@ public final class WriteBufferedP<B, T> implements Processor {
 
     /**
      * Use {@link
-     * SinkProcessors#writeBuffered(DistributedIntFunction,
+     * com.hazelcast.jet.processor.SinkProcessors#writeBuffered(DistributedIntFunction,
      * DistributedBiConsumer, DistributedConsumer, DistributedConsumer)
      * Sinks.writeBuffered()} instead of this one.
      */

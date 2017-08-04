@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.pipeline.samples;
 
+import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.aggregate.AggregateOperations;
@@ -23,18 +24,22 @@ import com.hazelcast.jet.pipeline.ComputeStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.stream.IStreamMap;
 
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
+import static com.hazelcast.jet.pipeline.samples.PipelineJoinAndCoGroup.assertEquals;
+import static com.hazelcast.jet.pipeline.samples.PipelineJoinAndCoGroup.printImap;
 
 public class PipelineWordCount {
 
     public static void main(String[] args) throws Exception {
 
         JetInstance jet = Jet.newJetInstance();
+        Jet.newJetInstance();
         try {
             final Pattern delimiter = Pattern.compile("\\W+");
 
@@ -54,6 +59,11 @@ public class PipelineWordCount {
                     .drainTo(Sinks.writeMap("totals"));
 
             p.execute(jet).get();
+
+            IMap<String, Long> counts = jet.getMap("counts");
+            printImap(jet.getMap("totals"));
+            assertEquals(2 * 14417, counts.get("the"));
+            System.err.println("Count of 'the' is valid");
         } finally {
             Jet.shutdownAll();
         }

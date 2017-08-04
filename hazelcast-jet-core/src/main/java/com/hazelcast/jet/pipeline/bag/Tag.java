@@ -21,7 +21,7 @@ import java.io.Serializable;
 /**
  * Javadoc pending.
  */
-public class Tag<E> implements Serializable, Comparable<Tag<?>> {
+public class Tag<T> implements Serializable, Comparable<Tag<?>> {
     public static final Tag TAG_0 = new Tag(0);
     public static final Tag TAG_1 = new Tag(1);
     public static final Tag TAG_2 = new Tag(2);

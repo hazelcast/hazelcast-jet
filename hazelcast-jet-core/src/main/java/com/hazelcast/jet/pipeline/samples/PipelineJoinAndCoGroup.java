@@ -236,19 +236,19 @@ public class PipelineJoinAndCoGroup {
         p.execute(jet).get();
     }
 
-    private static void assertEquals(int expected, int actual) {
+    static void assertEquals(long expected, long actual) {
         if (expected != actual) {
             throw new AssertionError("Expected != actual: " + expected + " != " + actual);
         }
     }
 
-    private static <T> void assertEqual(Set<T> expected, Collection<T> actual) {
+    static <T> void assertEqual(Set<T> expected, Collection<T> actual) {
         if (actual.size() != expected.size() || !expected.containsAll(actual)) {
             throw new AssertionError("Mismatch: expected " + expected + "; actual " + actual);
         }
     }
 
-    private static void assertSingletonColl(Collection<?> coll) {
+    static void assertSingletonColl(Collection<?> coll) {
         if (coll == null) {
             throw new AssertionError("Null collection");
         }
@@ -257,7 +257,7 @@ public class PipelineJoinAndCoGroup {
         }
     }
 
-    private static <K, V> void printImap(IMap<K, V> imap) {
+    static <K, V> void printImap(IMap<K, V> imap) {
         StringBuilder sb = new StringBuilder();
         System.err.println(imap.getName() + ':');
         imap.forEach((k, v) -> sb.append(k).append("->").append(v).append('\n'));

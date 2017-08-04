@@ -30,9 +30,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.pipeline.bag.Tag.tag0;
-import static com.hazelcast.jet.pipeline.bag.Tag.tag1;
-import static com.hazelcast.jet.pipeline.bag.Tag.tag2;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -83,8 +80,7 @@ public interface ComputeStage<E> extends Stage {
             ComputeStage<E1> s1, DistributedFunction<? super E1, ? extends K> key1F,
             AggregateOperation2<E, E1, A, R> aggrOp
     ) {
-        return attach(new CoGroupTransform<>(asList(thisKeyF, key1F), aggrOp, asList(tag0(), tag1())),
-                singletonList(s1));
+        return attach(new CoGroupTransform<>(asList(thisKeyF, key1F), aggrOp), singletonList(s1));
     }
 
     @SuppressWarnings("unchecked")
@@ -94,8 +90,7 @@ public interface ComputeStage<E> extends Stage {
             ComputeStage<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
             AggregateOperation3<E, E1, E2, A, R> aggrOp
     ) {
-        return attach(new CoGroupTransform<>(asList(thisKeyF, key1F, key2F), aggrOp, asList(tag0(), tag1(), tag2())),
-                asList(s1, s2));
+        return attach(new CoGroupTransform<>(asList(thisKeyF, key1F, key2F), aggrOp), asList(s1, s2));
     }
 
     default <K> CoGroupBuilder<K, E> coGroupBuilder(DistributedFunction<? super E, K> thisKeyF) {

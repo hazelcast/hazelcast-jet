@@ -33,7 +33,7 @@ import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.impl.processor.AggregateP;
-import com.hazelcast.jet.impl.processor.GroupByKeyP;
+import com.hazelcast.jet.impl.processor.CoGroupP;
 import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
@@ -214,7 +214,7 @@ public final class Processors {
             @Nonnull DistributedFunction<? super T, K> getKeyF,
             @Nonnull AggregateOperation1<? super T, A, R> aggregateOperation
     ) {
-        return () -> new GroupByKeyP<>(getKeyF, aggregateOperation);
+        return () -> new CoGroupP<>(getKeyF, aggregateOperation);
     }
 
     /**
@@ -229,18 +229,17 @@ public final class Processors {
      * are batch jobs.
      *
      * @param getKeyF computes the key from the entry
-     * @param aggregateOperation the aggregate operation to perform
+     * @param aggrOp the aggregate operation to perform
      * @param <T> type of received item
      * @param <K> type of key
-     * @param <A> type of accumulator returned from {@code aggregateOperation.
-     *            createAccumulatorF()}
+     * @param <A> type of accumulator returned from {@code aggrOp.createAccumulatorF()}
      */
     @Nonnull
     public static <T, K, A> DistributedSupplier<Processor> accumulateByKey(
             @Nonnull DistributedFunction<? super T, K> getKeyF,
-            @Nonnull AggregateOperation1<? super T, A, ?> aggregateOperation
+            @Nonnull AggregateOperation1<? super T, A, ?> aggrOp
     ) {
-        return () -> new GroupByKeyP<>(getKeyF, aggregateOperation.withFinish(identity()));
+        return () -> new CoGroupP<>(getKeyF, aggrOp.withFinish(identity()));
     }
 
     /**
@@ -265,7 +264,7 @@ public final class Processors {
     public static <T, A, R> DistributedSupplier<Processor> combineByKey(
             @Nonnull AggregateOperation1<T, A, R> aggregateOperation
     ) {
-        return () -> new GroupByKeyP<>(Entry::getKey,
+        return () -> new CoGroupP<>(Entry::getKey,
                 withCombiningAccumulate(aggregateOperation, Entry<Object, A>::getValue));
     }
 
@@ -278,18 +277,18 @@ public final class Processors {
      * Since the input to this processor must be bounded, its primary use case
      * is batch jobs.
      *
-     * @param aggregateOperation the aggregate operation to perform
+     * @param aggrOp the aggregate operation to perform
      * @param <T> type of received item
      * @param <A> type of accumulator returned from {@code
-     *            aggregateOperation.createAccumulatorF()}
-     * @param <R> type of the finished result returned from {@code aggregateOperation.
+     *            aggrOp.createAccumulatorF()}
+     * @param <R> type of the finished result returned from {@code aggrOp.
      *            finishAccumulationF()}
      */
     @Nonnull
     public static <T, A, R> DistributedSupplier<Processor> aggregate(
-            @Nonnull AggregateOperation1<T, A, R> aggregateOperation
+            @Nonnull AggregateOperation1<T, A, R> aggrOp
     ) {
-        return () -> new AggregateP<>(aggregateOperation);
+        return () -> new AggregateP<>(aggrOp);
     }
 
     /**
@@ -301,18 +300,18 @@ public final class Processors {
      * Since the input to this processor must be bounded, its primary use case
      * are batch jobs.
      *
-     * @param aggregateOperation the aggregate operation to perform
+     * @param aggrOp the aggregate operation to perform
      * @param <T> type of received item
      * @param <A> type of accumulator returned from {@code
-     *            aggregateOperation.createAccumulatorF()}
-     * @param <R> type of the finished result returned from {@code aggregateOperation.
+     *            aggrOp.createAccumulatorF()}
+     * @param <R> type of the finished result returned from {@code aggrOp.
      *            finishAccumulationF()}
      */
     @Nonnull
     public static <T, A, R> DistributedSupplier<Processor> accumulate(
-            @Nonnull AggregateOperation1<T, A, R> aggregateOperation
+            @Nonnull AggregateOperation1<T, A, R> aggrOp
     ) {
-        return () -> new AggregateP<>(aggregateOperation.withFinish(identity()));
+        return () -> new AggregateP<>(aggrOp.withFinish(identity()));
     }
 
     /**
@@ -324,18 +323,18 @@ public final class Processors {
      * Since the input to this processor must be bounded, its primary use case
      * are batch jobs.
      *
-     * @param aggregateOperation the aggregate operation to perform
+     * @param aggrOp the aggregate operation to perform
      * @param <T> type of received item
      * @param <A> type of accumulator returned from {@code
-     *            aggregateOperation.createAccumulatorF()}
-     * @param <R> type of the finished result returned from {@code aggregateOperation.
+     *            aggrOp.createAccumulatorF()}
+     * @param <R> type of the finished result returned from {@code aggrOp.
      *            finishAccumulationF()}
      */
     @Nonnull
     public static <T, A, R> DistributedSupplier<Processor> combine(
-            @Nonnull AggregateOperation1<T, A, R> aggregateOperation
+            @Nonnull AggregateOperation1<T, A, R> aggrOp
     ) {
-        return () -> new AggregateP<>(withCombiningAccumulate(aggregateOperation, identity()));
+        return () -> new AggregateP<>(withCombiningAccumulate(aggrOp, identity()));
     }
 
     /**
@@ -363,15 +362,9 @@ public final class Processors {
             @Nonnull DistributedToLongFunction<? super T> getTimestampF,
             @Nonnull TimestampKind timestampKind,
             @Nonnull WindowDefinition windowDef,
-            @Nonnull AggregateOperation1<? super T, A, R> aggregateOperation
+            @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        return Processors.<T, K, A, R>aggregateByKeyAndWindow(
-                getKeyF,
-                getTimestampF,
-                timestampKind,
-                windowDef,
-                aggregateOperation
-        );
+        return Processors.<T, K, A, R>aggregateByKeyAndWindow(getKeyF, getTimestampF, timestampKind, windowDef, aggrOp);
     }
 
     /**
@@ -397,7 +390,7 @@ public final class Processors {
      *
      * @param <T> input item type
      * @param <K> type of key returned from {@code getKeyF}
-     * @param <A> type of accumulator returned from {@code aggregateOperation.
+     * @param <A> type of accumulator returned from {@code aggrOp.
      *            createAccumulatorF()}
      */
     @Nonnull
@@ -406,15 +399,11 @@ public final class Processors {
             @Nonnull DistributedToLongFunction<? super T> getTimestampF,
             @Nonnull TimestampKind timestampKind,
             @Nonnull WindowDefinition windowDef,
-            @Nonnull AggregateOperation1<? super T, A, ?> aggregateOperation
+            @Nonnull AggregateOperation1<? super T, A, ?> aggrOp
     ) {
         WindowDefinition tumblingByFrame = windowDef.toTumblingByFrame();
-        return Processors.<T, K, A, A>aggregateByKeyAndWindow(
-                getKeyF,
-                getTimestampF,
-                timestampKind,
-                tumblingByFrame,
-                aggregateOperation.withFinish(identity())
+        return Processors.<T, K, A, A>aggregateByKeyAndWindow(getKeyF, getTimestampF, timestampKind, tumblingByFrame,
+                aggrOp.withFinish(identity())
         );
     }
 
@@ -440,20 +429,17 @@ public final class Processors {
      * TimestampedEntry&lt;K, A>} so there is one item per key per window position.
      *
      * @param <A> type of the accumulator
-     * @param <R> type of the finished result returned from {@code aggregateOperation.
+     * @param <R> type of the finished result returned from {@code aggrOp.
      *            finishAccumulationF()}
      */
     @Nonnull
     public static <K, A, R> DistributedSupplier<Processor> combineToSlidingWindow(
             @Nonnull WindowDefinition windowDef,
-            @Nonnull AggregateOperation1<?, A, R> aggregateOperation
+            @Nonnull AggregateOperation1<?, A, R> aggrOp
     ) {
         return aggregateByKeyAndWindow(
-                TimestampedEntry<K, A>::getKey,
-                TimestampedEntry::getTimestamp,
-                TimestampKind.FRAME,
-                windowDef,
-                withCombiningAccumulate(aggregateOperation, TimestampedEntry<K, A>::getValue)
+                TimestampedEntry::getKey, TimestampedEntry::getTimestamp, TimestampKind.FRAME,
+                windowDef, withCombiningAccumulate(aggrOp, TimestampedEntry<K, A>::getValue)
         );
     }
 
@@ -467,7 +453,7 @@ public final class Processors {
      * @param timestampKind the kind of timestamp extracted by {@code getTimestampF}: either the
      *                      event timestamp or the frame timestamp
      * @param windowDef definition of the window to compute
-     * @param aggregateOperation aggregate operation to perform on each group in a window
+     * @param aggrOp aggregate operation to perform on each group in a window
      * @param <T> type of stream item
      * @param <K> type of grouping key
      * @param <A> type of the aggregate operation's accumulator
@@ -479,7 +465,7 @@ public final class Processors {
             @Nonnull DistributedToLongFunction<? super T> getTimestampF,
             @Nonnull TimestampKind timestampKind,
             @Nonnull WindowDefinition windowDef,
-            @Nonnull AggregateOperation1<? super T, A, R> aggregateOperation
+            @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
         return () -> new SlidingWindowP<T, A, R>(
                 getKeyF,
@@ -487,7 +473,7 @@ public final class Processors {
                         ? item -> windowDef.higherFrameTs(getTimestampF.applyAsLong(item))
                         : getTimestampF,
                 windowDef,
-                aggregateOperation);
+                aggrOp);
     }
 
     /**
@@ -507,7 +493,7 @@ public final class Processors {
      * @param sessionTimeout     maximum gap between consecutive events in the same session window
      * @param getTimestampF      function to extract the timestamp from the item
      * @param getKeyF            function to extract the grouping key from the item
-     * @param aggregateOperation contains aggregation logic
+     * @param aggrOp contains aggregation logic
      *
      * @param <T> type of the stream event
      * @param <K> type of the item's grouping key
@@ -519,9 +505,9 @@ public final class Processors {
             long sessionTimeout,
             @Nonnull DistributedToLongFunction<? super T> getTimestampF,
             @Nonnull DistributedFunction<? super T, K> getKeyF,
-            @Nonnull AggregateOperation1<? super T, A, R> aggregateOperation
+            @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        return () -> new SessionWindowP<>(sessionTimeout, getTimestampF, getKeyF, aggregateOperation);
+        return () -> new SessionWindowP<>(sessionTimeout, getTimestampF, getKeyF, aggrOp);
     }
 
     /**

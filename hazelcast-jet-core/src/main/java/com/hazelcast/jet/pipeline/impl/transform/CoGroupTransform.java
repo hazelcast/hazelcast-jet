@@ -19,7 +19,6 @@ package com.hazelcast.jet.pipeline.impl.transform;
 import com.hazelcast.jet.pipeline.MultiTransform;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.pipeline.bag.Tag;
 
 import java.util.List;
 
@@ -27,34 +26,27 @@ import java.util.List;
  * Javadoc pending.
  */
 public class CoGroupTransform<K, A, R> implements MultiTransform {
-    private final List<DistributedFunction<?, ? extends K>> groupKeyFns;
-    private final AggregateOperation<A, R> aggregateOperation;
-    private final List<Tag> tags;
+    private final List<DistributedFunction<?, ? extends K>> groupKeyFs;
+    private final AggregateOperation<A, R> aggrOp;
 
     public CoGroupTransform(
-            List<DistributedFunction<?, ? extends K>> groupKeyFns,
-            AggregateOperation<A, R> aggregateOperation,
-            List<Tag> tags
+            List<DistributedFunction<?, ? extends K>> groupKeyFs,
+            AggregateOperation<A, R> aggrOp
     ) {
-        this.groupKeyFns = groupKeyFns;
-        this.aggregateOperation = aggregateOperation;
-        this.tags = tags;
+        this.groupKeyFs = groupKeyFs;
+        this.aggrOp = aggrOp;
     }
 
-    public List<DistributedFunction<?, ? extends K>> groupKeyFns() {
-        return groupKeyFns;
+    public List<DistributedFunction<?, ? extends K>> groupKeyFs() {
+        return groupKeyFs;
     }
 
     public AggregateOperation<A, R> aggregateOperation() {
-        return aggregateOperation;
-    }
-
-    public List<Tag> tags() {
-        return tags;
+        return aggrOp;
     }
 
     @Override
     public String toString() {
-        return tags().size() + "-way CoGroup";
+        return groupKeyFs.size() + "-way CoGroup";
     }
 }
