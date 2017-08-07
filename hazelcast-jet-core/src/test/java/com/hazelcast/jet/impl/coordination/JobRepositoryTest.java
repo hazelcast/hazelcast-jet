@@ -117,7 +117,7 @@ public class JobRepositoryTest extends JetTestSupport {
     }
 
     @Test
-    public void when_jobExpires_then_jobIsCleanedUp() {
+    public void when_jobRecordIsPresentForExpiredJob_then_jobIsNotCleanedUp() {
         long jobIb = uploadResourcesForNewJob();
 
         Data dag = createDAGData();
@@ -130,14 +130,14 @@ public class JobRepositoryTest extends JetTestSupport {
 
         jobRepository.cleanup(emptySet(), emptySet());
 
-        assertNull(jobRepository.getJob(jobIb));
-        assertTrue(jobRepository.getJobResources(jobIb).isEmpty());
-        assertFalse(jobIds.containsKey(executionId1));
-        assertFalse(jobIds.containsKey(executionId2));
+        assertNotNull(jobRepository.getJob(jobIb));
+        assertFalse(jobRepository.getJobResources(jobIb).isEmpty());
+        assertTrue(jobIds.containsKey(executionId1));
+        assertTrue(jobIds.containsKey(executionId2));
     }
 
     @Test
-    public void when_onlyJobResourcesExist_then_theyAreClearedAfterTheyExpire() {
+    public void when_onlyJobResourcesExist_then_jobResourcesClearedAfterExpiration() {
         long jobIb = uploadResourcesForNewJob();
 
         sleepUntilJobExpires();
@@ -148,20 +148,7 @@ public class JobRepositoryTest extends JetTestSupport {
     }
 
     @Test
-    public void when_onlyJobRecordExists_then_jobRecordCleanedUpAfterItExpires() {
-        long jobId = 1;
-        JobRecord jobRecord = new JobRecord(jobId, null, null, 1);
-        jobRepository.putNewJobRecord(jobRecord);
-
-        sleepUntilJobExpires();
-
-        jobRepository.cleanup(emptySet(), emptySet());
-
-        assertTrue(jobs.isEmpty());
-    }
-
-    @Test
-    public void when_jobResourceUploadFails_then_jobResourcesAreCleanedUp() {
+    public void when_jobResourceUploadFails_then_jobResourcesCleanedUp() {
         jobConfig.addResource("invalid path");
         try {
             jobRepository.uploadJobResources(jobConfig);

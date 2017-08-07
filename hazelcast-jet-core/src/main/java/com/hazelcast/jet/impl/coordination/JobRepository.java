@@ -39,6 +39,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -165,9 +166,12 @@ public class JobRepository {
         // Delete the job record
         jobs.remove(jobId);
         // Delete the execution ids, but keep the job id
-        jobIds.removeAll(new FilterExecutionIdByJobIdPredicate(jobId));
+        Set<Long> executionIds = jobIds.keySet(new FilterExecutionIdByJobIdPredicate(jobId));
+        executionIds.forEach(jobIds::remove);
+
         // Delete job resources
         cleanupJobResourcesMap(getJobResources(jobId));
+        System.out.println("JOB " + jobId + " JobResources Deleted");
     }
 
     private void cleanupJobResourcesMap(IMap<String, Object> jobResourcesMap) {
@@ -195,22 +199,18 @@ public class JobRepository {
         // clean up completed jobs
         completedJobIds.forEach(this::deleteJob);
 
-        // clean up expired jobs which are not still running
-        jobs.keySet()
-            .stream()
-            .filter(jobId -> !runningJobIds.contains(jobId))
-            .filter(jobId -> {
-                EntryView<Long, JobRecord> view = jobs.getEntryView(jobId);
-                return view != null && isJobExpired(view.getCreationTime());
-            })
-            .forEach(this::deleteJob);
+        Set<Long> validJobIds = new HashSet<>();
+        validJobIds.addAll(completedJobIds);
+        validJobIds.addAll(runningJobIds);
+        validJobIds.addAll(jobs.keySet());
 
         // Job ids are never cleaned up.
+        // We also don't clean up job records here because they might be started in parallel while cleanup is running
         // If a job id is not running or completed, it might be suitable for job resource clean up
         jobIds.entrySet(new FilterJobIdPredicate())
               .stream()
               .map(Entry::getKey)
-              .filter(jobId -> !(completedJobIds.contains(jobId) || runningJobIds.contains(jobId)))
+              .filter(jobId -> !validJobIds.contains(jobId))
               .forEach(jobId -> {
                   IMap<String, Object> resources = getJobResources(jobId);
                   if (resources.isEmpty()) {
@@ -224,7 +224,7 @@ public class JobRepository {
                   if (marker == null) {
                       resources.putIfAbsent(RESOURCE_MARKER, RESOURCE_MARKER);
                   } else if (isJobExpired(marker.getCreationTime())) {
-                      deleteJob(jobId);
+                      cleanupJobResourcesMap(resources);
                   }
               });
     }

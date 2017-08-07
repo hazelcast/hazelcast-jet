@@ -346,28 +346,35 @@ public class MasterContext {
 
         long elapsed = completionTime - jobStartTime;
 
-        if (failure == null || failure instanceof CancellationException) {
-            jobStatus.set(COMPLETED);
+        if (isSuccess(failure)) {
             logger.info("Execution of " + formatIds(jobId, executionId) + " completed in " + elapsed + " ms");
         } else {
-            jobStatus.set(FAILED);
             logger.warning("Execution of " + formatIds(jobId, executionId)
                     + " failed in " + elapsed + " ms", failure);
         }
 
-        coordinationService.completeJob(this, completionTime, failure)
-                           .whenComplete((r, e) -> {
-                               if (e != null) {
-                                   logger.warning("Completion of " + formatIds(jobId, executionId)
-                                           + " failed in " + elapsed + " ms", failure);
-                               }
+        try {
+            coordinationService.completeJob(this, completionTime, failure);
+        } catch (RuntimeException e) {
+            logger.warning("Completion of " + formatIds(jobId, executionId)
+                    + " failed in " + elapsed + " ms", failure);
+        } finally {
+            setFinalResult(failure);
+        }
+    }
 
-                               if (jobStatus() == COMPLETED) {
-                                   completionFuture.complete(true);
-                               } else {
-                                   completionFuture.completeExceptionally(failure);
-                               }
-                           });
+    void setFinalResult(Throwable failure) {
+        JobStatus status = isSuccess(failure) ? COMPLETED : FAILED;
+        jobStatus.set(status);
+        if (status == COMPLETED) {
+            completionFuture.complete(true);
+        } else {
+            completionFuture.completeExceptionally(failure);
+        }
+    }
+
+    private boolean isSuccess(Throwable failure) {
+        return (failure == null || failure instanceof CancellationException);
     }
 
     private void invoke(Function<ExecutionPlan, Operation> operationCtor,
