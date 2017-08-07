@@ -29,8 +29,6 @@ import java.io.IOException;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isJobRestartRequired;
 import static com.hazelcast.spi.ExceptionAction.THROW_EXCEPTION;
 
-// TODO [basri] ensure ordering between execute and cancel
-// If an ExecuteOp is cancelled before run() method calls, job coordination logic gets broken
 public abstract class AsyncExecutionOperation extends Operation implements IdentifiedDataSerializable {
 
     protected long jobId;
