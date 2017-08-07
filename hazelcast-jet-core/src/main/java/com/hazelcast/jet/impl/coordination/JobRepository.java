@@ -171,7 +171,6 @@ public class JobRepository {
 
         // Delete job resources
         cleanupJobResourcesMap(getJobResources(jobId));
-        System.out.println("JOB " + jobId + " JobResources Deleted");
     }
 
     private void cleanupJobResourcesMap(IMap<String, Object> jobResourcesMap) {
