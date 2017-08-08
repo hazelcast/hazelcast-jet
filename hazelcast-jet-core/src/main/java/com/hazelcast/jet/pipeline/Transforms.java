@@ -20,7 +20,9 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.pipeline.UnaryTransform;
+import com.hazelcast.jet.pipeline.impl.transform.FilterTransform;
 import com.hazelcast.jet.pipeline.impl.transform.FlatMapTransform;
 import com.hazelcast.jet.pipeline.impl.transform.GroupByTransform;
 import com.hazelcast.jet.pipeline.impl.transform.MapTransform;
@@ -42,6 +44,10 @@ public final class Transforms {
         return new FlatMapTransform<>(flatMapF);
     }
 
+    public static <E> UnaryTransform<E, E> filter(DistributedPredicate<? super E> filterF) {
+        return new FilterTransform<>(filterF);
+    }
+
     public static <E, K, R> UnaryTransform<E, Entry<K, R>> groupBy(
             DistributedFunction<? super E, ? extends K> keyF,
             AggregateOperation1<E, ?, R> aggregation
@@ -56,4 +62,6 @@ public final class Transforms {
     ) {
         return new SlidingWindowTransform<>(keyF, wDef, aggregation);
     }
+
+
 }

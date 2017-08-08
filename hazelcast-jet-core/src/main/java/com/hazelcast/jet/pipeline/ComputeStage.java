@@ -21,6 +21,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
 import com.hazelcast.jet.pipeline.impl.transform.JoinTransform;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
@@ -45,6 +46,9 @@ public interface ComputeStage<E> extends Stage {
         return attach(Transforms.map(mapF));
     }
 
+    default ComputeStage<E> filter(DistributedPredicate<E> filterF) {
+        return attach(Transforms.filter(filterF));
+    }
     default <R> ComputeStage<R> flatMap(DistributedFunction<? super E, Traverser<? extends R>> flatMapF) {
         return attach(Transforms.flatMap(flatMapF));
     }
