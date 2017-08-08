@@ -58,7 +58,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.LongSupplier;
 
 import static com.hazelcast.jet.JobStatus.COMPLETED;
 import static com.hazelcast.jet.JobStatus.FAILED;
@@ -94,7 +93,7 @@ public class MasterContext {
 
     private volatile ScheduledFuture<?> scheduledSnapshotFuture;
 
-    private volatile List<String> vertices;
+    private volatile List<String> snapshottableVertices;
 
     MasterContext(NodeEngineImpl nodeEngine, JobCoordinationService coordinationService, JobRecord jobRecord) {
         this.nodeEngine = nodeEngine;
@@ -116,11 +115,19 @@ public class MasterContext {
         return completionFuture;
     }
 
+    public boolean cancel() {
+        return completionFuture.cancel(true);
+    }
+
+    public boolean isCancelled() {
+        return completionFuture.isCancelled();
+    }
+
     public JobStatus jobStatus() {
         return jobStatus.get();
     }
 
-    void tryStartJob(LongSupplier idSupplier) {
+    void tryStartJob(Function<Long, Long> executionIdSupplier) {
         if (!setJobStatusToStarting()) {
             return;
         }
@@ -129,7 +136,7 @@ public class MasterContext {
             return;
         }
 
-        executionId = idSupplier.getAsLong();
+        executionId = executionIdSupplier.apply(jobId);
         MembersView membersView = getMembersView();
         try {
             executionPlanMap = createExecutionPlans(membersView);
@@ -164,7 +171,8 @@ public class MasterContext {
     private boolean setJobStatusToStarting() {
         JobStatus status = jobStatus();
         if (status == COMPLETED || status == FAILED) {
-            throw new IllegalStateException("Cannot init job " + idToString(jobId) + ": it already is " + status);
+            logger.severe("Cannot init job " + idToString(jobId) + ": it is already " + status);
+            return false;
         }
 
         if (completionFuture.isCancelled()) {
@@ -186,7 +194,8 @@ public class MasterContext {
 
         status = jobStatus();
         if (!(status == STARTING || status == RESTARTING)) {
-            throw new IllegalStateException("Cannot init job " + idToString(jobId) + ": status is " + status);
+            logger.severe("Cannot init job " + idToString(jobId) + ": status is " + status);
+            return false;
         }
 
         return true;
@@ -230,6 +239,15 @@ public class MasterContext {
 
     private void onInitStepCompleted(Map<MemberInfo, Object> responses) {
         Throwable error = getInitResult(responses);
+
+        if (error == null) {
+            JobStatus status = jobStatus();
+
+            if (!(status == STARTING || status == RESTARTING)) {
+                error = new IllegalStateException("Cannot execute " + formatIds(jobId, executionId)
+                        + ": status is " + status);
+            }
+        }
 
         if (error == null) {
             invokeExecute();
@@ -276,18 +294,6 @@ public class MasterContext {
     }
 
     private void invokeExecute() {
-        JobStatus status = jobStatus();
-
-        if (!(status == STARTING || status == RESTARTING)) {
-            throw new IllegalStateException("Cannot execute " + formatIds(jobId, executionId)
-                    + ": status is " + status);
-        }
-
-        vertices = executionPlanMap.entrySet().stream().filter(e -> e.getKey().getAddress().equals
-                (nodeEngine.getThisAddress()))
-                                   .map(e -> e.getValue().snapshottableVertices()).findFirst().orElseThrow(
-                        () -> new IllegalStateException("Could not find master node within execution plan map"));
-
         jobStatus.set(RUNNING);
         logger.fine("Executing " + formatIds(jobId, executionId));
         Function<ExecutionPlan, Operation> operationCtor = plan -> new ExecuteOperation(jobId, executionId);
@@ -301,6 +307,11 @@ public class MasterContext {
             return;
         }
 
+        snapshottableVertices = executionPlanMap.entrySet().stream().filter(e -> e.getKey().getAddress().equals
+                (nodeEngine.getThisAddress()))
+                                                .map(e -> e.getValue().snapshottableVertices()).findFirst().orElseThrow(
+                        () -> new IllegalStateException("Could not find master node within execution plan map"));
+
         String name = "jet.snapshot." + jobId + "." + executionId;
         scheduledSnapshotFuture = nodeEngine.getExecutionService().scheduleWithRepetition(
                 name, this::takeSnapshot, interval, interval, TimeUnit.MILLISECONDS);
@@ -308,7 +319,7 @@ public class MasterContext {
 
     private void takeSnapshot() {
         IMap<Object, Object> snapshotsMap = getSnapshotsMap();
-        SnapshotRecord record = new SnapshotRecord(jobId, nextSnapshotId++, vertices);
+        SnapshotRecord record = new SnapshotRecord(jobId, nextSnapshotId++, snapshottableVertices);
         if (snapshotsMap.putIfAbsent(Arrays.asList(jobId,  record.snapshotId()), record) != null) {
             logger.severe("Snapshot with id " + record.snapshotId() + " already exists for job " + idToString(jobId));
             //TODO: should job be failed here?
@@ -382,18 +393,39 @@ public class MasterContext {
     private void invokeComplete(Throwable error) {
         JobStatus status = jobStatus();
 
-        if (status == NOT_STARTED || status == COMPLETED || status == FAILED) {
-            throw new IllegalStateException("Cannot complete " + formatIds(jobId, executionId)
-                    + ": status is " + status);
+        Throwable finalError;
+        if (status == STARTING || status == RESTARTING || status == RUNNING) {
+            logger.fine("Completing " + formatIds(jobId, executionId));
+            finalError = error;
+        } else {
+            if (error != null) {
+                logger.severe("Cannot properly complete failed " + formatIds(jobId, executionId)
+                        + ": status is " + status, error);
+            } else {
+                logger.severe("Cannot properly complete " + formatIds(jobId, executionId)
+                        + ": status is " + status);
+            }
+
+            finalError = new IllegalStateException("Job coordination failed.");
         }
 
-        logger.fine("Completing " + formatIds(jobId, executionId));
-
-        Function<ExecutionPlan, Operation> operationCtor = plan -> new CompleteOperation(executionId, error);
+        Function<ExecutionPlan, Operation> operationCtor = plan -> new CompleteOperation(executionId, finalError);
         invoke(operationCtor, responses -> onCompleteStepCompleted(error), null);
     }
 
     private void onCompleteStepCompleted(@Nullable Throwable failure) {
+        JobStatus status = jobStatus();
+        if (status == COMPLETED || status == FAILED) {
+            if (failure != null) {
+                logger.severe("Ignoring failure completion of " + idToString(jobId) + " because status is "
+                        + status, failure);
+            } else {
+                logger.severe("Ignoring completion of " + idToString(jobId) + " because status is " + status);
+            }
+
+            return;
+        }
+
         long completionTime = System.currentTimeMillis();
 
         if (failure instanceof TopologyChangedException) {
@@ -403,28 +435,35 @@ public class MasterContext {
 
         long elapsed = completionTime - jobStartTime;
 
-        if (failure == null || failure instanceof CancellationException) {
-            jobStatus.set(COMPLETED);
+        if (isSuccess(failure)) {
             logger.info("Execution of " + formatIds(jobId, executionId) + " completed in " + elapsed + " ms");
         } else {
-            jobStatus.set(FAILED);
             logger.warning("Execution of " + formatIds(jobId, executionId)
                     + " failed in " + elapsed + " ms", failure);
         }
 
-        coordinationService.completeJob(this, completionTime, failure)
-                           .whenComplete((r, e) -> {
-                               if (e != null) {
-                                   logger.warning("Completion of " + formatIds(jobId, executionId)
-                                           + " failed in " + elapsed + " ms", failure);
-                               }
+        try {
+            coordinationService.completeJob(this, completionTime, failure);
+        } catch (RuntimeException e) {
+            logger.warning("Completion of " + formatIds(jobId, executionId)
+                    + " failed in " + elapsed + " ms", failure);
+        } finally {
+            setFinalResult(failure);
+        }
+    }
 
-                               if (jobStatus() == COMPLETED) {
-                                   completionFuture.complete(true);
-                               } else {
-                                   completionFuture.completeExceptionally(failure);
-                               }
-                           });
+    void setFinalResult(Throwable failure) {
+        JobStatus status = isSuccess(failure) ? COMPLETED : FAILED;
+        jobStatus.set(status);
+        if (status == COMPLETED) {
+            completionFuture.complete(true);
+        } else {
+            completionFuture.completeExceptionally(failure);
+        }
+    }
+
+    private boolean isSuccess(Throwable failure) {
+        return (failure == null || failure instanceof CancellationException);
     }
 
     private void invoke(Function<ExecutionPlan, Operation> operationCtor,

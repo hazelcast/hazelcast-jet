@@ -31,21 +31,20 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
  */
 public class JobConfig implements Serializable {
 
-    private boolean splitBrainProtectionEnabled = false;
-    private final transient List<ResourceConfig> resourceConfigs = new ArrayList<>();
-
     private ProcessingGuarantee processingGuarantee = ProcessingGuarantee.EXACTLY_ONCE;
     private long snapshotInterval = -1;
+    private boolean splitBrainProtectionEnabled;
+    private final List<ResourceConfig> resourceConfigs = new ArrayList<>();
 
     /**
-     * TODO [basri] missing javadoc comment
+     * Returns true if split brain protection is enabled
      */
     public boolean isSplitBrainProtectionEnabled() {
         return splitBrainProtectionEnabled;
     }
 
     /**
-     * TODO [basri] missing javadoc comment
+     * Sets split brain protection configuration
      */
     public JobConfig setSplitBrainProtectionEnabled(boolean splitBrainProtectionEnabled) {
         this.splitBrainProtectionEnabled = splitBrainProtectionEnabled;

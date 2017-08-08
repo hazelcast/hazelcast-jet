@@ -19,9 +19,10 @@ package com.hazelcast.jet.impl.execution.init;
 import com.hazelcast.internal.serialization.DataSerializerHook;
 import com.hazelcast.internal.serialization.impl.FactoryIdHelper;
 import com.hazelcast.jet.impl.JobRecord;
-import com.hazelcast.jet.impl.JobResourceKey;
 import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
+import com.hazelcast.jet.impl.coordination.JobRepository.FilterExecutionIdByJobIdPredicate;
+import com.hazelcast.jet.impl.coordination.JobRepository.FilterJobIdPredicate;
 import com.hazelcast.jet.impl.operation.CompleteOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.operation.ExecuteOperation;
@@ -48,11 +49,12 @@ public final class JetImplDataSerializerHook implements DataSerializerHook {
     public static final int COMPLETE_OP = 7;
     public static final int JOIN_JOB_OP = 8;
     public static final int GET_JOB_STATUS_OP = 9;
-    public static final int JOB_RESOURCE_KEY = 10;
-    public static final int SNAPSHOT_OP = 11;
-    public static final int MASTER_SNAPSHOT_RECORD = 12;
-    public static final int SESSION_WINDOW_P_WINDOWS = 13;
-    public static final int MAX_BY_AGGREGATOR = 14;
+    public static final int SNAPSHOT_OP = 10;
+    public static final int MASTER_SNAPSHOT_RECORD = 11;
+    public static final int SESSION_WINDOW_P_WINDOWS = 12;
+    public static final int MAX_BY_AGGREGATOR = 13;
+    public static final int FILTER_EXECUTION_ID_BY_JOB_ID_PREDICATE = 14;
+    public static final int FILTER_JOB_ID = 15;
 
     public static final int FACTORY_ID = FactoryIdHelper.getFactoryId(JET_IMPL_DS_FACTORY, JET_IMPL_DS_FACTORY_ID);
 
@@ -92,8 +94,6 @@ public final class JetImplDataSerializerHook implements DataSerializerHook {
                     return new JoinJobOperation();
                 case GET_JOB_STATUS_OP:
                     return new GetJobStatusOperation();
-                case JOB_RESOURCE_KEY:
-                    return new JobResourceKey();
                 case SNAPSHOT_OP:
                     return new SnapshotOperation();
                 case MASTER_SNAPSHOT_RECORD:
@@ -102,6 +102,10 @@ public final class JetImplDataSerializerHook implements DataSerializerHook {
                     return new SessionWindowP.Windows<>();
                 case MAX_BY_AGGREGATOR:
                     return new MaxByAggregator();
+                case FILTER_EXECUTION_ID_BY_JOB_ID_PREDICATE:
+                    return new FilterExecutionIdByJobIdPredicate();
+                case FILTER_JOB_ID:
+                    return new FilterJobIdPredicate();
                 default:
                     throw new IllegalArgumentException("Unknown type id " + typeId);
             }

@@ -55,7 +55,7 @@ public class CompleteOperation extends Operation implements IdentifiedDataSerial
                 + " with " + error);
 
         Address masterAddress = getNodeEngine().getMasterAddress();
-        if (!masterAddress.equals(callerAddress)) {
+        if (!callerAddress.equals(masterAddress)) {
             throw new IllegalStateException("Caller " + callerAddress + " cannot complete execution of "
                     + idToString(executionId) + " because it is not master. Master is: " + masterAddress);
         }

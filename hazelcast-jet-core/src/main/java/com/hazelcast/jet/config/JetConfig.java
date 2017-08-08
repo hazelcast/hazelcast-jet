@@ -18,7 +18,7 @@ package com.hazelcast.jet.config;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.config.MapConfig;
-import com.hazelcast.map.merge.PutIfAbsentMapMergePolicy;
+import com.hazelcast.map.merge.IgnoreMergingEntryMapMergePolicy;
 
 import java.util.List;
 import java.util.Properties;
@@ -163,7 +163,7 @@ public class JetConfig {
     }
 
     private static void setInternalMapMergePolicies(Config config) {
-        String mergePolicy = PutIfAbsentMapMergePolicy.class.getName();
+        String mergePolicy = IgnoreMergingEntryMapMergePolicy.class.getName();
         internalJetMapNames().forEach(name -> config.getMapConfig(name).setMergePolicy(mergePolicy));
     }
 

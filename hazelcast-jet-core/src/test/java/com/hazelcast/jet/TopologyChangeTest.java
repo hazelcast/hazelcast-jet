@@ -20,7 +20,6 @@ import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.internal.cluster.impl.ClusterDataSerializerHook;
 import com.hazelcast.internal.partition.impl.PartitionDataSerializerHook;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JetService;
@@ -151,7 +150,7 @@ public class TopologyChangeTest extends JetTestSupport {
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(StuckProcessor::new, nodeCount)));
 
         // When
-        Job job = instances[0].newJob(dag, newJobConfig());
+        Job job = instances[0].newJob(dag);
         StuckProcessor.executionStarted.await();
         factory.newMember();
         StuckProcessor.proceedLatch.countDown();
@@ -172,7 +171,7 @@ public class TopologyChangeTest extends JetTestSupport {
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(StuckProcessor::new, nodeCount)));
 
         // When
-        Job job = instances[0].newJob(dag, newJobConfig());
+        Job job = instances[0].newJob(dag);
         StuckProcessor.executionStarted.await();
         JetInstance instance = factory.newMember();
         instance.shutdown();
@@ -194,7 +193,7 @@ public class TopologyChangeTest extends JetTestSupport {
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(StuckProcessor::new, nodeCount)));
 
         // When
-        Job job = instances[0].newJob(dag, newJobConfig());
+        Job job = instances[0].newJob(dag);
         StuckProcessor.executionStarted.await();
 
         instances[2].getHazelcastInstance().getLifecycleService().terminate();
@@ -227,7 +226,7 @@ public class TopologyChangeTest extends JetTestSupport {
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(StuckProcessor::new, nodeCount)));
 
         // When
-        Job job = client.newJob(dag, newJobConfig());
+        Job job = client.newJob(dag);
         StuckProcessor.executionStarted.await();
 
         instances[2].getHazelcastInstance().getLifecycleService().terminate();
@@ -244,7 +243,7 @@ public class TopologyChangeTest extends JetTestSupport {
         // When
         Long jobId = null;
         try {
-            Job job = instances[0].newJob(dag, newJobConfig());
+            Job job = instances[0].newJob(dag);
             Future<Void> future = job.getFuture();
             jobId = job.getJobId();
             StuckProcessor.executionStarted.await();
@@ -294,7 +293,7 @@ public class TopologyChangeTest extends JetTestSupport {
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(StuckProcessor::new, nodeCount)));
 
         // When
-        Job job = instances[1].newJob(dag, newJobConfig());
+        Job job = instances[1].newJob(dag);
         StuckProcessor.executionStarted.await();
 
         instances[0].getHazelcastInstance().getLifecycleService().terminate();
@@ -311,7 +310,7 @@ public class TopologyChangeTest extends JetTestSupport {
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(StuckProcessor::new, nodeCount)));
 
         // When
-        Job job = client.newJob(dag, newJobConfig());
+        Job job = client.newJob(dag);
         StuckProcessor.executionStarted.await();
 
         instances[0].getHazelcastInstance().getLifecycleService().terminate();
@@ -331,7 +330,7 @@ public class TopologyChangeTest extends JetTestSupport {
 
         // When
         factory.newMember(config);
-        Job job = instances[0].newJob(dag, newJobConfig());
+        Job job = instances[0].newJob(dag);
 
 
         // Then
@@ -360,7 +359,7 @@ public class TopologyChangeTest extends JetTestSupport {
 
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(TestProcessors.Identity::new, nodeCount + 1)));
 
-        Job job = instances[0].newJob(dag, newJobConfig());
+        Job job = instances[0].newJob(dag);
         JetService jetService = getJetService(instances[0]);
 
         assertTrueEventually(new AssertTask() {
@@ -410,7 +409,7 @@ public class TopologyChangeTest extends JetTestSupport {
         // When a job participant starts its shutdown after the job is submitted
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(TestProcessors.Identity::new, nodeCount - 1)));
 
-        Job job = instances[0].newJob(dag, newJobConfig());
+        Job job = instances[0].newJob(dag);
 
         JetService jetService = getJetService(instances[0]);
 
@@ -455,7 +454,7 @@ public class TopologyChangeTest extends JetTestSupport {
 
         DAG dag = new DAG().vertex(new Vertex("test", new MockSupplier(TestProcessors.Identity::new, nodeCount - 1)));
 
-        Job job = instances[0].newJob(dag, newJobConfig());
+        Job job = instances[0].newJob(dag);
 
         assertTrueEventually(new AssertTask() {
             @Override
@@ -470,10 +469,6 @@ public class TopologyChangeTest extends JetTestSupport {
 
         // Then, the job restarts and successfully completes
         job.join();
-    }
-
-    private JobConfig newJobConfig() {
-        return new JobConfig().setSplitBrainProtectionEnabled(false);
     }
 
     static class MockSupplier implements ProcessorSupplier {

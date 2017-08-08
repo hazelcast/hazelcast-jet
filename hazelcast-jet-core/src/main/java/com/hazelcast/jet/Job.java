@@ -28,12 +28,37 @@ import java.util.concurrent.Future;
 public interface Job {
 
     /**
+     * Returns the ID of this job.
+     *
+     * @throws IllegalStateException If the job was not started yet, and thus
+     *                               has no job id.
+     */
+    long getJobId();
+
+    /**
+     * Returns the DAG associated with this job
+     */
+    @Nonnull
+    DAG getDAG();
+
+    /**
+     * Returns the config associated with this job
+     */
+    @Nonnull
+    JobConfig getConfig();
+
+    /**
      * Gets the future associated with the job, used to control the job.
      *
      * @throws IllegalStateException If the job was not started yet.
      */
     @Nonnull
     Future<Void> getFuture();
+    /**
+     * Returns the status of this job.
+     */
+    @Nonnull
+    JobStatus getJobStatus();
 
     /**
      * Attempts to cancel execution of this job.
@@ -45,7 +70,7 @@ public interface Job {
     }
 
     /**
-     * Waits for the job to complete and throws exception if job completed with errors.
+     * Waits for the job to complete and throws exception if job is completed with an error.
      *
      * Shorthand for <code>job.getFuture().get()</code>
      */
@@ -64,30 +89,5 @@ public interface Job {
     default Future<Void> execute() {
         return getFuture();
     }
-    /**
-     * Returns the status of this job.
-     */
-    @Nonnull
-    JobStatus getJobStatus();
-
-    /**
-     * Returns the ID of this job.
-     *
-     * @throws IllegalStateException If the job was not started yet, and thus
-     *                               has no job id.
-     */
-    long getJobId();
-
-    /**
-     * Returns the config associated with this job
-     */
-    @Nonnull
-    JobConfig getConfig();
-
-    /**
-     * Returns the DAG associated with this job
-     */
-    @Nonnull
-    DAG getDAG();
 
 }

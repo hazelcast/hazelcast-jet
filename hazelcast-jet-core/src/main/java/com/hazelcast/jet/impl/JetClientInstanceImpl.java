@@ -91,21 +91,20 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         }
 
         @Override
-        protected ICompletableFuture<Void> sendJoinRequest() {
-            Address masterAddress = getMasterAddress();
+        protected Address getMasterAddress() {
+            Set<Member> members = client.getCluster().getMembers();
+            Member master = members.iterator().next();
+            return master.getAddress();
+        }
+
+        @Override
+        protected ICompletableFuture<Void> sendJoinRequest(Address masterAddress) {
             ClientInvocation invocation = new ClientInvocation(client, createJoinJobRequest(), masterAddress);
             return new ExecutionFuture(invocation.invoke(), getJobId(), masterAddress);
         }
 
-        private ClientMessage createJoinJobRequest() {
-            SerializationService serializationService = client.getSerializationService();
-            Data dag = serializationService.toData(getDAG());
-            Data jobConfig = serializationService.toData(getConfig());
-            return JetJoinJobCodec.encodeRequest(getJobId(), dag, jobConfig);
-        }
-
-        @Nonnull @Override
-        public JobStatus getJobStatus() {
+        @Override
+        protected JobStatus sendJobStatusRequest() {
             Address masterAddress = getMasterAddress();
             ClientMessage request = JetGetJobStatusCodec.encodeRequest(getJobId());
             ClientInvocation invocation = new ClientInvocation(client, request, masterAddress);
@@ -117,12 +116,14 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
                 throw rethrow(e);
             }
         }
-    }
 
-    private Address getMasterAddress() {
-        Set<Member> members = client.getCluster().getMembers();
-        Member master = members.iterator().next();
-        return master.getAddress();
+        private ClientMessage createJoinJobRequest() {
+            SerializationService serializationService = client.getSerializationService();
+            Data dag = serializationService.toData(getDAG());
+            Data jobConfig = serializationService.toData(getConfig());
+            return JetJoinJobCodec.encodeRequest(getJobId(), dag, jobConfig);
+        }
+
     }
 
     private final class ExecutionFuture implements ICompletableFuture<Void> {
@@ -131,7 +132,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         private final long executionId;
         private final Address executionAddress;
 
-        protected ExecutionFuture(ClientInvocationFuture future, long executionId, Address executionAddress) {
+        ExecutionFuture(ClientInvocationFuture future, long executionId, Address executionAddress) {
             this.future = future;
             this.executionId = executionId;
             this.executionAddress = executionAddress;

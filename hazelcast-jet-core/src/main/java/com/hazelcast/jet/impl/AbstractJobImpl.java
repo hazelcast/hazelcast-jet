@@ -18,12 +18,15 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.ICompletableFuture;
+import com.hazelcast.core.LocalMemberResetException;
 import com.hazelcast.core.MemberLeftException;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.coordination.JobRepository;
+import com.hazelcast.nio.Address;
 import com.hazelcast.spi.exception.TargetDisconnectedException;
 import com.hazelcast.spi.exception.TargetNotMemberException;
 
@@ -51,19 +54,19 @@ public abstract class AbstractJobImpl implements Job {
 
     @Nonnull
     @Override
-    public JobConfig getConfig() {
+    public final JobConfig getConfig() {
         return config;
     }
 
     @Nonnull
     @Override
-    public DAG getDAG() {
+    public final DAG getDAG() {
         return dag;
     }
 
     @Nonnull
     @Override
-    public Future<Void> getFuture() {
+    public final Future<Void> getFuture() {
         if (jobId == null) {
             throw new IllegalStateException("Job not yet started, use execute()");
         }
@@ -71,10 +74,14 @@ public abstract class AbstractJobImpl implements Job {
         return future;
     }
 
-    protected abstract ICompletableFuture<Void> sendJoinRequest();
+    protected abstract Address getMasterAddress();
+
+    protected abstract ICompletableFuture<Void> sendJoinRequest(Address masterAddress);
+
+    protected abstract JobStatus sendJobStatusRequest();
 
     @Override
-    public long getJobId() {
+    public final long getJobId() {
         if (jobId == null) {
             throw new IllegalStateException("ID not yet assigned");
         }
@@ -86,15 +93,19 @@ public abstract class AbstractJobImpl implements Job {
      *
      * Also sends a JoinOp to ensure that the job is started as soon as possible
      */
-    void init() {
+    final void init() {
         if (jobId != null) {
             throw new IllegalStateException("Job already started");
         }
 
-        jobId = jobRepository.newId();
-        jobRepository.uploadJobResources(jobId, config);
+        Address masterAddress = getMasterAddress();
+        if (masterAddress == null) {
+            throw new IllegalStateException("Master address is null");
+        }
 
-        ICompletableFuture<Void> invocationFuture = sendJoinRequest();
+        jobId = jobRepository.uploadJobResources(config);
+
+        ICompletableFuture<Void> invocationFuture = sendJoinRequest(masterAddress);
         JobCallback callback = new JobCallback(invocationFuture);
         invocationFuture.andThen(callback);
         future.whenComplete((aVoid, throwable) -> {
@@ -102,6 +113,19 @@ public abstract class AbstractJobImpl implements Job {
                 callback.cancel();
             }
         });
+    }
+
+    @Nonnull @Override
+    public final JobStatus getJobStatus() {
+        if (future.isCancelled()) {
+            return JobStatus.COMPLETED;
+        } else if (future.isCompletedExceptionally()) {
+            return JobStatus.FAILED;
+        } else if (future.isDone()) {
+            return JobStatus.COMPLETED;
+        }
+
+        return sendJobStatusRequest();
     }
 
     private class JobCallback implements ExecutionCallback<Void> {
@@ -118,16 +142,25 @@ public abstract class AbstractJobImpl implements Job {
         }
 
         @Override
-        public void onFailure(Throwable t) {
-            if (isRestartable(t)) {
-                synchronized (this) {
-                    try {
-                        ICompletableFuture<Void> invocationFuture = sendJoinRequest();
-                        this.invocationFuture = invocationFuture;
-                        invocationFuture.andThen(this);
-                    } catch (Exception e) {
-                        future.completeExceptionally(e);
+        public synchronized void onFailure(Throwable t) {
+            if (isSplitBrainMerge(t)) {
+                String msg = "Job failed because the cluster is performing split-brain merge";
+                future.completeExceptionally(new CancellationException(msg));
+            } else if (isRestartable(t)) {
+                try {
+                    Address masterAddress = getMasterAddress();
+                    if (masterAddress == null) {
+                        // job data will be cleaned up eventually by coordinator
+                        String msg = "Job failed because cannot talk to the coordinator node";
+                        future.completeExceptionally(new IllegalStateException(msg));
+                        return;
                     }
+
+                    ICompletableFuture<Void> invocationFuture = sendJoinRequest(masterAddress);
+                    this.invocationFuture = invocationFuture;
+                    invocationFuture.andThen(this);
+                } catch (Exception e) {
+                    future.completeExceptionally(e);
                 }
             } else {
                 future.completeExceptionally(t);
@@ -139,6 +172,11 @@ public abstract class AbstractJobImpl implements Job {
             return cause  instanceof MemberLeftException
                     || cause instanceof TargetDisconnectedException
                     || cause instanceof TargetNotMemberException;
+        }
+
+        private boolean isSplitBrainMerge(Throwable t) {
+            Throwable cause = peel(t);
+            return (cause instanceof LocalMemberResetException);
         }
 
         public synchronized void cancel() {

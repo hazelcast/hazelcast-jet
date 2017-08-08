@@ -162,7 +162,7 @@ public class JobExecutionService {
     private void verifyClusterInformation(long jobId, long executionId, Address coordinator,
                                           int coordinatorMemberListVersion, Set<MemberInfo> participants) {
         Address masterAddress = nodeEngine.getMasterAddress();
-        if (!masterAddress.equals(coordinator)) {
+        if (!coordinator.equals(masterAddress)) {
             throw new IllegalStateException("Coordinator " + coordinator + " cannot initialize "
                     + formatIds(jobId, executionId) + ". Reason: it is not master, master is " + masterAddress);
         }
@@ -202,9 +202,9 @@ public class JobExecutionService {
     private ExecutionContext verifyAndGetExecutionContext(Address coordinator, long jobId, long executionId,
                                                           String operationName) {
         Address masterAddress = nodeEngine.getMasterAddress();
-        if (!masterAddress.equals(coordinator)) {
-            throw new IllegalStateException("Coordinator " + coordinator + " cannot run " + operationName + " "
-                    + formatIds(jobId, executionId) + ": it is not master, master is: " + masterAddress);
+        if (!coordinator.equals(masterAddress)) {
+            throw new IllegalStateException("Coordinator " + coordinator + " cannot start " + formatIds(jobId, executionId)
+                    + ": it is not master, master is: " + masterAddress);
         }
 
         if (!nodeEngine.isRunning()) {
