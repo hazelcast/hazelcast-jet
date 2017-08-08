@@ -49,7 +49,7 @@ public class ExecutionContext {
     private final long executionId;
     private final Address coordinator;
     private final Set<Address> participants;
-    private final Lock executionLock = new ReentrantLock();
+    private final Object executionLock = new Object();
 
     // dest vertex id --> dest ordinal --> sender addr --> receiver tasklet
     private Map<Integer, Map<Integer, Map<Address, ReceiverTasklet>>> receiverMap = emptyMap();
@@ -92,8 +92,7 @@ public class ExecutionContext {
     }
 
     public CompletionStage<Void> execute(Consumer<CompletionStage<Void>> doneCallback) {
-        executionLock.lock();
-        try {
+        synchronized (executionLock) {
             if (jobFuture != null) {
                 jobFuture.whenComplete((r, e) -> doneCallback.accept(jobFuture));
             } else {
@@ -104,14 +103,11 @@ public class ExecutionContext {
             }
 
             return jobFuture;
-        } finally {
-            executionLock.unlock();
         }
     }
 
     public CompletionStage<Void> cancel() {
-        executionLock.lock();
-        try {
+        synchronized (executionLock) {
             if (jobFuture == null) {
                 jobFuture = new CompletableFuture<>();
             }
@@ -119,17 +115,7 @@ public class ExecutionContext {
             jobFuture.toCompletableFuture().cancel(true);
 
             return jobFuture;
-        } finally {
-            executionLock.unlock();
         }
-    }
-
-    public CompletionStage<Void> initiateSnapshot(long snapshotId) {
-        return snapshotState.startNewSnapshot(snapshotId);
-    }
-
-    public CompletionStage<Void> getJobFuture() {
-        return jobFuture;
     }
 
     public long getJobId() {
@@ -172,6 +158,10 @@ public class ExecutionContext {
                    .get(ordinal)
                    .get(sender)
                    .receiveStreamPacket(in);
+    }
+
+    public CompletionStage<Void> initiateSnapshot(long snapshotId) {
+        return snapshotState.startNewSnapshot(snapshotId);
     }
 
     public boolean isParticipating(Address member) {

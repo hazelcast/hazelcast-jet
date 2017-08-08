@@ -127,7 +127,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
 
         JetService jetService = getJetService(instance);
         assertNull(jetService.getJobRepository().getJob(job.getJobId()));
-        JobResult jobResult = jetService.getJobCoordinationService().getResult(job.getJobId());
+        JobResult jobResult = jetService.getJobCoordinationService().getJobResult(job.getJobId());
         assertNotNull(jobResult);
         assertTrue(jobResult.isSuccessful());
         assertNull(jobResult.getFailure());
@@ -163,7 +163,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
         assertNotNull(job);
         JetService jetService = getJetService(instance);
         assertNull(jetService.getJobRepository().getJob(job.getJobId()));
-        JobResult jobResult = jetService.getJobCoordinationService().getResult(job.getJobId());
+        JobResult jobResult = jetService.getJobCoordinationService().getJobResult(job.getJobId());
         assertNotNull(jobResult);
         assertFalse(jobResult.isSuccessful());
         assertTrue(jobResult.getFailure() instanceof RuntimeException);
@@ -202,7 +202,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
         assertNotNull(job);
         JetService jetService = getJetService(instance);
         assertNull(jetService.getJobRepository().getJob(job.getJobId()));
-        JobResult jobResult = jetService.getJobCoordinationService().getResult(job.getJobId());
+        JobResult jobResult = jetService.getJobCoordinationService().getJobResult(job.getJobId());
         assertNotNull(jobResult);
         assertFalse(jobResult.isSuccessful());
         assertTrue(jobResult.getFailure() instanceof RuntimeException);

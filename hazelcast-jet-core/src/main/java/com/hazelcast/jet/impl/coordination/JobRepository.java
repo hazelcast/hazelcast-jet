@@ -74,43 +74,6 @@ public class JobRepository {
     }
 
     /**
-     * Generates a new execution id for the given job id, guaranteed to be unique across the cluster
-     */
-    long newExecutionId(long jobId) {
-        long executionId;
-        do {
-            executionId = Util.secureRandomNextLong();
-        } while (jobIds.putIfAbsent(executionId, jobId) != null);
-        return executionId;
-    }
-
-    /**
-     * Puts the given job record into the jobs map.
-     * If another job record is already put, it checks if it has the same DAG.
-     * If it has a different DAG, then the call fails with {@link IllegalStateException}
-     */
-    void putNewJobRecord(JobRecord jobRecord) {
-        long jobId = jobRecord.getJobId();
-        JobRecord prev = jobs.putIfAbsent(jobId, jobRecord);
-        if (prev != null && !prev.getDag().equals(jobRecord.getDag())) {
-            throw new IllegalStateException("Cannot put job record for job " + idToString(jobId)
-                    + " because it already exists with a different dag");
-        }
-    }
-
-    Collection<JobRecord> getJobRecords() {
-        return jobs.values();
-    }
-
-    public JobRecord getJob(long jobId) {
-       return jobs.get(jobId);
-    }
-
-    <T> IMap<String, T> getJobResources(long jobId) {
-        return instance.getMap(RESOURCES_MAP_NAME_PREFIX + jobId);
-    }
-
-    /**
      * Uploads job resources and returns a unique job id generated for the job.
      * If the upload process fails for any reason, such as being unable to access to a resource,
      * uploaded resources are cleaned up.
@@ -159,80 +122,6 @@ public class JobRepository {
     }
 
     /**
-     * Performs cleanup after job completion. Deletes job record and job resources but keeps the job id
-     * so that it will not be used again for a new job submission
-     */
-    void deleteJob(long jobId) {
-        // Delete the job record
-        jobs.remove(jobId);
-        // Delete the execution ids, but keep the job id
-        Set<Long> executionIds = jobIds.keySet(new FilterExecutionIdByJobIdPredicate(jobId));
-        executionIds.forEach(jobIds::remove);
-
-        // Delete job resources
-        cleanupJobResourcesMap(getJobResources(jobId));
-    }
-
-    private void cleanupJobResourcesMap(IMap<String, Object> jobResourcesMap) {
-        jobResourcesMap.clear();
-        jobResourcesMap.destroy();
-    }
-
-    /**
-     * Returns the job record creation time for the given job id.
-     * If the job record is not found, fails with an {@link IllegalArgumentException}
-     */
-    long getJobCreationTimeOrFail(long jobId) {
-        EntryView<Long, JobRecord> entryView = jobs.getEntryView(jobId);
-        if (entryView != null) {
-            return entryView.getCreationTime();
-        }
-
-        throw new IllegalArgumentException("Job creation time not found for job id: " + idToString(jobId));
-    }
-
-    /**
-     * Cleans up stale job records, execution ids and job resources.
-     */
-    void cleanup(Set<Long> completedJobIds, Set<Long> runningJobIds) {
-        // clean up completed jobs
-        completedJobIds.forEach(this::deleteJob);
-
-        Set<Long> validJobIds = new HashSet<>();
-        validJobIds.addAll(completedJobIds);
-        validJobIds.addAll(runningJobIds);
-        validJobIds.addAll(jobs.keySet());
-
-        // Job ids are never cleaned up.
-        // We also don't clean up job records here because they might be started in parallel while cleanup is running
-        // If a job id is not running or completed, it might be suitable for job resource clean up
-        jobIds.entrySet(new FilterJobIdPredicate())
-              .stream()
-              .map(Entry::getKey)
-              .filter(jobId -> !validJobIds.contains(jobId))
-              .forEach(jobId -> {
-                  IMap<String, Object> resources = getJobResources(jobId);
-                  if (resources.isEmpty()) {
-                      return;
-                  }
-
-                  EntryView<String, Object> marker = resources.getEntryView(RESOURCE_MARKER);
-                  // If the marker is absent, then job resources may be still uploaded.
-                  // Just put the marker so that the job resources may be cleaned up eventually.
-                  // If the job resources are still being uploaded, then the marker will be overwritten, which is ok.
-                  if (marker == null) {
-                      resources.putIfAbsent(RESOURCE_MARKER, RESOURCE_MARKER);
-                  } else if (isJobExpired(marker.getCreationTime())) {
-                      cleanupJobResourcesMap(resources);
-                  }
-              });
-    }
-
-    private boolean isJobExpired(long creationTime) {
-        return (System.currentTimeMillis() - creationTime) >= jobExpirationDurationInMillis;
-    }
-
-    /**
      * Unzips the Jar archive and processes individual entries using
      * {@link #readStreamAndPutCompressedToMap(String, Map, InputStream)}.
      */
@@ -262,6 +151,116 @@ public class JobRepository {
         }
 
         map.put(resourceName, baos.toByteArray());
+    }
+
+    private void cleanupJobResourcesMap(IMap<String, Object> jobResourcesMap) {
+        jobResourcesMap.clear();
+        jobResourcesMap.destroy();
+    }
+
+    /**
+     * Puts the given job record into the jobs map.
+     * If another job record is already put, it checks if it has the same DAG.
+     * If it has a different DAG, then the call fails with {@link IllegalStateException}
+     */
+    void putNewJobRecord(JobRecord jobRecord) {
+        long jobId = jobRecord.getJobId();
+        JobRecord prev = jobs.putIfAbsent(jobId, jobRecord);
+        if (prev != null && !prev.getDag().equals(jobRecord.getDag())) {
+            throw new IllegalStateException("Cannot put job record for job " + idToString(jobId)
+                    + " because it already exists with a different dag");
+        }
+    }
+
+    /**
+     * Generates a new execution id for the given job id, guaranteed to be unique across the cluster
+     */
+    long newExecutionId(long jobId) {
+        long executionId;
+        do {
+            executionId = Util.secureRandomNextLong();
+        } while (jobIds.putIfAbsent(executionId, jobId) != null);
+        return executionId;
+    }
+
+    /**
+     * Returns the job record creation time for the given job id.
+     * If the job record is not found, fails with an {@link IllegalArgumentException}
+     */
+    long getJobCreationTimeOrFail(long jobId) {
+        EntryView<Long, JobRecord> entryView = jobs.getEntryView(jobId);
+        if (entryView != null) {
+            return entryView.getCreationTime();
+        }
+
+        throw new IllegalArgumentException("Job creation time not found for job id: " + idToString(jobId));
+    }
+
+    /**
+     * Performs cleanup after job completion. Deletes job record and job resources but keeps the job id
+     * so that it will not be used again for a new job submission
+     */
+    void deleteJob(long jobId) {
+        // Delete the job record
+        jobs.remove(jobId);
+        // Delete the execution ids, but keep the job id
+        Set<Long> executionIds = jobIds.keySet(new FilterExecutionIdByJobIdPredicate(jobId));
+        executionIds.forEach(jobIds::remove);
+
+        // Delete job resources
+        cleanupJobResourcesMap(getJobResources(jobId));
+    }
+
+    /**
+     * Cleans up stale job records, execution ids and job resources.
+     */
+    void cleanup(Set<Long> completedJobIds, Set<Long> runningJobIds) {
+        // clean up completed jobs
+        completedJobIds.forEach(this::deleteJob);
+
+        Set<Long> validJobIds = new HashSet<>();
+        validJobIds.addAll(completedJobIds);
+        validJobIds.addAll(runningJobIds);
+        validJobIds.addAll(jobs.keySet());
+
+        // Job ids are never cleaned up.
+        // We also don't clean up job records here because they might be started in parallel while cleanup is running
+        // If a job id is not running or completed, it might be suitable for job resource clean up
+        jobIds.keySet(new FilterJobIdPredicate())
+              .stream()
+              .filter(jobId -> !validJobIds.contains(jobId))
+              .forEach(jobId -> {
+                  IMap<String, Object> resources = getJobResources(jobId);
+                  if (resources.isEmpty()) {
+                      return;
+                  }
+
+                  EntryView<String, Object> marker = resources.getEntryView(RESOURCE_MARKER);
+                  // If the marker is absent, then job resources may be still uploaded.
+                  // Just put the marker so that the job resources may be cleaned up eventually.
+                  // If the job resources are still being uploaded, then the marker will be overwritten, which is ok.
+                  if (marker == null) {
+                      resources.putIfAbsent(RESOURCE_MARKER, RESOURCE_MARKER);
+                  } else if (isJobExpired(marker.getCreationTime())) {
+                      cleanupJobResourcesMap(resources);
+                  }
+              });
+    }
+
+    private boolean isJobExpired(long creationTime) {
+        return (System.currentTimeMillis() - creationTime) >= jobExpirationDurationInMillis;
+    }
+
+    Collection<JobRecord> getJobRecords() {
+        return jobs.values();
+    }
+
+    public JobRecord getJob(long jobId) {
+       return jobs.get(jobId);
+    }
+
+    <T> IMap<String, T> getJobResources(long jobId) {
+        return instance.getMap(RESOURCES_MAP_NAME_PREFIX + jobId);
     }
 
     public static class FilterExecutionIdByJobIdPredicate implements Predicate<Long, Long>, IdentifiedDataSerializable {

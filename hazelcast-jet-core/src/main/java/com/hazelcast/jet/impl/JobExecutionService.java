@@ -73,14 +73,6 @@ public class JobExecutionService {
         this.executionService = executionService;
     }
 
-    public void reset(String reason, Supplier<RuntimeException> exceptionSupplier) {
-        executionContexts.values().forEach(exeCtx -> {
-            String message = "Completing " + formatIds(exeCtx.getJobId(), exeCtx.getExecutionId())
-                    + " locally. Reason: " + reason;
-            cancelAndComplete(exeCtx, message, exceptionSupplier.get());
-        });
-    }
-
     public ClassLoader getClassLoader(long jobId, PrivilegedAction<JetClassLoader> action) {
         return classLoaders.computeIfAbsent(jobId, k -> AccessController.doPrivileged(action));
     }
@@ -98,6 +90,20 @@ public class JobExecutionService {
         return ctx != null ? ctx.senderMap() : null;
     }
 
+    /**
+     * Cancels all ongoing executions using the given failure supplier
+     */
+    public void reset(String reason, Supplier<RuntimeException> exceptionSupplier) {
+        executionContexts.values().forEach(exeCtx -> {
+            String message = "Completing " + formatIds(exeCtx.getJobId(), exeCtx.getExecutionId())
+                    + " locally. Reason: " + reason;
+            cancelAndComplete(exeCtx, message, exceptionSupplier.get());
+        });
+    }
+
+    /**
+     * Cancels executions that contain the left address as the coordinator or a job participant
+     */
     void onMemberLeave(Address address) {
         executionContexts.values()
                 .stream()
@@ -122,6 +128,15 @@ public class JobExecutionService {
         }
     }
 
+    /**
+     * Initiates the given execution if the local node accepts the coordinator as its master, and has an up-to-date
+     * member list information.
+     * - If the local node has a stale member list, it retries the init operation until it receives the new member list
+     * from the master.
+     * - If the local node detects that the member list changed after the init operation is sent but before executed,
+     * then it sends a graceful failure so that the job init will be retried properly.
+     * - If there is an already ongoing execution for the given job, then the init execution is retried.
+     */
     void initExecution(long jobId, long executionId, Address coordinator, int coordinatorMemberListVersion,
                        Set<MemberInfo> participants, ExecutionPlan plan) {
         verifyClusterInformation(jobId, executionId, coordinator, coordinatorMemberListVersion, participants);
@@ -189,6 +204,9 @@ public class JobExecutionService {
         }
     }
 
+    /**
+     * Starts execution of the job if the coordinator is verified as the accepted master and the correct initiator.
+     */
     public CompletionStage<Void> execute(Address coordinator, long jobId, long executionId,
                                          Consumer<CompletionStage<Void>> doneCallback) {
         ExecutionContext executionContext = verifyAndGetExecutionContext(coordinator, jobId, executionId,
@@ -225,6 +243,9 @@ public class JobExecutionService {
         return executionContext;
     }
 
+    /**
+     * Completes and cleans up execution of the given job
+     */
     void completeExecution(long executionId, Throwable error) {
         ExecutionContext executionContext = executionContexts.remove(executionId);
         if (executionContext != null) {

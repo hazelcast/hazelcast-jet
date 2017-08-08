@@ -37,7 +37,7 @@ public final class ExceptionUtil {
 
     private ExceptionUtil() { }
 
-    public static boolean isJobRestartRequired(Throwable t) {
+    public static boolean isJobRestartRequired(Object t) {
         return t instanceof TopologyChangedException
                 || t instanceof MemberLeftException
                 || t instanceof TargetNotMemberException

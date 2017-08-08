@@ -56,7 +56,7 @@ public class JetClassLoader extends ClassLoader {
             return null;
         }
         // we distinguish between the case "resource found, but not accessible by URL" and "resource not found"
-        if (!resources.containsKey(name)) {
+        if (resources.containsKey(name)) {
             throw new IllegalArgumentException("Resource not accessible by URL: " + name);
         }
         return null;

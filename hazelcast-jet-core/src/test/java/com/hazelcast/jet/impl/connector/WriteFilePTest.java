@@ -57,6 +57,9 @@ import static org.junit.Assert.assertTrue;
 @RunWith(HazelcastParallelClassRunner.class)
 public class WriteFilePTest extends JetTestSupport {
 
+    // only used in when_slowSource_then_fileFlushedAfterEachItem
+    private static final Semaphore semaphore = new Semaphore(0);
+
     private JetInstance instance;
     private Path directory;
     private Path file;
@@ -175,7 +178,6 @@ public class WriteFilePTest extends JetTestSupport {
     @Test
     public void when_slowSource_then_fileFlushedAfterEachItem() throws Exception {
         // Given
-        Semaphore semaphore = new Semaphore(0);
         int numItems = 10;
 
         DAG dag = new DAG();

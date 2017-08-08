@@ -17,37 +17,37 @@
 package com.hazelcast.jet;
 
 /**
- * Javadoc pending
+ * Represents current status of the job from the perspective of the job coordinator.
  */
 public enum JobStatus {
 
     /**
-     * Javadoc pending
+     * The job is submitted but not started yet.
      */
     NOT_STARTED,
 
     /**
-     * Javadoc pending
+     * The job is in the initialization phase, in which it starts the execution.
      */
     STARTING,
 
     /**
-     * Javadoc pending
+     * The job is currently running.
      */
     RUNNING,
 
     /**
-     * Javadoc pending
+     * The job is performing a restart, because a job participant has left while the job was running.
      */
     RESTARTING,
 
     /**
-     * Javadoc pending
+     * The job is failed with an exception thrown by the DAG.
      */
     FAILED,
 
     /**
-     * Javadoc pending
+     * The job is completed successfully.
      */
     COMPLETED
 

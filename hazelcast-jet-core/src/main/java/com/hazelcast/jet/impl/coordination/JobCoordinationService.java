@@ -39,7 +39,6 @@ import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.executionservice.InternalExecutionService;
 import com.hazelcast.spi.properties.HazelcastProperties;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.security.PrivilegedAction;
 import java.util.Collection;
@@ -51,6 +50,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import static com.hazelcast.cluster.memberselector.MemberSelectors.DATA_MEMBER_SELECTOR;
+import static com.hazelcast.jet.JobStatus.COMPLETED;
+import static com.hazelcast.jet.JobStatus.FAILED;
+import static com.hazelcast.jet.JobStatus.NOT_STARTED;
 import static com.hazelcast.jet.config.JetConfig.JOB_RESULTS_MAP_NAME;
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
 import static com.hazelcast.jet.impl.util.Util.formatIds;
@@ -100,22 +102,22 @@ public class JobCoordinationService {
         return jobExecutionService.getClassLoader(jobId, action);
     }
 
-    // visible only for testing
+    // only for testing
     public Map<Long, MasterContext> getMasterContexts() {
         return new HashMap<>(masterContexts);
     }
 
-    // visible only for testing
+    // only for testing
     public MasterContext getMasterContext(long jobId) {
         return masterContexts.get(jobId);
     }
 
-    public Map<MemberInfo, ExecutionPlan> createExecutionPlans(MembersView membersView, DAG dag, JobConfig jobConfig) {
-        return ExecutionPlanBuilder.createExecutionPlans(nodeEngine, membersView, dag,
-                config.getInstanceConfig().getCooperativeThreadCount(), jobConfig);
+    // only for testing
+    public JobResult getJobResult(long jobId) {
+        return jobResults.get(jobId);
     }
 
-    // for testing
+    // only for testing
     public CompletableFuture<Boolean> joinJobIfRunning(long jobId) {
         MasterContext masterContext = masterContexts.get(jobId);
         if (masterContext == null) {
@@ -125,12 +127,23 @@ public class JobCoordinationService {
         return masterContext.completionFuture();
     }
 
+    public Map<MemberInfo, ExecutionPlan> createExecutionPlans(MembersView membersView, DAG dag, JobConfig jobConfig) {
+        return ExecutionPlanBuilder.createExecutionPlans(nodeEngine, membersView, dag,
+                config.getInstanceConfig().getCooperativeThreadCount(), jobConfig);
+    }
+
+    /**
+     * Starts the job if it is not already started or completed. Returns a future which represents result of the job.
+     */
     public CompletableFuture<Boolean> startOrJoinJob(long jobId, Data dag, JobConfig config) {
         if (!isMaster()) {
             throw new JetException("Job cannot be started here. Master address: "
                     + nodeEngine.getClusterService().getMasterAddress());
         }
 
+        // the order of operations are important.
+
+        // first, check if the job is already completed
         JobResult jobResult = jobResults.get(jobId);
         if (jobResult != null) {
             logger.fine("Not starting job " + idToString(jobId) + " since already completed with result: " +
@@ -142,24 +155,30 @@ public class JobCoordinationService {
         JobRecord jobRecord = new JobRecord(jobId, dag, config, quorumSize);
         MasterContext masterContext = new MasterContext(nodeEngine, this, jobRecord);
 
+        // just try to initiate the coordination
         MasterContext prev = masterContexts.putIfAbsent(jobId, masterContext);
         if (prev != null) {
             logger.fine("Joining to already started job " + idToString(jobId));
             return prev.completionFuture();
         }
 
+        // If job is not currently running, it might be that it is just completed
         if (completeMasterContextIfJobAlreadyCompleted(masterContext)) {
             return masterContext.completionFuture();
         }
 
+        // If there is no master context and job result at the same time, it means this is the first submission
         jobRepository.putNewJobRecord(jobRecord);
 
         logger.info("Starting new job " + idToString(jobId));
-        masterContext.tryStartJob(jobRepository::newExecutionId);
+        tryStartJob(masterContext);
         return masterContext.completionFuture();
     }
 
-    private void startJobIfNotStarted(JobRecord jobRecord) {
+    // Tries to automatically start a job if it is not already running or completed
+    private void startJobIfNotStartedOrCompleted(JobRecord jobRecord) {
+        // the order of operations are important.
+
         long jobId = jobRecord.getJobId();
         if (jobResults.containsKey(jobId) || masterContexts.containsKey(jobId)) {
             return;
@@ -171,14 +190,18 @@ public class JobCoordinationService {
             return;
         }
 
+        // If job is not currently running, it might be that it is just completed.
+        // Since we put the MasterContext into the masterContexts map, someone else could be joined to the job
+        // so we should notify its future
         if (completeMasterContextIfJobAlreadyCompleted(masterContext)) {
             return;
         }
 
         logger.info("Starting new job " + idToString(masterContext.getJobId()));
-        masterContext.tryStartJob(jobRepository::newExecutionId);
+        tryStartJob(masterContext);
     }
 
+    // If a job result is present, it completes the master context using the job result
     private boolean completeMasterContextIfJobAlreadyCompleted(MasterContext masterContext) {
         long jobId = masterContext.getJobId();
         JobResult jobResult = jobResults.get(jobId);
@@ -186,16 +209,18 @@ public class JobCoordinationService {
             logger.fine("Completing master context " + idToString(jobId) + " since already completed with result: " +
                     jobResult);
             masterContext.setFinalResult(jobResult.getFailure());
-            masterContexts.remove(jobId, masterContext);
-            return true;
+            return masterContexts.remove(jobId, masterContext);
         }
 
         return false;
     }
 
+    private void tryStartJob(MasterContext masterContext) {
+        masterContext.tryStartJob(jobRepository::newExecutionId);
+    }
+
     private int getQuorumSize() {
-        int dataMemberCount = getDataMemberCount();
-        return (dataMemberCount / 2) + 1;
+        return (getDataMemberCount() / 2) + 1;
     }
 
     boolean isQuorumPresent(int quorumSize) {
@@ -207,6 +232,9 @@ public class JobCoordinationService {
         return clusterService.getMembers(DATA_MEMBER_SELECTOR).size();
     }
 
+    /**
+     * Returns the job status or fails with {@link IllegalArgumentException} if the requested job is not found
+     */
     public JobStatus getJobStatus(long jobId) {
         if (!isMaster()) {
             throw new JetException("Job status cannot be queried here. Master address: "
@@ -222,27 +250,21 @@ public class JobCoordinationService {
         if (jobRecord == null) {
             JobResult jobResult = jobResults.get(jobId);
             if (jobResult != null) {
-                return jobResult.isSuccessfulOrCancelled() ? JobStatus.COMPLETED : JobStatus.FAILED;
+                return jobResult.isSuccessfulOrCancelled() ? COMPLETED : FAILED;
             }
 
-            throw new IllegalStateException("Job " + idToString(jobId) + " not found");
+            throw new IllegalArgumentException("Job " + idToString(jobId) + " not found");
         } else {
-            return JobStatus.NOT_STARTED;
+            return NOT_STARTED;
         }
     }
 
-    void scheduleRestart(long jobId) {
-        MasterContext masterContext = masterContexts.get(jobId);
-        if (masterContext != null) {
-            logger.fine("Scheduling master context restart for job " + idToString(jobId));
-            nodeEngine.getExecutionService().schedule(COORDINATOR_EXECUTOR_NAME, () -> restartJob(jobId),
-                    RETRY_DELAY_IN_MILLIS, MILLISECONDS);
-        } else {
-            logger.severe("Master context for job " + idToString(jobId) + " not found to schedule restart");
-        }
-    }
-
+    /**
+     * Completes the job which is coordinated with the given master context object.
+     */
     void completeJob(MasterContext masterContext, long completionTime, Throwable error) {
+        // the order of operations are important.
+
         long jobId = masterContext.getJobId();
         long jobCreationTime = jobRepository.getJobCreationTimeOrFail(jobId);
         String coordinator = nodeEngine.getNode().getThisUuid();
@@ -270,10 +292,29 @@ public class JobCoordinationService {
         }
     }
 
+    /**
+     * Schedules a restart task that will be run in future for the given job
+     */
+    void scheduleRestart(long jobId) {
+        MasterContext masterContext = masterContexts.get(jobId);
+        if (masterContext != null) {
+            logger.fine("Scheduling master context restart for job " + idToString(jobId));
+            nodeEngine.getExecutionService().schedule(COORDINATOR_EXECUTOR_NAME, () -> restartJob(jobId),
+                    RETRY_DELAY_IN_MILLIS, MILLISECONDS);
+        } else {
+            logger.severe("Master context for job " + idToString(jobId) + " not found to schedule restart");
+        }
+    }
+
+    /**
+     * Restarts a job for a new execution if the cluster is stable.
+     * Otherwise, it reschedules the restart task.
+     */
     private void restartJob(long jobId) {
         MasterContext masterContext = masterContexts.get(jobId);
         if (masterContext != null) {
             if (masterContext.isCancelled()) {
+                tryStartJob(masterContext);
                 return;
             }
 
@@ -282,13 +323,13 @@ public class JobCoordinationService {
                 return;
             }
 
-            masterContext.tryStartJob(jobRepository::newExecutionId);
+            tryStartJob(masterContext);
         } else {
             logger.severe("Master context for job " + idToString(jobId) + " not found to restart");
         }
     }
 
-    @SuppressFBWarnings(value = "UC_USELESS_OBJECT", justification = "false positive findbugs warning")
+    // runs periodically to restart jobs on coordinator failure and perform gc
     private void scanJobs() {
         if (!shouldStartJobs()) {
             return;
@@ -296,7 +337,7 @@ public class JobCoordinationService {
 
         try {
             Collection<JobRecord> jobs = jobRepository.getJobRecords();
-            jobs.forEach(this::startJobIfNotStarted);
+            jobs.forEach(this::startJobIfNotStartedOrCompleted);
 
             performCleanup();
         } catch (Exception e) {
@@ -325,11 +366,6 @@ public class JobCoordinationService {
         Set<Long> runningJobIds = masterContexts.keySet();
         Set<Long> completedJobIds = jobResults.keySet();
         jobRepository.cleanup(completedJobIds, runningJobIds);
-    }
-
-    // visible for testing
-    public JobResult getResult(long jobId) {
-        return jobResults.get(jobId);
     }
 
     private boolean isMaster() {

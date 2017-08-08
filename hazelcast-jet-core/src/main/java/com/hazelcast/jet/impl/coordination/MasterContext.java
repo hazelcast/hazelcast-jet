@@ -111,22 +111,28 @@ public class MasterContext {
         return executionId;
     }
 
-    CompletableFuture<Boolean> completionFuture() {
-        return completionFuture;
-    }
-
-    public boolean cancel() {
-        return completionFuture.cancel(true);
-    }
-
-    public boolean isCancelled() {
-        return completionFuture.isCancelled();
-    }
-
     public JobStatus jobStatus() {
         return jobStatus.get();
     }
 
+    CompletableFuture<Boolean> completionFuture() {
+        return completionFuture;
+    }
+
+    boolean cancel() {
+        return completionFuture.cancel(true);
+    }
+
+    boolean isCancelled() {
+        return completionFuture.isCancelled();
+    }
+
+    /**
+     * Starts execution of the job if it is not already completed, cancelled or failed.
+     * If the job is already cancelled, the job completion procedure is triggered.
+     * If the job quorum is not satisfied, job restart is rescheduled.
+     * If there was a membership change and the partition table is not completely fixed yet, job restart is rescheduled.
+     */
     void tryStartJob(Function<Long, Long> executionIdSupplier) {
         if (!setJobStatusToStarting()) {
             return;
@@ -166,7 +172,8 @@ public class MasterContext {
     }
 
     /**
-     * Set jobStatus to starting. Return false if job is already in started state.
+     * Sets job status to starting.
+     * Returns false if the job start process cannot proceed.
      */
     private boolean setJobStatusToStarting() {
         JobStatus status = jobStatus();
@@ -237,6 +244,7 @@ public class MasterContext {
         return deserializeWithCustomClassLoader(nodeEngine.getSerializationService(), cl, jobRecord.getDag());
     }
 
+    // Called as callback when all InitOperation invocations are done
     private void onInitStepCompleted(Map<MemberInfo, Object> responses) {
         Throwable error = getInitResult(responses);
 
@@ -256,6 +264,12 @@ public class MasterContext {
         }
     }
 
+    /**
+     * If there is no failure, then returns null. If the job is cancelled, then returns CancellationException.
+     * If there is at least one non-restartable failure, such as an exception in user code, then returns that failure.
+     * Otherwise, the failure is because a job participant has left the cluster.
+     * In that case, TopologyChangeException is returned so that the job will be restarted.
+     */
     private Throwable getInitResult(Map<MemberInfo, Object> responses) {
         if (completionFuture.isCancelled()) {
             logger.fine(formatIds(jobId, executionId) + " to be cancelled after init");
@@ -273,15 +287,18 @@ public class MasterContext {
         List<Entry<MemberInfo, Object>> failures = grouped.get(true);
         logger.fine("Init of " + formatIds(jobId, executionId) + " failed with: " + failures);
 
+        // if there is at least one non-restartable failure, such as a user code failure, then fail the job
+        // otherwise, return TopologyChangedException so that the job will be restarted
         return failures
                 .stream()
                 .map(e -> (Throwable) e.getValue())
-                .filter(t -> !isJobRestartRequiredFailure(t))
+                .filter(t -> !isJobRestartRequired(t))
                 .findFirst()
                 .map(ExceptionUtil::peel)
                 .orElse(new TopologyChangedException());
     }
 
+    // true -> failures, false -> success responses
     private Map<Boolean, List<Entry<MemberInfo, Object>>> groupResponses(Map<MemberInfo, Object> responses) {
         return responses
                 .entrySet()
@@ -289,10 +306,8 @@ public class MasterContext {
                 .collect(partitioningBy(e -> e.getValue() instanceof Throwable));
     }
 
-    private boolean isJobRestartRequiredFailure(Object response) {
-        return response instanceof Throwable && isJobRestartRequired((Throwable) response);
-    }
-
+    // If a participant leaves or the execution fails in a participant locally, executions are cancelled
+    // on the remaining participants and the callback is completed after all invocations return.
     private void invokeExecute() {
         jobStatus.set(RUNNING);
         logger.fine("Executing " + formatIds(jobId, executionId));
@@ -357,6 +372,7 @@ public class MasterContext {
         return nodeEngine.getHazelcastInstance().getMap(SNAPSHOTS_MAP_NAME);
     }
 
+    // Called as callback when all ExecuteOperation invocations are done
     private void onExecuteStepCompleted(Map<MemberInfo, Object> responses) {
         if (scheduledSnapshotFuture != null) {
             scheduledSnapshotFuture.cancel(true);
@@ -364,6 +380,12 @@ public class MasterContext {
         invokeComplete(getExecuteResult(responses));
     }
 
+    /**
+     * If there is no failure, then returns null. If the job is cancelled, then returns CancellationException.
+     * If there is at least one non-restartable failure, such as an exception in user code, then returns that failure.
+     * Otherwise, the failure is because a job participant has left the cluster.
+     * In that case, TopologyChangeException is returned so that the job will be restarted.
+     */
     private Throwable getExecuteResult(Map<MemberInfo, Object> responses) {
         if (completionFuture.isCancelled()) {
             logger.fine(formatIds(jobId, executionId) + " to be cancelled after execute");
@@ -381,10 +403,12 @@ public class MasterContext {
         List<Entry<MemberInfo, Object>> failures = grouped.get(true);
         logger.fine("Execute of " + formatIds(jobId, executionId) + " has failures: " + failures);
 
+        // If there is no user-code exception, it means at least one job participant has left the cluster.
+        // In that case, all remaining participants return a CancellationException.
         return failures
                 .stream()
                 .map(e -> (Throwable) e.getValue())
-                .filter(t -> !(t instanceof CancellationException || isJobRestartRequiredFailure(t)))
+                .filter(t -> !(t instanceof CancellationException || isJobRestartRequired(t)))
                 .findFirst()
                 .map(ExceptionUtil::peel)
                 .orElse(new TopologyChangedException());
@@ -413,6 +437,7 @@ public class MasterContext {
         invoke(operationCtor, responses -> onCompleteStepCompleted(error), null);
     }
 
+    // Called as callback when all CompleteOperation invocations are done
     private void onCompleteStepCompleted(@Nullable Throwable failure) {
         JobStatus status = jobStatus();
         if (status == COMPLETED || status == FAILED) {
@@ -468,7 +493,7 @@ public class MasterContext {
 
     private void invoke(Function<ExecutionPlan, Operation> operationCtor,
                         Consumer<Map<MemberInfo, Object>> completionCallback,
-                        CompletableFuture cancellation) {
+                        CompletableFuture cancellationFuture) {
         CompletableFuture<Void> doneFuture = new CompletableFuture<>();
         Map<MemberInfo, InternalCompletableFuture<Object>> futures = new ConcurrentHashMap<>();
         invokeOnParticipants(futures, doneFuture, operationCtor);
@@ -491,13 +516,12 @@ public class MasterContext {
             completionCallback.accept(responses);
         });
 
-        boolean cancelOnFailure = (cancellation != null);
+        boolean cancelOnFailure = (cancellationFuture != null);
 
-        // if cancel on failure is true, we should cancel invocations when the given future is cancelled, or
-        // any of the invocations fail
+        // if cancelOnFailure is true, we should cancel invocations when the future is cancelled, or any invocation fail
 
         if (cancelOnFailure) {
-            cancellation.whenComplete((r, e) -> {
+            cancellationFuture.whenComplete((r, e) -> {
                 if (e instanceof CancellationException) {
                     futures.values().forEach(f -> f.cancel(true));
                 }

@@ -33,6 +33,7 @@ public class JobConfig implements Serializable {
 
     private ProcessingGuarantee processingGuarantee = ProcessingGuarantee.EXACTLY_ONCE;
     private long snapshotInterval = -1;
+
     private boolean splitBrainProtectionEnabled;
     private final List<ResourceConfig> resourceConfigs = new ArrayList<>();
 
