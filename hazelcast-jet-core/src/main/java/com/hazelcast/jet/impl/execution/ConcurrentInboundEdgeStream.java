@@ -18,11 +18,13 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.util.concurrent.ConcurrentConveyor;
 import com.hazelcast.internal.util.concurrent.QueuedPipe;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
-import com.hazelcast.jet.impl.util.SkewReductionPolicy;
 
+import java.util.Arrays;
+import java.util.BitSet;
 import java.util.function.Consumer;
 
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
@@ -38,27 +40,33 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private final int priority;
     private final ConcurrentConveyor<Object> conveyor;
     private final ProgressTracker tracker = new ProgressTracker();
-    private long lastEmittedWm = Long.MIN_VALUE;
-    private final boolean blockOnBarrier;
+    private final boolean waitForSnapshot;
+    private final long[] queueWms;
 
-    private final SkewReductionPolicy skewReductionPolicy;
-    private final BarrierWatcher barrierWatcher;
-    private SnapshotBarrier barrierToDrain;
+    private final BitSet barrierReceived; // indicates if current snapshot is received on the queue
+
+    private long currSnapshot = 0; // current expected snapshot
+    private long lastEmittedWm = Long.MIN_VALUE;
+
+    private long activeQueues; // number of active queues remaining
 
     /**
-     * @param blockOnBarrier If true, queues won't be drained until the same
-     *     barrier is received from all of them. This will enforce exactly once
-     *     vs. at least once, if it is false.
+     * @param waitForSnapshot If true, queues won't be drained until the same
+     *                        barrier is received from all of them. This will enforce exactly once
+     *                        vs. at least once, if it is false.
      */
     public ConcurrentInboundEdgeStream(ConcurrentConveyor<Object> conveyor, int ordinal, int priority,
-                                       boolean blockOnBarrier) {
+                                       boolean waitForSnapshot) {
         this.conveyor = conveyor;
         this.ordinal = ordinal;
         this.priority = priority;
-        this.blockOnBarrier = blockOnBarrier;
+        this.waitForSnapshot = waitForSnapshot;
 
-        skewReductionPolicy = new SkewReductionPolicy(conveyor.queueCount());
-        barrierWatcher = new BarrierWatcher(conveyor.queueCount());
+        queueWms = new long[conveyor.queueCount()];
+        Arrays.fill(queueWms, Long.MIN_VALUE);
+
+        activeQueues = conveyor.queueCount();
+        barrierReceived = new BitSet(conveyor.queueCount());
     }
 
     @Override
@@ -71,84 +79,87 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         return priority;
     }
 
-    /**
-     * Drains multiple inbound queues into the {@code dest} collection.
-     *
-     * <p>Following rules apply:<ul>
-     *
-     * <li>{@link Watermark}s are handled specially: {@link SkewReductionPolicy}
-     * might decide to temporarily stop draining some queues, if they are
-     * ahead, or ignore watermark from some other, if they are too much behind.
-     * Generally, watermark is added to {@code dest} after it is received from
-     * all queues.
-     *
-     * <li>{@link SnapshotBarrier}s are handled specially as directed by
-     * {@link BarrierWatcher}. Same barrier has to be received from all queues
-     * to be added to the {@code dest} collection. Queues which already had the
-     * barrier are not drained until all other have it, if {@link
-     * #blockOnBarrier} is true.
-     *
-     * <li>Furthermore, {@link SnapshotBarrier} is always added to {@code dest}
-     * as the only item in a separate call to this method.
-     * </ul>
-     */
     @Override
     public ProgressState drainTo(Consumer<Object> dest) {
-        if (barrierToDrain != null) {
-            dest.accept(barrierToDrain);
-            barrierToDrain = null;
-            return ProgressState.MADE_PROGRESS;
-        }
-
         tracker.reset();
-        for (int drainOrderIdx = 0; drainOrderIdx < conveyor.queueCount(); drainOrderIdx++) {
-            int queueIndex = skewReductionPolicy.toQueueIndex(drainOrderIdx);
+        for (int queueIndex = 0; queueIndex < conveyor.queueCount(); queueIndex++) {
             final QueuedPipe<Object> q = conveyor.queue(queueIndex);
             if (q == null) {
                 continue;
             }
-            boolean done = false;
-            if (blockOnBarrier && barrierWatcher.isBlocked(queueIndex)) {
+
+            // skip queues where a snapshot barrier has already been received
+            if (waitForSnapshot && barrierReceived.get(queueIndex)) {
                 continue;
             }
 
             for (Object item; (item = q.poll()) != null; ) {
                 tracker.madeProgress();
                 if (item == DONE_ITEM) {
-                    done = true;
                     conveyor.removeQueue(queueIndex);
-                    long newBarrier = barrierWatcher.markQueueDone(queueIndex);
-                    if (newBarrier != 0) {
-                        barrierToDrain = new SnapshotBarrier(newBarrier);
-                        // stop now, barrier will be added as the sole item in next call
-                        return ProgressState.MADE_PROGRESS;
-                    }
+                    activeQueues--;
+                    // we are done with this queue
                     break;
                 }
                 if (item instanceof Watermark) {
-                    skewReductionPolicy.observeWm(queueIndex, ((Watermark) item).timestamp());
-                } else if (item instanceof SnapshotBarrier) {
-                    if (barrierWatcher.observe(queueIndex, ((SnapshotBarrier) item).snapshotId())) {
-                        barrierToDrain = (SnapshotBarrier) item;
-                        // stop now, barrier will be added as the sole item in next call
-                        return ProgressState.MADE_PROGRESS;
-                    }
-                } else {
-                    dest.accept(item);
+                    // do not drain more items from this queue after observing a WM
+                    observeWm(queueIndex, ((Watermark) item).timestamp());
+                    break;
                 }
-            }
+                if (item instanceof SnapshotBarrier) {
+                    SnapshotBarrier barrier = (SnapshotBarrier) item;
+                    if (barrier.snapshotId() != currSnapshot) {
+                        throw new JetException("Unexpected snapshot barrier "
+                                + barrier.snapshotId() + ", expected " + currSnapshot);
+                    }
+                    barrierReceived.set(queueIndex);
+                    // do not drain more items from this queue after snapshot barrier
+                    break;
+                }
 
-            if (!done) {
-                tracker.notDone();
+                // forward everything else
+                dest.accept(item);
             }
         }
 
-        long bottomWm = skewReductionPolicy.bottomObservedWm();
+        if (activeQueues == 0) {
+            return tracker.toProgressState();
+        }
+
+        tracker.notDone();
+
+        // coalesce WMs received and emit new WM if needed
+        long bottomWm = bottomObservedWm();
         if (bottomWm > lastEmittedWm) {
-            dest.accept(new Watermark(bottomWm));
             lastEmittedWm = bottomWm;
+            dest.accept(new Watermark(bottomWm));
         }
 
+        // if we have received the current snapshot from all active queues, forward it
+        if (barrierReceived.cardinality() == activeQueues) {
+            dest.accept(new SnapshotBarrier(currSnapshot));
+            currSnapshot++;
+            barrierReceived.clear();
+        }
         return tracker.toProgressState();
+    }
+
+
+    private void observeWm(int queueIndex, final long wmValue) {
+        if (queueWms[queueIndex] >= wmValue) {
+            throw new JetException("Watermarks not monotonically increasing on queue: " +
+                    "last one=" + queueWms[queueIndex] + ", new one=" + wmValue);
+        }
+        queueWms[queueIndex] = wmValue;
+    }
+
+    private long bottomObservedWm() {
+        long min = queueWms[0];
+        for (int i = 1; i < queueWms.length; i++) {
+            if (queueWms[i] < min) {
+                min = queueWms[i];
+            }
+        }
+        return min;
     }
 }

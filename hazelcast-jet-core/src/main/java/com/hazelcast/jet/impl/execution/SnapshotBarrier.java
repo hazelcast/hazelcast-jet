@@ -31,4 +31,23 @@ public class SnapshotBarrier {
     public String toString() {
         return "SnapshotBarrier{snapshotId=" + snapshotId + '}';
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        SnapshotBarrier barrier = (SnapshotBarrier) o;
+
+        return snapshotId == barrier.snapshotId;
+    }
+
+    @Override
+    public int hashCode() {
+        return (int) (snapshotId ^ (snapshotId >>> 32));
+    }
 }
