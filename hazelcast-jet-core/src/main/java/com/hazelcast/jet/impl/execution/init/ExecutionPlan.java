@@ -147,7 +147,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 ILogger logger =
                         nodeEngine.getLogger(p.getClass().getName() + '.' + srcVertex.name() + '#' + processorIdx);
                 ProcCtx context =
-                        new ProcCtx(instance, logger, srcVertex.name(), processorIdx + srcVertex.getProcIdxOffset(),
+                        new ProcCtx(nodeEngine, logger, srcVertex.name(), processorIdx + srcVertex.getProcIdxOffset(),
                                 jobConfig.getSnapshotInterval() >= 0);
 
                  String probePrefix = String.format("jet.job.%s.%s#%d", idToString(executionId), srcVertex.name(),
@@ -160,11 +160,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 List<InboundEdgeStream> inboundStreams = createInboundEdgeStreams(srcVertex, processorIdx);
                 ProcessorTaskletBase processorTasklet = p.isCooperative()
                         ? new CooperativeProcessorTasklet(context, p, inboundStreams, outboundStreams,
-                        snapshotContext, savesSnapshot ? queues[processorIdx] : null,
-                                nodeEngine.getSerializationService(), jobConfig.getProcessingGuarantee())
+                        snapshotContext, savesSnapshot ? queues[processorIdx] : null)
                         : new BlockingProcessorTasklet(context, p, inboundStreams, outboundStreams,
-                        snapshotContext, savesSnapshot ? queues[processorIdx] : null,
-                                nodeEngine.getSerializationService(), jobConfig.getProcessingGuarantee());
+                        snapshotContext, savesSnapshot ? queues[processorIdx] : null);
                 tasklets.add(processorTasklet);
                 this.processors.add(p);
                 processorIdx++;
@@ -192,6 +190,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
     public List<Tasklet> getTasklets() {
         return tasklets;
+    }
+
+    public JobConfig getJobConfig() {
+        return jobConfig;
     }
 
     void addVertex(VertexDef vertex) {

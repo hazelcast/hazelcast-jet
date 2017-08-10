@@ -82,7 +82,7 @@ public class ExecutionContext {
         // available to be completed in the case of init failure
         procSuppliers = unmodifiableList(plan.getProcessorSuppliers());
         processors = plan.getProcessors();
-        snapshotContext = new SnapshotContext();
+        snapshotContext = new SnapshotContext(plan.getJobConfig().getProcessingGuarantee());
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext);
         snapshotContext.setTaskletCount(plan.snapshottableVertices().size());
         receiverMap = unmodifiableMap(plan.getReceiverMap());

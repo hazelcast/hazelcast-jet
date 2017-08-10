@@ -43,10 +43,8 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
     public BlockingProcessorTasklet(
             ProcCtx context, Processor processor, List<InboundEdgeStream> instreams,
             List<OutboundEdgeStream> outstreams, SnapshotContext snapshotContext,
-            Queue<Object> snapshotQueue, SerializationService serializationService,
-            ProcessingGuarantee processingGuarantee) {
-        super(context, processor, instreams, outstreams, snapshotContext, snapshotQueue, serializationService,
-                processingGuarantee);
+            Queue<Object> snapshotQueue) {
+        super(context, processor, instreams, outstreams, snapshotContext, snapshotQueue);
         Preconditions.checkFalse(processor.isCooperative(), "Processor is cooperative");
         outbox = new BlockingOutbox();
     }
@@ -75,9 +73,10 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
     }
 
     @Override
-    protected SnapshotStorageImpl createSnapshotStorage(Queue<Object> snapshotQueue,
-                                                        SerializationService serializationService) {
-        return snapshotStorage = new BlockingSnapshotStorageImpl(serializationService, snapshotQueue);
+    protected SnapshotStorageImpl createSnapshotStorage(Queue<Object> snapshotQueue) {
+        return snapshotStorage = new BlockingSnapshotStorageImpl(
+                context.getEngine().getSerializationService(), snapshotQueue
+        );
     }
 
     @Override

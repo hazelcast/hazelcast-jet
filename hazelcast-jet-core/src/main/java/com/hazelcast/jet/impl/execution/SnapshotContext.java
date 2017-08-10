@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
 
 import java.util.concurrent.CompletableFuture;
@@ -44,9 +45,13 @@ public class SnapshotContext {
      */
     // this is an AtomicInteger because it will be decremented without synchronizing
     private final AtomicInteger remainingProcessors = new AtomicInteger();
+
+    private final ProcessingGuarantee guarantee;
+
     private CompletableFuture<Void> future;
 
-    public SnapshotContext() {
+    public SnapshotContext(ProcessingGuarantee guarantee) {
+        this.guarantee = guarantee;
         this.taskletCount = Integer.MIN_VALUE;
     }
 
@@ -93,5 +98,9 @@ public class SnapshotContext {
             future.complete(null);
             future = null;
         }
+    }
+
+    public ProcessingGuarantee getGuarantee() {
+        return guarantee;
     }
 }

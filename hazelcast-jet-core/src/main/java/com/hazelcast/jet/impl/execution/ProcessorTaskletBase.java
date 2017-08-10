@@ -51,13 +51,13 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     final ProgressTracker progTracker = new ProgressTracker();
     final OutboundEdgeStream[] outstreams;
     Outbox outbox;
+    final ProcCtx context;
+
     private final Processor processor;
     // casted #processor to Snapshottable or null, if #processor does not implement it
     private final Snapshottable snapshottable;
     private InboundEdgeStream currInstream;
-    private final ProcessingGuarantee processingGuarantee;
 
-    private final ProcCtx context;
     private final ArrayDequeInbox inbox = new ArrayDequeInbox(progTracker);
     private final Queue<ArrayList<InboundEdgeStream>> instreamGroupQueue;
     private CircularListCursor<InboundEdgeStream> instreamCursor;
@@ -76,8 +76,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                          List<InboundEdgeStream> instreams,
                          List<OutboundEdgeStream> outstreams,
                          SnapshotContext snapshotContext,
-                         Queue<Object> snapshotQueue,
-                         SerializationService serializationService, ProcessingGuarantee processingGuarantee) {
+                         Queue<Object> snapshotQueue) {
         Preconditions.checkNotNull(processor, "processor");
         this.context = context;
         this.processor = processor;
@@ -91,18 +90,17 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         this.outstreams = outstreams.stream()
                                     .sorted(comparing(OutboundEdgeStream::ordinal))
                                     .toArray(OutboundEdgeStream[]::new);
+
         this.snapshotContext = snapshotContext;
         this.snapshotQueue = snapshotQueue;
-        this.processingGuarantee = processingGuarantee;
 
         instreamCursor = popInstreamGroup();
         completedSnapshotId = snapshotContext != null ? snapshotContext.getCurrentSnapshotId() : Long.MAX_VALUE;
-        snapshotStorage = snapshotQueue == null ? null : createSnapshotStorage(snapshotQueue, serializationService);
+        snapshotStorage = snapshotQueue == null ? null : createSnapshotStorage(snapshotQueue);
         barrierWatcher = new BarrierWatcher(instreams.size());
     }
 
-    protected abstract SnapshotStorageImpl createSnapshotStorage(Queue<Object> snapshotQueue,
-                                                                 SerializationService serializationService);
+    protected abstract SnapshotStorageImpl createSnapshotStorage(Queue<Object> snapshotQueue);
 
     @Override @Nonnull
     public ProgressState call() {
@@ -238,7 +236,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
             }
             currInstream = instreamCursor.value();
             result = NO_PROGRESS;
-            if (processingGuarantee == ProcessingGuarantee.EXACTLY_ONCE
+            if (snapshotContext.getGuarantee() == ProcessingGuarantee.EXACTLY_ONCE
                     && barrierWatcher.isBlocked(currInstream.ordinal())) {
                 continue;
             }

@@ -20,10 +20,14 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorMetaSupplier.Context;
 import com.hazelcast.jet.ProcessorSupplier;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.spi.NodeEngine;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
+
+import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 
 public final class Contexts {
 
@@ -36,11 +40,13 @@ public final class Contexts {
         private final ILogger logger;
         private final String vertexName;
         private final int index;
+        private final NodeEngine engine;
         private CompletableFuture<Void> jobFuture;
         private final boolean snapshottingEnabled;
 
-        public ProcCtx(JetInstance instance, ILogger logger, String vertexName, int index, boolean snapshottingEnabled) {
-            this.instance = instance;
+        public ProcCtx(NodeEngine engine, ILogger logger, String vertexName, int index, boolean snapshottingEnabled) {
+            this.instance = getJetInstance(engine);
+            this.engine = engine;
             this.logger = logger;
             this.vertexName = vertexName;
             this.index = index;
@@ -89,6 +95,10 @@ public final class Contexts {
         public void initJobFuture(CompletableFuture<Void> jobFuture) {
             assert this.jobFuture == null : "jobFuture already initialized";
             this.jobFuture = jobFuture;
+        }
+
+        public NodeEngine getEngine() {
+            return engine;
         }
     }
 
