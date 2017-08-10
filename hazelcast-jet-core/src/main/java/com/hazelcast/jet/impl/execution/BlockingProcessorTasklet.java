@@ -42,10 +42,10 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
 
     public BlockingProcessorTasklet(
             ProcCtx context, Processor processor, List<InboundEdgeStream> instreams,
-            List<OutboundEdgeStream> outstreams, SnapshotState snapshotState,
+            List<OutboundEdgeStream> outstreams, SnapshotContext snapshotContext,
             Queue<Object> snapshotQueue, SerializationService serializationService,
             ProcessingGuarantee processingGuarantee) {
-        super(context, processor, instreams, outstreams, snapshotState, snapshotQueue, serializationService,
+        super(context, processor, instreams, outstreams, snapshotContext, snapshotQueue, serializationService,
                 processingGuarantee);
         Preconditions.checkFalse(processor.isCooperative(), "Processor is cooperative");
         outbox = new BlockingOutbox();

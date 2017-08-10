@@ -59,7 +59,7 @@ public class StoreSnapshotTasklet implements Tasklet {
     private final OperationService operationService;
     private final MapService mapService;
     private final JetService jetService;
-    private final SnapshotState snapshotState;
+    private final SnapshotContext snapshotContext;
 
     private long currentSnapshotId = -1;
     private long completedSnapshotId = -1;
@@ -70,9 +70,9 @@ public class StoreSnapshotTasklet implements Tasklet {
     private final AtomicReference<Throwable> firstFailure = new AtomicReference<>();
     private ExecutionCallback<Object> executionCallback;
 
-    public StoreSnapshotTasklet(SnapshotState snapshotState, long jobId, InboundEdgeStream inboundEdgeStream,
+    public StoreSnapshotTasklet(SnapshotContext snapshotContext, long jobId, InboundEdgeStream inboundEdgeStream,
                                 NodeEngine nodeEngine, String vertexName) {
-        this.snapshotState = snapshotState;
+        this.snapshotContext = snapshotContext;
         this.jobId = jobId;
         this.inboundEdgeStream = inboundEdgeStream;
         this.vertexName = vertexName;
@@ -95,9 +95,9 @@ public class StoreSnapshotTasklet implements Tasklet {
                 }
                 jetService.getParallelAsyncOpsCounter().decrementAndGet();
                 if (ourPendingAsyncOps.decrementAndGet() == 0) {
-                    snapshotState.snapshotCompletedInProcessor();
+                    snapshotContext.snapshotCompletedInProcessor();
                     if (inputExhausted) {
-                        snapshotState.processorCompleted();
+                        snapshotContext.processorCompleted();
                     }
                 }
             }
@@ -147,7 +147,7 @@ public class StoreSnapshotTasklet implements Tasklet {
             });
             inputExhausted = inputQueueResult.isDone();
             if (inputExhausted && ourPendingAsyncOps.get() == 0) {
-                snapshotState.processorCompleted();
+                snapshotContext.processorCompleted();
             }
         }
 

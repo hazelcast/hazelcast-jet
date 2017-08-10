@@ -61,7 +61,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     private final ArrayDequeInbox inbox = new ArrayDequeInbox(progTracker);
     private final Queue<ArrayList<InboundEdgeStream>> instreamGroupQueue;
     private CircularListCursor<InboundEdgeStream> instreamCursor;
-    private final SnapshotState snapshotState;
+    private final SnapshotContext snapshotContext;
     private final Queue<Object> snapshotQueue;
     private final SnapshotStorage snapshotStorage;
     private long completedSnapshotId;
@@ -75,7 +75,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                          Processor processor,
                          List<InboundEdgeStream> instreams,
                          List<OutboundEdgeStream> outstreams,
-                         SnapshotState snapshotState,
+                         SnapshotContext snapshotContext,
                          Queue<Object> snapshotQueue,
                          SerializationService serializationService, ProcessingGuarantee processingGuarantee) {
         Preconditions.checkNotNull(processor, "processor");
@@ -91,12 +91,12 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         this.outstreams = outstreams.stream()
                                     .sorted(comparing(OutboundEdgeStream::ordinal))
                                     .toArray(OutboundEdgeStream[]::new);
-        this.snapshotState = snapshotState;
+        this.snapshotContext = snapshotContext;
         this.snapshotQueue = snapshotQueue;
         this.processingGuarantee = processingGuarantee;
 
         instreamCursor = popInstreamGroup();
-        completedSnapshotId = snapshotState != null ? snapshotState.getCurrentSnapshotId() : Long.MAX_VALUE;
+        completedSnapshotId = snapshotContext != null ? snapshotContext.getCurrentSnapshotId() : Long.MAX_VALUE;
         snapshotStorage = snapshotQueue == null ? null : createSnapshotStorage(snapshotQueue, serializationService);
         barrierWatcher = new BarrierWatcher(instreams.size());
     }
@@ -112,7 +112,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
             if (instreamCursor == null) {
                 // If our processor is now a source, check the flag in ExecutionContext to start a snapshot.
                 // Any processor becomes a source after its input completes.
-                requestedSnapshotId = snapshotState.getCurrentSnapshotId();
+                requestedSnapshotId = snapshotContext.getCurrentSnapshotId();
                 assert requestedSnapshotId >= completedSnapshotId;
             }
             if (requestedSnapshotId == completedSnapshotId) {

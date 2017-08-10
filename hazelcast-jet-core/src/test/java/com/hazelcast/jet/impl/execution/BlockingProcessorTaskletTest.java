@@ -296,7 +296,7 @@ public class BlockingProcessorTaskletTest {
 
     private BlockingProcessorTasklet createTasklet() {
         final BlockingProcessorTasklet t = new BlockingProcessorTasklet(context, processor, instreams, outstreams,
-                new SnapshotState(), null, null, ProcessingGuarantee.EXACTLY_ONCE);
+                new SnapshotContext(), null, null, ProcessingGuarantee.EXACTLY_ONCE);
         t.init(jobFuture);
         return t;
     }

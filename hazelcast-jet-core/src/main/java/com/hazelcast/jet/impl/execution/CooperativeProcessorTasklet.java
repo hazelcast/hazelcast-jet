@@ -36,10 +36,10 @@ public class CooperativeProcessorTasklet extends ProcessorTaskletBase {
 
     public CooperativeProcessorTasklet(ProcCtx context, Processor processor,
                                        List<InboundEdgeStream> instreams, List<OutboundEdgeStream> outstreams,
-                                       SnapshotState snapshotState, Queue<Object> snapshotQueue,
+                                       SnapshotContext snapshotContext, Queue<Object> snapshotQueue,
                                        SerializationService serializationService,
                                        ProcessingGuarantee processingGuarantee) {
-        super(context, processor, instreams, outstreams, snapshotState, snapshotQueue, serializationService,
+        super(context, processor, instreams, outstreams, snapshotContext, snapshotQueue, serializationService,
                 processingGuarantee);
         Preconditions.checkTrue(processor.isCooperative(), "Processor is non-cooperative");
         int[] bucketCapacities = Stream.of(this.outstreams).mapToInt(OutboundEdgeStream::getOutboxCapacity).toArray();

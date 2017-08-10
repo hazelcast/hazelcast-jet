@@ -21,7 +21,7 @@ import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class SnapshotState {
+public class SnapshotContext {
 
     /**
      * SnapshotId of snapshot currently being created. Source processors read
@@ -36,7 +36,7 @@ public class SnapshotState {
      * decremented as the tasklets complete (this is when they receive
      * DONE_ITEM and after all pending async ops completed).
      */
-    private int storeSnapshotTaskletsCount;
+    private int taskletCount;
 
     /**
      * Remaining number of sinks in currently produced snapshot. When it is
@@ -46,12 +46,12 @@ public class SnapshotState {
     private final AtomicInteger remainingProcessors = new AtomicInteger();
     private CompletableFuture<Void> future;
 
-    public SnapshotState() {
-        this.storeSnapshotTaskletsCount = Integer.MIN_VALUE;
+    public SnapshotContext() {
+        this.taskletCount = Integer.MIN_VALUE;
     }
 
-    public void initStoreSnapshotTaskletsCount(int storeSnapshotTaskletsCount) {
-        this.storeSnapshotTaskletsCount = storeSnapshotTaskletsCount;
+    public void setTaskletCount(int count) {
+        this.taskletCount = count;
     }
 
     public long getCurrentSnapshotId() {
@@ -69,11 +69,11 @@ public class SnapshotState {
                 : "new snapshotId not incremented by 1. Previous=" + currentSnapshotId + ", new=" + snapshotId;
         assert future == null;
 
-        remainingProcessors.set(storeSnapshotTaskletsCount);
+        remainingProcessors.set(taskletCount);
         currentSnapshotId = snapshotId;
 
         CompletableFuture<Void> localFuture = new CompletableFuture<>();
-        if (storeSnapshotTaskletsCount == 0) {
+        if (taskletCount == 0) {
             localFuture.complete(null);
         } else {
             future = localFuture;
@@ -82,8 +82,8 @@ public class SnapshotState {
     }
 
     public synchronized void processorCompleted() {
-        assert storeSnapshotTaskletsCount > 0;
-        storeSnapshotTaskletsCount--;
+        assert taskletCount > 0;
+        taskletCount--;
     }
 
     public void snapshotCompletedInProcessor() {

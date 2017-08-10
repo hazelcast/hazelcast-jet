@@ -211,7 +211,7 @@ public class CooperativeProcessorTaskletTest {
 
     private CooperativeProcessorTasklet createTasklet() {
         final CooperativeProcessorTasklet t = new CooperativeProcessorTasklet(context, processor, instreams, outstreams,
-                new SnapshotState(), null, null, ProcessingGuarantee.EXACTLY_ONCE);
+                new SnapshotContext(), null, null, ProcessingGuarantee.EXACTLY_ONCE);
         t.init(new CompletableFuture<>());
         return t;
     }

@@ -65,7 +65,7 @@ public class ExecutionContext {
 
     private final NodeEngine nodeEngine;
     private final ExecutionService execService;
-    private SnapshotState snapshotState;
+    private SnapshotContext snapshotContext;
 
     public ExecutionContext(NodeEngine nodeEngine, ExecutionService execService,
                             long jobId, long executionId, Address coordinator, Set<Address> participants) {
@@ -82,9 +82,9 @@ public class ExecutionContext {
         // available to be completed in the case of init failure
         procSuppliers = unmodifiableList(plan.getProcessorSuppliers());
         processors = plan.getProcessors();
-        snapshotState = new SnapshotState();
-        plan.initialize(nodeEngine, jobId, executionId, snapshotState);
-        snapshotState.initStoreSnapshotTaskletsCount(plan.snapshottableVertices().size());
+        snapshotContext = new SnapshotContext();
+        plan.initialize(nodeEngine, jobId, executionId, snapshotContext);
+        snapshotContext.setTaskletCount(plan.snapshottableVertices().size());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
         senderMap = unmodifiableMap(plan.getSenderMap());
         tasklets = plan.getTasklets();
@@ -161,7 +161,7 @@ public class ExecutionContext {
     }
 
     public CompletionStage<Void> initiateSnapshot(long snapshotId) {
-        return snapshotState.startNewSnapshot(snapshotId);
+        return snapshotContext.startNewSnapshot(snapshotId);
     }
 
     public boolean isParticipating(Address member) {

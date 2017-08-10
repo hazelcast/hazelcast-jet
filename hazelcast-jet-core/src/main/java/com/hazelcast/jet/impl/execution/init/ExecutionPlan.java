@@ -40,7 +40,7 @@ import com.hazelcast.jet.impl.execution.OutboundEdgeStream;
 import com.hazelcast.jet.impl.execution.ProcessorTaskletBase;
 import com.hazelcast.jet.impl.execution.ReceiverTasklet;
 import com.hazelcast.jet.impl.execution.SenderTasklet;
-import com.hazelcast.jet.impl.execution.SnapshotState;
+import com.hazelcast.jet.impl.execution.SnapshotContext;
 import com.hazelcast.jet.impl.execution.StoreSnapshotTasklet;
 import com.hazelcast.jet.impl.execution.Tasklet;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
@@ -115,7 +115,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         this.jobConfig = jobConfig;
     }
 
-    public void initialize(NodeEngine nodeEngine, long jobId, long executionId, SnapshotState snapshotState) {
+    public void initialize(NodeEngine nodeEngine, long jobId, long executionId, SnapshotContext snapshotContext) {
         this.nodeEngine = nodeEngine;
         this.executionId = executionId;
         initProcSuppliers();
@@ -136,7 +136,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                     queues[i] = new OneToOneConcurrentArrayQueue<>(2000);
                 }
                 ConcurrentConveyor<Object> ssConveyor = concurrentConveyor(null, queues);
-                StoreSnapshotTasklet ssTasklet = new StoreSnapshotTasklet(snapshotState, jobId,
+                StoreSnapshotTasklet ssTasklet = new StoreSnapshotTasklet(snapshotContext, jobId,
                         new ConcurrentInboundEdgeStream(ssConveyor, 0, 0, true),
                         nodeEngine, srcVertex.name());
                 tasklets.add(ssTasklet);
@@ -160,10 +160,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 List<InboundEdgeStream> inboundStreams = createInboundEdgeStreams(srcVertex, processorIdx);
                 ProcessorTaskletBase processorTasklet = p.isCooperative()
                         ? new CooperativeProcessorTasklet(context, p, inboundStreams, outboundStreams,
-                                snapshotState, savesSnapshot ? queues[processorIdx] : null,
+                        snapshotContext, savesSnapshot ? queues[processorIdx] : null,
                                 nodeEngine.getSerializationService(), jobConfig.getProcessingGuarantee())
                         : new BlockingProcessorTasklet(context, p, inboundStreams, outboundStreams,
-                                snapshotState, savesSnapshot ? queues[processorIdx] : null,
+                        snapshotContext, savesSnapshot ? queues[processorIdx] : null,
                                 nodeEngine.getSerializationService(), jobConfig.getProcessingGuarantee());
                 tasklets.add(processorTasklet);
                 this.processors.add(p);
