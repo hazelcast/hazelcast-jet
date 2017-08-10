@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.SnapshotStorage;
@@ -41,6 +40,8 @@ import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
+import static com.hazelcast.jet.impl.execution.ProcessorState.*;
+import static com.hazelcast.jet.impl.util.ProgressState.*;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toCollection;
@@ -67,7 +68,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     private long requestedSnapshotId;
     private BarrierWatcher barrierWatcher;
 
-    private ProcessorState state = ProcessorState.STATE_NULLARY_PROCESS;
+    private ProcessorState state = NULLARY_PROCESS;
     private long pendingBarrier;
 
     ProcessorTaskletBase(ProcCtx context,
@@ -107,7 +108,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     public ProgressState call() {
         progTracker.reset();
 
-        if (state == ProcessorState.STATE_START_SNAPSHOT) {
+        if (state == START_SNAPSHOT) {
             if (instreamCursor == null) {
                 // If our processor is now a source, check the flag in ExecutionContext to start a snapshot.
                 // Any processor becomes a source after its input completes.
@@ -116,51 +117,51 @@ public abstract class ProcessorTaskletBase implements Tasklet {
             }
             if (requestedSnapshotId == completedSnapshotId) {
                 // No new snapshot requested, skip snapshot creation
-                state = ProcessorState.STATE_NULLARY_PROCESS;
+                state = NULLARY_PROCESS;
             } else if (snapshotQueue == null) {
                 // New snapshot requested, but our processor is stateless. Just forward the barrier.
-                state = ProcessorState.STATE_SNAPSHOT_BARRIER_TO_OUTBOX;
+                state = SNAPSHOT_BARRIER_TO_OUTBOX;
             } else if (snapshotQueue.offer(new SnapshotStartBarrier(requestedSnapshotId))) {
-                state = ProcessorState.STATE_DO_SNAPSHOT;
+                state = DO_SNAPSHOT;
             } else {
                 progTracker.notDone();
             }
         }
 
-        if (state == ProcessorState.STATE_DO_SNAPSHOT) {
+        if (state == DO_SNAPSHOT) {
             if (snapshottable.saveSnapshot(snapshotStorage)) {
-                state = ProcessorState.STATE_SNAPSHOT_BARRIER_TO_SNAPSHOT_QUEUE;
+                state = SNAPSHOT_BARRIER_TO_SNAPSHOT_QUEUE;
             } else {
                 progTracker.notDone();
             }
         }
 
-        if (state == ProcessorState.STATE_SNAPSHOT_BARRIER_TO_SNAPSHOT_QUEUE) {
+        if (state == SNAPSHOT_BARRIER_TO_SNAPSHOT_QUEUE) {
             if (snapshotQueue.offer(new SnapshotBarrier(requestedSnapshotId))) {
-                state = ProcessorState.STATE_SNAPSHOT_BARRIER_TO_OUTBOX;
+                state = SNAPSHOT_BARRIER_TO_OUTBOX;
             } else {
                 progTracker.notDone();
             }
         }
 
-        if (state == ProcessorState.STATE_SNAPSHOT_BARRIER_TO_OUTBOX) {
+        if (state == SNAPSHOT_BARRIER_TO_OUTBOX) {
             if (outbox.offer(new SnapshotBarrier(requestedSnapshotId))) {
                 completedSnapshotId = requestedSnapshotId;
-                state = ProcessorState.STATE_NULLARY_PROCESS;
+                state = NULLARY_PROCESS;
             } else {
                 progTracker.notDone();
             }
         }
 
-        if (state == ProcessorState.STATE_NULLARY_PROCESS) {
+        if (state == NULLARY_PROCESS) {
             if (processor.tryProcess()) {
-                state = ProcessorState.STATE_PROCESS_OR_COMPLETE;
+                state = PROCESS_OR_COMPLETE;
             } else {
                 progTracker.notDone();
             }
         }
 
-        if (state == ProcessorState.STATE_PROCESS_OR_COMPLETE) {
+        if (state == PROCESS_OR_COMPLETE) {
             if (inbox.isEmpty()) {
                 tryFillInbox();
                 // Barrier is put to the inbox as the sole item by ConcurrentInboundEdgeStream. In
@@ -170,8 +171,8 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                     if (barrierWatcher.observe(currInstream.ordinal(), requestedSnapshotId)) {
                         requestedSnapshotId = barrier.snapshotId();
                         state = snapshotQueue == null
-                                ? ProcessorState.STATE_SNAPSHOT_BARRIER_TO_OUTBOX
-                                : ProcessorState.STATE_START_SNAPSHOT;
+                                ? SNAPSHOT_BARRIER_TO_OUTBOX
+                                : START_SNAPSHOT;
                         return call(); // recursive call
                     }
                 }
@@ -181,9 +182,9 @@ public abstract class ProcessorTaskletBase implements Tasklet {
 
             if (progTracker.isDone()) {
                 if (processor.complete()) {
-                    state = ProcessorState.STATE_ADD_DONE_ITEM_OUTBOX;
+                    state = ADD_DONE_ITEM_OUTBOX;
                 } else {
-                    state = ProcessorState.STATE_START_SNAPSHOT;
+                    state = START_SNAPSHOT;
                     progTracker.notDone();
                 }
             } else {
@@ -191,22 +192,22 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                     processor.process(currInstream.ordinal(), inbox);
                 }
                 if (inbox.isEmpty()) {
-                    state = ProcessorState.STATE_START_SNAPSHOT;
+                    state = START_SNAPSHOT;
                 }
             }
         }
 
-        if (state == ProcessorState.STATE_ADD_DONE_ITEM_OUTBOX) {
+        if (state == ADD_DONE_ITEM_OUTBOX) {
             if (outbox.offer(DONE_ITEM)) {
-                state = ProcessorState.STATE_ADD_DONE_ITEM_SNAPSHOT;
+                state = ADD_DONE_ITEM_SNAPSHOT;
             } else {
                 progTracker.notDone();
             }
         }
 
-        if (state == ProcessorState.STATE_ADD_DONE_ITEM_SNAPSHOT) {
+        if (state == ADD_DONE_ITEM_SNAPSHOT) {
             if (snapshotQueue == null || snapshotQueue.offer(DONE_ITEM)) {
-                state = ProcessorState.STATE_PROCESSOR_COMPLETED;
+                state = PROCESSOR_COMPLETED;
             } else {
                 progTracker.notDone();
             }
@@ -236,7 +237,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                 return;
             }
             currInstream = instreamCursor.value();
-            result = ProgressState.NO_PROGRESS;
+            result = NO_PROGRESS;
             if (processingGuarantee == ProcessingGuarantee.EXACTLY_ONCE
                     && barrierWatcher.isBlocked(currInstream.ordinal())) {
                 continue;
@@ -270,57 +271,6 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     }
 
     protected abstract void tryFlushOutbox();
-
-    private enum ProcessorState {
-        /**
-         * Check, if new snapshot is requested and wait to accept the {@link
-         * SnapshotStartBarrier} by the queue.
-         */
-        STATE_START_SNAPSHOT,
-
-        /**
-         * Doing calls to {@link Snapshottable#saveSnapshot(SnapshotStorage)} until
-         * it returns true.
-         */
-        STATE_DO_SNAPSHOT,
-
-        /**
-         * Waiting to accept the {@link SnapshotBarrier} by the queue.
-         */
-        STATE_SNAPSHOT_BARRIER_TO_OUTBOX,
-
-        /**
-         * Waiting to accept the {@link SnapshotBarrier} by the {@link
-         * #snapshotQueue}.
-         */
-        STATE_SNAPSHOT_BARRIER_TO_SNAPSHOT_QUEUE,
-
-        /**
-         * Doing calls to {@link Processor#tryProcess()} until it returns true.
-         */
-        STATE_NULLARY_PROCESS,
-
-        /**
-         * Doing calls to {@link Processor#process(int, Inbox)} until the inbox is
-         * empty or to {@link Processor#complete()} until it returns true.
-         */
-        STATE_PROCESS_OR_COMPLETE,
-
-        /**
-         * Waiting until outbox accepts DONE_ITEM.
-         */
-        STATE_ADD_DONE_ITEM_OUTBOX,
-
-        /**
-         * Waiting until snapshot storage accepts DONE_ITEM.
-         */
-        STATE_ADD_DONE_ITEM_SNAPSHOT,
-
-        /**
-         * waiting to flush the outbox. This is a terminal state.
-         */
-        STATE_PROCESSOR_COMPLETED
-    }
 
 }
 
