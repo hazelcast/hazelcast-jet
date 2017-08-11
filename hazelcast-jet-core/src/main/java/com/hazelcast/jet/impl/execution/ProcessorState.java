@@ -41,7 +41,7 @@ enum ProcessorState {
 
     /**
      * Waiting to accept the {@link SnapshotBarrier} by the {@link
-     * #snapshotQueue}.
+     * ProcessorTaskletBase#snapshotQueue}.
      */
     SNAPSHOT_BARRIER_TO_SNAPSHOT_QUEUE,
 

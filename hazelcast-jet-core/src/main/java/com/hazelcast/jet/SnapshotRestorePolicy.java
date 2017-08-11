@@ -31,6 +31,7 @@ public enum SnapshotRestorePolicy {
      * copies of the snapshot).
      */
     PARTITIONED,
+
     /**
      * Entire snapshot will be restored to all processor instances. To
      * limit the traffic, use {@link #getSnapshotPredicate()}. Use this

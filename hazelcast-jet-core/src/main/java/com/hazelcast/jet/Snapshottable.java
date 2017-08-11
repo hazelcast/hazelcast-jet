@@ -26,7 +26,6 @@ public interface Snapshottable {
 
     /**
      * Returns the snapshot restore policy for the processor
-     * <ul>
      */
     @Nonnull
     default SnapshotRestorePolicy restorePolicy() {

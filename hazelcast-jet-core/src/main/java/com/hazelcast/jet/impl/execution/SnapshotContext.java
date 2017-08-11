@@ -37,7 +37,7 @@ public class SnapshotContext {
      * decremented as the tasklets complete (this is when they receive
      * DONE_ITEM and after all pending async ops completed).
      */
-    private int taskletCount;
+    private int taskletCount = Integer.MIN_VALUE;
 
     /**
      * Remaining number of sinks in currently produced snapshot. When it is
@@ -50,16 +50,16 @@ public class SnapshotContext {
 
     private CompletableFuture<Void> future;
 
-    public SnapshotContext(ProcessingGuarantee guarantee) {
+    SnapshotContext(ProcessingGuarantee guarantee) {
         this.guarantee = guarantee;
-        this.taskletCount = Integer.MIN_VALUE;
     }
 
-    public void setTaskletCount(int count) {
+    void initTaskletCount(int count) {
+        assert this.taskletCount == Long.MIN_VALUE;
         this.taskletCount = count;
     }
 
-    public long getCurrentSnapshotId() {
+    long getCurrentSnapshotId() {
         return currentSnapshotId;
     }
 
@@ -67,7 +67,7 @@ public class SnapshotContext {
      * This method is called when the member received {@link
      * SnapshotOperation}.
      */
-    public synchronized CompletableFuture<Void> startNewSnapshot(long snapshotId) {
+    synchronized CompletableFuture<Void> startNewSnapshot(long snapshotId) {
         assert remainingProcessors.get() == 0
                 : "previous snapshot not finished, remainingProcessors=" + remainingProcessors.get();
         assert snapshotId == currentSnapshotId + 1
@@ -86,12 +86,12 @@ public class SnapshotContext {
         return localFuture;
     }
 
-    public synchronized void processorCompleted() {
+    synchronized void processorCompleted() {
         assert taskletCount > 0;
         taskletCount--;
     }
 
-    public void snapshotCompletedInProcessor() {
+    void snapshotCompletedInProcessor() {
         int res = remainingProcessors.decrementAndGet();
         assert res >= 0;
         if (res == 0) {

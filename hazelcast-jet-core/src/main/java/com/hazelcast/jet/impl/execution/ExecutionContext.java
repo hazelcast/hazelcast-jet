@@ -33,8 +33,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 import static com.hazelcast.jet.impl.util.Util.formatIds;
@@ -84,7 +82,7 @@ public class ExecutionContext {
         processors = plan.getProcessors();
         snapshotContext = new SnapshotContext(plan.getJobConfig().getProcessingGuarantee());
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext);
-        snapshotContext.setTaskletCount(plan.snapshottableVertices().size());
+        snapshotContext.initTaskletCount(plan.snapshottableVertices().size());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
         senderMap = unmodifiableMap(plan.getSenderMap());
         tasklets = plan.getTasklets();

@@ -63,7 +63,7 @@ class BarrierWatcher {
 
         assert !barrierReceived.get(queueIndex) : "Barrier already received on queue";
 
-        assert newBarrier != 0 : "snapshotId=0 is not allowed";
+        assert newBarrier != NO_SNAPSHOT : "snapshotId=" + NO_SNAPSHOT + " is not allowed";
 
         currentSnapshotId = newBarrier;
 
