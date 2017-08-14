@@ -17,8 +17,7 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
-import com.hazelcast.jet.impl.util.ProgressTracker;
+import com.hazelcast.jet.test.TestOutbox;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Test;
@@ -54,7 +53,7 @@ public class ReadWithPartitionIteratorPTest {
         };
         ReadWithPartitionIteratorP<Entry<Integer, Integer>> r =
                 new ReadWithPartitionIteratorP<>(p -> content[p], partitions);
-        ArrayDequeOutbox outbox = new ArrayDequeOutbox(new int[]{3}, new ProgressTracker());
+        TestOutbox outbox = new TestOutbox(3);
         Queue<Object> bucket = outbox.queueWithOrdinal(0);
         r.init(outbox, mock(Processor.Context.class));
 

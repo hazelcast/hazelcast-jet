@@ -18,9 +18,8 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.jet.JetTestSupport;
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
-import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.jet.processor.Sources;
+import com.hazelcast.jet.test.TestOutbox;
 import com.hazelcast.jet.test.TestProcessorContext;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
@@ -45,12 +44,12 @@ import static org.junit.Assert.assertTrue;
 public class StreamSocketPTest extends JetTestSupport {
 
     private Queue<Object> bucket;
-    private ArrayDequeOutbox outbox;
+    private TestOutbox outbox;
     private TestProcessorContext context;
 
     @Before
     public void before() {
-        outbox = new ArrayDequeOutbox(new int[]{10}, new ProgressTracker());
+        outbox = new TestOutbox(10);
         context = new TestProcessorContext();
         context.setJobFuture(new CompletableFuture<>());
         bucket = outbox.queueWithOrdinal(0);

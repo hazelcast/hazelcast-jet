@@ -19,9 +19,9 @@ package com.hazelcast.jet;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.impl.util.ArrayDequeInbox;
-import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
 import com.hazelcast.jet.impl.util.ProgressTracker;
+import com.hazelcast.jet.test.TestInbox;
+import com.hazelcast.jet.test.TestOutbox;
 import com.hazelcast.jet.test.TestProcessorContext;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
@@ -66,8 +66,8 @@ public class Processors_peekTest {
     @Parameter(2)
     public Class<Processor> processor;
 
-    private ArrayDequeInbox inbox;
-    private ArrayDequeOutbox outbox;
+    private TestInbox inbox;
+    private TestOutbox outbox;
     private TestProcessorContext context;
     private ILogger logger;
 
@@ -86,8 +86,8 @@ public class Processors_peekTest {
 
     @Before
     public void before() {
-        inbox = new ArrayDequeInbox();
-        outbox = new ArrayDequeOutbox(new int[]{128}, new ProgressTracker());
+        inbox = new TestInbox();
+        outbox = new TestOutbox(128);
         logger = mock(ILogger.class);
         context = new TestProcessorContext().setLogger(logger);
     }

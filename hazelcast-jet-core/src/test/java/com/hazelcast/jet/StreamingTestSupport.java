@@ -16,9 +16,8 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.jet.impl.util.ArrayDequeInbox;
-import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
-import com.hazelcast.jet.impl.util.ProgressTracker;
+import com.hazelcast.jet.test.TestInbox;
+import com.hazelcast.jet.test.TestOutbox;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -27,8 +26,8 @@ import java.util.stream.Stream;
 import static org.junit.Assert.assertEquals;
 
 public class StreamingTestSupport {
-    public ArrayDequeInbox inbox = new ArrayDequeInbox();
-    public ArrayDequeOutbox outbox = new ArrayDequeOutbox(new int[] {1024}, new ProgressTracker());
+    public TestInbox inbox = new TestInbox();
+    public TestOutbox outbox = new TestOutbox(1024);
 
     protected static Watermark wm(long timestamp) {
         return new Watermark(timestamp);

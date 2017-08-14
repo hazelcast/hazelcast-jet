@@ -18,8 +18,7 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.Processor.Context;
 import com.hazelcast.jet.Watermark;
-import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
-import com.hazelcast.jet.impl.util.ProgressTracker;
+import com.hazelcast.jet.test.TestOutbox;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Test;
@@ -45,14 +44,14 @@ public class InsertWatermarksPTest {
 
     private MockClock clock;
     private InsertWatermarksP<Item> p;
-    private ArrayDequeOutbox outbox;
+    private TestOutbox outbox;
     private List<String> resultToCheck = new ArrayList<>();
 
     public void setUp(int outboxCapacity) {
         clock = new MockClock(100);
         p = new InsertWatermarksP<>(Item::getTimestamp, withFixedLag(LAG).get(), suppressDuplicates());
 
-        outbox = new ArrayDequeOutbox(new int[]{outboxCapacity}, new ProgressTracker());
+        outbox = new TestOutbox(outboxCapacity);
         Context context = mock(Context.class);
 
         p.init(outbox, context);

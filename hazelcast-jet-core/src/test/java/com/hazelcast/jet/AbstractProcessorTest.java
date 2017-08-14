@@ -17,9 +17,8 @@
 package com.hazelcast.jet;
 
 import com.hazelcast.jet.AbstractProcessor.FlatMapper;
-import com.hazelcast.jet.impl.util.ArrayDequeInbox;
-import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
-import com.hazelcast.jet.impl.util.ProgressTracker;
+import com.hazelcast.jet.test.TestInbox;
+import com.hazelcast.jet.test.TestOutbox;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
@@ -65,18 +64,18 @@ public class AbstractProcessorTest {
     private RegisteringMethodCallsP p;
     private SpecializedByOrdinalP tryProcessP;
 
-    private ArrayDequeInbox inbox;
-    private ArrayDequeOutbox outbox;
+    private TestInbox inbox;
+    private TestOutbox outbox;
     private NothingOverriddenP nothingOverriddenP;
 
     @Before
     public void before() {
-        inbox = new ArrayDequeInbox();
+        inbox = new TestInbox();
         inbox.add(MOCK_ITEM);
         inbox.add(MOCK_WM);
         int[] capacities = new int[OUTBOX_BUCKET_COUNT];
         Arrays.fill(capacities, 1);
-        outbox = new ArrayDequeOutbox(capacities, new ProgressTracker());
+        outbox = new TestOutbox(capacities);
         final Processor.Context ctx = mock(Processor.Context.class);
         Mockito.when(ctx.logger()).thenReturn(mock(ILogger.class));
 
