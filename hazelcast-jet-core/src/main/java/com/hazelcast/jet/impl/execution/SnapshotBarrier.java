@@ -20,6 +20,7 @@ public class SnapshotBarrier {
     private final long snapshotId;
 
     public SnapshotBarrier(long snapshotId) {
+        assert snapshotId >= 0; // snapshot ID starts at 0 and is only incremented
         this.snapshotId = snapshotId;
     }
 

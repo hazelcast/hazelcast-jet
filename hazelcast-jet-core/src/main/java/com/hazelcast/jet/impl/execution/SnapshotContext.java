@@ -26,11 +26,11 @@ public class SnapshotContext {
 
     /**
      * SnapshotId of snapshot currently being created. Source processors read
-     * it and when they see increased value, they start a snapshot with that
-     * ID.
+     * it and when they see changed value, they start a snapshot with that
+     * ID. {@code Long.MIN_VALUE} means no snapshot is in progress.
      */
     // is volatile because it will be read without synchronizing
-    private volatile long currentSnapshotId = -1;
+    private volatile long currentSnapshotId = Long.MIN_VALUE;
 
     /**
      * Current number of {@link StoreSnapshotTasklet}s in the job. It's
@@ -97,6 +97,7 @@ public class SnapshotContext {
         if (res == 0) {
             future.complete(null);
             future = null;
+            currentSnapshotId = Long.MIN_VALUE;
         }
     }
 
