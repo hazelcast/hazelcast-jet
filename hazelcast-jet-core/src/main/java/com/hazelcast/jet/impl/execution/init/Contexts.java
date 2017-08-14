@@ -23,6 +23,7 @@ import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.NodeEngine;
+import com.hazelcast.spi.serialization.SerializationService;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
@@ -40,13 +41,14 @@ public final class Contexts {
         private final ILogger logger;
         private final String vertexName;
         private final int index;
-        private final NodeEngine engine;
+        private final SerializationService serService;
         private CompletableFuture<Void> jobFuture;
         private final boolean snapshottingEnabled;
 
-        public ProcCtx(NodeEngine engine, ILogger logger, String vertexName, int index, boolean snapshottingEnabled) {
-            this.instance = getJetInstance(engine);
-            this.engine = engine;
+        public ProcCtx(JetInstance instance, SerializationService serService,
+                       ILogger logger, String vertexName, int index, boolean snapshottingEnabled) {
+            this.instance = instance;
+            this.serService = serService;
             this.logger = logger;
             this.vertexName = vertexName;
             this.index = index;
@@ -97,8 +99,8 @@ public final class Contexts {
             this.jobFuture = jobFuture;
         }
 
-        public NodeEngine getEngine() {
-            return engine;
+        public SerializationService getSerializationService() {
+            return serService;
         }
     }
 

@@ -62,7 +62,7 @@ public class CooperativeProcessorTaskletTest {
     public void setUp() {
         this.mockInput = IntStream.range(0, MOCK_INPUT_SIZE).boxed().collect(toList());
         this.processor = new PassThroughProcessor();
-        this.context = new ProcCtx(null, null, null, 0, false);
+        this.context = new ProcCtx(null, null,null, null, 0, false);
         this.instreams = new ArrayList<>();
         this.outstreams = new ArrayList<>();
     }

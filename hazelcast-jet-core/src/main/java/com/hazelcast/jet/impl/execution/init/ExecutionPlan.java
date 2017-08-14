@@ -21,6 +21,7 @@ import com.hazelcast.internal.util.concurrent.OneToOneConcurrentArrayQueue;
 import com.hazelcast.internal.util.concurrent.QueuedPipe;
 import com.hazelcast.jet.Edge.RoutingPolicy;
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.jet.Snapshottable;
@@ -68,6 +69,7 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.internal.util.concurrent.ConcurrentConveyor.concurrentConveyor;
 import static com.hazelcast.jet.impl.execution.OutboundCollector.compositeCollector;
+import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 import static com.hazelcast.jet.impl.util.Util.idToString;
 import static com.hazelcast.jet.impl.util.Util.memoize;
 import static com.hazelcast.jet.impl.util.Util.readList;
@@ -120,6 +122,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         initDag();
 
         this.ptionArrgmt = new PartitionArrangement(partitionOwners, nodeEngine.getThisAddress());
+        JetInstance instance = getJetInstance(nodeEngine);
         for (VertexDef srcVertex : vertices) {
             Collection<? extends Processor> processors = createProcessors(srcVertex, srcVertex.parallelism());
 
@@ -143,9 +146,14 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             for (Processor p : processors) {
                 ILogger logger =
                         nodeEngine.getLogger(p.getClass().getName() + '.' + srcVertex.name() + '#' + processorIdx);
-                ProcCtx context =
-                        new ProcCtx(nodeEngine, logger, srcVertex.name(), processorIdx + srcVertex.getProcIdxOffset(),
-                                jobConfig.getSnapshotInterval() >= 0);
+                ProcCtx context = new ProcCtx(
+                        instance,
+                        nodeEngine.getSerializationService(),
+                        logger,
+                        srcVertex.name(),
+                        processorIdx + srcVertex.getProcIdxOffset(),
+                        jobConfig.getSnapshotInterval() >= 0
+                );
 
                  String probePrefix = String.format("jet.job.%s.%s#%d", idToString(executionId), srcVertex.name(),
                          processorIdx);

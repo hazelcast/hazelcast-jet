@@ -31,6 +31,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
+import javax.annotation.Nonnull;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.TestUtil.throttle;
