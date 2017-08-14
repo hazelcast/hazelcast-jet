@@ -32,7 +32,6 @@ import static com.hazelcast.util.Preconditions.checkTrue;
 
 /**
  * A wrapper processor to throttle the output of a processor.
- * See {@link DiagnosticProcessors#peekInput(DistributedSupplier)}.
  */
 public final class ThrottleWrappedP implements Processor {
 
@@ -110,6 +109,11 @@ public final class ThrottleWrappedP implements Processor {
         @Override
         public boolean offer(int[] ordinals, @Nonnull Object item) {
             return wrappedOutbox.offer(ordinals, item);
+        }
+
+        @Override
+        public boolean offerSnapshot(Object key, Object value) {
+            return wrappedOutbox.offerSnapshot(key, value);
         }
     }
 }

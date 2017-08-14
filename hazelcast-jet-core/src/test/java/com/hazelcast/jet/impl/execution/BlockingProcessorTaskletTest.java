@@ -214,7 +214,7 @@ public class BlockingProcessorTaskletTest {
     public void when_jobFutureCompleted_then_exceptionThrownAndCaughtInTasklet() {
         // Given
         instreams.add(new MockInboundStream(0, mockInput, 1));
-        outstreams.add(new MockOutboundStream(0, 0, 0));
+        outstreams.add(new MockOutboundStream(0, 0));
         BlockingProcessorTasklet tasklet = createTasklet();
 
         // When
@@ -353,7 +353,7 @@ public class BlockingProcessorTaskletTest {
     }
 
     private static MockOutboundStream outstream(int ordinal) {
-        return new MockOutboundStream(ordinal, 1024, 1024);
+        return new MockOutboundStream(ordinal, 1024);
     }
 
     private static void callUntil(Tasklet tasklet, ProgressState expectedState) {

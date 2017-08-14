@@ -152,7 +152,7 @@ public class CooperativeProcessorTaskletTest {
     public void when_outstreamRefusesItem_then_noProgress() {
         // Given
         MockInboundStream instream1 = new MockInboundStream(0, mockInput, mockInput.size());
-        MockOutboundStream outstream1 = new MockOutboundStream(0, 1, 1);
+        MockOutboundStream outstream1 = new MockOutboundStream(0, 1);
         instreams.add(instream1);
         outstreams.add(outstream1);
         Tasklet tasklet = createTasklet();
@@ -186,7 +186,7 @@ public class CooperativeProcessorTaskletTest {
     public void when_completeReturnsFalse_then_retried() {
         // Given
         MockInboundStream instream1 = new MockInboundStream(0, emptyList(), 1);
-        MockOutboundStream outstream1 = new MockOutboundStream(0, 1, 1);
+        MockOutboundStream outstream1 = new MockOutboundStream(0, 1);
         instreams.add(instream1);
         outstreams.add(outstream1);
         CooperativeProcessorTasklet tasklet = createTasklet();
