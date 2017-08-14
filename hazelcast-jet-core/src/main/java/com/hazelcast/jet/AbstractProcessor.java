@@ -328,6 +328,11 @@ public abstract class AbstractProcessor implements Processor {
         return outbox.offer(ordinals, item);
     }
 
+    @CheckReturnValue
+    protected boolean tryEmitToSnapshot(Object key, Object value) {
+        return outbox.offerToSnapshot(key, value);
+    }
+
     /**
      * Adds the item to the outbox bucket with the supplied ordinal, throwing
      * an exception if the outbox refuses it. Only useful for non-cooperative
@@ -359,6 +364,10 @@ public abstract class AbstractProcessor implements Processor {
      */
     protected void emit(int[] ordinals, @Nonnull Object item) {
         ensureAccepted(tryEmit(ordinals, item));
+    }
+
+    protected void emitToSnapshot(Object key, Object value) {
+        ensureAccepted(tryEmitToSnapshot(key, value));
     }
 
     private static void ensureAccepted(boolean accepted) {
@@ -419,7 +428,7 @@ public abstract class AbstractProcessor implements Processor {
             item = traverser.next();
         }
         for (; item != null; item = traverser.next()) {
-            if (!outbox.offerSnapshot(item.getKey(), item.getValue())) {
+            if (!outbox.offerToSnapshot(item.getKey(), item.getValue())) {
                 pendingSnapshotItem = item;
                 return false;
             }

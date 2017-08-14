@@ -88,9 +88,7 @@ public class JobRestartWithSnapshotTest {
     static class StreamSource extends AbstractProcessor implements Snapshottable {
 
         private final int end;
-
         private Traverser<Integer> traverser;
-
         private Integer lastEmitted = - 1;
 
         public StreamSource(int end) {
@@ -106,10 +104,10 @@ public class JobRestartWithSnapshotTest {
         }
 
         @Override
-        public boolean saveSnapshot(SnapshotStorage storage) {
+        public boolean saveSnapshot() {
             System.out.println("Save snapshot");
             System.out.println("State:"  + lastEmitted);
-            return storage.offer("next", lastEmitted + 1);
+            return tryEmitToSnapshot("next", lastEmitted + 1);
         }
 
         @Override

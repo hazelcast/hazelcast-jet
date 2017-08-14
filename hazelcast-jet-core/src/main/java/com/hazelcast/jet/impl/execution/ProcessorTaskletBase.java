@@ -168,7 +168,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         }
 
         if (state == EMIT_BARRIER) {
-            if (outbox.offerEdgesAndSnapshot(new SnapshotBarrier(currSnapshot))) {
+            if (outbox.offerToEdgesAndSnapshot(new SnapshotBarrier(currSnapshot))) {
                 state = NULLARY_PROCESS;
             } else {
                 progTracker.notDone();
@@ -188,7 +188,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
 //            } else if (snapshottable == null) {
 //                // New snapshot requested, but our processor is stateless. Just forward the barrier.
 //                state = EMIT_BARRIER;
-//            } else if (outbox.offerSnapshot(new SnapshotStartBarrier(requestedSnapshotId))) {
+//            } else if (outbox.offerToSnapshot(new SnapshotStartBarrier(requestedSnapshotId))) {
 //                state = SAVE_SNAPSHOT;
 //            } else {
 //                progTracker.notDone();
@@ -196,7 +196,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
 //        }
 
         if (state == EMIT_DONE_ITEM) {
-            if (outbox.offerEdgesAndSnapshot(DONE_ITEM)) {
+            if (outbox.offerToEdgesAndSnapshot(DONE_ITEM)) {
                 state = END;
             } else {
                 progTracker.notDone();
