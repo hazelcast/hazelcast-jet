@@ -111,7 +111,7 @@ public class OutboxImpl implements Outbox {
     }
 
     @Override
-    public final boolean offerSnapshot(Object key, Object value) {
+    public final boolean offerToSnapshot(Object key, Object value) {
         if (snapshotEdge == null) {
             throw new IllegalStateException("Outbox does not have snapshot queue");
         }
@@ -133,11 +133,11 @@ public class OutboxImpl implements Outbox {
         return success;
     }
 
-    public final boolean offerSnapshot(Object item) {
+    public final boolean offerToSnapshot(Object item) {
         return offer(snapshotEdge, item);
     }
 
-    public final boolean offerEdgesAndSnapshot(Object item) {
+    public final boolean offerToEdgesAndSnapshot(Object item) {
         return offer(allEdgesAndSnapshot, item);
     }
 }

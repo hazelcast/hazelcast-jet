@@ -101,5 +101,5 @@ public interface Outbox {
      *     {@link Snapshottable}
      */
     @CheckReturnValue
-    boolean offerSnapshot(Object key, Object value);
+    boolean offerToSnapshot(Object key, Object value);
 }

@@ -105,8 +105,8 @@ public final class TestOutbox implements Outbox {
     }
 
     @Override
-    public boolean offerSnapshot(Object key, Object value) {
-        return outbox.offerSnapshot(key, value);
+    public boolean offerToSnapshot(Object key, Object value) {
+        return outbox.offerToSnapshot(key, value);
     }
 
     @Override

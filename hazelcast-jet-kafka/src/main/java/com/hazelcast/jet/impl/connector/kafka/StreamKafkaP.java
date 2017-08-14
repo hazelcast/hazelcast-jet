@@ -20,7 +20,6 @@ import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.jet.SnapshotRestorePolicy;
-import com.hazelcast.jet.SnapshotStorage;
 import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
@@ -110,12 +109,12 @@ public final class StreamKafkaP extends AbstractProcessor implements Snapshottab
     }
 
     @Override
-    public boolean saveSnapshot(SnapshotStorage storage) {
+    public boolean saveSnapshot() {
         if (snapshotTraverser == null) {
             snapshotTraverser = Traversers.traverseIterable(offsets.entrySet())
                     .onFirstNull(() -> snapshotTraverser = null);
         }
-        return emitSnapshotFromTraverser(storage, snapshotTraverser);
+        return emitSnapshotFromTraverser(snapshotTraverser);
     }
 
     @Override

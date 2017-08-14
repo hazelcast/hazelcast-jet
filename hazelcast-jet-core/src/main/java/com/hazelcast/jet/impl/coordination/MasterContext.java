@@ -322,12 +322,13 @@ public class MasterContext {
             return;
         }
 
-        snapshottableVertices = executionPlanMap.entrySet().stream().filter(e -> e.getKey().getAddress().equals
-                (nodeEngine.getThisAddress()))
-                                                .map(e -> e.getValue().snapshottableVertices()).findFirst().orElseThrow(
-                        () -> new IllegalStateException("Could not find master node within execution plan map"));
+        snapshottableVertices = executionPlanMap.entrySet().stream()
+                .filter(e -> e.getKey().getAddress().equals(nodeEngine.getThisAddress()))
+                .map(e -> e.getValue().snapshottableVertices())
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Could not find master node within execution plan map"));
 
-        String name = "jet.snapshot." + jobId + "." + executionId;
+        String name = "jet.snapshot.job-" + idToString(jobId) + ".execution-" + idToString(executionId);
         scheduledSnapshotFuture = nodeEngine.getExecutionService().scheduleWithRepetition(
                 name, this::takeSnapshot, interval, interval, TimeUnit.MILLISECONDS);
     }

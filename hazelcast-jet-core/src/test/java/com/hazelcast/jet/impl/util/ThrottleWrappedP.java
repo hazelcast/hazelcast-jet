@@ -19,9 +19,6 @@ package com.hazelcast.jet.impl.util;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.processor.DiagnosticProcessors;
-import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
 
@@ -112,8 +109,8 @@ public final class ThrottleWrappedP implements Processor {
         }
 
         @Override
-        public boolean offerSnapshot(Object key, Object value) {
-            return wrappedOutbox.offerSnapshot(key, value);
+        public boolean offerToSnapshot(Object key, Object value) {
+            return wrappedOutbox.offerToSnapshot(key, value);
         }
     }
 }

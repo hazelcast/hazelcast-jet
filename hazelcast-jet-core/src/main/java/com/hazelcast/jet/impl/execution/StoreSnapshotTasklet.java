@@ -61,8 +61,8 @@ public class StoreSnapshotTasklet implements Tasklet {
     private final JetService jetService;
     private final SnapshotContext snapshotContext;
 
-    private long currentSnapshotId = -1;
-    private long completedSnapshotId = -1;
+    // the current snapshot id (which is >=0) or Long.MIN_VALUE, meaning no snapshot is in progress
+    private long currentSnapshotId = Long.MIN_VALUE;
     private final AtomicInteger ourPendingAsyncOps = new AtomicInteger();
 
     private final String vertexName;
@@ -123,17 +123,16 @@ public class StoreSnapshotTasklet implements Tasklet {
 
         // drain input queues
         boolean[] haveUnsentEntries = {false};
-        if (!inputExhausted && (currentSnapshotId > completedSnapshotId || ourPendingAsyncOps.get() == 0)) {
+        if (!inputExhausted && (currentSnapshotId >= 0 || ourPendingAsyncOps.get() == 0)) {
             ProgressState inputQueueResult = inboundEdgeStream.drainTo(item -> {
                 progTracker.madeProgress();
-                if (item instanceof SnapshotStartBarrier) {
-                    currentSnapshotId = ((SnapshotStartBarrier) item).snapshotId();
-                } else if (item instanceof SnapshotBarrier) {
-                    completedSnapshotId = ((SnapshotBarrier) item).snapshotId();
+                if (item instanceof SnapshotBarrier) {
+                    currentSnapshotId = Long.MIN_VALUE;
                 } else {
-                    assert currentSnapshotId + 1 == completedSnapshotId : "Writing to snapshot even though there is no " +
-                            "snapshot in progress. currentSnapshotId=" + currentSnapshotId + ", completedSnapshotId="
-                            + completedSnapshotId;
+                    if (currentSnapshotId == Long.MIN_VALUE) {
+                        currentSnapshotId = snapshotContext.getCurrentSnapshotId();
+                    }
+                    assert currentSnapshotId >= 0 : "No snapshot in progress";
                     haveUnsentEntries[0] = true;
                     Entry<Data, Data> entry = (Entry<Data, Data>) item;
                     int partitionId = partitionService.getPartitionId(entry.getKey());
