@@ -23,18 +23,8 @@ import com.hazelcast.jet.Snapshottable;
 enum ProcessorState {
 
     /**
-     * Initial state
-     */
-    BEGIN,
-
-    /**
-     * Doing calls to {@link Processor#tryProcess()} until it returns true.
-     */
-    NULLARY_PROCESS,
-
-    /**
-     * Doing calls to {@link Processor#process(int, Inbox)} until the inbox is
-     * empty.
+     * Doing calls to {@link Processor#tryProcess()} and {@link
+     * Processor#process(int, Inbox)} until the inbox is empty.
      */
     PROCESS_INBOX,
 
@@ -42,6 +32,7 @@ enum ProcessorState {
      * Doing calls to {@link Processor#complete()} until it returns true
      */
     COMPLETE,
+
     /**
      * Doing calls to {@link Snapshottable#saveSnapshot()} until
      * it returns true.
@@ -52,13 +43,14 @@ enum ProcessorState {
      * Waiting to accept the {@link SnapshotBarrier} by outbox.
      */
     EMIT_BARRIER,
+
     /**
      * Waiting until outbox accepts DONE_ITEM.
      */
     EMIT_DONE_ITEM,
 
     /**
-     * End state
+     * Terminal state
      */
     END
 }

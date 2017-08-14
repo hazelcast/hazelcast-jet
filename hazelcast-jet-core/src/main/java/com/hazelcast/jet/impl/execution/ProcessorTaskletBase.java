@@ -120,23 +120,29 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                 context.getSerializationService());
     }
 
+    protected abstract OutboxImpl createOutboxInt(Function<Object, ProgressState>[] outstreams, boolean hasSnapshot,
+                                                  ProgressTracker progTracker, SerializationService serializationService);
+
     private ProcessorState initialState() {
         return instreamCursor == null ? COMPLETE : PROCESS_INBOX;
     }
 
-    protected abstract OutboxImpl createOutboxInt(Function<Object, ProgressState>[] outstreams, boolean hasSnapshot,
-                                                  ProgressTracker progTracker, SerializationService serializationService);
+    @Override
+    public void init(CompletableFuture<Void> jobFuture) {
+        context.initJobFuture(jobFuture);
+        processor.init(outbox, context);
+    }
 
     @Override @Nonnull
     public ProgressState call() {
         progTracker.reset();
+
         switch (state) {
             case PROCESS_INBOX:
                 progTracker.notDone();
-                if (inbox.isEmpty()) {
-                    if (processor.tryProcess()) {
-                        fillInbox();
-                    }
+                // call nullary process
+                if (inbox.isEmpty() && processor.tryProcess()) {
+                    fillInbox();
                 }
                 if (!inbox.isEmpty()) {
                     processor.process(currInstream.ordinal(), inbox);
@@ -144,7 +150,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                     if (inbox.isEmpty()
                             && instreamGroupQueue.size() > 0
                             && barrierReceived.cardinality() == instreamGroupQueue.size()) {
-                        state = SAVE_SNAPSHOT;
+                        state = snapshottable == null ? EMIT_BARRIER : SAVE_SNAPSHOT;
                         break;
                     }
                 }
@@ -152,13 +158,15 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                     state = COMPLETE;
                 }
                 break;
+
             case SAVE_SNAPSHOT:
-                if (snapshottable == null || snapshottable.saveSnapshot()) {
+                progTracker.notDone();
+                if (snapshottable.saveSnapshot()) {
                     state = EMIT_BARRIER;
                     break;
                 }
-                progTracker.notDone();
                 break;
+
             case EMIT_BARRIER:
                 progTracker.notDone();
                 if (outbox.offerToEdgesAndSnapshot(new SnapshotBarrier(currSnapshot))) {
@@ -167,6 +175,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                     break;
                 }
                 break;
+
             case COMPLETE:
                 progTracker.notDone();
                 // check snapshotContext to see if a new barrier should be emitted
@@ -184,6 +193,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                     state = EMIT_DONE_ITEM;
                 }
                 break;
+
             case EMIT_DONE_ITEM:
                 if (outbox.offerToEdgesAndSnapshot(DONE_ITEM)) {
                     state = END;
@@ -191,16 +201,12 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                 }
                 progTracker.notDone();
                 break;
+
             default:
+                // note ProcessorState.END goes here
                 throw new JetException("Unexpected state: " + state);
         }
         return progTracker.toProgressState();
-    }
-
-    @Override
-    public void init(CompletableFuture<Void> jobFuture) {
-        context.initJobFuture(jobFuture);
-        processor.init(outbox, context);
     }
 
     private void fillInbox() {

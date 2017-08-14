@@ -180,6 +180,13 @@ public class Edge implements IdentifiedDataSerializable {
      * Example: there two incoming edges on a vertex, with priorities 1 and 2.
      * The data from the edge with priority 1 will be processed in full before
      * accepting any data from the edge with priority 2.
+     * <p>
+     * <i>Note:</i> having different priority edges will cause that first
+     * snapshot can only be created after all higher-priority edges are
+     * processed, because we will not receive snapshot barriers from
+     * lower-priority edges, as the are interleaved with items on that edge
+     * which we don't process. This is typically not a problem if
+     * higher-priority edges are processed quickly.
      */
     public Edge priority(int priority) {
         this.priority = priority;
