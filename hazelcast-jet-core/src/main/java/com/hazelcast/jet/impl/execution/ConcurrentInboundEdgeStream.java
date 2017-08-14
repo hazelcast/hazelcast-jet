@@ -97,6 +97,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                 tracker.madeProgress();
                 if (item == DONE_ITEM) {
                     conveyor.removeQueue(queueIndex);
+                    barrierReceived.clear(queueIndex);
                     activeQueues--;
                     // we are done with this queue
                     break;
