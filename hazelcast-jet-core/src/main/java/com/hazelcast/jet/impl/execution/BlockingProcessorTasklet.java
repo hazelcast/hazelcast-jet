@@ -16,12 +16,13 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.Watermark;
-import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
+import com.hazelcast.jet.impl.util.OutboxBlockingImpl;
+import com.hazelcast.jet.impl.util.OutboxBlockingImpl.JobFutureCompleted;
+import com.hazelcast.jet.impl.util.OutboxImpl;
 import com.hazelcast.jet.impl.util.ProgressState;
+import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.util.Preconditions;
 
@@ -29,16 +30,12 @@ import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
-
-import static com.hazelcast.jet.impl.execution.ExecutionService.IDLER;
+import java.util.function.Function;
 
 /**
  * Tasklet that drives a non-cooperative processor.
  */
 public class BlockingProcessorTasklet extends ProcessorTaskletBase {
-
-    private CompletableFuture<?> jobFuture;
-    private BlockingSnapshotStorageImpl snapshotStorage;
 
     public BlockingProcessorTasklet(
             ProcCtx context, Processor processor, List<InboundEdgeStream> instreams,
@@ -46,7 +43,6 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
             Queue<Object> snapshotQueue) {
         super(context, processor, instreams, outstreams, snapshotContext, snapshotQueue);
         Preconditions.checkFalse(processor.isCooperative(), "Processor is cooperative");
-        outbox = new BlockingOutbox();
     }
 
     @Override
@@ -57,10 +53,7 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
     @Override
     public void init(CompletableFuture<Void> jobFuture) {
         super.init(jobFuture);
-        this.jobFuture = jobFuture;
-        if (snapshotStorage != null) {
-            snapshotStorage.initJobFuture(jobFuture);
-        }
+        ((OutboxBlockingImpl) getOutbox()).initJobFuture(jobFuture);
     }
 
     @Override @Nonnull
@@ -73,68 +66,8 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
     }
 
     @Override
-    protected SnapshotStorageImpl createSnapshotStorage(Queue<Object> snapshotQueue) {
-        return snapshotStorage = new BlockingSnapshotStorageImpl(
-                context.getEngine().getSerializationService(), snapshotQueue
-        );
-    }
-
-    @Override
-    protected void tryFlushOutbox() {
-        // do nothing: our outbox flushes automatically
-    }
-
-    private class BlockingOutbox implements Outbox {
-
-        @Override
-        public int bucketCount() {
-            return outstreams.length;
-        }
-
-        @Override
-        public boolean offer(int ordinal, @Nonnull Object item) {
-            progTracker.madeProgress();
-            if (ordinal != -1) {
-                submit(outstreams[ordinal], item);
-            } else {
-                for (OutboundEdgeStream outstream : outstreams) {
-                    submit(outstream, item);
-                }
-            }
-            return true;
-        }
-
-        @Override
-        public boolean offer(int[] ordinals, @Nonnull Object item) {
-            progTracker.madeProgress();
-            for (int ord : ordinals) {
-                submit(outstreams[ord], item);
-            }
-            return true;
-        }
-
-        private void submit(OutboundEdgeStream outstream, @Nonnull Object item) {
-            OutboundCollector collector = outstream.getCollector();
-            for (long idleCount = 0; ;) {
-                ProgressState result = (item instanceof Watermark || item instanceof DoneItem
-                            || item instanceof SnapshotBarrier)
-                        ? collector.offerBroadcast(item)
-                        : collector.offer(item);
-                if (result.isDone()) {
-                    return;
-                }
-                if (jobFuture.isDone()) {
-                    throw new JobFutureCompleted();
-                }
-                if (result.isMadeProgress()) {
-                    idleCount = 0;
-                } else {
-                    IDLER.idle(++idleCount);
-                }
-            }
-        }
-    }
-
-    static class JobFutureCompleted extends RuntimeException {
+    protected OutboxImpl createOutboxInt(Function<Object, ProgressState>[] outstreams, boolean hasSnapshot,
+                                         ProgressTracker progTracker, SerializationService serializationService) {
+        return new OutboxImpl(outstreams, hasSnapshot, progTracker, serializationService);
     }
 }

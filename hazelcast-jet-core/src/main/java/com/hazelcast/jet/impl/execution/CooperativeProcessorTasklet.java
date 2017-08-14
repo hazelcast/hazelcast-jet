@@ -17,17 +17,17 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.Watermark;
-import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
-import com.hazelcast.jet.impl.util.ArrayDequeOutbox;
+import com.hazelcast.jet.impl.util.OutboxBlockingImpl;
+import com.hazelcast.jet.impl.util.OutboxImpl;
 import com.hazelcast.jet.impl.util.ProgressState;
+import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.util.Preconditions;
 
 import java.util.List;
 import java.util.Queue;
-import java.util.stream.Stream;
+import java.util.function.Function;
 
 /**
  * Tasklet that drives a cooperative processor.
@@ -39,33 +39,12 @@ public class CooperativeProcessorTasklet extends ProcessorTaskletBase {
                                        SnapshotContext snapshotContext, Queue<Object> snapshotQueue) {
         super(context, processor, instreams, outstreams, snapshotContext, snapshotQueue);
         Preconditions.checkTrue(processor.isCooperative(), "Processor is non-cooperative");
-        int[] bucketCapacities = Stream.of(this.outstreams).mapToInt(OutboundEdgeStream::getOutboxCapacity).toArray();
-        outbox = new ArrayDequeOutbox(bucketCapacities, progTracker);
     }
 
     @Override
-    protected SnapshotStorageImpl createSnapshotStorage(Queue<Object> snapshotQueue) {
-        return new SnapshotStorageImpl(context.getEngine().getSerializationService(), snapshotQueue);
-    }
-
-    @Override
-    protected void tryFlushOutbox() {
-        nextOutstream:
-        for (int i = 0; i < outbox.bucketCount(); i++) {
-            final Queue q = ((ArrayDequeOutbox) outbox).queueWithOrdinal(i);
-            for (Object item; (item = q.peek()) != null; ) {
-                final OutboundCollector c = outstreams[i].getCollector();
-                final ProgressState state =
-                        (item instanceof Watermark || item instanceof DoneItem || item instanceof SnapshotBarrier
-                                ? c.offerBroadcast(item) : c.offer(item));
-                progTracker.madeProgress(state.isMadeProgress());
-                if (!state.isDone()) {
-                    progTracker.notDone();
-                    continue nextOutstream;
-                }
-                q.remove();
-            }
-        }
+    protected OutboxImpl createOutboxInt(Function<Object, ProgressState>[] outstreams, boolean hasSnapshot,
+                                         ProgressTracker progTracker, SerializationService serializationService) {
+        return new OutboxBlockingImpl(outstreams, hasSnapshot, progTracker, serializationService);
     }
 }
 

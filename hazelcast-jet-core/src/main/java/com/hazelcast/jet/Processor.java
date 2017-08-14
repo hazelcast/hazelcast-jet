@@ -79,6 +79,8 @@ public interface Processor {
      * removing each item after it is processed. Does not remove an item until it
      * is done with it.
      * <p>
+     * No other methods are called until all items in the inbox are processed.
+     * <p>
      * The default implementation does nothing.
      *
      * @param ordinal ordinal of the inbound edge

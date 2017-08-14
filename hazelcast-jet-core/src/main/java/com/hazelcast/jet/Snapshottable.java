@@ -57,7 +57,7 @@ public interface Snapshottable {
      * After {@link Processor#complete()} returned {@code true}, this method
      * won't be called anymore.
      */
-    boolean saveSnapshot(SnapshotStorage storage);
+    boolean saveSnapshot();
 
     /**
      * Apply a key from a snapshot to processor’s internal state.

@@ -170,5 +170,10 @@ public final class PeekWrappedP implements Processor {
             }
             return false;
         }
+
+        @Override
+        public boolean offerSnapshot(Object key, Object value) {
+            return wrappedOutbox.offerSnapshot(key, value);
+        }
     }
 }

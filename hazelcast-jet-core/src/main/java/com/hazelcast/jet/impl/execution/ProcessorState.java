@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.SnapshotStorage;
 import com.hazelcast.jet.Snapshottable;
 
 enum ProcessorState {
@@ -29,7 +28,7 @@ enum ProcessorState {
     START_SNAPSHOT,
 
     /**
-     * Doing calls to {@link Snapshottable#saveSnapshot(SnapshotStorage)} until
+     * Doing calls to {@link Snapshottable#saveSnapshot()} until
      * it returns true.
      */
     DO_SNAPSHOT,
@@ -37,13 +36,7 @@ enum ProcessorState {
     /**
      * Waiting to accept the {@link SnapshotBarrier} by the queue.
      */
-    SNAPSHOT_BARRIER_TO_OUTBOX,
-
-    /**
-     * Waiting to accept the {@link SnapshotBarrier} by the {@link
-     * ProcessorTaskletBase#snapshotQueue}.
-     */
-    SNAPSHOT_BARRIER_TO_SNAPSHOT_QUEUE,
+    FORWARD_SNAPSHOT_BARRIER,
 
     /**
      * Doing calls to {@link Processor#tryProcess()} until it returns true.
@@ -59,12 +52,7 @@ enum ProcessorState {
     /**
      * Waiting until outbox accepts DONE_ITEM.
      */
-    ADD_DONE_ITEM_OUTBOX,
-
-    /**
-     * Waiting until snapshot storage accepts DONE_ITEM.
-     */
-    ADD_DONE_ITEM_SNAPSHOT,
+    FORWARD_DONE_ITEM,
 
     /**
      * waiting to flush the outbox. This is a terminal state.

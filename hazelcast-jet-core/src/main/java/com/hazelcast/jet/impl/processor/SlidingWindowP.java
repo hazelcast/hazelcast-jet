@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.processor;
 import com.hazelcast.core.PartitionAware;
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.AggregateOperation;
-import com.hazelcast.jet.SnapshotStorage;
 import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Traverser;
@@ -199,7 +198,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor implements Snapsh
     }
 
     @Override
-    public boolean saveSnapshot(SnapshotStorage storage) {
+    public boolean saveSnapshot() {
         if (isLastStage) {
             if (snapshotTraverser == null) {
                 snapshotTraverser = traverseIterable(tsToKeyToAcc.entrySet())
@@ -208,7 +207,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor implements Snapsh
                         )
                         .onFirstNull(() -> snapshotTraverser = null);
             }
-            return emitSnapshotFromTraverser(storage, snapshotTraverser);
+            return emitSnapshotFromTraverser(snapshotTraverser);
         } else {
             return flushBuffers();
         }

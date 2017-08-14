@@ -410,9 +410,7 @@ public abstract class AbstractProcessor implements Processor {
     /**
      * Javadoc pending
      */
-    protected <T extends Entry<?, ?>> boolean emitSnapshotFromTraverser(
-            SnapshotStorage storage, @Nonnull Traverser<T> traverser
-    ) {
+    protected <T extends Entry<?, ?>> boolean emitSnapshotFromTraverser(@Nonnull Traverser<T> traverser) {
         Entry<?, ?> item;
         if (pendingSnapshotItem != null) {
             item = pendingSnapshotItem;
@@ -421,7 +419,7 @@ public abstract class AbstractProcessor implements Processor {
             item = traverser.next();
         }
         for (; item != null; item = traverser.next()) {
-            if (!storage.offer(item.getKey(), item.getValue())) {
+            if (!outbox.offerSnapshot(item.getKey(), item.getValue())) {
                 pendingSnapshotItem = item;
                 return false;
             }

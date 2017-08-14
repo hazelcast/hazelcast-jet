@@ -16,14 +16,13 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.SnapshotStorage;
 import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.CircularListCursor;
+import com.hazelcast.jet.impl.util.OutboxImpl;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.spi.serialization.SerializationService;
@@ -38,20 +37,28 @@ import java.util.Optional;
 import java.util.Queue;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
-import static com.hazelcast.jet.impl.execution.ProcessorState.*;
-import static com.hazelcast.jet.impl.util.ProgressState.*;
+import static com.hazelcast.jet.impl.execution.ProcessorState.DO_SNAPSHOT;
+import static com.hazelcast.jet.impl.execution.ProcessorState.FORWARD_DONE_ITEM;
+import static com.hazelcast.jet.impl.execution.ProcessorState.FORWARD_SNAPSHOT_BARRIER;
+import static com.hazelcast.jet.impl.execution.ProcessorState.NULLARY_PROCESS;
+import static com.hazelcast.jet.impl.execution.ProcessorState.PROCESSOR_COMPLETED;
+import static com.hazelcast.jet.impl.execution.ProcessorState.PROCESS_OR_COMPLETE;
+import static com.hazelcast.jet.impl.execution.ProcessorState.START_SNAPSHOT;
+import static com.hazelcast.jet.impl.util.ProgressState.DONE;
+import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toCollection;
 
 public abstract class ProcessorTaskletBase implements Tasklet {
 
-    final ProgressTracker progTracker = new ProgressTracker();
-    final OutboundEdgeStream[] outstreams;
-    Outbox outbox;
-    final ProcCtx context;
+    private final ProgressTracker progTracker = new ProgressTracker();
+    private final OutboundEdgeStream[] outstreams;
+    private final OutboxImpl outbox;
+    private final ProcCtx context;
 
     private final Processor processor;
     // casted #processor to Snapshottable or null, if #processor does not implement it
@@ -62,8 +69,6 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     private final Queue<ArrayList<InboundEdgeStream>> instreamGroupQueue;
     private CircularListCursor<InboundEdgeStream> instreamCursor;
     private final SnapshotContext snapshotContext;
-    private final Queue<Object> snapshotQueue;
-    private final SnapshotStorage snapshotStorage;
     private long completedSnapshotId;
     private long requestedSnapshotId;
     private BarrierWatcher barrierWatcher;
@@ -92,15 +97,28 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                                     .toArray(OutboundEdgeStream[]::new);
 
         this.snapshotContext = snapshotContext;
-        this.snapshotQueue = snapshotQueue;
 
         instreamCursor = popInstreamGroup();
         completedSnapshotId = snapshotContext != null ? snapshotContext.getCurrentSnapshotId() : Long.MAX_VALUE;
-        snapshotStorage = snapshotQueue == null ? null : createSnapshotStorage(snapshotQueue);
         barrierWatcher = new BarrierWatcher(instreams.size());
+        outbox = createOutbox(snapshotQueue);
     }
 
-    protected abstract SnapshotStorageImpl createSnapshotStorage(Queue<Object> snapshotQueue);
+    private OutboxImpl createOutbox(Queue<Object> snapshotQueue) {
+        Function<Object, ProgressState>[] functions = new Function[outstreams.length + (snapshotQueue == null ? 0 : 1)];
+        for (int i = 0; i < outstreams.length; i++) {
+            functions[i] = outstreams[i].getCollector()::offer;
+        }
+        if (snapshotQueue != null) {
+            functions[outstreams.length] = e -> snapshotQueue.offer(e) ? DONE : NO_PROGRESS;
+        }
+
+        return createOutboxInt(functions, snapshotQueue != null, progTracker,
+                context.getEngine().getSerializationService());
+    }
+
+    protected abstract OutboxImpl createOutboxInt(Function<Object, ProgressState>[] outstreams, boolean hasSnapshot,
+                                                  ProgressTracker progTracker, SerializationService serializationService);
 
     @Override @Nonnull
     public ProgressState call() {
@@ -116,10 +134,10 @@ public abstract class ProcessorTaskletBase implements Tasklet {
             if (requestedSnapshotId == completedSnapshotId) {
                 // No new snapshot requested, skip snapshot creation
                 state = NULLARY_PROCESS;
-            } else if (snapshotQueue == null) {
+            } else if (snapshottable == null) {
                 // New snapshot requested, but our processor is stateless. Just forward the barrier.
-                state = SNAPSHOT_BARRIER_TO_OUTBOX;
-            } else if (snapshotQueue.offer(new SnapshotStartBarrier(requestedSnapshotId))) {
+                state = FORWARD_SNAPSHOT_BARRIER;
+            } else if (outbox.offerSnapshot(new SnapshotStartBarrier(requestedSnapshotId))) {
                 state = DO_SNAPSHOT;
             } else {
                 progTracker.notDone();
@@ -127,24 +145,15 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         }
 
         if (state == DO_SNAPSHOT) {
-            if (snapshottable.saveSnapshot(snapshotStorage)) {
-                state = SNAPSHOT_BARRIER_TO_SNAPSHOT_QUEUE;
+            if (snapshottable.saveSnapshot()) {
+                state = FORWARD_SNAPSHOT_BARRIER;
             } else {
                 progTracker.notDone();
             }
         }
 
-        if (state == SNAPSHOT_BARRIER_TO_SNAPSHOT_QUEUE) {
-            if (snapshotQueue.offer(new SnapshotBarrier(requestedSnapshotId))) {
-                state = SNAPSHOT_BARRIER_TO_OUTBOX;
-            } else {
-                progTracker.notDone();
-            }
-        }
-
-        if (state == SNAPSHOT_BARRIER_TO_OUTBOX) {
-            if (outbox.offer(new SnapshotBarrier(requestedSnapshotId))) {
-                completedSnapshotId = requestedSnapshotId;
+        if (state == FORWARD_SNAPSHOT_BARRIER) {
+            if (outbox.offerEdgesAndSnapshot(new SnapshotBarrier(requestedSnapshotId))) {
                 state = NULLARY_PROCESS;
             } else {
                 progTracker.notDone();
@@ -168,8 +177,8 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                     SnapshotBarrier barrier = (SnapshotBarrier) inbox.remove();
                     if (barrierWatcher.observe(currInstream.ordinal(), requestedSnapshotId)) {
                         requestedSnapshotId = barrier.snapshotId();
-                        state = snapshotQueue == null
-                                ? SNAPSHOT_BARRIER_TO_OUTBOX
+                        state = snapshottable == null
+                                ? FORWARD_SNAPSHOT_BARRIER
                                 : START_SNAPSHOT;
                         return call(); // recursive call
                     }
@@ -180,7 +189,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
 
             if (progTracker.isDone()) {
                 if (processor.complete()) {
-                    state = ADD_DONE_ITEM_OUTBOX;
+                    state = FORWARD_DONE_ITEM;
                 } else {
                     state = START_SNAPSHOT;
                     progTracker.notDone();
@@ -195,24 +204,14 @@ public abstract class ProcessorTaskletBase implements Tasklet {
             }
         }
 
-        if (state == ADD_DONE_ITEM_OUTBOX) {
-            if (outbox.offer(DONE_ITEM)) {
-                state = ADD_DONE_ITEM_SNAPSHOT;
-            } else {
-                progTracker.notDone();
-            }
-        }
-
-        if (state == ADD_DONE_ITEM_SNAPSHOT) {
-            if (snapshotQueue == null || snapshotQueue.offer(DONE_ITEM)) {
+        if (state == FORWARD_DONE_ITEM) {
+            if (outbox.offerEdgesAndSnapshot(DONE_ITEM)) {
                 state = PROCESSOR_COMPLETED;
             } else {
                 progTracker.notDone();
             }
         }
 
-        // most steps can add items to outbox, let's flush them
-        tryFlushOutbox();
         return progTracker.toProgressState();
     }
 
@@ -259,16 +258,13 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                        .orElse(null);
     }
 
-    public boolean isSink() {
-        return outstreams.length == 0;
+    protected OutboxImpl getOutbox() {
+        return outbox;
     }
 
     @Override
     public String toString() {
         return "ProcessorTasklet{vertex=" + context.vertexName() + ", processor=" + processor + '}';
     }
-
-    protected abstract void tryFlushOutbox();
-
 }
 

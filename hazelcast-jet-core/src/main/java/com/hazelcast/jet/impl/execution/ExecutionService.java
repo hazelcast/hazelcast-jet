@@ -50,7 +50,7 @@ import static java.util.stream.Collectors.toList;
 
 public class ExecutionService {
 
-    static final IdleStrategy IDLER =
+    private static final IdleStrategy IDLER =
             new BackoffIdleStrategy(0, 0, MICROSECONDS.toNanos(1), MILLISECONDS.toNanos(1));
 
     private final ExecutorService blockingTaskletExecutor = newCachedThreadPool(new BlockingTaskThreadFactory());
