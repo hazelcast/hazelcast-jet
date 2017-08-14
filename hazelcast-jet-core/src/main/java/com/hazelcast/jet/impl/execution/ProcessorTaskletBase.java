@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.Snapshottable;
+import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
@@ -108,7 +109,9 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     private OutboxImpl createOutbox(Queue<Object> snapshotQueue) {
         Function<Object, ProgressState>[] functions = new Function[outstreams.length + (snapshotQueue == null ? 0 : 1)];
         for (int i = 0; i < outstreams.length; i++) {
-            functions[i] = outstreams[i].getCollector()::offer;
+            OutboundCollector collector = outstreams[i].getCollector();
+            functions[i] = item -> item instanceof Watermark || item instanceof SnapshotBarrier || item == DONE_ITEM
+                    ? collector.offerBroadcast(item) : collector.offer(item);
         }
         if (snapshotQueue != null) {
             functions[outstreams.length] = e -> snapshotQueue.offer(e) ? DONE : NO_PROGRESS;
