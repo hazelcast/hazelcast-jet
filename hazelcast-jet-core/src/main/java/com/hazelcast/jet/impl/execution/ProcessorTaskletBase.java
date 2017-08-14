@@ -162,6 +162,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
             case EMIT_BARRIER:
                 progTracker.notDone();
                 if (outbox.offerToEdgesAndSnapshot(new SnapshotBarrier(currSnapshot))) {
+                    barrierReceived.clear();
                     state = initialState();
                     break;
                 }
