@@ -102,17 +102,12 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                     break;
                 }
                 if (item instanceof Watermark) {
-                    // do not drain more items from this queue after observing a WM
                     observeWm(queueIndex, ((Watermark) item).timestamp());
+                    // do not drain more items from this queue after observing a WM
                     break;
                 }
                 if (item instanceof SnapshotBarrier) {
-                    SnapshotBarrier barrier = (SnapshotBarrier) item;
-                    if (barrier.snapshotId() != currSnapshot) {
-                        throw new JetException("Unexpected snapshot barrier "
-                                + barrier.snapshotId() + ", expected " + currSnapshot);
-                    }
-                    barrierReceived.set(queueIndex);
+                    observeSnapshot(queueIndex, ((SnapshotBarrier) item).snapshotId());
                     // do not drain more items from this queue after snapshot barrier
                     break;
                 }
@@ -142,6 +137,14 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             barrierReceived.clear();
         }
         return tracker.toProgressState();
+    }
+
+    private void observeSnapshot(int queueIndex, long snapshotId) {
+        if (snapshotId != currSnapshot) {
+            throw new JetException("Unexpected snapshot barrier "
+                    + snapshotId + ", expected " + currSnapshot);
+        }
+        barrierReceived.set(queueIndex);
     }
 
 

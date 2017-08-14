@@ -45,10 +45,14 @@ enum ProcessorState {
 
     /**
      * Doing calls to {@link Processor#process(int, Inbox)} until the inbox is
-     * empty or to {@link Processor#complete()} until it returns true.
+     * empty.
      */
-    PROCESS_OR_COMPLETE,
+    PROCESS_INBOX,
 
+    /**
+     * Doing calls to {@link Processor#complete()} until it returns true
+     */
+    COMPLETE,
     /**
      * Waiting until outbox accepts DONE_ITEM.
      */

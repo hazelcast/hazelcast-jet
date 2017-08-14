@@ -24,6 +24,7 @@ import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -66,7 +67,7 @@ public class JobRestartWithSnapshotTest {
         factory.shutdownAll();
     }
 
-    @Test
+    @Test @Ignore
     public void when_nodeDown_then_jobRestartsFromSnapshot() throws InterruptedException {
         DAG dag = new DAG();
         DistributedSupplier<Processor> sup = () -> new StreamSource(100);
