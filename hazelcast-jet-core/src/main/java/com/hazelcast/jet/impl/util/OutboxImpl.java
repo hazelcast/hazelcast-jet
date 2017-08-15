@@ -98,7 +98,7 @@ public class OutboxImpl implements Outbox {
         if (done) {
             broadcastTracker.clear();
         }
-        return progTracker.isDone();
+        return done;
     }
 
     protected ProgressState doOffer(Function<Object, ProgressState> outstream, Object item) {

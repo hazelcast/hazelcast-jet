@@ -68,6 +68,6 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
     @Override
     protected OutboxImpl createOutboxInt(Function<Object, ProgressState>[] outstreams, boolean hasSnapshot,
                                          ProgressTracker progTracker, SerializationService serializationService) {
-        return new OutboxImpl(outstreams, hasSnapshot, progTracker, serializationService);
+        return new OutboxBlockingImpl(outstreams, hasSnapshot, progTracker, serializationService);
     }
 }

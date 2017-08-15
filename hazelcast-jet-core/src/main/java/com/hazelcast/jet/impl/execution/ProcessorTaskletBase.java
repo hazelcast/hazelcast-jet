@@ -31,6 +31,7 @@ import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -72,22 +73,24 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     private final ArrayDequeInbox inbox = new ArrayDequeInbox(progTracker);
     private final Queue<ArrayList<InboundEdgeStream>> instreamGroupQueue;
 
+    private int activeOrdinals; // counter for remaining active ordinals
     private CircularListCursor<InboundEdgeStream> instreamCursor;
     private InboundEdgeStream currInstream;
     private ProcessorState state = PROCESS_INBOX;
     private long currSnapshot;
 
 
-    ProcessorTaskletBase(ProcCtx context,
-                         Processor processor,
-                         List<InboundEdgeStream> instreams,
-                         List<OutboundEdgeStream> outstreams,
-                         SnapshotContext snapshotContext,
-                         Queue<Object> snapshotQueue) {
+    ProcessorTaskletBase(@Nonnull ProcCtx context,
+                         @Nonnull Processor processor,
+                         @Nonnull List<InboundEdgeStream> instreams,
+                         @Nonnull List<OutboundEdgeStream> outstreams,
+                         @Nullable SnapshotContext snapshotContext,
+                         @Nullable Queue<Object> snapshotQueue) {
         Preconditions.checkNotNull(processor, "processor");
         this.context = context;
         this.processor = processor;
         this.snapshottable = processor instanceof Snapshottable ? (Snapshottable) processor : null;
+        this.activeOrdinals = instreams.size();
         this.instreamGroupQueue = instreams
                 .stream()
                 .collect(groupingBy(InboundEdgeStream::priority, TreeMap::new, toCollection(ArrayList::new)))
@@ -190,7 +193,9 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                     }
                 }
                 if (processor.complete()) {
+                    progTracker.madeProgress();
                     state = EMIT_DONE_ITEM;
+                    return call();
                 }
                 break;
 
@@ -221,7 +226,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
             result = NO_PROGRESS;
 
             // skip ordinals where a snapshot barrier has already been received
-            if (snapshotContext.getGuarantee() == ProcessingGuarantee.EXACTLY_ONCE
+            if (snapshotContext != null && snapshotContext.getGuarantee() == ProcessingGuarantee.EXACTLY_ONCE
                     && barrierReceived.get(currInstream.ordinal())) {
                 continue;
             }
@@ -231,6 +236,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
             if (result.isDone()) {
                 barrierReceived.clear(currInstream.ordinal());
                 instreamCursor.remove();
+                activeOrdinals--;
             }
 
             // check if last item was snapshot
