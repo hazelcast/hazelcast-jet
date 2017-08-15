@@ -109,7 +109,9 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         for (int i = 0; i < outstreams.length; i++) {
             collectors[i] = outstreams[i].getCollector();
         }
-        collectors[outstreams.length] = snapshotQueue;
+        if (snapshotQueue != null) {
+            collectors[outstreams.length] = snapshotQueue;
+        }
         return createOutboxInt(collectors, snapshotQueue != null, progTracker,
                 context.getSerializationService());
     }
@@ -130,7 +132,11 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     @Override @Nonnull
     public ProgressState call() {
         progTracker.reset();
+        callInternal();
+        return progTracker.toProgressState();
+    }
 
+    private void callInternal() {
         switch (state) {
             case PROCESS_INBOX:
                 progTracker.notDone();
@@ -143,15 +149,15 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                             && inbox.isEmpty()
                             && numActiveOrdinals > 0
                             && receivedBarriers.cardinality() == numActiveOrdinals) {
-                        // we have emptied the inbox and received the current snapshot from all active ordinals
+                        // we have emptied the inbox and received the current snapshot barrier from all active ordinals
                         state = snapshottable == null ? EMIT_BARRIER : SAVE_SNAPSHOT;
-                        break;
+                        return;
                     }
                 }
                 if (inbox.isEmpty() && instreamCursor == null) {
                     state = COMPLETE;
                 }
-                break;
+                return;
 
             case SAVE_SNAPSHOT:
                 assert context.snapshottingEnabled() : "Snapshotting is not enabled";
@@ -160,9 +166,8 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                 progTracker.notDone();
                 if (snapshottable.saveSnapshot()) {
                     state = EMIT_BARRIER;
-                    break;
                 }
-                break;
+                return;
 
             case EMIT_BARRIER:
                 assert context.snapshottingEnabled() : "Snapshotting is not enabled";
@@ -172,9 +177,8 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                     receivedBarriers.clear();
                     pendingSnapshotId++;
                     state = initialState();
-                    break;
                 }
-                break;
+                return;
 
             case COMPLETE:
                 progTracker.notDone();
@@ -185,28 +189,27 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                             + ", current was" + pendingSnapshotId;
                     if (currSnapshotId == pendingSnapshotId) {
                         state = EMIT_BARRIER;
-                        break;
+                        return;
                     }
                 }
                 if (processor.complete()) {
                     progTracker.madeProgress();
                     state = EMIT_DONE_ITEM;
                 }
-                break;
+                return;
 
             case EMIT_DONE_ITEM:
                 if (!outbox.offerToEdgesAndSnapshot(DONE_ITEM)) {
                     progTracker.notDone();
-                    break;
+                    return;
                 }
                 state = END;
-                break;
+                return;
 
             default:
                 // note ProcessorState.END goes here
                 throw new JetException("Unexpected state: " + state);
         }
-        return progTracker.toProgressState();
     }
 
     private void fillInbox() {
