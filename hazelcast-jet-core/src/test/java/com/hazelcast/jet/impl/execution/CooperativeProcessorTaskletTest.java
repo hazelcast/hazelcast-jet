@@ -31,6 +31,8 @@ import org.junit.runner.RunWith;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -185,7 +187,7 @@ public class CooperativeProcessorTaskletTest {
     @Test
     public void when_completeReturnsFalse_then_retried() {
         // Given
-        MockInboundStream instream1 = new MockInboundStream(0, emptyList(), 1);
+        MockInboundStream instream1 = new MockInboundStream(0, Collections.singletonList(DONE_ITEM), 1);
         MockOutboundStream outstream1 = new MockOutboundStream(0, 1);
         instreams.add(instream1);
         outstreams.add(outstream1);

@@ -101,7 +101,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         instreamCursor = popInstreamGroup();
         outbox = createOutbox(ssCollector);
         receivedBarriers = new BitSet(instreams.size());
-        state = initialState();
+        state = initialProcessingState();
     }
 
     private OutboxImpl createOutbox(OutboundCollector snapshotQueue) {
@@ -118,10 +118,6 @@ public abstract class ProcessorTaskletBase implements Tasklet {
 
     protected abstract OutboxImpl createOutboxInt(OutboundCollector[] outstreams, boolean hasSnapshot,
                                                   ProgressTracker progTracker, SerializationService serializationService);
-
-    private ProcessorState initialState() {
-        return instreamCursor == null ? COMPLETE : PROCESS_INBOX;
-    }
 
     @Override
     public void init(CompletableFuture<Void> jobFuture) {
@@ -150,7 +146,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                             && numActiveOrdinals > 0
                             && receivedBarriers.cardinality() == numActiveOrdinals) {
                         // we have emptied the inbox and received the current snapshot barrier from all active ordinals
-                        state = snapshottable == null ? EMIT_BARRIER : SAVE_SNAPSHOT;
+                        state = initialSnapshottingState();
                         return;
                     }
                 }
@@ -178,7 +174,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                 if (outbox.offerToEdgesAndSnapshot(new SnapshotBarrier(pendingSnapshotId))) {
                     receivedBarriers.clear();
                     pendingSnapshotId++;
-                    state = initialState();
+                    state = initialProcessingState();
                 }
                 return;
 
@@ -190,7 +186,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                     assert currSnapshotId <= pendingSnapshotId : "Unexpected new snapshot id " + currSnapshotId
                             + ", current was" + pendingSnapshotId;
                     if (currSnapshotId == pendingSnapshotId) {
-                        state = EMIT_BARRIER;
+                        state = initialSnapshottingState();
                         return;
                     }
                 }
@@ -263,6 +259,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         return outbox;
     }
 
+
     @Override
     public String toString() {
         return "ProcessorTasklet{vertex=" + context.vertexName() + ", processor=" + processor + '}';
@@ -274,6 +271,22 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                     " expected " + pendingSnapshotId);
         }
         receivedBarriers.set(ordinal);
+    }
+
+    /**
+     * Initial state of the processor. If there are no inbound ordinals left, we will go to COMPLETE state
+     * otherwise to PROCESS_INBOX.
+     */
+    private ProcessorState initialProcessingState() {
+        return instreamCursor == null ? COMPLETE : PROCESS_INBOX;
+    }
+
+    /**
+     * Initial snapshot state of the processor. If processor does not support snapshotting, we will transition directly
+     * to EMIT_BARRIER state.
+     */
+    private ProcessorState initialSnapshottingState() {
+        return snapshottable == null ? EMIT_BARRIER : SAVE_SNAPSHOT;
     }
 
 }

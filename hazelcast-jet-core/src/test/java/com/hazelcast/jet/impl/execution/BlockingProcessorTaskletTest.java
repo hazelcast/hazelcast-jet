@@ -31,6 +31,7 @@ import org.junit.runner.RunWith;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -180,6 +181,7 @@ public class BlockingProcessorTaskletTest {
 
         // When
         callUntil(tasklet, NO_PROGRESS);
+        instream1.push(DONE_ITEM);
         callUntil(tasklet, DONE);
 
         // Then
@@ -190,7 +192,7 @@ public class BlockingProcessorTaskletTest {
     @Test
     public void when_completeReturnsFalse_then_retried() {
         // Given
-        MockInboundStream instream1 = new MockInboundStream(0, emptyList(), 1);
+        MockInboundStream instream1 = new MockInboundStream(0, Collections.singletonList(DONE_ITEM), 1);
         MockOutboundStream outstream1 = outstream(0);
         instreams.add(instream1);
         outstreams.add(outstream1);
@@ -200,13 +202,13 @@ public class BlockingProcessorTaskletTest {
         // When
 
         // sets instreamCursor to null
-        assertEquals(tasklet.call(), NO_PROGRESS);
+        assertEquals(MADE_PROGRESS, tasklet.call());
         // complete() first time
-        assertEquals(tasklet.call(), MADE_PROGRESS);
+        assertEquals(MADE_PROGRESS, tasklet.call());
         // complete() second time, done
-        assertEquals(tasklet.call(), MADE_PROGRESS);
+        assertEquals(MADE_PROGRESS, tasklet.call());
         // emit done item, done
-        assertEquals(tasklet.call(), DONE);
+        assertEquals(DONE, tasklet.call());
 
         // Then
         assertTrue(processor.itemsToEmitInComplete <= 0);
