@@ -51,4 +51,5 @@ public class SnapshotBarrier {
     public int hashCode() {
         return (int) (snapshotId ^ (snapshotId >>> 32));
     }
+
 }

@@ -123,7 +123,7 @@ public final class TestOutbox implements Outbox {
         return buckets[ordinal];
     }
 
-    private static class MockSerializationService implements SerializationService {
+    public static class MockSerializationService implements SerializationService {
 
         @Override
         public <B extends Data> B toData(Object obj) {

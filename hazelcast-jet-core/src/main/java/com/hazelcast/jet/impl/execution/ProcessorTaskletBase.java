@@ -132,11 +132,11 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     @Override @Nonnull
     public ProgressState call() {
         progTracker.reset();
-        callInternal();
+        stateMachineStep();
         return progTracker.toProgressState();
     }
 
-    private void callInternal() {
+    private void stateMachineStep() {
         switch (state) {
             case PROCESS_INBOX:
                 progTracker.notDone();
@@ -155,6 +155,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                     }
                 }
                 if (inbox.isEmpty() && instreamCursor == null) {
+                    progTracker.madeProgress();
                     state = COMPLETE;
                 }
                 return;
@@ -165,6 +166,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
 
                 progTracker.notDone();
                 if (snapshottable.saveSnapshot()) {
+                    progTracker.madeProgress();
                     state = EMIT_BARRIER;
                 }
                 return;
@@ -225,6 +227,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
             // skip ordinals where a snapshot barrier has already been received
             if (ssContext != null && ssContext.getGuarantee() == ProcessingGuarantee.EXACTLY_ONCE
                     && receivedBarriers.get(currInstream.ordinal())) {
+                instreamCursor.advance();
                 continue;
             }
             result = currInstream.drainTo(inbox::add);
