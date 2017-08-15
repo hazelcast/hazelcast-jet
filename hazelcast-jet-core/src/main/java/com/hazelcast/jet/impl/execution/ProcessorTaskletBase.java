@@ -152,7 +152,8 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                     // we have emptied the inbox and received the current snapshot from all active ordinals
                     if (inbox.isEmpty()
                             && instreamGroupQueue.size() > 0
-                            && barrierReceived.cardinality() == instreamGroupQueue.size()) {
+                            && barrierReceived.cardinality() == activeOrdinals) {
+                        // if processor does not support snapshotting, we will skip SAVE_SNAPSHOT state
                         state = snapshottable == null ? EMIT_BARRIER : SAVE_SNAPSHOT;
                         break;
                     }
@@ -195,16 +196,15 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                 if (processor.complete()) {
                     progTracker.madeProgress();
                     state = EMIT_DONE_ITEM;
-                    return call();
                 }
                 break;
 
             case EMIT_DONE_ITEM:
-                if (outbox.offerToEdgesAndSnapshot(DONE_ITEM)) {
-                    state = END;
+                if (!outbox.offerToEdgesAndSnapshot(DONE_ITEM)) {
+                    progTracker.notDone();
                     break;
                 }
-                progTracker.notDone();
+                state = END;
                 break;
 
             default:
@@ -218,7 +218,6 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         if (instreamCursor == null) {
             return;
         }
-        progTracker.notDone();
         final InboundEdgeStream first = instreamCursor.value();
         ProgressState result;
         do {

@@ -204,6 +204,8 @@ public class BlockingProcessorTaskletTest {
         // complete() first time
         assertEquals(tasklet.call(), MADE_PROGRESS);
         // complete() second time, done
+        assertEquals(tasklet.call(), MADE_PROGRESS);
+        // emit done item, done
         assertEquals(tasklet.call(), DONE);
 
         // Then
@@ -254,8 +256,10 @@ public class BlockingProcessorTaskletTest {
         BlockingProcessorTasklet tasklet = createTasklet();
 
         // When
-        tasklet.call();
-
+        // complete()
+        assertEquals(MADE_PROGRESS, tasklet.call());
+        // emit done item
+        assertEquals(DONE, tasklet.call());
         // Then
 
         // buffers also contain the DONE_ITEM
@@ -282,7 +286,10 @@ public class BlockingProcessorTaskletTest {
         BlockingProcessorTasklet tasklet = createTasklet();
 
         // When
-        tasklet.call();
+        // complete()
+        assertEquals(MADE_PROGRESS, tasklet.call());
+        // emit done item
+        assertEquals(DONE, tasklet.call());
 
         // Then
 
@@ -296,7 +303,7 @@ public class BlockingProcessorTaskletTest {
 
     private BlockingProcessorTasklet createTasklet() {
         final BlockingProcessorTasklet t = new BlockingProcessorTasklet(context, processor, instreams, outstreams,
-                new SnapshotContext(ProcessingGuarantee.EXACTLY_ONCE), null);
+                null, null);
         t.init(jobFuture);
         return t;
     }
