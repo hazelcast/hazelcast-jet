@@ -19,7 +19,8 @@ package com.hazelcast.jet.test;
 import com.hazelcast.core.ManagedContext;
 import com.hazelcast.core.PartitioningStrategy;
 import com.hazelcast.jet.Outbox;
-import com.hazelcast.jet.impl.util.OutboxImpl;
+import com.hazelcast.jet.impl.execution.OutboundCollector;
+import com.hazelcast.jet.impl.execution.OutboxImpl;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.nio.serialization.Data;
@@ -66,7 +67,7 @@ public final class TestOutbox implements Outbox {
         buckets = new Queue[edgeCapacities.length];
         Arrays.setAll(buckets, i -> new ArrayDeque());
 
-        Function<Object, ProgressState>[] outstreams = new Function[edgeCapacities.length + snapshotCapacity > 0 ? 1 : 0];
+        OutboundCollector[] outstreams = new OutboundCollector[edgeCapacities.length + snapshotCapacity > 0 ? 1 : 0];
         Arrays.setAll(outstreams, i ->
                 i < edgeCapacities.length
                     ? e -> addToQueue(buckets[i], edgeCapacities[i], e)

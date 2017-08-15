@@ -18,9 +18,7 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
-import com.hazelcast.jet.impl.util.OutboxBlockingImpl;
-import com.hazelcast.jet.impl.util.OutboxBlockingImpl.JobFutureCompleted;
-import com.hazelcast.jet.impl.util.OutboxImpl;
+import com.hazelcast.jet.impl.execution.OutboxBlockingImpl.JobFutureCompleted;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.spi.serialization.SerializationService;
@@ -66,7 +64,7 @@ public class BlockingProcessorTasklet extends ProcessorTaskletBase {
     }
 
     @Override
-    protected OutboxImpl createOutboxInt(Function<Object, ProgressState>[] outstreams, boolean hasSnapshot,
+    protected OutboxImpl createOutboxInt(OutboundCollector[] outstreams, boolean hasSnapshot,
                                          ProgressTracker progTracker, SerializationService serializationService) {
         return new OutboxBlockingImpl(outstreams, hasSnapshot, progTracker, serializationService);
     }

@@ -14,9 +14,14 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.util;
+package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.Outbox;
+import com.hazelcast.jet.Watermark;
+import com.hazelcast.jet.impl.execution.OutboundCollector;
+import com.hazelcast.jet.impl.execution.SnapshotBarrier;
+import com.hazelcast.jet.impl.util.ProgressState;
+import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.serialization.SerializationService;
 
@@ -27,10 +32,11 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 
 public class OutboxImpl implements Outbox {
 
-    private final Function<Object, ProgressState>[] outstreams;
+    private final OutboundCollector[] outstreams;
     private final ProgressTracker progTracker;
     private final SerializationService serializationService;
 
@@ -47,7 +53,7 @@ public class OutboxImpl implements Outbox {
      * @param progTracker Tracker to track progress. Only madeProgress will be called,
      *                    done status won't be ever changed
      */
-    public OutboxImpl(Function<Object, ProgressState>[] outstreams, boolean hasSnapshot,
+    public OutboxImpl(OutboundCollector[] outstreams, boolean hasSnapshot,
                       ProgressTracker progTracker, SerializationService serializationService) {
         this.outstreams = outstreams;
         this.progTracker = progTracker;
@@ -101,8 +107,11 @@ public class OutboxImpl implements Outbox {
         return done;
     }
 
-    protected ProgressState doOffer(Function<Object, ProgressState> outstream, Object item) {
-        return outstream.apply(item);
+    protected ProgressState doOffer(OutboundCollector collector, Object item) {
+        if (item instanceof Watermark || item instanceof SnapshotBarrier || item == DONE_ITEM) {
+            return collector.offerBroadcast(item);
+        }
+        return collector.offer(item);
     }
 
     @Override

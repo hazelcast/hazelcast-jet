@@ -24,7 +24,6 @@ import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.CircularListCursor;
-import com.hazelcast.jet.impl.util.OutboxImpl;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.spi.serialization.SerializationService;
@@ -41,7 +40,6 @@ import java.util.Optional;
 import java.util.Queue;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.ProcessorState.COMPLETE;
@@ -77,7 +75,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     private CircularListCursor<InboundEdgeStream> instreamCursor;
     private InboundEdgeStream currInstream;
     private ProcessorState state = PROCESS_INBOX;
-    private long currSnapshot;
+    private long pendingSnapshotId = 0;
 
 
     ProcessorTaskletBase(@Nonnull ProcCtx context,
@@ -109,21 +107,19 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     }
 
     private OutboxImpl createOutbox(Queue<Object> snapshotQueue) {
-        Function<Object, ProgressState>[] functions = new Function[outstreams.length + (snapshotQueue == null ? 0 : 1)];
+        OutboundCollector[] collectors = new OutboundCollector[outstreams.length + (snapshotQueue == null ? 0 : 1)];
         for (int i = 0; i < outstreams.length; i++) {
-            OutboundCollector collector = outstreams[i].getCollector();
-            functions[i] = item -> item instanceof Watermark || item instanceof SnapshotBarrier || item == DONE_ITEM
-                    ? collector.offerBroadcast(item) : collector.offer(item);
+            collectors[i] = outstreams[i].getCollector();
         }
         if (snapshotQueue != null) {
-            functions[outstreams.length] = e -> snapshotQueue.offer(e) ? DONE : NO_PROGRESS;
+            collectors[outstreams.length] = item -> snapshotQueue.offer(item) ? DONE : NO_PROGRESS;
         }
 
-        return createOutboxInt(functions, snapshotQueue != null, progTracker,
+        return createOutboxInt(collectors, snapshotQueue != null, progTracker,
                 context.getSerializationService());
     }
 
-    protected abstract OutboxImpl createOutboxInt(Function<Object, ProgressState>[] outstreams, boolean hasSnapshot,
+    protected abstract OutboxImpl createOutboxInt(OutboundCollector[] outstreams, boolean hasSnapshot,
                                                   ProgressTracker progTracker, SerializationService serializationService);
 
     private ProcessorState initialState() {
@@ -150,8 +146,9 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                 if (!inbox.isEmpty()) {
                     processor.process(currInstream.ordinal(), inbox);
                     // we have emptied the inbox and received the current snapshot from all active ordinals
-                    if (inbox.isEmpty()
-                            && instreamGroupQueue.size() > 0
+                    if (context.snapshottingEnabled()
+                            && inbox.isEmpty()
+                            && activeOrdinals > 0
                             && barrierReceived.cardinality() == activeOrdinals) {
                         // if processor does not support snapshotting, we will skip SAVE_SNAPSHOT state
                         state = snapshottable == null ? EMIT_BARRIER : SAVE_SNAPSHOT;
@@ -164,6 +161,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                 break;
 
             case SAVE_SNAPSHOT:
+                assert context.snapshottingEnabled();
                 progTracker.notDone();
                 if (snapshottable.saveSnapshot()) {
                     state = EMIT_BARRIER;
@@ -172,9 +170,11 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                 break;
 
             case EMIT_BARRIER:
+                assert context.snapshottingEnabled();
                 progTracker.notDone();
-                if (outbox.offerToEdgesAndSnapshot(new SnapshotBarrier(currSnapshot))) {
+                if (outbox.offerToEdgesAndSnapshot(new SnapshotBarrier(pendingSnapshotId))) {
                     barrierReceived.clear();
+                    pendingSnapshotId++;
                     state = initialState();
                     break;
                 }
@@ -182,13 +182,12 @@ public abstract class ProcessorTaskletBase implements Tasklet {
 
             case COMPLETE:
                 progTracker.notDone();
-                // check snapshotContext to see if a new barrier should be emitted
-                if (snapshotContext != null) {
-                    long newSnapshotId = snapshotContext.getCurrentSnapshotId();
-                    if (newSnapshotId > currSnapshot) {
-                        assert newSnapshotId == currSnapshot + 1 : "Unexpected new snapshot id " + newSnapshotId
-                                + ", current was" + currSnapshot;
-                        currSnapshot = newSnapshotId;
+                // check snapshotContext to see if a barrier should be emitted
+                if (context.snapshottingEnabled()) {
+                    long currSnapshotId = snapshotContext.getCurrentSnapshotId();
+                    assert currSnapshotId <= pendingSnapshotId : "Unexpected new snapshot id " + currSnapshotId
+                            + ", current was" + pendingSnapshotId;
+                    if (currSnapshotId == pendingSnapshotId) {
                         state = EMIT_BARRIER;
                         break;
                     }
@@ -268,9 +267,9 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     }
 
     private void observeSnapshot(int ordinal, long snapshotId) {
-        if (snapshotId != currSnapshot) {
+        if (snapshotId != pendingSnapshotId) {
             throw new JetException("Unexpected snapshot barrier " + snapshotId + " from ordinal " + ordinal +
-                    " expected " + currSnapshot);
+                    " expected " + pendingSnapshotId);
         }
         barrierReceived.set(ordinal);
     }

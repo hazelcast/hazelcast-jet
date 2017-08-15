@@ -28,6 +28,7 @@ import java.util.BitSet;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+@FunctionalInterface
 public interface OutboundCollector {
     /**
      * Offers an item to this collector.
@@ -39,7 +40,9 @@ public interface OutboundCollector {
      * Offer a watermark to this collector. Watermarks will be propagated to all sub-collectors
      * if the collector is a composite one.
      */
-    ProgressState offerBroadcast(Object item);
+    default ProgressState offerBroadcast(Object item) {
+        return offer(item);
+    }
 
     /**
      * Offers an item with a known partition id
@@ -51,7 +54,9 @@ public interface OutboundCollector {
     /**
      * Returns the list of partitions handled by this collector.
      */
-    int[] getPartitions();
+    default int[] getPartitions() {
+        throw new UnsupportedOperationException();
+    }
 
 
     static OutboundCollector compositeCollector(

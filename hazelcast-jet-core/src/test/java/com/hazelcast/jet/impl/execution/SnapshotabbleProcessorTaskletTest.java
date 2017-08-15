@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
+import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ProgressState;
@@ -38,42 +39,40 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.util.ProgressState.DONE;
-import static com.hazelcast.jet.impl.util.ProgressState.MADE_PROGRESS;
 import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
-import static junit.framework.TestCase.assertFalse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
-public class BlockingProcessorTaskletTest {
+public class SnapshotabbleProcessorTaskletTest {
 
     private static final int MOCK_INPUT_SIZE = 10;
     private static final int CALL_COUNT_LIMIT = 10;
-    private ProcCtx context;
-    private CompletableFuture<Void> jobFuture;
+
     private List<Object> mockInput;
     private List<InboundEdgeStream> instreams;
     private List<OutboundEdgeStream> outstreams;
-    private PassThroughProcessor processor;
-
+    private SnapshottableProcessor processor;
+    private ProcCtx context;
+    private SnapshotContext snapshotContext;
 
     @Before
     public void setUp() {
-        this.processor = new PassThroughProcessor();
-        this.context = new ProcCtx(null, null,null, null, 0, false);
-        this.jobFuture = new CompletableFuture<>();
         this.mockInput = IntStream.range(0, MOCK_INPUT_SIZE).boxed().collect(toList());
+        this.processor = new SnapshottableProcessor();
+        this.context = new ProcCtx(null, null,null, null, 0,
+                true);
         this.instreams = new ArrayList<>();
         this.outstreams = new ArrayList<>();
     }
 
     @Test
-    public void when_isCooperative_then_false() {
-        assertFalse(createTasklet().isCooperative());
+    public void when_isCooperative_then_true() {
+        assertTrue(createTasklet().isCooperative());
     }
 
     @Test
@@ -81,7 +80,7 @@ public class BlockingProcessorTaskletTest {
         // Given
         mockInput.add(DONE_ITEM);
         MockInboundStream instream1 = new MockInboundStream(0, mockInput, mockInput.size());
-        MockOutboundStream outstream1 = outstream(0);
+        MockOutboundStream outstream1 = new MockOutboundStream(0);
         instreams.add(instream1);
         outstreams.add(outstream1);
         Tasklet tasklet = createTasklet();
@@ -98,8 +97,8 @@ public class BlockingProcessorTaskletTest {
         // Given
         mockInput.add(DONE_ITEM);
         MockInboundStream instream1 = new MockInboundStream(0, mockInput, mockInput.size());
-        MockOutboundStream outstream1 = outstream(0);
-        MockOutboundStream outstream2 = outstream(1);
+        MockOutboundStream outstream1 = new MockOutboundStream(0);
+        MockOutboundStream outstream2 = new MockOutboundStream(1);
         instreams.add(instream1);
         outstreams.add(outstream1);
         outstreams.add(outstream2);
@@ -118,7 +117,7 @@ public class BlockingProcessorTaskletTest {
         // Given
         mockInput.add(DONE_ITEM);
         MockInboundStream instream1 = new MockInboundStream(0, mockInput, 4);
-        MockOutboundStream outstream1 = outstream(0);
+        MockOutboundStream outstream1 = new MockOutboundStream(0);
         instreams.add(instream1);
         outstreams.add(outstream1);
         Tasklet tasklet = createTasklet();
@@ -140,7 +139,7 @@ public class BlockingProcessorTaskletTest {
         instream2.push(DONE_ITEM);
         instream3.push(DONE_ITEM);
         instreams.addAll(asList(instream1, instream2, instream3));
-        MockOutboundStream outstream1 = new MockOutboundStream(0, 20);
+        MockOutboundStream outstream1 = new MockOutboundStream(0);
         outstreams.add(outstream1);
         Tasklet tasklet = createTasklet();
 
@@ -153,172 +152,79 @@ public class BlockingProcessorTaskletTest {
     }
 
     @Test
-    public void when_inboxEmpty_then_nullaryProcessCalled() {
+    public void when_outstreamRefusesItem_then_noProgress() {
         // Given
-        MockInboundStream instream1 = new MockInboundStream(0, emptyList(), 1);
-        MockOutboundStream outstream1 = outstream(0);
+        MockInboundStream instream1 = new MockInboundStream(0, mockInput, mockInput.size());
+        MockOutboundStream outstream1 = new MockOutboundStream(0, 1);
         instreams.add(instream1);
         outstreams.add(outstream1);
-        BlockingProcessorTasklet tasklet = createTasklet();
+        Tasklet tasklet = createTasklet();
 
         // When
         callUntil(tasklet, NO_PROGRESS);
 
         // Then
-        assertTrue(processor.nullaryProcessCallCount > 0);
+        assertTrue(outstream1.getBuffer().equals(mockInput.subList(0, 1)));
     }
 
     @Test
-    public void when_inboxNotEmpty_then_notDone() {
+    public void when_inboxEmpty_then_nullaryProcessCalled() {
         // Given
-        MockInboundStream instream1 = new MockInboundStream(0, mockInput, mockInput.size());
-        MockOutboundStream outstream1 = new MockOutboundStream(0, 1024);
+        MockInboundStream instream1 = new MockInboundStream(0, emptyList(), 1);
+        MockOutboundStream outstream1 = new MockOutboundStream(0);
         instreams.add(instream1);
         outstreams.add(outstream1);
-        BlockingProcessorTasklet tasklet = createTasklet();
-        processor.itemCountToProcess = 1;
+        CooperativeProcessorTasklet tasklet = createTasklet();
+        processor.nullaryProcessCallCountdown = 1;
 
         // When
         callUntil(tasklet, NO_PROGRESS);
-        callUntil(tasklet, DONE);
 
         // Then
-        mockInput.add(DONE_ITEM);
-        assertEquals(mockInput, outstream1.getBuffer());
+        assertTrue("Expected: nullaryProcessCallCountdown<=0, was " + processor.nullaryProcessCallCountdown,
+                processor.nullaryProcessCallCountdown <= 0);
     }
 
     @Test
     public void when_completeReturnsFalse_then_retried() {
         // Given
         MockInboundStream instream1 = new MockInboundStream(0, emptyList(), 1);
-        MockOutboundStream outstream1 = outstream(0);
+        MockOutboundStream outstream1 = new MockOutboundStream(0, 1);
         instreams.add(instream1);
         outstreams.add(outstream1);
-        BlockingProcessorTasklet tasklet = createTasklet();
+        CooperativeProcessorTasklet tasklet = createTasklet();
         processor.itemsToEmitInComplete = 2;
 
         // When
 
-        // sets instreamCursor to null
-        assertEquals(tasklet.call(), NO_PROGRESS);
-        // complete() first time
-        assertEquals(tasklet.call(), MADE_PROGRESS);
-        // complete() second time, done
-        assertEquals(tasklet.call(), MADE_PROGRESS);
-        // emit done item, done
-        assertEquals(tasklet.call(), DONE);
+        // first call doesn't immediately detect there is no input
+        callUntil(tasklet, NO_PROGRESS);
+        // first "completing" item can't be flushed from outbox due to outstream1 constraint
+        callUntil(tasklet, NO_PROGRESS);
+        outstream1.flush();
+        // second "completing" item can't be flushed from outbox due to outstream1 constraint
+        callUntil(tasklet, NO_PROGRESS);
+        outstream1.flush();
+        callUntil(tasklet, DONE);
 
         // Then
         assertTrue(processor.itemsToEmitInComplete <= 0);
+
     }
 
-    @Test
-    public void when_jobFutureCompleted_then_exceptionThrownAndCaughtInTasklet() {
-        // Given
-        instreams.add(new MockInboundStream(0, mockInput, 1));
-        outstreams.add(new MockOutboundStream(0, 0));
-        BlockingProcessorTasklet tasklet = createTasklet();
-
-        // When
-        jobFuture.cancel(true);
-
-        // Then
-        assertEquals(tasklet.call(), DONE);
-    }
-
-    // BlockingOutbox tests
-
-    @Test
-    public void when_outboxBucketCount_then_equalsOutstreamCount() {
-        // Given
-        outstreams.add(outstream(0));
-        outstreams.add(outstream(1));
-        BlockingProcessorTasklet tasklet = createTasklet();
-
-        // When
-        assertEquals(2, processor.outbox.bucketCount());
-    }
-
-    @Test
-    public void when_emitToOneOrdinal_then_onlyOneBucketFilled() {
-        // Given
-        MockOutboundStream outstream0 = outstream(0);
-        MockOutboundStream outstream1 = outstream(1);
-        outstreams.add(outstream0);
-        outstreams.add(outstream1);
-        processor = new PassThroughProcessor() {
-            @Override
-            public boolean complete() {
-                assertTrue(outbox.offer(1, "completing"));
-                return true;
-            }
-        };
-        BlockingProcessorTasklet tasklet = createTasklet();
-
-        // When
-        // complete()
-        assertEquals(MADE_PROGRESS, tasklet.call());
-        // emit done item
-        assertEquals(DONE, tasklet.call());
-        // Then
-
-        // buffers also contain the DONE_ITEM
-        assertTrue("Ordinal 0 received an item", outstream0.getBuffer().size() == 1);
-        assertTrue("Ordinal 1 didn't receive an item", outstream1.getBuffer().size() == 2);
-    }
-
-    @Test
-    public void when_emitToSpecificOrdinals_then_onlyThoseBucketsFilled() {
-        // Given
-        MockOutboundStream outstream0 = outstream(0);
-        MockOutboundStream outstream1 = outstream(1);
-        MockOutboundStream outstream2 = outstream(2);
-        outstreams.add(outstream0);
-        outstreams.add(outstream1);
-        outstreams.add(outstream2);
-        processor = new PassThroughProcessor() {
-            @Override
-            public boolean complete() {
-                assertTrue(outbox.offer(new int[] {1, 2}, "completing"));
-                return true;
-            }
-        };
-        BlockingProcessorTasklet tasklet = createTasklet();
-
-        // When
-        // complete()
-        assertEquals(MADE_PROGRESS, tasklet.call());
-        // emit done item
-        assertEquals(DONE, tasklet.call());
-
-        // Then
-
-        // buffers also contain the DONE_ITEM
-        assertTrue("Ordinal 0 received an item", outstream0.getBuffer().size() == 1);
-        assertTrue("Ordinal 1 didn't receive an item", outstream1.getBuffer().size() == 2);
-        assertTrue("Ordinal 2 didn't receive an item", outstream2.getBuffer().size() == 2);
-    }
-
-    // END BlockingOutbox tests
-
-    private BlockingProcessorTasklet createTasklet() {
-        final BlockingProcessorTasklet t = new BlockingProcessorTasklet(context, processor, instreams, outstreams,
-                null, null);
-        t.init(jobFuture);
+    private CooperativeProcessorTasklet createTasklet() {
+        snapshotContext = new SnapshotContext(ProcessingGuarantee.AT_LEAST_ONCE);
+        final CooperativeProcessorTasklet t = new CooperativeProcessorTasklet(context, processor, instreams, outstreams,
+                snapshotContext, null);
+        t.init(new CompletableFuture<>());
         return t;
     }
 
-    private static class PassThroughProcessor implements Processor {
+    private static class SnapshottableProcessor implements Processor, Snapshottable {
 
-        Outbox outbox;
-        int nullaryProcessCallCount;
+        int nullaryProcessCallCountdown;
         int itemsToEmitInComplete;
-        int itemCountToProcess = Integer.MAX_VALUE;
-
-        @Override
-        public boolean isCooperative() {
-            return false;
-        }
+        private Outbox outbox;
 
         @Override
         public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
@@ -327,16 +233,11 @@ public class BlockingProcessorTaskletTest {
 
         @Override
         public void process(int ordinal, @Nonnull Inbox inbox) {
-            for (Object item; itemCountToProcess > 0 && (item = inbox.poll()) != null; itemCountToProcess--) {
-                emit(item);
+            for (Object item; (item = inbox.poll()) != null; ) {
+                if (!outbox.offer(item)) {
+                    return;
+                }
             }
-            itemCountToProcess = Integer.MAX_VALUE;
-        }
-
-        @Override
-        public boolean tryProcess() {
-            // A test will set this field to less than zero to provoke an exception in tasklet
-            return ++nullaryProcessCallCount > 0;
         }
 
         @Override
@@ -351,20 +252,23 @@ public class BlockingProcessorTaskletTest {
             return itemsToEmitInComplete == 0;
         }
 
-        private void emit(Object item) {
-            if (!outbox.offer(item)) {
-                throw new AssertionError("Blocking outbox refused an item: " + item);
-            }
+        @Override
+        public boolean tryProcess() {
+            return nullaryProcessCallCountdown-- <= 0;
         }
 
-    }
+        @Override
+        public boolean saveSnapshot() {
+            return false;
+        }
 
-    private static MockOutboundStream outstream(int ordinal) {
-        return new MockOutboundStream(ordinal, 1024);
+        @Override
+        public void restoreSnapshotKey(Object key, Object value) {
+
+        }
     }
 
     private static void callUntil(Tasklet tasklet, ProgressState expectedState) {
-        System.out.println("================= call tasklet");
         int iterCount = 0;
         for (ProgressState r; (r = tasklet.call()) != expectedState; ) {
             assertTrue("Failed to make progress: " + r, r.isMadeProgress());
@@ -372,7 +276,6 @@ public class BlockingProcessorTaskletTest {
                     "tasklet.call() invoked %d times without reaching %s. Last state was %s",
                     CALL_COUNT_LIMIT, expectedState, r),
                     ++iterCount < CALL_COUNT_LIMIT);
-            System.out.println("================= call tasklet");
         }
     }
 }

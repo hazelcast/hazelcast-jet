@@ -18,16 +18,12 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
-import com.hazelcast.jet.impl.util.OutboxBlockingImpl;
-import com.hazelcast.jet.impl.util.OutboxImpl;
-import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.util.Preconditions;
 
 import java.util.List;
 import java.util.Queue;
-import java.util.function.Function;
 
 /**
  * Tasklet that drives a cooperative processor.
@@ -42,7 +38,7 @@ public class CooperativeProcessorTasklet extends ProcessorTaskletBase {
     }
 
     @Override
-    protected OutboxImpl createOutboxInt(Function<Object, ProgressState>[] outstreams, boolean hasSnapshot,
+    protected OutboxImpl createOutboxInt(OutboundCollector[] outstreams, boolean hasSnapshot,
                                          ProgressTracker progTracker, SerializationService serializationService) {
         return new OutboxImpl(outstreams, hasSnapshot, progTracker, serializationService);
     }

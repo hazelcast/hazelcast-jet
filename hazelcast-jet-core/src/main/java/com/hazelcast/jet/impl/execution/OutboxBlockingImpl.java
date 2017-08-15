@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.util;
+package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.jet.impl.util.ProgressState;
+import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.util.concurrent.BackoffIdleStrategy;
 import com.hazelcast.util.concurrent.IdleStrategy;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -33,15 +34,15 @@ public class OutboxBlockingImpl extends OutboxImpl {
 
     private CompletableFuture<Void> jobFuture;
 
-    public OutboxBlockingImpl(Function<Object, ProgressState>[] outstreams, boolean hasSnapshot,
+    public OutboxBlockingImpl(OutboundCollector[] outstreams, boolean hasSnapshot,
                               ProgressTracker progTracker, SerializationService serializationService) {
         super(outstreams, hasSnapshot, progTracker, serializationService);
     }
 
     @Override
-    protected ProgressState doOffer(Function<Object, ProgressState> outstream, Object item) {
+    protected ProgressState doOffer(OutboundCollector collector, Object item) {
         for (long idleCount = 0; ;) {
-            ProgressState result = super.doOffer(outstream, item);
+            ProgressState result = super.doOffer(collector, item);
             if (result.isDone()) {
                 return result;
             }
