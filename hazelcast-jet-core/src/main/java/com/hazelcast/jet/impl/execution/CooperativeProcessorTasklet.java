@@ -32,8 +32,8 @@ public class CooperativeProcessorTasklet extends ProcessorTaskletBase {
 
     public CooperativeProcessorTasklet(ProcCtx context, Processor processor,
                                        List<InboundEdgeStream> instreams, List<OutboundEdgeStream> outstreams,
-                                       SnapshotContext snapshotContext, Queue<Object> snapshotQueue) {
-        super(context, processor, instreams, outstreams, snapshotContext, snapshotQueue);
+                                       SnapshotContext ssContext, OutboundCollector ssCollector) {
+        super(context, processor, instreams, outstreams, ssContext, ssCollector);
         Preconditions.checkTrue(processor.isCooperative(), "Processor is non-cooperative");
     }
 

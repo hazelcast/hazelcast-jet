@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.Snapshottable;
-import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
@@ -48,7 +47,6 @@ import static com.hazelcast.jet.impl.execution.ProcessorState.EMIT_DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.ProcessorState.END;
 import static com.hazelcast.jet.impl.execution.ProcessorState.PROCESS_INBOX;
 import static com.hazelcast.jet.impl.execution.ProcessorState.SAVE_SNAPSHOT;
-import static com.hazelcast.jet.impl.util.ProgressState.DONE;
 import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.groupingBy;
@@ -65,13 +63,13 @@ public abstract class ProcessorTaskletBase implements Tasklet {
 
     // casted #processor to Snapshottable or null, if #processor does not implement it
     private final Snapshottable snapshottable;
-    private final SnapshotContext snapshotContext;
-    private final BitSet barrierReceived; // indicates if current snapshot is received on the ordinal
+    private final SnapshotContext ssContext;
+    private final BitSet receivedBarriers; // indicates if current snapshot is received on the ordinal
 
     private final ArrayDequeInbox inbox = new ArrayDequeInbox(progTracker);
     private final Queue<ArrayList<InboundEdgeStream>> instreamGroupQueue;
 
-    private int activeOrdinals; // counter for remaining active ordinals
+    private int numActiveOrdinals; // counter for remaining active ordinals
     private CircularListCursor<InboundEdgeStream> instreamCursor;
     private InboundEdgeStream currInstream;
     private ProcessorState state = PROCESS_INBOX;
@@ -82,13 +80,13 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                          @Nonnull Processor processor,
                          @Nonnull List<InboundEdgeStream> instreams,
                          @Nonnull List<OutboundEdgeStream> outstreams,
-                         @Nullable SnapshotContext snapshotContext,
-                         @Nullable Queue<Object> snapshotQueue) {
+                         @Nullable SnapshotContext ssContext,
+                         @Nullable OutboundCollector ssCollector) {
         Preconditions.checkNotNull(processor, "processor");
         this.context = context;
         this.processor = processor;
         this.snapshottable = processor instanceof Snapshottable ? (Snapshottable) processor : null;
-        this.activeOrdinals = instreams.size();
+        this.numActiveOrdinals = instreams.size();
         this.instreamGroupQueue = instreams
                 .stream()
                 .collect(groupingBy(InboundEdgeStream::priority, TreeMap::new, toCollection(ArrayList::new)))
@@ -98,23 +96,20 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         this.outstreams = outstreams.stream()
                                     .sorted(comparing(OutboundEdgeStream::ordinal))
                                     .toArray(OutboundEdgeStream[]::new);
-        this.snapshotContext = snapshotContext;
+        this.ssContext = ssContext;
 
         instreamCursor = popInstreamGroup();
-        outbox = createOutbox(snapshotQueue);
-        barrierReceived = new BitSet(instreams.size());
+        outbox = createOutbox(ssCollector);
+        receivedBarriers = new BitSet(instreams.size());
         state = initialState();
     }
 
-    private OutboxImpl createOutbox(Queue<Object> snapshotQueue) {
+    private OutboxImpl createOutbox(OutboundCollector snapshotQueue) {
         OutboundCollector[] collectors = new OutboundCollector[outstreams.length + (snapshotQueue == null ? 0 : 1)];
         for (int i = 0; i < outstreams.length; i++) {
             collectors[i] = outstreams[i].getCollector();
         }
-        if (snapshotQueue != null) {
-            collectors[outstreams.length] = item -> snapshotQueue.offer(item) ? DONE : NO_PROGRESS;
-        }
-
+        collectors[outstreams.length] = snapshotQueue;
         return createOutboxInt(collectors, snapshotQueue != null, progTracker,
                 context.getSerializationService());
     }
@@ -139,18 +134,16 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         switch (state) {
             case PROCESS_INBOX:
                 progTracker.notDone();
-                // call nullary process
                 if (inbox.isEmpty() && processor.tryProcess()) {
                     fillInbox();
                 }
                 if (!inbox.isEmpty()) {
                     processor.process(currInstream.ordinal(), inbox);
-                    // we have emptied the inbox and received the current snapshot from all active ordinals
                     if (context.snapshottingEnabled()
                             && inbox.isEmpty()
-                            && activeOrdinals > 0
-                            && barrierReceived.cardinality() == activeOrdinals) {
-                        // if processor does not support snapshotting, we will skip SAVE_SNAPSHOT state
+                            && numActiveOrdinals > 0
+                            && receivedBarriers.cardinality() == numActiveOrdinals) {
+                        // we have emptied the inbox and received the current snapshot from all active ordinals
                         state = snapshottable == null ? EMIT_BARRIER : SAVE_SNAPSHOT;
                         break;
                     }
@@ -161,7 +154,9 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                 break;
 
             case SAVE_SNAPSHOT:
-                assert context.snapshottingEnabled();
+                assert context.snapshottingEnabled() : "Snapshotting is not enabled";
+                assert snapshottable != null : "Processor does not support snapshotting";
+
                 progTracker.notDone();
                 if (snapshottable.saveSnapshot()) {
                     state = EMIT_BARRIER;
@@ -170,10 +165,11 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                 break;
 
             case EMIT_BARRIER:
-                assert context.snapshottingEnabled();
+                assert context.snapshottingEnabled() : "Snapshotting is not enabled";
+
                 progTracker.notDone();
                 if (outbox.offerToEdgesAndSnapshot(new SnapshotBarrier(pendingSnapshotId))) {
-                    barrierReceived.clear();
+                    receivedBarriers.clear();
                     pendingSnapshotId++;
                     state = initialState();
                     break;
@@ -182,9 +178,9 @@ public abstract class ProcessorTaskletBase implements Tasklet {
 
             case COMPLETE:
                 progTracker.notDone();
-                // check snapshotContext to see if a barrier should be emitted
+                // check ssContext to see if a barrier should be emitted
                 if (context.snapshottingEnabled()) {
-                    long currSnapshotId = snapshotContext.getCurrentSnapshotId();
+                    long currSnapshotId = ssContext.getCurrentSnapshotId();
                     assert currSnapshotId <= pendingSnapshotId : "Unexpected new snapshot id " + currSnapshotId
                             + ", current was" + pendingSnapshotId;
                     if (currSnapshotId == pendingSnapshotId) {
@@ -224,17 +220,17 @@ public abstract class ProcessorTaskletBase implements Tasklet {
             result = NO_PROGRESS;
 
             // skip ordinals where a snapshot barrier has already been received
-            if (snapshotContext != null && snapshotContext.getGuarantee() == ProcessingGuarantee.EXACTLY_ONCE
-                    && barrierReceived.get(currInstream.ordinal())) {
+            if (ssContext != null && ssContext.getGuarantee() == ProcessingGuarantee.EXACTLY_ONCE
+                    && receivedBarriers.get(currInstream.ordinal())) {
                 continue;
             }
             result = currInstream.drainTo(inbox::add);
             progTracker.madeProgress(result.isMadeProgress());
 
             if (result.isDone()) {
-                barrierReceived.clear(currInstream.ordinal());
+                receivedBarriers.clear(currInstream.ordinal());
                 instreamCursor.remove();
-                activeOrdinals--;
+                numActiveOrdinals--;
             }
 
             // check if last item was snapshot
@@ -271,7 +267,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
             throw new JetException("Unexpected snapshot barrier " + snapshotId + " from ordinal " + ordinal +
                     " expected " + pendingSnapshotId);
         }
-        barrierReceived.set(ordinal);
+        receivedBarriers.set(ordinal);
     }
 
 }

@@ -69,6 +69,8 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.internal.util.concurrent.ConcurrentConveyor.concurrentConveyor;
 import static com.hazelcast.jet.impl.execution.OutboundCollector.compositeCollector;
+import static com.hazelcast.jet.impl.util.ProgressState.DONE;
+import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 import static com.hazelcast.jet.impl.util.Util.idToString;
 import static com.hazelcast.jet.impl.util.Util.memoize;
@@ -127,15 +129,13 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             Collection<? extends Processor> processors = createProcessors(srcVertex, srcVertex.parallelism());
 
             // create StoreSnapshotTasklet and the queues to it
-            QueuedPipe<Object>[] queues = null;
+            ConcurrentConveyor<Object> ssConveyor = null;
             final boolean savesSnapshot = processors.iterator().next() instanceof Snapshottable;
             if (savesSnapshot) {
-                queues = new QueuedPipe[srcVertex.parallelism()];
-                for (int i = 0; i < queues.length; i++) {
-                    // TODO configure queue capacity
-                    queues[i] = new OneToOneConcurrentArrayQueue<>(2000);
-                }
-                ConcurrentConveyor<Object> ssConveyor = concurrentConveyor(null, queues);
+                QueuedPipe<Object>[] snapshotQueues = new QueuedPipe[srcVertex.parallelism()];
+                // TODO configure queue capacity
+                Arrays.setAll(snapshotQueues, i -> new OneToOneConcurrentArrayQueue<>(2000));
+                ssConveyor = ConcurrentConveyor.concurrentConveyor(null, snapshotQueues);
                 StoreSnapshotTasklet ssTasklet = new StoreSnapshotTasklet(snapshotContext, jobId,
                         new ConcurrentInboundEdgeStream(ssConveyor, 0, 0, true),
                         nodeEngine, srcVertex.name());
@@ -163,11 +163,16 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 // Also populates instance fields: senderMap, receiverMap, tasklets.
                 List<OutboundEdgeStream> outboundStreams = createOutboundEdgeStreams(srcVertex, processorIdx);
                 List<InboundEdgeStream> inboundStreams = createInboundEdgeStreams(srcVertex, processorIdx);
+
+                OutboundCollector snapshotCollector = savesSnapshot
+                        ? new ConveyorCollector(ssConveyor, processorIdx, null)
+                        : null;
+
                 ProcessorTaskletBase processorTasklet = p.isCooperative()
                         ? new CooperativeProcessorTasklet(context, p, inboundStreams, outboundStreams,
-                        snapshotContext, savesSnapshot ? queues[processorIdx] : null)
+                        snapshotContext, snapshotCollector)
                         : new BlockingProcessorTasklet(context, p, inboundStreams, outboundStreams,
-                        snapshotContext, savesSnapshot ? queues[processorIdx] : null);
+                        snapshotContext, snapshotCollector);
                 tasklets.add(processorTasklet);
                 this.processors.add(p);
                 processorIdx++;

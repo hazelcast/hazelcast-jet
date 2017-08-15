@@ -31,15 +31,20 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.util.ProgressState.DONE;
 import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
+import static com.hazelcast.query.impl.predicates.PredicateTestUtils.entry;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
@@ -48,7 +53,7 @@ import static org.junit.Assert.assertTrue;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
-public class SnapshotabbleProcessorTaskletTest {
+public class SnapshottableProcessorTaskletTest {
 
     private static final int MOCK_INPUT_SIZE = 10;
     private static final int CALL_COUNT_LIMIT = 10;
@@ -59,6 +64,7 @@ public class SnapshotabbleProcessorTaskletTest {
     private SnapshottableProcessor processor;
     private ProcCtx context;
     private SnapshotContext snapshotContext;
+    private OutboundCollector snapshotCollector;
 
     @Before
     public void setUp() {
@@ -68,6 +74,7 @@ public class SnapshotabbleProcessorTaskletTest {
                 true);
         this.instreams = new ArrayList<>();
         this.outstreams = new ArrayList<>();
+        this.snapshotCollector = new MockOutboundCollector(10);
     }
 
     @Test
@@ -78,7 +85,8 @@ public class SnapshotabbleProcessorTaskletTest {
     @Test
     public void when_singleInstreamAndOutstream_then_outstreamGetsAll() {
         // Given
-        mockInput.add(DONE_ITEM);
+        mockInput.add(1);
+        mockInput.add(2);
         MockInboundStream instream1 = new MockInboundStream(0, mockInput, mockInput.size());
         MockOutboundStream outstream1 = new MockOutboundStream(0);
         instreams.add(instream1);
@@ -90,126 +98,6 @@ public class SnapshotabbleProcessorTaskletTest {
 
         // Then
         assertEquals(mockInput, outstream1.getBuffer());
-    }
-
-    @Test
-    public void when_oneInstreamAndTwoOutstreams_then_allOutstreamsGetAllItems() {
-        // Given
-        mockInput.add(DONE_ITEM);
-        MockInboundStream instream1 = new MockInboundStream(0, mockInput, mockInput.size());
-        MockOutboundStream outstream1 = new MockOutboundStream(0);
-        MockOutboundStream outstream2 = new MockOutboundStream(1);
-        instreams.add(instream1);
-        outstreams.add(outstream1);
-        outstreams.add(outstream2);
-        Tasklet tasklet = createTasklet();
-
-        // When
-        callUntil(tasklet, DONE);
-
-        // Then
-        assertEquals(mockInput, outstream1.getBuffer());
-        assertEquals(mockInput, outstream2.getBuffer());
-    }
-
-    @Test
-    public void when_instreamChunked_then_processAllEventually() {
-        // Given
-        mockInput.add(DONE_ITEM);
-        MockInboundStream instream1 = new MockInboundStream(0, mockInput, 4);
-        MockOutboundStream outstream1 = new MockOutboundStream(0);
-        instreams.add(instream1);
-        outstreams.add(outstream1);
-        Tasklet tasklet = createTasklet();
-
-        // When
-        callUntil(tasklet, DONE);
-
-        // Then
-        assertEquals(mockInput, outstream1.getBuffer());
-    }
-
-    @Test
-    public void when_3instreams_then_pushAllIntoOutstream() {
-        // Given
-        MockInboundStream instream1 = new MockInboundStream(0, mockInput.subList(0, 4), 4);
-        MockInboundStream instream2 = new MockInboundStream(1, mockInput.subList(4, 8), 4);
-        MockInboundStream instream3 = new MockInboundStream(2, mockInput.subList(8, 10), 4);
-        instream1.push(DONE_ITEM);
-        instream2.push(DONE_ITEM);
-        instream3.push(DONE_ITEM);
-        instreams.addAll(asList(instream1, instream2, instream3));
-        MockOutboundStream outstream1 = new MockOutboundStream(0);
-        outstreams.add(outstream1);
-        Tasklet tasklet = createTasklet();
-
-        // When
-        callUntil(tasklet, DONE);
-
-        // Then
-        mockInput.add(DONE_ITEM);
-        assertEquals(new HashSet<>(mockInput), new HashSet<>(outstream1.getBuffer()));
-    }
-
-    @Test
-    public void when_outstreamRefusesItem_then_noProgress() {
-        // Given
-        MockInboundStream instream1 = new MockInboundStream(0, mockInput, mockInput.size());
-        MockOutboundStream outstream1 = new MockOutboundStream(0, 1);
-        instreams.add(instream1);
-        outstreams.add(outstream1);
-        Tasklet tasklet = createTasklet();
-
-        // When
-        callUntil(tasklet, NO_PROGRESS);
-
-        // Then
-        assertTrue(outstream1.getBuffer().equals(mockInput.subList(0, 1)));
-    }
-
-    @Test
-    public void when_inboxEmpty_then_nullaryProcessCalled() {
-        // Given
-        MockInboundStream instream1 = new MockInboundStream(0, emptyList(), 1);
-        MockOutboundStream outstream1 = new MockOutboundStream(0);
-        instreams.add(instream1);
-        outstreams.add(outstream1);
-        CooperativeProcessorTasklet tasklet = createTasklet();
-        processor.nullaryProcessCallCountdown = 1;
-
-        // When
-        callUntil(tasklet, NO_PROGRESS);
-
-        // Then
-        assertTrue("Expected: nullaryProcessCallCountdown<=0, was " + processor.nullaryProcessCallCountdown,
-                processor.nullaryProcessCallCountdown <= 0);
-    }
-
-    @Test
-    public void when_completeReturnsFalse_then_retried() {
-        // Given
-        MockInboundStream instream1 = new MockInboundStream(0, emptyList(), 1);
-        MockOutboundStream outstream1 = new MockOutboundStream(0, 1);
-        instreams.add(instream1);
-        outstreams.add(outstream1);
-        CooperativeProcessorTasklet tasklet = createTasklet();
-        processor.itemsToEmitInComplete = 2;
-
-        // When
-
-        // first call doesn't immediately detect there is no input
-        callUntil(tasklet, NO_PROGRESS);
-        // first "completing" item can't be flushed from outbox due to outstream1 constraint
-        callUntil(tasklet, NO_PROGRESS);
-        outstream1.flush();
-        // second "completing" item can't be flushed from outbox due to outstream1 constraint
-        callUntil(tasklet, NO_PROGRESS);
-        outstream1.flush();
-        callUntil(tasklet, DONE);
-
-        // Then
-        assertTrue(processor.itemsToEmitInComplete <= 0);
-
     }
 
     private CooperativeProcessorTasklet createTasklet() {
@@ -226,6 +114,8 @@ public class SnapshotabbleProcessorTaskletTest {
         int itemsToEmitInComplete;
         private Outbox outbox;
 
+        private Queue<Map.Entry> snapshotQueue = new ArrayDeque<>();
+
         @Override
         public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
             this.outbox = outbox;
@@ -233,9 +123,11 @@ public class SnapshotabbleProcessorTaskletTest {
 
         @Override
         public void process(int ordinal, @Nonnull Inbox inbox) {
-            for (Object item; (item = inbox.poll()) != null; ) {
+            for (Object item; (item = inbox.peek()) != null; ) {
                 if (!outbox.offer(item)) {
                     return;
+                } else {
+                    snapshotQueue.offer(entry(UUID.randomUUID(), inbox.remove()));
                 }
             }
         }
@@ -259,7 +151,15 @@ public class SnapshotabbleProcessorTaskletTest {
 
         @Override
         public boolean saveSnapshot() {
-            return false;
+            for (Map.Entry item; (item = snapshotQueue.peek()) != null; ) {
+                if (!outbox.offerToSnapshot(item.getKey(), item.getValue())) {
+                    return false;
+                } else {
+                    snapshotQueue.remove();
+                }
+            }
+            snapshotQueue.clear();
+            return true;
         }
 
         @Override

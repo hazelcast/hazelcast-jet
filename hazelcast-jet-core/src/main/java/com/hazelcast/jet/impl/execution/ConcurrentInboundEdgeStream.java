@@ -43,7 +43,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private final boolean waitForSnapshot;
     private final long[] queueWms;
 
-    private final BitSet barrierReceived; // indicates if current snapshot is received on the queue
+    private final BitSet receivedBarriers; // indicates if current snapshot is received on the queue
 
     private long currSnapshot = 0; // current expected snapshot
     private long lastEmittedWm = Long.MIN_VALUE;
@@ -66,7 +66,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         Arrays.fill(queueWms, Long.MIN_VALUE);
 
         activeQueues = conveyor.queueCount();
-        barrierReceived = new BitSet(conveyor.queueCount());
+        receivedBarriers = new BitSet(conveyor.queueCount());
     }
 
     @Override
@@ -89,7 +89,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             }
 
             // skip queues where a snapshot barrier has already been received
-            if (waitForSnapshot && barrierReceived.get(queueIndex)) {
+            if (waitForSnapshot && receivedBarriers.get(queueIndex)) {
                 continue;
             }
 
@@ -97,7 +97,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                 tracker.madeProgress();
                 if (item == DONE_ITEM) {
                     conveyor.removeQueue(queueIndex);
-                    barrierReceived.clear(queueIndex);
+                    receivedBarriers.clear(queueIndex);
                     activeQueues--;
                     // we are done with this queue
                     break;
@@ -132,10 +132,10 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         }
 
         // if we have received the current snapshot from all active queues, forward it
-        if (barrierReceived.cardinality() == activeQueues) {
+        if (receivedBarriers.cardinality() == activeQueues) {
             dest.accept(new SnapshotBarrier(currSnapshot));
             currSnapshot++;
-            barrierReceived.clear();
+            receivedBarriers.clear();
         }
         return tracker.toProgressState();
     }
@@ -145,7 +145,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             throw new JetException("Unexpected snapshot barrier "
                     + snapshotId + ", expected " + currSnapshot);
         }
-        barrierReceived.set(queueIndex);
+        receivedBarriers.set(queueIndex);
     }
 
 
