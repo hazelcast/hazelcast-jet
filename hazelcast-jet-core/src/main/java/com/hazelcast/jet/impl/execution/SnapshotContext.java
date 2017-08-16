@@ -24,13 +24,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class SnapshotContext {
 
+    private static final int NO_SNAPSHOT = -1;
+
     /**
      * SnapshotId of snapshot currently being created. Source processors read
      * it and when they see changed value, they start a snapshot with that
      * ID. {@code Long.MIN_VALUE} means no snapshot is in progress.
      */
     // is volatile because it will be read without synchronizing
-    private volatile long currentSnapshotId = Long.MIN_VALUE;
+    private volatile long currentSnapshotId = NO_SNAPSHOT;
 
     /**
      * Current number of {@link StoreSnapshotTasklet}s in the job. It's
@@ -97,7 +99,6 @@ public class SnapshotContext {
         if (res == 0) {
             future.complete(null);
             future = null;
-            currentSnapshotId = Long.MIN_VALUE;
         }
     }
 

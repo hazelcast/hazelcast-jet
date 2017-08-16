@@ -24,6 +24,7 @@ import com.hazelcast.nio.Address;
 import javax.annotation.Nonnull;
 import java.io.Serializable;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Factory of {@link ProcessorSupplier} instances. The starting point of
@@ -73,7 +74,7 @@ public interface ProcessorMetaSupplier extends Serializable {
      * been called.
      */
     @Nonnull
-    java.util.function.Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses);
+    Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses);
 
     /**
      * Factory method that wraps the given {@code ProcessorSupplier}

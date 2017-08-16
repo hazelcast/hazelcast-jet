@@ -46,6 +46,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static com.hazelcast.jet.impl.util.ProgressState.MADE_PROGRESS;
 import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static com.hazelcast.query.impl.predicates.PredicateTestUtils.entry;
 import static java.util.stream.Collectors.toList;
@@ -115,8 +116,8 @@ public class SnapshottableProcessorTaskletTest {
 
         List<Object> input2 = new ArrayList<>();
 
-        MockInboundStream instream1 = new MockInboundStream(0, input1, input1.size());
-        MockInboundStream instream2 = new MockInboundStream(1, input2, input2.size());
+        MockInboundStream instream1 = new MockInboundStream(0, input1, 1024);
+        MockInboundStream instream2 = new MockInboundStream(1, input2, 1024);
         MockOutboundStream outstream1 = new MockOutboundStream(0);
 
         instreams.add(instream1);
@@ -131,6 +132,37 @@ public class SnapshottableProcessorTaskletTest {
         // Then
         assertEquals(Arrays.asList(0, 1, 2, 3), outstream1.getBuffer());
         assertEquals(Collections.emptyList(), getSnapshotBuffer());
+
+        // When
+        instream2.push(barrier(0));
+        callUntil(tasklet, NO_PROGRESS);
+        assertEquals(Arrays.asList(0, 1, 2, 3, barrier(0), 4, 5, 6, 7), outstream1.getBuffer());
+    }
+
+    @Test
+    public void when_snapshotTriggered_then_saveSnapshotAndemitBarrier() {
+        // Given
+        MockOutboundStream outstream1 = new MockOutboundStream(0, 2);
+        outstreams.add(outstream1);
+        Tasklet tasklet = createTasklet(ProcessingGuarantee.EXACTLY_ONCE);
+        processor.itemsToEmitInComplete = 4;
+
+        // When
+        callUntil(tasklet, NO_PROGRESS);
+
+        // Then
+        assertEquals(Arrays.asList(0, 1), outstream1.getBuffer());
+        assertEquals(Collections.emptyList(), getSnapshotBuffer());
+
+        // When
+        snapshotContext.startNewSnapshot(0);
+        outstream1.flush();
+
+        callUntil(tasklet, NO_PROGRESS);
+
+        // Then
+        assertEquals(Arrays.asList(barrier(0), 2), outstream1.getBuffer());
+        assertEquals(Arrays.asList(0 , 1, barrier(0)), getSnapshotBuffer());
     }
 
 
@@ -171,6 +203,7 @@ public class SnapshottableProcessorTaskletTest {
 
         int nullaryProcessCallCountdown;
         int itemsToEmitInComplete;
+        int completedCount;
         private Outbox outbox;
 
         private Queue<Map.Entry> snapshotQueue = new ArrayDeque<>();
@@ -193,14 +226,15 @@ public class SnapshottableProcessorTaskletTest {
 
         @Override
         public boolean complete() {
-            if (itemsToEmitInComplete == 0) {
+            if (completedCount == itemsToEmitInComplete) {
                 return true;
             }
-            boolean accepted = outbox.offer("completing");
+            boolean accepted = outbox.offer(completedCount);
             if (accepted) {
-                itemsToEmitInComplete--;
+                snapshotQueue.offer(entry(UUID.randomUUID(), completedCount));
+                completedCount++;
             }
-            return itemsToEmitInComplete == 0;
+            return completedCount == itemsToEmitInComplete;
         }
 
         @Override

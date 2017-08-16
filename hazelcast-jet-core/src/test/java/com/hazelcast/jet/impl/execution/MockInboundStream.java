@@ -40,11 +40,7 @@ public class MockInboundStream implements InboundEdgeStream {
     MockInboundStream(int ordinal, List<Object> mockData, int chunkSize) {
         this.ordinal = ordinal;
         this.chunkSize = chunkSize;
-        if (mockData.isEmpty()) {
-            this.mockData = emptyList();
-        } else {
-            this.mockData = new ArrayList<>(mockData);
-        }
+        this.mockData = new ArrayList<>(mockData);
     }
 
     void push(Object... items) {
@@ -64,9 +60,11 @@ public class MockInboundStream implements InboundEdgeStream {
             final Object item = mockData.get(dataIndex);
             if (item == DONE_ITEM) {
                 done = true;
+                break;
             } else if (item instanceof SnapshotBarrier) {
                 dest.accept(item);
-                return MADE_PROGRESS;
+                dataIndex++;
+                break;
             } else {
                 dest.accept(item);
             }

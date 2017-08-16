@@ -141,18 +141,20 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                 }
                 if (!inbox.isEmpty()) {
                     processor.process(currInstream.ordinal(), inbox);
+                }
+
+                if (inbox.isEmpty()) {
                     if (context.snapshottingEnabled()
-                            && inbox.isEmpty()
                             && numActiveOrdinals > 0
                             && receivedBarriers.cardinality() == numActiveOrdinals) {
-                        // we have emptied the inbox and received the current snapshot barrier from all active ordinals
+                        // we have an empty inbox and received the current snapshot barrier from all active ordinals
                         state = initialSnapshottingState();
                         return;
                     }
-                }
-                if (inbox.isEmpty() && instreamCursor == null) {
-                    progTracker.madeProgress();
-                    state = COMPLETE;
+                    if (numActiveOrdinals == 0) {
+                        progTracker.madeProgress();
+                        state = COMPLETE;
+                    }
                 }
                 return;
 
@@ -187,6 +189,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                             + ", current was" + pendingSnapshotId;
                     if (currSnapshotId == pendingSnapshotId) {
                         state = initialSnapshottingState();
+                        progTracker.madeProgress();
                         return;
                     }
                 }
