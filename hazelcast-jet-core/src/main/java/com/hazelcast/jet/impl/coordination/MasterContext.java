@@ -78,6 +78,7 @@ import static java.util.stream.Collectors.toList;
 
 public class MasterContext {
 
+    public static final int SNAPSHOT_EDGE_PRIORITY = Integer.MIN_VALUE;
     private final NodeEngineImpl nodeEngine;
     private final JobCoordinationService coordinationService;
     private final ILogger logger;
@@ -169,12 +170,19 @@ public class MasterContext {
                     continue;
                 }
 
+                if (dag.getInboundEdges(vertexName).stream().anyMatch(e -> e.getPriority() <= SNAPSHOT_EDGE_PRIORITY)) {
+                    // We set the snapshot restore edge priority to MIN_VALUE. If there is other edge with that
+                    // priority, it will conflict.
+                    throw new JetException("Edge with MIN_VALUE priority is not allowed");
+                }
+
                 Vertex readSnapshotVertex = dag.newVertex("__read_snapshot:" + vertexName,
                         readMap(SnapshotRepository.snapshotDataMapName(jobId, snapshotRec.snapshotId(), vertexName)))
                                           .localParallelism(vertex.getLocalParallelism());
                 Edge edge;
                 dag.edge(edge = from(readSnapshotVertex)
                         .to(vertex, dag.getInboundEdges(vertexName).size())
+                        .priority(Integer.MIN_VALUE)
                         .distributed());
                 if (snapshotRestorePolicy == SnapshotRestorePolicy.PARTITIONED) {
                     edge.partitioned(entryKey());

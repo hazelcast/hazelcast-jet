@@ -19,6 +19,7 @@ package com.hazelcast.jet;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.impl.SerializationConstants;
+import com.hazelcast.jet.impl.coordination.MasterContext;
 import com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -189,6 +190,9 @@ public class Edge implements IdentifiedDataSerializable {
      * edges are completed.
      */
     public Edge priority(int priority) {
+        if (priority <= MasterContext.SNAPSHOT_EDGE_PRIORITY) {
+            throw new IllegalArgumentException("priority must be > " + MasterContext.SNAPSHOT_EDGE_PRIORITY);
+        }
         this.priority = priority;
         return this;
     }

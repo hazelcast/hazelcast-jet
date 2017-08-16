@@ -29,6 +29,12 @@ enum ProcessorState {
     PROCESS_INBOX,
 
     /**
+     * Doing calls to {@link Processor#completeEdge(int)} until it returns
+     * true.
+     */
+    COMPLETE_EDGE,
+
+    /**
      * Doing calls to {@link Processor#complete()} until it returns true
      */
     COMPLETE,

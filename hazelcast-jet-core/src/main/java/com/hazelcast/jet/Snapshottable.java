@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet;
 
+import javax.annotation.Nonnull;
+
 /**
  * An interface to be implemented by a {@link Processor} that wants to do
  * snapshots and be able to restore the state after restart or failure.
@@ -49,25 +51,21 @@ public interface Snapshottable {
     boolean saveSnapshot();
 
     /**
-     * Apply a key from a snapshot to processor’s internal state.
+     * Restore processor's state from an inbox with snapshotted state. Items
+     * are of type {@code Map.Entry<Object, Object>}. The inbox contains just
+     * one batch of items, method will be called multiple times if needed. If
+     * there is no snapshot to restore, method won't be called at all, even
+     * though the processors is stateful.
+     * <p>
+     * Processor is allowed to put items to Outbox during this call.
      */
-    void restoreSnapshotKey(Object key, Object value);
-
+    void restoreSnapshot(@Nonnull Inbox inbox);
 
     /**
      * Called after all keys have been restored using {@link
-     * #restoreSnapshotKey(Object, Object)}.
+     * #restoreSnapshot(Inbox)}.
      */
-    default void finishSnapshotRestore() {
-    }
-
-    /**
-     * Clear entire state, that might have been restored using {@link
-     * #restoreSnapshotKey(Object, Object)}.
-     * <p>
-     * This will be used, if partition migration took place during restoring,
-     * in which case the process has to be started over.
-     */
-    default void clearState() {
+    default boolean finishSnapshotRestore() {
+        return true;
     }
 }

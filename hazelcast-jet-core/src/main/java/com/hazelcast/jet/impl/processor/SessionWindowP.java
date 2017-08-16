@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.AggregateOperation;
+import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Session;
 import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.Traverser;
@@ -159,12 +160,15 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor implements Sna
     }
 
     @Override
-    public void restoreSnapshotKey(Object key, Object value) {
-        keyToWindows.put((K) key, (Windows) value);
+    public void restoreSnapshot(@Nonnull Inbox inbox) {
+        for (Object o; (o = inbox.poll()) != null; ) {
+            Entry<K, Windows> entry = (Entry<K, Windows>) o;
+            keyToWindows.put(entry.getKey(), entry.getValue());
+        }
     }
 
     @Override
-    public void finishSnapshotRestore() {
+    public boolean finishSnapshotRestore() {
         assert deadlineToKeys.isEmpty();
         // populate deadlineToKeys
         for (Entry<K, Windows> entry : keyToWindows.entrySet()) {
@@ -172,6 +176,7 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor implements Sna
                 addToDeadlines(entry.getKey(), end);
             }
         }
+        return true;
     }
 
     private void addEvent(Windows<A> w, K key, long timestamp, T event) {

@@ -20,6 +20,7 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.config.ProcessingGuarantee;
+import com.hazelcast.jet.impl.coordination.MasterContext;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.CircularListCursor;
@@ -42,6 +43,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.ProcessorState.COMPLETE;
+import static com.hazelcast.jet.impl.execution.ProcessorState.COMPLETE_EDGE;
 import static com.hazelcast.jet.impl.execution.ProcessorState.EMIT_BARRIER;
 import static com.hazelcast.jet.impl.execution.ProcessorState.EMIT_DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.ProcessorState.END;
@@ -73,8 +75,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     private CircularListCursor<InboundEdgeStream> instreamCursor;
     private InboundEdgeStream currInstream;
     private ProcessorState state;
-    private long pendingSnapshotId = 0;
-
+    private long pendingSnapshotId;
 
     ProcessorTaskletBase(@Nonnull ProcCtx context,
                          @Nonnull Processor processor,
@@ -136,15 +137,24 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         switch (state) {
             case PROCESS_INBOX:
                 progTracker.notDone();
-                if (inbox.isEmpty() && processor.tryProcess()) {
+                if (inbox.isEmpty() && (isSnapshotInbox() || processor.tryProcess())) {
                     fillInbox();
                 }
                 if (!inbox.isEmpty()) {
-                    processor.process(currInstream.ordinal(), inbox);
+                    if (isSnapshotInbox()) {
+                        snapshottable.restoreSnapshot(inbox);
+                    } else {
+                        processor.process(currInstream.ordinal(), inbox);
+                    }
                 }
 
                 if (inbox.isEmpty()) {
-                    if (context.snapshottingEnabled()
+                    // there is either snapshot or instream is done, not both
+                    if (currInstream != null && currInstream.isDone()) {
+                        state = COMPLETE_EDGE;
+                        stateMachineStep();
+                        return;
+                    } else if (context.snapshottingEnabled()
                             && numActiveOrdinals > 0
                             && receivedBarriers.cardinality() == numActiveOrdinals) {
                         // we have an empty inbox and received the current snapshot barrier from all active ordinals
@@ -155,6 +165,14 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                         progTracker.madeProgress();
                         state = COMPLETE;
                     }
+                }
+                return;
+
+            case COMPLETE_EDGE:
+                progTracker.notDone();
+                if (isSnapshotInbox()
+                        ? snapshottable.finishSnapshotRestore() : processor.completeEdge(currInstream.ordinal())) {
+                    state = initialProcessingState();
                 }
                 return;
 
@@ -292,5 +310,12 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         return snapshottable == null ? EMIT_BARRIER : SAVE_SNAPSHOT;
     }
 
+    /**
+     * Returns, if the inbox we are currently on is the snapshot restoring inbox.
+     */
+    private boolean isSnapshotInbox() {
+        return snapshottable != null && currInstream != null
+                && currInstream.priority() == MasterContext.SNAPSHOT_EDGE_PRIORITY;
+    }
 }
 

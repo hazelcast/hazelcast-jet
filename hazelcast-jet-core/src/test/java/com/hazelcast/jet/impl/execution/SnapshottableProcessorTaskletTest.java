@@ -46,7 +46,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static com.hazelcast.jet.impl.util.ProgressState.MADE_PROGRESS;
 import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static com.hazelcast.query.impl.predicates.PredicateTestUtils.entry;
 import static java.util.stream.Collectors.toList;
@@ -256,7 +255,7 @@ public class SnapshottableProcessorTaskletTest {
         }
 
         @Override
-        public void restoreSnapshotKey(Object key, Object value) {
+        public void restoreSnapshot(@Nonnull Inbox inbox) {
 
         }
     }

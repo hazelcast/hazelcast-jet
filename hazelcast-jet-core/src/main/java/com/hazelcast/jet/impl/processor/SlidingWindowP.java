@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.processor;
 import com.hazelcast.core.PartitionAware;
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.AggregateOperation;
+import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Traverser;
@@ -214,14 +215,17 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor implements Snapsh
     }
 
     @Override
-    public void restoreSnapshotKey(Object key, Object value) {
-        Map.Entry<Long, Object> k = (Entry<Long, Object>) key;
-        tsToKeyToAcc.computeIfAbsent(k.getKey(), x -> new HashMap<>())
-                    .merge(key, (A) value, (o, n) -> {
-                        aggrOp.combineAccumulatorsF().accept(o, n);
-                        return o.equals(emptyAcc) ? null : o;
-                    });
-        topTs = Math.max(topTs, k.getKey());
+    public void restoreSnapshot(@Nonnull Inbox inbox) {
+        for (Object o; (o = inbox.poll()) != null; ) {
+            Entry<Entry<Long, Object>, A> entry = (Entry<Entry<Long, Object>, A>) o;
+            Map.Entry<Long, Object> k = entry.getKey();
+            tsToKeyToAcc.computeIfAbsent(k.getKey(), x -> new HashMap<>())
+                        .merge(k, entry.getValue(), (oldV, newV) -> {
+                            aggrOp.combineAccumulatorsF().accept(oldV, newV);
+                            return oldV.equals(emptyAcc) ? null : oldV;
+                        });
+            topTs = Math.max(topTs, k.getKey());
+        }
     }
 
     private static final class SnapshotKey implements PartitionAware<Object> {

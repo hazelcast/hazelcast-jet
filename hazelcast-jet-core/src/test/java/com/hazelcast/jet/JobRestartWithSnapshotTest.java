@@ -32,6 +32,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import javax.annotation.Nonnull;
+import java.util.Map;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.TestUtil.throttle;
@@ -112,8 +113,8 @@ public class JobRestartWithSnapshotTest {
         }
 
         @Override
-        public void restoreSnapshotKey(Object key, Object value) {
-            lastEmitted = (Integer) value;
+        public void restoreSnapshot(@Nonnull Inbox inbox) {
+            lastEmitted = ((Map.Entry<Object, Integer>) inbox.poll()).getValue();
             traverser = getTraverser();
         }
 

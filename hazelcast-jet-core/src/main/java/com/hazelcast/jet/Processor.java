@@ -90,6 +90,18 @@ public interface Processor {
     }
 
     /**
+     * Called after the edge input with the supplied {@code ordinal} is exhausted. If
+     * it returns {@code false}, it will be invoked again until it returns {@code true},
+     * and until it does, no other methods will be invoked on the processor.
+     *
+     * @return {@code true} if the processor is now done completing this input,
+     * {@code false} otherwise.
+     */
+    default boolean completeEdge(int ordinal) {
+        return true;
+    }
+
+    /**
      * Called when there is no pending data in the inbox. Allows the processor
      * to produce output in the absence of input. If it returns {@code false},
      * it will be called again before proceeding to call any other method.

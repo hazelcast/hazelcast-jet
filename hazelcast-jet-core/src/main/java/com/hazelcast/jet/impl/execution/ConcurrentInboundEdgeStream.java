@@ -48,7 +48,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private long currSnapshot = 0; // current expected snapshot
     private long lastEmittedWm = Long.MIN_VALUE;
 
-    private long activeQueues; // number of active queues remaining
+    private long numActiveQueues; // number of active queues remaining
 
     /**
      * @param waitForSnapshot If true, queues won't be drained until the same
@@ -65,7 +65,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         queueWms = new long[conveyor.queueCount()];
         Arrays.fill(queueWms, Long.MIN_VALUE);
 
-        activeQueues = conveyor.queueCount();
+        numActiveQueues = conveyor.queueCount();
         receivedBarriers = new BitSet(conveyor.queueCount());
     }
 
@@ -98,7 +98,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                 if (item == DONE_ITEM) {
                     conveyor.removeQueue(queueIndex);
                     receivedBarriers.clear(queueIndex);
-                    activeQueues--;
+                    numActiveQueues--;
                     // we are done with this queue
                     break;
                 }
@@ -118,7 +118,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             }
         }
 
-        if (activeQueues == 0) {
+        if (numActiveQueues == 0) {
             return tracker.toProgressState();
         }
 
@@ -132,12 +132,17 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         }
 
         // if we have received the current snapshot from all active queues, forward it
-        if (receivedBarriers.cardinality() == activeQueues) {
+        if (receivedBarriers.cardinality() == numActiveQueues) {
             dest.accept(new SnapshotBarrier(currSnapshot));
             currSnapshot++;
             receivedBarriers.clear();
         }
         return tracker.toProgressState();
+    }
+
+    @Override
+    public boolean isDone() {
+        return numActiveQueues == 0;
     }
 
     private void observeSnapshot(int queueIndex, long snapshotId) {

@@ -32,4 +32,6 @@ public interface InboundEdgeStream {
     int priority();
 
     ProgressState drainTo(Consumer<Object> dest);
+
+    boolean isDone();
 }

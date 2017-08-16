@@ -28,7 +28,6 @@ import static com.hazelcast.jet.impl.util.ProgressState.DONE;
 import static com.hazelcast.jet.impl.util.ProgressState.MADE_PROGRESS;
 import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static com.hazelcast.jet.impl.util.ProgressState.WAS_ALREADY_DONE;
-import static java.util.Collections.emptyList;
 
 public class MockInboundStream implements InboundEdgeStream {
     private final int chunkSize;
@@ -70,6 +69,11 @@ public class MockInboundStream implements InboundEdgeStream {
             }
         }
         return done ? DONE : MADE_PROGRESS;
+    }
+
+    @Override
+    public boolean isDone() {
+        return done;
     }
 
     @Override

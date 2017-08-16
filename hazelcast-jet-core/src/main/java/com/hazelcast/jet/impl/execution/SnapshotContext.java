@@ -57,7 +57,7 @@ public class SnapshotContext {
     }
 
     void initTaskletCount(int count) {
-        assert this.taskletCount == Long.MIN_VALUE;
+        assert this.taskletCount == Integer.MIN_VALUE;
         this.taskletCount = count;
     }
 
