@@ -181,12 +181,12 @@ public class Edge implements IdentifiedDataSerializable {
      * The data from the edge with priority 1 will be processed in full before
      * accepting any data from the edge with priority 2.
      * <p>
-     * <i>Note:</i> having different priority edges will cause that first
-     * snapshot can only be created after all higher-priority edges are
-     * processed, because we will not receive snapshot barriers from
-     * lower-priority edges, as the are interleaved with items on that edge
-     * which we don't process. This is typically not a problem if
-     * higher-priority edges are processed quickly.
+     * <i>Note:</i> currently, having different priority edges will prevent
+     * usage of
+     * {@link com.hazelcast.jet.config.ProcessingGuarantee#EXACTLY_ONCE
+     * EXACTLY_ONCE} guarantee for snapshots. This might change in future in a
+     * way that snapshots will be postponed until after all higher-priority
+     * edges are completed.
      */
     public Edge priority(int priority) {
         this.priority = priority;
