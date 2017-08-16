@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.impl.coordination.SnapshotRepository;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.map.impl.MapEntries;
@@ -43,7 +44,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class StoreSnapshotTasklet implements Tasklet {
 
-    private static final String JET_SNAPSHOT_PREFIX = "__jet_snapshot.";
     private static final int MAX_PARALLEL_ASYNC_OPS = 1000;
 
     // These magic values are copied from com.hazelcast.spi.impl.operationservice.impl.InvokeOnPartitions
@@ -221,7 +221,7 @@ public class StoreSnapshotTasklet implements Tasklet {
     }
 
     private String mapName() {
-        return JET_SNAPSHOT_PREFIX + jobId + '.' + currentSnapshotId + '.' + vertexName;
+        return SnapshotRepository.snapshotDataMapName(jobId, currentSnapshotId, vertexName);
     }
 
     public String vertexName() {

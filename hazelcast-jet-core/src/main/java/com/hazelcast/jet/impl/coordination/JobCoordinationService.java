@@ -71,16 +71,19 @@ public class JobCoordinationService {
     private final ILogger logger;
     private final JobRepository jobRepository;
     private final JobExecutionService jobExecutionService;
+    private final SnapshotRepository snapshotRepository;
     private final ConcurrentMap<Long, MasterContext> masterContexts = new ConcurrentHashMap<>();
     private final IMap<Long, JobResult> jobResults;
 
     public JobCoordinationService(NodeEngineImpl nodeEngine, JetConfig config,
-                                  JobRepository jobRepository, JobExecutionService jobExecutionService) {
+                                  JobRepository jobRepository, JobExecutionService jobExecutionService,
+                                  SnapshotRepository snapshotRepository) {
         this.nodeEngine = nodeEngine;
         this.config = config;
         this.logger = nodeEngine.getLogger(getClass());
         this.jobRepository = jobRepository;
         this.jobExecutionService = jobExecutionService;
+        this.snapshotRepository = snapshotRepository;
         this.jobResults = nodeEngine.getHazelcastInstance().getMap(JOB_RESULTS_MAP_NAME);
     }
 
@@ -372,4 +375,7 @@ public class JobCoordinationService {
         return nodeEngine.getClusterService().isMaster();
     }
 
+    public SnapshotRepository getSnapshotRepository() {
+        return snapshotRepository;
+    }
 }

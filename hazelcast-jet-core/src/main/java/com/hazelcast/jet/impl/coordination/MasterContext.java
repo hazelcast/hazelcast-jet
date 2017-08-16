@@ -17,13 +17,15 @@
 package com.hazelcast.jet.impl.coordination;
 
 import com.hazelcast.core.ExecutionCallback;
-import com.hazelcast.core.IMap;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.cluster.impl.MembersView;
 import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.Edge;
 import com.hazelcast.jet.JobStatus;
+import com.hazelcast.jet.SnapshotRestorePolicy;
 import com.hazelcast.jet.TopologyChangedException;
+import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
@@ -33,16 +35,12 @@ import com.hazelcast.jet.impl.operation.ExecuteOperation;
 import com.hazelcast.jet.impl.operation.InitOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
-import com.hazelcast.jet.impl.util.MaxByAggregator;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.map.AbstractEntryProcessor;
-import com.hazelcast.query.Predicates;
 import com.hazelcast.spi.InternalCompletableFuture;
 import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -59,23 +57,24 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static com.hazelcast.jet.Edge.from;
 import static com.hazelcast.jet.JobStatus.COMPLETED;
 import static com.hazelcast.jet.JobStatus.FAILED;
 import static com.hazelcast.jet.JobStatus.NOT_STARTED;
 import static com.hazelcast.jet.JobStatus.RESTARTING;
 import static com.hazelcast.jet.JobStatus.RUNNING;
 import static com.hazelcast.jet.JobStatus.STARTING;
+import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isJobRestartRequired;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.Util.formatIds;
 import static com.hazelcast.jet.impl.util.Util.idToString;
+import static com.hazelcast.jet.processor.Sources.readMap;
 import static java.util.stream.Collectors.partitioningBy;
 import static java.util.stream.Collectors.toList;
 
 public class MasterContext {
-
-    private static final String SNAPSHOTS_MAP_NAME = "__jet.jobs.snapshots";
 
     private final NodeEngineImpl nodeEngine;
     private final JobCoordinationService coordinationService;
@@ -142,33 +141,54 @@ public class MasterContext {
             return;
         }
 
+        DAG dag = deserializeDAG();
+        SnapshotRecord snapshotRec = coordinationService.getSnapshotRepository().findUsableSnapshot(jobId);
+        if (snapshotRec != null) {
+            // add snapshot restore vertices to the DAG
+            for (String vertexName : snapshotRec.vertices()) {
+                Vertex vertex = dag.getVertex(vertexName);
+                if (vertex == null) {
+                    logger.warning(formatIds(jobId, executionId) + ", snapshot " + snapshotRec.snapshotId()
+                            + ": snapshot contains data for vertex " + vertexName + ", but this vertex does not exist");
+                    continue;
+                }
+                SnapshotRestorePolicy snapshotRestorePolicy = vertex.getSupplier().snapshotRestorePolicy();
+                if (snapshotRestorePolicy == null) {
+                    logger.warning(formatIds(jobId, executionId) + ", snapshot " + snapshotRec.snapshotId()
+                            + ": snapshot contains data for vertex " + vertexName + ", but this vertex is not stateful");
+                    continue;
+                }
+
+                Vertex readSnapshotVertex = dag.newVertex("__read_snapshot:" + vertexName,
+                        readMap(SnapshotRepository.snapshotDataMapName(jobId, snapshotRec.snapshotId(), vertexName)))
+                                          .localParallelism(vertex.getLocalParallelism());
+                Edge edge;
+                dag.edge(edge = from(readSnapshotVertex)
+                        .to(vertex, dag.getInboundEdges(vertexName).size())
+                        .distributed());
+                if (snapshotRestorePolicy == SnapshotRestorePolicy.PARTITIONED) {
+                    edge.partitioned(entryKey());
+                } else {
+                    edge.broadcast();
+                }
+            }
+        }
+
         executionId = executionIdSupplier.apply(jobId);
         MembersView membersView = getMembersView();
         try {
-            executionPlanMap = createExecutionPlans(membersView);
+            executionPlanMap = createExecutionPlans(membersView, dag);
         } catch (TopologyChangedException e) {
             logger.severe("Execution plans could not be created for " + formatIds(jobId, executionId), e);
             scheduleRestart();
             return;
         }
 
-        long snapshotId = findUsableSnapshot();
-
         logger.fine("Built execution plans for " + formatIds(jobId, executionId));
         Set<MemberInfo> participants = executionPlanMap.keySet();
         Function<ExecutionPlan, Operation> operationCtor = plan ->
-                new InitOperation(jobId, executionId, membersView.getVersion(), participants, plan, snapshotId);
+                new InitOperation(jobId, executionId, membersView.getVersion(), participants, plan);
         invoke(operationCtor, this::onInitStepCompleted, null);
-    }
-
-    /**
-     * Return snapshotId of newest complete snapshot for this job.
-     */
-    private long findUsableSnapshot() {
-        IMap<Long, SnapshotRecord> snapshotsMap = nodeEngine.getHazelcastInstance().getMap(SNAPSHOTS_MAP_NAME);
-        Entry<Long, SnapshotRecord> newestSnapshot =
-                snapshotsMap.aggregate(new MaxByAggregator<>("creationTime"), Predicates.equal("jobId", jobId));
-        return newestSnapshot != null ? newestSnapshot.getKey() : 0;
     }
 
     /**
@@ -230,9 +250,7 @@ public class MasterContext {
         return clusterService.getMembershipManager().getMembersView();
     }
 
-    private Map<MemberInfo, ExecutionPlan> createExecutionPlans(MembersView membersView) {
-        DAG dag = deserializeDAG();
-
+    private Map<MemberInfo, ExecutionPlan> createExecutionPlans(MembersView membersView, DAG dag) {
         logger.info("Start executing " + formatIds(jobId, executionId) + ", status " + jobStatus()
                 + ": " + dag);
         logger.fine("Building execution plan for " + formatIds(jobId, executionId));
@@ -334,16 +352,14 @@ public class MasterContext {
     }
 
     private void takeSnapshot() {
-        IMap<Object, Object> snapshotsMap = getSnapshotsMap();
         SnapshotRecord record = new SnapshotRecord(jobId, nextSnapshotId++, snapshottableVertices);
-        if (snapshotsMap.putIfAbsent(Arrays.asList(jobId,  record.snapshotId()), record) != null) {
-            logger.severe("Snapshot with id " + record.snapshotId() + " already exists for job " + idToString(jobId));
-            //TODO: should job be failed here?
+        if (!coordinationService.getSnapshotRepository().putNewSnapshotRecord(record)) {
             return;
         }
 
         logger.info(String.format("Starting snapshot %s for job %s", record.snapshotId(), idToString(jobId)));
-        Function<ExecutionPlan, Operation> factory = plan -> new SnapshotOperation(jobId, executionId, record.snapshotId());
+        Function<ExecutionPlan, Operation> factory =
+                plan -> new SnapshotOperation(jobId, executionId, record.snapshotId());
         invoke(factory, responses -> onSnapshotCompleted(responses, record.snapshotId()), completionFuture);
     }
 
@@ -359,18 +375,9 @@ public class MasterContext {
         }
 
         // mark the record in the map as completed
-        IMap<Object, Object> map = getSnapshotsMap();
-        long creationTime = (long) map.executeOnKey(Arrays.asList(jobId, snapshotId),
-                new MarkRecordCompleteEntryProcessor());
-
-        logger.info(String.format("Snapshot %s for job %s completed in %dms", snapshotId,
-                idToString(jobId), System.currentTimeMillis() - creationTime));
+        coordinationService.getSnapshotRepository().markRecordCompleted(jobId, snapshotId);
 
         // TODO delete older snapshots
-    }
-
-    private IMap<Object, Object> getSnapshotsMap() {
-        return nodeEngine.getHazelcastInstance().getMap(SNAPSHOTS_MAP_NAME);
     }
 
     // Called as callback when all ExecuteOperation invocations are done
@@ -560,16 +567,6 @@ public class MasterContext {
                          })
                          .invoke();
             futures.put(member, future);
-        }
-    }
-
-    private static class MarkRecordCompleteEntryProcessor extends AbstractEntryProcessor<Object, SnapshotRecord> {
-        @Override
-        public Object process(Entry<Object, SnapshotRecord> entry) {
-            SnapshotRecord record = entry.getValue();
-            record.complete();
-            entry.setValue(record);
-            return record.creationTime();
         }
     }
 }

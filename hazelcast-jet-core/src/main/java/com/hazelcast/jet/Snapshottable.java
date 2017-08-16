@@ -16,21 +16,11 @@
 
 package com.hazelcast.jet;
 
-import javax.annotation.Nonnull;
-
 /**
  * An interface to be implemented by a {@link Processor} that wants to do
  * snapshots and be able to restore the state after restart or failure.
  */
 public interface Snapshottable {
-
-    /**
-     * Returns the snapshot restore policy for the processor
-     */
-    @Nonnull
-    default SnapshotRestorePolicy restorePolicy() {
-        return SnapshotRestorePolicy.PARTITIONED;
-    }
 
     /**
      * Store the state to the snapshot. Return {@code true} if done, or {@code
@@ -48,8 +38,7 @@ public interface Snapshottable {
      * processing methods, so no synchronization is necessary.
      * <p>
      * If the processor {@link Processor#isCooperative() is cooperative}, this
-     * method must also be cooperative. Using {@code storage} satisfies this
-     * condition.
+     * method must also be cooperative.
      * <p>
      * If {@code false} is returned, the method will be called again before any
      * other methods are called.

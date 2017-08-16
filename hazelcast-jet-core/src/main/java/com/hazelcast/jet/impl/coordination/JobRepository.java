@@ -225,7 +225,7 @@ public class JobRepository {
 
         // Job ids are never cleaned up.
         // We also don't clean up job records here because they might be started in parallel while cleanup is running
-        // If a job id is not running or completed, it might be suitable for job resource clean up
+        // If a job id is not running or is completed it might be suitable to clean up job resources
         jobIds.keySet(new FilterJobIdPredicate())
               .stream()
               .filter(jobId -> !validJobIds.contains(jobId))

@@ -52,6 +52,18 @@ public class JetConfig {
     public static final String JOB_RESULTS_MAP_NAME = "__jet.jobs.results";
 
     /**
+     * Name of internal IMap which stores snapshot ids
+     */
+    public static final String SNAPSHOT_RECORDS_MAP_NAME = "__jet.jobs.snapshots";
+
+    /**
+     * Name of internal IMap which stores snapshot data. This a prefix, the
+     * format is:
+     * <pre>SNAPSHOT_DATA_MAP_NAME_PREFIX + jobId + '.' + snapshotId + '.' + vertexName</pre>
+     */
+    public static final String SNAPSHOT_DATA_MAP_NAME_PREFIX = "__jet_snapshot.";
+
+    /**
      * The default port number for the cluster auto-discovery mechanism's
      * multicast communication.
      */
@@ -168,8 +180,13 @@ public class JetConfig {
     }
 
     private static List<String> internalJetMapNames() {
-        String resourcesMapNameWildcard = RESOURCES_MAP_NAME_PREFIX + "*";
-        return asList(IDS_MAP_NAME, JOB_RECORDS_MAP_NAME, resourcesMapNameWildcard, JOB_RESULTS_MAP_NAME);
+        return asList(
+                IDS_MAP_NAME,
+                JOB_RECORDS_MAP_NAME,
+                RESOURCES_MAP_NAME_PREFIX + "*",
+                JOB_RESULTS_MAP_NAME,
+                SNAPSHOT_RECORDS_MAP_NAME,
+                SNAPSHOT_DATA_MAP_NAME_PREFIX + "*");
     }
 
 }

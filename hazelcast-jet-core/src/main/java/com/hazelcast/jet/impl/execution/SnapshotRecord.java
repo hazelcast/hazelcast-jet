@@ -25,16 +25,16 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Set;
 
 import static com.hazelcast.jet.impl.util.Util.idToString;
 
 /**
  * A record stored in the {@link
- * com.hazelcast.jet.impl.coordination.MasterContext#SNAPSHOTS_MAP_NAME}
+ * com.hazelcast.jet.config.JetConfig#SNAPSHOT_RECORDS_MAP_NAME}
  * map.
  */
 public class SnapshotRecord implements IdentifiedDataSerializable {
+
     private long jobId;
     private long snapshotId;
     private long creationTime = System.currentTimeMillis();

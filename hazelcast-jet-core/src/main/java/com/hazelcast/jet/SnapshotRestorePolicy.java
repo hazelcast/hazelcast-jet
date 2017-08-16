@@ -33,10 +33,9 @@ public enum SnapshotRestorePolicy {
     PARTITIONED,
 
     /**
-     * Entire snapshot will be restored to all processor instances. To
-     * limit the traffic, use {@link #getSnapshotPredicate()}. Use this
-     * option, if partitions of keys in the snapshot don't match the
-     * Hazelcast partitions of this processor.
+     * Entire snapshot will be restored to all processor instances. Use this
+     * option if partitions of keys in the snapshot don't match the Hazelcast
+     * partitions of this processor.
      */
     BROADCAST
 }

@@ -29,6 +29,7 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.coordination.JobCoordinationService;
 import com.hazelcast.jet.impl.coordination.JobRepository;
+import com.hazelcast.jet.impl.coordination.SnapshotRepository;
 import com.hazelcast.jet.impl.execution.ExecutionService;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
@@ -72,6 +73,7 @@ public class JetService
     private Networking networking;
     private ExecutionService executionService;
     private JobRepository jobRepository;
+    private SnapshotRepository snapshotRepository;
     private JobCoordinationService jobCoordinationService;
     private JobExecutionService jobExecutionService;
 
@@ -103,9 +105,11 @@ public class JetService
                 config.getInstanceConfig().getCooperativeThreadCount());
 
         jobRepository = new JobRepository(jetInstance);
+        snapshotRepository = new SnapshotRepository(jetInstance);
 
         jobExecutionService = new JobExecutionService(nodeEngine, executionService);
-        jobCoordinationService = new JobCoordinationService(nodeEngine, config, jobRepository, jobExecutionService);
+        jobCoordinationService = new JobCoordinationService(nodeEngine, config, jobRepository,
+                jobExecutionService, snapshotRepository);
         networking = new Networking(engine, jobExecutionService, config.getInstanceConfig().getFlowControlPeriodMs());
 
         ClientEngineImpl clientEngine = engine.getService(ClientEngineImpl.SERVICE_NAME);

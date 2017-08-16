@@ -51,7 +51,7 @@ public class InitOperation extends Operation implements IdentifiedDataSerializab
     }
 
     public InitOperation(long jobId, long executionId, int coordinatorMemberListVersion, Set<MemberInfo> participants,
-                         ExecutionPlan plan, long snapshotId) {
+                         ExecutionPlan plan) {
         this.jobId = jobId;
         this.executionId = executionId;
         this.coordinatorMemberListVersion = coordinatorMemberListVersion;
