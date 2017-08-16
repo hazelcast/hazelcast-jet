@@ -83,6 +83,7 @@ public class AsyncMapWriter {
     }
 
     public void put(Object key, Object value) {
+        // TODO use Map's partitioning strategy, as in MapProxySupport.toDataWithStrategy
         Data keyData = serializationService.toData(key);
         Data valueData = serializationService.toData(value);
         put(entry(keyData, valueData));
@@ -165,7 +166,7 @@ public class AsyncMapWriter {
             numConcurrentOps.decrementAndGet();
             for (Object o : r.getResults()) {
                 if (o instanceof Throwable) {
-                    completionFuture.completeExceptionally((Throwable)o);
+                    completionFuture.completeExceptionally((Throwable) o);
                     return;
                 }
             }
@@ -182,7 +183,7 @@ public class AsyncMapWriter {
                     .createInvocationBuilder(MapService.SERVICE_NAME, entry.getValue(), entry.getKey())
                     .setTryCount(TRY_COUNT)
                     .setTryPauseMillis(TRY_PAUSE_MILLIS)
-                    .setExecutionCallback((ExecutionCallback)callback)
+                    .setExecutionCallback((ExecutionCallback) callback)
                     .invoke();
         }
     }
