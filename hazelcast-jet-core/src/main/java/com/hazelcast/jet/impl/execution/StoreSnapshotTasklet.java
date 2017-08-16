@@ -44,6 +44,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class StoreSnapshotTasklet implements Tasklet {
 
+    //TODO: should be configurable
     private static final int MAX_PARALLEL_ASYNC_OPS = 1000;
 
     // These magic values are copied from com.hazelcast.spi.impl.operationservice.impl.InvokeOnPartitions
@@ -93,7 +94,7 @@ public class StoreSnapshotTasklet implements Tasklet {
                         firstFailure.compareAndSet(null, (Throwable) result);
                     }
                 }
-                jetService.getParallelAsyncOpsCounter().decrementAndGet();
+                jetService.numConcurrentPutAllOps().decrementAndGet();
                 if (ourPendingAsyncOps.decrementAndGet() == 0) {
                     snapshotContext.snapshotCompletedInProcessor();
                     if (inputExhausted) {
@@ -164,13 +165,13 @@ public class StoreSnapshotTasklet implements Tasklet {
         int prev;
         int next;
         do {
-            prev = jetService.getParallelAsyncOpsCounter().get();
+            prev = jetService.numConcurrentPutAllOps().get();
             next = prev + memberPartitionsMap.size();
             // not enough operations for us, back off
             if (next > MAX_PARALLEL_ASYNC_OPS) {
                 return ProgressState.NO_PROGRESS;
             }
-        } while (!jetService.getParallelAsyncOpsCounter().compareAndSet(prev, next));
+        } while (!jetService.numConcurrentPutAllOps().compareAndSet(prev, next));
         ourPendingAsyncOps.addAndGet(memberPartitionsMap.size());
 
         // invoke the operations
@@ -214,7 +215,7 @@ public class StoreSnapshotTasklet implements Tasklet {
         }
 
         // release operations for members which did not have any data
-        jetService.getParallelAsyncOpsCounter().getAndAdd(-emptyCount);
+        jetService.numConcurrentPutAllOps().getAndAdd(-emptyCount);
         ourPendingAsyncOps.getAndAdd(-emptyCount);
 
         return progTracker.toProgressState();

@@ -77,7 +77,7 @@ public class JetService
     private JobCoordinationService jobCoordinationService;
     private JobExecutionService jobExecutionService;
 
-    private final AtomicInteger parallelAsyncOpsCounter = new AtomicInteger();
+    private final AtomicInteger numConcurrentPutAllOps = new AtomicInteger();
 
     public JetService(NodeEngine nodeEngine) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
@@ -227,8 +227,8 @@ public class JetService
     }
 
 
-    public AtomicInteger getParallelAsyncOpsCounter() {
-        return parallelAsyncOpsCounter;
+    public AtomicInteger numConcurrentPutAllOps() {
+        return numConcurrentPutAllOps;
     }
 
     public CompletionStage<Void> doSnapshotOnMember(Address coordinator, long jobId, long executionId, long snapshotId) {

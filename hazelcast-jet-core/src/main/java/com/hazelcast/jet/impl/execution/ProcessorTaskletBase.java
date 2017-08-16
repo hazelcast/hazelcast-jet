@@ -72,7 +72,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     private int numActiveOrdinals; // counter for remaining active ordinals
     private CircularListCursor<InboundEdgeStream> instreamCursor;
     private InboundEdgeStream currInstream;
-    private ProcessorState state = PROCESS_INBOX;
+    private ProcessorState state;
     private long pendingSnapshotId = 0;
 
 
