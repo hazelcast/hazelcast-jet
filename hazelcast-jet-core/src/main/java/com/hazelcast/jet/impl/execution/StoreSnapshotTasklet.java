@@ -16,60 +16,42 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.core.ExecutionCallback;
-import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.coordination.SnapshotRepository;
+import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
-import com.hazelcast.map.impl.MapEntries;
-import com.hazelcast.map.impl.MapService;
-import com.hazelcast.map.impl.operation.MapOperationProvider;
-import com.hazelcast.nio.Address;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.NodeEngine;
-import com.hazelcast.spi.OperationFactory;
-import com.hazelcast.spi.OperationService;
-import com.hazelcast.spi.impl.operationservice.impl.operations.PartitionIteratingOperation;
-import com.hazelcast.spi.impl.operationservice.impl.operations.PartitionIteratingOperation.PartitionResponse;
-import com.hazelcast.spi.partition.IPartitionService;
 
 import javax.annotation.Nonnull;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
+
+import static com.hazelcast.jet.impl.execution.StoreSnapshotTasklet.State.DONE;
+import static com.hazelcast.jet.impl.execution.StoreSnapshotTasklet.State.DRAIN;
+import static com.hazelcast.jet.impl.execution.StoreSnapshotTasklet.State.FLUSH;
+import static com.hazelcast.jet.impl.execution.StoreSnapshotTasklet.State.REACHED_BARRIER;
 
 public class StoreSnapshotTasklet implements Tasklet {
-
-    //TODO: should be configurable
-    private static final int MAX_PARALLEL_ASYNC_OPS = 1000;
-
-    // These magic values are copied from com.hazelcast.spi.impl.operationservice.impl.InvokeOnPartitions
-    private static final int TRY_COUNT = 10;
-    private static final int TRY_PAUSE_MILLIS = 300;
 
     private final ProgressTracker progTracker = new ProgressTracker();
     private final long jobId;
     private final InboundEdgeStream inboundEdgeStream;
-    private final MapEntries[] outputBuffer;
+    private final ArrayDequeInbox inbox = new ArrayDequeInbox(progTracker);
 
-    private final IPartitionService partitionService;
-    private final OperationService operationService;
-    private final MapService mapService;
-    private final JetService jetService;
     private final SnapshotContext snapshotContext;
-
-    // the current snapshot id (which is >=0) or Long.MIN_VALUE, meaning no snapshot is in progress
-    private long currentSnapshotId = Long.MIN_VALUE;
-    private final AtomicInteger ourPendingAsyncOps = new AtomicInteger();
-
+    private final AsyncMapWriter mapWriter;
     private final String vertexName;
-    private volatile boolean inputExhausted;
-    private final AtomicReference<Throwable> firstFailure = new AtomicReference<>();
-    private ExecutionCallback<Object> executionCallback;
+
+    private long currentSnapshotId = 0;
+
+    private AtomicInteger numActiveFlushes = new AtomicInteger();
+    private String currMapName;
+
+    private State state;
+    private boolean hasReachedBarrier;
+    private boolean isDone;
 
     public StoreSnapshotTasklet(SnapshotContext snapshotContext, long jobId, InboundEdgeStream inboundEdgeStream,
                                 NodeEngine nodeEngine, String vertexName) {
@@ -77,151 +59,74 @@ public class StoreSnapshotTasklet implements Tasklet {
         this.jobId = jobId;
         this.inboundEdgeStream = inboundEdgeStream;
         this.vertexName = vertexName;
-        this.jetService = nodeEngine.getService(JetService.SERVICE_NAME);
 
-        partitionService = nodeEngine.getPartitionService();
-        operationService = nodeEngine.getOperationService();
-        outputBuffer = new MapEntries[partitionService.getPartitionCount()];
-        mapService = nodeEngine.getService(MapService.SERVICE_NAME);
-
-        executionCallback = new ExecutionCallback<Object>() {
-            @Override
-            public void onResponse(Object response) {
-                PartitionResponse r = (PartitionResponse) response;
-                for (Object result : r.getResults()) {
-                    if (result instanceof Throwable) {
-                        // TODO retry the operation, similarly to what putAll does?
-                        firstFailure.compareAndSet(null, (Throwable) result);
-                    }
-                }
-                jetService.numConcurrentPutAllOps().decrementAndGet();
-                if (ourPendingAsyncOps.decrementAndGet() == 0) {
-                    snapshotContext.snapshotCompletedInProcessor();
-                    if (inputExhausted) {
-                        snapshotContext.processorCompleted();
-                    }
-                }
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                firstFailure.compareAndSet(null, t);
-            }
-        };
+        this.mapWriter = new AsyncMapWriter(nodeEngine);
+        this.currMapName = mapName();
     }
 
     @Nonnull
     @Override
     public ProgressState call() {
-        if (firstFailure.get() != null) {
-            throw new JetException("Failure during snapshot saving", firstFailure.get());
-        }
-
         progTracker.reset();
-        if (!inputExhausted) {
-            progTracker.notDone();
-        }
-
-        // drain input queues
-        boolean[] haveUnsentEntries = {false};
-        if (!inputExhausted && (currentSnapshotId >= 0 || ourPendingAsyncOps.get() == 0)) {
-            ProgressState inputQueueResult = inboundEdgeStream.drainTo(item -> {
-                progTracker.madeProgress();
-                if (item instanceof SnapshotBarrier) {
-                    currentSnapshotId = Long.MIN_VALUE;
-                } else {
-                    if (currentSnapshotId == Long.MIN_VALUE) {
-                        currentSnapshotId = snapshotContext.getCurrentSnapshotId();
-                    }
-                    assert currentSnapshotId >= 0 : "No snapshot in progress";
-                    haveUnsentEntries[0] = true;
-                    Entry<Data, Data> entry = (Entry<Data, Data>) item;
-                    int partitionId = partitionService.getPartitionId(entry.getKey());
-                    MapEntries entries = outputBuffer[partitionId];
-                    if (entries == null) {
-                        entries = new MapEntries();
-                        outputBuffer[partitionId] = entries;
-                    }
-                    entries.add(entry.getKey(), entry.getValue());
-                }
-            });
-            inputExhausted = inputQueueResult.isDone();
-            if (inputExhausted && ourPendingAsyncOps.get() == 0) {
-                snapshotContext.processorCompleted();
-            }
-        }
-
-        if (!haveUnsentEntries[0]) {
-            return progTracker.toProgressState();
-        }
-
-        // TODO check: is getMemberPartitionsMap() guaranteed to contain all partitions in the returned map?
-        // TODO check: javadoc for getMemberPartitionsMap() says it might block: is this a concern? is it just upon a start-up?
-        Map<Address, List<Integer>> memberPartitionsMap = partitionService.getMemberPartitionsMap();
-
-        // Try to reserve room for number of async operations equal to number of members.
-        // Logic is similar to AtomicInteger.updateAndGet, but it stops, when in some iteration
-        // the value would exceed MAX_PARALLEL_ASYNC_OPS
-        int prev;
-        int next;
-        do {
-            prev = jetService.numConcurrentPutAllOps().get();
-            next = prev + memberPartitionsMap.size();
-            // not enough operations for us, back off
-            if (next > MAX_PARALLEL_ASYNC_OPS) {
-                return ProgressState.NO_PROGRESS;
-            }
-        } while (!jetService.numConcurrentPutAllOps().compareAndSet(prev, next));
-        ourPendingAsyncOps.addAndGet(memberPartitionsMap.size());
-
-        // invoke the operations
-        int emptyCount = 0;
-        MapOperationProvider operationProvider = mapService.getMapServiceContext().getMapOperationProvider(mapName());
-        for (Entry<Address, List<Integer>> memberPartitionsEntry : memberPartitionsMap.entrySet()) {
-            MapEntries[] entriesForMember = new MapEntries[memberPartitionsEntry.getValue().size()];
-            int[] partitionsForMember = new int[memberPartitionsEntry.getValue().size()];
-            int index = 0;
-            for (Integer partition : memberPartitionsEntry.getValue()) {
-                if (outputBuffer[partition] != null) {
-                    entriesForMember[index] = outputBuffer[partition];
-                    partitionsForMember[index] = partition;
-                    index++;
-                }
-            }
-            if (index == 0) {
-                // no entries for this member, ship the operation
-                emptyCount++;
-                continue;
-            }
-            // trim arrays to real sizes
-            if (index < memberPartitionsEntry.getValue().size()) {
-                entriesForMember = Arrays.copyOf(entriesForMember, index);
-                partitionsForMember = Arrays.copyOf(partitionsForMember, index);
-            }
-            // send the operation
-            OperationFactory factory = operationProvider.createPutAllOperationFactory(mapName(),
-                    partitionsForMember, entriesForMember);
-            PartitionIteratingOperation operation =
-                    new PartitionIteratingOperation(factory, memberPartitionsEntry.getValue());
-
-            operationService
-                    .createInvocationBuilder(MapService.SERVICE_NAME, operation, memberPartitionsEntry.getKey())
-                    .setTryCount(TRY_COUNT)
-                    .setTryPauseMillis(TRY_PAUSE_MILLIS)
-                    .setExecutionCallback(executionCallback)
-                    .invoke();
-
-            Arrays.fill(outputBuffer, null);
-        }
-
-        // release operations for members which did not have any data
-        jetService.numConcurrentPutAllOps().getAndAdd(-emptyCount);
-        ourPendingAsyncOps.getAndAdd(-emptyCount);
-
+        stateMachineStep();
         return progTracker.toProgressState();
     }
 
+    private void stateMachineStep() {
+        switch (state) {
+            case DRAIN:
+                progTracker.mergeWith(inboundEdgeStream.drainTo(o -> {
+                    if (o instanceof SnapshotBarrier) {
+                        SnapshotBarrier barrier = (SnapshotBarrier) o;
+                        assert currentSnapshotId == barrier.snapshotId() : "Unexpected barrier, expected was " +
+                                currentSnapshotId + ", but barrier was " + barrier.snapshotId();
+                        hasReachedBarrier = true;
+                    } else {
+                        mapWriter.put(((Entry<Data, Data>) o));
+                    }
+                }));
+                if (progTracker.isDone()) {
+                    isDone = true;
+                }
+                if (progTracker.isMadeProgress()) {
+                    state = FLUSH;
+                    stateMachineStep();
+                }
+                return;
+            case FLUSH:
+                progTracker.notDone();
+                CompletableFuture<Void> future = new CompletableFuture<>();
+                future.whenComplete((r, t) -> {
+                    if (t == null) {
+                        numActiveFlushes.decrementAndGet();
+                    }
+                    //TODO: error handling
+                });
+                if (mapWriter.tryFlushAsync(currMapName, future)) {
+                    progTracker.madeProgress();
+                    numActiveFlushes.incrementAndGet();
+                    state = isDone ? DONE : hasReachedBarrier ? REACHED_BARRIER : DRAIN;
+                }
+                return;
+            case REACHED_BARRIER:
+                progTracker.notDone();
+                if (numActiveFlushes.get() == 0) {
+                    snapshotContext.snapshotCompletedInProcessor();
+                    currentSnapshotId++;
+                    currMapName = mapName();
+                    state = DRAIN;
+                }
+                return;
+            case DONE:
+                if (numActiveFlushes.get() != 0) {
+                    progTracker.notDone();
+                }
+                return;
+        }
+    }
+
     private String mapName() {
+        //TODO: replace jobId with executionId
         return SnapshotRepository.snapshotDataMapName(jobId, currentSnapshotId, vertexName);
     }
 
@@ -232,5 +137,12 @@ public class StoreSnapshotTasklet implements Tasklet {
     @Override
     public String toString() {
         return StoreSnapshotTasklet.class.getSimpleName() + ", vertex:" + vertexName;
+    }
+
+    enum State {
+        DRAIN,
+        FLUSH,
+        REACHED_BARRIER,
+        DONE
     }
 }
