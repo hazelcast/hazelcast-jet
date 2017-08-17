@@ -52,9 +52,11 @@ import static com.hazelcast.util.CollectionUtil.toIntegerList;
 
 /**
  * Utility for cooperative writes to a Map
+ * Not thread-safe
  */
 public class AsyncMapWriter {
 
+    //TODO: What number to put here?
     public static final int MAX_PARALLEL_ASYNC_OPS = 1000;
 
     // These magic values are copied from com.hazelcast.spi.impl.operationservice.impl.InvokeOnPartitions
@@ -99,6 +101,10 @@ public class AsyncMapWriter {
         put(entry(keyData, valueData));
     }
 
+    /**
+     * Set to new map name. No operations must be in flight when this is done, or it might cause
+     * retries to go to another map
+     */
     public void setMapName(String mapName) {
         this.mapName = mapName;
         this.opProvider = mapService.getMapServiceContext().getMapOperationProvider(mapName);
@@ -199,6 +205,8 @@ public class AsyncMapWriter {
         for (PartitionOpBuilder builder : opBuilders) {
             ExecutionCallback<PartitionResponse> callback = callbackOf(r -> {
                 numConcurrentOps.decrementAndGet();
+
+                // try to cherry-pick partition which failed in this operation
                 List<Integer> failedPartitons = new ArrayList<>();
                 List<MapEntries> failedEntries = new ArrayList<>();
                 Throwable t = null;
@@ -221,16 +229,17 @@ public class AsyncMapWriter {
                             failedEntries.toArray(new MapEntries[failedEntries.size()]), completionFuture)) {
                         completionFuture.completeExceptionally(t);
                     }
+                    return;
                 }
-
                 if (doneLatch.decrementAndGet() == 0) {
                     completionFuture.complete(null);
                 }
 
             }, throwable -> {
                 numConcurrentOps.decrementAndGet();
-
                 if (throwable instanceof RetryableException) {
+                    // the whole operation to the member failed, so we need to retry
+                    // all of the partitions in the operation
                     if (!tryRetry(builder.partitions, builder.entries, completionFuture)) {
                         completionFuture.completeExceptionally(throwable);
                     }
