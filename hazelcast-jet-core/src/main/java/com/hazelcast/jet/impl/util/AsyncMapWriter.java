@@ -130,7 +130,7 @@ public class AsyncMapWriter {
 
         IPartition[] partitionOwners = partitionService.getPartitions();
         Map<Address, Entry<List<Integer>, List<MapEntries>>> addrToEntries = new HashMap<>();
-        for (int index = 0; index < partitionOwners.length; index++) {
+        for (int index = 0; index < partitions.length; index++) {
             int partition = partitions[index];
             MapEntries entries = entriesPerPtition[index];
             Address owner = partitionOwners[partition].getOwnerOrNull();
