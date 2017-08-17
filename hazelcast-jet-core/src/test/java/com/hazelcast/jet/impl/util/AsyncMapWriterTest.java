@@ -29,7 +29,6 @@ import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -102,6 +101,19 @@ public class AsyncMapWriterTest extends JetTestSupport {
         assertEquals("value1", map.get("key1"));
         assertEquals("value2", map.get("key2"));
         assertEquals("value3", map.get("key3"));
+    }
+
+    @Test
+    public void when_emptyFlush_then_futureIscompleted() throws Exception {
+        // Given
+        CompletableFuture<Void> future = new CompletableFuture<>();
+
+        // When
+        boolean flushed = writer.tryFlushAsync(future);
+
+        // Then
+        assertTrue("tryFlushAsync failed", flushed);
+        future.get();
     }
 
     @Test

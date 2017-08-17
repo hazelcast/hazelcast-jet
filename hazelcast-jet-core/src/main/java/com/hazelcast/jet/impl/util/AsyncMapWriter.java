@@ -198,6 +198,11 @@ public class AsyncMapWriter {
     }
 
     private boolean invokeOnCluster(List<PartitionOpBuilder> opBuilders, CompletableFuture<Void> completionFuture) {
+        if (opBuilders.isEmpty()) {
+            completionFuture.complete(null);
+            return true;
+        }
+
         if (!reserveOps(opBuilders.size())) {
             return false;
         }
