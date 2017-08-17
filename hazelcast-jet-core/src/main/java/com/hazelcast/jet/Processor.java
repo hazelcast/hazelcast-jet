@@ -154,6 +154,60 @@ public interface Processor {
     }
 
     /**
+     * Store the state to the snapshot. Return {@code true} if done, or {@code
+     * false} if the method should be called again. Method is allowed to add
+     * items to outbox during this call.
+     * <p>
+     * The default implementation always returns {@code true}.
+     * <p>
+     * The method will never be called, if the inbox is not empty after the
+     * {@link Processor#process(int, Inbox)} method returns.
+     * After the inbox is done (this includes source processors), the method
+     * can be called anytime between {@link Processor#complete()} calls. If a
+     * processor never returns from {@link Processor#complete()} (which is
+     * allowed for non-cooperative processors), method will never be called.
+     * <p>
+     * Snapshot method will always be called on the same thread as other
+     * processing methods, so no synchronization is necessary.
+     * <p>
+     * If the processor {@link Processor#isCooperative() is cooperative}, this
+     * method must also be cooperative.
+     * <p>
+     * If {@code false} is returned, the method will be called again before any
+     * other methods are called.
+     * <p>
+     * After {@link Processor#complete()} returned {@code true}, this method
+     * won't be called anymore.
+     */
+    default boolean saveSnapshot() {
+        return true;
+    }
+
+    /**
+     * Restore processor's state from an inbox with snapshotted state. Items
+     * are of type {@code Map.Entry<Object, Object>}. The inbox contains just
+     * one batch of items, method will be called multiple times if needed. If
+     * there is no snapshot to restore, method won't be called at all, even
+     * though the processors is stateful.
+     * <p>
+     * Processor is allowed to put items to Outbox during this call.
+     * <p>
+     * If the processor {@link Processor#isCooperative() is cooperative}, this
+     * method must also be cooperative.
+     */
+    default void restoreSnapshot(@Nonnull Inbox inbox) {
+        throw new JetException("Processor " + getClass().getName() + " does not override the restoreSnapshot() method");
+    }
+
+    /**
+     * Called after all keys have been restored using {@link
+     * #restoreSnapshot(Inbox)}.
+     */
+    default boolean finishSnapshotRestore() {
+        return true;
+    }
+
+    /**
      * Context passed to the processor in the
      * {@link #init(Outbox, Processor.Context) init()} call.
      */

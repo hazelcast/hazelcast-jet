@@ -20,7 +20,6 @@ import com.hazelcast.core.PartitionAware;
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.Inbox;
-import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
@@ -50,7 +49,7 @@ import static java.util.Collections.emptyMap;
  * @param <A> type of the frame accumulator object
  * @param <R> type of the finished result
  */
-public class SlidingWindowP<T, A, R> extends AbstractProcessor implements Snapshottable {
+public class SlidingWindowP<T, A, R> extends AbstractProcessor {
 
     // package-visible for testing
     final Map<Long, Map<Object, A>> tsToKeyToAcc = new HashMap<>();

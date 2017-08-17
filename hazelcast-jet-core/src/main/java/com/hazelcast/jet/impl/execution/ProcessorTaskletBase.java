@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.coordination.MasterContext;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
@@ -62,9 +61,6 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     private final ProcCtx context;
 
     private final Processor processor;
-
-    // casted #processor to Snapshottable or null, if #processor does not implement it
-    private final Snapshottable snapshottable;
     private final SnapshotContext ssContext;
     private final BitSet receivedBarriers; // indicates if current snapshot is received on the ordinal
 
@@ -86,7 +82,6 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         Preconditions.checkNotNull(processor, "processor");
         this.context = context;
         this.processor = processor;
-        this.snapshottable = processor instanceof Snapshottable ? (Snapshottable) processor : null;
         this.numActiveOrdinals = instreams.size();
         this.instreamGroupQueue = instreams
                 .stream()
@@ -143,7 +138,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                 }
                 if (!inbox.isEmpty()) {
                     if (isSnapshotInbox()) {
-                        snapshottable.restoreSnapshot(inbox);
+                        processor.restoreSnapshot(inbox);
                     } else {
                         processor.process(currInstream.ordinal(), inbox);
                     }
@@ -153,13 +148,13 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                     // there is either snapshot or instream is done, not both
                     if (currInstream != null && currInstream.isDone()) {
                         state = COMPLETE_EDGE;
-                        stateMachineStep();
+                        progTracker.madeProgress();
                         return;
                     } else if (context.snapshottingEnabled()
                             && numActiveOrdinals > 0
                             && receivedBarriers.cardinality() == numActiveOrdinals) {
                         // we have an empty inbox and received the current snapshot barrier from all active ordinals
-                        state = initialSnapshottingState();
+                        state = SAVE_SNAPSHOT;
                         return;
                     }
                     if (numActiveOrdinals == 0) {
@@ -172,17 +167,17 @@ public abstract class ProcessorTaskletBase implements Tasklet {
             case COMPLETE_EDGE:
                 progTracker.notDone();
                 if (isSnapshotInbox()
-                        ? snapshottable.finishSnapshotRestore() : processor.completeEdge(currInstream.ordinal())) {
+                        ? processor.finishSnapshotRestore() : processor.completeEdge(currInstream.ordinal())) {
+                    progTracker.madeProgress();
                     state = initialProcessingState();
                 }
                 return;
 
             case SAVE_SNAPSHOT:
                 assert context.snapshottingEnabled() : "Snapshotting is not enabled";
-                assert snapshottable != null : "Processor does not support snapshotting";
 
                 progTracker.notDone();
-                if (snapshottable.saveSnapshot()) {
+                if (processor.saveSnapshot()) {
                     progTracker.madeProgress();
                     state = EMIT_BARRIER;
                 }
@@ -207,7 +202,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                     assert currSnapshotId <= pendingSnapshotId : "Unexpected new snapshot id " + currSnapshotId
                             + ", current was" + pendingSnapshotId;
                     if (currSnapshotId == pendingSnapshotId) {
-                        state = initialSnapshottingState();
+                        state = SAVE_SNAPSHOT;
                         progTracker.madeProgress();
                         return;
                     }
@@ -304,19 +299,9 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     }
 
     /**
-     * Initial snapshot state of the processor. If processor does not support snapshotting, we will transition directly
-     * to EMIT_BARRIER state.
-     */
-    private ProcessorState initialSnapshottingState() {
-        return snapshottable == null ? EMIT_BARRIER : SAVE_SNAPSHOT;
-    }
-
-    /**
      * Returns, if the inbox we are currently on is the snapshot restoring inbox.
      */
     private boolean isSnapshotInbox() {
-        return snapshottable != null && currInstream != null
-                && currInstream.priority() == MasterContext.SNAPSHOT_EDGE_PRIORITY;
+        return currInstream != null && currInstream.priority() == MasterContext.SNAPSHOT_EDGE_PRIORITY;
     }
 }
-

@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.coordination.MasterContext;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
@@ -105,7 +104,7 @@ public class SnapshottableProcessorTaskletTest {
 
         // Then
         assertEquals(input, outstream1.getBuffer());
-        assertEquals(input, getSnapshotBuffer());
+        assertEquals(input, getSnapshotBufferValues());
     }
 
     @Test
@@ -133,13 +132,13 @@ public class SnapshottableProcessorTaskletTest {
 
         // Then
         assertEquals(asList(0, 1, 2, 3), outstream1.getBuffer());
-        assertEquals(emptyList(), getSnapshotBuffer());
+        assertEquals(emptyList(), getSnapshotBufferValues());
 
         // When
         instream2.push(barrier(0));
         callUntil(tasklet, NO_PROGRESS);
         assertEquals(asList(0, 1, 2, 3, barrier(0), 4, 5, 6, 7), outstream1.getBuffer());
-        assertEquals(asList(0, 1, 2, 3, barrier(0)), getSnapshotBuffer());
+        assertEquals(asList(0, 1, 2, 3, barrier(0)), getSnapshotBufferValues());
     }
 
     @Test
@@ -155,7 +154,7 @@ public class SnapshottableProcessorTaskletTest {
 
         // Then
         assertEquals(asList(0, 1), outstream1.getBuffer());
-        assertEquals(emptyList(), getSnapshotBuffer());
+        assertEquals(emptyList(), getSnapshotBufferValues());
 
         // When
         snapshotContext.startNewSnapshot(0);
@@ -165,7 +164,7 @@ public class SnapshottableProcessorTaskletTest {
 
         // Then
         assertEquals(asList(barrier(0), 2), outstream1.getBuffer());
-        assertEquals(asList(0 , 1, barrier(0)), getSnapshotBuffer());
+        assertEquals(asList(0 , 1, barrier(0)), getSnapshotBufferValues());
     }
 
     @Test
@@ -188,7 +187,7 @@ public class SnapshottableProcessorTaskletTest {
 
         // Then
         assertEquals(asList("finishRestore", barrier(0), DONE_ITEM), outstream1.getBuffer());
-        assertEquals(asList(ssEntry1, ssEntry2, barrier(0), DONE_ITEM), getSnapshotBuffer());
+        assertEquals(asList(ssEntry1.getValue(), ssEntry2.getValue(), barrier(0), DONE_ITEM), getSnapshotBufferValues());
     }
 
     private CooperativeProcessorTasklet createTasklet(ProcessingGuarantee guarantee) {
@@ -202,13 +201,13 @@ public class SnapshottableProcessorTaskletTest {
         return t;
     }
 
-    private List<Object> getSnapshotBuffer() {
+    private List<Object> getSnapshotBufferValues() {
         return snapshotCollector.getBuffer().stream()
-                                .map(e -> (e instanceof Map.Entry) ? deserializeEntry((Map.Entry) e) : e)
+                                .map(e -> (e instanceof Map.Entry) ? deserializeEntryValue((Map.Entry) e) : e)
                                 .collect(Collectors.toList());
     }
 
-    private Object deserializeEntry(Entry e) {
+    private Object deserializeEntryValue(Entry e) {
         return ((MockData) e.getValue()).getObject();
     }
 
@@ -227,7 +226,7 @@ public class SnapshottableProcessorTaskletTest {
         return new SnapshotBarrier(snapshotId);
     }
 
-    private static class SnapshottableProcessor implements Processor, Snapshottable {
+    private static class SnapshottableProcessor implements Processor {
 
         int nullaryProcessCallCountdown;
         int itemsToEmitInComplete;

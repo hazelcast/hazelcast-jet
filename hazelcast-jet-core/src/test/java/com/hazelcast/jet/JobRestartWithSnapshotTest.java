@@ -87,7 +87,7 @@ public class JobRestartWithSnapshotTest {
         job.join();
     }
 
-    static class StreamSource extends AbstractProcessor implements Snapshottable {
+    static class StreamSource extends AbstractProcessor {
 
         private final int end;
         private Traverser<Integer> traverser;

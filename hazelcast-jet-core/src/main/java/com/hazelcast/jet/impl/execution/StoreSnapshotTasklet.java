@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.impl.coordination.SnapshotRepository;
 import com.hazelcast.jet.impl.util.AsyncMapWriter;
 import com.hazelcast.jet.impl.util.ProgressState;
@@ -42,12 +43,12 @@ public class StoreSnapshotTasklet implements Tasklet {
     private final AsyncMapWriter mapWriter;
     private final String vertexName;
 
-    private long currentSnapshotId = 0;
+    private long currentSnapshotId;
 
     private AtomicInteger numActiveFlushes = new AtomicInteger();
     private String currMapName;
 
-    private State state;
+    private State state = DRAIN;
     private boolean hasReachedBarrier;
     private boolean isDone;
 
@@ -91,6 +92,7 @@ public class StoreSnapshotTasklet implements Tasklet {
                     stateMachineStep();
                 }
                 return;
+
             case FLUSH:
                 progTracker.notDone();
                 CompletableFuture<Void> future = new CompletableFuture<>();
@@ -106,6 +108,7 @@ public class StoreSnapshotTasklet implements Tasklet {
                     state = isDone ? DONE : hasReachedBarrier ? REACHED_BARRIER : DRAIN;
                 }
                 return;
+
             case REACHED_BARRIER:
                 progTracker.notDone();
                 if (numActiveFlushes.get() == 0) {
@@ -115,11 +118,15 @@ public class StoreSnapshotTasklet implements Tasklet {
                     state = DRAIN;
                 }
                 return;
+
             case DONE:
                 if (numActiveFlushes.get() != 0) {
                     progTracker.notDone();
                 }
                 return;
+
+            default:
+                throw new JetException("Unexpected state: " + state);
         }
     }
 

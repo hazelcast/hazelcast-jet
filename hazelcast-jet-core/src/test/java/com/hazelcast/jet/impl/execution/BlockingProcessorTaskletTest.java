@@ -206,11 +206,13 @@ public class BlockingProcessorTaskletTest {
         assertEquals(MADE_PROGRESS, tasklet.call());
         // complete() second time, done
         assertEquals(MADE_PROGRESS, tasklet.call());
+        // completeEdge() called
+        assertEquals(MADE_PROGRESS, tasklet.call());
         // emit done item, done
         assertEquals(DONE, tasklet.call());
 
         // Then
-        assertTrue(processor.itemsToEmitInComplete <= 0);
+        assertTrue(processor.itemsToEmitInComplete == 0);
     }
 
     @Test

@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.impl.coordination.MasterContext;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.test.HazelcastParallelClassRunner;
@@ -234,34 +233,14 @@ public class CooperativeProcessorTaskletTest {
         List<Object> expected = asList(1, 3, 2, 4, "completedEdge=0", "completedEdge=1",
                 5, 7, 6, 8, "completedEdge=2", "completedEdge=3");
         List<Object> actual = new ArrayList<>();
-        for (int i = 0; i < expected.size(); i++) {
+        boolean noItemInOutboxAllowed = true;
+        while (actual.size() < expected.size()) {
             callUntil(tasklet, MADE_PROGRESS);
-            assertEquals("Expected 1 item after " + actual, 1, outstream1.getBuffer().size());
-            actual.add(outstream1.getBuffer().remove(0));
-        }
-        assertEquals(expected, actual);
-    }
-
-    @Test
-    public void when_snapshotPriority_then_snapshotMethodsCalled() {
-        // Given
-        MockInboundStream instream1 = new MockInboundStream(MasterContext.SNAPSHOT_EDGE_PRIORITY, asList(1, 2, DONE_ITEM), 1);
-        MockInboundStream instream2 = new MockInboundStream(1, asList(3, 4, DONE_ITEM), 1);
-        MockOutboundStream outstream1 = new MockOutboundStream(0, 1);
-        instreams.add(instream1);
-        instreams.add(instream2);
-        outstreams.add(outstream1);
-        CooperativeProcessorTasklet tasklet = createTasklet();
-        processor.itemsToEmitInComplete = 1;
-        processor.itemsToEmitInEachCompleteEdge = 1;
-
-        // When
-
-        List<Object> expected = asList(1, 3, 2, 4, "completedEdge=0", "completedEdge=1",
-                5, 7, 6, 8, "completedEdge=2", "completedEdge=3");
-        List<Object> actual = new ArrayList<>();
-        for (int i = 0; i < expected.size(); i++) {
-            callUntil(tasklet, MADE_PROGRESS);
+            if (outstream1.getBuffer().isEmpty() && noItemInOutboxAllowed) {
+                noItemInOutboxAllowed = false;
+                continue;
+            }
+            noItemInOutboxAllowed = true;
             assertEquals("Expected 1 item after " + actual, 1, outstream1.getBuffer().size());
             actual.add(outstream1.getBuffer().remove(0));
         }

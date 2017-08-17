@@ -20,7 +20,6 @@ import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Session;
-import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Watermark;
@@ -67,7 +66,7 @@ import static java.lang.System.arraycopy;
  * @param <A> type of the accumulator object
  * @param <R> type of the finished result
  */
-public class SessionWindowP<T, K, A, R> extends AbstractProcessor implements Snapshottable {
+public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
     private static final Watermark COMPLETING_WM = new Watermark(Long.MAX_VALUE);
 
     // exposed for testing, to check for memory leaks

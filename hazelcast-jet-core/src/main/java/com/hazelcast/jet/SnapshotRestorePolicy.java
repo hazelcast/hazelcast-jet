@@ -16,19 +16,39 @@
 
 package com.hazelcast.jet;
 
+/**
+ * Snapshot restore policies.
+ */
 public enum SnapshotRestorePolicy {
 
     /**
-     * The processor must be preceded with a {@link Edge#distributed()
-     * distributed} and {@link
-     * Edge#partitioned(com.hazelcast.jet.function.DistributedFunction)
-     * partitioned} edge using default partitioner and partitioned by the
-     * same key as is used in the snapshot.
+     * Specifies that only part of the state will be restored to each processor
+     * instance.
      * <p>
-     * Correct keys will be restored to each processor and saving and
-     * restoring the snapshot will be done locally (except if the partitioning
-     * in the HZ map changed since the job started and except for the backup
-     * copies of the snapshot).
+     * The processor must be preceded with an edge which satisfies these
+     * conditions:<ol>
+     * <li>is {@link Edge#distributed() distributed}
+     * <li>is {@link Edge#partitioned(com.hazelcast.jet.function.DistributedFunction)
+     * partitioned}
+     * <li>is partitioned by the same key as is used in the snapshot.
+     * <li>use the default partitioner
+     * </ol>
+     *
+     * If there are multiple inbound edges, all must satisfy the conditions. If
+     * some condition is not met then state for some key might be restored to
+     * one processor instance and items for that key will be delivered to
+     * another. This situation is currently not detected and might go
+     * unnoticed, producing incorrect results.
+     *<p>
+     * With this type of state saving and restoring of a snapshot is done
+     * locally with two exceptions:<ul>
+     *
+     * <li>partition migration took place since the job started: job doesn't
+     * migrate partitions, but IMap does (unless disabled). In this case, some
+     * partitions of the snapshot will be stored remotely.
+     *
+     * <li>backup copies are always stored remotely, obviously.
+     * </ul>
      */
     PARTITIONED,
 

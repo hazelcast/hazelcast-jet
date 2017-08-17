@@ -20,7 +20,6 @@ import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorSupplier;
-import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.impl.util.Util;
@@ -47,7 +46,7 @@ import static java.util.stream.Collectors.toList;
  * See {@link com.hazelcast.jet.processor.KafkaProcessors#streamKafka(
  * Properties, String...)}.
  */
-public final class StreamKafkaP extends AbstractProcessor implements Snapshottable, Closeable {
+public final class StreamKafkaP extends AbstractProcessor implements Closeable {
 
     private static final int POLL_TIMEOUT_MS = 1000;
 

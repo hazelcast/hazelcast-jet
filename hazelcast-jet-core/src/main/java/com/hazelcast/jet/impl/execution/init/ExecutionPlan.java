@@ -24,7 +24,6 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorSupplier;
-import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
@@ -69,8 +68,6 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.internal.util.concurrent.ConcurrentConveyor.concurrentConveyor;
 import static com.hazelcast.jet.impl.execution.OutboundCollector.compositeCollector;
-import static com.hazelcast.jet.impl.util.ProgressState.DONE;
-import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 import static com.hazelcast.jet.impl.util.Util.idToString;
 import static com.hazelcast.jet.impl.util.Util.memoize;
@@ -129,18 +126,14 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             Collection<? extends Processor> processors = createProcessors(srcVertex, srcVertex.parallelism());
 
             // create StoreSnapshotTasklet and the queues to it
-            ConcurrentConveyor<Object> ssConveyor = null;
-            final boolean savesSnapshot = processors.iterator().next() instanceof Snapshottable;
-            if (savesSnapshot) {
-                QueuedPipe<Object>[] snapshotQueues = new QueuedPipe[srcVertex.parallelism()];
-                // TODO configure queue capacity
-                Arrays.setAll(snapshotQueues, i -> new OneToOneConcurrentArrayQueue<>(2000));
-                ssConveyor = ConcurrentConveyor.concurrentConveyor(null, snapshotQueues);
-                StoreSnapshotTasklet ssTasklet = new StoreSnapshotTasklet(snapshotContext, jobId,
-                        new ConcurrentInboundEdgeStream(ssConveyor, 0, 0, true),
-                        nodeEngine, srcVertex.name());
-                tasklets.add(ssTasklet);
-            }
+            QueuedPipe<Object>[] snapshotQueues = new QueuedPipe[srcVertex.parallelism()];
+            // TODO configure queue capacity
+            Arrays.setAll(snapshotQueues, i -> new OneToOneConcurrentArrayQueue<>(2000));
+            ConcurrentConveyor<Object> ssConveyor = ConcurrentConveyor.concurrentConveyor(null, snapshotQueues);
+            StoreSnapshotTasklet ssTasklet = new StoreSnapshotTasklet(snapshotContext, jobId,
+                    new ConcurrentInboundEdgeStream(ssConveyor, 0, 0, true),
+                    nodeEngine, srcVertex.name());
+            tasklets.add(ssTasklet);
 
             int processorIdx = 0;
             for (Processor p : processors) {
@@ -164,9 +157,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 List<OutboundEdgeStream> outboundStreams = createOutboundEdgeStreams(srcVertex, processorIdx);
                 List<InboundEdgeStream> inboundStreams = createInboundEdgeStreams(srcVertex, processorIdx);
 
-                OutboundCollector snapshotCollector = savesSnapshot
-                        ? new ConveyorCollector(ssConveyor, processorIdx, null)
-                        : null;
+                OutboundCollector snapshotCollector = new ConveyorCollector(ssConveyor, processorIdx, null);
 
                 ProcessorTaskletBase processorTasklet = p.isCooperative()
                         ? new CooperativeProcessorTasklet(context, p, inboundStreams, outboundStreams,
