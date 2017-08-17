@@ -17,9 +17,9 @@
 package com.hazelcast.jet.impl.connector.kafka;
 
 import com.hazelcast.jet.AbstractProcessor;
+import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorSupplier;
-import com.hazelcast.jet.SnapshotRestorePolicy;
 import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
@@ -102,12 +102,6 @@ public final class StreamKafkaP extends AbstractProcessor implements Snapshottab
         return false;
     }
 
-
-    @Nonnull @Override
-    public SnapshotRestorePolicy restorePolicy() {
-        return SnapshotRestorePolicy.BROADCAST;
-    }
-
     @Override
     public boolean saveSnapshot() {
         if (snapshotTraverser == null) {
@@ -118,8 +112,11 @@ public final class StreamKafkaP extends AbstractProcessor implements Snapshottab
     }
 
     @Override
-    public void restoreSnapshotKey(Object key, Object value) {
-        consumer.seek((TopicPartition) key, (Long) value);
+    public void restoreSnapshot(@Nonnull Inbox inbox) {
+        for (Object o; (o = inbox.poll()) != null; ) {
+            Entry<TopicPartition, Long> entry = (Entry<TopicPartition, Long>) o;
+            consumer.seek(entry.getKey(), entry.getValue());
+        }
     }
 
     /**
