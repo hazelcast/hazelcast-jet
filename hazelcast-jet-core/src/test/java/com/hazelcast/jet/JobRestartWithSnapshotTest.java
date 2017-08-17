@@ -16,10 +16,14 @@
 
 package com.hazelcast.jet;
 
+import com.hazelcast.core.IMap;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.impl.coordination.SnapshotRepository;
+import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.processor.DiagnosticProcessors;
+import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
@@ -32,14 +36,16 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.TestUtil.throttle;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastSerialClassRunner.class)
-public class JobRestartWithSnapshotTest {
+public class JobRestartWithSnapshotTest extends JetTestSupport {
 
     private static final int NODE_COUNT = 2;
     private static final int LOCAL_PARALLELISM = 4;
@@ -69,7 +75,7 @@ public class JobRestartWithSnapshotTest {
         factory.shutdownAll();
     }
 
-    @Test @Ignore
+    @Test
     public void when_nodeDown_then_jobRestartsFromSnapshot() throws InterruptedException {
         DAG dag = new DAG();
         DistributedSupplier<Processor> sup = () -> new StreamSource(100);
@@ -84,7 +90,40 @@ public class JobRestartWithSnapshotTest {
         config.setSnapshotIntervalMillis(2000);
         Job job = instance.newJob(dag, config);
 
-        job.join();
+        while (true) {
+            dumpSnapshots(instance);
+            Thread.sleep(100);
+        }
+
+    }
+
+    private static void dumpSnapshots(JetInstance jet) {
+        IMap<List<Long>, SnapshotRecord> map = jet.getMap("__jet.jobs.snapshots");
+        for (Entry<List<Long>, SnapshotRecord> entry : map.entrySet()) {
+            List<Long> key = entry.getKey();
+            long jobId = key.get(0);
+            long snapshotId = key.get(1);
+
+            SnapshotRecord sr = entry.getValue();
+            System.out.println("---------- jobId=" + jobId + ", snapshotId=" + snapshotId);
+            System.out.println("sr=" + sr);
+
+            for (String vertexId : sr.vertices()) {
+                IStreamMap<Object, Object> map2 = jet.getMap("__jet_snapshot." + jobId + '.' + snapshotId + '.' + vertexId);
+                System.out.println("--- " + map2.getName());
+                int cnt = 0;
+                for (Entry<Object, Object> entry2 : map2.entrySet()) {
+                    System.out.println(entry2);
+                    cnt++;
+                }
+                System.out.println(cnt + " entries");
+            }
+        }
+    }
+
+    private IStreamMap<Object, Object> getSnapshot(Job job, long id) {
+        String map = SnapshotRepository.snapshotDataMapName(job.getJobId(), id, "generator");
+        return instance.getMap(map);
     }
 
     static class StreamSource extends AbstractProcessor {

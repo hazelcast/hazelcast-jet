@@ -32,6 +32,7 @@ import com.hazelcast.spi.impl.operationservice.impl.operations.PartitionIteratin
 import com.hazelcast.spi.partition.IPartition;
 import com.hazelcast.spi.partition.IPartitionService;
 import com.hazelcast.spi.serialization.SerializationService;
+import com.hazelcast.util.CollectionUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,6 +47,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.util.CollectionUtil.toIntArray;
 import static com.hazelcast.util.CollectionUtil.toIntegerList;
 
 /**
@@ -104,43 +106,57 @@ public class AsyncMapWriter {
 
     public boolean tryFlushAsync(CompletableFuture<Void> completionFuture) {
         Map<Address, List<Integer>> memberPartitionsMap = partitionService.getMemberPartitionsMap();
-        // Try to reserve room for number of async operations equal to number of members.
-        // Logic is similar to AtomicInteger.updateAndGet, but it stops, when in some iteration
-        // the value would exceed MAX_PARALLEL_ASYNC_OPS
-        if (!reserveOps(memberPartitionsMap.size())) {
+        List<PartitionOpBuilder> ops = memberPartitionsMap.entrySet()
+                                                          .stream()
+                                                          .map(e -> opForMember(e.getKey(), e.getValue(), outputBuffers))
+                                                          .filter(Objects::nonNull)
+                                                          .collect(Collectors.toList());
+
+        if (!invokeOnCluster(ops, completionFuture)) {
             return false;
         }
-
-        List<PartitionOpHolder> ops = memberPartitionsMap.entrySet()
-                           .stream()
-                           .map(e -> getPartitionOp(e.getKey(), e.getValue()))
-                           .filter(Objects::nonNull)
-                           .collect(Collectors.toList());
-
-        for (Entry<Address, List<Integer>> entry : memberPartitionsMap.entrySet()) {
-            PartitionOpHolder holder = getPartitionOp(entry.getKey(), entry.getValue());
-            if (holder == null) {
-                continue;
-            }
-            ops.add(holder);
-        }
-
-        // release operations for members which did not have any data
-        releaseOps(memberPartitionsMap.size() - ops.size());
-        invokeOnCluster(ops, completionFuture);
         resetBuffers();
         return true;
     }
 
-    private PartitionOpHolder getPartitionOp(Address member, List<Integer> partitions) {
-        PartitionOpHolder holder = new PartitionOpHolder();
-        holder.entries = new MapEntries[partitions.size()];
-        holder.partitions = new int[partitions.size()];
+    private boolean tryRetry(int[] partitions, MapEntries[] entriesPerPtition, CompletableFuture<Void> completionFuture) {
+        assert partitions.length == entriesPerPtition.length;
+
+        IPartition[] partitionOwners = partitionService.getPartitions();
+        Map<Address, Entry<List<Integer>, List<MapEntries>>> addrToEntries = new HashMap<>();
+        for (int index = 0; index < partitionOwners.length; index++) {
+            int partition = partitions[index];
+            MapEntries entries = entriesPerPtition[index];
+            Address owner = partitionOwners[partition].getOwnerOrNull();
+            Entry<List<Integer>, List<MapEntries>> ptitionsAndEntries
+                    = addrToEntries.computeIfAbsent(owner, a -> entry(new ArrayList<>(), new ArrayList<>()));
+            ptitionsAndEntries.getValue().add(entries);
+            ptitionsAndEntries.getKey().add(partition);
+        }
+
+        List<PartitionOpBuilder> retryOps = addrToEntries
+                .entrySet()
+                .stream()
+                .map(e -> {
+                    PartitionOpBuilder h = new PartitionOpBuilder(e.getKey());
+                    List<MapEntries> entries = e.getValue().getValue();
+                    h.entries = entries.toArray(new MapEntries[entries.size()]);
+                    h.partitions = CollectionUtil.toIntArray(e.getValue().getKey());
+                    return h;
+                }).collect(Collectors.toList());
+
+        return invokeOnCluster(retryOps, completionFuture);
+    }
+
+    private PartitionOpBuilder opForMember(Address member, List<Integer> partitions, MapEntries[] partitionToEntries) {
+        PartitionOpBuilder builder = new PartitionOpBuilder(member);
+        builder.entries = new MapEntries[partitions.size()];
+        builder.partitions = new int[partitions.size()];
         int index = 0;
         for (Integer partition : partitions) {
-            if (outputBuffers[partition] != null) {
-                holder.entries[index] = outputBuffers[partition];
-                holder.partitions[index] = partition;
+            if (partitionToEntries[partition] != null) {
+                builder.entries[index] = partitionToEntries[partition];
+                builder.partitions[index] = partition;
                 index++;
             }
         }
@@ -151,25 +167,15 @@ public class AsyncMapWriter {
 
         // trim arrays to real sizes
         if (index < partitions.size()) {
-            holder.entries = Arrays.copyOf(holder.entries, index);
-            holder.partitions = Arrays.copyOf(holder.partitions, index);
+            builder.entries = Arrays.copyOf(builder.entries, index);
+            builder.partitions = Arrays.copyOf(builder.partitions, index);
         }
-
-        OperationFactory factory = opProvider.createPutAllOperationFactory(mapName,
-                holder.partitions, holder.entries);
-        holder.op = new PartitionIteratingOperation(factory, toIntegerList(holder.partitions));
-        holder.address = member;
-        return holder;
+        return builder;
     }
+
 
     private void resetBuffers() {
         Arrays.fill(outputBuffers, null);
-    }
-
-    private void releaseOps(int count) {
-        if (count > 0) {
-            numConcurrentOps.getAndAdd(-count);
-        }
     }
 
     private boolean reserveOps(int count) {
@@ -185,36 +191,61 @@ public class AsyncMapWriter {
         return true;
     }
 
-    private void invokeOnCluster(List<PartitionOpHolder> opHolders, CompletableFuture<Void> completionFuture) {
-        AtomicInteger doneLatch = new AtomicInteger(opHolders.size());
-        for (PartitionOpHolder holder : opHolders) {
+    private boolean invokeOnCluster(List<PartitionOpBuilder> opBuilders, CompletableFuture<Void> completionFuture) {
+        if (!reserveOps(opBuilders.size())) {
+            return false;
+        }
+        AtomicInteger doneLatch = new AtomicInteger(opBuilders.size());
+        for (PartitionOpBuilder builder : opBuilders) {
             ExecutionCallback<PartitionResponse> callback = callbackOf(r -> {
                 numConcurrentOps.decrementAndGet();
-                System.out.println("Callback " + r);
-                for (Object o : r.getResults()) {
+                List<Integer> failedPartitons = new ArrayList<>();
+                List<MapEntries> failedEntries = new ArrayList<>();
+                Throwable t = null;
+                Object[] results = r.getResults();
+                for (int idx = 0; idx < results.length; idx++) {
+                    Object o = results[idx];
                     if (o instanceof Throwable) {
-                        //TODO: retry failed partitions
-                        completionFuture.completeExceptionally((Throwable) o);
-                        return;
+                        t = (Throwable) o;
+                        if (t instanceof RetryableException) {
+                            failedPartitons.add(builder.partitions[idx]);
+                            failedEntries.add(builder.entries[idx]);
+                        } else {
+                            completionFuture.completeExceptionally((Throwable) o);
+                            return;
+                        }
                     }
                 }
+                if (t != null) {
+                    if (!tryRetry(toIntArray(failedPartitons),
+                            failedEntries.toArray(new MapEntries[failedEntries.size()]), completionFuture)) {
+                        completionFuture.completeExceptionally(t);
+                    }
+                }
+
                 if (doneLatch.decrementAndGet() == 0) {
                     completionFuture.complete(null);
                 }
+
             }, throwable -> {
                 numConcurrentOps.decrementAndGet();
+
                 if (throwable instanceof RetryableException) {
-                    //TODO: the whole operation on the member failed
+                    if (!tryRetry(builder.partitions, builder.entries, completionFuture)) {
+                        completionFuture.completeExceptionally(throwable);
+                    }
+                } else {
+                    completionFuture.completeExceptionally(throwable);
                 }
-                completionFuture.completeExceptionally(throwable);
             });
             operationService
-                    .createInvocationBuilder(MapService.SERVICE_NAME, holder.op, holder.address)
+                    .createInvocationBuilder(MapService.SERVICE_NAME, builder.build(), builder.address)
                     .setTryCount(TRY_COUNT)
                     .setTryPauseMillis(TRY_PAUSE_MILLIS)
                     .setExecutionCallback((ExecutionCallback) callback)
                     .invoke();
         }
+        return true;
     }
 
     private <T> ExecutionCallback<T> callbackOf(Consumer<T> onResponse, Consumer<Throwable> onError) {
@@ -231,14 +262,23 @@ public class AsyncMapWriter {
         };
     }
 
-    private class PartitionOpHolder {
-        private Address address;
-        private PartitionIteratingOperation op;
+    private class PartitionOpBuilder {
+        private final Address address;
+
+        public PartitionOpBuilder(Address address) {
+            this.address = address;
+        }
 
         // PartitionIteratingOp doesn't expose these, so we have to track them separately
         private MapEntries[] entries; //entries in the operation
         private int[] partitions; // partitions in the operation
 
+        private PartitionIteratingOperation build() {
+            OperationFactory factory = opProvider.createPutAllOperationFactory(mapName,
+                    partitions, entries);
+            //TODO: remove list conversion after PR merge
+            return new PartitionIteratingOperation(factory, toIntegerList(partitions));
+        }
     }
 }
 

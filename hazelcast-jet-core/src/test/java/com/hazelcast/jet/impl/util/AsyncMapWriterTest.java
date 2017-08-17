@@ -139,8 +139,8 @@ public class AsyncMapWriterTest extends JetTestSupport {
         assertTrue("tryFlushAsync failed", flushed);
     }
 
-    @Test @Ignore
-    public void when_exception_then_completeFutureExceptionally() throws Exception {
+    @Test
+    public void when_memberLeaves_then_retryAutomatically() throws Exception {
         // Given
         for (int i = 0; i < 100; i++) {
             writer.put(i, i);
@@ -149,9 +149,16 @@ public class AsyncMapWriterTest extends JetTestSupport {
 
         JetService service = nodeEngine.getService(JetService.SERVICE_NAME);
         service.numConcurrentPutAllOps().set(AsyncMapWriter.MAX_PARALLEL_ASYNC_OPS - NODE_COUNT);
+
         // When
         assertTrue("tryFlushAsync failed", writer.tryFlushAsync(future));
         factory.terminate(instance2);
+
+        // Then
         future.get();
+        for (int i = 0; i < 100; i++) {
+            assertEquals(i, map.get(i));
+        }
+
     }
 }
