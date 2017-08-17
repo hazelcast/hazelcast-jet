@@ -206,7 +206,7 @@ public class AsyncMapWriter {
             ExecutionCallback<PartitionResponse> callback = callbackOf(r -> {
                 numConcurrentOps.decrementAndGet();
 
-                // try to cherry-pick partition which failed in this operation
+                // try to cherry-pick partitions which failed in this operation
                 List<Integer> failedPartitons = new ArrayList<>();
                 List<MapEntries> failedEntries = new ArrayList<>();
                 Throwable t = null;
