@@ -21,6 +21,7 @@ import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.Snapshottable;
 import com.hazelcast.jet.config.ProcessingGuarantee;
+import com.hazelcast.jet.impl.coordination.MasterContext;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.test.TestOutbox.MockData;
@@ -35,8 +36,6 @@ import org.junit.runner.RunWith;
 import javax.annotation.Nonnull;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -46,8 +45,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
+import static com.hazelcast.jet.impl.util.ProgressState.DONE;
 import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
-import static com.hazelcast.query.impl.predicates.PredicateTestUtils.entry;
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -60,7 +63,7 @@ public class SnapshottableProcessorTaskletTest {
     private static final int CALL_COUNT_LIMIT = 10;
 
     private List<Object> mockInput;
-    private List<InboundEdgeStream> instreams;
+    private List<MockInboundStream> instreams;
     private List<OutboundEdgeStream> outstreams;
     private SnapshottableProcessor processor;
     private ProcCtx context;
@@ -71,7 +74,7 @@ public class SnapshottableProcessorTaskletTest {
     public void setUp() {
         this.mockInput = IntStream.range(0, MOCK_INPUT_SIZE).boxed().collect(toList());
         this.processor = new SnapshottableProcessor();
-        this.context = new ProcCtx(null, new MockSerializationService(),null, null, 0,
+        this.context = new ProcCtx(null, new MockSerializationService(), null, null, 0,
                 true);
         this.instreams = new ArrayList<>();
         this.outstreams = new ArrayList<>();
@@ -116,7 +119,7 @@ public class SnapshottableProcessorTaskletTest {
         List<Object> input2 = new ArrayList<>();
 
         MockInboundStream instream1 = new MockInboundStream(0, input1, 1024);
-        MockInboundStream instream2 = new MockInboundStream(1, input2, 1024);
+        MockInboundStream instream2 = new MockInboundStream(0, input2, 1024);
         MockOutboundStream outstream1 = new MockOutboundStream(0);
 
         instreams.add(instream1);
@@ -129,17 +132,18 @@ public class SnapshottableProcessorTaskletTest {
         callUntil(tasklet, NO_PROGRESS);
 
         // Then
-        assertEquals(Arrays.asList(0, 1, 2, 3), outstream1.getBuffer());
-        assertEquals(Collections.emptyList(), getSnapshotBuffer());
+        assertEquals(asList(0, 1, 2, 3), outstream1.getBuffer());
+        assertEquals(emptyList(), getSnapshotBuffer());
 
         // When
         instream2.push(barrier(0));
         callUntil(tasklet, NO_PROGRESS);
-        assertEquals(Arrays.asList(0, 1, 2, 3, barrier(0), 4, 5, 6, 7), outstream1.getBuffer());
+        assertEquals(asList(0, 1, 2, 3, barrier(0), 4, 5, 6, 7), outstream1.getBuffer());
+        assertEquals(asList(0, 1, 2, 3, barrier(0)), getSnapshotBuffer());
     }
 
     @Test
-    public void when_snapshotTriggered_then_saveSnapshotAndemitBarrier() {
+    public void when_snapshotTriggered_then_saveSnapshotAndEmitBarrier() {
         // Given
         MockOutboundStream outstream1 = new MockOutboundStream(0, 2);
         outstreams.add(outstream1);
@@ -150,8 +154,8 @@ public class SnapshottableProcessorTaskletTest {
         callUntil(tasklet, NO_PROGRESS);
 
         // Then
-        assertEquals(Arrays.asList(0, 1), outstream1.getBuffer());
-        assertEquals(Collections.emptyList(), getSnapshotBuffer());
+        assertEquals(asList(0, 1), outstream1.getBuffer());
+        assertEquals(emptyList(), getSnapshotBuffer());
 
         // When
         snapshotContext.startNewSnapshot(0);
@@ -160,12 +164,37 @@ public class SnapshottableProcessorTaskletTest {
         callUntil(tasklet, NO_PROGRESS);
 
         // Then
-        assertEquals(Arrays.asList(barrier(0), 2), outstream1.getBuffer());
-        assertEquals(Arrays.asList(0 , 1, barrier(0)), getSnapshotBuffer());
+        assertEquals(asList(barrier(0), 2), outstream1.getBuffer());
+        assertEquals(asList(0 , 1, barrier(0)), getSnapshotBuffer());
     }
 
+    @Test
+    public void when_snapshotRestoreInput_then_restoreMethodsCalled() {
+        Entry<String, String> ssEntry1 = entry("k1", "v1");
+        Entry<String, String> ssEntry2 = entry("k2", "v2");
+        List<Object> restoredSnapshot = asList(ssEntry1, ssEntry2, DONE_ITEM);
+        MockInboundStream instream1 = new MockInboundStream(MasterContext.SNAPSHOT_EDGE_PRIORITY, restoredSnapshot, 1024);
+        MockInboundStream instream2 = new MockInboundStream(0, asList(barrier(0), DONE_ITEM), 1024);
+        MockOutboundStream outstream1 = new MockOutboundStream(0);
+
+        instreams.add(instream1);
+        instreams.add(instream2);
+        outstreams.add(outstream1);
+
+        Tasklet tasklet = createTasklet(ProcessingGuarantee.EXACTLY_ONCE);
+
+        // When
+        callUntil(tasklet, DONE);
+
+        // Then
+        assertEquals(asList("finishRestore", barrier(0), DONE_ITEM), outstream1.getBuffer());
+        assertEquals(asList(ssEntry1, ssEntry2, barrier(0), DONE_ITEM), getSnapshotBuffer());
+    }
 
     private CooperativeProcessorTasklet createTasklet(ProcessingGuarantee guarantee) {
+        for (int i = 0; i < instreams.size(); i++) {
+            instreams.get(i).setOrdinal(i);
+        }
         snapshotContext = new SnapshotContext(guarantee);
         final CooperativeProcessorTasklet t = new CooperativeProcessorTasklet(context, processor, instreams, outstreams,
                 snapshotContext, snapshotCollector);
@@ -256,7 +285,14 @@ public class SnapshottableProcessorTaskletTest {
 
         @Override
         public void restoreSnapshot(@Nonnull Inbox inbox) {
+            for (Object o; (o = inbox.poll()) != null; ) {
+                snapshotQueue.offer((Entry) o);
+            }
+        }
 
+        @Override
+        public boolean finishSnapshotRestore() {
+            return outbox.offer("finishRestore");
         }
     }
 }

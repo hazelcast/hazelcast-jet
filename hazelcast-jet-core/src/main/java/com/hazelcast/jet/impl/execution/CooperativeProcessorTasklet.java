@@ -23,7 +23,6 @@ import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.util.Preconditions;
 
 import java.util.List;
-import java.util.Queue;
 
 /**
  * Tasklet that drives a cooperative processor.
@@ -31,7 +30,8 @@ import java.util.Queue;
 public class CooperativeProcessorTasklet extends ProcessorTaskletBase {
 
     public CooperativeProcessorTasklet(ProcCtx context, Processor processor,
-                                       List<InboundEdgeStream> instreams, List<OutboundEdgeStream> outstreams,
+                                       List<? extends InboundEdgeStream> instreams,
+                                       List<? extends OutboundEdgeStream> outstreams,
                                        SnapshotContext ssContext, OutboundCollector ssCollector) {
         super(context, processor, instreams, outstreams, ssContext, ssCollector);
         Preconditions.checkTrue(processor.isCooperative(), "Processor is non-cooperative");

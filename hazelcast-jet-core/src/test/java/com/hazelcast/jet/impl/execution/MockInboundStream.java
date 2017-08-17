@@ -30,20 +30,26 @@ import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static com.hazelcast.jet.impl.util.ProgressState.WAS_ALREADY_DONE;
 
 public class MockInboundStream implements InboundEdgeStream {
-    private final int chunkSize;
+    private int ordinal;
+    private int priority;
     private final List<Object> mockData;
-    private final int ordinal;
+    private final int chunkSize;
+
     private int dataIndex;
     private boolean done;
 
-    MockInboundStream(int ordinal, List<Object> mockData, int chunkSize) {
-        this.ordinal = ordinal;
+    MockInboundStream(int priority, List<Object> mockData, int chunkSize) {
+        this.priority = priority;
         this.chunkSize = chunkSize;
         this.mockData = new ArrayList<>(mockData);
     }
 
     void push(Object... items) {
         mockData.addAll(Arrays.asList(items));
+    }
+
+    public void setOrdinal(int ordinal) {
+        this.ordinal = ordinal;
     }
 
     @Override
@@ -83,6 +89,6 @@ public class MockInboundStream implements InboundEdgeStream {
 
     @Override
     public int priority() {
-        return 0;
+        return priority;
     }
 }

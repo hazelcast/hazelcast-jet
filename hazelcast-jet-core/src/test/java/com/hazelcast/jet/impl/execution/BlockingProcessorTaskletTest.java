@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.test.HazelcastParallelClassRunner;
@@ -57,7 +56,7 @@ public class BlockingProcessorTaskletTest {
     private ProcCtx context;
     private CompletableFuture<Void> jobFuture;
     private List<Object> mockInput;
-    private List<InboundEdgeStream> instreams;
+    private List<MockInboundStream> instreams;
     private List<OutboundEdgeStream> outstreams;
     private PassThroughProcessor processor;
 
@@ -65,7 +64,7 @@ public class BlockingProcessorTaskletTest {
     @Before
     public void setUp() {
         this.processor = new PassThroughProcessor();
-        this.context = new ProcCtx(null, null,null, null, 0, false);
+        this.context = new ProcCtx(null, null, null, null, 0, false);
         this.jobFuture = new CompletableFuture<>();
         this.mockInput = IntStream.range(0, MOCK_INPUT_SIZE).boxed().collect(toList());
         this.instreams = new ArrayList<>();
@@ -135,8 +134,8 @@ public class BlockingProcessorTaskletTest {
     public void when_3instreams_then_pushAllIntoOutstream() {
         // Given
         MockInboundStream instream1 = new MockInboundStream(0, mockInput.subList(0, 4), 4);
-        MockInboundStream instream2 = new MockInboundStream(1, mockInput.subList(4, 8), 4);
-        MockInboundStream instream3 = new MockInboundStream(2, mockInput.subList(8, 10), 4);
+        MockInboundStream instream2 = new MockInboundStream(0, mockInput.subList(4, 8), 4);
+        MockInboundStream instream3 = new MockInboundStream(0, mockInput.subList(8, 10), 4);
         instream1.push(DONE_ITEM);
         instream2.push(DONE_ITEM);
         instream3.push(DONE_ITEM);
@@ -235,7 +234,7 @@ public class BlockingProcessorTaskletTest {
         // Given
         outstreams.add(outstream(0));
         outstreams.add(outstream(1));
-        BlockingProcessorTasklet tasklet = createTasklet();
+        createTasklet();
 
         // When
         assertEquals(2, processor.outbox.bucketCount());
@@ -304,6 +303,9 @@ public class BlockingProcessorTaskletTest {
     // END BlockingOutbox tests
 
     private BlockingProcessorTasklet createTasklet() {
+        for (int i = 0; i < instreams.size(); i++) {
+            instreams.get(i).setOrdinal(i);
+        }
         final BlockingProcessorTasklet t = new BlockingProcessorTasklet(context, processor, instreams, outstreams,
                 null, null);
         t.init(jobFuture);

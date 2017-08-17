@@ -79,8 +79,8 @@ public abstract class ProcessorTaskletBase implements Tasklet {
 
     ProcessorTaskletBase(@Nonnull ProcCtx context,
                          @Nonnull Processor processor,
-                         @Nonnull List<InboundEdgeStream> instreams,
-                         @Nonnull List<OutboundEdgeStream> outstreams,
+                         @Nonnull List<? extends InboundEdgeStream> instreams,
+                         @Nonnull List<? extends OutboundEdgeStream> outstreams,
                          @Nullable SnapshotContext ssContext,
                          @Nullable OutboundCollector ssCollector) {
         Preconditions.checkNotNull(processor, "processor");
@@ -90,7 +90,8 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         this.numActiveOrdinals = instreams.size();
         this.instreamGroupQueue = instreams
                 .stream()
-                .collect(groupingBy(InboundEdgeStream::priority, TreeMap::new, toCollection(ArrayList::new)))
+                .collect(groupingBy(InboundEdgeStream::priority, TreeMap::new,
+                        toCollection(ArrayList<InboundEdgeStream>::new)))
                 .entrySet().stream()
                 .map(Entry::getValue)
                 .collect(toCollection(ArrayDeque::new));

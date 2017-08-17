@@ -17,8 +17,8 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.execution.OutboxBlockingImpl.JobFutureCompleted;
+import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.spi.serialization.SerializationService;
@@ -26,9 +26,7 @@ import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
 import java.util.List;
-import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 /**
  * Tasklet that drives a non-cooperative processor.
@@ -36,8 +34,8 @@ import java.util.function.Function;
 public class BlockingProcessorTasklet extends ProcessorTaskletBase {
 
     public BlockingProcessorTasklet(
-            ProcCtx context, Processor processor, List<InboundEdgeStream> instreams,
-            List<OutboundEdgeStream> outstreams, SnapshotContext ssContext,
+            ProcCtx context, Processor processor, List<? extends InboundEdgeStream> instreams,
+            List<? extends OutboundEdgeStream> outstreams, SnapshotContext ssContext,
             OutboundCollector ssCollector) {
         super(context, processor, instreams, outstreams, ssContext, ssCollector);
         Preconditions.checkFalse(processor.isCooperative(), "Processor is cooperative");
