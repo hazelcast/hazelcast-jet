@@ -38,8 +38,6 @@ public class StoreSnapshotTasklet implements Tasklet {
     private final ProgressTracker progTracker = new ProgressTracker();
     private final long jobId;
     private final InboundEdgeStream inboundEdgeStream;
-    private final ArrayDequeInbox inbox = new ArrayDequeInbox(progTracker);
-
     private final SnapshotContext snapshotContext;
     private final AsyncMapWriter mapWriter;
     private final String vertexName;

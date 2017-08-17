@@ -97,6 +97,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             }
 
             drainQueue(q, dest);
+
             if (itemDetector.isDone) {
                 conveyor.removeQueue(queueIndex);
                 receivedBarriers.clear(queueIndex);

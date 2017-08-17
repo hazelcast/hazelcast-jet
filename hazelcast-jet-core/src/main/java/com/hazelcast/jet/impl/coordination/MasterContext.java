@@ -202,12 +202,6 @@ public class MasterContext {
             return;
         }
 
-        snapshottableVertices = executionPlanMap.entrySet().stream()
-                .filter(e -> e.getKey().getAddress().equals(nodeEngine.getThisAddress()))
-                .map(e -> e.getValue().snapshottableVertices())
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Could not find master node within execution plan map"));
-
         logger.fine("Built execution plans for " + formatIds(jobId, executionId));
         Set<MemberInfo> participants = executionPlanMap.keySet();
         Function<ExecutionPlan, Operation> operationCtor = plan ->
@@ -355,7 +349,18 @@ public class MasterContext {
         logger.fine("Executing " + formatIds(jobId, executionId));
         Function<ExecutionPlan, Operation> operationCtor = plan -> new ExecuteOperation(jobId, executionId);
         invoke(operationCtor, this::onExecuteStepCompleted, completionFuture);
+
+        // snapshottableVertices must be assigned before first snapshot
+        snapshottableVertices = snapshottableVertices();
         scheduleSnapshot();
+    }
+
+    private List<String> snapshottableVertices() {
+        return executionPlanMap.entrySet().stream()
+                                                .filter(e -> e.getKey().getAddress().equals(nodeEngine.getThisAddress()))
+                                                .map(e -> e.getValue().snapshottableVertices())
+                                                .findFirst()
+                                                .orElseThrow(() -> new IllegalStateException("Could not find master node within execution plan map"));
     }
 
     private void scheduleSnapshot() {
@@ -366,10 +371,10 @@ public class MasterContext {
 
         String name = "jet.snapshot.job-" + idToString(jobId) + ".execution-" + idToString(executionId);
         scheduledSnapshotFuture = nodeEngine.getExecutionService().schedule(
-                name, this::initiateSnapshot, interval, TimeUnit.MILLISECONDS);
+                name, this::beginSnapshot, interval, TimeUnit.MILLISECONDS);
     }
 
-    private void initiateSnapshot() {
+    private void beginSnapshot() {
         SnapshotRecord record = new SnapshotRecord(jobId, nextSnapshotId++, snapshottableVertices);
         if (!coordinationService.getSnapshotRepository().putNewSnapshotRecord(record)) {
             return;
