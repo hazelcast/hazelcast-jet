@@ -49,7 +49,7 @@ public class StoreSnapshotTasklet implements Tasklet {
 
     private State state = DRAIN;
     private boolean hasReachedBarrier;
-    private boolean isDone;
+    private boolean inputIsDone;
 
     public StoreSnapshotTasklet(SnapshotContext snapshotContext, long jobId, InboundEdgeStream inboundEdgeStream,
                                 NodeEngine nodeEngine, String vertexName) {
@@ -73,20 +73,25 @@ public class StoreSnapshotTasklet implements Tasklet {
     private void stateMachineStep() {
         switch (state) {
             case DRAIN:
-                progTracker.mergeWith(inboundEdgeStream.drainTo(o -> {
+                progTracker.notDone();
+                ProgressState result = inboundEdgeStream.drainTo(o -> {
+                    if (vertexName.equals("insertWm")) {
+                        System.out.println("received=" + o);
+                    }
                     if (o instanceof SnapshotBarrier) {
                         SnapshotBarrier barrier = (SnapshotBarrier) o;
                         assert currentSnapshotId == barrier.snapshotId() : "Unexpected barrier, expected was " +
-                                currentSnapshotId + ", but barrier was " + barrier.snapshotId();
+                                currentSnapshotId + ", but barrier was " + barrier.snapshotId() + ", this=" + this;
                         hasReachedBarrier = true;
                     } else {
                         mapWriter.put(((Entry<Data, Data>) o));
                     }
-                }));
-                if (progTracker.isDone()) {
-                    isDone = true;
+                });
+                if (result.isDone()) {
+                    inputIsDone = true;
                 }
-                if (progTracker.isMadeProgress()) {
+                if (result.isMadeProgress()) {
+                    progTracker.madeProgress();
                     state = FLUSH;
                     stateMachineStep();
                 }
@@ -98,13 +103,15 @@ public class StoreSnapshotTasklet implements Tasklet {
                 future.whenComplete((r, t) -> {
                     if (t == null) {
                         numActiveFlushes.decrementAndGet();
+                    } else {
+                        //TODO: error handling
+                        t.printStackTrace();
                     }
-                    //TODO: error handling
                 });
                 if (mapWriter.tryFlushAsync(future)) {
                     progTracker.madeProgress();
                     numActiveFlushes.incrementAndGet();
-                    state = isDone ? DONE : hasReachedBarrier ? REACHED_BARRIER : DRAIN;
+                    state = inputIsDone ? DONE : hasReachedBarrier ? REACHED_BARRIER : DRAIN;
                 }
                 return;
 
@@ -114,7 +121,8 @@ public class StoreSnapshotTasklet implements Tasklet {
                     snapshotContext.snapshotCompletedInProcessor();
                     currentSnapshotId++;
                     mapWriter.setMapName(currMapName());
-                    state = DRAIN;
+                    state = inputIsDone ? DONE : DRAIN;
+                    hasReachedBarrier = false;
                 }
                 return;
 

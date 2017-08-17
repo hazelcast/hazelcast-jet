@@ -48,7 +48,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
 
     private final BitSet receivedBarriers; // indicates if current snapshot is received on the queue
 
-    private long currSnapshot = 0; // current expected snapshot
+    private long currSnapshot; // current expected snapshot
     private long lastEmittedWm = Long.MIN_VALUE;
 
     private long numActiveQueues; // number of active queues remaining
@@ -102,12 +102,10 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                 conveyor.removeQueue(queueIndex);
                 receivedBarriers.clear(queueIndex);
                 numActiveQueues--;
-            }
-            else if (itemDetector.wm != null) {
+            } else if (itemDetector.wm != null) {
                 observeWm(queueIndex, itemDetector.wm.timestamp());
-            }
-            else if (itemDetector.barrier != null) {
-                observeSnapshot(queueIndex, itemDetector.barrier.snapshotId());
+            } else if (itemDetector.barrier != null) {
+                observeBarrier(queueIndex, itemDetector.barrier.snapshotId());
             }
         }
 
@@ -152,7 +150,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         itemDetector.dest = null;
     }
 
-    private void observeSnapshot(int queueIndex, long snapshotId) {
+    private void observeBarrier(int queueIndex, long snapshotId) {
         if (snapshotId != currSnapshot) {
             throw new JetException("Unexpected snapshot barrier "
                     + snapshotId + ", expected " + currSnapshot);
