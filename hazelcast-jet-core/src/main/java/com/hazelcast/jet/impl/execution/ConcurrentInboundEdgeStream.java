@@ -17,11 +17,13 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.util.concurrent.ConcurrentConveyor;
+import com.hazelcast.internal.util.concurrent.Pipe;
 import com.hazelcast.internal.util.concurrent.QueuedPipe;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
+import com.hazelcast.util.function.Predicate;
 
 import java.util.Arrays;
 import java.util.BitSet;
@@ -40,6 +42,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private final int priority;
     private final ConcurrentConveyor<Object> conveyor;
     private final ProgressTracker tracker = new ProgressTracker();
+    private final ItemDetector itemDetector = new ItemDetector();
     private final boolean waitForSnapshot;
     private final long[] queueWms;
 
@@ -93,28 +96,17 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                 continue;
             }
 
-            for (Object item; (item = q.poll()) != null; ) {
-                tracker.madeProgress();
-                if (item == DONE_ITEM) {
-                    conveyor.removeQueue(queueIndex);
-                    receivedBarriers.clear(queueIndex);
-                    numActiveQueues--;
-                    // we are done with this queue
-                    break;
-                }
-                if (item instanceof Watermark) {
-                    observeWm(queueIndex, ((Watermark) item).timestamp());
-                    // do not drain more items from this queue after observing a WM
-                    break;
-                }
-                if (item instanceof SnapshotBarrier) {
-                    observeSnapshot(queueIndex, ((SnapshotBarrier) item).snapshotId());
-                    // do not drain more items from this queue after snapshot barrier
-                    break;
-                }
-
-                // forward everything else
-                dest.accept(item);
+            drainQueue(q, dest);
+            if (itemDetector.isDone) {
+                conveyor.removeQueue(queueIndex);
+                receivedBarriers.clear(queueIndex);
+                numActiveQueues--;
+            }
+            else if (itemDetector.wm != null) {
+                observeWm(queueIndex, itemDetector.wm.timestamp());
+            }
+            else if (itemDetector.barrier != null) {
+                observeSnapshot(queueIndex, itemDetector.barrier.snapshotId());
             }
         }
 
@@ -145,6 +137,20 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         return numActiveQueues == 0;
     }
 
+    /**
+     * Drains the supplied queue into a {@code dest} collection, up to the next
+     * {@link Watermark} or {@link SnapshotBarrier}. Also updates the {@code tracker} with new status.
+     *
+     */
+    private void drainQueue(Pipe<Object> queue, Consumer<Object> dest) {
+        itemDetector.reset(dest);
+
+        int drainedCount = queue.drain(itemDetector);
+        tracker.mergeWith(ProgressState.valueOf(drainedCount > 0, itemDetector.isDone));
+
+        itemDetector.dest = null;
+    }
+
     private void observeSnapshot(int queueIndex, long snapshotId) {
         if (snapshotId != currSnapshot) {
             throw new JetException("Unexpected snapshot barrier "
@@ -170,5 +176,44 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             }
         }
         return min;
+    }
+
+    /**
+     * Drains a concurrent conveyor's queue while watching for {@link Watermark}s
+     * and {@link SnapshotBarrier}s.
+     * When encountering a either, prevents draining more items.
+     */
+    private static final class ItemDetector implements Predicate<Object> {
+        Consumer<Object> dest;
+        Watermark wm;
+        SnapshotBarrier barrier;
+        boolean isDone;
+
+        void reset(Consumer<Object> newDest) {
+            dest = newDest;
+            wm = null;
+            isDone = false;
+            barrier = null;
+        }
+
+        @Override
+        public boolean test(Object o) {
+            if (o instanceof Watermark) {
+                assert wm == null : "Received multiple Watermarks without a call to reset()";
+                wm = (Watermark) o;
+                return false;
+            }
+            if (o instanceof SnapshotBarrier) {
+                assert barrier == null : "Received multiple barriers without a call to reset()";
+                barrier = (SnapshotBarrier) o;
+                return false;
+            }
+            if (o == DONE_ITEM) {
+                isDone = true;
+                return false;
+            }
+            dest.accept(o);
+            return true;
+        }
     }
 }
