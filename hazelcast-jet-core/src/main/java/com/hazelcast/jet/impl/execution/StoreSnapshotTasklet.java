@@ -134,10 +134,6 @@ public class StoreSnapshotTasklet implements Tasklet {
         return SnapshotRepository.snapshotDataMapName(jobId, currentSnapshotId, vertexName);
     }
 
-    public String vertexName() {
-        return vertexName;
-    }
-
     @Override
     public String toString() {
         return StoreSnapshotTasklet.class.getSimpleName() + ", vertex:" + vertexName;

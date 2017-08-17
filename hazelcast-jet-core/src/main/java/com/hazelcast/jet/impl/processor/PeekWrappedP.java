@@ -102,6 +102,26 @@ public final class PeekWrappedP implements Processor {
         }
     }
 
+    @Override
+    public boolean completeEdge(int ordinal) {
+        return wrappedProcessor.completeEdge(ordinal);
+    }
+
+    @Override
+    public boolean saveSnapshot() {
+        return wrappedProcessor.saveSnapshot();
+    }
+
+    @Override
+    public void restoreSnapshot(@Nonnull Inbox inbox) {
+        wrappedProcessor.restoreSnapshot(inbox);
+    }
+
+    @Override
+    public boolean finishSnapshotRestore() {
+        return wrappedProcessor.finishSnapshotRestore();
+    }
+
     private class LoggingInbox implements Inbox {
 
         private Inbox wrappedInbox;
