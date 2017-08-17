@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.execution;
+package com.hazelcast.jet.impl.util;
 
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.jet.impl.JetService;
@@ -48,7 +48,7 @@ import static com.hazelcast.jet.Util.entry;
  */
 public class AsyncMapWriter {
 
-    private static final int MAX_PARALLEL_ASYNC_OPS = 1000;
+    public static final int MAX_PARALLEL_ASYNC_OPS = 1000;
 
     // These magic values are copied from com.hazelcast.spi.impl.operationservice.impl.InvokeOnPartitions
     private static final int TRY_COUNT = 10;
@@ -95,7 +95,7 @@ public class AsyncMapWriter {
         // Try to reserve room for number of async operations equal to number of members.
         // Logic is similar to AtomicInteger.updateAndGet, but it stops, when in some iteration
         // the value would exceed MAX_PARALLEL_ASYNC_OPS
-        if (reserveOps(memberPartitionsMap.size())) {
+        if (!reserveOps(memberPartitionsMap.size())) {
             return false;
         }
 
@@ -107,7 +107,7 @@ public class AsyncMapWriter {
             int[] partitionsForMember = new int[memberPartitions.size()];
             int index = 0;
             for (Integer partition : memberPartitions) {
-                if (outputBuffers[partition] == null) {
+                if (outputBuffers[partition] != null) {
                     entriesForMember[index] = outputBuffers[partition];
                     partitionsForMember[index] = partition;
                     index++;
@@ -166,6 +166,7 @@ public class AsyncMapWriter {
             numConcurrentOps.decrementAndGet();
             for (Object o : r.getResults()) {
                 if (o instanceof Throwable) {
+                    //TODO: retry failed partitions
                     completionFuture.completeExceptionally((Throwable) o);
                     return;
                 }
