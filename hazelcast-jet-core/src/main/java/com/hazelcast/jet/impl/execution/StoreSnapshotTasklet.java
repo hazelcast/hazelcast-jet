@@ -46,7 +46,6 @@ public class StoreSnapshotTasklet implements Tasklet {
     private long currentSnapshotId;
 
     private AtomicInteger numActiveFlushes = new AtomicInteger();
-    private String currMapName;
 
     private State state = DRAIN;
     private boolean hasReachedBarrier;
@@ -60,7 +59,7 @@ public class StoreSnapshotTasklet implements Tasklet {
         this.vertexName = vertexName;
 
         this.mapWriter = new AsyncMapWriter(nodeEngine);
-        this.currMapName = mapName();
+        this.mapWriter.setMapName(currMapName());
     }
 
     @Nonnull
@@ -102,7 +101,7 @@ public class StoreSnapshotTasklet implements Tasklet {
                     }
                     //TODO: error handling
                 });
-                if (mapWriter.tryFlushAsync(currMapName, future)) {
+                if (mapWriter.tryFlushAsync(future)) {
                     progTracker.madeProgress();
                     numActiveFlushes.incrementAndGet();
                     state = isDone ? DONE : hasReachedBarrier ? REACHED_BARRIER : DRAIN;
@@ -114,7 +113,7 @@ public class StoreSnapshotTasklet implements Tasklet {
                 if (numActiveFlushes.get() == 0) {
                     snapshotContext.snapshotCompletedInProcessor();
                     currentSnapshotId++;
-                    currMapName = mapName();
+                    mapWriter.setMapName(currMapName());
                     state = DRAIN;
                 }
                 return;
@@ -130,7 +129,7 @@ public class StoreSnapshotTasklet implements Tasklet {
         }
     }
 
-    private String mapName() {
+    private String currMapName() {
         //TODO: replace jobId with executionId
         return SnapshotRepository.snapshotDataMapName(jobId, currentSnapshotId, vertexName);
     }
