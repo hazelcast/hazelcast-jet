@@ -446,11 +446,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         return processors;
     }
 
-    public List<String> snapshottableVertices() {
-        return tasklets.stream()
-                       .filter(t -> t instanceof StoreSnapshotTasklet)
-                       .map(t -> ((StoreSnapshotTasklet) t).vertexName())
-                       .collect(Collectors.toList());
+    public int getStoreSnapshotTaskletCount() {
+        return (int) tasklets.stream()
+                             .filter(t -> t instanceof StoreSnapshotTasklet)
+                             .count();
     }
 }
 

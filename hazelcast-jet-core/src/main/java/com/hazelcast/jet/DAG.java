@@ -319,4 +319,12 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
         }
         return null;
     }
+
+    /**
+     * Returns the list of all vertic
+     * @return
+     */
+    public List<String> getVertexNames() {
+        return new ArrayList<>(verticesByName.keySet());
+    }
 }

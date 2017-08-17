@@ -87,15 +87,13 @@ public class MasterContext {
     private final CompletableFuture<Boolean> completionFuture = new CompletableFuture<>();
     private final AtomicReference<JobStatus> jobStatus = new AtomicReference<>(NOT_STARTED);
 
-    private volatile long nextSnapshotId;
-
     private volatile long executionId;
     private volatile long jobStartTime;
     private volatile Map<MemberInfo, ExecutionPlan> executionPlanMap;
+    private volatile List<String> vertexNames;
 
+    private volatile long nextSnapshotId;
     private volatile ScheduledFuture<?> scheduledSnapshotFuture;
-
-    private volatile List<String> snapshottableVertices;
 
     MasterContext(NodeEngineImpl nodeEngine, JobCoordinationService coordinationService, JobRecord jobRecord) {
         this.nodeEngine = nodeEngine;
@@ -145,6 +143,7 @@ public class MasterContext {
         }
 
         DAG dag = deserializeDAG();
+        vertexNames = dag.getVertexNames();
 
         // check the "no different priority with EXACTLY_ONCE" restriction
         if (jobRecord.getConfig().getProcessingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE
@@ -349,18 +348,7 @@ public class MasterContext {
         logger.fine("Executing " + formatIds(jobId, executionId));
         Function<ExecutionPlan, Operation> operationCtor = plan -> new ExecuteOperation(jobId, executionId);
         invoke(operationCtor, this::onExecuteStepCompleted, completionFuture);
-
-        // snapshottableVertices must be assigned before first snapshot
-        snapshottableVertices = snapshottableVertices();
         scheduleSnapshot();
-    }
-
-    private List<String> snapshottableVertices() {
-        return executionPlanMap.entrySet().stream()
-                                                .filter(e -> e.getKey().getAddress().equals(nodeEngine.getThisAddress()))
-                                                .map(e -> e.getValue().snapshottableVertices())
-                                                .findFirst()
-                                                .orElseThrow(() -> new IllegalStateException("Could not find master node within execution plan map"));
     }
 
     private void scheduleSnapshot() {
@@ -375,7 +363,7 @@ public class MasterContext {
     }
 
     private void beginSnapshot() {
-        SnapshotRecord record = new SnapshotRecord(jobId, nextSnapshotId++, snapshottableVertices);
+        SnapshotRecord record = new SnapshotRecord(jobId, nextSnapshotId++, vertexNames);
         if (!coordinationService.getSnapshotRepository().putNewSnapshotRecord(record)) {
             return;
         }
