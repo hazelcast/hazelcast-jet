@@ -47,8 +47,9 @@ public class SnapshotOperation extends AsyncExecutionOperation {
     protected void doRun() throws Exception {
         JetService service = getService();
 
-        executionFuture = service.doSnapshotOnMember(getCallerAddress(), jobId, executionId, snapshotId)
-                .whenComplete((r, v) -> {
+        executionFuture = service.getJobExecutionService()
+                                 .doSnapshotOnMember(getCallerAddress(), jobId, executionId,
+                                         snapshotId).whenComplete((r, v) -> {
                     LoggingUtil.logFine(getLogger(), "Snapshot %s for job %s finished on member",
                             snapshotId, idToString(jobId));
                     doSendResponse(null);

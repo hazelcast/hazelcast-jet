@@ -198,7 +198,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                 progTracker.notDone();
                 // check ssContext to see if a barrier should be emitted
                 if (context.snapshottingEnabled()) {
-                    long currSnapshotId = ssContext.getCurrentSnapshotId();
+                    long currSnapshotId = ssContext.currentSnapshotId();
                     assert currSnapshotId <= pendingSnapshotId : "Unexpected new snapshot id " + currSnapshotId
                             + ", current was" + pendingSnapshotId;
                     if (currSnapshotId == pendingSnapshotId) {
@@ -238,7 +238,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
             result = NO_PROGRESS;
 
             // skip ordinals where a snapshot barrier has already been received
-            if (ssContext != null && ssContext.getGuarantee() == ProcessingGuarantee.EXACTLY_ONCE
+            if (ssContext != null && ssContext.processingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE
                     && receivedBarriers.get(currInstream.ordinal())) {
                 instreamCursor.advance();
                 continue;

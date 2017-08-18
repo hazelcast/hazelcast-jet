@@ -118,7 +118,7 @@ public class StoreSnapshotTasklet implements Tasklet {
             case REACHED_BARRIER:
                 progTracker.notDone();
                 if (numActiveFlushes.get() == 0) {
-                    snapshotContext.snapshotCompletedInProcessor();
+                    snapshotContext.snapshotDoneForTasklet();
                     currentSnapshotId++;
                     mapWriter.setMapName(currMapName());
                     state = inputIsDone ? DONE : DRAIN;
@@ -129,6 +129,7 @@ public class StoreSnapshotTasklet implements Tasklet {
             case DONE:
                 if (numActiveFlushes.get() != 0) {
                     progTracker.notDone();
+                    snapshotContext.taskletDone(currentSnapshotId - 1);
                 }
                 return;
 

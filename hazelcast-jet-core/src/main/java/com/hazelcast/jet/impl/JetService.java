@@ -226,12 +226,8 @@ public class JetService
         return jobCoordinationService.startOrJoinJob(jobId, dag, config);
     }
 
-
     public AtomicInteger numConcurrentPutAllOps() {
         return numConcurrentPutAllOps;
     }
 
-    public CompletionStage<Void> doSnapshotOnMember(Address coordinator, long jobId, long executionId, long snapshotId) {
-        return jobExecutionService.doSnapshotOnMember(coordinator, jobId, executionId, snapshotId);
-    }
 }
