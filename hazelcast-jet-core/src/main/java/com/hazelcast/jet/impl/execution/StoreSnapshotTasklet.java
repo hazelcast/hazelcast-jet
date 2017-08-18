@@ -129,8 +129,8 @@ public class StoreSnapshotTasklet implements Tasklet {
             case DONE:
                 if (numActiveFlushes.get() != 0) {
                     progTracker.notDone();
-                    snapshotContext.taskletDone(currentSnapshotId - 1);
                 }
+                snapshotContext.taskletDone(currentSnapshotId - 1);
                 return;
 
             default:

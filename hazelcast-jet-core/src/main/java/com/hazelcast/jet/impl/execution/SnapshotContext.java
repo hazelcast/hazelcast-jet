@@ -77,8 +77,8 @@ public class SnapshotContext {
     synchronized CompletableFuture<Void> startNewSnapshot(long snapshotId) {
         assert snapshotId == currentSnapshotId + 1
                 : "new snapshotId not incremented by 1. Previous=" + currentSnapshotId + ", new=" + snapshotId;
+
         if (numTasklets == 0) {
-            // there are no tasklets, so complete future immediately.
             return CompletableFuture.completedFuture(null);
         }
         boolean success = numRemainingTasklets.compareAndSet(0, numTasklets);
