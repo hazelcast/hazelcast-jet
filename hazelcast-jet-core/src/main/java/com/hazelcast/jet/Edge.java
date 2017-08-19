@@ -182,17 +182,34 @@ public class Edge implements IdentifiedDataSerializable {
      * The data from the edge with priority 1 will be processed in full before
      * accepting any data from the edge with priority 2.
      * <p>
-     * <i>Note:</i> currently, having different priority edges will prevent
-     * usage of
-     * {@link com.hazelcast.jet.config.ProcessingGuarantee#EXACTLY_ONCE
-     * EXACTLY_ONCE} guarantee for snapshots. This might change in future in a
-     * way that snapshots will be postponed until after all higher-priority
+     * <i>Note:</i> having different priority edges will cause postponing of
+     * the first snapshot until after upstream vertices of higher priority
      * edges are completed.
+     * Reason: after receiving a {@link
+     * com.hazelcast.jet.impl.execution.SnapshotBarrier barrier} we stop
+     * processing items on that edge until the barrier is received from all
+     * other edges. However, we also don't process lower priority edges until
+     * higher priority edges are done, which prevents receiving the barrier on
+     * them, which in the end stalls the job indefinitely. Technically this
+     * applies only to {@link
+     * com.hazelcast.jet.config.ProcessingGuarantee#EXACTLY_ONCE EXACTLY_ONCE}
+     * snapshot mode, but the snapshot is also postponed for {@link
+     * com.hazelcast.jet.config.ProcessingGuarantee#AT_LEAST_ONCE
+     * AT_LEAST_ONCE} jobs, because the snapshot won't complete until after all
+     * higher priority edges are completed and will increase the number of
+     * duplicately processed items.
      */
     public Edge priority(int priority) {
         if (priority <= MasterContext.SNAPSHOT_EDGE_PRIORITY) {
             throw new IllegalArgumentException("priority must be > " + MasterContext.SNAPSHOT_EDGE_PRIORITY);
         }
+        return priorityInt(priority);
+    }
+
+    /**
+     * Internal API
+     */
+    public Edge priorityInt(int priority) {
         this.priority = priority;
         return this;
     }

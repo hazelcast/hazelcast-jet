@@ -101,15 +101,15 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         state = initialProcessingState();
     }
 
-    private OutboxImpl createOutbox(OutboundCollector snapshotQueue) {
-        OutboundCollector[] collectors = new OutboundCollector[outstreams.length + (snapshotQueue == null ? 0 : 1)];
+    private OutboxImpl createOutbox(OutboundCollector ssCollector) {
+        OutboundCollector[] collectors = new OutboundCollector[outstreams.length + (ssCollector == null ? 0 : 1)];
         for (int i = 0; i < outstreams.length; i++) {
             collectors[i] = outstreams[i].getCollector();
         }
-        if (snapshotQueue != null) {
-            collectors[outstreams.length] = snapshotQueue;
+        if (ssCollector != null) {
+            collectors[outstreams.length] = ssCollector;
         }
-        return createOutboxInt(collectors, snapshotQueue != null, progTracker,
+        return createOutboxInt(collectors, ssCollector != null, progTracker,
                 context.getSerializationService());
     }
 

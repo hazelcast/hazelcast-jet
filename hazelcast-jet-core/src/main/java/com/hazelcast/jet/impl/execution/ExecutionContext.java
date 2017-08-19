@@ -48,6 +48,7 @@ public class ExecutionContext {
     private final Address coordinator;
     private final Set<Address> participants;
     private final Object executionLock = new Object();
+    private final ILogger logger;
 
     // dest vertex id --> dest ordinal --> sender addr --> receiver tasklet
     private Map<Integer, Map<Integer, Map<Address, ReceiverTasklet>>> receiverMap = emptyMap();
@@ -73,6 +74,8 @@ public class ExecutionContext {
         this.participants = new HashSet<>(participants);
         this.execService = execService;
         this.nodeEngine = nodeEngine;
+
+        logger = nodeEngine.getLogger(getClass());
     }
 
     public ExecutionContext initialize(ExecutionPlan plan) {
@@ -80,9 +83,10 @@ public class ExecutionContext {
         // available to be completed in the case of init failure
         procSuppliers = unmodifiableList(plan.getProcessorSuppliers());
         processors = plan.getProcessors();
-        snapshotContext = new SnapshotContext(plan.getJobConfig().getProcessingGuarantee());
+        snapshotContext = new SnapshotContext(nodeEngine.getLogger(SnapshotContext.class), jobId, executionId,
+                plan.getJobConfig().getProcessingGuarantee());
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext);
-        snapshotContext.initTaskletCount(plan.getStoreSnapshotTaskletCount());
+        snapshotContext.initTaskletCount(plan.getStoreSnapshotTaskletCount(), plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
         senderMap = unmodifiableMap(plan.getSenderMap());
         tasklets = plan.getTasklets();

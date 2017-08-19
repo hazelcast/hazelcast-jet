@@ -16,6 +16,10 @@
 
 package com.hazelcast.jet.impl.execution;
 
+/**
+ * Special item interleaved with other items on queue to signal a start of a
+ * snapshot.
+ */
 public class SnapshotBarrier {
     private final long snapshotId;
 
@@ -51,5 +55,4 @@ public class SnapshotBarrier {
     public int hashCode() {
         return (int) (snapshotId ^ (snapshotId >>> 32));
     }
-
 }

@@ -20,15 +20,11 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorMetaSupplier.Context;
 import com.hazelcast.jet.ProcessorSupplier;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.serialization.SerializationService;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
-
-import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 
 public final class Contexts {
 

@@ -95,6 +95,22 @@ public class VertexDef implements IdentifiedDataSerializable {
         return JetImplDataSerializerHook.VERTEX_DEF;
     }
 
+    /**
+     * Returns true, if this vertex is higher priority source for some of it's
+     * downstream vertices or if some of it's downstream vertices is higher
+     * priority source itself (determined by recursion).
+     */
+    public boolean isHigherPriorityUpstream() {
+        for (EdgeDef outboundEdge : outboundEdges) {
+            if (outboundEdge.destVertex().isHigherPriorityUpstream()
+                    || outboundEdge.destVertex().inboundEdges.stream()
+                              .anyMatch(edge -> edge.priority() < outboundEdge.priority())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeInt(id);

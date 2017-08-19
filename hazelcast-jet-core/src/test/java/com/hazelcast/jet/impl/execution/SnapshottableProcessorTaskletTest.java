@@ -25,6 +25,7 @@ import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.test.TestOutbox.MockData;
 import com.hazelcast.jet.test.TestOutbox.MockSerializationService;
+import com.hazelcast.logging.ILogger;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Before;
@@ -53,6 +54,7 @@ import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
@@ -194,7 +196,8 @@ public class SnapshottableProcessorTaskletTest {
         for (int i = 0; i < instreams.size(); i++) {
             instreams.get(i).setOrdinal(i);
         }
-        snapshotContext = new SnapshotContext(guarantee);
+        snapshotContext = new SnapshotContext(mock(ILogger.class), 0, 0, guarantee);
+        snapshotContext.initTaskletCount(1, 0);
         final CooperativeProcessorTasklet t = new CooperativeProcessorTasklet(context, processor, instreams, outstreams,
                 snapshotContext, snapshotCollector);
         t.init(new CompletableFuture<>());

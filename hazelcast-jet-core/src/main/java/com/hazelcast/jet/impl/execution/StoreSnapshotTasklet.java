@@ -41,6 +41,7 @@ public class StoreSnapshotTasklet implements Tasklet {
     private final InboundEdgeStream inboundEdgeStream;
     private final SnapshotContext snapshotContext;
     private final AsyncMapWriter mapWriter;
+    private final boolean isHigherPrioritySource;
     private final String vertexName;
 
     private long currentSnapshotId;
@@ -52,11 +53,12 @@ public class StoreSnapshotTasklet implements Tasklet {
     private boolean inputIsDone;
 
     public StoreSnapshotTasklet(SnapshotContext snapshotContext, long jobId, InboundEdgeStream inboundEdgeStream,
-                                NodeEngine nodeEngine, String vertexName) {
+                                NodeEngine nodeEngine, String vertexName, boolean isHigherPrioritySource) {
         this.snapshotContext = snapshotContext;
         this.jobId = jobId;
         this.inboundEdgeStream = inboundEdgeStream;
         this.vertexName = vertexName;
+        this.isHigherPrioritySource = isHigherPrioritySource;
 
         this.mapWriter = new AsyncMapWriter(nodeEngine);
         this.mapWriter.setMapName(currMapName());
@@ -130,7 +132,7 @@ public class StoreSnapshotTasklet implements Tasklet {
                 if (numActiveFlushes.get() != 0) {
                     progTracker.notDone();
                 }
-                snapshotContext.taskletDone(currentSnapshotId - 1);
+                snapshotContext.taskletDone(currentSnapshotId - 1, isHigherPrioritySource);
                 return;
 
             default:

@@ -27,7 +27,6 @@ import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.SnapshotRestorePolicy;
 import com.hazelcast.jet.TopologyChangedException;
 import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
@@ -145,13 +144,6 @@ public class MasterContext {
         DAG dag = deserializeDAG();
         vertexNames = dag.getVertexNames();
 
-        // check the "no different priority with EXACTLY_ONCE" restriction
-        if (jobRecord.getConfig().getProcessingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE
-                && jobRecord.getConfig().getSnapshotInterval() > 0 && dag.differentPriorityEdgesVertex() != null) {
-            throw new JetException("Jobs with different-priority edges and EXACTLY_ONCE guarantee " +
-                    "are currently not supported. Vertex=" + dag.differentPriorityEdgesVertex());
-        }
-
         SnapshotRecord snapshotRec = coordinationService.getSnapshotRepository().findUsableSnapshot(jobId);
         if (snapshotRec != null) {
             // add snapshot restore vertices to the DAG
@@ -181,7 +173,7 @@ public class MasterContext {
                 Edge edge;
                 dag.edge(edge = from(readSnapshotVertex)
                         .to(vertex, dag.getInboundEdges(vertexName).size())
-                        .priority(Integer.MIN_VALUE)
+                        .priorityInt(Integer.MIN_VALUE)
                         .distributed());
                 if (snapshotRestorePolicy == SnapshotRestorePolicy.PARTITIONED) {
                     edge.partitioned(entryKey());

@@ -302,27 +302,9 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     }
 
     /**
-     * Returns the name of any vertex in the DAG that has two inbound edges
-     * with different priority.
+     * Returns the list of all vertices.
      * <p>
-     * This method is internal API.
-     */
-    public String differentPriorityEdgesVertex() {
-        Map<String, Integer> priorities = new HashMap<>();
-        for (Edge edge : edges) {
-            Integer oldPriority = priorities.get(edge.getDestName());
-            if (oldPriority == null) {
-                priorities.put(edge.getDestName(), edge.getPriority());
-            } else if (oldPriority != edge.getPriority()) {
-                return edge.getDestName();
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Returns the list of all vertic
-     * @return
+     * This method is internal API and can change in future.
      */
     public List<String> getVertexNames() {
         return new ArrayList<>(verticesByName.keySet());

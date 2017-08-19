@@ -132,7 +132,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             ConcurrentConveyor<Object> ssConveyor = ConcurrentConveyor.concurrentConveyor(null, snapshotQueues);
             StoreSnapshotTasklet ssTasklet = new StoreSnapshotTasklet(snapshotContext, jobId,
                     new ConcurrentInboundEdgeStream(ssConveyor, 0, 0, true),
-                    nodeEngine, srcVertex.name());
+                    nodeEngine, srcVertex.name(), srcVertex.isHigherPriorityUpstream());
             tasklets.add(ssTasklet);
 
             int processorIdx = 0;
@@ -449,6 +449,12 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     public int getStoreSnapshotTaskletCount() {
         return (int) tasklets.stream()
                              .filter(t -> t instanceof StoreSnapshotTasklet)
+                             .count();
+    }
+
+    public int getHigherPriorityVertexCount() {
+        return (int) vertices.stream()
+                             .filter(VertexDef::isHigherPriorityUpstream)
                              .count();
     }
 }
