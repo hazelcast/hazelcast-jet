@@ -47,13 +47,32 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.zip.DeflaterOutputStream;
 
-import static com.hazelcast.jet.config.JetConfig.IDS_MAP_NAME;
-import static com.hazelcast.jet.config.JetConfig.JOB_RECORDS_MAP_NAME;
-import static com.hazelcast.jet.config.JetConfig.RESOURCES_MAP_NAME_PREFIX;
 import static com.hazelcast.jet.impl.util.Util.idToString;
 import static java.util.concurrent.TimeUnit.HOURS;
 
 public class JobRepository {
+
+    /**
+     * Name of internal IMap which stores job resources
+     */
+    public static final String RESOURCES_MAP_NAME_PREFIX = "__jet.resources.";
+
+
+    /**
+     * Name of internal IMap which is used for unique id generation
+     */
+    public static final String IDS_MAP_NAME = "__jet.ids";
+
+    /**
+     * Name of internal IMap which stores job records
+     */
+    public static final String JOB_RECORDS_MAP_NAME = "__jet.records";
+
+    /**
+     * Name of internal IMap which stores job results
+     */
+    public static final String JOB_RESULTS_MAP_NAME = "__jet.results";
+
 
     private static final String RESOURCE_MARKER = "__jet.jobId";
     private static final long JOB_EXPIRATION_DURATION_IN_MILLIS = HOURS.toMillis(2);

@@ -18,50 +18,15 @@ package com.hazelcast.jet.config;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.config.MapConfig;
-import com.hazelcast.map.merge.IgnoreMergingEntryMapMergePolicy;
 
-import java.util.List;
 import java.util.Properties;
 
 import static com.hazelcast.spi.partition.IPartition.MAX_BACKUP_COUNT;
-import static java.util.Arrays.asList;
 
 /**
  * Configuration object for a Jet instance.
  */
 public class JetConfig {
-
-    /**
-     * Name of internal IMap which is used for unique id generation
-     */
-    public static final String IDS_MAP_NAME = "__jet.ids";
-
-    /**
-     * Name of internal IMap which stores job resources
-     */
-    public static final String RESOURCES_MAP_NAME_PREFIX = "__jet.resources.";
-
-    /**
-     * Name of internal IMap which stores job records
-     */
-    public static final String JOB_RECORDS_MAP_NAME = "__jet.records";
-
-    /**
-     * Name of internal IMap which stores job results
-     */
-    public static final String JOB_RESULTS_MAP_NAME = "__jet.results";
-
-    /**
-     * Name of internal IMap which stores snapshot ids
-     */
-    public static final String SNAPSHOT_RECORDS_MAP_NAME = "__jet.snapshots";
-
-    /**
-     * Name of internal IMap which stores snapshot data. This a prefix, the
-     * format is:
-     * <pre>SNAPSHOT_DATA_MAP_NAME_PREFIX + jobId + '.' + snapshotId + '.' + vertexName</pre>
-     */
-    public static final String SNAPSHOT_DATA_MAP_NAME_PREFIX = "__jet.snapshots.";
 
     /**
      * The default port number for the cluster auto-discovery mechanism's
@@ -73,7 +38,6 @@ public class JetConfig {
      * The default backup count to be used for storing job metadata in Hazelcast maps
      */
     public static final int JOB_METADATA_DEFAULT_BACKUP_COUNT = MapConfig.DEFAULT_BACKUP_COUNT;
-
 
     private Config hazelcastConfig = defaultHazelcastConfig();
     private InstanceConfig instanceConfig = new InstanceConfig();
@@ -93,7 +57,6 @@ public class JetConfig {
      */
     public JetConfig setHazelcastConfig(Config config) {
         hazelcastConfig = config;
-        setInternalMapMergePolicies(config);
         setJobMetadataBackupCount(jobMetadataBackupCount);
         return this;
     }
@@ -153,7 +116,6 @@ public class JetConfig {
         } else if (newBackupCount > MAX_BACKUP_COUNT) {
             throw new IllegalArgumentException("backup-count can't be larger than than " + MAX_BACKUP_COUNT);
         }
-        internalJetMapNames().forEach(name -> hazelcastConfig.getMapConfig(name).setBackupCount(newBackupCount));
         this.jobMetadataBackupCount = newBackupCount;
         return this;
     }
@@ -170,23 +132,6 @@ public class JetConfig {
         config.getNetworkConfig().getJoin().getMulticastConfig().setMulticastPort(DEFAULT_JET_MULTICAST_PORT);
         config.getGroupConfig().setName("jet");
         config.getGroupConfig().setPassword("jet-pass");
-        setInternalMapMergePolicies(config);
         return config;
     }
-
-    private static void setInternalMapMergePolicies(Config config) {
-        String mergePolicy = IgnoreMergingEntryMapMergePolicy.class.getName();
-        internalJetMapNames().forEach(name -> config.getMapConfig(name).setMergePolicy(mergePolicy));
-    }
-
-    private static List<String> internalJetMapNames() {
-        return asList(
-                IDS_MAP_NAME,
-                JOB_RECORDS_MAP_NAME,
-                RESOURCES_MAP_NAME_PREFIX + "*",
-                JOB_RESULTS_MAP_NAME,
-                SNAPSHOT_RECORDS_MAP_NAME,
-                SNAPSHOT_DATA_MAP_NAME_PREFIX + "*");
-    }
-
 }

@@ -36,6 +36,8 @@ import org.junit.runner.RunWith;
 
 import java.util.Properties;
 
+import static com.hazelcast.jet.impl.coordination.JobRepository.IDS_MAP_NAME;
+import static com.hazelcast.jet.impl.coordination.JobRepository.JOB_RECORDS_MAP_NAME;
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
@@ -71,8 +73,8 @@ public class JobRepositoryTest extends JetTestSupport {
         jobRepository = new JobRepository(instance);
         jobRepository.setJobExpirationDurationInMillis(JOB_EXPIRATION_TIME_IN_MILLIS);
 
-        jobIds = instance.getMap(JetConfig.IDS_MAP_NAME);
-        jobs = instance.getMap(JetConfig.JOB_RECORDS_MAP_NAME);
+        jobIds = instance.getMap(IDS_MAP_NAME);
+        jobs = instance.getMap(JOB_RECORDS_MAP_NAME);
     }
 
     @After
@@ -154,7 +156,7 @@ public class JobRepositoryTest extends JetTestSupport {
             jobRepository.uploadJobResources(jobConfig);
             fail();
         } catch (JetException e) {
-            assertTrue(instance.getMap(JetConfig.IDS_MAP_NAME).isEmpty());
+            assertTrue(instance.getMap(IDS_MAP_NAME).isEmpty());
         }
     }
 

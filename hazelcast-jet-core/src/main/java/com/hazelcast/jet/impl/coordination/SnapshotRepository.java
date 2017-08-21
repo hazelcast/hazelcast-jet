@@ -33,11 +33,23 @@ import static com.hazelcast.jet.impl.util.Util.idToString;
 
 public class SnapshotRepository {
 
+    /**
+     * Name of internal IMap which stores snapshot ids
+     */
+    public static final String SNAPSHOT_RECORDS_MAP_NAME = "__jet.snapshots";
+
+    /**
+     * Name of internal IMap which stores snapshot data. This a prefix, the
+     * format is:
+     * <pre>SNAPSHOT_DATA_MAP_NAME_PREFIX + jobId + '.' + snapshotId + '.' + vertexName</pre>
+     */
+    public static final String SNAPSHOT_DATA_MAP_NAME_PREFIX = "__jet.snapshots.";
+
     private final IMap<Object, Object> snapshotsMap;
     private final ILogger logger;
 
     public SnapshotRepository(JetInstance jetInstance) {
-        this.snapshotsMap = jetInstance.getHazelcastInstance().getMap(JetConfig.SNAPSHOT_RECORDS_MAP_NAME);
+        this.snapshotsMap = jetInstance.getHazelcastInstance().getMap(SNAPSHOT_RECORDS_MAP_NAME);
         this.logger = jetInstance.getHazelcastInstance().getLoggingService().getLogger(getClass());
     }
 
@@ -72,7 +84,7 @@ public class SnapshotRepository {
     }
 
     public static String snapshotDataMapName(long jobId, long snapshotId, String vertexName) {
-        return JetConfig.SNAPSHOT_DATA_MAP_NAME_PREFIX + jobId + '.' + snapshotId + '.' + vertexName;
+        return SNAPSHOT_DATA_MAP_NAME_PREFIX + jobId + '.' + snapshotId + '.' + vertexName;
     }
 
     private static class MarkRecordCompleteEntryProcessor extends AbstractEntryProcessor<Object, SnapshotRecord> {

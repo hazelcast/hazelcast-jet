@@ -42,6 +42,8 @@ import java.util.Map.Entry;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.TestUtil.throttle;
+import static com.hazelcast.jet.impl.coordination.SnapshotRepository.SNAPSHOT_DATA_MAP_NAME_PREFIX;
+import static com.hazelcast.jet.impl.coordination.SnapshotRepository.SNAPSHOT_RECORDS_MAP_NAME;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastSerialClassRunner.class)
@@ -98,7 +100,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
     }
 
     private static void dumpSnapshots(JetInstance jet) {
-        IMap<List<Long>, SnapshotRecord> map = jet.getMap(JetConfig.SNAPSHOT_RECORDS_MAP_NAME);
+        IMap<List<Long>, SnapshotRecord> map = jet.getMap(SNAPSHOT_RECORDS_MAP_NAME);
         for (Entry<List<Long>, SnapshotRecord> entry : map.entrySet()) {
             List<Long> key = entry.getKey();
             long jobId = key.get(0);
@@ -109,7 +111,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
             System.out.println("sr=" + sr);
 
             for (String vertexId : sr.vertices()) {
-                IStreamMap<Object, Object> map2 = jet.getMap(JetConfig.SNAPSHOT_DATA_MAP_NAME_PREFIX + jobId + '.' + snapshotId + '.' + vertexId);
+                IStreamMap<Object, Object> map2 = jet.getMap(SNAPSHOT_DATA_MAP_NAME_PREFIX + jobId + '.' + snapshotId + '.' + vertexId);
                 System.out.println("--- " + map2.getName());
                 int cnt = 0;
                 for (Entry<Object, Object> entry2 : map2.entrySet()) {
