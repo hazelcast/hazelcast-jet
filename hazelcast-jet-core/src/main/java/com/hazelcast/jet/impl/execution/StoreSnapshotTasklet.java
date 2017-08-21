@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.impl.coordination.SnapshotRepository;
+import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.util.AsyncMapWriter;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;

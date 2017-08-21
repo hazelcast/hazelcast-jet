@@ -20,7 +20,7 @@ import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.config.ProcessingGuarantee;
-import com.hazelcast.jet.impl.coordination.MasterContext;
+import com.hazelcast.jet.impl.MasterContext;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.test.TestOutbox.MockData;
@@ -174,7 +174,7 @@ public class SnapshottableProcessorTaskletTest {
         Entry<String, String> ssEntry1 = entry("k1", "v1");
         Entry<String, String> ssEntry2 = entry("k2", "v2");
         List<Object> restoredSnapshot = asList(ssEntry1, ssEntry2, DONE_ITEM);
-        MockInboundStream instream1 = new MockInboundStream(MasterContext.SNAPSHOT_EDGE_PRIORITY, restoredSnapshot, 1024);
+        MockInboundStream instream1 = new MockInboundStream(Integer.MIN_VALUE, restoredSnapshot, 1024);
         MockInboundStream instream2 = new MockInboundStream(0, asList(barrier(0), DONE_ITEM), 1024);
         MockOutboundStream outstream1 = new MockOutboundStream(0);
 

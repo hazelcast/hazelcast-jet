@@ -19,7 +19,7 @@ package com.hazelcast.jet;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.impl.SerializationConstants;
-import com.hazelcast.jet.impl.coordination.MasterContext;
+import com.hazelcast.jet.impl.MasterContext;
 import com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -64,17 +64,16 @@ public class Edge implements IdentifiedDataSerializable {
     private int destOrdinal;
 
     private int priority;
-    private boolean isBuffered;
     private boolean isDistributed;
     private Partitioner<?> partitioner;
     private RoutingPolicy routingPolicy = RoutingPolicy.UNICAST;
 
     private EdgeConfig config;
 
-    Edge() {
+    protected Edge() {
     }
 
-    private Edge(Vertex source, int sourceOrdinal, Vertex destination, int destOrdinal) {
+    protected Edge(Vertex source, int sourceOrdinal, Vertex destination, int destOrdinal) {
         this.source = source;
         this.sourceName = source.getName();
         this.sourceOrdinal = sourceOrdinal;
@@ -200,16 +199,9 @@ public class Edge implements IdentifiedDataSerializable {
      * duplicately processed items.
      */
     public Edge priority(int priority) {
-        if (priority <= MasterContext.SNAPSHOT_EDGE_PRIORITY) {
-            throw new IllegalArgumentException("priority must be > " + MasterContext.SNAPSHOT_EDGE_PRIORITY);
+        if (priority <= Integer.MIN_VALUE) {
+            throw new IllegalArgumentException("priority must be > " + Integer.MIN_VALUE);
         }
-        return priorityInt(priority);
-    }
-
-    /**
-     * Internal API
-     */
-    public Edge priorityInt(int priority) {
         this.priority = priority;
         return this;
     }
@@ -393,16 +385,15 @@ public class Edge implements IdentifiedDataSerializable {
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeUTF(sourceName);
-        out.writeInt(sourceOrdinal);
-        out.writeUTF(destName);
-        out.writeInt(destOrdinal);
-        out.writeInt(priority);
-        out.writeBoolean(isBuffered);
-        out.writeBoolean(isDistributed);
-        out.writeObject(routingPolicy);
-        CustomClassLoadedObject.write(out, partitioner);
-        out.writeObject(config);
+        out.writeUTF(getSourceName());
+        out.writeInt(getSourceOrdinal());
+        out.writeUTF(getDestName());
+        out.writeInt(getDestOrdinal());
+        out.writeInt(getPriority());
+        out.writeBoolean(isDistributed());
+        out.writeObject(getRoutingPolicy());
+        CustomClassLoadedObject.write(out, getPartitioner());
+        out.writeObject(getConfig());
     }
 
     @Override
@@ -412,7 +403,6 @@ public class Edge implements IdentifiedDataSerializable {
         destName = in.readUTF();
         destOrdinal = in.readInt();
         priority = in.readInt();
-        isBuffered = in.readBoolean();
         isDistributed = in.readBoolean();
         routingPolicy = in.readObject();
         partitioner = CustomClassLoadedObject.read(in);

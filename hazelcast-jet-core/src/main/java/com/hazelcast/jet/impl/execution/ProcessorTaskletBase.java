@@ -19,7 +19,7 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.config.ProcessingGuarantee;
-import com.hazelcast.jet.impl.coordination.MasterContext;
+import com.hazelcast.jet.impl.MasterContext;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.CircularListCursor;
@@ -302,6 +302,6 @@ public abstract class ProcessorTaskletBase implements Tasklet {
      * Returns, if the inbox we are currently on is the snapshot restoring inbox.
      */
     private boolean isSnapshotInbox() {
-        return currInstream != null && currInstream.priority() == MasterContext.SNAPSHOT_EDGE_PRIORITY;
+        return currInstream != null && currInstream.priority() == Integer.MIN_VALUE;
     }
 }

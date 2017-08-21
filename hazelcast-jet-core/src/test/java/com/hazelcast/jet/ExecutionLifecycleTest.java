@@ -28,6 +28,7 @@ import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
+import com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.properties.GroupProperty;
@@ -257,7 +258,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
 
         JetService jetService = getJetService(instance);
         final Map<MemberInfo, ExecutionPlan> executionPlans =
-                jetService.getJobCoordinationService().createExecutionPlans(membersView, dag, new JobConfig());
+                ExecutionPlanBuilder.createExecutionPlans(nodeEngineImpl, membersView, dag, new JobConfig());
         ExecutionPlan executionPlan = executionPlans.get(membersView.getMember(localAddress));
         long jobId = 0;
         long executionId = 1;

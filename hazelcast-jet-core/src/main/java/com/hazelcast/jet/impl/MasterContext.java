@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.coordination;
+package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.internal.cluster.MemberInfo;
@@ -27,10 +27,9 @@ import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.SnapshotRestorePolicy;
 import com.hazelcast.jet.TopologyChangedException;
 import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.impl.JetService;
-import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
+import com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder;
 import com.hazelcast.jet.impl.operation.CompleteOperation;
 import com.hazelcast.jet.impl.operation.ExecuteOperation;
 import com.hazelcast.jet.impl.operation.InitOperation;
@@ -58,14 +57,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import static com.hazelcast.jet.Edge.from;
 import static com.hazelcast.jet.JobStatus.COMPLETED;
 import static com.hazelcast.jet.JobStatus.FAILED;
 import static com.hazelcast.jet.JobStatus.NOT_STARTED;
 import static com.hazelcast.jet.JobStatus.RESTARTING;
 import static com.hazelcast.jet.JobStatus.RUNNING;
 import static com.hazelcast.jet.JobStatus.STARTING;
-import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.SnapshotRestorePolicy.BROADCAST;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isJobRestartRequired;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
@@ -77,7 +75,6 @@ import static java.util.stream.Collectors.toList;
 
 public class MasterContext {
 
-    public static final int SNAPSHOT_EDGE_PRIORITY = Integer.MIN_VALUE;
     private final NodeEngineImpl nodeEngine;
     private final JobCoordinationService coordinationService;
     private final ILogger logger;
@@ -146,41 +143,7 @@ public class MasterContext {
 
         SnapshotRecord snapshotRec = coordinationService.snapshotRepository().findUsableSnapshot(jobId);
         if (snapshotRec != null) {
-            // add snapshot restore vertices to the DAG
-            for (String vertexName : snapshotRec.vertices()) {
-                Vertex vertex = dag.getVertex(vertexName);
-                if (vertex == null) {
-                    logger.warning(formatIds(jobId, executionId) + ", snapshot " + snapshotRec.snapshotId()
-                            + ": snapshot contains data for vertex " + vertexName + ", but this vertex does not exist");
-                    continue;
-                }
-                SnapshotRestorePolicy snapshotRestorePolicy = vertex.getSupplier().snapshotRestorePolicy();
-                if (snapshotRestorePolicy == null) {
-                    logger.warning(formatIds(jobId, executionId) + ", snapshot " + snapshotRec.snapshotId()
-                            + ": snapshot contains data for vertex " + vertexName + ", but this vertex is not stateful");
-                    continue;
-                }
-
-                if (dag.getInboundEdges(vertexName).stream().anyMatch(e -> e.getPriority() <= SNAPSHOT_EDGE_PRIORITY)) {
-                    // We set the snapshot restore edge priority to MIN_VALUE. If there is other edge with that
-                    // priority, it will conflict.
-                    throw new JetException("Edge with MIN_VALUE priority is not allowed");
-                }
-
-                Vertex readSnapshotVertex = dag.newVertex("__read_snapshot:" + vertexName,
-                        readMap(SnapshotRepository.snapshotDataMapName(jobId, snapshotRec.snapshotId(), vertexName)))
-                                          .localParallelism(vertex.getLocalParallelism());
-                Edge edge;
-                dag.edge(edge = from(readSnapshotVertex)
-                        .to(vertex, dag.getInboundEdges(vertexName).size())
-                        .priorityInt(Integer.MIN_VALUE)
-                        .distributed());
-                if (snapshotRestorePolicy == SnapshotRestorePolicy.PARTITIONED) {
-                    edge.partitioned(entryKey());
-                } else {
-                    edge.broadcast();
-                }
-            }
+            rewriteDagWithSnapshotRestore(dag, snapshotRec);
         }
 
         executionId = executionIdSupplier.apply(jobId);
@@ -198,6 +161,29 @@ public class MasterContext {
         Function<ExecutionPlan, Operation> operationCtor = plan ->
                 new InitOperation(jobId, executionId, membersView.getVersion(), participants, plan);
         invoke(operationCtor, this::onInitStepCompleted, null);
+    }
+
+    private void rewriteDagWithSnapshotRestore(DAG dag, SnapshotRecord snapshotRec) {
+        for (String vertexName : snapshotRec.vertices()) {
+            Vertex vertex = dag.getVertex(vertexName);
+            if (vertex == null) {
+                logger.warning(formatIds(jobId, executionId) + ", snapshot " + snapshotRec.snapshotId()
+                        + ": snapshot contains data for vertex " + vertexName + ", but this vertex does not exist");
+                continue;
+            }
+            List<Edge> inboundEdges = dag.getInboundEdges(vertexName);
+            if (inboundEdges.stream().anyMatch(e -> e.getPriority() <= Integer.MIN_VALUE)) {
+                // We set the snapshot restore edge priority to MIN_VALUE. If there is other edge with that
+                // priority, it will conflict.
+                throw new JetException("Edge with MIN_VALUE priority is not allowed");
+            }
+
+            Vertex readSnapshotVertex = dag.newVertex("__read_snapshot." + vertexName,
+                    readMap(SnapshotRepository.snapshotDataMapName(jobId, snapshotRec.snapshotId(), vertexName)))
+                                      .localParallelism(vertex.getLocalParallelism());
+            //TODO: what parallelism to use here when restoring snapshots?
+            dag.edge(new SnapshotRestoreEdge(readSnapshotVertex, vertex, inboundEdges.size()));
+        }
     }
 
     /**
@@ -263,7 +249,7 @@ public class MasterContext {
         logger.info("Start executing " + formatIds(jobId, executionId) + ", status " + jobStatus()
                 + ": " + dag);
         logger.fine("Building execution plan for " + formatIds(jobId, executionId));
-        return coordinationService.createExecutionPlans(membersView, dag, jobRecord.getConfig());
+        return ExecutionPlanBuilder.createExecutionPlans(nodeEngine, membersView, dag, jobRecord.getConfig());
     }
 
     private DAG deserializeDAG() {
@@ -572,6 +558,32 @@ public class MasterContext {
                          })
                          .invoke();
             futures.put(member, future);
+        }
+    }
+
+    /**
+     * Specific type of edge to be used when restoring snapshots
+     */
+    private class SnapshotRestoreEdge extends Edge {
+
+        public SnapshotRestoreEdge(Vertex source, Vertex destination, int destOrdinal) {
+            super(source, 0, destination, destOrdinal);
+        }
+
+        @Override
+        public int getPriority() {
+            return Integer.MIN_VALUE;
+        }
+
+        @Override
+        public boolean isDistributed() {
+            return super.isDistributed();
+        }
+
+        @Override
+        public RoutingPolicy getRoutingPolicy() {
+            return getDestination().getSupplier().snapshotRestorePolicy() == BROADCAST ? RoutingPolicy.BROADCAST :
+                    RoutingPolicy.PARTITIONED;
         }
     }
 }

@@ -18,7 +18,6 @@ package com.hazelcast.jet;
 
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.impl.ProcessorMetaSupplierImpl;
 import com.hazelcast.nio.Address;
 
 import javax.annotation.Nonnull;
@@ -98,7 +97,7 @@ public interface ProcessorMetaSupplier extends Serializable {
      * Factory method that wraps the given {@code Supplier<Processor>}
      * and uses it as the supplier of all {@code Processor} instances.
      * Specifically, returns a meta-supplier that will always return the
-     * result of calling {@link ProcessorSupplier#of(DistributedSupplier <Processor>)}.
+     * result of calling {@link ProcessorSupplier#of(DistributedSupplier)}.
      */
     @Nonnull
     static ProcessorMetaSupplier of(@Nonnull DistributedSupplier<? extends Processor> procSupplier) {
@@ -122,7 +121,12 @@ public interface ProcessorMetaSupplier extends Serializable {
      * {@link ProcessorSupplier} for each given address
      */
     static ProcessorMetaSupplier of(DistributedFunction<Address, ProcessorSupplier> addressToSupplier) {
-        return new ProcessorMetaSupplierImpl(addressToSupplier, SnapshotRestorePolicy.PARTITIONED);
+        return new ProcessorMetaSupplier() {
+            @Nonnull @Override
+            public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
+                return addressToSupplier;
+            }
+        };
     }
 
     /**
@@ -131,7 +135,18 @@ public interface ProcessorMetaSupplier extends Serializable {
      */
     static ProcessorMetaSupplier of(DistributedFunction<Address, ProcessorSupplier> addressToSupplier,
                                     SnapshotRestorePolicy snapshotRestorePolicy) {
-        return new ProcessorMetaSupplierImpl(addressToSupplier, snapshotRestorePolicy);
+        return new ProcessorMetaSupplier() {
+            @Nonnull @Override
+            public
+            Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
+                return addressToSupplier;
+            }
+
+            @Override
+            public SnapshotRestorePolicy snapshotRestorePolicy() {
+                return snapshotRestorePolicy;
+            }
+        };
     }
 
     /**

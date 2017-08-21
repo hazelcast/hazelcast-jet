@@ -52,9 +52,10 @@ public final class ExecutionPlanBuilder {
     }
 
     public static Map<MemberInfo, ExecutionPlan> createExecutionPlans(
-            NodeEngine nodeEngine, MembersView membersView, DAG dag, int defaultParallelism,
-            JobConfig jobConfig) {
+            NodeEngine nodeEngine, MembersView membersView, DAG dag, JobConfig jobConfig
+    ) {
         JetInstance instance = getJetInstance(nodeEngine);
+        int defaultParallelism = instance.getConfig().getInstanceConfig().getCooperativeThreadCount();
         final Collection<MemberInfo> members = new HashSet<>(membersView.size());
         final Address[] partitionOwners = new Address[nodeEngine.getPartitionService().getPartitionCount()];
         initPartitionOwnersAndMembers(nodeEngine, membersView, members, partitionOwners);

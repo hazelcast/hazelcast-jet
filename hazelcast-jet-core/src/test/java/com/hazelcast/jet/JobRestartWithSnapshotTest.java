@@ -20,7 +20,7 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.impl.coordination.SnapshotRepository;
+import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.processor.DiagnosticProcessors;
 import com.hazelcast.jet.stream.IStreamMap;
@@ -28,7 +28,6 @@ import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -42,8 +41,8 @@ import java.util.Map.Entry;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.TestUtil.throttle;
-import static com.hazelcast.jet.impl.coordination.SnapshotRepository.SNAPSHOT_DATA_MAP_NAME_PREFIX;
-import static com.hazelcast.jet.impl.coordination.SnapshotRepository.SNAPSHOT_RECORDS_MAP_NAME;
+import static com.hazelcast.jet.impl.SnapshotRepository.SNAPSHOT_DATA_MAP_NAME_PREFIX;
+import static com.hazelcast.jet.impl.SnapshotRepository.SNAPSHOT_RECORDS_MAP_NAME;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastSerialClassRunner.class)

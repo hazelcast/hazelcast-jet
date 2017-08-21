@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.coordination;
+package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.IMap;
@@ -28,9 +28,6 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.impl.JobExecutionService;
-import com.hazelcast.jet.impl.JobRecord;
-import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.deployment.JetClassLoader;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder;
@@ -53,7 +50,7 @@ import static com.hazelcast.cluster.memberselector.MemberSelectors.DATA_MEMBER_S
 import static com.hazelcast.jet.JobStatus.COMPLETED;
 import static com.hazelcast.jet.JobStatus.FAILED;
 import static com.hazelcast.jet.JobStatus.NOT_STARTED;
-import static com.hazelcast.jet.impl.coordination.JobRepository.JOB_RESULTS_MAP_NAME;
+import static com.hazelcast.jet.impl.JobRepository.JOB_RESULTS_MAP_NAME;
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
 import static com.hazelcast.jet.impl.util.Util.formatIds;
 import static com.hazelcast.jet.impl.util.Util.idToString;
@@ -128,11 +125,6 @@ public class JobCoordinationService {
         }
 
         return masterContext.completionFuture();
-    }
-
-    public Map<MemberInfo, ExecutionPlan> createExecutionPlans(MembersView membersView, DAG dag, JobConfig jobConfig) {
-        return ExecutionPlanBuilder.createExecutionPlans(nodeEngine, membersView, dag,
-                config.getInstanceConfig().getCooperativeThreadCount(), jobConfig);
     }
 
     /**

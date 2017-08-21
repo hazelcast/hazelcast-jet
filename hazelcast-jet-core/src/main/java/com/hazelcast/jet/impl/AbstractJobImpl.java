@@ -25,7 +25,6 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.impl.coordination.JobRepository;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.exception.TargetDisconnectedException;
 import com.hazelcast.spi.exception.TargetNotMemberException;

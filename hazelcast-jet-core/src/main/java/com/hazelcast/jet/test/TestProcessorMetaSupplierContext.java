@@ -19,6 +19,8 @@ package com.hazelcast.jet.test;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.ProcessorMetaSupplier;
 
+import javax.annotation.Nonnull;
+
 /**
  * Simple implementation of {@link ProcessorMetaSupplier.Context}.
  */
@@ -28,7 +30,7 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
     private int localParallelism = 1;
     private boolean snapshottingEnabled;
 
-    @Override
+    @Nonnull @Override
     public JetInstance jetInstance() {
         return jetInstance;
     }
