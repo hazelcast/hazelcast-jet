@@ -32,7 +32,7 @@ import static java.util.Arrays.asList;
 public class JetConfig {
 
     /**
-     * Name of internal IMap which stores job ids
+     * Name of internal IMap which is used for unique id generation
      */
     public static final String IDS_MAP_NAME = "__jet.ids";
 
@@ -54,7 +54,7 @@ public class JetConfig {
     /**
      * Name of internal IMap which stores snapshot ids
      */
-    public static final String SNAPSHOT_RECORDS_MAP_NAME = "__jet.shapshots";
+    public static final String SNAPSHOT_RECORDS_MAP_NAME = "__jet.snapshots";
 
     /**
      * Name of internal IMap which stores snapshot data. This a prefix, the
