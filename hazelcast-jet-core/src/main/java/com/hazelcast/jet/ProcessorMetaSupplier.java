@@ -156,6 +156,7 @@ public interface ProcessorMetaSupplier extends Serializable {
      * The default implementation returns PARTITIONED. Override this method,
      * if needed, or use #of
      */
+    @Nonnull
     default SnapshotRestorePolicy snapshotRestorePolicy() {
         return SnapshotRestorePolicy.PARTITIONED;
     }

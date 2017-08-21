@@ -22,7 +22,6 @@ import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.cluster.impl.MembersView;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Edge;
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.TopologyChangedException;
 import com.hazelcast.jet.Vertex;
@@ -41,8 +40,11 @@ import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nullable;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -64,6 +66,7 @@ import static com.hazelcast.jet.JobStatus.RESTARTING;
 import static com.hazelcast.jet.JobStatus.RUNNING;
 import static com.hazelcast.jet.JobStatus.STARTING;
 import static com.hazelcast.jet.SnapshotRestorePolicy.BROADCAST;
+import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.execution.SnapshotContext.NO_SNAPSHOT;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isJobRestartRequired;
@@ -87,7 +90,7 @@ public class MasterContext {
     private volatile long executionId;
     private volatile long jobStartTime;
     private volatile Map<MemberInfo, ExecutionPlan> executionPlanMap;
-    private volatile List<String> vertexNames;
+    private volatile Set<String> vertexNames;
 
     private volatile long nextSnapshotId;
     private volatile ScheduledFuture<?> scheduledSnapshotFuture;
@@ -140,9 +143,13 @@ public class MasterContext {
         }
 
         DAG dag = deserializeDAG();
-        vertexNames = dag.getVertexNames();
+        // save a copy of vertex list, because it is going to change
+        vertexNames = new HashSet<>(dag.getVertexNames());
 
         SnapshotRecord snapshotRec = coordinationService.snapshotRepository().findLatestSnapshot(jobId);
+        if (jobStatus() == RESTARTING && snapshotRec == null && jobRecord.getConfig().getSnapshotInterval() > 0) {
+            logger.warning("No usable snapshot for job " + idToString(jobId) + " found");
+        }
         if (snapshotRec != null) {
             rewriteDagWithSnapshotRestore(dag, snapshotRec);
         }
@@ -172,6 +179,16 @@ public class MasterContext {
     }
 
     private void rewriteDagWithSnapshotRestore(DAG dag, SnapshotRecord snapshotRec) {
+        logger.info(formatIds(jobId, executionId) + ": restoring state from snapshotId=" + snapshotRec.snapshotId()
+                + ", snapshot start time="
+                + Instant.ofEpochMilli(snapshotRec.startTime()).atZone(ZoneId.systemDefault()).toLocalDateTime());
+        Set<String> verticesWithNoSnapshot = new HashSet<>(dag.getVertexNames());
+        verticesWithNoSnapshot.removeAll(snapshotRec.vertices());
+        if (!verticesWithNoSnapshot.isEmpty()) {
+            logger.warning(formatIds(jobId, executionId) + ", snapshot " + snapshotRec.snapshotId()
+                    + ": snapshot doesn't contain data for following vertices: " + verticesWithNoSnapshot);
+        }
+        // add snapshot restore vertices to the DAG
         for (String vertexName : snapshotRec.vertices()) {
             Vertex vertex = dag.getVertex(vertexName);
             if (vertex == null) {
@@ -179,18 +196,13 @@ public class MasterContext {
                         + ": snapshot contains data for vertex " + vertexName + ", but this vertex does not exist");
                 continue;
             }
-            List<Edge> inboundEdges = dag.getInboundEdges(vertexName);
-            if (inboundEdges.stream().anyMatch(e -> e.getPriority() <= Integer.MIN_VALUE)) {
-                // We set the snapshot restore edge priority to MIN_VALUE. If there is other edge with that
-                // priority, it will conflict.
-                throw new JetException("Edge with MIN_VALUE priority is not allowed");
-            }
 
-            Vertex readSnapshotVertex = dag.newVertex("__read_snapshot." + vertexName,
-                    readMap(SnapshotRepository.snapshotDataMapName(jobId, snapshotRec.snapshotId(), vertexName)))
-                                      .localParallelism(vertex.getLocalParallelism());
-            //TODO: what parallelism to use here when restoring snapshots?
-            dag.edge(new SnapshotRestoreEdge(readSnapshotVertex, vertex, inboundEdges.size()));
+            String mapName = SnapshotRepository.snapshotDataMapName(jobId, snapshotRec.snapshotId(), vertexName);
+            if (!nodeEngine.getHazelcastInstance().getMap(mapName).isEmpty()) {
+                Vertex readSnapshotVertex = dag.newVertex("__read_snapshot-" + vertexName, readMap(mapName))
+                                               .localParallelism(vertex.getLocalParallelism());
+                dag.edge(new SnapshotRestoreEdge(readSnapshotVertex, vertex, dag.getInboundEdges(vertexName).size()));
+            }
         }
     }
 
@@ -565,24 +577,20 @@ public class MasterContext {
      */
     private class SnapshotRestoreEdge extends Edge {
 
-        public SnapshotRestoreEdge(Vertex source, Vertex destination, int destOrdinal) {
+        SnapshotRestoreEdge(Vertex source, Vertex destination, int destOrdinal) {
             super(source, 0, destination, destOrdinal);
+
+            distributed();
+            if (getDestination().getSupplier().snapshotRestorePolicy() == BROADCAST) {
+                broadcast();
+            } else {
+                partitioned(entryKey());
+            }
         }
 
         @Override
         public int getPriority() {
             return Integer.MIN_VALUE;
-        }
-
-        @Override
-        public boolean isDistributed() {
-            return super.isDistributed();
-        }
-
-        @Override
-        public RoutingPolicy getRoutingPolicy() {
-            return getDestination().getSupplier().snapshotRestorePolicy() == BROADCAST ? RoutingPolicy.BROADCAST :
-                    RoutingPolicy.PARTITIONED;
         }
     }
 }

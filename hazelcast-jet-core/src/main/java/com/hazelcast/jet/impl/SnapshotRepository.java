@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.util.MaxByAggregator;
 import com.hazelcast.logging.ILogger;
@@ -92,7 +91,7 @@ public class SnapshotRepository {
         @Override
         public Object process(Entry<Object, SnapshotRecord> entry) {
             SnapshotRecord record = entry.getValue();
-            record.complete();
+            record.setComplete();
             entry.setValue(record);
             return record.startTime();
         }

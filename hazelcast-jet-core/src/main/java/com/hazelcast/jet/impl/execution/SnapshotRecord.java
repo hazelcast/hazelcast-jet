@@ -17,16 +17,12 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.impl.execution.init.JetImplDataSerializerHook;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import java.io.IOException;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.List;
+import java.util.Set;
 
 import static com.hazelcast.jet.impl.util.Util.idToString;
 import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
@@ -41,13 +37,13 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
     private long jobId;
     private long snapshotId;
     private long startTime = System.currentTimeMillis();
-    private boolean isComplete;
-    private List<String> vertices;
+    private boolean complete;
+    private Set<String> vertices;
 
     public SnapshotRecord() {
     }
 
-    public SnapshotRecord(long jobId, long snapshotId, List<String> vertices) {
+    public SnapshotRecord(long jobId, long snapshotId, Set<String> vertices) {
         this.jobId = jobId;
         this.snapshotId = snapshotId;
         this.vertices = vertices;
@@ -61,16 +57,16 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         return jobId;
     }
 
-    public List<String> vertices() {
+    public Set<String> vertices() {
         return vertices;
     }
 
-    public boolean isComplete() {
-        return isComplete;
+    public boolean complete() {
+        return complete;
     }
 
-    public void complete() {
-        isComplete = true;
+    public void setComplete() {
+        complete = true;
     }
 
     public long snapshotId() {
@@ -96,7 +92,7 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         out.writeLong(jobId);
         out.writeLong(snapshotId);
         out.writeLong(startTime);
-        out.writeBoolean(isComplete);
+        out.writeBoolean(complete);
         out.writeObject(vertices);
     }
 
@@ -105,16 +101,16 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         jobId = in.readLong();
         snapshotId = in.readLong();
         startTime = in.readLong();
-        isComplete = in.readBoolean();
+        complete = in.readBoolean();
         vertices = in.readObject();
     }
 
     @Override public String toString() {
         return "SnapshotRecord{" +
-                "jobId=" + Util.idToString(jobId) +
+                "jobId=" + idToString(jobId) +
                 ", snapshotId=" + snapshotId +
                 ", startTime=" + toLocalDateTime(startTime) +
-                ", isComplete=" + isComplete +
+                ", complete=" + complete +
                 ", vertices=" + vertices +
                 '}';
     }

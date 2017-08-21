@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static java.util.Collections.newSetFromMap;
+import static java.util.Collections.unmodifiableSet;
 
 /**
  * Describes a computation to be performed by the Jet computation engine.
@@ -289,6 +290,8 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
             Edge edge = in.readObject();
             edges.add(edge);
         }
+
+        verticesByIdentity.addAll(verticesByName.values());
     }
 
     @Override
@@ -302,11 +305,11 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     }
 
     /**
-     * Returns the list of all vertices.
+     * Returns the names of all vertices.
      * <p>
      * This method is internal API and can change in future.
      */
-    public List<String> getVertexNames() {
-        return new ArrayList<>(verticesByName.keySet());
+    public Set<String> getVertexNames() {
+        return unmodifiableSet(verticesByName.keySet());
     }
 }

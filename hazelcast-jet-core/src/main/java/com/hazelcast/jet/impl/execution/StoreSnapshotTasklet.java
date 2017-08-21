@@ -79,9 +79,6 @@ public class StoreSnapshotTasklet implements Tasklet {
             case DRAIN:
                 progTracker.notDone();
                 ProgressState result = inboundEdgeStream.drainTo(o -> {
-                    if (vertexName.equals("insertWm")) {
-                        System.out.println("received=" + o);
-                    }
                     if (o instanceof SnapshotBarrier) {
                         SnapshotBarrier barrier = (SnapshotBarrier) o;
                         assert pendingSnapshotId == barrier.snapshotId() : "Unexpected barrier, expected was " +

@@ -48,7 +48,6 @@ import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.util.CollectionUtil.toIntArray;
-import static com.hazelcast.util.CollectionUtil.toIntegerList;
 
 /**
  * Utility for cooperative writes to a Map
@@ -290,8 +289,7 @@ public class AsyncMapWriter {
         private PartitionIteratingOperation build() {
             OperationFactory factory = opProvider.createPutAllOperationFactory(mapName,
                     partitions, entries);
-            //TODO: remove list conversion after PR merge
-            return new PartitionIteratingOperation(factory, toIntegerList(partitions));
+            return new PartitionIteratingOperation(factory, partitions);
         }
     }
 }
