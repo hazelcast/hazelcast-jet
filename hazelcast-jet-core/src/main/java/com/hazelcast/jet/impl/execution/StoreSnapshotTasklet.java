@@ -44,7 +44,7 @@ public class StoreSnapshotTasklet implements Tasklet {
     private final boolean isHigherPrioritySource;
     private final String vertexName;
 
-    private long currentSnapshotId;
+    private long pendingSnapshotId;
 
     private AtomicInteger numActiveFlushes = new AtomicInteger();
 
@@ -62,6 +62,8 @@ public class StoreSnapshotTasklet implements Tasklet {
 
         this.mapWriter = new AsyncMapWriter(nodeEngine);
         this.mapWriter.setMapName(currMapName());
+        this.pendingSnapshotId = snapshotContext.lastSnapshotId() + 1;
+
     }
 
     @Nonnull
@@ -82,8 +84,8 @@ public class StoreSnapshotTasklet implements Tasklet {
                     }
                     if (o instanceof SnapshotBarrier) {
                         SnapshotBarrier barrier = (SnapshotBarrier) o;
-                        assert currentSnapshotId == barrier.snapshotId() : "Unexpected barrier, expected was " +
-                                currentSnapshotId + ", but barrier was " + barrier.snapshotId() + ", this=" + this;
+                        assert pendingSnapshotId == barrier.snapshotId() : "Unexpected barrier, expected was " +
+                                pendingSnapshotId + ", but barrier was " + barrier.snapshotId() + ", this=" + this;
                         hasReachedBarrier = true;
                     } else {
                         mapWriter.put(((Entry<Data, Data>) o));
@@ -121,7 +123,7 @@ public class StoreSnapshotTasklet implements Tasklet {
                 progTracker.notDone();
                 if (numActiveFlushes.get() == 0) {
                     snapshotContext.snapshotDoneForTasklet();
-                    currentSnapshotId++;
+                    pendingSnapshotId++;
                     mapWriter.setMapName(currMapName());
                     state = inputIsDone ? DONE : DRAIN;
                     hasReachedBarrier = false;
@@ -132,7 +134,7 @@ public class StoreSnapshotTasklet implements Tasklet {
                 if (numActiveFlushes.get() != 0) {
                     progTracker.notDone();
                 }
-                snapshotContext.taskletDone(currentSnapshotId - 1, isHigherPrioritySource);
+                snapshotContext.taskletDone(pendingSnapshotId - 1, isHigherPrioritySource);
                 return;
 
             default:
@@ -142,7 +144,7 @@ public class StoreSnapshotTasklet implements Tasklet {
 
     private String currMapName() {
         //TODO: replace jobId with executionId
-        return SnapshotRepository.snapshotDataMapName(jobId, currentSnapshotId, vertexName);
+        return SnapshotRepository.snapshotDataMapName(jobId, pendingSnapshotId, vertexName);
     }
 
     @Override

@@ -27,6 +27,7 @@ import com.hazelcast.query.EntryObject;
 import com.hazelcast.query.PredicateBuilder;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.impl.util.Util.idToString;
@@ -45,7 +46,7 @@ public class SnapshotRepository {
      */
     public static final String SNAPSHOT_DATA_MAP_NAME_PREFIX = "__jet.snapshots.";
 
-    private final IMap<Object, Object> snapshotsMap;
+    private final IMap<List<Long>, SnapshotRecord> snapshotsMap;
     private final ILogger logger;
 
     public SnapshotRepository(JetInstance jetInstance) {
@@ -66,10 +67,10 @@ public class SnapshotRepository {
     /**
      * Return snapshotId of newest complete snapshot for the specified job.
      */
-    SnapshotRecord findUsableSnapshot(long jobId) {
+    SnapshotRecord findLatestSnapshot(long jobId) {
         EntryObject eo = new PredicateBuilder().getEntryObject();
-        Entry<Long, SnapshotRecord> newestSnapshot =
-                snapshotsMap.aggregate(new MaxByAggregator<>("creationTime"),
+        Entry<List, SnapshotRecord> newestSnapshot =
+                snapshotsMap.aggregate(new MaxByAggregator<>("snapshotId"),
                         eo.get("jobId").equal(jobId)
                         .and(eo.get("complete").equal(true)));
         return newestSnapshot != null ? newestSnapshot.getValue() : null;
@@ -93,7 +94,7 @@ public class SnapshotRepository {
             SnapshotRecord record = entry.getValue();
             record.complete();
             entry.setValue(record);
-            return record.creationTime();
+            return record.startTime();
         }
     }
 }

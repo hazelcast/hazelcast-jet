@@ -31,7 +31,6 @@ import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
@@ -62,7 +61,7 @@ public class ConcurrentInboundEdgeStreamTest {
         //noinspection unchecked
         conveyor = ConcurrentConveyor.concurrentConveyor(senderGone, q1, q2);
 
-        stream = new ConcurrentInboundEdgeStream(conveyor, 0, 0, false);
+        stream = new ConcurrentInboundEdgeStream(conveyor, 0, 0, -1, false);
     }
 
     @Test
@@ -86,6 +85,7 @@ public class ConcurrentInboundEdgeStreamTest {
         // both are now done
         drainAndAssert(DONE, 1, 2, 6);
     }
+
     @Test
     public void when_allEmittersInitiallyDone_then_firstCallDone() {
         q1.add(DONE_ITEM);
@@ -133,7 +133,7 @@ public class ConcurrentInboundEdgeStreamTest {
 
     @Test
     public void when_receivingSnapshots_then_waitForSnapshot() {
-        stream = new ConcurrentInboundEdgeStream(conveyor, 0, 0, true);
+        stream = new ConcurrentInboundEdgeStream(conveyor, 0, 0, -1, true);
 
         add(q1, barrier(0));
         add(q2, 1);
@@ -149,7 +149,7 @@ public class ConcurrentInboundEdgeStreamTest {
 
     @Test
     public void when_receivingSnapshotsWhileDone_then_coalesce() {
-        stream = new ConcurrentInboundEdgeStream(conveyor, 0, 0, true);
+        stream = new ConcurrentInboundEdgeStream(conveyor, 0, 0, -1, true);
 
         add(q1, 1, barrier(0));
         add(q2, DONE_ITEM);

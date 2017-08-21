@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.config.ProcessingGuarantee;
-import com.hazelcast.jet.impl.MasterContext;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.CircularListCursor;
@@ -77,8 +76,8 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                          @Nonnull Processor processor,
                          @Nonnull List<? extends InboundEdgeStream> instreams,
                          @Nonnull List<? extends OutboundEdgeStream> outstreams,
-                         @Nullable SnapshotContext ssContext,
-                         @Nullable OutboundCollector ssCollector) {
+                         @Nonnull SnapshotContext ssContext,
+                         @Nonnull OutboundCollector ssCollector) {
         Preconditions.checkNotNull(processor, "processor");
         this.context = context;
         this.processor = processor;
@@ -99,6 +98,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         outbox = createOutbox(ssCollector);
         receivedBarriers = new BitSet(instreams.size());
         state = initialProcessingState();
+        pendingSnapshotId = ssContext.lastSnapshotId() + 1;
     }
 
     private OutboxImpl createOutbox(OutboundCollector ssCollector) {
@@ -198,7 +198,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
                 progTracker.notDone();
                 // check ssContext to see if a barrier should be emitted
                 if (context.snapshottingEnabled()) {
-                    long currSnapshotId = ssContext.currentSnapshotId();
+                    long currSnapshotId = ssContext.lastSnapshotId();
                     assert currSnapshotId <= pendingSnapshotId : "Unexpected new snapshot id " + currSnapshotId
                             + ", current was" + pendingSnapshotId;
                     if (currSnapshotId == pendingSnapshotId) {

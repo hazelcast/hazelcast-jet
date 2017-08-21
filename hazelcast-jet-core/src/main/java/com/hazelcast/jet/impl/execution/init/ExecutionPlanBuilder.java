@@ -52,7 +52,7 @@ public final class ExecutionPlanBuilder {
     }
 
     public static Map<MemberInfo, ExecutionPlan> createExecutionPlans(
-            NodeEngine nodeEngine, MembersView membersView, DAG dag, JobConfig jobConfig
+            NodeEngine nodeEngine, MembersView membersView, DAG dag, JobConfig jobConfig, long lastSnapshotId
     ) {
         JetInstance instance = getJetInstance(nodeEngine);
         int defaultParallelism = instance.getConfig().getInstanceConfig().getCooperativeThreadCount();
@@ -65,7 +65,7 @@ public final class ExecutionPlanBuilder {
         final boolean isJobDistributed = clusterSize > 1;
         final EdgeConfig defaultEdgeConfig = instance.getConfig().getDefaultEdgeConfig();
         final Map<MemberInfo, ExecutionPlan> plans =
-                members.stream().collect(toMap(m -> m, m -> new ExecutionPlan(partitionOwners, jobConfig)));
+                members.stream().collect(toMap(m -> m, m -> new ExecutionPlan(partitionOwners, jobConfig, lastSnapshotId)));
         final Map<String, Integer> vertexIdMap = assignVertexIds(dag);
         for (Entry<String, Integer> entry : vertexIdMap.entrySet()) {
             final Vertex vertex = dag.getVertex(entry.getKey());

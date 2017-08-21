@@ -27,15 +27,15 @@ import static com.hazelcast.jet.impl.util.Util.formatIds;
 
 public class SnapshotContext {
 
-    private static final int NO_SNAPSHOT = -1;
+    public static final int NO_SNAPSHOT = -1;
     private final ILogger logger;
 
     /**
-     * SnapshotId of snapshot currently being created. Source processors read
+     * SnapshotId of last snapshot created. Source processors read
      * it and when they see changed value, they start a snapshot with that
-     * ID. {@code Long.MIN_VALUE} means no snapshot is in progress.
+     * ID. {@code -1} means no snapshot was started.
      */
-    private volatile long currentSnapshotId = NO_SNAPSHOT;
+    private volatile long lastSnapshotId = NO_SNAPSHOT;
 
     /**
      * Current number of {@link StoreSnapshotTasklet}s in the job. It's
@@ -64,15 +64,21 @@ public class SnapshotContext {
     private final long executionId;
     private final ProcessingGuarantee guarantee;
 
-    SnapshotContext(ILogger logger, long jobId, long executionId, ProcessingGuarantee guarantee) {
+    SnapshotContext(ILogger logger, long jobId, long executionId, long lastSnapshotId,
+                    ProcessingGuarantee guarantee
+    ) {
         this.jobId = jobId;
         this.executionId = executionId;
+        this.lastSnapshotId = lastSnapshotId;
         this.guarantee = guarantee;
         this.logger = logger;
     }
 
-    long currentSnapshotId() {
-        return currentSnapshotId;
+    /**
+     * Id of the last started snapshot
+     */
+    long lastSnapshotId() {
+        return lastSnapshotId;
     }
 
     ProcessingGuarantee processingGuarantee() {
@@ -94,8 +100,8 @@ public class SnapshotContext {
      * SnapshotOperation}.
      */
     synchronized CompletableFuture<Void> startNewSnapshot(long snapshotId) {
-        assert snapshotId == currentSnapshotId + 1
-                : "new snapshotId not incremented by 1. Previous=" + currentSnapshotId + ", new=" + snapshotId;
+        assert snapshotId == lastSnapshotId + 1
+                : "new snapshotId not incremented by 1. Previous=" + lastSnapshotId + ", new=" + snapshotId;
         assert numTasklets >= 0 : "numTasklets=" + numTasklets;
 
         if (numTasklets == 0) {
@@ -106,7 +112,7 @@ public class SnapshotContext {
         assert success : "previous snapshot was not finished, numRemainingTasklets=" + numRemainingTasklets.get();
         // if there are no higher priority tasklets, start the snapshot now
         if (numHigherPriorityTasklets == 0) {
-            currentSnapshotId = snapshotId;
+            lastSnapshotId = snapshotId;
         } else {
             logger.warning("Snapshot " + snapshotId + " for " + formatIds(jobId, executionId) + " is postponed" +
                     " until all higher priority vertices are completed (number of vertices = "
@@ -123,7 +129,7 @@ public class SnapshotContext {
      */
     synchronized void taskletDone(long lastSnapshotId, boolean isHigherPrioritySource) {
         assert numTasklets > 0;
-        assert lastSnapshotId <= currentSnapshotId;
+        assert lastSnapshotId <= this.lastSnapshotId;
 
         numTasklets--;
         if (isHigherPrioritySource) {
@@ -131,12 +137,12 @@ public class SnapshotContext {
             numHigherPriorityTasklets--;
             // after all higher priority vertices are done we can start the snapshot
             if (numHigherPriorityTasklets == 0) {
-                currentSnapshotId++;
-                logger.info("Postponed snapshot " + currentSnapshotId + " for " + formatIds(jobId, executionId)
+                this.lastSnapshotId++;
+                logger.info("Postponed snapshot " + this.lastSnapshotId + " for " + formatIds(jobId, executionId)
                         + " started");
             }
         }
-        if (currentSnapshotId < lastSnapshotId) {
+        if (this.lastSnapshotId < lastSnapshotId) {
             snapshotDoneForTasklet();
         }
     }

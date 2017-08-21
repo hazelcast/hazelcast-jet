@@ -58,6 +58,7 @@ import java.util.stream.Stream;
 
 import static com.hazelcast.jet.TestUtil.assertExceptionInCauses;
 import static com.hazelcast.jet.TestUtil.getJetService;
+import static com.hazelcast.jet.impl.execution.SnapshotContext.NO_SNAPSHOT;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static java.util.stream.Collectors.toList;
@@ -258,7 +259,8 @@ public class ExecutionLifecycleTest extends JetTestSupport {
 
         JetService jetService = getJetService(instance);
         final Map<MemberInfo, ExecutionPlan> executionPlans =
-                ExecutionPlanBuilder.createExecutionPlans(nodeEngineImpl, membersView, dag, new JobConfig());
+                ExecutionPlanBuilder.createExecutionPlans(nodeEngineImpl, membersView, dag, new JobConfig(),
+                        NO_SNAPSHOT);
         ExecutionPlan executionPlan = executionPlans.get(membersView.getMember(localAddress));
         long jobId = 0;
         long executionId = 1;

@@ -69,6 +69,26 @@ public final class ThrottleWrappedP implements Processor {
         return wrappedProcessor.complete();
     }
 
+    @Override
+    public boolean saveSnapshot() {
+        return wrappedProcessor.saveSnapshot();
+    }
+
+    @Override
+    public void restoreSnapshot(@Nonnull Inbox inbox) {
+        wrappedProcessor.restoreSnapshot(inbox);
+    }
+
+    @Override
+    public boolean completeEdge(int ordinal) {
+        return wrappedProcessor.completeEdge(ordinal);
+    }
+
+    @Override
+    public boolean finishSnapshotRestore() {
+        return wrappedProcessor.finishSnapshotRestore();
+    }
+
     private final class ThrottlingOutbox implements Outbox {
         private final Outbox wrappedOutbox;
         private long emitCount;

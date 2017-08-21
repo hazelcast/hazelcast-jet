@@ -24,9 +24,9 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Edge;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JobStatus;
-import com.hazelcast.jet.SnapshotRestorePolicy;
 import com.hazelcast.jet.TopologyChangedException;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder;
@@ -64,6 +64,7 @@ import static com.hazelcast.jet.JobStatus.RESTARTING;
 import static com.hazelcast.jet.JobStatus.RUNNING;
 import static com.hazelcast.jet.JobStatus.STARTING;
 import static com.hazelcast.jet.SnapshotRestorePolicy.BROADCAST;
+import static com.hazelcast.jet.impl.execution.SnapshotContext.NO_SNAPSHOT;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isJobRestartRequired;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
@@ -141,7 +142,7 @@ public class MasterContext {
         DAG dag = deserializeDAG();
         vertexNames = dag.getVertexNames();
 
-        SnapshotRecord snapshotRec = coordinationService.snapshotRepository().findUsableSnapshot(jobId);
+        SnapshotRecord snapshotRec = coordinationService.snapshotRepository().findLatestSnapshot(jobId);
         if (snapshotRec != null) {
             rewriteDagWithSnapshotRestore(dag, snapshotRec);
         }
@@ -149,7 +150,14 @@ public class MasterContext {
         executionId = executionIdSupplier.apply(jobId);
         MembersView membersView = getMembersView();
         try {
-            executionPlanMap = createExecutionPlans(membersView, dag);
+            logger.info("Start executing " + formatIds(jobId, executionId) + ", status " + jobStatus()
+                    + ": " + dag);
+            logger.fine("Building execution plan for " + formatIds(jobId, executionId));
+            //TODO: incomplete snapshot id needs to be skipped here
+            long lastSnapshotId = snapshotRec == null ? NO_SNAPSHOT : snapshotRec.snapshotId();
+            JobConfig jobConfig = jobRecord.getConfig();
+            executionPlanMap = ExecutionPlanBuilder.createExecutionPlans(nodeEngine,
+                    membersView, dag, jobConfig, lastSnapshotId);
         } catch (TopologyChangedException e) {
             logger.severe("Execution plans could not be created for " + formatIds(jobId, executionId), e);
             scheduleRestart();
@@ -243,13 +251,6 @@ public class MasterContext {
     private MembersView getMembersView() {
         ClusterServiceImpl clusterService = (ClusterServiceImpl) nodeEngine.getClusterService();
         return clusterService.getMembershipManager().getMembersView();
-    }
-
-    private Map<MemberInfo, ExecutionPlan> createExecutionPlans(MembersView membersView, DAG dag) {
-        logger.info("Start executing " + formatIds(jobId, executionId) + ", status " + jobStatus()
-                + ": " + dag);
-        logger.fine("Building execution plan for " + formatIds(jobId, executionId));
-        return ExecutionPlanBuilder.createExecutionPlans(nodeEngine, membersView, dag, jobRecord.getConfig());
     }
 
     private DAG deserializeDAG() {
@@ -366,6 +367,7 @@ public class MasterContext {
         // mark the record in the map as completed
         coordinationService.snapshotRepository().markRecordCompleted(jobId, snapshotId);
 
+        //TODO: exception get swallowed here
         // TODO delete older snapshots
 
         scheduleSnapshot();
@@ -446,19 +448,16 @@ public class MasterContext {
             } else {
                 logger.severe("Ignoring completion of " + idToString(jobId) + " because status is " + status);
             }
-
             return;
         }
 
         long completionTime = System.currentTimeMillis();
-
         if (failure instanceof TopologyChangedException) {
             scheduleRestart();
             return;
         }
 
         long elapsed = completionTime - jobStartTime;
-
         if (isSuccess(failure)) {
             logger.info("Execution of " + formatIds(jobId, executionId) + " completed in " + elapsed + " ms");
         } else {

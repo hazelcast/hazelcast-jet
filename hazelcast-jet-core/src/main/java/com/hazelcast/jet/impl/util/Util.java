@@ -40,6 +40,9 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.security.SecureRandom;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -214,6 +217,10 @@ public final class Util {
 
     public static String formatIds(long jobId, long executionId) {
         return "job " + idToString(jobId) + ", execution " + idToString(executionId);
+    }
+
+    public static LocalDateTime toLocalDateTime(long startTime) {
+        return Instant.ofEpochMilli(startTime).atZone(ZoneId.systemDefault()).toLocalDateTime();
     }
 
     @SuppressWarnings("checkstyle:magicnumber")

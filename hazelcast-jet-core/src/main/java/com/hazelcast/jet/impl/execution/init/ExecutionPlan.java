@@ -98,6 +98,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
     private NodeEngine nodeEngine;
     private long executionId;
+    private long lastSnapshotId;
 
     // list of unique remote members
     private final Supplier<Set<Address>> remoteMembers = memoize(() ->
@@ -109,9 +110,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     ExecutionPlan() {
     }
 
-    ExecutionPlan(Address[] partitionOwners, JobConfig jobConfig) {
+    ExecutionPlan(Address[] partitionOwners, JobConfig jobConfig, long lastSnapshotId) {
         this.partitionOwners = partitionOwners;
         this.jobConfig = jobConfig;
+        this.lastSnapshotId = lastSnapshotId;
     }
 
     public void initialize(NodeEngine nodeEngine, long jobId, long executionId, SnapshotContext snapshotContext) {
@@ -131,7 +133,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             Arrays.setAll(snapshotQueues, i -> new OneToOneConcurrentArrayQueue<>(2000));
             ConcurrentConveyor<Object> ssConveyor = ConcurrentConveyor.concurrentConveyor(null, snapshotQueues);
             StoreSnapshotTasklet ssTasklet = new StoreSnapshotTasklet(snapshotContext, jobId,
-                    new ConcurrentInboundEdgeStream(ssConveyor, 0, 0, true),
+                    new ConcurrentInboundEdgeStream(ssConveyor, 0, 0, lastSnapshotId, true),
                     nodeEngine, srcVertex.name(), srcVertex.isHigherPriorityUpstream());
             tasklets.add(ssTasklet);
 
@@ -217,6 +219,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     public void writeData(ObjectDataOutput out) throws IOException {
         writeList(out, vertices);
         out.writeInt(partitionOwners.length);
+        out.writeLong(lastSnapshotId);
         for (Address address : partitionOwners) {
             out.writeObject(address);
         }
@@ -228,6 +231,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         vertices = readList(in);
         int len = in.readInt();
         partitionOwners = new Address[len];
+        lastSnapshotId = in.readLong();
         for (int i = 0; i < len; i++) {
             partitionOwners[i] = in.readObject();
         }
@@ -294,9 +298,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             for (Address destAddr : remoteMembers.get()) {
                 final ConcurrentConveyor<Object> conveyor = createConveyorArray(
                         1, edge.sourceVertex().parallelism(), edge.getConfig().getQueueSize())[0];
-                final ConcurrentInboundEdgeStream inboundEdgeStream =
-                        new ConcurrentInboundEdgeStream(conveyor, edge.destOrdinal(), edge.priority(),
-                                jobConfig.getProcessingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE);
+                final ConcurrentInboundEdgeStream inboundEdgeStream = newEdgeStream(edge, conveyor);
                 final int destVertexId = edge.destVertex().vertexId();
                 final SenderTasklet t = new SenderTasklet(inboundEdgeStream, nodeEngine,
                         destAddr, executionId, destVertexId, edge.getConfig().getPacketSizeLimit());
@@ -436,14 +438,22 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         for (EdgeDef inEdge : srcVertex.inboundEdges()) {
             // each tasklet has one input conveyor per edge
             final ConcurrentConveyor<Object> conveyor = localConveyorMap.get(inEdge.edgeId())[processorIdx];
-            inboundStreams.add(new ConcurrentInboundEdgeStream(conveyor, inEdge.destOrdinal(), inEdge.priority(),
-                    jobConfig.getProcessingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE));
+            inboundStreams.add(newEdgeStream(inEdge, conveyor));
         }
         return inboundStreams;
     }
 
+    private ConcurrentInboundEdgeStream newEdgeStream(EdgeDef inEdge, ConcurrentConveyor<Object> conveyor) {
+        return new ConcurrentInboundEdgeStream(conveyor, inEdge.destOrdinal(), inEdge.priority(),
+                lastSnapshotId, jobConfig.getProcessingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE);
+    }
+
     public List<Processor> getProcessors() {
         return processors;
+    }
+
+    public long lastSnapshotId() {
+        return lastSnapshotId;
     }
 
     public int getStoreSnapshotTaskletCount() {
@@ -457,5 +467,6 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                              .filter(VertexDef::isHigherPriorityUpstream)
                              .count();
     }
+
 }
 

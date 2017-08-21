@@ -17,27 +17,30 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.impl.execution.init.JetImplDataSerializerHook;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 
 import static com.hazelcast.jet.impl.util.Util.idToString;
+import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
 
 /**
  * A record stored in the {@link
- * com.hazelcast.jet.config.JetConfig#SNAPSHOT_RECORDS_MAP_NAME}
+ * com.hazelcast.jet.impl.SnapshotRepository#SNAPSHOT_RECORDS_MAP_NAME}
  * map.
  */
 public class SnapshotRecord implements IdentifiedDataSerializable {
 
     private long jobId;
     private long snapshotId;
-    private long creationTime = System.currentTimeMillis();
+    private long startTime = System.currentTimeMillis();
     private boolean isComplete;
     private List<String> vertices;
 
@@ -58,10 +61,6 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         return jobId;
     }
 
-    public long creationTime() {
-        return creationTime;
-    }
-
     public List<String> vertices() {
         return vertices;
     }
@@ -72,6 +71,14 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
 
     public void complete() {
         isComplete = true;
+    }
+
+    public long snapshotId() {
+        return snapshotId;
+    }
+
+    public long startTime() {
+        return startTime;
     }
 
     @Override
@@ -87,7 +94,8 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeLong(jobId);
-        out.writeLong(creationTime);
+        out.writeLong(snapshotId);
+        out.writeLong(startTime);
         out.writeBoolean(isComplete);
         out.writeObject(vertices);
     }
@@ -95,22 +103,19 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
     @Override
     public void readData(ObjectDataInput in) throws IOException {
         jobId = in.readLong();
-        creationTime = in.readLong();
+        snapshotId = in.readLong();
+        startTime = in.readLong();
         isComplete = in.readBoolean();
         vertices = in.readObject();
     }
 
-    @Override
-    public String toString() {
+    @Override public String toString() {
         return "SnapshotRecord{" +
-                "jobId=" + idToString(jobId) +
-                ", creationTime=" + Instant.ofEpochMilli(creationTime).atZone(ZoneId.systemDefault()).toLocalDateTime() +
+                "jobId=" + Util.idToString(jobId) +
+                ", snapshotId=" + snapshotId +
+                ", startTime=" + toLocalDateTime(startTime) +
                 ", isComplete=" + isComplete +
                 ", vertices=" + vertices +
                 '}';
-    }
-
-    public long snapshotId() {
-        return snapshotId;
     }
 }

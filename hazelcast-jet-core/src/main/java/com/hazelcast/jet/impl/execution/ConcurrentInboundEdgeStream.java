@@ -48,7 +48,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
 
     private final BitSet receivedBarriers; // indicates if current snapshot is received on the queue
 
-    private long currSnapshot; // current expected snapshot
+    private long pendingSnapshotId; // next snapshot barrier to emit
     private long lastEmittedWm = Long.MIN_VALUE;
 
     private long numActiveQueues; // number of active queues remaining
@@ -59,7 +59,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
      *                        vs. at least once, if it is false.
      */
     public ConcurrentInboundEdgeStream(ConcurrentConveyor<Object> conveyor, int ordinal, int priority,
-                                       boolean waitForSnapshot) {
+                                       long lastSnapshotId, boolean waitForSnapshot) {
         this.conveyor = conveyor;
         this.ordinal = ordinal;
         this.priority = priority;
@@ -70,6 +70,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
 
         numActiveQueues = conveyor.queueCount();
         receivedBarriers = new BitSet(conveyor.queueCount());
+        pendingSnapshotId = lastSnapshotId + 1;
     }
 
     @Override
@@ -124,8 +125,8 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
 
         // if we have received the current snapshot from all active queues, forward it
         if (receivedBarriers.cardinality() == numActiveQueues) {
-            dest.accept(new SnapshotBarrier(currSnapshot));
-            currSnapshot++;
+            dest.accept(new SnapshotBarrier(pendingSnapshotId));
+            pendingSnapshotId++;
             receivedBarriers.clear();
         }
         return tracker.toProgressState();
@@ -151,9 +152,9 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     }
 
     private void observeBarrier(int queueIndex, long snapshotId) {
-        if (snapshotId != currSnapshot) {
+        if (snapshotId != pendingSnapshotId) {
             throw new JetException("Unexpected snapshot barrier "
-                    + snapshotId + ", expected " + currSnapshot);
+                    + snapshotId + ", expected " + pendingSnapshotId);
         }
         receivedBarriers.set(queueIndex);
     }

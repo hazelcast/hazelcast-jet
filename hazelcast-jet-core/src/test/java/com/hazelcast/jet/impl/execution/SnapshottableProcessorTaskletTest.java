@@ -196,7 +196,7 @@ public class SnapshottableProcessorTaskletTest {
         for (int i = 0; i < instreams.size(); i++) {
             instreams.get(i).setOrdinal(i);
         }
-        snapshotContext = new SnapshotContext(mock(ILogger.class), 0, 0, guarantee);
+        snapshotContext = new SnapshotContext(mock(ILogger.class), 0, 0, -1, guarantee);
         snapshotContext.initTaskletCount(1, 0);
         final CooperativeProcessorTasklet t = new CooperativeProcessorTasklet(context, processor, instreams, outstreams,
                 snapshotContext, snapshotCollector);

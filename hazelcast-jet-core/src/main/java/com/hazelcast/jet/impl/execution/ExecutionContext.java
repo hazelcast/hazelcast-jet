@@ -84,7 +84,7 @@ public class ExecutionContext {
         procSuppliers = unmodifiableList(plan.getProcessorSuppliers());
         processors = plan.getProcessors();
         snapshotContext = new SnapshotContext(nodeEngine.getLogger(SnapshotContext.class), jobId, executionId,
-                plan.getJobConfig().getProcessingGuarantee());
+                plan.lastSnapshotId(), plan.getJobConfig().getProcessingGuarantee());
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext);
         snapshotContext.initTaskletCount(plan.getStoreSnapshotTaskletCount(), plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());

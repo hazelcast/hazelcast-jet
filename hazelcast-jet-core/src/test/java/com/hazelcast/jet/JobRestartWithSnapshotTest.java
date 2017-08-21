@@ -91,10 +91,15 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         config.setSnapshotIntervalMillis(2000);
         Job job = instance.newJob(dag, config);
 
+        int num = 0;
         while (true) {
             dumpSnapshots(instance);
-            Thread.sleep(100);
-        }
+            Thread.sleep(5000);
+            num++;
+            if (num == 2) {
+                instances[1].shutdown();
+            }
+         }
 
     }
 
