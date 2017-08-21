@@ -34,34 +34,34 @@ public class JetConfig {
     /**
      * Name of internal IMap which stores job ids
      */
-    public static final String IDS_MAP_NAME = "__jet.jobs.ids";
+    public static final String IDS_MAP_NAME = "__jet.ids";
 
     /**
      * Name of internal IMap which stores job resources
      */
-    public static final String RESOURCES_MAP_NAME_PREFIX = "__jet.jobs.resources.";
+    public static final String RESOURCES_MAP_NAME_PREFIX = "__jet.resources.";
 
     /**
      * Name of internal IMap which stores job records
      */
-    public static final String JOB_RECORDS_MAP_NAME = "__jet.jobs.records";
+    public static final String JOB_RECORDS_MAP_NAME = "__jet.records";
 
     /**
      * Name of internal IMap which stores job results
      */
-    public static final String JOB_RESULTS_MAP_NAME = "__jet.jobs.results";
+    public static final String JOB_RESULTS_MAP_NAME = "__jet.results";
 
     /**
      * Name of internal IMap which stores snapshot ids
      */
-    public static final String SNAPSHOT_RECORDS_MAP_NAME = "__jet.jobs.snapshots";
+    public static final String SNAPSHOT_RECORDS_MAP_NAME = "__jet.shapshots";
 
     /**
      * Name of internal IMap which stores snapshot data. This a prefix, the
      * format is:
      * <pre>SNAPSHOT_DATA_MAP_NAME_PREFIX + jobId + '.' + snapshotId + '.' + vertexName</pre>
      */
-    public static final String SNAPSHOT_DATA_MAP_NAME_PREFIX = "__jet_snapshot.";
+    public static final String SNAPSHOT_DATA_MAP_NAME_PREFIX = "__jet.snapshots.";
 
     /**
      * The default port number for the cluster auto-discovery mechanism's

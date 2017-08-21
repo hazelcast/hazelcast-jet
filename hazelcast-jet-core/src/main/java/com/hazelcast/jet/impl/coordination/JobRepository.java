@@ -59,13 +59,13 @@ public class JobRepository {
     private static final long JOB_EXPIRATION_DURATION_IN_MILLIS = HOURS.toMillis(2);
 
     private final HazelcastInstance instance;
-    private final IMap<Long, Long> jobIds;
+    private final IMap<Long, Long> randomIds;
     private final IMap<Long, JobRecord> jobs;
     private long jobExpirationDurationInMillis = JOB_EXPIRATION_DURATION_IN_MILLIS;
 
     public JobRepository(JetInstance jetInstance) {
         this.instance = jetInstance.getHazelcastInstance();
-        this.jobIds = instance.getMap(IDS_MAP_NAME);
+        this.randomIds = instance.getMap(IDS_MAP_NAME);
         this.jobs = instance.getMap(JOB_RECORDS_MAP_NAME);
     }
 
@@ -89,7 +89,7 @@ public class JobRepository {
                     loadJar(tmpMap, rc.getUrl());
                 } catch (IOException e) {
                     cleanupJobResourcesMap(jobResourcesMap);
-                    jobIds.remove(jobId);
+                    randomIds.remove(jobId);
                     throw new JetException("Job resource upload failed", e);
                 }
             } else {
@@ -98,7 +98,7 @@ public class JobRepository {
                     readStreamAndPutCompressedToMap(rc.getId(), tmpMap, in);
                 } catch (IOException e) {
                     cleanupJobResourcesMap(jobResourcesMap);
-                    jobIds.remove(jobId);
+                    randomIds.remove(jobId);
                     throw new JetException("Job resource upload failed", e);
                 }
             }
@@ -117,7 +117,7 @@ public class JobRepository {
         long jobId;
         do {
             jobId = Util.secureRandomNextLong();
-        } while (jobIds.putIfAbsent(jobId, jobId) != null);
+        } while (randomIds.putIfAbsent(jobId, jobId) != null);
         return jobId;
     }
 
@@ -179,7 +179,7 @@ public class JobRepository {
         long executionId;
         do {
             executionId = Util.secureRandomNextLong();
-        } while (jobIds.putIfAbsent(executionId, jobId) != null);
+        } while (randomIds.putIfAbsent(executionId, jobId) != null);
         return executionId;
     }
 
@@ -204,8 +204,8 @@ public class JobRepository {
         // Delete the job record
         jobs.remove(jobId);
         // Delete the execution ids, but keep the job id
-        Set<Long> executionIds = jobIds.keySet(new FilterExecutionIdByJobIdPredicate(jobId));
-        executionIds.forEach(jobIds::remove);
+        Set<Long> executionIds = randomIds.keySet(new FilterExecutionIdByJobIdPredicate(jobId));
+        executionIds.forEach(randomIds::remove);
 
         // Delete job resources
         cleanupJobResourcesMap(getJobResources(jobId));
@@ -226,10 +226,10 @@ public class JobRepository {
         // Job ids are never cleaned up.
         // We also don't clean up job records here because they might be started in parallel while cleanup is running
         // If a job id is not running or is completed it might be suitable to clean up job resources
-        jobIds.keySet(new FilterJobIdPredicate())
-              .stream()
-              .filter(jobId -> !validJobIds.contains(jobId))
-              .forEach(jobId -> {
+        randomIds.keySet(new FilterJobIdPredicate())
+                 .stream()
+                 .filter(jobId -> !validJobIds.contains(jobId))
+                 .forEach(jobId -> {
                   IMap<String, Object> resources = getJobResources(jobId);
                   if (resources.isEmpty()) {
                       return;
