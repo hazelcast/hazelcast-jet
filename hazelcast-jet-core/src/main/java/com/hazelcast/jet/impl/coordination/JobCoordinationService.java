@@ -375,7 +375,7 @@ public class JobCoordinationService {
         return nodeEngine.getClusterService().isMaster();
     }
 
-    public SnapshotRepository getSnapshotRepository() {
+    public SnapshotRepository snapshotRepository() {
         return snapshotRepository;
     }
 }

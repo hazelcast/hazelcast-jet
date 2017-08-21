@@ -24,7 +24,7 @@ import com.hazelcast.internal.cluster.impl.operations.TriggerMemberListPublishOp
 import com.hazelcast.jet.TopologyChangedException;
 import com.hazelcast.jet.impl.deployment.JetClassLoader;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
-import com.hazelcast.jet.impl.execution.ExecutionService;
+import com.hazelcast.jet.impl.execution.TaskletExecutionService;
 import com.hazelcast.jet.impl.execution.SenderTasklet;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
@@ -54,7 +54,7 @@ public class JobExecutionService {
 
     private final NodeEngineImpl nodeEngine;
     private final ILogger logger;
-    private final ExecutionService executionService;
+    private final TaskletExecutionService taskletExecutionService;
 
     private final Set<Long> executionContextJobIds = newSetFromMap(new ConcurrentHashMap<>());
 
@@ -67,10 +67,10 @@ public class JobExecutionService {
     // key: jobId
     private final ConcurrentHashMap<Long, JetClassLoader> classLoaders = new ConcurrentHashMap<>();
 
-    JobExecutionService(NodeEngineImpl nodeEngine, ExecutionService executionService) {
+    JobExecutionService(NodeEngineImpl nodeEngine, TaskletExecutionService taskletExecutionService) {
         this.nodeEngine = nodeEngine;
         this.logger = nodeEngine.getLogger(getClass());
-        this.executionService = executionService;
+        this.taskletExecutionService = taskletExecutionService;
     }
 
     public ClassLoader getClassLoader(long jobId, PrivilegedAction<JetClassLoader> action) {
@@ -163,7 +163,7 @@ public class JobExecutionService {
         }
 
         Set<Address> addresses = participants.stream().map(MemberInfo::getAddress).collect(toSet());
-        ExecutionContext created = new ExecutionContext(nodeEngine, executionService,
+        ExecutionContext created = new ExecutionContext(nodeEngine, taskletExecutionService,
                 jobId, executionId, coordinator, addresses);
         try {
             created.initialize(plan);
@@ -258,10 +258,10 @@ public class JobExecutionService {
         }
     }
 
-    public CompletionStage<Void> doSnapshotOnMember(Address coordinator, long jobId, long executionId, long snapshotId) {
+    public CompletionStage<Void> beginSnapshot(Address coordinator, long jobId, long executionId, long snapshotId) {
         ExecutionContext executionContext = verifyAndGetExecutionContext(coordinator, jobId, executionId,
                 SnapshotOperation.class.getSimpleName());
 
-        return executionContext.initiateSnapshot(snapshotId);
+        return executionContext.beginSnapshot(snapshotId);
     }
 }

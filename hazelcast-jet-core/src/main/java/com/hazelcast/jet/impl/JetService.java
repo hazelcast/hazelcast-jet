@@ -30,7 +30,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.coordination.JobCoordinationService;
 import com.hazelcast.jet.impl.coordination.JobRepository;
 import com.hazelcast.jet.impl.coordination.SnapshotRepository;
-import com.hazelcast.jet.impl.execution.ExecutionService;
+import com.hazelcast.jet.impl.execution.TaskletExecutionService;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
@@ -71,7 +71,7 @@ public class JetService
     private JetConfig config;
     private JetInstance jetInstance;
     private Networking networking;
-    private ExecutionService executionService;
+    private TaskletExecutionService taskletExecutionService;
     private JobRepository jobRepository;
     private SnapshotRepository snapshotRepository;
     private JobCoordinationService jobCoordinationService;
@@ -101,13 +101,13 @@ public class JetService
         }
 
         jetInstance = new JetInstanceImpl((HazelcastInstanceImpl) engine.getHazelcastInstance(), config);
-        executionService = new ExecutionService(nodeEngine.getHazelcastInstance(),
+        taskletExecutionService = new TaskletExecutionService(nodeEngine.getHazelcastInstance(),
                 config.getInstanceConfig().getCooperativeThreadCount());
 
         jobRepository = new JobRepository(jetInstance);
         snapshotRepository = new SnapshotRepository(jetInstance);
 
-        jobExecutionService = new JobExecutionService(nodeEngine, executionService);
+        jobExecutionService = new JobExecutionService(nodeEngine, taskletExecutionService);
         jobCoordinationService = new JobCoordinationService(nodeEngine, config, jobRepository,
                 jobExecutionService, snapshotRepository);
         networking = new Networking(engine, jobExecutionService, config.getInstanceConfig().getFlowControlPeriodMs());
@@ -136,7 +136,7 @@ public class JetService
     public void shutdown(boolean terminate) {
         jobExecutionService.reset("shutdown", HazelcastInstanceNotActiveException::new);
         networking.shutdown();
-        executionService.shutdown();
+        taskletExecutionService.shutdown();
     }
 
     @Override

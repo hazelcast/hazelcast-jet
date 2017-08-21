@@ -63,10 +63,10 @@ public class ExecutionContext {
     private CompletionStage<Void> jobFuture;
 
     private final NodeEngine nodeEngine;
-    private final ExecutionService execService;
+    private final TaskletExecutionService execService;
     private SnapshotContext snapshotContext;
 
-    public ExecutionContext(NodeEngine nodeEngine, ExecutionService execService,
+    public ExecutionContext(NodeEngine nodeEngine, TaskletExecutionService execService,
                             long jobId, long executionId, Address coordinator, Set<Address> participants) {
         this.jobId = jobId;
         this.executionId = executionId;
@@ -162,7 +162,7 @@ public class ExecutionContext {
                    .receiveStreamPacket(in);
     }
 
-    public CompletionStage<Void> initiateSnapshot(long snapshotId) {
+    public CompletionStage<Void> beginSnapshot(long snapshotId) {
         return snapshotContext.startNewSnapshot(snapshotId);
     }
 

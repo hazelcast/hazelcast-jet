@@ -144,7 +144,7 @@ public class MasterContext {
         DAG dag = deserializeDAG();
         vertexNames = dag.getVertexNames();
 
-        SnapshotRecord snapshotRec = coordinationService.getSnapshotRepository().findUsableSnapshot(jobId);
+        SnapshotRecord snapshotRec = coordinationService.snapshotRepository().findUsableSnapshot(jobId);
         if (snapshotRec != null) {
             // add snapshot restore vertices to the DAG
             for (String vertexName : snapshotRec.vertices()) {
@@ -356,7 +356,7 @@ public class MasterContext {
 
     private void beginSnapshot() {
         SnapshotRecord record = new SnapshotRecord(jobId, nextSnapshotId++, vertexNames);
-        if (!coordinationService.getSnapshotRepository().putNewSnapshotRecord(record)) {
+        if (!coordinationService.snapshotRepository().putNewRecord(record)) {
             return;
         }
 
@@ -378,7 +378,7 @@ public class MasterContext {
         }
 
         // mark the record in the map as completed
-        coordinationService.getSnapshotRepository().markRecordCompleted(jobId, snapshotId);
+        coordinationService.snapshotRepository().markRecordCompleted(jobId, snapshotId);
 
         // TODO delete older snapshots
 

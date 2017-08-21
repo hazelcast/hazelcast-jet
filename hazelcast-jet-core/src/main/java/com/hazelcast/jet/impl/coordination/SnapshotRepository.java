@@ -53,7 +53,7 @@ public class SnapshotRepository {
         this.logger = jetInstance.getHazelcastInstance().getLoggingService().getLogger(getClass());
     }
 
-    boolean putNewSnapshotRecord(SnapshotRecord record) {
+    boolean putNewRecord(SnapshotRecord record) {
         if (snapshotsMap.putIfAbsent(Arrays.asList(record.jobId(), record.snapshotId()), record) != null) {
             logger.severe("Snapshot with id " + record.snapshotId() + " already exists for job "
                     + idToString(record.jobId()));
