@@ -47,12 +47,10 @@ public class SnapshotRepository {
      */
     public static final String SNAPSHOT_NAME_PREFIX = "__jet.snapshots.";
 
-    private final ILogger logger;
     private final JetInstance instance;
 
     public SnapshotRepository(JetInstance jetInstance) {
         this.instance = jetInstance;
-        this.logger = jetInstance.getHazelcastInstance().getLoggingService().getLogger(getClass());
     }
 
     /**
@@ -105,8 +103,6 @@ public class SnapshotRepository {
     private MaxByAggregator<Entry<Long, SnapshotRecord>> maxByAggregator() {
         return new MaxByAggregator<>("snapshotId");
     }
-
-
 
     public static String snapshotDataMapName(long jobId, long snapshotId, String vertexName) {
         return SNAPSHOT_NAME_PREFIX + idToString(jobId) + '.' + snapshotId + '.' + vertexName;

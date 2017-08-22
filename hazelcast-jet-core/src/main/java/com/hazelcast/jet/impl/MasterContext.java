@@ -83,6 +83,7 @@ public class MasterContext {
     private final long jobId;
     private final CompletableFuture<Boolean> completionFuture = new CompletableFuture<>();
     private final AtomicReference<JobStatus> jobStatus = new AtomicReference<>(NOT_STARTED);
+    private final SnapshotRepository snapshotRepository;
 
     private volatile long executionId;
     private volatile long jobStartTime;
@@ -94,6 +95,7 @@ public class MasterContext {
     MasterContext(NodeEngineImpl nodeEngine, JobCoordinationService coordinationService, JobRecord jobRecord) {
         this.nodeEngine = nodeEngine;
         this.coordinationService = coordinationService;
+        this.snapshotRepository = coordinationService.snapshotRepository();
         this.logger = nodeEngine.getLogger(getClass());
         this.jobRecord = jobRecord;
         this.jobId = jobRecord.getJobId();
@@ -143,7 +145,6 @@ public class MasterContext {
         // last started snapshot complete or not complete. The next started snapshot must be greater than this number
         long lastSnapshotId = NO_SNAPSHOT;
         if (jobStatus() == RESTARTING && jobRecord.getConfig().getSnapshotInterval() > 0) {
-            SnapshotRepository snapshotRepository = coordinationService.snapshotRepository();
             Long snapshotId = snapshotRepository.latestCompleteSnapshot(jobId);
             Long lastStartedSnapshot = snapshotRepository.latestStartedSnapshot(jobId);
             if (snapshotId != null) {
@@ -340,7 +341,7 @@ public class MasterContext {
     }
 
     private void beginSnapshot() {
-        long snapshotId = coordinationService.snapshotRepository().registerSnapshot(jobId, nextSnapshotId);
+        long snapshotId = snapshotRepository.registerSnapshot(jobId, nextSnapshotId);
         nextSnapshotId = snapshotId + 1;
 
         logger.info(String.format("Starting snapshot %s for job %s", snapshotId, idToString(jobId)));
@@ -351,24 +352,25 @@ public class MasterContext {
 
     private void onSnapshotCompleted(Map<MemberInfo, Object> responses, long snapshotId) {
         // check if all members were successful
+        boolean completed = true;
         for (Object r : responses.values()) {
             if (r instanceof Throwable) {
                 logger.warning(SnapshotOperation.class.getSimpleName() + " for " + formatIds(jobId, executionId)
                         + " failed on some members: " + r, (Throwable) r);
-                // fail the job
-                completionFuture.completeExceptionally((Throwable) r);
+                completed = false;
             }
         }
 
-        // mark the record in the map as completed
-        long elapsed = coordinationService.snapshotRepository().snapshotCompleted(jobId, snapshotId);
-        logger.info(String.format("Snapshot %s for job %s completed in %dms", snapshotId,
-                idToString(jobId), elapsed));
+        if (completed) {
+            // mark the record in the map as completed
+            long elapsed = snapshotRepository.snapshotCompleted(jobId, snapshotId);
+            logger.info(String.format("Snapshot %s for job %s completed in %dms", snapshotId,
+                    idToString(jobId), elapsed));
+            //TODO: exception get swallowed here
+            //TODO: delete older snapshots
 
-        //TODO: exception get swallowed here
-        // TODO delete older snapshots
-
-        scheduleSnapshot();
+            scheduleSnapshot();
+        }
     }
 
     // Called as callback when all ExecuteOperation invocations are done
