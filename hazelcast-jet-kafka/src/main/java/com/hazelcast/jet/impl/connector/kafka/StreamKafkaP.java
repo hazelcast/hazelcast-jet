@@ -19,24 +19,31 @@ package com.hazelcast.jet.impl.connector.kafka;
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Processor;
+import com.hazelcast.jet.ProcessorMetaSupplier;
 import com.hazelcast.jet.ProcessorSupplier;
+import com.hazelcast.jet.SnapshotRestorePolicy;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.impl.util.Util;
+import com.hazelcast.nio.Address;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 
 import javax.annotation.Nonnull;
 import java.io.Closeable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
@@ -52,6 +59,8 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
 
     private final Properties properties;
     private final String[] topicIds;
+    private final int processorCount;
+    private final int processorIndex;
     private CompletableFuture<Void> jobFuture;
     private boolean snapshottingEnabled;
     private KafkaConsumer<?, ?> consumer;
@@ -59,9 +68,11 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
     private final Map<TopicPartition, Long> offsets = new HashMap<>();
     private Traverser<Entry<TopicPartition, Long>> snapshotTraverser;
 
-    public StreamKafkaP(Properties properties, String[] topicIds) {
+    StreamKafkaP(Properties properties, String[] topicIds, int processorCount, int processorIndex) {
         this.properties = properties;
         this.topicIds = Arrays.copyOf(topicIds, topicIds.length);
+        this.processorCount = processorCount;
+        this.processorIndex = processorIndex;
     }
 
     @Override
@@ -69,9 +80,15 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
         jobFuture = context.jobFuture();
         snapshottingEnabled = context.snapshottingEnabled();
         consumer = new KafkaConsumer<>(properties);
-        // TODO use manual partition assignment
-        // TODO handle changing kafka partitions at runtime
-        consumer.subscribe(Arrays.asList(topicIds));
+
+        List<TopicPartition> assignment = new ArrayList<>();
+        for (String topicId : topicIds) {
+            List<PartitionInfo> partitionInfos = consumer.partitionsFor(topicId);
+            for (int i = processorIndex; i < partitionInfos.size(); i += processorCount) {
+                assignment.add(new TopicPartition(topicId, partitionInfos.get(i).partition()));
+            }
+        }
+        consumer.assign(assignment);
     }
 
     @Override
@@ -112,32 +129,47 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
 
     @Override
     public void restoreSnapshot(@Nonnull Inbox inbox) {
+        Set<TopicPartition> assignment = consumer.assignment();
         for (Object o; (o = inbox.poll()) != null; ) {
             Entry<TopicPartition, Long> entry = (Entry<TopicPartition, Long>) o;
-            consumer.seek(entry.getKey(), entry.getValue());
+            if (assignment.contains(entry.getKey())) {
+                consumer.seek(entry.getKey(), entry.getValue());
+            }
         }
     }
 
     /**
      * Please use {@link com.hazelcast.jet.processor.KafkaProcessors#streamKafka(Properties, String...)}.
      */
-    public static class Supplier implements ProcessorSupplier {
+    private static class Supplier implements ProcessorSupplier {
 
         static final long serialVersionUID = 1L;
 
         private final String[] topicIds;
+        private final int memberCount;
+        private final int memberIndex;
         private final Properties properties;
         private transient List<StreamKafkaP> processors;
+        private int localParallelism;
 
-        public Supplier(Properties properties, String[] topicIds) {
+        Supplier(Properties properties, String[] topicIds, int memberCount, int memberIndex) {
             this.properties = properties;
             this.topicIds = topicIds;
+            this.memberCount = memberCount;
+            this.memberIndex = memberIndex;
+        }
+
+        @Override
+        public void init(@Nonnull Context context) {
+            localParallelism = context.localParallelism();
         }
 
         @Override @Nonnull
         public List<Processor> get(int count) {
+            // localParallelism is equal on all members
             processors = IntStream.range(0, count)
-                                         .mapToObj(i -> new StreamKafkaP(properties, topicIds))
+                                         .mapToObj(i -> new StreamKafkaP(properties, topicIds,
+                                                 memberCount * localParallelism, memberIndex * localParallelism + i))
                                          .collect(toList());
             return (List) processors;
         }
@@ -145,6 +177,29 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
         @Override
         public void complete(Throwable error) {
             processors.forEach(p -> Util.uncheckRun(p::close));
+        }
+    }
+
+    public static class MetaSupplier implements ProcessorMetaSupplier {
+
+        private final Properties properties;
+        private final String[] topicIds;
+
+        public MetaSupplier(Properties properties, String[] topicIds) {
+            this.properties = properties;
+            this.topicIds = topicIds;
+        }
+
+        @Nonnull
+        @Override
+        public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
+            return address -> new Supplier(properties, topicIds, addresses.size(), addresses.indexOf(address));
+        }
+
+        @Nonnull
+        @Override
+        public SnapshotRestorePolicy snapshotRestorePolicy() {
+            return SnapshotRestorePolicy.BROADCAST;
         }
     }
 }

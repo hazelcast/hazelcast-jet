@@ -17,7 +17,6 @@
 package com.hazelcast.jet.processor;
 
 import com.hazelcast.jet.ProcessorMetaSupplier;
-import com.hazelcast.jet.SnapshotRestorePolicy;
 import com.hazelcast.jet.impl.connector.kafka.StreamKafkaP;
 import com.hazelcast.jet.impl.connector.kafka.WriteKafkaP;
 import com.hazelcast.util.Preconditions;
@@ -54,7 +53,7 @@ public final class KafkaProcessors {
         Preconditions.checkTrue(properties.containsKey("group.id"), "Properties should contain `group.id`");
         properties.put("enable.auto.commit", false);
 
-        return ProcessorMetaSupplier.of(new StreamKafkaP.Supplier(properties, topics), SnapshotRestorePolicy.BROADCAST);
+        return new StreamKafkaP.MetaSupplier(properties, topics);
     }
 
     /**

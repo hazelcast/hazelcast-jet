@@ -93,7 +93,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
 
         int num = 0;
         while (true) {
-            dumpSnapshots(instance);
+            dumpSnapshots(instance, dag);
             Thread.sleep(5000);
             num++;
             if (num == 2) {
@@ -103,7 +103,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
 
     }
 
-    private static void dumpSnapshots(JetInstance jet) {
+    private static void dumpSnapshots(JetInstance jet, DAG dag) {
         IMap<List<Long>, SnapshotRecord> map = jet.getMap(SNAPSHOT_RECORDS_MAP_NAME);
         for (Entry<List<Long>, SnapshotRecord> entry : map.entrySet()) {
             List<Long> key = entry.getKey();
@@ -114,8 +114,8 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
             System.out.println("---------- jobId=" + jobId + ", snapshotId=" + snapshotId);
             System.out.println("sr=" + sr);
 
-            for (String vertexId : sr.vertices()) {
-                IStreamMap<Object, Object> map2 = jet.getMap(SNAPSHOT_DATA_MAP_NAME_PREFIX + jobId + '.' + snapshotId + '.' + vertexId);
+            for (Vertex vertex : dag) {
+                IStreamMap<Object, Object> map2 = jet.getMap(SNAPSHOT_DATA_MAP_NAME_PREFIX + jobId + '.' + snapshotId + '.' + vertex.getName());
                 System.out.println("--- " + map2.getName());
                 int cnt = 0;
                 for (Entry<Object, Object> entry2 : map2.entrySet()) {
