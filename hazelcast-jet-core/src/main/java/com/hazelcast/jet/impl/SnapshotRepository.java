@@ -16,19 +16,13 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.aggregation.impl.MaxAggregator;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.util.MaxByAggregator;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.stream.IStreamMap;
-import com.hazelcast.logging.ILogger;
-import com.hazelcast.query.EntryObject;
 import com.hazelcast.query.Predicate;
-import com.hazelcast.query.PredicateBuilder;
 
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.impl.util.Util.compute;
@@ -37,12 +31,12 @@ import static com.hazelcast.jet.impl.util.Util.idToString;
 public class SnapshotRepository {
 
     /**
-     * Name of internal IMaps which stores snapshot related data.
-     *
+     * Name of internal IMaps which store snapshot related data.
+     * <p>
      * Snapshot metadata is stored in the following map:
-     * <pre>SNAPSHOT_NAME_PREFIX + jobId/pre>
-     *
-     * Snapshot data is stored in the following map:
+     * <pre>SNAPSHOT_NAME_PREFIX + jobId</pre>
+     * <p>
+     * Snapshot data for one vertex is stored in the following map:
      * <pre>SNAPSHOT_NAME_PREFIX + jobId + '.' + snapshotId + '.' + vertexName</pre>
      */
     public static final String SNAPSHOT_NAME_PREFIX = "__jet.snapshots.";
