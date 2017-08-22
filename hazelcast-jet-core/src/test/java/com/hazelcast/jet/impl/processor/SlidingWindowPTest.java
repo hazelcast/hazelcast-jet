@@ -18,13 +18,13 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.Processor.Context;
-import com.hazelcast.jet.StreamingTestSupport;
 import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.TimestampedEntry;
+import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.test.TestSupport;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
 import com.hazelcast.test.annotation.QuickTest;
@@ -54,12 +54,11 @@ import static java.util.Collections.shuffle;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
 
 @RunWith(Parameterized.class)
 @Category({QuickTest.class, ParallelTest.class})
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
-public class SlidingWindowPTest extends StreamingTestSupport {
+public class SlidingWindowPTest {
 
     private static final Long KEY = 77L;
 
@@ -99,7 +98,6 @@ public class SlidingWindowPTest extends StreamingTestSupport {
                             operation)
                 : combineToSlidingWindow(windowDef, operation);
         processor = (SlidingWindowP<?, ?, Long>) procSupplier.get();
-        processor.init(outbox, mock(Context.class));
     }
 
     @After
@@ -110,103 +108,78 @@ public class SlidingWindowPTest extends StreamingTestSupport {
 
     @Test
     public void when_noFramesReceived_then_onlyEmitWm() {
-        // Given
-        inbox.addAll(singletonList(
-                wm(1)
-        ));
-
-        // When
-        processor.process(0, inbox);
-        assertTrue(inbox.isEmpty());
-
-        // Then
-        assertOutbox(singletonList(
-                wm(1)
-        ));
+        List<Watermark> wmList = singletonList(wm(1));
+        TestSupport.testProcessor(processor, wmList, wmList);
     }
 
     @Test
     public void when_receiveAscendingTimestamps_then_emitAscending() {
-        // Given
-        inbox.addAll(asList(
-                event(0, 1),
-                event(1, 1),
-                event(2, 1),
-                event(3, 1),
-                event(4, 1),
-                wm(1),
-                wm(2),
-                wm(3),
-                wm(4),
-                wm(5),
-                wm(6),
-                wm(7)
-        ));
-
-        // When
-        processor.process(0, inbox);
-        assertTrue(inbox.isEmpty());
-
-        // Then
-        assertOutbox(asList(
-                outboxFrame(0, 1),
-                outboxFrame(1, 2),
-                wm(1),
-                outboxFrame(2, 3),
-                wm(2),
-                outboxFrame(3, 4),
-                wm(3),
-                outboxFrame(4, 4),
-                wm(4),
-                outboxFrame(5, 3),
-                wm(5),
-                outboxFrame(6, 2),
-                wm(6),
-                outboxFrame(7, 1),
-                wm(7)
-        ));
+        TestSupport.testProcessor(processor,
+                asList(
+                        event(0, 1),
+                        event(1, 1),
+                        event(2, 1),
+                        event(3, 1),
+                        event(4, 1),
+                        wm(1),
+                        wm(2),
+                        wm(3),
+                        wm(4),
+                        wm(5),
+                        wm(6),
+                        wm(7)
+                ), asList(
+                        outboxFrame(0, 1),
+                        outboxFrame(1, 2),
+                        wm(1),
+                        outboxFrame(2, 3),
+                        wm(2),
+                        outboxFrame(3, 4),
+                        wm(3),
+                        outboxFrame(4, 4),
+                        wm(4),
+                        outboxFrame(5, 3),
+                        wm(5),
+                        outboxFrame(6, 2),
+                        wm(6),
+                        outboxFrame(7, 1),
+                        wm(7)
+                ));
     }
 
     @Test
     public void when_receiveDescendingTimestamps_then_emitAscending() {
-        // Given
-        inbox.addAll(asList(
-                event(4, 1),
-                event(3, 1),
-                event(2, 1),
-                event(1, 1),
-                event(0, 1),
-                wm(1),
-                wm(2),
-                wm(3),
-                wm(4),
-                wm(5),
-                wm(6),
-                wm(7)
-        ));
-
-        // When
-        processor.process(0, inbox);
-        assertTrue(inbox.isEmpty());
-
-        // Then
-        assertOutbox(asList(
-                outboxFrame(0, 1),
-                outboxFrame(1, 2),
-                wm(1),
-                outboxFrame(2, 3),
-                wm(2),
-                outboxFrame(3, 4),
-                wm(3),
-                outboxFrame(4, 4),
-                wm(4),
-                outboxFrame(5, 3),
-                wm(5),
-                outboxFrame(6, 2),
-                wm(6),
-                outboxFrame(7, 1),
-                wm(7)
-        ));
+        TestSupport.testProcessor(processor,
+                asList(
+                        event(4, 1),
+                        event(3, 1),
+                        event(2, 1),
+                        event(1, 1),
+                        event(0, 1),
+                        wm(1),
+                        wm(2),
+                        wm(3),
+                        wm(4),
+                        wm(5),
+                        wm(6),
+                        wm(7)
+                ), asList(
+                        outboxFrame(0, 1),
+                        outboxFrame(1, 2),
+                        wm(1),
+                        outboxFrame(2, 3),
+                        wm(2),
+                        outboxFrame(3, 4),
+                        wm(3),
+                        outboxFrame(4, 4),
+                        wm(4),
+                        outboxFrame(5, 3),
+                        wm(5),
+                        outboxFrame(6, 2),
+                        wm(6),
+                        outboxFrame(7, 1),
+                        wm(7)
+                ));
     }
 
     @Test
@@ -214,6 +187,7 @@ public class SlidingWindowPTest extends StreamingTestSupport {
         // Given
         final List<Long> timestampsToAdd = LongStream.range(0, 100).boxed().collect(toList());
         shuffle(timestampsToAdd);
+        ArrayList<Object> inbox = new ArrayList<>();
         for (long ts : timestampsToAdd) {
             inbox.add(event(ts, 1));
         }
@@ -221,11 +195,6 @@ public class SlidingWindowPTest extends StreamingTestSupport {
             inbox.add(wm(i));
         }
 
-        // When
-        processor.process(0, inbox);
-        assertTrue(inbox.isEmpty());
-
-        // Then
         List<Object> expectedOutbox = new ArrayList<>();
         expectedOutbox.addAll(Arrays.asList(
                 outboxFrame(0, 1),
@@ -251,88 +220,73 @@ public class SlidingWindowPTest extends StreamingTestSupport {
                 wm(104),
                 wm(105)
         ));
-
-        assertOutbox(expectedOutbox);
+        TestSupport.testProcessor(processor, inbox, expectedOutbox);
     }
 
     @Test
     public void when_receiveWithGaps_then_emitAscending() {
-        // Given
-        inbox.addAll(asList(
-                event(0, 1),
-                event(10, 1),
-                event(11, 1),
-                wm(15),
-                event(16, 3),
-                wm(19)
-        ));
+        TestSupport.testProcessor(processor,
+                asList(
+                        event(0, 1),
+                        event(10, 1),
+                        event(11, 1),
+                        wm(15),
+                        event(16, 3),
+                        wm(19)
+                ), asList(
+                        outboxFrame(0, 1),
+                        outboxFrame(1, 1),
+                        outboxFrame(2, 1),
+                        outboxFrame(3, 1),
 
-        // When
-        processor.process(0, inbox);
-        assertTrue(inbox.isEmpty());
+                        outboxFrame(10, 1),
+                        outboxFrame(11, 2),
+                        outboxFrame(12, 2),
+                        outboxFrame(13, 2),
+                        outboxFrame(14, 1),
 
-        // Then
-        assertOutbox(asList(
-                outboxFrame(0, 1),
-                outboxFrame(1, 1),
-                outboxFrame(2, 1),
-                outboxFrame(3, 1),
-
-                outboxFrame(10, 1),
-                outboxFrame(11, 2),
-                outboxFrame(12, 2),
-                outboxFrame(13, 2),
-                outboxFrame(14, 1),
-
-                wm(15),
-                outboxFrame(16, 3),
-                outboxFrame(17, 3),
-                outboxFrame(18, 3),
-                outboxFrame(19, 3),
-                wm(19)
-        ));
+                        wm(15),
+                        outboxFrame(16, 3),
+                        outboxFrame(17, 3),
+                        outboxFrame(18, 3),
+                        outboxFrame(19, 3),
+                        wm(19)
+                ));
     }
 
     @Test
     public void when_receiveWithGaps_then_doNotSkipFrames() {
-        // Given
-        inbox.addAll(asList(
-                event(10, 1),
-                event(11, 1),
-                event(12, 1),
-                wm(1),
-                event(2, 1),
-                event(3, 1),
-                event(4, 1),
-                wm(4),
-                wm(12),
-                wm(15)
-        ));
+        TestSupport.testProcessor(processor,
+                asList(
+                        event(10, 1),
+                        event(11, 1),
+                        event(12, 1),
+                        wm(1),
+                        event(2, 1),
+                        event(3, 1),
+                        event(4, 1),
+                        wm(4),
+                        wm(12),
+                        wm(15)
+                ), asList(
+                        wm(1),
+                        outboxFrame(2, 1),
+                        outboxFrame(3, 2),
+                        outboxFrame(4, 3),
+                        wm(4),
+                        outboxFrame(5, 3),
+                        outboxFrame(6, 2),
+                        outboxFrame(7, 1),
+                        outboxFrame(10, 1),
 
-        // When
-        processor.process(0, inbox);
-        assertTrue(inbox.isEmpty());
-
-        // Then
-        assertOutbox(asList(
-                wm(1),
-                outboxFrame(2, 1),
-                outboxFrame(3, 2),
-                outboxFrame(4, 3),
-                wm(4),
-                outboxFrame(5, 3),
-                outboxFrame(6, 2),
-                outboxFrame(7, 1),
-                outboxFrame(10, 1),
-
-                outboxFrame(11, 2),
-                outboxFrame(12, 3),
-                wm(12),
-                outboxFrame(13, 3),
-                outboxFrame(14, 2),
-                outboxFrame(15, 1),
-                wm(15)
-        ));
+                        outboxFrame(11, 2),
+                        outboxFrame(12, 3),
+                        wm(12),
+                        outboxFrame(13, 3),
+                        outboxFrame(14, 2),
+                        outboxFrame(15, 1),
+                        wm(15)
+                ));
     }
 
     private Entry<Long, ?> event(long frameTs, long value) {
@@ -345,5 +299,9 @@ public class SlidingWindowPTest extends StreamingTestSupport {
 
     private static TimestampedEntry<Long, ?> outboxFrame(long ts, long value) {
         return new TimestampedEntry<>(ts, KEY, value);
+    }
+
+    private static Watermark wm(long timestamp) {
+        return new Watermark(timestamp);
     }
 }

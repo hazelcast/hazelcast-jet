@@ -31,7 +31,6 @@ import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Map.Entry;
 import java.util.Queue;
-import java.util.function.Function;
 
 import static com.hazelcast.util.Preconditions.checkNotNegative;
 
@@ -43,7 +42,7 @@ public final class TestOutbox implements Outbox {
     private static final SerializationService IDENTITY_SERIALIZER = new MockSerializationService();
 
     private final Queue<Object>[] buckets;
-    private final Queue<Entry<Data, Data>> snapshotQueue = new ArrayDeque<>();
+    private final Queue<Entry<MockData, MockData>> snapshotQueue = new ArrayDeque<>();
     private final OutboxImpl outbox;
 
     /**
@@ -67,13 +66,13 @@ public final class TestOutbox implements Outbox {
         buckets = new Queue[edgeCapacities.length];
         Arrays.setAll(buckets, i -> new ArrayDeque());
 
-        OutboundCollector[] outstreams = new OutboundCollector[edgeCapacities.length + snapshotCapacity > 0 ? 1 : 0];
+        OutboundCollector[] outstreams = new OutboundCollector[edgeCapacities.length + (snapshotCapacity > 0 ? 1 : 0)];
         Arrays.setAll(outstreams, i ->
                 i < edgeCapacities.length
                     ? e -> addToQueue(buckets[i], edgeCapacities[i], e)
-                    : e -> addToQueue(snapshotQueue, snapshotCapacity, (Entry<Data, Data>) e));
+                    : e -> addToQueue(snapshotQueue, snapshotCapacity, (Entry<MockData, MockData>) e));
 
-        outbox = new OutboxImpl(outstreams, snapshotCapacity  > 0, new ProgressTracker(), IDENTITY_SERIALIZER);
+        outbox = new OutboxImpl(outstreams, snapshotCapacity > 0, new ProgressTracker(), IDENTITY_SERIALIZER);
     }
 
     private static <E> ProgressState addToQueue(Queue<? super E> queue, int capacity, E o) {
@@ -121,6 +120,13 @@ public final class TestOutbox implements Outbox {
      */
     public Queue<Object> queueWithOrdinal(int ordinal) {
         return buckets[ordinal];
+    }
+
+    /**
+     * Returns the queue to which snapshot is written.
+     */
+    public Queue<Entry<MockData, MockData>> snapshotQueue() {
+        return snapshotQueue;
     }
 
     public static class MockSerializationService implements SerializationService {

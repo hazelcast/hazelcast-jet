@@ -32,10 +32,11 @@ import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.StreamingTestSupport.streamToString;
 import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.WatermarkPolicies.limitingLagAndLull;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
@@ -137,6 +138,12 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
         String expected = streamToString(expectedOutput.stream());
         String actual = streamToString(new ArrayList<>(sinkList).stream());
         assertEquals(expected, actual);
+    }
+
+    private static String streamToString(Stream<?> stream) {
+        return stream
+                .map(String::valueOf)
+                .collect(Collectors.joining("\n"));
     }
 
     /**
