@@ -54,15 +54,13 @@ public class SnapshotRepository {
         this.logger = jetInstance.getHazelcastInstance().getLoggingService().getLogger(getClass());
     }
 
-    boolean putNewRecord(SnapshotRecord record) {
-        IStreamMap<Long, SnapshotRecord> snapshots = getSnapshotMap(record.jobId());
-        if (snapshots.putIfAbsent(record.snapshotId(), record) != null) {
-            logger.severe("Snapshot with id " + record.snapshotId() + " already exists for job "
-                    + idToString(record.jobId()));
-            //TODO: should job be failed here?
-            return false;
-        }
-        return true;
+    long beginSnapshot(long jobId, long proposedId) {
+        IStreamMap<Long, SnapshotRecord> snapshots = getSnapshotMap(jobId);
+        SnapshotRecord record;
+        do {
+            record = new SnapshotRecord(jobId, proposedId++);
+        } while (snapshots.putIfAbsent(record.snapshotId(), record) != null);
+        return record.snapshotId();
     }
 
     private IStreamMap<Long, SnapshotRecord> getSnapshotMap(long jobId) {

@@ -71,7 +71,6 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.isJobRestartRequired;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.Util.formatIds;
 import static com.hazelcast.jet.impl.util.Util.idToString;
-import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
 import static com.hazelcast.jet.processor.Sources.readMap;
 import static java.util.stream.Collectors.partitioningBy;
 import static java.util.stream.Collectors.toList;
@@ -342,15 +341,13 @@ public class MasterContext {
     }
 
     private void beginSnapshot() {
-        SnapshotRecord record = new SnapshotRecord(jobId, nextSnapshotId++);
-        if (!coordinationService.snapshotRepository().putNewRecord(record)) {
-            return;
-        }
+        long snapshotId = coordinationService.snapshotRepository().beginSnapshot(jobId, nextSnapshotId);
+        nextSnapshotId = snapshotId + 1;
 
-        logger.info(String.format("Starting snapshot %s for job %s", record.snapshotId(), idToString(jobId)));
+        logger.info(String.format("Starting snapshot %s for job %s", snapshotId, idToString(jobId)));
         Function<ExecutionPlan, Operation> factory =
-                plan -> new SnapshotOperation(jobId, executionId, record.snapshotId());
-        invoke(factory, responses -> onSnapshotCompleted(responses, record.snapshotId()), completionFuture);
+                plan -> new SnapshotOperation(jobId, executionId, snapshotId);
+        invoke(factory, responses -> onSnapshotCompleted(responses, snapshotId), completionFuture);
     }
 
     private void onSnapshotCompleted(Map<MemberInfo, Object> responses, long snapshotId) {

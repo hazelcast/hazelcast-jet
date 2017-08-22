@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.processor;
 
-import com.hazelcast.core.PartitionAware;
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.Inbox;
@@ -67,7 +66,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     private final A emptyAcc;
     private Traverser<Object> flushTraverser;
     private long topTs = Long.MIN_VALUE;
-    private Traverser<Entry<SnapshotKey, A>> snapshotTraverser;
+    private Traverser<Entry<Entry<Long, Object>, A>> snapshotTraverser;
 
     public SlidingWindowP(
             Function<? super T, ?> getKeyF,
@@ -203,7 +202,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
             if (snapshotTraverser == null) {
                 snapshotTraverser = traverseIterable(tsToKeyToAcc.entrySet())
                         .flatMap(entry -> traverseIterable(entry.getValue().entrySet())
-                                .map(entry2 -> entry(new SnapshotKey(entry.getKey(), entry2.getKey()), entry2.getValue()))
+                                .map(entry2 -> entry(entry(entry.getKey(), entry2.getKey()), entry2.getValue()))
                         )
                         .onFirstNull(() -> snapshotTraverser = null);
             }
@@ -224,21 +223,6 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
                             return oldV.equals(emptyAcc) ? null : oldV;
                         });
             topTs = Math.max(topTs, k.getKey());
-        }
-    }
-
-    private static final class SnapshotKey implements PartitionAware<Object> {
-        final long timestamp;
-        final Object key;
-
-        private SnapshotKey(long timestamp, Object key) {
-            this.timestamp = timestamp;
-            this.key = key;
-        }
-
-        @Override
-        public Object getPartitionKey() {
-            return key;
         }
     }
 }

@@ -100,7 +100,7 @@ public class VertexDef implements IdentifiedDataSerializable {
      * downstream vertices or if some of it's downstream vertices is higher
      * priority source itself (determined by recursion).
      */
-    public boolean isHigherPriorityUpstream() {
+    boolean isHigherPriorityUpstream() {
         for (EdgeDef outboundEdge : outboundEdges) {
             if (outboundEdge.destVertex().isHigherPriorityUpstream()
                     || outboundEdge.destVertex().inboundEdges.stream()

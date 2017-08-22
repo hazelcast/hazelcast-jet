@@ -29,7 +29,7 @@ import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
 
 /**
  * A record stored in the {@link
- * com.hazelcast.jet.impl.SnapshotRepository#SNAPSHOT_RECORDS_MAP_NAME}
+ * com.hazelcast.jet.impl.SnapshotRepository#SNAPSHOT_NAME_PREFIX}
  * map.
  */
 public class SnapshotRecord implements IdentifiedDataSerializable {

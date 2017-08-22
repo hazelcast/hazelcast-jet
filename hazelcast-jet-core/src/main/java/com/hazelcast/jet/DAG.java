@@ -289,6 +289,8 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
             Edge edge = in.readObject();
             edges.add(edge);
         }
+
+        verticesByIdentity.addAll(verticesByName.values());
     }
 
     @Override
