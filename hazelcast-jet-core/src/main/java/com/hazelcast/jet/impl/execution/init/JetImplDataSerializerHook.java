@@ -30,6 +30,7 @@ import com.hazelcast.jet.impl.operation.InitOperation;
 import com.hazelcast.jet.impl.operation.JoinJobOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
+import com.hazelcast.jet.impl.processor.SlidingWindowP;
 import com.hazelcast.jet.impl.util.MaxByAggregator;
 import com.hazelcast.nio.serialization.DataSerializableFactory;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -55,6 +56,7 @@ public final class JetImplDataSerializerHook implements DataSerializerHook {
     public static final int MAX_BY_AGGREGATOR = 13;
     public static final int FILTER_EXECUTION_ID_BY_JOB_ID_PREDICATE = 14;
     public static final int FILTER_JOB_ID = 15;
+    public static final int SLIDING_WINDOW_P_SNAPSHOT_KEY = 16;
 
     public static final int FACTORY_ID = FactoryIdHelper.getFactoryId(JET_IMPL_DS_FACTORY, JET_IMPL_DS_FACTORY_ID);
 
@@ -106,6 +108,8 @@ public final class JetImplDataSerializerHook implements DataSerializerHook {
                     return new FilterExecutionIdByJobIdPredicate();
                 case FILTER_JOB_ID:
                     return new FilterJobIdPredicate();
+                case SLIDING_WINDOW_P_SNAPSHOT_KEY:
+                    return new SlidingWindowP.SnapshotKey();
                 default:
                     throw new IllegalArgumentException("Unknown type id " + typeId);
             }

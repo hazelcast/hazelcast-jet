@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.core.PartitionAware;
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.Inbox;
@@ -25,8 +26,13 @@ import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.impl.execution.init.JetImplDataSerializerHook;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import javax.annotation.Nonnull;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -39,6 +45,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.function.DistributedComparator.naturalOrder;
 import static java.lang.Math.min;
 import static java.util.Collections.emptyMap;
+import static java.util.stream.Collectors.toSet;
 
 /**
  * Handles various setups of sliding and tumbling window aggregation.
@@ -66,7 +73,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     private final A emptyAcc;
     private Traverser<Object> flushTraverser;
     private long topTs = Long.MIN_VALUE;
-    private Traverser<Entry<Entry<Long, Object>, A>> snapshotTraverser;
+    private Traverser<Entry<SnapshotKey, A>> snapshotTraverser;
 
     public SlidingWindowP(
             Function<? super T, ?> getKeyF,
@@ -202,7 +209,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
             if (snapshotTraverser == null) {
                 snapshotTraverser = traverseIterable(tsToKeyToAcc.entrySet())
                         .flatMap(entry -> traverseIterable(entry.getValue().entrySet())
-                                .map(entry2 -> entry(entry(entry.getKey(), entry2.getKey()), entry2.getValue()))
+                                .map(entry2 -> entry(new SnapshotKey(entry.getKey(), entry2.getKey()), entry2.getValue()))
                         )
                         .onFirstNull(() -> snapshotTraverser = null);
             }
@@ -215,14 +222,53 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     @Override
     public void restoreSnapshot(@Nonnull Inbox inbox) {
         for (Object o; (o = inbox.poll()) != null; ) {
-            Entry<Entry<Long, Object>, A> entry = (Entry<Entry<Long, Object>, A>) o;
-            Map.Entry<Long, Object> k = entry.getKey();
-            tsToKeyToAcc.computeIfAbsent(k.getKey(), x -> new HashMap<>())
-                        .merge(k, entry.getValue(), (oldV, newV) -> {
+            Entry<SnapshotKey, A> entry = (Entry<SnapshotKey, A>) o;
+            SnapshotKey k = entry.getKey();
+            tsToKeyToAcc.computeIfAbsent(k.timestamp, x -> new HashMap<>())
+                        .merge(k.key, entry.getValue(), (oldV, newV) -> {
                             aggrOp.combineAccumulatorsF().accept(oldV, newV);
                             return oldV.equals(emptyAcc) ? null : oldV;
                         });
-            topTs = Math.max(topTs, k.getKey());
+            topTs = Math.max(topTs, k.timestamp);
+        }
+    }
+
+    public static final class SnapshotKey implements PartitionAware<Object>, IdentifiedDataSerializable {
+        private long timestamp;
+        private Object key;
+
+        public SnapshotKey() { }
+
+        private SnapshotKey(long timestamp, Object key) {
+            this.timestamp = timestamp;
+            this.key = key;
+        }
+
+        @Override
+        public Object getPartitionKey() {
+            return key;
+        }
+
+        @Override
+        public int getFactoryId() {
+            return JetImplDataSerializerHook.FACTORY_ID;
+        }
+
+        @Override
+        public int getId() {
+            return JetImplDataSerializerHook.SLIDING_WINDOW_P_SNAPSHOT_KEY;
+        }
+
+        @Override
+        public void writeData(ObjectDataOutput out) throws IOException {
+            out.writeLong(timestamp);
+            out.writeObject(key);
+        }
+
+        @Override
+        public void readData(ObjectDataInput in) throws IOException {
+            timestamp = in.readLong();
+            key = in.readObject();
         }
     }
 }
