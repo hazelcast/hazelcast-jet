@@ -36,7 +36,6 @@ import java.util.Map;
 import java.util.Set;
 
 import static java.util.Collections.newSetFromMap;
-import static java.util.Collections.unmodifiableSet;
 
 /**
  * Describes a computation to be performed by the Jet computation engine.
@@ -132,31 +131,31 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
         if (!containsVertex(edge.getSource())) {
             throw new IllegalArgumentException(
                     containsVertexName(edge.getSource())
-                        ? "This DAG has a vertex called '" + edge.getSourceName()
+                            ? "This DAG has a vertex called '" + edge.getSourceName()
                             + "', but the supplied edge's source is a different vertex with the same name"
-                        : "Source vertex '" + edge.getSourceName() + "' is not in this DAG"
+                            : "Source vertex '" + edge.getSourceName() + "' is not in this DAG"
             );
         }
         if (!containsVertex(edge.getDestination())) {
             throw new IllegalArgumentException(
                     containsVertexName(edge.getDestination())
-                        ? "This DAG has a vertex called '" + edge.getDestName()
+                            ? "This DAG has a vertex called '" + edge.getDestName()
                             + "', but the supplied edge's destination is a different vertex with the same name"
-                        : "Destination vertex '" + edge.getDestName() + "' is not in this DAG");
+                            : "Destination vertex '" + edge.getDestName() + "' is not in this DAG");
         }
         if (getInboundEdges(edge.getDestName())
                 .stream().anyMatch(e -> e.getDestOrdinal() == edge.getDestOrdinal())) {
             throw new IllegalArgumentException("Vertex '" + edge.getDestName()
                     + "' already has an inbound edge at ordinal " + edge.getDestOrdinal()
                     + (edge.getSourceOrdinal() == 0 && edge.getDestOrdinal() == 0
-                            ? ", use Edge.from().to() to specify another ordinal" : ""));
+                    ? ", use Edge.from().to() to specify another ordinal" : ""));
         }
         if (getOutboundEdges(edge.getSourceName())
                 .stream().anyMatch(e -> e.getSourceOrdinal() == edge.getSourceOrdinal())) {
             throw new IllegalArgumentException("Vertex '" + edge.getSourceName()
                     + "' already has an outbound edge at ordinal " + edge.getSourceOrdinal()
                     + (edge.getSourceOrdinal() == 0 && edge.getDestOrdinal() == 0
-                            ? ", use Edge.from().to() to specify another ordinal" : ""));
+                    ? ", use Edge.from().to() to specify another ordinal" : ""));
         }
         edges.add(edge);
         return this;
@@ -290,8 +289,6 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
             Edge edge = in.readObject();
             edges.add(edge);
         }
-
-        verticesByIdentity.addAll(verticesByName.values());
     }
 
     @Override
@@ -302,14 +299,5 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     @Override
     public int getId() {
         return SerializationConstants.DAG;
-    }
-
-    /**
-     * Returns the names of all vertices.
-     * <p>
-     * This method is internal API and can change in future.
-     */
-    public Set<String> getVertexNames() {
-        return unmodifiableSet(verticesByName.keySet());
     }
 }

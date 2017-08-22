@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.Snapshottable;
 
 enum ProcessorState {
 
@@ -40,7 +39,7 @@ enum ProcessorState {
     COMPLETE,
 
     /**
-     * Doing calls to {@link Snapshottable#saveSnapshot()} until
+     * Doing calls to {@link Processor#saveSnapshot()} until
      * it returns true.
      */
     SAVE_SNAPSHOT,

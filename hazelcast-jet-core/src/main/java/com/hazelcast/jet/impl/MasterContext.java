@@ -34,6 +34,7 @@ import com.hazelcast.jet.impl.operation.ExecuteOperation;
 import com.hazelcast.jet.impl.operation.InitOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.InternalCompletableFuture;
 import com.hazelcast.spi.Operation;
@@ -67,12 +68,14 @@ import static com.hazelcast.jet.JobStatus.RUNNING;
 import static com.hazelcast.jet.JobStatus.STARTING;
 import static com.hazelcast.jet.SnapshotRestorePolicy.BROADCAST;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.impl.SnapshotRepository.snapshotDataMapName;
 import static com.hazelcast.jet.impl.execution.SnapshotContext.NO_SNAPSHOT;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isJobRestartRequired;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.Util.formatIds;
 import static com.hazelcast.jet.impl.util.Util.idToString;
+import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
 import static com.hazelcast.jet.processor.Sources.readMap;
 import static java.util.stream.Collectors.partitioningBy;
 import static java.util.stream.Collectors.toList;
@@ -90,7 +93,6 @@ public class MasterContext {
     private volatile long executionId;
     private volatile long jobStartTime;
     private volatile Map<MemberInfo, ExecutionPlan> executionPlanMap;
-    private volatile Set<String> vertexNames;
 
     private volatile long nextSnapshotId;
     private volatile ScheduledFuture<?> scheduledSnapshotFuture;
@@ -143,8 +145,6 @@ public class MasterContext {
         }
 
         DAG dag = deserializeDAG();
-        // save a copy of vertex list, because it is going to change
-        vertexNames = new HashSet<>(dag.getVertexNames());
 
         SnapshotRecord snapshotRec = coordinationService.snapshotRepository().findLatestSnapshot(jobId);
         if (jobStatus() == RESTARTING && snapshotRec == null && jobRecord.getConfig().getSnapshotInterval() > 0) {
@@ -181,27 +181,15 @@ public class MasterContext {
     private void rewriteDagWithSnapshotRestore(DAG dag, SnapshotRecord snapshotRec) {
         logger.info(formatIds(jobId, executionId) + ": restoring state from snapshotId=" + snapshotRec.snapshotId()
                 + ", snapshot start time="
-                + Instant.ofEpochMilli(snapshotRec.startTime()).atZone(ZoneId.systemDefault()).toLocalDateTime());
-        Set<String> verticesWithNoSnapshot = new HashSet<>(dag.getVertexNames());
-        verticesWithNoSnapshot.removeAll(snapshotRec.vertices());
-        if (!verticesWithNoSnapshot.isEmpty()) {
-            logger.warning(formatIds(jobId, executionId) + ", snapshot " + snapshotRec.snapshotId()
-                    + ": snapshot doesn't contain data for following vertices: " + verticesWithNoSnapshot);
-        }
-        // add snapshot restore vertices to the DAG
-        for (String vertexName : snapshotRec.vertices()) {
-            Vertex vertex = dag.getVertex(vertexName);
-            if (vertex == null) {
-                logger.warning(formatIds(jobId, executionId) + ", snapshot " + snapshotRec.snapshotId()
-                        + ": snapshot contains data for vertex " + vertexName + ", but this vertex does not exist");
-                continue;
-            }
+                + toLocalDateTime(snapshotRec.startTime()));
 
-            String mapName = SnapshotRepository.snapshotDataMapName(jobId, snapshotRec.snapshotId(), vertexName);
+        for (Vertex vertex : dag) {
+            String mapName = snapshotDataMapName(jobId, snapshotRec.snapshotId(), vertex.getName());
             if (!nodeEngine.getHazelcastInstance().getMap(mapName).isEmpty()) {
-                Vertex readSnapshotVertex = dag.newVertex("__read_snapshot-" + vertexName, readMap(mapName))
+                Vertex readSnapshotVertex = dag.newVertex("__read_snapshot-" + vertex.getName(), readMap(mapName))
                                                .localParallelism(vertex.getLocalParallelism());
-                dag.edge(new SnapshotRestoreEdge(readSnapshotVertex, vertex, dag.getInboundEdges(vertexName).size()));
+                int destOrdinal = dag.getInboundEdges(vertex.getName()).size();
+                dag.edge(new SnapshotRestoreEdge(readSnapshotVertex, vertex, destOrdinal));
             }
         }
     }
@@ -354,7 +342,7 @@ public class MasterContext {
     }
 
     private void beginSnapshot() {
-        SnapshotRecord record = new SnapshotRecord(jobId, nextSnapshotId++, vertexNames);
+        SnapshotRecord record = new SnapshotRecord(jobId, nextSnapshotId++);
         if (!coordinationService.snapshotRepository().putNewRecord(record)) {
             return;
         }

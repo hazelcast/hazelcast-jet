@@ -38,15 +38,13 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
     private long snapshotId;
     private long startTime = System.currentTimeMillis();
     private boolean complete;
-    private Set<String> vertices;
 
     public SnapshotRecord() {
     }
 
-    public SnapshotRecord(long jobId, long snapshotId, Set<String> vertices) {
+    public SnapshotRecord(long jobId, long snapshotId) {
         this.jobId = jobId;
         this.snapshotId = snapshotId;
-        this.vertices = vertices;
     }
 
     /**
@@ -55,10 +53,6 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
      */
     public long jobId() {
         return jobId;
-    }
-
-    public Set<String> vertices() {
-        return vertices;
     }
 
     public boolean complete() {
@@ -93,7 +87,6 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         out.writeLong(snapshotId);
         out.writeLong(startTime);
         out.writeBoolean(complete);
-        out.writeObject(vertices);
     }
 
     @Override
@@ -102,7 +95,6 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         snapshotId = in.readLong();
         startTime = in.readLong();
         complete = in.readBoolean();
-        vertices = in.readObject();
     }
 
     @Override public String toString() {
@@ -111,7 +103,6 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
                 ", snapshotId=" + snapshotId +
                 ", startTime=" + toLocalDateTime(startTime) +
                 ", complete=" + complete +
-                ", vertices=" + vertices +
                 '}';
     }
 }
