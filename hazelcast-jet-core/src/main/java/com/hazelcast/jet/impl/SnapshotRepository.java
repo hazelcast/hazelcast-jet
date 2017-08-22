@@ -16,45 +16,47 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.core.IMap;
+import com.hazelcast.aggregation.impl.MaxAggregator;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.util.MaxByAggregator;
+import com.hazelcast.jet.impl.util.Util;
+import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.map.AbstractEntryProcessor;
 import com.hazelcast.query.EntryObject;
+import com.hazelcast.query.Predicate;
 import com.hazelcast.query.PredicateBuilder;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 
+import static com.hazelcast.jet.impl.util.Util.compute;
 import static com.hazelcast.jet.impl.util.Util.idToString;
 
 public class SnapshotRepository {
 
     /**
-     * Name of internal IMap which stores snapshot ids
+     * Name of internal IMaps which stores snapshot related data.
+     *
+     * Snapshot metadata is stored in the following map:
+     * <pre>SNAPSHOT_NAME_PREFIX + jobId/pre>
+     *
+     * Snapshot data is stored in the following map:
+     * <pre>SNAPSHOT_NAME_PREFIX + jobId + '.' + snapshotId + '.' + vertexName</pre>
      */
-    public static final String SNAPSHOT_RECORDS_MAP_NAME = "__jet.snapshots";
+    public static final String SNAPSHOT_NAME_PREFIX = "__jet.snapshots.";
 
-    /**
-     * Name of internal IMap which stores snapshot data. This a prefix, the
-     * format is:
-     * <pre>SNAPSHOT_DATA_MAP_NAME_PREFIX + jobId + '.' + snapshotId + '.' + vertexName</pre>
-     */
-    public static final String SNAPSHOT_DATA_MAP_NAME_PREFIX = "__jet.snapshots.";
-
-    private final IMap<List<Long>, SnapshotRecord> snapshotsMap;
     private final ILogger logger;
+    private final JetInstance instance;
 
     public SnapshotRepository(JetInstance jetInstance) {
-        this.snapshotsMap = jetInstance.getHazelcastInstance().getMap(SNAPSHOT_RECORDS_MAP_NAME);
+        this.instance = jetInstance;
         this.logger = jetInstance.getHazelcastInstance().getLoggingService().getLogger(getClass());
     }
 
     boolean putNewRecord(SnapshotRecord record) {
-        if (snapshotsMap.putIfAbsent(Arrays.asList(record.jobId(), record.snapshotId()), record) != null) {
+        IStreamMap<Long, SnapshotRecord> snapshots = getSnapshotMap(record.jobId());
+        if (snapshots.putIfAbsent(record.snapshotId(), record) != null) {
             logger.severe("Snapshot with id " + record.snapshotId() + " already exists for job "
                     + idToString(record.jobId()));
             //TODO: should job be failed here?
@@ -63,37 +65,42 @@ public class SnapshotRepository {
         return true;
     }
 
+    private IStreamMap<Long, SnapshotRecord> getSnapshotMap(long jobId) {
+        return instance.getMap(SNAPSHOT_NAME_PREFIX + idToString(jobId));
+    }
+
     /**
-     * Return snapshotId of newest complete snapshot for the specified job.
+     * Return the newest complete snapshot ID for the specified job.
      */
-    SnapshotRecord findLatestSnapshot(long jobId) {
-        EntryObject eo = new PredicateBuilder().getEntryObject();
-        Entry<List, SnapshotRecord> newestSnapshot =
-                snapshotsMap.aggregate(new MaxByAggregator<>("snapshotId"),
-                        eo.get("jobId").equal(jobId)
-                        .and(eo.get("complete").equal(true)));
-        return newestSnapshot != null ? newestSnapshot.getValue() : null;
+    Long latestCompleteSnapshot(long jobId) {
+        Predicate<Long, SnapshotRecord> completedSnapshots = mapEntry -> mapEntry.getValue().complete();
+        Entry<Long, SnapshotRecord> entry = getSnapshotMap(jobId).aggregate(maxByAggregator(), completedSnapshots);
+        return entry != null ? entry.getKey() : null;
+    }
+
+    /**
+     * Return the latest started snapshot ID for the specified job.
+     */
+    Long latestStartedSnapshot(long jobId) {
+        Entry<Long, SnapshotRecord> entry = getSnapshotMap(jobId).aggregate(maxByAggregator());
+        return entry != null ? entry.getKey() : null;
+    }
+
+    private MaxByAggregator<Entry<Long, SnapshotRecord>> maxByAggregator() {
+        return new MaxByAggregator<>("snapshotId");
     }
 
     void markRecordCompleted(long jobId, long snapshotId) {
-        long creationTime = (long) snapshotsMap.executeOnKey(Arrays.asList(jobId, snapshotId),
-                new MarkRecordCompleteEntryProcessor());
-
+        IStreamMap<Long, SnapshotRecord> snapshots = getSnapshotMap(jobId);
+        SnapshotRecord record = compute(snapshots, snapshotId, (k, r) -> {
+            r.setComplete();
+            return r;
+        });
         logger.info(String.format("Snapshot %s for job %s completed in %dms", snapshotId,
-                idToString(jobId), System.currentTimeMillis() - creationTime));
+                idToString(jobId), System.currentTimeMillis() - record.startTime()));
     }
 
     public static String snapshotDataMapName(long jobId, long snapshotId, String vertexName) {
-        return SNAPSHOT_DATA_MAP_NAME_PREFIX + jobId + '.' + snapshotId + '.' + vertexName;
-    }
-
-    private static class MarkRecordCompleteEntryProcessor extends AbstractEntryProcessor<Object, SnapshotRecord> {
-        @Override
-        public Object process(Entry<Object, SnapshotRecord> entry) {
-            SnapshotRecord record = entry.getValue();
-            record.setComplete();
-            entry.setValue(record);
-            return record.startTime();
-        }
+        return SNAPSHOT_NAME_PREFIX + idToString(jobId) + '.' + snapshotId + '.' + vertexName;
     }
 }

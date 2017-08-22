@@ -34,18 +34,14 @@ import com.hazelcast.jet.impl.operation.ExecuteOperation;
 import com.hazelcast.jet.impl.operation.InitOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.InternalCompletableFuture;
 import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nullable;
-import java.time.Instant;
-import java.time.ZoneId;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -146,12 +142,20 @@ public class MasterContext {
 
         DAG dag = deserializeDAG();
 
-        SnapshotRecord snapshotRec = coordinationService.snapshotRepository().findLatestSnapshot(jobId);
-        if (jobStatus() == RESTARTING && snapshotRec == null && jobRecord.getConfig().getSnapshotInterval() > 0) {
-            logger.warning("No usable snapshot for job " + idToString(jobId) + " found");
-        }
-        if (snapshotRec != null) {
-            rewriteDagWithSnapshotRestore(dag, snapshotRec);
+        // last started snapshot complete or not complete. The next started snapshot must be greater than this number
+        long lastSnapshotId = NO_SNAPSHOT;
+        if (jobStatus() == RESTARTING && jobRecord.getConfig().getSnapshotInterval() > 0) {
+            SnapshotRepository snapshotRepository = coordinationService.snapshotRepository();
+            Long snapshotId = snapshotRepository.latestCompleteSnapshot(jobId);
+            Long lastStartedSnapshot = snapshotRepository.latestStartedSnapshot(jobId);
+            if (snapshotId != null) {
+                rewriteDagWithSnapshotRestore(dag, snapshotId);
+            } else {
+                logger.warning("No usable snapshot for job " + idToString(jobId) + " found.");
+            }
+            if (lastStartedSnapshot != null) {
+                lastSnapshotId = lastStartedSnapshot;
+            }
         }
 
         executionId = executionIdSupplier.apply(jobId);
@@ -161,7 +165,6 @@ public class MasterContext {
                     + ": " + dag);
             logger.fine("Building execution plan for " + formatIds(jobId, executionId));
             //TODO: incomplete snapshot id needs to be skipped here
-            long lastSnapshotId = snapshotRec == null ? NO_SNAPSHOT : snapshotRec.snapshotId();
             JobConfig jobConfig = jobRecord.getConfig();
             executionPlanMap = ExecutionPlanBuilder.createExecutionPlans(nodeEngine,
                     membersView, dag, jobConfig, lastSnapshotId);
@@ -178,13 +181,10 @@ public class MasterContext {
         invoke(operationCtor, this::onInitStepCompleted, null);
     }
 
-    private void rewriteDagWithSnapshotRestore(DAG dag, SnapshotRecord snapshotRec) {
-        logger.info(formatIds(jobId, executionId) + ": restoring state from snapshotId=" + snapshotRec.snapshotId()
-                + ", snapshot start time="
-                + toLocalDateTime(snapshotRec.startTime()));
-
+    private void rewriteDagWithSnapshotRestore(DAG dag, long snapshotId) {
+        logger.info(formatIds(jobId, executionId) + ": restoring state from snapshotId=" + snapshotId);
         for (Vertex vertex : dag) {
-            String mapName = snapshotDataMapName(jobId, snapshotRec.snapshotId(), vertex.getName());
+            String mapName = snapshotDataMapName(jobId, snapshotId, vertex.getName());
             if (!nodeEngine.getHazelcastInstance().getMap(mapName).isEmpty()) {
                 Vertex readSnapshotVertex = dag.newVertex("__read_snapshot-" + vertex.getName(), readMap(mapName))
                                                .localParallelism(vertex.getLocalParallelism());

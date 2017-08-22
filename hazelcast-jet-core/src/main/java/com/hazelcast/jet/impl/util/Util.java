@@ -16,11 +16,15 @@
 
 package com.hazelcast.jet.impl.util;
 
+import com.hazelcast.core.IMap;
 import com.hazelcast.core.Member;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.map.AbstractEntryProcessor;
+import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.BufferObjectDataInput;
 import com.hazelcast.nio.BufferObjectDataOutput;
@@ -46,6 +50,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 
@@ -176,7 +181,7 @@ public final class Util {
      * correctly serializable by actually trying to serialize it. This will
      * reveal some non-serializable field early.
      *
-     * @param object object to check
+     * @param object     object to check
      * @param objectName object description for the exception
      * @throws IllegalArgumentException if {@code object} is not serializable
      */
@@ -185,7 +190,7 @@ public final class Util {
             if (!(object instanceof Serializable)) {
                 throw new IllegalArgumentException("\"" + objectName + "\" must be serializable");
             }
-            try  (ObjectOutputStream os = new ObjectOutputStream(new NullOutputStream())) {
+            try (ObjectOutputStream os = new ObjectOutputStream(new NullOutputStream())) {
                 os.writeObject(object);
             } catch (NotSerializableException | InvalidClassException e) {
                 throw new IllegalArgumentException("\"" + objectName + "\" must be serializable", e);
@@ -234,5 +239,23 @@ public final class Util {
             }
         }
         return new String(buf);
+    }
+
+    public static <K, V> EntryProcessor<K, V> entryProcessor(
+            DistributedBiFunction<? super K, ? super V, ? extends V> remappingFunction
+    ) {
+        return new AbstractEntryProcessor<K, V>() {
+            @Override
+            public Object process(Entry<K, V> entry) {
+                V newValue = remappingFunction.apply(entry.getKey(), entry.getValue());
+                entry.setValue(newValue);
+                return newValue;
+            }
+        };
+    }
+
+    public static <K,V> V compute(IMap<K,V> map, K key,
+                                  DistributedBiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+        return (V) map.executeOnKey(key, entryProcessor(remappingFunction));
     }
 }

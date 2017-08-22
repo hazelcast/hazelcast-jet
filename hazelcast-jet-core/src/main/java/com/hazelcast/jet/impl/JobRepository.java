@@ -57,7 +57,6 @@ public class JobRepository {
      */
     public static final String RESOURCES_MAP_NAME_PREFIX = "__jet.resources.";
 
-
     /**
      * Name of internal IMap which is used for unique id generation
      */
@@ -279,7 +278,7 @@ public class JobRepository {
     }
 
     <T> IMap<String, T> getJobResources(long jobId) {
-        return instance.getMap(RESOURCES_MAP_NAME_PREFIX + jobId);
+        return instance.getMap(RESOURCES_MAP_NAME_PREFIX + idToString(jobId));
     }
 
     public static class FilterExecutionIdByJobIdPredicate implements Predicate<Long, Long>, IdentifiedDataSerializable {

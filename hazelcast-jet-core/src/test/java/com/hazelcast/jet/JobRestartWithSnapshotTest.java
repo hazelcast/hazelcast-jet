@@ -16,14 +16,10 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.core.IMap;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.impl.SnapshotRepository;
-import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.processor.DiagnosticProcessors;
-import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
@@ -35,27 +31,22 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import javax.annotation.Nonnull;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.TestUtil.throttle;
-import static com.hazelcast.jet.impl.SnapshotRepository.SNAPSHOT_DATA_MAP_NAME_PREFIX;
-import static com.hazelcast.jet.impl.SnapshotRepository.SNAPSHOT_RECORDS_MAP_NAME;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastSerialClassRunner.class)
 public class JobRestartWithSnapshotTest extends JetTestSupport {
 
-    private static final int NODE_COUNT = 2;
     private static final int LOCAL_PARALLELISM = 4;
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
 
-    private JetInstance instance;
-    private JetInstance[] instances;
+    private JetInstance instance1;
+    private JetInstance instance2;
     private JetTestInstanceFactory factory;
 
 
@@ -66,8 +57,9 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         JetConfig config = new JetConfig();
         config.getInstanceConfig().setCooperativeThreadCount(LOCAL_PARALLELISM);
 
-        instances = factory.newMembers(config, NODE_COUNT);
-        instance = instances[0];
+        JetInstance[] instances = factory.newMembers(config, 2);
+        instance1 = instances[0];
+        instance2 = instances[1];
 
     }
 
@@ -89,47 +81,17 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
 
         JobConfig config = new JobConfig();
         config.setSnapshotIntervalMillis(2000);
-        Job job = instance.newJob(dag, config);
+        Job job = instance1.newJob(dag, config);
 
-        int num = 0;
+        int round = 0;
         while (true) {
-            dumpSnapshots(instance);
             Thread.sleep(5000);
-            num++;
-            if (num == 2) {
-                instances[1].shutdown();
+            round++;
+            if (round == 1) {
+                instance2.shutdown();
             }
          }
 
-    }
-
-    private static void dumpSnapshots(JetInstance jet) {
-        IMap<List<Long>, SnapshotRecord> map = jet.getMap(SNAPSHOT_RECORDS_MAP_NAME);
-        for (Entry<List<Long>, SnapshotRecord> entry : map.entrySet()) {
-            List<Long> key = entry.getKey();
-            long jobId = key.get(0);
-            long snapshotId = key.get(1);
-
-            SnapshotRecord sr = entry.getValue();
-            System.out.println("---------- jobId=" + jobId + ", snapshotId=" + snapshotId);
-            System.out.println("sr=" + sr);
-
-            for (String vertexId : sr.vertices()) {
-                IStreamMap<Object, Object> map2 = jet.getMap(SNAPSHOT_DATA_MAP_NAME_PREFIX + jobId + '.' + snapshotId + '.' + vertexId);
-                System.out.println("--- " + map2.getName());
-                int cnt = 0;
-                for (Entry<Object, Object> entry2 : map2.entrySet()) {
-                    System.out.println(entry2);
-                    cnt++;
-                }
-                System.out.println(cnt + " entries");
-            }
-        }
-    }
-
-    private IStreamMap<Object, Object> getSnapshot(Job job, long id) {
-        String map = SnapshotRepository.snapshotDataMapName(job.getJobId(), id, "generator");
-        return instance.getMap(map);
     }
 
     static class StreamSource extends AbstractProcessor {
@@ -159,6 +121,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
 
         @Override
         public void restoreSnapshot(@Nonnull Inbox inbox) {
+            System.out.println("Restoring snapshot..");
             lastEmitted = ((Map.Entry<Object, Integer>) inbox.poll()).getValue();
             traverser = getTraverser();
         }
