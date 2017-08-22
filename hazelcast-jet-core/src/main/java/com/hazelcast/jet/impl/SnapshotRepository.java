@@ -27,6 +27,7 @@ import com.hazelcast.query.EntryObject;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.PredicateBuilder;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -54,7 +55,11 @@ public class SnapshotRepository {
         this.logger = jetInstance.getHazelcastInstance().getLoggingService().getLogger(getClass());
     }
 
-    long beginSnapshot(long jobId, long proposedId) {
+    /**
+     * Registers a new snapshot with a proposedId, and increment until the next free snapshot sequence
+     * can be found. Returns the ID for the registered snapshot
+     */
+    long registerSnapshot(long jobId, long proposedId) {
         IStreamMap<Long, SnapshotRecord> snapshots = getSnapshotMap(jobId);
         SnapshotRecord record;
         do {
@@ -63,13 +68,21 @@ public class SnapshotRepository {
         return record.snapshotId();
     }
 
-    private IStreamMap<Long, SnapshotRecord> getSnapshotMap(long jobId) {
-        return instance.getMap(SNAPSHOT_NAME_PREFIX + idToString(jobId));
-    }
-
     /**
-     * Return the newest complete snapshot ID for the specified job.
+     * Mark the given snapshot as completed. Returns the elapsed time for the snapshot.
      */
+    long snapshotCompleted(long jobId, long snapshotId) {
+        IStreamMap<Long, SnapshotRecord> snapshots = getSnapshotMap(jobId);
+        SnapshotRecord record = compute(snapshots, snapshotId, (k, r) -> {
+            r.setComplete();
+            return r;
+        });
+        return System.currentTimeMillis() - record.startTime();
+    }
+    /**
+     * Return the newest complete snapshot ID for the specified job or null if no such snapshot is found.
+     */
+    @Nullable
     Long latestCompleteSnapshot(long jobId) {
         Predicate<Long, SnapshotRecord> completedSnapshots = mapEntry -> mapEntry.getValue().complete();
         Entry<Long, SnapshotRecord> entry = getSnapshotMap(jobId).aggregate(maxByAggregator(), completedSnapshots);
@@ -77,26 +90,23 @@ public class SnapshotRepository {
     }
 
     /**
-     * Return the latest started snapshot ID for the specified job.
+     * Return the latest started snapshot ID for the specified job or null if no such snapshot is found.
      */
+    @Nullable
     Long latestStartedSnapshot(long jobId) {
         Entry<Long, SnapshotRecord> entry = getSnapshotMap(jobId).aggregate(maxByAggregator());
         return entry != null ? entry.getKey() : null;
+    }
+
+    private IStreamMap<Long, SnapshotRecord> getSnapshotMap(long jobId) {
+        return instance.getMap(SNAPSHOT_NAME_PREFIX + idToString(jobId));
     }
 
     private MaxByAggregator<Entry<Long, SnapshotRecord>> maxByAggregator() {
         return new MaxByAggregator<>("snapshotId");
     }
 
-    void markRecordCompleted(long jobId, long snapshotId) {
-        IStreamMap<Long, SnapshotRecord> snapshots = getSnapshotMap(jobId);
-        SnapshotRecord record = compute(snapshots, snapshotId, (k, r) -> {
-            r.setComplete();
-            return r;
-        });
-        logger.info(String.format("Snapshot %s for job %s completed in %dms", snapshotId,
-                idToString(jobId), System.currentTimeMillis() - record.startTime()));
-    }
+
 
     public static String snapshotDataMapName(long jobId, long snapshotId, String vertexName) {
         return SNAPSHOT_NAME_PREFIX + idToString(jobId) + '.' + snapshotId + '.' + vertexName;

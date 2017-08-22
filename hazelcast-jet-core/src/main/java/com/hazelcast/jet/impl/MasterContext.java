@@ -26,7 +26,6 @@ import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.TopologyChangedException;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder;
 import com.hazelcast.jet.impl.operation.CompleteOperation;
@@ -341,7 +340,7 @@ public class MasterContext {
     }
 
     private void beginSnapshot() {
-        long snapshotId = coordinationService.snapshotRepository().beginSnapshot(jobId, nextSnapshotId);
+        long snapshotId = coordinationService.snapshotRepository().registerSnapshot(jobId, nextSnapshotId);
         nextSnapshotId = snapshotId + 1;
 
         logger.info(String.format("Starting snapshot %s for job %s", snapshotId, idToString(jobId)));
@@ -362,7 +361,9 @@ public class MasterContext {
         }
 
         // mark the record in the map as completed
-        coordinationService.snapshotRepository().markRecordCompleted(jobId, snapshotId);
+        long elapsed = coordinationService.snapshotRepository().snapshotCompleted(jobId, snapshotId);
+        logger.info(String.format("Snapshot %s for job %s completed in %dms", snapshotId,
+                idToString(jobId), elapsed));
 
         //TODO: exception get swallowed here
         // TODO delete older snapshots
