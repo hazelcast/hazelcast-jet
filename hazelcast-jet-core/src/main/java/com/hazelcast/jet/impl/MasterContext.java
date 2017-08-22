@@ -26,7 +26,6 @@ import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.TopologyChangedException;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder;
 import com.hazelcast.jet.impl.operation.CompleteOperation;
@@ -71,7 +70,6 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.isJobRestartRequired;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.Util.formatIds;
 import static com.hazelcast.jet.impl.util.Util.idToString;
-import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
 import static com.hazelcast.jet.processor.Sources.readMap;
 import static java.util.stream.Collectors.partitioningBy;
 import static java.util.stream.Collectors.toList;
@@ -85,6 +83,7 @@ public class MasterContext {
     private final long jobId;
     private final CompletableFuture<Boolean> completionFuture = new CompletableFuture<>();
     private final AtomicReference<JobStatus> jobStatus = new AtomicReference<>(NOT_STARTED);
+    private final SnapshotRepository snapshotRepository;
 
     private volatile long executionId;
     private volatile long jobStartTime;
@@ -96,6 +95,7 @@ public class MasterContext {
     MasterContext(NodeEngineImpl nodeEngine, JobCoordinationService coordinationService, JobRecord jobRecord) {
         this.nodeEngine = nodeEngine;
         this.coordinationService = coordinationService;
+        this.snapshotRepository = coordinationService.snapshotRepository();
         this.logger = nodeEngine.getLogger(getClass());
         this.jobRecord = jobRecord;
         this.jobId = jobRecord.getJobId();
@@ -142,12 +142,19 @@ public class MasterContext {
 
         DAG dag = deserializeDAG();
 
-        SnapshotRecord snapshotRec = coordinationService.snapshotRepository().findLatestSnapshot(jobId);
-        if (jobStatus() == RESTARTING && snapshotRec == null && jobRecord.getConfig().getSnapshotInterval() > 0) {
-            logger.warning("No usable snapshot for job " + idToString(jobId) + " found");
-        }
-        if (snapshotRec != null) {
-            rewriteDagWithSnapshotRestore(dag, snapshotRec);
+        // last started snapshot complete or not complete. The next started snapshot must be greater than this number
+        long lastSnapshotId = NO_SNAPSHOT;
+        if (jobStatus() == RESTARTING && jobRecord.getConfig().getSnapshotInterval() > 0) {
+            Long snapshotId = snapshotRepository.latestCompleteSnapshot(jobId);
+            Long lastStartedSnapshot = snapshotRepository.latestStartedSnapshot(jobId);
+            if (snapshotId != null) {
+                rewriteDagWithSnapshotRestore(dag, snapshotId);
+            } else {
+                logger.warning("No usable snapshot for job " + idToString(jobId) + " found.");
+            }
+            if (lastStartedSnapshot != null) {
+                lastSnapshotId = lastStartedSnapshot;
+            }
         }
 
         executionId = executionIdSupplier.apply(jobId);
@@ -157,7 +164,6 @@ public class MasterContext {
                     + ": " + dag);
             logger.fine("Building execution plan for " + formatIds(jobId, executionId));
             //TODO: incomplete snapshot id needs to be skipped here
-            long lastSnapshotId = snapshotRec == null ? NO_SNAPSHOT : snapshotRec.snapshotId();
             JobConfig jobConfig = jobRecord.getConfig();
             executionPlanMap = ExecutionPlanBuilder.createExecutionPlans(nodeEngine,
                     membersView, dag, jobConfig, lastSnapshotId);
@@ -174,13 +180,10 @@ public class MasterContext {
         invoke(operationCtor, this::onInitStepCompleted, null);
     }
 
-    private void rewriteDagWithSnapshotRestore(DAG dag, SnapshotRecord snapshotRec) {
-        logger.info(formatIds(jobId, executionId) + ": restoring state from snapshotId=" + snapshotRec.snapshotId()
-                + ", snapshot start time="
-                + toLocalDateTime(snapshotRec.startTime()));
-
+    private void rewriteDagWithSnapshotRestore(DAG dag, long snapshotId) {
+        logger.info(formatIds(jobId, executionId) + ": restoring state from snapshotId=" + snapshotId);
         for (Vertex vertex : dag) {
-            String mapName = snapshotDataMapName(jobId, snapshotRec.snapshotId(), vertex.getName());
+            String mapName = snapshotDataMapName(jobId, snapshotId, vertex.getName());
             if (!nodeEngine.getHazelcastInstance().getMap(mapName).isEmpty()) {
                 Vertex readSnapshotVertex = dag.newVertex("__read_snapshot-" + vertex.getName(), readMap(mapName))
                                                .localParallelism(vertex.getLocalParallelism());
@@ -338,33 +341,36 @@ public class MasterContext {
     }
 
     private void beginSnapshot() {
-        SnapshotRecord record = coordinationService.snapshotRepository().putNewRecord(jobId, nextSnapshotId);
-        nextSnapshotId = record.snapshotId() + 1;
+        long snapshotId = snapshotRepository.registerSnapshot(jobId, nextSnapshotId);
+        nextSnapshotId = snapshotId + 1;
 
-        logger.info(String.format("Starting snapshot %s for job %s", record.snapshotId(), idToString(jobId)));
+        logger.info(String.format("Starting snapshot %s for job %s", snapshotId, idToString(jobId)));
         Function<ExecutionPlan, Operation> factory =
-                plan -> new SnapshotOperation(jobId, executionId, record.snapshotId());
-        invoke(factory, responses -> onSnapshotCompleted(responses, record.snapshotId()), completionFuture);
+                plan -> new SnapshotOperation(jobId, executionId, snapshotId);
+        invoke(factory, responses -> onSnapshotCompleted(responses, snapshotId), completionFuture);
     }
 
     private void onSnapshotCompleted(Map<MemberInfo, Object> responses, long snapshotId) {
         // check if all members were successful
+        boolean completed = true;
         for (Object r : responses.values()) {
             if (r instanceof Throwable) {
                 logger.warning(SnapshotOperation.class.getSimpleName() + " for " + formatIds(jobId, executionId)
                         + " failed on some members: " + r, (Throwable) r);
-                // fail the job
-                completionFuture.completeExceptionally((Throwable) r);
+                completed = false;
             }
         }
 
-        // mark the record in the map as completed
-        coordinationService.snapshotRepository().markRecordCompleted(jobId, snapshotId);
+        if (completed) {
+            // mark the record in the map as completed
+            long elapsed = snapshotRepository.snapshotCompleted(jobId, snapshotId);
+            logger.info(String.format("Snapshot %s for job %s completed in %dms", snapshotId,
+                    idToString(jobId), elapsed));
+            //TODO: exception get swallowed here
+            //TODO: delete older snapshots
 
-        //TODO: exception get swallowed here
-        // TODO delete older snapshots
-
-        scheduleSnapshot();
+            scheduleSnapshot();
+        }
     }
 
     // Called as callback when all ExecuteOperation invocations are done
