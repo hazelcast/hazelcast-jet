@@ -34,18 +34,14 @@ import com.hazelcast.jet.impl.operation.ExecuteOperation;
 import com.hazelcast.jet.impl.operation.InitOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.InternalCompletableFuture;
 import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nullable;
-import java.time.Instant;
-import java.time.ZoneId;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -342,10 +338,8 @@ public class MasterContext {
     }
 
     private void beginSnapshot() {
-        SnapshotRecord record = new SnapshotRecord(jobId, nextSnapshotId++);
-        if (!coordinationService.snapshotRepository().putNewRecord(record)) {
-            return;
-        }
+        SnapshotRecord record = coordinationService.snapshotRepository().putNewRecord(jobId, nextSnapshotId);
+        nextSnapshotId = record.snapshotId() + 1;
 
         logger.info(String.format("Starting snapshot %s for job %s", record.snapshotId(), idToString(jobId)));
         Function<ExecutionPlan, Operation> factory =

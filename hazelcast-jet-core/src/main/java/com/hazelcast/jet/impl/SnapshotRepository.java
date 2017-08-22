@@ -48,19 +48,21 @@ public class SnapshotRepository {
     private final IMap<List<Long>, SnapshotRecord> snapshotsMap;
     private final ILogger logger;
 
-    public SnapshotRepository(JetInstance jetInstance) {
+    SnapshotRepository(JetInstance jetInstance) {
         this.snapshotsMap = jetInstance.getHazelcastInstance().getMap(SNAPSHOT_RECORDS_MAP_NAME);
         this.logger = jetInstance.getHazelcastInstance().getLoggingService().getLogger(getClass());
     }
 
-    boolean putNewRecord(SnapshotRecord record) {
-        if (snapshotsMap.putIfAbsent(Arrays.asList(record.jobId(), record.snapshotId()), record) != null) {
-            logger.severe("Snapshot with id " + record.snapshotId() + " already exists for job "
-                    + idToString(record.jobId()));
-            //TODO: should job be failed here?
-            return false;
-        }
-        return true;
+    /**
+     * Create new {@link SnapshotRecord} for the supplied jobId, trying to use
+     * snapshotId of {@code proposedId}, then {@code proposedId + 1} etc.
+     */
+    SnapshotRecord putNewRecord(long jobId, long proposedId) {
+        SnapshotRecord record;
+        do {
+            record = new SnapshotRecord(jobId, proposedId++);
+        } while (snapshotsMap.putIfAbsent(Arrays.asList(record.jobId(), record.snapshotId()), record) != null);
+        return record;
     }
 
     /**
