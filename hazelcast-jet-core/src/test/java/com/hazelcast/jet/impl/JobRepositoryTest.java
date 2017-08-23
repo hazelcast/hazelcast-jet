@@ -24,8 +24,6 @@ import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.JetTestSupport;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.impl.JobRecord;
-import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
@@ -171,7 +169,7 @@ public class JobRepositoryTest extends JetTestSupport {
     }
 
     private JobRecord createJobRecord(long jobIb, Data dag) {
-        return new JobRecord(jobIb, dag, jobConfig, 1);
+        return new JobRecord(jobIb, System.currentTimeMillis(), dag, jobConfig, 1);
     }
 
     private void sleepUntilJobExpires() {

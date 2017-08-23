@@ -31,10 +31,12 @@ import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.executionservice.InternalExecutionService;
 import com.hazelcast.spi.properties.HazelcastProperties;
+import com.hazelcast.util.Clock;
 
 import java.security.PrivilegedAction;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -42,8 +44,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import static com.hazelcast.cluster.memberselector.MemberSelectors.DATA_MEMBER_SELECTOR;
-import static com.hazelcast.jet.JobStatus.COMPLETED;
-import static com.hazelcast.jet.JobStatus.FAILED;
 import static com.hazelcast.jet.JobStatus.NOT_STARTED;
 import static com.hazelcast.jet.impl.JobRepository.JOB_RESULTS_MAP_NAME;
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
@@ -125,7 +125,7 @@ public class JobCoordinationService {
     /**
      * Starts the job if it is not already started or completed. Returns a future which represents result of the job.
      */
-    public CompletableFuture<Boolean> startOrJoinJob(long jobId, Data dag, JobConfig config) {
+    public CompletableFuture<Boolean> submitJob(long jobId, Data dag, JobConfig config) {
         if (!isMaster()) {
             throw new JetException("Job cannot be started here. Master address: "
                     + nodeEngine.getClusterService().getMasterAddress());
@@ -142,7 +142,7 @@ public class JobCoordinationService {
         }
 
         int quorumSize = config.isSplitBrainProtectionEnabled() ? getQuorumSize() : 0;
-        JobRecord jobRecord = new JobRecord(jobId, dag, config, quorumSize);
+        JobRecord jobRecord = new JobRecord(jobId, Clock.currentTimeMillis(), dag, config, quorumSize);
         MasterContext masterContext = new MasterContext(nodeEngine, this, jobRecord);
 
         // just try to initiate the coordination
@@ -163,6 +163,25 @@ public class JobCoordinationService {
         logger.info("Starting new job " + idToString(jobId));
         tryStartJob(masterContext);
         return masterContext.completionFuture();
+    }
+
+    public CompletableFuture<Boolean> joinSubmittedJob(long jobId) {
+        if (!isMaster()) {
+            throw new JetException("Cannot join to submitted job jere. Master address: "
+                    + nodeEngine.getClusterService().getMasterAddress());
+        }
+
+        JobRecord jobRecord = jobRepository.getJob(jobId);
+        if (jobRecord != null) {
+            return submitJob(jobId, jobRecord.getDag(), jobRecord.getConfig());
+        }
+
+        JobResult jobResult = jobResults.get(jobId);
+        if (jobResult != null) {
+            return jobResult.asCompletableFuture();
+        }
+
+        throw new IllegalArgumentException("Job " + idToString(jobId) + " not found to join!");
     }
 
     // Tries to automatically start a job if it is not already running or completed
@@ -222,6 +241,13 @@ public class JobCoordinationService {
         return clusterService.getMembers(DATA_MEMBER_SELECTOR).size();
     }
 
+    public Set<Long> getAllJobIds() {
+        Set<Long> jobIds = new HashSet<>(jobRepository.getJobIds());
+        jobIds.addAll(masterContexts.keySet());
+        jobIds.addAll(jobResults.keySet());
+        return jobIds;
+    }
+
     /**
      * Returns the job status or fails with {@link IllegalArgumentException} if the requested job is not found
      */
@@ -240,7 +266,7 @@ public class JobCoordinationService {
         if (jobRecord == null) {
             JobResult jobResult = jobResults.get(jobId);
             if (jobResult != null) {
-                return jobResult.isSuccessfulOrCancelled() ? COMPLETED : FAILED;
+                return jobResult.getJobStatus();
             }
 
             throw new IllegalArgumentException("Job " + idToString(jobId) + " not found");
@@ -256,9 +282,13 @@ public class JobCoordinationService {
         // the order of operations are important.
 
         long jobId = masterContext.getJobId();
-        long jobCreationTime = jobRepository.getJobCreationTimeOrFail(jobId);
+        JobRecord jobRecord = jobRepository.getJob(jobId);
+        if (jobRecord == null) {
+            throw new IllegalArgumentException("Job record not found for job id: " + idToString(jobId));
+        }
+
         String coordinator = nodeEngine.getNode().getThisUuid();
-        JobResult jobResult = new JobResult(jobId, coordinator, jobCreationTime, completionTime, error);
+        JobResult jobResult = new JobResult(jobId, coordinator, jobRecord.getCreationTime(), completionTime, error);
 
         JobResult prev = jobResults.putIfAbsent(jobId, jobResult);
         if (prev != null) {
@@ -365,4 +395,5 @@ public class JobCoordinationService {
     public SnapshotRepository snapshotRepository() {
         return snapshotRepository;
     }
+
 }

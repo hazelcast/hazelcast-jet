@@ -219,8 +219,16 @@ public class JetService
     public void memberAttributeChanged(MemberAttributeServiceEvent event) {
     }
 
-    public CompletableFuture<Boolean> startOrJoinJob(long jobId, Data dag, JobConfig config) {
-        return jobCoordinationService.startOrJoinJob(jobId, dag, config);
+    public CompletableFuture<Boolean> submitJob(long jobId, Data dag, JobConfig config) {
+        return jobCoordinationService.submitJob(jobId, dag, config);
+    }
+
+    public CompletableFuture<Boolean> joinSubmittedJob(long jobId) {
+        return jobCoordinationService.joinSubmittedJob(jobId);
+    }
+
+    public Set<Long> getAllJobIds() {
+        return jobCoordinationService.getAllJobIds();
     }
 
     public AtomicInteger numConcurrentPutAllOps() {

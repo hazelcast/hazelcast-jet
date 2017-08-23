@@ -23,7 +23,6 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
-import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.execution.init.JetImplDataSerializerHook;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.nio.IOUtil;
@@ -202,19 +201,6 @@ public class JobRepository {
     }
 
     /**
-     * Returns the job record creation time for the given job id.
-     * If the job record is not found, fails with an {@link IllegalArgumentException}
-     */
-    long getJobCreationTimeOrFail(long jobId) {
-        EntryView<Long, JobRecord> entryView = jobs.getEntryView(jobId);
-        if (entryView != null) {
-            return entryView.getCreationTime();
-        }
-
-        throw new IllegalArgumentException("Job creation time not found for job id: " + idToString(jobId));
-    }
-
-    /**
      * Performs cleanup after job completion. Deletes job record and job resources but keeps the job id
      * so that it will not be used again for a new job submission
      */
@@ -267,6 +253,10 @@ public class JobRepository {
 
     private boolean isJobExpired(long creationTime) {
         return (System.currentTimeMillis() - creationTime) >= jobExpirationDurationInMillis;
+    }
+
+    Set<Long> getJobIds() {
+        return jobs.keySet();
     }
 
     Collection<JobRecord> getJobRecords() {

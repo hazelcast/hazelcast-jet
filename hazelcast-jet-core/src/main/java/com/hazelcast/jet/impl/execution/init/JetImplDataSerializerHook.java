@@ -26,8 +26,10 @@ import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.operation.CompleteOperation;
 import com.hazelcast.jet.impl.operation.ExecuteOperation;
 import com.hazelcast.jet.impl.operation.GetJobStatusOperation;
+import com.hazelcast.jet.impl.operation.GetJobIdsOperation;
 import com.hazelcast.jet.impl.operation.InitOperation;
-import com.hazelcast.jet.impl.operation.JoinJobOperation;
+import com.hazelcast.jet.impl.operation.JoinSubmittedJobOperation;
+import com.hazelcast.jet.impl.operation.SubmitJobOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
@@ -48,7 +50,7 @@ public final class JetImplDataSerializerHook implements DataSerializerHook {
     public static final int INIT_OP = 5;
     public static final int EXECUTE_OP = 6;
     public static final int COMPLETE_OP = 7;
-    public static final int JOIN_JOB_OP = 8;
+    public static final int SUBMIT_JOB_OP = 8;
     public static final int GET_JOB_STATUS_OP = 9;
     public static final int SNAPSHOT_OP = 10;
     public static final int MASTER_SNAPSHOT_RECORD = 11;
@@ -57,6 +59,8 @@ public final class JetImplDataSerializerHook implements DataSerializerHook {
     public static final int FILTER_EXECUTION_ID_BY_JOB_ID_PREDICATE = 14;
     public static final int FILTER_JOB_ID = 15;
     public static final int SLIDING_WINDOW_P_SNAPSHOT_KEY = 16;
+    public static final int GET_JOB_IDS = 17;
+    public static final int JOIN_SUBMITTED_JOB = 18;
 
     public static final int FACTORY_ID = FactoryIdHelper.getFactoryId(JET_IMPL_DS_FACTORY, JET_IMPL_DS_FACTORY_ID);
 
@@ -92,8 +96,8 @@ public final class JetImplDataSerializerHook implements DataSerializerHook {
                     return new ExecuteOperation();
                 case COMPLETE_OP:
                     return new CompleteOperation();
-                case JOIN_JOB_OP:
-                    return new JoinJobOperation();
+                case SUBMIT_JOB_OP:
+                    return new SubmitJobOperation();
                 case GET_JOB_STATUS_OP:
                     return new GetJobStatusOperation();
                 case SNAPSHOT_OP:
@@ -110,6 +114,10 @@ public final class JetImplDataSerializerHook implements DataSerializerHook {
                     return new FilterJobIdPredicate();
                 case SLIDING_WINDOW_P_SNAPSHOT_KEY:
                     return new SlidingWindowP.SnapshotKey();
+                case GET_JOB_IDS:
+                    return new GetJobIdsOperation();
+                case JOIN_SUBMITTED_JOB:
+                    return new JoinSubmittedJobOperation();
                 default:
                     throw new IllegalArgumentException("Unknown type id " + typeId);
             }

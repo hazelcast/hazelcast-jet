@@ -16,12 +16,10 @@
 
 package com.hazelcast.jet.impl.operation;
 
-import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.init.JetImplDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import java.io.IOException;
@@ -29,26 +27,22 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 
-public class JoinJobOperation extends AsyncExecutionOperation implements IdentifiedDataSerializable {
+public class JoinSubmittedJobOperation extends AsyncExecutionOperation implements IdentifiedDataSerializable {
 
-
-    private Data dag;
-    private JobConfig config;
     private volatile CompletableFuture<Boolean> executionFuture;
 
-    public JoinJobOperation() {
+    public JoinSubmittedJobOperation() {
     }
 
-    public JoinJobOperation(long jobId, Data dag, JobConfig config) {
+    public JoinSubmittedJobOperation(long jobId) {
         super(jobId);
-        this.dag = dag;
-        this.config = config;
+
     }
 
     @Override
     protected void doRun() {
         JetService service = getService();
-        executionFuture = service.startOrJoinJob(jobId, dag, config);
+        executionFuture = service.joinSubmittedJob(jobId);
         executionFuture.whenComplete((r, t) -> doSendResponse(peel(t)));
     }
 
@@ -61,20 +55,17 @@ public class JoinJobOperation extends AsyncExecutionOperation implements Identif
 
     @Override
     public int getId() {
-        return JetImplDataSerializerHook.JOIN_JOB_OP;
+        return JetImplDataSerializerHook.JOIN_SUBMITTED_JOB;
     }
 
     @Override
     protected void writeInternal(ObjectDataOutput out) throws IOException {
         super.writeInternal(out);
-        out.writeData(dag);
-        out.writeObject(config);
     }
 
     @Override
     protected void readInternal(ObjectDataInput in) throws IOException {
         super.readInternal(in);
-        dag = in.readData();
-        config = in.readObject();
     }
+
 }
