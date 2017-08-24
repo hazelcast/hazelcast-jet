@@ -92,9 +92,8 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
 
     @Override
     public Collection<Job> getJobs() {
-        Address masterAddress = getMasterAddress();
         ClientMessage request = JetGetJobIdsCodec.encodeRequest();
-        ClientInvocation invocation = new ClientInvocation(client, request, masterAddress);
+        ClientInvocation invocation = new ClientInvocation(client, request, masterAddress());
         Set<Long> jobIds;
         try {
             ClientMessage clientMessage = invocation.invoke().get();
@@ -113,16 +112,9 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         return jobs;
     }
 
-    private Address getMasterAddress() {
-        Set<Member> members = client.getCluster().getMembers();
-        Member master = members.iterator().next();
-        return master.getAddress();
-    }
-
     private JobStatus sendJobStatusRequest(long jobId) {
-        Address masterAddress = getMasterAddress();
         ClientMessage request = JetGetJobStatusCodec.encodeRequest(jobId);
-        ClientInvocation invocation = new ClientInvocation(client, request, masterAddress);
+        ClientInvocation invocation = new ClientInvocation(client, request, masterAddress());
         try {
             ClientMessage clientMessage = invocation.invoke().get();
             JetGetJobStatusCodec.ResponseParameters response = JetGetJobStatusCodec.decodeResponse(clientMessage);
@@ -136,6 +128,12 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         return client.getLoggingService().getLogger(type);
     }
 
+    private Address masterAddress() {
+        Set<Member> members = client.getCluster().getMembers();
+        Member master = members.iterator().next();
+        return master.getAddress();
+    }
+
     private class SubmittedJobImpl extends AbstractSubmittedJobImpl {
 
         SubmittedJobImpl(JetInstance jetInstance, ILogger logger, DAG dag, JobConfig config) {
@@ -144,7 +142,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
 
         @Override
         protected Address getMasterAddress() {
-            return JetClientInstanceImpl.this.getMasterAddress();
+            return JetClientInstanceImpl.this.masterAddress();
         }
 
         @Override
@@ -174,7 +172,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
 
         @Override
         protected Address getMasterAddress() {
-            return JetClientInstanceImpl.this.getMasterAddress();
+            return JetClientInstanceImpl.this.masterAddress();
         }
 
         @Override
