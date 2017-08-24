@@ -37,8 +37,7 @@ public interface OutboundCollector {
     ProgressState offer(Object item);
 
     /**
-     * Offer a watermark to this collector. Watermarks will be propagated to all sub-collectors
-     * if the collector is a composite one.
+     * Broadcasts an item to all sub-collectors, if any.
      */
     default ProgressState offerBroadcast(Object item) {
         return offer(item);

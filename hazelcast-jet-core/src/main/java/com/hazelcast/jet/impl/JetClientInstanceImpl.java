@@ -21,7 +21,6 @@ import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.JetCancelJobCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobIdsCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobStatusCodec;
-import com.hazelcast.client.impl.protocol.codec.JetGetJobStatusCodec.ResponseParameters;
 import com.hazelcast.client.impl.protocol.codec.JetJoinSubmittedJobCodec;
 import com.hazelcast.client.impl.protocol.codec.JetSubmitJobCodec;
 import com.hazelcast.client.spi.impl.ClientInvocation;
@@ -52,6 +51,7 @@ import java.util.concurrent.TimeoutException;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.Util.idToString;
+import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -97,8 +97,8 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         Set<Long> jobIds;
         try {
             ClientMessage clientMessage = invocation.invoke().get();
-            ResponseParameters response = JetGetJobStatusCodec.decodeResponse(clientMessage);
-            jobIds = JetClientInstanceImpl.this.client.getSerializationService().toObject(response.response);
+            JetGetJobIdsCodec.ResponseParameters response = JetGetJobIdsCodec.decodeResponse(clientMessage);
+            jobIds = client.getSerializationService().toObject(response.response);
         } catch (Exception e) {
             throw rethrow(e);
         }
@@ -124,8 +124,8 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         ClientInvocation invocation = new ClientInvocation(client, request, masterAddress);
         try {
             ClientMessage clientMessage = invocation.invoke().get();
-            ResponseParameters response = JetGetJobStatusCodec.decodeResponse(clientMessage);
-            return JetClientInstanceImpl.this.client.getSerializationService().toObject(response.response);
+            JetGetJobStatusCodec.ResponseParameters response = JetGetJobStatusCodec.decodeResponse(clientMessage);
+            return client.getSerializationService().toObject(response.response);
         } catch (Exception e) {
             throw rethrow(e);
         }
