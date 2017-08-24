@@ -27,10 +27,14 @@ import com.hazelcast.nio.Address;
 import javax.annotation.Nonnull;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Queue;
+import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.test.JetAssert.assertEquals;
@@ -57,34 +61,36 @@ public final class TestSupport {
 
     /**
      * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean)}
-     * with progress assertion enabled.
+     * with progress assertion and snapshot+restore enabled.
      */
     public static <T, U> void testProcessor(@Nonnull DistributedSupplier<Processor> supplier,
                                             @Nonnull List<T> input, @Nonnull List<U> expectedOutput) {
-        testProcessor(supplier, input, expectedOutput, true, false);
+        testProcessor(supplier, input, expectedOutput, true, true);
     }
 
     /**
      * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean)}
-     * with progress assertion enabled.
+     * with progress assertion and snapshot+restoreenabled.
      */
     public static <T, U> void testProcessor(@Nonnull ProcessorSupplier supplier,
                                             @Nonnull List<T> input, @Nonnull List<U> expectedOutput) {
-        testProcessor(supplierFrom(supplier), input, expectedOutput, true, false);
+        testProcessor(supplierFrom(supplier), input, expectedOutput, true, true);
     }
 
     /**
      * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean)}
-     * with progress assertion enabled.
+     * with progress assertion and snapshot+restoreenabled.
      */
     public static <T, U> void testProcessor(@Nonnull ProcessorMetaSupplier supplier,
                                             @Nonnull List<T> input, @Nonnull List<U> expectedOutput) {
-        testProcessor(supplierFrom(supplier), input, expectedOutput, true, false);
+        testProcessor(supplierFrom(supplier), input, expectedOutput, true, true);
     }
 
     /**
-     * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean)}
-     * with progress assertion enabled.
+     * Convenience for {@link #testProcessor(Supplier, List, List, boolean,
+     * boolean)} with progress assertion enabled. Snapshot+restore is disabled
+     * since we don't have processor supplier and cannot create new instances
+     * of the processor.
      */
     public static <T, U> void testProcessor(@Nonnull Processor processor, @Nonnull List<T> input,
                                             @Nonnull List<U> expectedOutput) {
@@ -100,45 +106,6 @@ public final class TestSupport {
     }
 
     /**
-     * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean)}
-     * extracting the processor instance from the {@code supplier}.
-     */
-    public static <T, U> void testProcessor(
-            @Nonnull DistributedSupplier<Processor> supplier,
-            @Nonnull List<T> input,
-            @Nonnull List<U> expectedOutput,
-            boolean assertProgress
-    ) {
-        testProcessor(supplier, input, expectedOutput, assertProgress, false);
-    }
-
-    /**
-     * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean)}
-     * extracting the processor instance from the {@code supplier}.
-     */
-    public static <T, U> void testProcessor(
-            @Nonnull ProcessorSupplier supplier,
-            @Nonnull List<T> input,
-            @Nonnull List<U> expectedOutput,
-            boolean assertProgress
-    ) {
-        testProcessor(supplierFrom(supplier), input, expectedOutput, assertProgress, false);
-    }
-
-    /**
-     * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean)}
-     * extracting the processor instance from the {@code supplier}.
-     */
-    public static <T, U> void testProcessor(
-            @Nonnull ProcessorMetaSupplier supplier,
-            @Nonnull List<T> input,
-            @Nonnull List<U> expectedOutput,
-            boolean assertProgress
-    ) {
-        testProcessor(supplierFrom(supplier), input, expectedOutput, assertProgress, false);
-    }
-
-    /**
      * A utility to test processors. It will initialize the processor instance,
      * pass input items to it and assert the outbox contents.
      * <p>
@@ -147,11 +114,32 @@ public final class TestSupport {
      *     com.hazelcast.jet.Outbox, com.hazelcast.jet.Processor.Context)}
      *
      *     <li>calls {@link Processor#process(int, com.hazelcast.jet.Inbox)
-     *     Processor.process(0, inbox)}, the inbox contains all items from
-     *     {@code input} parameter
+     *     Processor.process(0, inbox)}, the inbox always contains one item
+     *     from {@code input} parameter
      *
      *     <li>asserts the progress of the {@code process()} call: that
      *     something was taken from the inbox or put to the outbox
+     *
+     *     <li>every time the inbox gets empty or {@code complete()} returns
+     *     false, following steps are done: <ul>
+     *         <li>{@code saveSnapshot()} is called
+     *
+     *         <li>asserts the progress of {@code saveSnapshot()}: it must put
+     *         something to snapshot outbox, normal outbox or return true
+     *
+     *         <li>new processor instance is created, from now on only this
+     *         instance will be used
+     *
+     *         <li>snapshot is restored using {@code restoreSnapshot()}
+     *
+     *         <li>progress of {@code restoreSnapshot()} is asserted: it must
+     *         take something from inbox or put something to outbox
+     *
+     *         <li>{@code finishSnapshotRestore()} is called
+     *
+     *         <li>progress of {@code finishSnapshotRestore()} is asserted:
+     *         it must return true or put something to outbox
+     *     </ul>
      *
      *     <li>calls {@link Processor#complete()} until it returns {@code true}
      *
@@ -164,12 +152,15 @@ public final class TestSupport {
      * will additionally be full in every other call to {@code process()}. This
      * will test the edge case: the {@code process()} method is called even
      * when the outbox is full to give the processor a chance to process inbox.
+     * The snapshot outbox will also have capacity of 1 for a cooperative
+     * processor.
      * <p>
      * This class does not cover these cases:<ul>
      *     <li>Testing of processors which distinguish input or output edges
      *     by ordinal
      *     <li>Checking that the state of a stateful processor is empty at the
-     *     end (you can do that yourself afterwards).
+     *     end (you can do that yourself afterwards with the last instance
+     *     returned from your supplier).
      * </ul>
      *
      * Example usage. This will test one of the jet-provided processors:
@@ -198,8 +189,6 @@ public final class TestSupport {
                                             boolean assertProgress,
                                             boolean doSnapshots) {
         TestInbox inbox = new TestInbox();
-        inbox.addAll(input);
-
         Processor processor = supplier.get();
 
         // we'll use 1-capacity outbox to test cooperative emission, if the processor is cooperative
@@ -211,21 +200,25 @@ public final class TestSupport {
         processor.init(outbox, new TestProcessorContext());
 
         // call the process() method
-        int lastInboxSize = inbox.size();
-        while (!inbox.isEmpty()) {
+        Iterator<T> inputIterator = input.iterator();
+        while (inputIterator.hasNext() || !inbox.isEmpty()) {
+            if (inbox.isEmpty()) {
+                inbox.add(inputIterator.next());
+            }
             processor.process(0, inbox);
-            if (processor.isCooperative() && outbox.queueWithOrdinal(0).size() == 1) {
+            assertTrue("process() call without progress",
+                    !assertProgress || inbox.isEmpty() || !outbox.queueWithOrdinal(0).isEmpty());
+            if (processor.isCooperative() && outbox.queueWithOrdinal(0).size() == 1 && !inbox.isEmpty()) {
                 // if the outbox is full, call the process() method again. Cooperative
                 // processor must be able to cope with this situation and not try to put
                 // more items to the outbox.
                 processor.process(0, inbox);
             }
-            assertTrue("process() call without progress",
-                    !assertProgress || lastInboxSize > inbox.size() || !outbox.queueWithOrdinal(0).isEmpty());
             drainOutbox(outbox.queueWithOrdinal(0), actualOutput);
-            lastInboxSize = inbox.size();
+            if (inbox.isEmpty()) {
+                processor = snapshotAndRestore(processor, supplier, outbox, actualOutput, doSnapshots, assertProgress);
+            }
         }
-        processor = snapshotAndRestore(processor, supplier, outbox, actualOutput, doSnapshots, assertProgress);
 
         // call the complete() method
         boolean done;
@@ -238,7 +231,7 @@ public final class TestSupport {
         } while (!done);
 
         // assert the outbox
-        assertEquals("processor output doesn't match", expectedOutput, actualOutput);
+        assertEquals("processor output doesn't match", listToString(expectedOutput), listToString(actualOutput));
     }
 
     private static Processor snapshotAndRestore(Processor currentProcessor, Supplier<Processor> supplier,
@@ -251,10 +244,14 @@ public final class TestSupport {
         // save state of current processor
         TestInbox snapshotInbox = new TestInbox();
         boolean done;
+        Set<Object> keys = new HashSet<>();
         do {
             done = currentProcessor.saveSnapshot();
             for (Entry<MockData, MockData> entry : outbox.snapshotQueue()) {
-                snapshotInbox.add(entry(entry.getKey().getObject(), entry.getValue().getObject()));
+                Object key = entry.getKey().getObject();
+                assertTrue("Duplicate key produced in saveSnapshot()\n  Duplicate: " + key + "\n  Keys so far: " + keys,
+                        keys.add(key));
+                snapshotInbox.add(entry(key, entry.getValue().getObject()));
             }
             assertTrue("saveSnapshot() call without progress",
                     !assertProgress || done || !outbox.snapshotQueue().isEmpty()
@@ -279,7 +276,11 @@ public final class TestSupport {
             drainOutbox(outbox.queueWithOrdinal(0), actualOutput);
             lastInboxSize = snapshotInbox.size();
         }
-        newProcessor.finishSnapshotRestore();
+        while (!newProcessor.finishSnapshotRestore()) {
+            assertTrue("finishSnapshotRestore() call without progress",
+                    !assertProgress || !outbox.queueWithOrdinal(0).isEmpty());
+            drainOutbox(outbox.queueWithOrdinal(0), actualOutput);
+        }
         return newProcessor;
     }
 
@@ -308,5 +309,11 @@ public final class TestSupport {
     public static Supplier<Processor> supplierFrom(ProcessorMetaSupplier supplier) {
         supplier.init(new TestProcessorMetaSupplierContext());
         return supplierFrom(supplier.get(singletonList(LOCAL_ADDRESS)).apply(LOCAL_ADDRESS));
+    }
+
+    private static String listToString(List<?> list) {
+        return list.stream()
+                .map(String::valueOf)
+                .collect(Collectors.joining("\n"));
     }
 }

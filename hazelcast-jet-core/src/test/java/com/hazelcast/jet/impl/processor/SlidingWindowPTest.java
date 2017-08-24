@@ -24,7 +24,6 @@ import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.test.TestSupport;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
 import com.hazelcast.test.annotation.QuickTest;
@@ -42,6 +41,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
@@ -49,6 +49,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.processor.Processors.aggregateToSlidingWindow;
 import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
+import static com.hazelcast.jet.test.TestSupport.testProcessor;
 import static java.util.Arrays.asList;
 import static java.util.Collections.shuffle;
 import static java.util.Collections.singletonList;
@@ -68,7 +69,8 @@ public class SlidingWindowPTest {
     @Parameter(1)
     public boolean singleStageProcessor;
 
-    private SlidingWindowP<?, ?, Long> processor;
+    private Supplier<Processor> supplier;
+    private SlidingWindowP<?, ?, Long> lastSuppliedProcessor;
 
     @Parameters(name = "hasDeduct={0}, singleStageProcessor={1}")
     public static Collection<Object[]> parameters() {
@@ -97,24 +99,43 @@ public class SlidingWindowPTest {
                             windowDef,
                             operation)
                 : combineToSlidingWindow(windowDef, operation);
-        processor = (SlidingWindowP<?, ?, Long>) procSupplier.get();
+
+        // new supplier to save the last supplied instance
+        supplier = () -> lastSuppliedProcessor = (SlidingWindowP<?, ?, Long>) procSupplier.get();
     }
 
     @After
     public void after() {
-        assertTrue("tsToKeyToFrame is not empty: " + processor.tsToKeyToAcc, processor.tsToKeyToAcc.isEmpty());
-        assertTrue("slidingWindow is not empty: " + processor.slidingWindow, processor.slidingWindow.isEmpty());
+        assertTrue("tsToKeyToFrame is not empty: " + lastSuppliedProcessor.tsToKeyToAcc,
+                lastSuppliedProcessor.tsToKeyToAcc.isEmpty());
+        assertTrue("slidingWindow is not empty: " + lastSuppliedProcessor.slidingWindow,
+                lastSuppliedProcessor.slidingWindow.isEmpty());
     }
 
     @Test
     public void when_noFramesReceived_then_onlyEmitWm() {
         List<Watermark> wmList = singletonList(wm(1));
-        TestSupport.testProcessor(processor, wmList, wmList);
+        testProcessor(supplier, wmList, wmList, true, true);
+    }
+
+    @Test
+    public void simple_smokeTest() {
+        testProcessor(supplier,
+                asList(
+                        event(0, 1),
+                        wm(4)),
+                asList(
+                        outboxFrame(0, 1),
+                        outboxFrame(1, 1),
+                        outboxFrame(2, 1),
+                        outboxFrame(3, 1),
+                        wm(4)
+                ), true, true);
     }
 
     @Test
     public void when_receiveAscendingTimestamps_then_emitAscending() {
-        TestSupport.testProcessor(processor,
+        testProcessor(supplier,
                 asList(
                         event(0, 1),
                         event(1, 1),
@@ -144,12 +165,12 @@ public class SlidingWindowPTest {
                         wm(6),
                         outboxFrame(7, 1),
                         wm(7)
-                ));
+                ), true, true);
     }
 
     @Test
     public void when_receiveDescendingTimestamps_then_emitAscending() {
-        TestSupport.testProcessor(processor,
+        testProcessor(supplier,
                 asList(
                         event(4, 1),
                         event(3, 1),
@@ -179,7 +200,7 @@ public class SlidingWindowPTest {
                         wm(6),
                         outboxFrame(7, 1),
                         wm(7)
-                ));
+                ), true, true);
     }
 
     @Test
@@ -220,12 +241,12 @@ public class SlidingWindowPTest {
                 wm(104),
                 wm(105)
         ));
-        TestSupport.testProcessor(processor, inbox, expectedOutbox);
+        testProcessor(supplier, inbox, expectedOutbox, true, true);
     }
 
     @Test
     public void when_receiveWithGaps_then_emitAscending() {
-        TestSupport.testProcessor(processor,
+        testProcessor(supplier,
                 asList(
                         event(0, 1),
                         event(10, 1),
@@ -251,12 +272,12 @@ public class SlidingWindowPTest {
                         outboxFrame(18, 3),
                         outboxFrame(19, 3),
                         wm(19)
-                ));
+                ), true, true);
     }
 
     @Test
     public void when_receiveWithGaps_then_doNotSkipFrames() {
-        TestSupport.testProcessor(processor,
+        testProcessor(supplier,
                 asList(
                         event(10, 1),
                         event(11, 1),
@@ -286,7 +307,7 @@ public class SlidingWindowPTest {
                         outboxFrame(14, 2),
                         outboxFrame(15, 1),
                         wm(15)
-                ));
+                ), true, true);
     }
 
     private Entry<Long, ?> event(long frameTs, long value) {
