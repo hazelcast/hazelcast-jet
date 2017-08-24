@@ -118,7 +118,12 @@ public interface Processor {
      * Called after all the inbound edges' streams are exhausted. If it returns
      * {@code false}, it will be invoked again until it returns {@code true}.
      * After this method is called, no other processing methods will be called on
-     * this processor.
+     * this processor, except for {@link #saveSnapshot()}.
+     * <p>
+     * Non-cooperative processors are required to return from this method from
+     * time to time to give chance to check for new snapshots initiated or job
+     * canceled. The time they spend in this method adds to latency of
+     * snapshots and job cancellations.
      *
      * @return {@code true} if the completing step is now done, {@code false}
      *         otherwise.
