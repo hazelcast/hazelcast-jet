@@ -109,9 +109,12 @@ public final class TestSupport {
      * A utility to test processors. It will initialize the processor instance,
      * pass input items to it and assert the outbox contents.
      * <p>
-     * This method does the following:<ul>
+     * This method does the following:
+     * <ul>
      *     <li>initializes the processor by calling {@link Processor#init(
      *     com.hazelcast.jet.Outbox, com.hazelcast.jet.Processor.Context)}
+     *
+     *     <li>does snapshot+restore (see below)
      *
      *     <li>calls {@link Processor#process(int, com.hazelcast.jet.Inbox)
      *     Processor.process(0, inbox)}, the inbox always contains one item
@@ -120,31 +123,35 @@ public final class TestSupport {
      *     <li>asserts the progress of the {@code process()} call: that
      *     something was taken from the inbox or put to the outbox
      *
-     *     <li>every time the inbox gets empty or {@code complete()} returns
-     *     false, following steps are done: <ul>
-     *         <li>{@code saveSnapshot()} is called
-     *
-     *         <li>asserts the progress of {@code saveSnapshot()}: it must put
-     *         something to snapshot outbox, normal outbox or return true
-     *
-     *         <li>new processor instance is created, from now on only this
-     *         instance will be used
-     *
-     *         <li>snapshot is restored using {@code restoreSnapshot()}
-     *
-     *         <li>progress of {@code restoreSnapshot()} is asserted: it must
-     *         take something from inbox or put something to outbox
-     *
-     *         <li>{@code finishSnapshotRestore()} is called
-     *
-     *         <li>progress of {@code finishSnapshotRestore()} is asserted:
-     *         it must return true or put something to outbox
-     *     </ul>
+     *     <li>every time the inbox gets empty does does snapshot+restore
      *
      *     <li>calls {@link Processor#complete()} until it returns {@code true}
      *
      *     <li>asserts the progress of the {@code complete()} call if it
      *     returned {@code false}: something must have been put to the outbox.
+     *
+     *     <li>does snapshot+restore after {@code complete()} returned {@code
+     *     false}
+     * </ul>
+     * The snapshot+restore test procedure:
+     * <ul>
+     *     <li>{@code saveSnapshot()} is called
+     *
+     *     <li>asserts the progress of {@code saveSnapshot()}: it must put
+     *     something to snapshot outbox, normal outbox or return true
+     *
+     *     <li>new processor instance is created, from now on only this
+     *     instance will be used
+     *
+     *     <li>snapshot is restored using {@code restoreSnapshot()}
+     *
+     *     <li>progress of {@code restoreSnapshot()} is asserted: it must
+     *     take something from inbox or put something to outbox
+     *
+     *     <li>{@code finishSnapshotRestore()} is called
+     *
+     *     <li>progress of {@code finishSnapshotRestore()} is asserted:
+     *     it must return true or put something to outbox
      * </ul>
      * Note that this method never calls {@link Processor#tryProcess()}.
      * <p>
@@ -180,14 +187,23 @@ public final class TestSupport {
      * @param expectedOutput expected output
      * @param assertProgress if false, progress will not be asserted after
      *                       {@code process()} and {@code complete()} calls
-     * @param doSnapshots if true, snapshot will be saved and restored after each
-     *                    {@code process()} or {@code complete()} call
+     * @param doSnapshots if true, snapshot will be saved and restored before
+     *                    first item and after each {@code process()} and {@code
+     *                    complete()} call. The normal test will be performed too (as
+     *                    if this parameter was false)
      */
     public static <T, U> void testProcessor(@Nonnull Supplier<Processor> supplier,
                                             @Nonnull List<T> input,
                                             @Nonnull List<U> expectedOutput,
                                             boolean assertProgress,
                                             boolean doSnapshots) {
+        if (doSnapshots) {
+            // if we test with snapshots, also do the test without snapshots
+            System.out.println("Running the test with doSnapshots=false");
+            testProcessor(supplier, input, expectedOutput, assertProgress, false);
+            System.out.println("Running the test with doSnapshots=true");
+        }
+
         TestInbox inbox = new TestInbox();
         Processor processor = supplier.get();
 
@@ -198,6 +214,9 @@ public final class TestSupport {
 
         // create instance of your processor and call the init() method
         processor.init(outbox, new TestProcessorContext());
+
+        // do snapshot+restore before processing any item. This will test saveSnapshot() in this edge case
+        processor = snapshotAndRestore(processor, supplier, outbox, actualOutput, doSnapshots, assertProgress);
 
         // call the process() method
         Iterator<T> inputIterator = input.iterator();
