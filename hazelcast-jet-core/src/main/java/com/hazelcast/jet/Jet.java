@@ -19,7 +19,6 @@ package com.hazelcast.jet;
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.impl.HazelcastClientProxy;
-import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.ServiceConfig;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
@@ -98,6 +97,7 @@ public final class Jet {
 
         jetConfig.getHazelcastConfig().getMapConfig(INTERNAL_JET_MAPS)
                  .setBackupCount(jetConfig.getJobMetadataBackupCount())
+                 .setStatisticsEnabled(false)
                  .setMergePolicy(IgnoreMergingEntryMapMergePolicy.class.getName());
     }
 }
