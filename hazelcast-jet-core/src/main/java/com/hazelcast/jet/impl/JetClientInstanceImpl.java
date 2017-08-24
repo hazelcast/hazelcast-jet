@@ -51,7 +51,6 @@ import java.util.concurrent.TimeoutException;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.Util.idToString;
-import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -61,11 +60,13 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
 
     private final HazelcastClientInstanceImpl client;
     private final ILogger logger;
+    private SerializationService serializationService;
 
     public JetClientInstanceImpl(HazelcastClientInstanceImpl hazelcastInstance) {
         super(hazelcastInstance);
         this.client = hazelcastInstance;
         this.logger = getLogger(JetInstance.class);
+        this.serializationService = client.getSerializationService();
 
         ExceptionUtil.registerJetExceptions(hazelcastInstance.getClientExceptionFactory());
     }
@@ -98,7 +99,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         try {
             ClientMessage clientMessage = invocation.invoke().get();
             JetGetJobIdsCodec.ResponseParameters response = JetGetJobIdsCodec.decodeResponse(clientMessage);
-            jobIds = client.getSerializationService().toObject(response.response);
+            jobIds = serializationService.toObject(response.response);
         } catch (Exception e) {
             throw rethrow(e);
         }
@@ -125,7 +126,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         try {
             ClientMessage clientMessage = invocation.invoke().get();
             JetGetJobStatusCodec.ResponseParameters response = JetGetJobStatusCodec.decodeResponse(clientMessage);
-            return client.getSerializationService().toObject(response.response);
+            return serializationService.toObject(response.response);
         } catch (Exception e) {
             throw rethrow(e);
         }
@@ -158,7 +159,6 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         }
 
         private ClientMessage createJoinJobRequest() {
-            SerializationService serializationService = client.getSerializationService();
             Data serializedDag = serializationService.toData(dag);
             Data serializedConfig = serializationService.toData(config);
             return JetSubmitJobCodec.encodeRequest(getJobId(), serializedDag, serializedConfig);
