@@ -39,13 +39,16 @@ import java.util.function.ToLongFunction;
  */
 public class InsertWatermarksP<T> extends AbstractProcessor {
 
+    private static final Object NULL_OBJECT = new Object();
+
     private final ToLongFunction<T> getTimestampF;
     private final WatermarkPolicy wmPolicy;
     private final WatermarkEmissionPolicy wmEmitPolicy;
-    private final ResettableSingletonTraverser<Object> singletonTraverser;
-    private final FlatMapper<Object, Object> flatMapper;
 
-    private long currWm = Long.MIN_VALUE;
+    private final ResettableSingletonTraverser<Object> singletonTraverser = new ResettableSingletonTraverser<>();
+    private final NextWatermarkTraverser nextWatermarkTraverser = new NextWatermarkTraverser();
+    private final FlatMapper<Object, Object> flatMapper = flatMapper(this::traverser);
+
     private long lastEmittedWm = Long.MIN_VALUE;
 
     /**
@@ -60,21 +63,11 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
         this.getTimestampF = getTimestampF;
         this.wmPolicy = wmPolicy;
         this.wmEmitPolicy = wmEmitPolicy;
-        this.flatMapper = flatMapper(this::traverser);
-        this.singletonTraverser = new ResettableSingletonTraverser<>();
     }
 
     @Override
     public boolean tryProcess() {
-        currWm = wmPolicy.getCurrentWatermark();
-        if (!wmEmitPolicy.shouldEmit(currWm, lastEmittedWm)) {
-            return true;
-        }
-        boolean didEmit = tryEmit(new Watermark(currWm));
-        if (didEmit) {
-            lastEmittedWm = currWm;
-        }
-        return didEmit;
+        return flatMapper.tryProcess(NULL_OBJECT);
     }
 
     @Override
@@ -83,17 +76,43 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
     }
 
     private Traverser<Object> traverser(Object item) {
-        long timestamp = getTimestampF.applyAsLong((T) item);
-        if (timestamp < currWm) {
+        long timestamp = item == NULL_OBJECT
+                ? wmPolicy.getCurrentWatermark() : getTimestampF.applyAsLong((T) item);
+        if (timestamp < lastEmittedWm) {
             // drop late event
             return Traversers.empty();
         }
-        currWm = wmPolicy.reportEvent(timestamp);
-        singletonTraverser.accept(item);
-        if (wmEmitPolicy.shouldEmit(currWm, lastEmittedWm)) {
-            lastEmittedWm = currWm;
-            return singletonTraverser.prepend(new Watermark(currWm));
+        long newWm;
+        if (item != NULL_OBJECT) {
+            singletonTraverser.accept(item);
+            newWm = wmPolicy.reportEvent(timestamp);
+            if (lastEmittedWm == Long.MIN_VALUE) {
+                lastEmittedWm = newWm - 1;
+            }
+        } else {
+            newWm = timestamp;
+        }
+        if (newWm >= lastEmittedWm) {
+            nextWatermarkTraverser.limit = newWm;
+            return singletonTraverser.prependTraverser(nextWatermarkTraverser);
         }
         return singletonTraverser;
+    }
+
+    private class NextWatermarkTraverser implements Traverser<Watermark> {
+
+        private long limit;
+
+        @Override
+        public Watermark next() {
+            if (lastEmittedWm >= limit) {
+                return null;
+            }
+            long nextWm = wmEmitPolicy.nextWatermark(lastEmittedWm, limit);
+            if (nextWm <= limit) {
+                return new Watermark(lastEmittedWm = nextWm);
+            }
+            return null;
+        }
     }
 }

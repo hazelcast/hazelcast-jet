@@ -19,130 +19,143 @@ package com.hazelcast.jet.impl.processor;
 import com.hazelcast.jet.Processor.Context;
 import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.test.TestOutbox;
-import com.hazelcast.test.HazelcastParallelClassRunner;
+import com.hazelcast.test.HazelcastParametersRunnerFactory;
+import com.hazelcast.test.annotation.ParallelTest;
 import com.hazelcast.test.annotation.QuickTest;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 
-import static com.hazelcast.jet.WatermarkEmissionPolicy.suppressDuplicates;
+import static com.hazelcast.jet.WatermarkEmissionPolicy.emitAll;
 import static com.hazelcast.jet.WatermarkPolicies.withFixedLag;
+import static com.hazelcast.jet.impl.util.Util.uncheckCall;
+import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
-@Category(QuickTest.class)
-@RunWith(HazelcastParallelClassRunner.class)
+@RunWith(Parameterized.class)
+@Category({QuickTest.class, ParallelTest.class})
+@Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 public class InsertWatermarksPTest {
 
     private static final long LAG = 3;
 
+    @Parameter
+    public int outboxCapacity;
+
     private MockClock clock;
     private InsertWatermarksP<Item> p;
     private TestOutbox outbox;
-    private List<String> resultToCheck = new ArrayList<>();
+    private List<Object> resultToCheck = new ArrayList<>();
+    private Context context;
 
-    public void setUp(int outboxCapacity) {
+    @Parameters(name = "outboxCapacity={0}")
+    public static Collection<Object> parameters() {
+        return asList(1, 1024);
+    }
+
+    @Before
+    public void setUp() {
         clock = new MockClock(100);
-        p = new InsertWatermarksP<>(Item::getTimestamp, withFixedLag(LAG).get(), suppressDuplicates());
-
         outbox = new TestOutbox(outboxCapacity);
-        Context context = mock(Context.class);
+        context = mock(Context.class);
+    }
 
+    @Test
+    public void smokeTest() throws Exception {
+        p = new InsertWatermarksP<>(Item::getTimestamp, withFixedLag(LAG).get(), emitAll());
         p.init(outbox, context);
-    }
+        List<Object> input = new ArrayList<>();
 
-    @Test
-    public void smokeTest_oneItemOutbox() throws Exception {
-        smokeTest(1);
-    }
-
-    @Test
-    public void smokeTest_outboxLargeEnough() throws Exception {
-        smokeTest(1024);
-    }
-
-    public void smokeTest(int outboxCapacity) throws Exception {
-        setUp(outboxCapacity);
-
-        // this is to make the capacity-one outbox initially full
-        assertTrue(outbox.offer("initialItem"));
-
-        String[] expected = {
-                "-- at 100",
-                "initialItem",
-                "Watermark{timestamp=7}",
-                "Item{timestamp=10}",
-                "Item{timestamp=8}",
-                "-- at 101",
-                "Watermark{timestamp=8}",
-                "Item{timestamp=11}",
-                "Item{timestamp=9}",
-                "-- at 102",
-                "Watermark{timestamp=9}",
-                "Item{timestamp=12}",
-                "Item{timestamp=10}",
-                "-- at 103",
-                "Watermark{timestamp=10}",
-                "Item{timestamp=13}",
-                "Item{timestamp=11}",
-                "-- at 104",
-                "-- at 105",
-                "-- at 106",
-                "-- at 107",
-                "-- at 108",
-                "-- at 109",
-                "-- at 110",
-                "Watermark{timestamp=17}",
-                "Item{timestamp=20}",
-                "Item{timestamp=18}",
-                "-- at 111",
-                "Watermark{timestamp=18}",
-                "Item{timestamp=21}",
-                "Item{timestamp=19}",
-                "-- at 112",
-                "-- at 113",
-                "-- at 114",
-                "-- at 115",
-                "-- at 116",
-                "-- at 117",
-                "-- at 118",
-                "-- at 119",
-        };
-
-        for (int eventTime = 10; eventTime < 30; eventTime++) {
-            resultToCheck.add("-- at " + clock.now());
-            if (eventTime < 14 || eventTime >= 20 && eventTime <= 21) {
-                Item item = new Item(eventTime);
-                Item oldItem = new Item(eventTime - 2);
-                tryProcessAndDrain(item);
-                tryProcessAndDrain(oldItem);
+        for (int eventTime = 10, time = (int) clock.now; eventTime < 22; eventTime++, time++) {
+            input.add(tick(time));
+            if (eventTime < 14 || eventTime >= 17 && eventTime <= 18) {
+                input.add(item(eventTime));
+                input.add(item(eventTime - 2));
             }
-
-            p.tryProcess();
-            drainOutbox();
-
-            clock.advance();
         }
+        // input.forEach(System.out::println);
 
-        assertEquals(listToString(Arrays.asList(expected)), listToString(resultToCheck));
+        doTest(input, asList(
+                tick(100),
+                wm(7),
+                item(10),
+                item(8),
+
+                tick(101),
+                wm(8),
+                item(11),
+                item(9),
+
+                tick(102),
+                wm(9),
+                item(12),
+                item(10),
+
+                tick(103),
+                wm(10),
+                item(13),
+                item(11),
+
+                tick(104),
+                tick(105),
+                tick(106),
+                tick(107),
+                wm(11),
+                wm(12),
+                wm(13),
+                wm(14),
+                item(17),
+                item(15),
+
+                tick(108),
+                wm(15),
+                item(18),
+                item(16),
+
+                tick(109),
+                tick(110),
+                tick(111)
+        ));
     }
 
-    private void tryProcessAndDrain(Item item) throws Exception {
-        while (!p.tryProcess(0, item)) {
-            drainOutbox();
+    private void doTest(List<Object> input, List<Object> expectedOutput) throws Exception {
+        for (Object inputItem : input) {
+            if (inputItem instanceof Tick) {
+                clock.set(((Tick) inputItem).timestamp);
+                resultToCheck.add(tick(clock.now));
+                doAndDrain(p::tryProcess);
+            } else {
+                assertTrue(inputItem instanceof Item);
+                doAndDrain(() -> uncheckCall(() -> p.tryProcess(0, inputItem)));
+            }
         }
+
+        assertEquals(listToString(expectedOutput), listToString(resultToCheck));
+    }
+
+    private void doAndDrain(BooleanSupplier action) {
+        boolean done;
+        do {
+            done = action.getAsBoolean();
+            drainOutbox();
+        } while (!done);
     }
 
     private void drainOutbox() {
-        for (Object o; (o = outbox.queueWithOrdinal(0).poll()) != null; ) {
-            resultToCheck.add(myToString(o));
-        }
+        resultToCheck.addAll(outbox.queueWithOrdinal(0));
+        outbox.queueWithOrdinal(0).clear();
     }
 
     private String myToString(Object o) {
@@ -151,8 +164,33 @@ public class InsertWatermarksPTest {
                 : o.toString();
     }
 
-    private static String listToString(List<String> actual) {
-        return actual.stream().collect(Collectors.joining("\n"));
+    private String listToString(List<?> actual) {
+        return actual.stream().map(this::myToString).collect(Collectors.joining("\n"));
+    }
+
+    private static Item item(long timestamp) {
+        return new Item(timestamp);
+    }
+
+    private static Watermark wm(long timestamp) {
+        return new Watermark(timestamp);
+    }
+
+    private static Tick tick(long timestamp) {
+        return new Tick(timestamp);
+    }
+
+    private static final class Tick {
+        final long timestamp;
+
+        private Tick(long timestamp) {
+            this.timestamp = timestamp;
+        }
+
+        @Override
+        public String toString() {
+            return "-- at " + timestamp;
+        }
     }
 
     private static class Item {
@@ -162,7 +200,7 @@ public class InsertWatermarksPTest {
             this.timestamp = timestamp;
         }
 
-        public long getTimestamp() {
+        long getTimestamp() {
             return timestamp;
         }
 
@@ -189,12 +227,9 @@ public class InsertWatermarksPTest {
             this.now = now;
         }
 
-        long now() {
-            return now;
-        }
-
-        void advance() {
-            now++;
+        void set(long newNow) {
+            assert newNow >= now;
+            now = newNow;
         }
     }
 }

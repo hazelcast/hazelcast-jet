@@ -22,33 +22,36 @@ import java.io.Serializable;
 import static com.hazelcast.util.Preconditions.checkPositive;
 
 /**
- * A policy object that decides when when the watermark has advanced
- * enough to emit a new watermark item.
+ * A policy object that decides the progress of watermarks.
  */
 @FunctionalInterface
 public interface WatermarkEmissionPolicy extends Serializable {
 
     /**
-     * Decides whether a watermark item with the supplied {@code currentWm}
-     * value should be emitted, given the last emitted value {@code
-     * lastEmittedWm}.
+     * Determines, based on last emitted watermark and current watermark, what
+     * the next watermark should be.
+     * <p>
+     * It returns watermark value to emit. It could be less or more than {@code
+     * currentWm}. If it's less, it must be emitted and this method called
+     * again until it returns a value {@code >= currentWm}. It should not be
+     * called again, if {@code currentWm} is not greater than the value last
+     * returned.
+     *
+     * @param lastEmittedWm Last emitted watermark
+     * @param currentWm Current wanna-be watermark value
      */
-    boolean shouldEmit(long currentWm, long lastEmittedWm);
+    long nextWatermark(long lastEmittedWm, long currentWm);
 
     /**
-     * Returns a policy that ensures that each emitted watermark has a higher
-     * timestamp than the last one. This protects the basic invariant of
-     * watermark items (that their timestamps are strictly increasing), but
-     * doesn't perform any throttling. Since the timestamps are typically quite
-     * dense (in milliseconds), this emission policy will pass through many
-     * watermark items that have no useful effect in terms of updating the
-     * state of accumulating vertices. It is useful primarily in testing
-     * scenarios or some specific cases where it is known that no watermark
-     * throttling is needed.
+     * Returns a policy that allows emission of all possible watermarks (that
+     * is every millisecond).
+     * <p>
+     * It is useful primarily in testing scenarios or some specific cases where
+     * it is known that no watermark throttling is needed.
      */
     @Nonnull
-    static WatermarkEmissionPolicy suppressDuplicates() {
-        return (currentWm, lastEmittedWm) -> currentWm > lastEmittedWm;
+    static WatermarkEmissionPolicy emitAll() {
+        return (currentWm, lastEmittedWm) -> Math.min(currentWm, lastEmittedWm) + 1;
     }
 
     /**
@@ -59,7 +62,7 @@ public interface WatermarkEmissionPolicy extends Serializable {
     @Nonnull
     static WatermarkEmissionPolicy emitByMinStep(long minStep) {
         checkPositive(minStep, "minStep");
-        return (currentWm, lastEmittedWm) -> currentWm >= lastEmittedWm + minStep;
+        return (lastEmittedWm, newWm) -> Math.max(newWm, lastEmittedWm + minStep);
     }
 
     /**
@@ -80,7 +83,7 @@ public interface WatermarkEmissionPolicy extends Serializable {
      * aggregateToSlidingWindow()}).
      */
     @Nonnull
-    static WatermarkEmissionPolicy emitByFrame(WindowDefinition wDef) {
-        return (currentWm, lastEmittedWm) -> wDef.floorFrameTs(currentWm) > lastEmittedWm;
+    static WatermarkEmissionPolicy emitByFrame(@Nonnull WindowDefinition wDef) {
+        return (lastEmittedWm, newWm) ->  wDef.higherFrameTs(lastEmittedWm);
     }
 }
