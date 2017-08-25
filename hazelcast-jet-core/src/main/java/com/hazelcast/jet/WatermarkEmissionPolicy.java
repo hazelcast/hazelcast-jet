@@ -51,7 +51,7 @@ public interface WatermarkEmissionPolicy extends Serializable {
      */
     @Nonnull
     static WatermarkEmissionPolicy emitAll() {
-        return (lastEmittedWm, newWm) -> lastEmittedWm == Long.MIN_VALUE ? newWm : lastEmittedWm + 1;
+        return (lastEmittedWm, newWm) -> newWm;
     }
 
     /**

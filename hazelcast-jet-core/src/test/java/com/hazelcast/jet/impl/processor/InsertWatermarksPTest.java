@@ -81,48 +81,6 @@ public class InsertWatermarksPTest {
     }
 
     @Test
-    public void smokeTest() throws Exception {
-        List<Object> input = new ArrayList<>();
-
-        for (int eventTime = 10, time = (int) clock.now; eventTime < 22; eventTime++, time++) {
-            if (eventTime < 14 || eventTime >= 17 && eventTime <= 18) {
-                input.add(item(eventTime));
-                input.add(item(eventTime - 2));
-            }
-        }
-        // input.forEach(System.out::println);
-
-        doTest(input, asList(
-                wm(7),
-                item(10),
-                item(8),
-
-                wm(8),
-                item(11),
-                item(9),
-
-                wm(9),
-                item(12),
-                item(10),
-
-                wm(10),
-                item(13),
-                item(11),
-
-                wm(11),
-                wm(12),
-                wm(13),
-                wm(14),
-                item(17),
-                item(15),
-
-                wm(15),
-                item(18),
-                item(16)
-        ));
-    }
-
-    @Test
     public void when_firstEventLate_then_dropped() {
         wmPolicy = WatermarkPolicies.limitingTimestampAndWallClockLag(0, 0, clock::now).get();
         doTest(
@@ -183,7 +141,7 @@ public class InsertWatermarksPTest {
     }
 
     @Test
-    public void when_gapBetweenEvents_then_manyWms() {
+    public void when_gapBetweenEvents_then_oneWm() {
         doTest(
                 asList(
                         item(10),
@@ -191,8 +149,6 @@ public class InsertWatermarksPTest {
                 asList(
                         wm(7),
                         item(10),
-                        wm(8),
-                        wm(9),
                         wm(10),
                         item(13))
         );
