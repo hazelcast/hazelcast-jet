@@ -97,9 +97,6 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
         if (proposedWm == Long.MIN_VALUE) {
             return singletonTraverser;
         }
-        if (lastEmittedWm == Long.MIN_VALUE) {
-            lastEmittedWm = proposedWm - 1;
-        }
         if (proposedWm < nextWm || nextWatermarkTraverser.limit > proposedWm) {
             return singletonTraverser;
         }
@@ -129,7 +126,9 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
             if (lastEmittedWm >= limit) {
                 return null;
             }
-            nextWm = wmEmitPolicy.nextWatermark(lastEmittedWm, limit);
+            if (nextWm < limit) {
+                nextWm = wmEmitPolicy.nextWatermark(lastEmittedWm, limit);
+            }
             if (nextWm <= limit) {
                 return new Watermark(lastEmittedWm = nextWm);
             }

@@ -40,7 +40,10 @@ import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.WatermarkEmissionPolicy.emitAll;
+import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByFrame;
+import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByMinStep;
 import static com.hazelcast.jet.WatermarkPolicies.withFixedLag;
+import static com.hazelcast.jet.WindowDefinition.tumblingWindowDef;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -82,7 +85,6 @@ public class InsertWatermarksPTest {
         List<Object> input = new ArrayList<>();
 
         for (int eventTime = 10, time = (int) clock.now; eventTime < 22; eventTime++, time++) {
-            input.add(tick(time));
             if (eventTime < 14 || eventTime >= 17 && eventTime <= 18) {
                 input.add(item(eventTime));
                 input.add(item(eventTime - 2));
@@ -91,30 +93,22 @@ public class InsertWatermarksPTest {
         // input.forEach(System.out::println);
 
         doTest(input, asList(
-                tick(100),
                 wm(7),
                 item(10),
                 item(8),
 
-                tick(101),
                 wm(8),
                 item(11),
                 item(9),
 
-                tick(102),
                 wm(9),
                 item(12),
                 item(10),
 
-                tick(103),
                 wm(10),
                 item(13),
                 item(11),
 
-                tick(104),
-                tick(105),
-                tick(106),
-                tick(107),
                 wm(11),
                 wm(12),
                 wm(13),
@@ -122,14 +116,9 @@ public class InsertWatermarksPTest {
                 item(17),
                 item(15),
 
-                tick(108),
                 wm(15),
                 item(18),
-                item(16),
-
-                tick(109),
-                tick(110),
-                tick(111)
+                item(16)
         ));
     }
 
@@ -139,6 +128,172 @@ public class InsertWatermarksPTest {
         doTest(
                 singletonList(item(clock.now - 1)),
                 singletonList(wm(100)));
+    }
+
+    @Test
+    public void when_manyEvents_then_oneWm() {
+        doTest(
+                asList(
+                        item(10),
+                        item(10)),
+                asList(
+                        wm(7),
+                        item(10),
+                        item(10))
+        );
+    }
+
+    @Test
+    public void when_eventsIncrease_then_wmIncreases() {
+        doTest(
+                asList(
+                        item(10),
+                        item(11)),
+                asList(
+                        wm(7),
+                        item(10),
+                        wm(8),
+                        item(11))
+        );
+    }
+
+    @Test
+    public void when_eventsDecrease_then_oneWm() {
+        doTest(
+                asList(
+                        item(11),
+                        item(10)),
+                asList(
+                        wm(8),
+                        item(11),
+                        item(10))
+        );
+    }
+
+    @Test
+    public void when_lateEvent_then_dropped() {
+        doTest(
+                asList(
+                        item(11),
+                        item(7)),
+                asList(
+                        wm(8),
+                        item(11))
+        );
+    }
+
+    @Test
+    public void when_gapBetweenEvents_then_manyWms() {
+        doTest(
+                asList(
+                        item(10),
+                        item(13)),
+                asList(
+                        wm(7),
+                        item(10),
+                        wm(8),
+                        wm(9),
+                        wm(10),
+                        item(13))
+        );
+    }
+
+    @Test
+    public void emitByFrame_when_eventsIncrease_then_wmIncreases() {
+        wmEmissionPolicy = emitByFrame(tumblingWindowDef(2));
+        doTest(
+                asList(
+                        item(10),
+                        item(11),
+                        item(12),
+                        item(13)
+                ),
+                asList(
+                        item(10), // no WM before this item. WM would be 7 and this is not on the verge of a frame
+                        wm(8),
+                        item(11),
+                        item(12),
+                        wm(10),
+                        item(13)
+                )
+        );
+    }
+
+    @Test
+    public void emitByFrame_when_eventsIncreaseAndStartAtVergeOfFrame_then_wmIncreases() {
+        wmEmissionPolicy = emitByFrame(tumblingWindowDef(2));
+        doTest(
+                asList(
+                        item(11),
+                        item(12),
+                        item(13),
+                        item(14)
+                ),
+                asList(
+                        wm(8),
+                        item(11),
+                        item(12),
+                        wm(10),
+                        item(13),
+                        item(14)
+                )
+        );
+
+    }
+
+    @Test
+    public void emitByFrame_when_gapBetweenEvents_then_manyWms() {
+        wmEmissionPolicy = emitByFrame(tumblingWindowDef(2));
+        doTest(
+                asList(
+                        item(11),
+                        item(15)),
+                asList(
+                        wm(8),
+                        item(11),
+                        wm(10),
+                        wm(12),
+                        item(15))
+        );
+    }
+
+    @Test
+    public void emitByMinStep_when_eventsIncrease_then_wmIncreases() {
+        wmEmissionPolicy = emitByMinStep(2);
+        doTest(
+                asList(
+                        item(11),
+                        item(12),
+                        item(13),
+                        item(14)
+                ),
+                asList(
+                        wm(8),
+                        item(11),
+                        item(12),
+                        wm(10),
+                        item(13),
+                        item(14)
+                )
+        );
+    }
+
+    @Test
+    public void emitByMinStep_when_gapBetweenEvents_then_oneWm() {
+        wmEmissionPolicy = emitByMinStep(2);
+        doTest(
+                asList(
+                        item(10),
+                        item(15),
+                        item(20)),
+                asList(
+                        wm(7),
+                        item(10),
+                        wm(12),
+                        item(15),
+                        wm(17),
+                        item(20))
+        );
     }
 
     private void doTest(List<Object> input, List<Object> expectedOutput) {

@@ -31,27 +31,27 @@ public interface WatermarkEmissionPolicy extends Serializable {
      * Determines, based on last emitted watermark and current watermark, what
      * the next watermark should be.
      * <p>
-     * It returns watermark value to emit. It could be less or more than {@code
-     * currentWm}. If it's less, it must be emitted and this method called
+     * It returns watermark value to emit. If returned value is less than
+     * {@code currentWm}, such watermark must be emitted and this method called
      * again until it returns a value {@code >= currentWm}. It should not be
      * called again, if {@code currentWm} is not greater than the value last
      * returned.
      *
-     * @param lastEmittedWm Last emitted watermark
+     * @param lastEmittedWm Last emitted watermark, Long.MIN_VALUE initially
      * @param currentWm Current wanna-be watermark value
      */
     long nextWatermark(long lastEmittedWm, long currentWm);
 
     /**
      * Returns a policy that allows emission of all possible watermarks (that
-     * is every millisecond).
+     * is every millisecond, if millisecond is the time unit).
      * <p>
      * It is useful primarily in testing scenarios or some specific cases where
      * it is known that no watermark throttling is needed.
      */
     @Nonnull
     static WatermarkEmissionPolicy emitAll() {
-        return (lastEmittedWm, newWm) -> lastEmittedWm + 1;
+        return (lastEmittedWm, newWm) -> lastEmittedWm == Long.MIN_VALUE ? newWm : lastEmittedWm + 1;
     }
 
     /**
@@ -66,11 +66,13 @@ public interface WatermarkEmissionPolicy extends Serializable {
     }
 
     /**
-     * Returns a watermark emission policy that ensures that the value of
-     * the emitted watermark belongs to a frame higher than the previous
-     * watermark's frame, as per the supplied {@code WindowDefinition}. This
-     * emission policy should be employed to drive a downstream processor that
-     * computes a sliding/tumbling window
+     * Returns a watermark emission policy that ensures that the emitted
+     * watermarks are on the verge of a frame (at the 0th moment belonging to
+     * the frame). It also ensures that there is a watermark for each frame
+     * even if no event belongs to that frame.
+     * <p>
+     * This emission policy should be employed to drive a downstream processor
+     * that computes a sliding/tumbling window
      * ({@link com.hazelcast.jet.processor.Processors#accumulateByFrame(
      *      com.hazelcast.jet.function.DistributedFunction,
      *      com.hazelcast.jet.function.DistributedToLongFunction,
@@ -84,6 +86,11 @@ public interface WatermarkEmissionPolicy extends Serializable {
      */
     @Nonnull
     static WatermarkEmissionPolicy emitByFrame(@Nonnull WindowDefinition wDef) {
-        return (lastEmittedWm, newWm) ->  wDef.higherFrameTs(lastEmittedWm);
+        return (lastEmittedWm, newWm) ->
+                lastEmittedWm == Long.MIN_VALUE
+                        ? newWm % wDef.frameLength() == 0
+                                ? newWm
+                                : wDef.higherFrameTs(newWm)
+                        : wDef.higherFrameTs(lastEmittedWm);
     }
 }
