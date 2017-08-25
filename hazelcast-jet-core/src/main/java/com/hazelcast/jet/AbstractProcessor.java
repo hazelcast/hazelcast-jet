@@ -100,6 +100,9 @@ public abstract class AbstractProcessor implements Processor {
      * the processing methods ({@link #process(int, Inbox) process()} and
      * {@link #complete()}), but after the outbox and {@link #getLogger()
      * logger} have been initialized.
+     * <p>
+     * Subclasses are not required to call this superclass method, it does
+     * nothing.
      *
      * @param context the {@link Context context} associated with this processor
      */

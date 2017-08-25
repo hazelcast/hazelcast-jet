@@ -26,6 +26,7 @@ import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByMinStep;
 import static com.hazelcast.jet.WindowDefinition.tumblingWindowDef;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
@@ -51,6 +52,7 @@ public class WatermarkEmissionPolicyTest {
     }
 
     private void assertWm(long expectedNextWm, long lastEmittedWm, long newWm) {
+        assertTrue(expectedNextWm > lastEmittedWm);
         assertEquals(expectedNextWm, p.nextWatermark(lastEmittedWm, newWm));
     }
 }

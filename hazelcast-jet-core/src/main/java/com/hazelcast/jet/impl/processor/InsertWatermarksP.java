@@ -17,15 +17,16 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
+import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.ResettableSingletonTraverser;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.WatermarkEmissionPolicy;
 import com.hazelcast.jet.WatermarkPolicy;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 
 import javax.annotation.Nonnull;
+import java.util.Map.Entry;
 import java.util.function.ToLongFunction;
 
 /**
@@ -50,6 +51,8 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
     private final FlatMapper<Object, Object> flatMapper = flatMapper(this::traverser);
 
     private long lastEmittedWm = Long.MIN_VALUE;
+    private long nextWm = Long.MIN_VALUE;
+    private int globalProcessorIndex;
 
     /**
      * @param getTimestampF function that extracts the timestamp from the item
@@ -66,6 +69,11 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
     }
 
     @Override
+    protected void init(@Nonnull Context context) throws Exception {
+        globalProcessorIndex = context.globalProcessorIndex();
+    }
+
+    @Override
     public boolean tryProcess() {
         return flatMapper.tryProcess(NULL_OBJECT);
     }
@@ -76,27 +84,40 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
     }
 
     private Traverser<Object> traverser(Object item) {
-        long timestamp = item == NULL_OBJECT
-                ? wmPolicy.getCurrentWatermark() : getTimestampF.applyAsLong((T) item);
-        if (timestamp < lastEmittedWm) {
-            // drop late event
-            return Traversers.empty();
-        }
-        long newWm;
-        if (item != NULL_OBJECT) {
-            singletonTraverser.accept(item);
-            newWm = wmPolicy.reportEvent(timestamp);
-            if (lastEmittedWm == Long.MIN_VALUE) {
-                lastEmittedWm = newWm - 1;
-            }
+        long proposedWm;
+        if (item == NULL_OBJECT) {
+            proposedWm = wmPolicy.getCurrentWatermark();
         } else {
-            newWm = timestamp;
+            long eventTs = getTimestampF.applyAsLong((T) item);
+            proposedWm = wmPolicy.reportEvent(eventTs);
+            if (Math.max(proposedWm, lastEmittedWm) <= eventTs) {
+                singletonTraverser.accept(item);
+            }
         }
-        if (newWm >= lastEmittedWm) {
-            nextWatermarkTraverser.limit = newWm;
-            return singletonTraverser.prependTraverser(nextWatermarkTraverser);
+        if (proposedWm == Long.MIN_VALUE) {
+            return singletonTraverser;
         }
-        return singletonTraverser;
+        if (lastEmittedWm == Long.MIN_VALUE) {
+            lastEmittedWm = proposedWm - 1;
+        }
+        if (proposedWm < nextWm || nextWatermarkTraverser.limit > proposedWm) {
+            return singletonTraverser;
+        }
+        nextWatermarkTraverser.limit = proposedWm;
+        return singletonTraverser.prependTraverser(nextWatermarkTraverser);
+    }
+
+    @Override
+    public boolean saveSnapshot() {
+        return lastEmittedWm == Long.MIN_VALUE
+                || tryEmitToSnapshot(globalProcessorIndex, lastEmittedWm);
+    }
+
+    @Override
+    public void restoreSnapshot(@Nonnull Inbox inbox) {
+        for (Object o; (o = inbox.poll()) != null; ) {
+            lastEmittedWm = Math.max(lastEmittedWm, ((Entry<?, Long>) o).getValue());
+        }
     }
 
     private class NextWatermarkTraverser implements Traverser<Watermark> {
@@ -108,7 +129,7 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
             if (lastEmittedWm >= limit) {
                 return null;
             }
-            long nextWm = wmEmitPolicy.nextWatermark(lastEmittedWm, limit);
+            nextWm = wmEmitPolicy.nextWatermark(lastEmittedWm, limit);
             if (nextWm <= limit) {
                 return new Watermark(lastEmittedWm = nextWm);
             }

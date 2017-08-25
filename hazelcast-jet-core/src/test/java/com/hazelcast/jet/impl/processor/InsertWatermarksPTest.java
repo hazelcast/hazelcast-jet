@@ -18,6 +18,9 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.Processor.Context;
 import com.hazelcast.jet.Watermark;
+import com.hazelcast.jet.WatermarkEmissionPolicy;
+import com.hazelcast.jet.WatermarkPolicies;
+import com.hazelcast.jet.WatermarkPolicy;
 import com.hazelcast.jet.test.TestOutbox;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
@@ -40,6 +43,7 @@ import static com.hazelcast.jet.WatermarkEmissionPolicy.emitAll;
 import static com.hazelcast.jet.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -54,11 +58,13 @@ public class InsertWatermarksPTest {
     @Parameter
     public int outboxCapacity;
 
-    private MockClock clock;
+    private MockClock clock = new MockClock(100);
     private InsertWatermarksP<Item> p;
     private TestOutbox outbox;
     private List<Object> resultToCheck = new ArrayList<>();
     private Context context;
+    private WatermarkPolicy wmPolicy = withFixedLag(LAG).get();
+    private WatermarkEmissionPolicy wmEmissionPolicy = emitAll();
 
     @Parameters(name = "outboxCapacity={0}")
     public static Collection<Object> parameters() {
@@ -67,15 +73,12 @@ public class InsertWatermarksPTest {
 
     @Before
     public void setUp() {
-        clock = new MockClock(100);
         outbox = new TestOutbox(outboxCapacity);
         context = mock(Context.class);
     }
 
     @Test
     public void smokeTest() throws Exception {
-        p = new InsertWatermarksP<>(Item::getTimestamp, withFixedLag(LAG).get(), emitAll());
-        p.init(outbox, context);
         List<Object> input = new ArrayList<>();
 
         for (int eventTime = 10, time = (int) clock.now; eventTime < 22; eventTime++, time++) {
@@ -130,7 +133,44 @@ public class InsertWatermarksPTest {
         ));
     }
 
-    private void doTest(List<Object> input, List<Object> expectedOutput) throws Exception {
+    @Test
+    public void when_firstEventLate_then_dropped() {
+        wmPolicy = WatermarkPolicies.limitingTimestampAndWallClockLag(0, 0, clock::now).get();
+        doTest(
+                singletonList(item(clock.now - 1)),
+                singletonList(wm(100)));
+    }
+
+    private void doTest(List<Object> input, List<Object> expectedOutput) {
+        // wrap the emission policy to check how it's used and what it returns
+        WatermarkEmissionPolicy wrappedEmissionPolicy = new WatermarkEmissionPolicy() {
+            long lastReturnedValue = Long.MIN_VALUE;
+
+            @Override
+            public long nextWatermark(long lastEmittedWm, long currentWm) {
+                assertTrue("nextWatermark() called with currentWm smaller than already returned value. " +
+                                "lastReturnedValue=" + lastReturnedValue + ", currentWm=" + currentWm
+                                + ", lastEmittedWm=" + lastEmittedWm,
+                        lastEmittedWm < currentWm);
+                if (lastReturnedValue > Long.MIN_VALUE) {
+                    assertTrue("higher emitted value than emission policy returned, lastEmittedWm=" + lastEmittedWm
+                                    + ", lastReturnedValue=" + lastReturnedValue,
+                            lastEmittedWm <= lastReturnedValue);
+                }
+                assertTrue("superfluous call, lastReturnedValue=" + lastReturnedValue + ", currentWm=" + currentWm,
+                        lastReturnedValue < currentWm);
+
+                lastReturnedValue = wmEmissionPolicy.nextWatermark(lastEmittedWm, currentWm);
+
+                assertTrue("emission policy returned value smaller than lastEmittedWm. lastEmittedWm=" + lastEmittedWm
+                                + ", lastReturnedValue=" + lastReturnedValue,
+                        lastReturnedValue > lastEmittedWm);
+                return lastReturnedValue;
+            }
+        };
+        p = new InsertWatermarksP<>(Item::getTimestamp, wmPolicy, wrappedEmissionPolicy);
+        p.init(outbox, context);
+
         for (Object inputItem : input) {
             if (inputItem instanceof Tick) {
                 clock.set(((Tick) inputItem).timestamp);
@@ -227,9 +267,14 @@ public class InsertWatermarksPTest {
             this.now = now;
         }
 
+        long now() {
+            return now;
+        }
+
         void set(long newNow) {
             assert newNow >= now;
             now = newNow;
         }
+
     }
 }
