@@ -50,11 +50,12 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
+@SuppressWarnings("unchecked")
 public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
 
     private static final boolean PREFETCH_VALUES = true;
 
-    private static final int DEFAULT_FETCH_SIZE = 16384;
+    private static final int FETCH_SIZE = 16384;
 
     private final Traverser<T> outputTraverser;
 
@@ -76,44 +77,28 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
         };
     }
 
-    public static ProcessorMetaSupplier readMap(String mapName) {
-        return readMap(mapName, DEFAULT_FETCH_SIZE);
-    }
-
-    public static <T> ProcessorMetaSupplier readMap(String mapName, int fetchSize) {
+    public static <T> ProcessorMetaSupplier readMap(String mapName) {
         return new LocalClusterMetaSupplier<T>(
                 instance -> partition -> ((MapProxyImpl) instance.getMap(mapName))
-                        .iterator(fetchSize, partition, PREFETCH_VALUES));
+                        .iterator(FETCH_SIZE, partition, PREFETCH_VALUES));
     }
 
-    public static ProcessorMetaSupplier readMap(String mapName, ClientConfig clientConfig) {
-        return readMap(mapName, DEFAULT_FETCH_SIZE, clientConfig);
-    }
-
-    public static <T> ProcessorMetaSupplier readMap(String mapName, int fetchSize, ClientConfig clientConfig) {
+    public static <T> ProcessorMetaSupplier readMap(String mapName, ClientConfig clientConfig) {
         return new RemoteClusterMetaSupplier<T>(clientConfig,
                 instance -> partition -> ((ClientMapProxy) instance.getMap(mapName))
-                        .iterator(fetchSize, partition, PREFETCH_VALUES));
+                        .iterator(FETCH_SIZE, partition, PREFETCH_VALUES));
     }
 
-    public static ProcessorMetaSupplier readCache(String cacheName) {
-        return readCache(cacheName, DEFAULT_FETCH_SIZE);
-    }
-
-    public static <T> ProcessorMetaSupplier readCache(String cacheName, int fetchSize) {
+    public static <T> ProcessorMetaSupplier readCache(String cacheName) {
         return new LocalClusterMetaSupplier<T>(
                 instance -> partition -> ((CacheProxy) instance.getCacheManager().getCache(cacheName))
-                        .iterator(fetchSize, partition, PREFETCH_VALUES));
+                        .iterator(FETCH_SIZE, partition, PREFETCH_VALUES));
     }
 
-    public static ProcessorMetaSupplier readCache(String cacheName, ClientConfig clientConfig) {
-        return readCache(cacheName, DEFAULT_FETCH_SIZE, clientConfig);
-    }
-
-    public static <T> ProcessorMetaSupplier readCache(String cacheName, int fetchSize, ClientConfig clientConfig) {
+    public static <T> ProcessorMetaSupplier readCache(String cacheName, ClientConfig clientConfig) {
         return new RemoteClusterMetaSupplier<T>(clientConfig,
                 instance -> partition -> ((ClientCacheProxy) instance.getCacheManager().getCache(cacheName))
-                        .iterator(fetchSize, partition, PREFETCH_VALUES));
+                        .iterator(FETCH_SIZE, partition, PREFETCH_VALUES));
     }
 
     @Override

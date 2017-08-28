@@ -96,7 +96,8 @@ public class ReadFilesP extends AbstractProcessor {
     }
 
     /**
-     * @see SourceProcessors#readFiles(String, Charset, String)
+     * Private API. Use {@link SourceProcessors#readFiles(String, Charset, String)}
+     * instead.
      */
     public static ProcessorSupplier supplier(@Nonnull String directory, @Nonnull String charset, @Nonnull String glob) {
         return new ProcessorSupplier() {

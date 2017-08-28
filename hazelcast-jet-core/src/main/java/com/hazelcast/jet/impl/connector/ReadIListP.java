@@ -41,16 +41,16 @@ import static java.util.stream.IntStream.rangeClosed;
 
 public final class ReadIListP extends AbstractProcessor {
 
-    private static final int DEFAULT_FETCH_SIZE = 16384;
+    private static final int FETCH_SIZE = 16384;
 
     private final Traverser<Object> traverser;
 
-    ReadIListP(List<Object> list, int fetchSize) {
+    ReadIListP(List<Object> list, int FETCH_SIZE) {
         final int size = list.size();
-        traverser = size <= fetchSize
+        traverser = size <= FETCH_SIZE
                 ? traverseIterable(list)
-                : traverseStream(rangeClosed(0, size / fetchSize).mapToObj(chunkIndex -> chunkIndex * fetchSize))
-                    .flatMap(start -> traverseIterable(list.subList(start, min(start + fetchSize, size))));
+                : traverseStream(rangeClosed(0, size / FETCH_SIZE).mapToObj(chunkIndex -> chunkIndex * FETCH_SIZE))
+                    .flatMap(start -> traverseIterable(list.subList(start, min(start + FETCH_SIZE, size))));
     }
 
     @Override
@@ -64,19 +64,11 @@ public final class ReadIListP extends AbstractProcessor {
     }
 
     public static ProcessorMetaSupplier supplier(String listName) {
-        return new MetaSupplier(listName, DEFAULT_FETCH_SIZE);
-    }
-
-    public static ProcessorMetaSupplier supplier(String listName, int fetchSize) {
-        return new MetaSupplier(listName, fetchSize);
+        return new MetaSupplier(listName, FETCH_SIZE);
     }
 
     public static ProcessorMetaSupplier supplier(String listName, ClientConfig clientConfig) {
-        return new MetaSupplier(listName, clientConfig, DEFAULT_FETCH_SIZE);
-    }
-
-    public static ProcessorMetaSupplier supplier(String listName, ClientConfig clientConfig, int fetchSize) {
-        return new MetaSupplier(listName, clientConfig, fetchSize);
+        return new MetaSupplier(listName, clientConfig, FETCH_SIZE);
     }
 
     private static class MetaSupplier implements ProcessorMetaSupplier {
@@ -84,18 +76,18 @@ public final class ReadIListP extends AbstractProcessor {
         static final long serialVersionUID = 1L;
         private final String name;
         private final SerializableClientConfig clientConfig;
-        private final int fetchSize;
+        private final int DEFAULT_FETCH_SIZE;
 
         private transient Address ownerAddress;
 
-        MetaSupplier(String name, int fetchSize) {
-            this(name, null, fetchSize);
+        MetaSupplier(String name, int DEFAULT_FETCH_SIZE) {
+            this(name, null, DEFAULT_FETCH_SIZE);
         }
 
-        MetaSupplier(String name, ClientConfig clientConfig, int fetchSize) {
+        MetaSupplier(String name, ClientConfig clientConfig, int DEFAULT_FETCH_SIZE) {
             this.name = name;
             this.clientConfig = clientConfig != null ? new SerializableClientConfig(clientConfig) : null;
-            this.fetchSize = fetchSize;
+            this.DEFAULT_FETCH_SIZE = DEFAULT_FETCH_SIZE;
         }
 
         @Override
@@ -109,7 +101,7 @@ public final class ReadIListP extends AbstractProcessor {
         public DistributedFunction<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
             return address -> {
                 if (address.equals(ownerAddress)) {
-                    return new Supplier(name, clientConfig, fetchSize);
+                    return new Supplier(name, clientConfig, DEFAULT_FETCH_SIZE);
                 }
                 // return empty producer on all other nodes
                 return c -> {
@@ -126,14 +118,14 @@ public final class ReadIListP extends AbstractProcessor {
 
         private final String name;
         private final SerializableClientConfig clientConfig;
-        private final int fetchSize;
+        private final int DEFAULT_FETCH_SIZE;
         private transient IList list;
         private transient HazelcastInstance client;
 
-        Supplier(String name, SerializableClientConfig clientConfig, int fetchSize) {
+        Supplier(String name, SerializableClientConfig clientConfig, int DEFAULT_FETCH_SIZE) {
             this.name = name;
             this.clientConfig = clientConfig;
-            this.fetchSize = fetchSize;
+            this.DEFAULT_FETCH_SIZE = DEFAULT_FETCH_SIZE;
         }
 
         @Override
@@ -161,7 +153,7 @@ public final class ReadIListP extends AbstractProcessor {
         @Override @Nonnull
         public List<Processor> get(int count) {
             assertCountIsOne(count);
-            return singletonList(new ReadIListP(list, fetchSize));
+            return singletonList(new ReadIListP(list, DEFAULT_FETCH_SIZE));
         }
     }
 
