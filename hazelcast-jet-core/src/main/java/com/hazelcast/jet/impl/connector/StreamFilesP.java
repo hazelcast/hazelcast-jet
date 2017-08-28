@@ -58,7 +58,7 @@ import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
- * @see SourceProcessors#streamFiles(String, Charset, String)
+ * Private API. Access via SourceProcessors#streamFiles(String, Charset, String).
  */
 public class StreamFilesP extends AbstractProcessor implements Closeable {
 
@@ -309,10 +309,11 @@ public class StreamFilesP extends AbstractProcessor implements Closeable {
     }
 
     /**
-     * @see SourceProcessors#streamFiles(String, Charset, String)
+     * Private API. Use {@link SourceProcessors#streamFiles(String, Charset, String)} instead.
      */
-    public static ProcessorSupplier supplier(@Nonnull String watchedDirectory, @Nonnull String charset,
-                                             @Nonnull String glob
+    @Nonnull
+    public static ProcessorSupplier supplier(
+            @Nonnull String watchedDirectory, @Nonnull String charset, @Nonnull String glob
     ) {
         return new Supplier(watchedDirectory, charset, glob);
     }

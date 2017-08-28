@@ -29,7 +29,6 @@ import com.hazelcast.jet.impl.connector.StreamSocketP;
 
 import javax.annotation.Nonnull;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 
 /**
  * Static utility class with factories of source processors (the DAG
@@ -37,6 +36,7 @@ import java.nio.charset.StandardCharsets;
  * com.hazelcast.jet.processor package-level documentation}.
  */
 public final class SourceProcessors {
+
     private SourceProcessors() {
     }
 
@@ -128,15 +128,6 @@ public final class SourceProcessors {
     }
 
     /**
-     * Convenience for {@link #streamSocket(String, int, Charset)} with
-     * the UTF-8 character set.
-     */
-    @Nonnull
-    public static DistributedSupplier<Processor> streamSocket(@Nonnull String host, int port) {
-        return streamSocket(host, port, StandardCharsets.UTF_8);
-    }
-
-    /**
      * Returns a supplier of processor which connects to a specified socket and
      * reads and emits text line by line. This processor expects a server-side
      * socket to be available to connect to.
@@ -157,15 +148,6 @@ public final class SourceProcessors {
             @Nonnull String host, int port, @Nonnull Charset charset
     ) {
         return StreamSocketP.supplier(host, port, charset.name());
-    }
-
-    /**
-     * Convenience for {@link #readFiles(String, Charset, String)} with the
-     * default charset (UTF-8) and the default glob pattern (match all files).
-     */
-    @Nonnull
-    public static ProcessorSupplier readFiles(@Nonnull String directory) {
-        return readFiles(directory, StandardCharsets.UTF_8, "*");
     }
 
     /**
@@ -199,14 +181,6 @@ public final class SourceProcessors {
             @Nonnull String directory, @Nonnull Charset charset, @Nonnull String glob
     ) {
         return ReadFilesP.supplier(directory, charset.name(), glob);
-    }
-
-    /**
-     * Convenience for {@link #streamFiles(String, Charset, String)} with the
-     * default charset (UTF-8) and the default glob pattern (match all files).
-     */
-    public static ProcessorSupplier streamFiles(@Nonnull String watchedDirectory) {
-        return streamFiles(watchedDirectory, StandardCharsets.UTF_8, "*");
     }
 
     /**
@@ -264,7 +238,7 @@ public final class SourceProcessors {
      * @param charset charset to use to decode the files
      * @param glob the globbing mask, see {@link
      *             java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()}.
-     *             Use {@code "*"} for all files.
+     *             Use {@code "*"} for all (non-special) files.
      */
     public static ProcessorSupplier streamFiles(
             @Nonnull String watchedDirectory, @Nonnull Charset charset, @Nonnull String glob

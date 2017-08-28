@@ -32,12 +32,12 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Static utility class with factories of sink processors (the terminators
@@ -49,8 +49,8 @@ public final class SinkProcessors {
     }
 
     /**
-     * Returns a supplier of processor that will put data into a Hazelcast
-     * {@code IMap}. Processor expects items of type {@code Map.Entry}.
+     * Returns a supplier of processor that will put {@code Map.Entry}s it
+     * receives into a Hazelcast {@code IMap}.
      */
     @Nonnull
     public static ProcessorSupplier writeMap(@Nonnull String mapName) {
@@ -58,9 +58,8 @@ public final class SinkProcessors {
     }
 
     /**
-     * Returns a supplier of processor that will put data into a Hazelcast
-     * {@code IMap} in a remote cluster. Processor expects items of type {@code
-     * Map.Entry}.
+     * Returns a supplier of processor that will put {@code Map.Entry}s it
+     * receives into a Hazelcast {@code IMap} in a remote cluster.
      */
     @Nonnull
     public static ProcessorSupplier writeMap(@Nonnull String mapName, @Nonnull ClientConfig clientConfig) {
@@ -68,8 +67,8 @@ public final class SinkProcessors {
     }
 
     /**
-     * Returns a supplier of processor which will put data into a Hazelcast
-     * {@code ICache}. Processor expects items of type {@code Map.Entry}
+     * Returns a supplier of processor that will put {@code Map.Entry}s it
+     * receives into a Hazelcast {@code ICache}.
      */
     @Nonnull
     public static ProcessorSupplier writeCache(@Nonnull String cacheName) {
@@ -77,9 +76,8 @@ public final class SinkProcessors {
     }
 
     /**
-     * Returns a supplier of processor which will put data into a Hazelcast
-     * {@code ICache} in a remote cluster. Processor expects items of type
-     * {@code Map.Entry}.
+     * Returns a supplier of processor that will put {@code Map.Entry}s it
+     * receives into a Hazelcast {@code ICache} in a remote cluster.
      */
     @Nonnull
     public static ProcessorSupplier writeCache(@Nonnull String cacheName, @Nonnull ClientConfig clientConfig) {
@@ -87,8 +85,8 @@ public final class SinkProcessors {
     }
 
     /**
-     * Returns a supplier of processor which writes received items to an IMDG
-     * {@code IList}.
+     * Returns a supplier of processor that will write the items it receives
+     * to a Hazelcast {@code IList}.
      */
     @Nonnull
     public static ProcessorSupplier writeList(@Nonnull String listName) {
@@ -96,8 +94,8 @@ public final class SinkProcessors {
     }
 
     /**
-     * Returns a supplier of processor which writes received items to an IMDG
-     * {@code IList} in a remote cluster.
+     * Returns a supplier of processor that will write the items it receives
+     * to a Hazelcast {@code IList} in a remote cluster.
      */
     @Nonnull
     public static ProcessorSupplier writeList(@Nonnull String listName, @Nonnull ClientConfig clientConfig) {
@@ -151,30 +149,10 @@ public final class SinkProcessors {
     }
 
     /**
-     * Convenience for {@link #writeSocket(String, int, DistributedFunction, Charset)}
-     * with {@code Object::toString} formatter and UTF-8 charset.
-     */
-    public static ProcessorSupplier writeSocket(@Nonnull String host, int port) {
-        return writeSocket(host, port, Object::toString, StandardCharsets.UTF_8);
-    }
-
-    /**
-     * Convenience for {@link #writeSocket(String, int, DistributedFunction, Charset)}
-     * with UTF-8 charset.
-     */
-    public static <T> ProcessorSupplier writeSocket(
-            @Nonnull String host,
-            int port,
-            @Nonnull DistributedFunction<T, String> toStringF
-    ) {
-        return writeSocket(host, port, toStringF, StandardCharsets.UTF_8);
-    }
-
-    /**
-     * Returns a supplier of processor which connects to specified socket and
-     * writes the items as text.
-     * <p>
-     * Note that no separator is added between items.
+     * Returns a supplier of processor which connects to the specified TCP
+     * socket and writes to it a string representation of the items it
+     * receives. It converts an item to its string representation using the
+     * supplied {@code toStringF} function.
      */
     public static <T> ProcessorSupplier writeSocket(
             @Nonnull String host,
@@ -198,33 +176,6 @@ public final class SinkProcessors {
                 bufferedWriter -> uncheckRun(bufferedWriter::flush),
                 bufferedWriter -> uncheckRun(bufferedWriter::close)
         );
-    }
-
-    /**
-     * Convenience for {@link #writeFile(String, DistributedFunction, Charset,
-     * boolean)} with the UTF-8 charset and with overwriting of existing files.
-     *
-     * @param directoryName directory to create the files in. Will be created,
-     *                      if it doesn't exist. Must be the same on all members.
-     */
-    @Nonnull
-    public static ProcessorSupplier writeFile(@Nonnull String directoryName) {
-        return writeFile(directoryName, Object::toString, StandardCharsets.UTF_8, false);
-    }
-
-    /**
-     * Convenience for {@link #writeFile(String, DistributedFunction, Charset,
-     * boolean)} with the UTF-8 charset and with overwriting of existing files.
-     *
-     * @param directoryName directory to create the files in. Will be created,
-     *                      if it doesn't exist. Must be the same on all members.
-     * @param toStringF a function to convert items to String (a formatter).
-     */
-    @Nonnull
-    public static <T> ProcessorSupplier writeFile(
-            @Nonnull String directoryName, @Nonnull DistributedFunction<T, String> toStringF
-    ) {
-        return writeFile(directoryName, toStringF, StandardCharsets.UTF_8, false);
     }
 
     /**
@@ -258,5 +209,32 @@ public final class SinkProcessors {
             boolean append
     ) {
         return WriteFileP.supplier(directoryName, toStringF, charset.name(), append);
+    }
+
+    /**
+     * Convenience for {@link #writeFile(String, DistributedFunction, Charset,
+     * boolean)} with the UTF-8 charset and with overwriting of existing files.
+     *
+     * @param directoryName directory to create the files in. Will be created,
+     *                      if it doesn't exist. Must be the same on all members.
+     * @param toStringF a function to convert items to String (a formatter).
+     */
+    @Nonnull
+    public static <T> ProcessorSupplier writeFile(
+            @Nonnull String directoryName, @Nonnull DistributedFunction<T, String> toStringF
+    ) {
+        return writeFile(directoryName, toStringF, UTF_8, false);
+    }
+
+    /**
+     * Convenience for {@link #writeFile(String, DistributedFunction, Charset,
+     * boolean)} with the UTF-8 charset and with overwriting of existing files.
+     *
+     * @param directoryName directory to create the files in. Will be created,
+     *                      if it doesn't exist. Must be the same on all members.
+     */
+    @Nonnull
+    public static ProcessorSupplier writeFile(@Nonnull String directoryName) {
+        return writeFile(directoryName, Object::toString, UTF_8, false);
     }
 }
