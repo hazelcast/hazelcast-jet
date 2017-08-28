@@ -24,6 +24,7 @@ import com.hazelcast.jet.impl.processor.HashJoinP;
 import com.hazelcast.jet.pipeline.Stage;
 import com.hazelcast.jet.pipeline.Transform;
 import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
+import com.hazelcast.jet.pipeline.impl.transform.FilterTransform;
 import com.hazelcast.jet.pipeline.impl.transform.FlatMapTransform;
 import com.hazelcast.jet.pipeline.impl.transform.GroupByTransform;
 import com.hazelcast.jet.pipeline.impl.transform.JoinTransform;
@@ -65,6 +66,11 @@ class Planner {
                 SourceImpl source = (SourceImpl) transform;
                 addVertex(stage, new Vertex(source.name(), source.metaSupplier())
                         .localParallelism(1));
+            } else if (transform instanceof FilterTransform) {
+                FilterTransform filterTransform = (FilterTransform) transform;
+                PlannerVertex pv = addVertex(stage,
+                        new Vertex("filter." + randomSuffix(), Processors.filter(filterTransform.filterF)));
+                addEdges(stage, pv.v);
             } else if (transform instanceof MapTransform) {
                 MapTransform mapTransform = (MapTransform) transform;
                 PlannerVertex pv = addVertex(stage,
