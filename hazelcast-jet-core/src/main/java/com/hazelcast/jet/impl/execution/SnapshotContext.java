@@ -30,6 +30,10 @@ public class SnapshotContext {
     public static final int NO_SNAPSHOT = -1;
     private final ILogger logger;
 
+    private final long jobId;
+    private final long executionId;
+    private final ProcessingGuarantee guarantee;
+
     /**
      * SnapshotId of last snapshot created. Source processors read
      * it and when they see changed value, they start a snapshot with that
@@ -52,17 +56,14 @@ public class SnapshotContext {
     private int numHigherPriorityTasklets = Integer.MIN_VALUE;
 
     /**
-     * Remaining number of sinks in currently produced snapshot. When it is
-     * decreased to 0, the snapshot is complete.
+     * Remaining number of {@link StoreSnapshotTasklet}s in currently produced
+     * snapshot. When it is decremented to 0, the snapshot is complete and new
+     * one can start.
      */
     private final AtomicInteger numRemainingTasklets = new AtomicInteger();
 
     /** Future which will be completed when the current snapshot completes. */
     private volatile CompletableFuture<Void> future;
-
-    private final long jobId;
-    private final long executionId;
-    private final ProcessingGuarantee guarantee;
 
     SnapshotContext(ILogger logger, long jobId, long executionId, long lastSnapshotId,
                     ProcessingGuarantee guarantee

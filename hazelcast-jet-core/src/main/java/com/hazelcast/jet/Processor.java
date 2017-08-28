@@ -80,6 +80,8 @@ public interface Processor {
      * is done with it.
      * <p>
      * No other methods are called until all items in the inbox are processed.
+     * There is always at least one item in the inbox when this method is
+     * called.
      * <p>
      * The default implementation does nothing.
      *
@@ -193,7 +195,8 @@ public interface Processor {
      * are of type {@code Map.Entry<Object, Object>}. The inbox contains just
      * one batch of items, method will be called multiple times if needed. If
      * there is no snapshot to restore, method won't be called at all, even
-     * though the processors is stateful.
+     * though the processors is stateful (there is always at leas  one item in
+     * the inbox).
      * <p>
      * Processor is allowed to put items to Outbox during this call.
      * <p>
