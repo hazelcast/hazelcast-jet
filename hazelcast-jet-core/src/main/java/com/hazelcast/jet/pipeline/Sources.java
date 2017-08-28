@@ -17,11 +17,13 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.jet.ProcessorMetaSupplier;
 import com.hazelcast.jet.impl.connector.ReadFilesP;
 import com.hazelcast.jet.impl.connector.ReadIListP;
 import com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP;
 import com.hazelcast.jet.impl.connector.StreamFilesP;
 import com.hazelcast.jet.impl.connector.StreamSocketP;
+import com.hazelcast.jet.pipeline.impl.SinkImpl;
 import com.hazelcast.jet.pipeline.impl.SourceImpl;
 import com.hazelcast.jet.processor.SourceProcessors;
 
@@ -36,6 +38,17 @@ public final class Sources {
     private static final String GLOB_WILDCARD = "*";
 
     private Sources() {
+    }
+
+    /**
+     * Returns a source constructed directly from the given Core API processor
+     * meta-supplier.
+     *
+     * @param sourceName user-friendly source name
+     * @param metaSupplier the processor meta-supplier
+     */
+    public static <T> Source<T> fromProcessor(String sourceName, ProcessorMetaSupplier metaSupplier) {
+        return new SourceImpl<>(sourceName, metaSupplier);
     }
 
     /**

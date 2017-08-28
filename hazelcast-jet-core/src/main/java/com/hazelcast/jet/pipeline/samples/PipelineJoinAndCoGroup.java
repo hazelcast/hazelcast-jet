@@ -31,7 +31,6 @@ import com.hazelcast.jet.pipeline.bag.Tag;
 import com.hazelcast.jet.pipeline.bag.ThreeBags;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
 import com.hazelcast.jet.pipeline.tuple.Tuple3;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -43,7 +42,6 @@ import java.util.Set;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.pipeline.JoinOn.onKeys;
 
-@SuppressFBWarnings("DLS_DEAD_LOCAL_STORE")
 public class PipelineJoinAndCoGroup {
 
     private static final String TRADES = "trades";
@@ -202,7 +200,6 @@ public class PipelineJoinAndCoGroup {
         }
         System.err.println("CoGroupDirect results are valid");
     }
-
 
     private ComputeStage<Tuple2<Integer, BagsByTag>> coGroupBuild() {
         CoGroupBuilder<Integer, Trade> builder = trades.coGroupBuilder(Trade::classId);

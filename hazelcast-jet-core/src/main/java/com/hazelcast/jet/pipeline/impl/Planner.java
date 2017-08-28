@@ -29,6 +29,7 @@ import com.hazelcast.jet.pipeline.impl.transform.FlatMapTransform;
 import com.hazelcast.jet.pipeline.impl.transform.GroupByTransform;
 import com.hazelcast.jet.pipeline.impl.transform.JoinTransform;
 import com.hazelcast.jet.pipeline.impl.transform.MapTransform;
+import com.hazelcast.jet.pipeline.impl.transform.ProcessorTransform;
 import com.hazelcast.jet.processor.Processors;
 import com.hazelcast.jet.processor.SinkProcessors;
 
@@ -66,6 +67,11 @@ class Planner {
                 SourceImpl source = (SourceImpl) transform;
                 addVertex(stage, new Vertex(source.name(), source.metaSupplier())
                         .localParallelism(1));
+            } else if (transform instanceof ProcessorTransform) {
+                ProcessorTransform procTransform = (ProcessorTransform) transform;
+                PlannerVertex pv = addVertex(stage,
+                        new Vertex(procTransform.transformName + '.' + randomSuffix(), procTransform.procSupplier));
+                addEdges(stage, pv.v);
             } else if (transform instanceof FilterTransform) {
                 FilterTransform filterTransform = (FilterTransform) transform;
                 PlannerVertex pv = addVertex(stage,

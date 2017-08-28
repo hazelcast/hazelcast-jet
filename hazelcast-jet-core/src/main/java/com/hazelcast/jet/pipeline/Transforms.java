@@ -16,16 +16,18 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
-import com.hazelcast.jet.pipeline.UnaryTransform;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.pipeline.impl.transform.FilterTransform;
 import com.hazelcast.jet.pipeline.impl.transform.FlatMapTransform;
 import com.hazelcast.jet.pipeline.impl.transform.GroupByTransform;
 import com.hazelcast.jet.pipeline.impl.transform.MapTransform;
+import com.hazelcast.jet.pipeline.impl.transform.ProcessorTransform;
 import com.hazelcast.jet.pipeline.impl.transform.SlidingWindowTransform;
 
 import java.util.Map.Entry;
@@ -33,7 +35,12 @@ import java.util.Map.Entry;
 public final class Transforms {
 
     private Transforms() {
+    }
 
+    public static <E, R> UnaryTransform<E, R> fromProcessor(
+            String transforName, DistributedSupplier<Processor> procSupplier
+    ) {
+        return new ProcessorTransform<>(transforName, procSupplier);
     }
 
     public static <E, R> UnaryTransform<E, R> map(DistributedFunction<? super E, ? extends R> mapF) {
