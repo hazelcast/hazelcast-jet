@@ -16,21 +16,39 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
+import com.hazelcast.jet.Processor;
+import com.hazelcast.jet.ProcessorMetaSupplier;
+import com.hazelcast.jet.ProcessorSupplier;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.pipeline.Sink;
 
 public class SinkImpl implements Sink {
     private final String name;
+    private final ProcessorMetaSupplier metaSupplier;
 
-    public SinkImpl(String name) {
+    public SinkImpl(String name, ProcessorMetaSupplier metaSupplier) {
+        this.metaSupplier = metaSupplier;
         this.name = name;
+    }
+
+    public SinkImpl(String name, ProcessorSupplier supplier) {
+        this(name, ProcessorMetaSupplier.of(supplier));
+    }
+
+    public SinkImpl(String name, DistributedSupplier<Processor> supplier) {
+        this(name, ProcessorMetaSupplier.of(supplier));
     }
 
     public String name() {
         return name;
     }
 
+    public ProcessorMetaSupplier metaSupplier() {
+        return metaSupplier;
+    }
+
     @Override
     public String toString() {
-        return "DrainTo IMap " + name;
+        return name;
     }
 }

@@ -16,31 +16,37 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
+import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorMetaSupplier;
 import com.hazelcast.jet.ProcessorSupplier;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.pipeline.Source;
 
 public class SourceImpl<E> implements Source<E> {
 
-    private final ProcessorMetaSupplier metaSupplier;
     private final String name;
+    private final ProcessorMetaSupplier metaSupplier;
 
-    public SourceImpl(ProcessorMetaSupplier metaSupplier, String name) {
+    public SourceImpl(String name, ProcessorMetaSupplier metaSupplier) {
         this.metaSupplier = metaSupplier;
         this.name = name;
     }
 
-    public SourceImpl(ProcessorSupplier supplier, String name) {
-        this(ProcessorMetaSupplier.of(supplier), name);
+    public SourceImpl(String name, ProcessorSupplier supplier) {
+        this(name, ProcessorMetaSupplier.of(supplier));
     }
 
-    public ProcessorMetaSupplier metaSupplier() {
-        return metaSupplier;
+    public SourceImpl(String name, DistributedSupplier<Processor> supplier) {
+        this(name, ProcessorMetaSupplier.of(supplier));
     }
 
     @Override
     public String name() {
         return name;
+    }
+
+    public ProcessorMetaSupplier metaSupplier() {
+        return metaSupplier;
     }
 
     @Override

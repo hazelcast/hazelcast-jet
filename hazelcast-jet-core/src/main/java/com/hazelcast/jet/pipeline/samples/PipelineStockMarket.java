@@ -20,20 +20,19 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.pipeline.ComputeStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
-import com.hazelcast.jet.pipeline.Sources;
 
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
-import static com.hazelcast.jet.pipeline.Sources.streamKafka;
+import static com.hazelcast.jet.pipeline.Sources.readMap;
 import static com.hazelcast.jet.pipeline.Transforms.slidingWindow;
 
 public class PipelineStockMarket {
     public static void main(String[] args) {
         Pipeline p = Pipeline.create();
-        ComputeStage<Entry<String, Long>> c = p.drawFrom(streamKafka());
+        ComputeStage<Entry<String, Long>> c = p.drawFrom(readMap("someMap"));
         c.attach(slidingWindow(entryKey(), slidingWindowDef(1, 1), counting()))
          .drainTo(Sinks.writeMap("sink"));
         p.execute(Jet.newJetInstance());
