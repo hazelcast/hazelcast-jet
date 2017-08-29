@@ -44,58 +44,62 @@ public final class Sinks {
     }
 
     /**
-     * Returns a sink that will put {@code Map.Entry}s it receives into a
-     * Hazelcast {@code IMap}.
+     * Returns a sink that puts {@code Map.Entry}s it receives into a Hazelcast
+     * {@code IMap} with the specified name.
      */
     public static Sink writeMap(String mapName) {
         return new SinkImpl("writeMap(" + mapName + ')', SinkProcessors.writeMap(mapName));
     }
 
     /**
-     * Returns a sink that will put {@code Map.Entry}s it receives into a
-     * Hazelcast {@code IMap} in a remote cluster.
+     * Returns a sink that puts {@code Map.Entry}s it receives into a Hazelcast
+     * {@code IMap} with the specified name in a remote cluster identified by
+     * the supplied {@code ClientConfig}.
      */
     public static Sink writeMap(String mapName, ClientConfig clientConfig) {
         return new SinkImpl("writeMap(" + mapName + ')', SinkProcessors.writeMap(mapName, clientConfig));
     }
 
     /**
-     * Returns a sink that will put {@code Map.Entry}s it receives into a
-     * Hazelcast {@code ICache}.
+     * Returns a sink that puts {@code Map.Entry}s it receives into a Hazelcast
+     * {@code ICache} with the specified name.
      */
     public static Sink writeCache(String cacheName) {
         return new SinkImpl("writeCache(" + cacheName + ')', SinkProcessors.writeCache(cacheName));
     }
 
     /**
-     * Returns a sink that will put {@code Map.Entry}s it receives into a
-     * Hazelcast {@code ICache} in a remote cluster.
+     * Returns a sink that puts {@code Map.Entry}s it receives into a Hazelcast
+     * {@code ICache} with the specified name in a remote cluster identified by
+     * the supplied {@code ClientConfig}.
      */
     public static Sink writeCache(String cacheName, ClientConfig clientConfig) {
         return new SinkImpl("writeCache(" + cacheName + ')', SinkProcessors.writeCache(cacheName, clientConfig));
     }
 
     /**
-     * Returns a sink that will write the items it receives to a Hazelcast
-     * {@code IList}.
+     * Returns a sink that adds the items it receives to a Hazelcast {@code
+     * IList} with the specified name.
      */
     public static Sink writeList(String listName) {
         return new SinkImpl("writeList(" + listName + ')', SinkProcessors.writeList(listName));
     }
 
     /**
-     * Returns a sink that will write the items it receives to a Hazelcast
-     * {@code IList} in a remote cluster.
+     * Returns a sink that adds the items it receives to a Hazelcast {@code
+     * IList} with the specified name in a remote cluster identified by the
+     * supplied {@code ClientConfig}.
      */
     public static Sink writeList(String listName, ClientConfig clientConfig) {
         return new SinkImpl("writeList(" + listName + ')', SinkProcessors.writeList(listName, clientConfig));
     }
 
     /**
-     * Returns a sink which connects to the specified TCP socket and writes
-     * to it a string representation of the items it receives. It converts
-     * an item to its string representation using the supplied
-     * {@code toStringF} function.
+     * Returns a sink that connects to the specified TCP socket and writes to
+     * it a string representation of the items it receives. It converts an
+     * item to its string representation using the supplied {@code toStringF}
+     * function and encodes the string using the supplied {@code Charset}. It
+     * follows each item with a newline character.
      */
     public static <T> Sink writeSocket(
             @Nonnull String host,
@@ -128,5 +132,54 @@ public final class Sinks {
     public static <T> Sink writeSocket(@Nonnull String host, int port) {
         return new SinkImpl("writeSocket(" + host + ':' + port + ')',
                 SinkProcessors.writeSocket(host, port, Object::toString, UTF_8));
+    }
+
+    /**
+     * Returns a sink that writes all items to a local file on each member. It
+     * converts an item to its string representation using the supplied {@code
+     * toStringF} function and encodes the string using the supplied {@code
+     * Charset}. It follows each item with a platform-specific line separator.
+     * <p>
+     * The same pathname must be available for writing on all members. Each
+     * processor writes to its own file whose name is equal to the
+     * processor's global index (an integer unique to each processor of the
+     * vertex).
+     *
+     * @param directoryName directory to create the files in. Will be created
+     *                      if it doesn't exist. Must be the same on all members.
+     * @param toStringF a function to convert items to String (a formatter)
+     * @param charset charset used to encode the file output
+     * @param append whether to append ({@code true}) or overwrite ({@code false})
+     *               an existing file
+     */
+    @Nonnull
+    public static <T> Sink writeFile(
+            @Nonnull String directoryName,
+            @Nonnull DistributedFunction<T, String> toStringF,
+            @Nonnull Charset charset,
+            boolean append
+    ) {
+        return new SinkImpl("writeFile(" + directoryName + ')',
+                SinkProcessors.writeFile(directoryName, toStringF, charset, append));
+    }
+
+    /**
+     * Convenience for {@link #writeFile(String, DistributedFunction, Charset,
+     * boolean)} with the UTF-8 charset and with overwriting of existing files.
+     */
+    @Nonnull
+    public static <T> Sink writeFile(
+            @Nonnull String directoryName, @Nonnull DistributedFunction<T, String> toStringF
+    ) {
+        return writeFile(directoryName, toStringF, UTF_8, false);
+    }
+
+    /**
+     * Convenience for {@link #writeFile(String, DistributedFunction, Charset,
+     * boolean)} with the UTF-8 charset and with overwriting of existing files.
+     */
+    @Nonnull
+    public static Sink writeFile(@Nonnull String directoryName) {
+        return writeFile(directoryName, Object::toString, UTF_8, false);
     }
 }
