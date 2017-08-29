@@ -23,7 +23,6 @@ import com.hazelcast.jet.impl.connector.ReadIListP;
 import com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP;
 import com.hazelcast.jet.impl.connector.StreamFilesP;
 import com.hazelcast.jet.impl.connector.StreamSocketP;
-import com.hazelcast.jet.pipeline.impl.SinkImpl;
 import com.hazelcast.jet.pipeline.impl.SourceImpl;
 import com.hazelcast.jet.processor.SourceProcessors;
 
@@ -52,24 +51,29 @@ public final class Sources {
     }
 
     /**
-     * Returns a source that will fetch entries from the Hazelcast {@code IMap}
-     * with the specified name and will emit them as {@code Map.Entry}. Its
-     * processors will only access data local to the member.
+     * Returns a source that fetches entries from the Hazelcast {@code IMap}
+     * with the specified name and emits them as {@code Map.Entry}. Its
+     * processors will leverage data locality by fetching only those entries
+     * that are stored on the member where they are running.
      * <p>
-     * If the underlying map is concurrently being modified, there are no guarantees
-     * given with respect to missing or duplicate items.
+     * If the {@code IMap} is modified while being read, or if there is a
+     * cluster topology change (triggering data migration), the source may
+     * miss and/or duplicate some entries.
      */
     public static <K, V> Source<Map.Entry<K, V>> readMap(String mapName) {
         return new SourceImpl<>("readMap(" + mapName + ')', SourceProcessors.readMap(mapName));
     }
 
     /**
-     * Returns a meta-supplier of processor that will fetch entries from a
-     * Hazelcast {@code IMap} in a remote cluster. Processor will emit the
-     * entries as {@code Map.Entry}.
+     * Returns a source that fetches entries from the Hazelcast {@code IMap}
+     * with the specified name in a remote cluster identified by the supplied
+     * {@code ClientConfig} and emits them as {@code Map.Entry}. Its processors
+     * will leverage data locality by fetching only those entries that are
+     * stored on the member where they are running.
      * <p>
-     * If the underlying map is concurrently modified, there may be missing or
-     * duplicate items.
+     * If the {@code IMap} is modified while being read, or if there is a
+     * cluster topology change (triggering data migration), the source may
+     * miss and/or duplicate some entries.
      */
     @Nonnull
     public static <K, V> Source<Map.Entry<K, V>> readMap(@Nonnull String mapName, @Nonnull ClientConfig clientConfig) {
@@ -77,19 +81,14 @@ public final class Sources {
     }
 
     /**
-     * Returns a meta-supplier of processor that will fetch entries from the
-     * Hazelcast {@code ICache} with the specified name and will emit them as
-     * {@code Cache.Entry}. The processors will only access data local to the
-     * member and, if {@code localParallelism} for the vertex is above one,
-     * processors will divide the labor within the member so that each one gets
-     * a subset of all local partitions to read.
+     * Returns a source that fetches entries from the Hazelcast {@code ICache}
+     * with the specified name and emits them as {@code Map.Entry}. Its
+     * processors will leverage data locality by fetching only those entries
+     * that are stored on the member where they are running.
      * <p>
-     * The number of Hazelcast partitions should be configured to at least
-     * {@code localParallelism * clusterSize}, otherwise some processors will
-     * have no partitions assigned to them.
-     * <p>
-     * If the underlying cache is concurrently modified, there may be missing
-     * or duplicate items.
+     * If the {@code ICache} is modified while being read, or if there is a
+     * cluster topology change (triggering data migration), the source may
+     * miss and/or duplicate some entries.
      */
     @Nonnull
     public static <K, V> Source<Map.Entry<K, V>> readCache(@Nonnull String cacheName) {
@@ -97,12 +96,15 @@ public final class Sources {
     }
 
     /**
-     * Returns a meta-supplier of processor that will fetch entries from a
-     * Hazelcast {@code ICache} in a remote cluster. Processor will emit the
-     * entries as {@code Cache.Entry}.
+     * Returns a source that fetches entries from the Hazelcast {@code ICache}
+     * with the specified name in a remote cluster identified by the supplied
+     * {@code ClientConfig} and emits them as {@code Map.Entry}. Its processors
+     * will leverage data locality by fetching only those entries that are
+     * stored on the member where they are running.
      * <p>
-     * If the underlying cache is concurrently modified, there may be missing
-     * or duplicate items.
+     * If the {@code ICache} is modified while being read, or if there is a
+     * cluster topology change (triggering data migration), the source may
+     * miss and/or duplicate some entries.
      */
     @Nonnull
     public static <K, V> Source<Map.Entry<K, V>> readCache(
@@ -114,9 +116,9 @@ public final class Sources {
     }
 
     /**
-     * Returns a meta-supplier of processor that emits items retrieved from an
-     * IMDG IList. Note that all elements from the list are emitted on a single
-     * member &mdash; the one where the entire list is stored by the IMDG.
+     * Returns a source that emits items retrieved from a Hazelcast {@code
+     * IList}. All elements are emitted on a single member &mdash; the one
+     * where the entire list is stored by the IMDG.
      */
     @Nonnull
     public static <E> Source<E> readList(@Nonnull String listName) {
@@ -124,10 +126,10 @@ public final class Sources {
     }
 
     /**
-     * Returns a meta-supplier of processor that emits items retrieved from an
-     * IMDG IList in a remote cluster. Note that all elements from the list are
-     * emitted on a single member &mdash; the one where the entire list is
-     * stored by the IMDG.
+     * Returns a source that emits items retrieved from a Hazelcast {@code
+     * IList} in a remote cluster identified by the supplied {@code
+     * ClientConfig}. All elements are emitted on a single member &mdash; the
+     * one where the entire list is stored by the IMDG.
      */
     @Nonnull
     public static <E> Source<E> readList(@Nonnull String listName, @Nonnull ClientConfig clientConfig) {
@@ -135,20 +137,15 @@ public final class Sources {
     }
 
     /**
-     * Returns a supplier of processor which connects to a specified socket and
-     * reads and emits text line by line. This processor expects a server-side
-     * socket to be available to connect to.
+     * Returns a source which connects to the specified socket and emits lines
+     * of text received from it. It decodes the text using the supplied {@code
+     * Charset}.
      * <p>
-     * Each processor instance will create a socket connection to the configured
-     * [host:port], so there will be {@code clusterSize * localParallelism}
-     * connections. The server should do the load-balancing.
+     * Each underlying processor opens its own TCP connection, so there will be
+     * {@code clusterSize * localParallelism} open connections to the server.
      * <p>
-     * The processor will complete when the socket is closed by the server.
-     * No reconnection is attempted.
-     *
-     * @param host The host name to connect to
-     * @param port The port number to connect to
-     * @param charset Character set used to decode the stream
+     * The source completes when the server closes the socket. It never
+     * attempts to reconnect.
      */
     @Nonnull
     public static Source<String> streamSocket(
@@ -190,18 +187,18 @@ public final class Sources {
     }
 
     /**
-     * A source that generates a stream of lines of text coming from files in
+     * A source that emits a stream of lines of text coming from files in
      * the watched directory (but not its subdirectories). It will emit only
      * new contents added after startup: both new files and new content
      * appended to existing ones.
      * <p>
-     * If the source observes a file that doesn't end with a newline, it will
-     * ignore all the appended contents up to the next newline, so it only
-     * emits full lines.
-     * <p>
      * To be useful, the source should be configured to read data local to
      * each member. For example, if the pathname resolves to a shared network
      * filesystem, it will emit duplicate data.
+     * <p>
+     * If, during the scanning phase, the source observes a file that doesn't
+     * end with a newline, it will assume that there is a line just being
+     * written. This line won't appear in its output.
      * <p>
      * The source completes when the directory is deleted. However, in order
      * to delete the directory, all files in it must be deleted and if you

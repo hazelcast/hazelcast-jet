@@ -35,7 +35,7 @@ import java.util.Map;
 
 /**
  * Static utility class with factories of source processors (the DAG
- * entry points). For other kinds of processors refer to the {@link
+ * entry points). For other kinds for a vertexs refer to the {@link
  * com.hazelcast.jet.processor package-level documentation}.
  */
 public final class SourceProcessors {
@@ -44,20 +44,22 @@ public final class SourceProcessors {
     }
 
     /**
-     * Returns a meta-supplier of processor that will fetch entries from the
-     * Hazelcast {@code IMap} with the specified name and emit them as
-     * {@code Map.Entry}. Processors will only access data local to the
-     * member and, if {@code localParallelism} for the vertex is above one,
-     * they will divide the labor within the member so that each one gets a
-     * subset of all local partitions to read.
+     * Returns a meta-supplier of processors for a vertex that fetches entries
+     * from the Hazelcast {@code IMap} with the specified name and emits them
+     * as {@code Map.Entry}.
+     * <p>
+     * On each member the processors fetch only the locally stored entries. If
+     * {@code localParallelism} for the vertex is more than one, they will
+     * divide the labor within the member so that each one gets a subset of all
+     * local partitions to read.
      * <p>
      * The number of Hazelcast partitions should be configured to at least
      * {@code localParallelism * clusterSize}, otherwise some processors will
      * have no partitions assigned to them.
      * <p>
-     * The {@code IMap} must be read only while it is not being mutated and the
-     * cluster is stable (there are no migrations or membership changes).
-     * Otherwise the processors may miss and/or duplicate some entries.
+     * If the {@code IMap} is modified while being read, or if there is a
+     * cluster topology change (triggering data migration), the processors
+     * may miss and/or duplicate some entries.
      */
     @Nonnull
     public static ProcessorMetaSupplier readMap(@Nonnull String mapName) {
@@ -65,21 +67,23 @@ public final class SourceProcessors {
     }
 
     /**
-     * Returns a meta-supplier of processor that will fetch entries from the
-     * Hazelcast {@code IMap} with the specified name. It will filter the
-     * entries with the given predicate and transform them with the given
-     * projection function. Processors will only access data local to the
-     * member and, if {@code localParallelism} for the vertex is above one,
-     * processors will divide the labor within the member so that each one gets
-     * a subset of all local partitions to read.
+     * Returns a meta-supplier of processors for a vertex that fetches entries
+     * from the Hazelcast {@code IMap} with the specified name, filters them
+     * using the supplied predicate, transforms them using the supplied
+     * projection function, and emits the results.
+     * <p>
+     * On each member the processors fetch only the locally stored entries. If
+     * {@code localParallelism} for the vertex is more than one, they will
+     * divide the labor within the member so that each one gets a subset of all
+     * local partitions to read.
      * <p>
      * The number of Hazelcast partitions should be configured to at least
      * {@code localParallelism * clusterSize}, otherwise some processors will have
      * no partitions assigned to them.
      * <p>
-     * The {@code IMap} must be read only while it is not being mutated and the
-     * cluster is stable (there are no migrations or membership changes).
-     * Otherwise the processors may miss and/or duplicate some entries.
+     * If the {@code IMap} is modified while being read, or if there is a
+     * cluster topology change (triggering data migration), the processors
+     * may miss and/or duplicate some entries.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier readMap(
@@ -91,13 +95,14 @@ public final class SourceProcessors {
     }
 
     /**
-     * Returns a meta-supplier of processor that will fetch entries from a
-     * Hazelcast {@code IMap} in a remote cluster identified by the supplied
-     * {@code ClientConfig}and emit them as {@code Map.Entry}.
+     * Returns a meta-supplier of processors for a vertex that fetches entries
+     * from the Hazelcast {@code IMap} with the specified name in a remote
+     * cluster identified by the supplied {@code ClientConfig} and emits them
+     * as {@code Map.Entry}.
      * <p>
-     * The {@code IMap} must be read only while it is not being mutated and the
-     * cluster is stable (there are no migrations or membership changes).
-     * Otherwise the processors may miss and/or duplicate some entries.
+     * If the {@code IMap} is modified while being read, or if there is a
+     * cluster topology change (triggering data migration), the processors
+     * may miss and/or duplicate some entries.
      */
     @Nonnull
     public static ProcessorMetaSupplier readMap(@Nonnull String mapName, @Nonnull ClientConfig clientConfig) {
@@ -105,18 +110,15 @@ public final class SourceProcessors {
     }
 
     /**
-     * Returns a meta-supplier of processor that will fetch entries from the
-     * Hazelcast {@code IMap} with the specified name in a remote cluster
-     * identified by the supplied {@code ClientConfig}. It will filter the
-     * entries with the given predicate and transform them with the given
-     * projection function. Processors will only access data local to the
-     * member and, if {@code localParallelism} for the vertex is above one,
-     * processors will divide the labor within the member so that each one gets
-     * a subset of all local partitions to read.
+     * Returns a meta-supplier of processors for a vertex that fetches entries
+     * from the Hazelcast {@code IMap} with the specified name in a remote
+     * cluster identified by the supplied {@code ClientConfig}, filters them
+     * using the supplied predicate, transforms them using the supplied
+     * projection function, and emits the results.
      * <p>
-     * The {@code IMap} must be read only while it is not being mutated and the
-     * cluster is stable (there are no migrations or membership changes).
-     * Otherwise the processors may miss and/or duplicate some entries.
+     * If the {@code IMap} is modified while being read, or if there is a
+     * cluster topology change (triggering data migration), the processors
+     * may miss and/or duplicate some entries.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier readMap(
@@ -129,20 +131,22 @@ public final class SourceProcessors {
     }
 
     /**
-     * Returns a meta-supplier of processor that will fetch entries from the
-     * Hazelcast {@code ICache} with the specified name and emit them as
-     * {@code Cache.Entry}. Processors will only access data local to the
-     * member and, if {@code localParallelism} for the vertex is above one,
-     * they will divide the labor within the member so that each one gets a
-     * subset of all local partitions to read.
+     * Returns a meta-supplier of processors for a vertex that fetches entries
+     * from the Hazelcast {@code ICache} with the specified name and emits them
+     * as {@code Map.Entry}.
+     * <p>
+     * On each member the processors fetch only the locally stored entries. If
+     * {@code localParallelism} for the vertex is more than one, they will
+     * divide the labor within the member so that each one gets a subset of all
+     * local partitions to read.
      * <p>
      * The number of Hazelcast partitions should be configured to at least
      * {@code localParallelism * clusterSize}, otherwise some processors will
      * have no partitions assigned to them.
      * <p>
-     * The {@code ICache} must be read only while it is not being mutated and the
-     * cluster is stable (there are no migrations or membership changes).
-     * Otherwise the processors may miss and/or duplicate some entries.
+     * If the {@code ICache} is modified while being read, or if there is a
+     * cluster topology change (triggering data migration), the processors
+     * may miss and/or duplicate some entries.
      */
     @Nonnull
     public static ProcessorMetaSupplier readCache(@Nonnull String cacheName) {
@@ -150,13 +154,14 @@ public final class SourceProcessors {
     }
 
     /**
-     * Returns a meta-supplier of processor that will fetch entries from a
-     * Hazelcast {@code ICache} in a remote cluster identified by the supplied
-     * {@code ClientConfig} and emit them as {@code Cache.Entry}.
+     * Returns a meta-supplier of processors for a vertex that fetches entries
+     * from the Hazelcast {@code ICache} with the specified name in a remote
+     * cluster identified by the supplied {@code ClientConfig} and emits them
+     * as {@code Map.Entry}.
      * <p>
-     * The {@code ICache} must be read only while it is not being mutated and the
-     * cluster is stable (there are no migrations or membership changes).
-     * Otherwise the processors may miss and/or duplicate some entries.
+     * If the {@code ICache} is modified while being read, or if there is a
+     * cluster topology change (triggering data migration), the processors
+     * may miss and/or duplicate some entries.
      */
     @Nonnull
     public static ProcessorMetaSupplier readCache(@Nonnull String cacheName, @Nonnull ClientConfig clientConfig) {
@@ -164,9 +169,10 @@ public final class SourceProcessors {
     }
 
     /**
-     * Returns a meta-supplier of processor that emits items retrieved from a
-     * Hazelcast {@code IList}. All elements are emitted on a single member
-     * &mdash; the one where the entire list is stored by the IMDG.
+     * Returns a meta-supplier of processors for a vertex that emits items
+     * retrieved from a Hazelcast {@code IList}. All elements are emitted on a
+     * single member &mdash; the one where the entire list is stored by the
+     * IMDG.
      */
     @Nonnull
     public static ProcessorMetaSupplier readList(@Nonnull String listName) {
@@ -174,10 +180,11 @@ public final class SourceProcessors {
     }
 
     /**
-     * Returns a meta-supplier of processor that emits items retrieved from a
-     * Hazelcast {@code IList} in a remote cluster identified by the supplied
-     * {@code ClientConfig}. All elements are emitted on a single member
-     * &mdash; the one where the entire list is stored by the IMDG.
+     * Returns a meta-supplier of processors for a vertex that emits items
+     * retrieved from a Hazelcast {@code IList} in a remote cluster identified
+     * by the supplied {@code ClientConfig}. All elements are emitted on a
+     * single member &mdash; the one where the entire list is stored by the
+     * IMDG.
      */
     @Nonnull
     public static ProcessorMetaSupplier readList(@Nonnull String listName, @Nonnull ClientConfig clientConfig) {
@@ -185,20 +192,15 @@ public final class SourceProcessors {
     }
 
     /**
-     * Returns a supplier of processor which connects to a specified socket and
-     * reads and emits text line by line. This processor expects a server-side
-     * socket to be available to connect to.
+     * Returns a supplier of processors for a vertex which connects to the
+     * specified socket and emits lines of text received from it. It decodes
+     * the text using the supplied {@code Charset}.
      * <p>
-     * Each processor instance will create a socket connection to the configured
-     * [host:port], so there will be {@code clusterSize * localParallelism}
-     * connections. The server should do the load-balancing.
+     * Each processor opens its own TCP connection, so there will be {@code
+     * clusterSize * localParallelism} open connections to the server.
      * <p>
-     * The processor will complete when the socket is closed by the server.
-     * No reconnection is attempted.
-     *
-     * @param host    The host name to connect to
-     * @param port    The port number to connect to
-     * @param charset Character set used to decode the stream
+     * Each processor completes when the server closes its connection. It never
+     * attempts to reconnect.
      */
     @Nonnull
     public static DistributedSupplier<Processor> streamSocket(
@@ -208,23 +210,21 @@ public final class SourceProcessors {
     }
 
     /**
-     * Returns a supplier of processor that emits lines from all files in a
-     * directory (but not its subdirectories), or only the files matching the
-     * supplied {@code glob} pattern. The files must not change while being
-     * read; if they do, the behavior is unspecified. There will be no
-     * indication which file a particular line comes from.
+     * Returns a supplier of processors for a vertex that emits lines from
+     * files in a directory (but not its subdirectories. The files must not
+     * change while being read; if they do, the behavior is unspecified.
      * <p>
-     * The same pathname should be available on all members, but it should not
-     * contain the same files &mdash; (e.g., it shouldn't resolve to a
-     * directory shared over the network).
+     * To be useful, the vertex should read files local to each member. For
+     * example, if the pathname resolves to a shared network filesystem, it
+     * will emit duplicate data.
      * <p>
-     * Since the work of this processor is file IO-intensive, {@link
-     * com.hazelcast.jet.Vertex#localParallelism(int) local parallelism} of the
-     * vertex should be set according to the performance characteristics of the
+     * Since the work of this vertex is file IO-intensive, its {@link
+     * com.hazelcast.jet.Vertex#localParallelism(int) local parallelism}
+     * should be set according to the performance characteristics of the
      * underlying storage system. Modern high-end devices peak with 4-8 reading
-     * threads, so if running a single Jet job with a single file-reading vertex,
-     * the optimal value would be in the range of 4-8. Note that any one file
-     * is only read by one thread, so extra parallelism won't improve the
+     * threads, so if running a single Jet job with a single file-reading
+     * vertex, the optimal value would be in the range of 4-8. Note that any
+     * one file is only read by one thread, so extra parallelism won't improve
      * performance if there aren't enough files to read.
      *
      * @param directory parent directory of the files
@@ -241,35 +241,32 @@ public final class SourceProcessors {
     }
 
     /**
-     * A source that generates a stream of lines of text coming from files in
-     * the watched directory (but not its subdirectories). You can pass `*` as
-     * the pattern to read all files in the directory. It will pick up both
-     * newly created files and content appended to pre-existing files. It
-     * expects the file contents not to change once appended. There is no
-     * indication which file a particular line comes from.
+     * Returns a supplier of processors for a vertex that emits a stream of
+     * lines of text coming from files in the watched directory (but not its
+     * subdirectories). It will emit only new contents added after startup:
+     * both new files and new content appended to existing ones.
      * <p>
-     * The processor will scan pre-existing files for file sizes on startup and
-     * process them from that position. It will ignore the first line if the
-     * starting offset is not immediately after a newline character (it is
-     * assumed that another process is concurrently appending to the file).
+     * To be useful, the vertex should be configured to read data local to
+     * each member. For example, if the pathname resolves to a shared network
+     * filesystem, it will emit duplicate data.
      * <p>
-     * The same pathname should be available on all members, but it should not
-     * contain the same files &mdash; (e.g., it shouldn't resolve to a
-     * directory shared over the network).
+     * If, during the scanning phase, the vertex observes a file that doesn't
+     * end with a newline, it will assume that there is a line just being
+     * written. This line won't appear in its output.
      * <p>
-     * Since the work of this processor is file IO-intensive, {@link
-     * com.hazelcast.jet.Vertex#localParallelism(int) local parallelism} of the
-     * vertex should be set according to the performance characteristics of the
+     * Since the work of this vertex is file IO-intensive, its {@link
+     * com.hazelcast.jet.Vertex#localParallelism(int) local parallelism}
+     * should be set according to the performance characteristics of the
      * underlying storage system. Modern high-end devices peak with 4-8 reading
-     * threads, so if running a single Jet job with a single file-reading vertex,
-     * the optimal value would be in the range of 4-8. Note that any one file
-     * is only read by one thread, so extra parallelism won't improve the
+     * threads, so if running a single Jet job with a single file-reading
+     * vertex, the optimal value would be in the range of 4-8. Note that any
+     * one file is only read by one thread, so extra parallelism won't improve
      * performance if there aren't enough files to read.
      * <p>
-     * When a change is detected the file is opened, appended lines are read
-     * and file is closed. This process is repeated as necessary.
+     * Each time the vertex detects a change in a file, it opens it, reads the
+     * new content, and closes it.
      * <p>
-     * The processor completes when the directory is deleted. However, in order
+     * The vertex completes when the directory is deleted. However, in order
      * to delete the directory, all files in it must be deleted and if you
      * delete a file that is currently being read from, the job may encounter
      * an {@code IOException}. The directory must be deleted on all nodes.
@@ -279,7 +276,7 @@ public final class SourceProcessors {
      * <h3>Limitation on Windows</h3>
      * On Windows the {@code WatchService} is not notified of appended lines
      * until the file is closed. If the writer keeps the file open while
-     * appending (which is typical), the processor may fail to observe the
+     * appending (which is typical), the vertex may fail to observe the
      * changes. It will be notified if any process tries to open that file,
      * such as looking at the file in Explorer. This holds for Windows 10 with
      * the NTFS file system and might change in future. You are advised to do
@@ -287,7 +284,7 @@ public final class SourceProcessors {
      * <p>
      * <h3>Use the latest JRE</h3>
      * The underlying JDK API ({@link java.nio.file.WatchService}) has a
-     * history of unreliability and this processor may experience infinite
+     * history of unreliability and this vertex may experience infinite
      * blocking, missed, or duplicate events as a result. Such problems may be
      * resolved by upgrading the JRE to the latest version.
      *
