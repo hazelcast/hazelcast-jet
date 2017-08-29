@@ -45,19 +45,19 @@ public final class SourceProcessors {
 
     /**
      * Returns a meta-supplier of processor that will fetch entries from the
-     * Hazelcast {@code IMap} with the specified name and will emit them as
-     * {@code Map.Entry}. The processors will only access data local to the
+     * Hazelcast {@code IMap} with the specified name and emit them as
+     * {@code Map.Entry}. Processors will only access data local to the
      * member and, if {@code localParallelism} for the vertex is above one,
-     * processors will divide the labor within the member so that each one gets
-     * a subset of all local partitions to read.
+     * they will divide the labor within the member so that each one gets a
+     * subset of all local partitions to read.
      * <p>
      * The number of Hazelcast partitions should be configured to at least
-     * {@code localParallelism * clusterSize}, otherwise some processors will have
-     * no partitions assigned to them.
+     * {@code localParallelism * clusterSize}, otherwise some processors will
+     * have no partitions assigned to them.
      * <p>
-     * Iterating the map should be done only when the {@link com.hazelcast.core.IMap} is not being
-     * mutated and the cluster is stable (there are no migrations or membership changes).
-     * In other cases, the iterator may not return some entries or may return an entry twice.
+     * The {@code IMap} must be read only while it is not being mutated and the
+     * cluster is stable (there are no migrations or membership changes).
+     * Otherwise the processors may miss and/or duplicate some entries.
      */
     @Nonnull
     public static ProcessorMetaSupplier readMap(@Nonnull String mapName) {
@@ -66,9 +66,9 @@ public final class SourceProcessors {
 
     /**
      * Returns a meta-supplier of processor that will fetch entries from the
-     * Hazelcast {@code IMap} with the specified name. Entries will be filtered
-     * according to the given predicate and the result of the projection will be
-     * emitted to downstream. The processors will only access data local to the
+     * Hazelcast {@code IMap} with the specified name. It will filter the
+     * entries with the given predicate and transform them with the given
+     * projection function. Processors will only access data local to the
      * member and, if {@code localParallelism} for the vertex is above one,
      * processors will divide the labor within the member so that each one gets
      * a subset of all local partitions to read.
@@ -77,9 +77,9 @@ public final class SourceProcessors {
      * {@code localParallelism * clusterSize}, otherwise some processors will have
      * no partitions assigned to them.
      * <p>
-     * Iterating the map should be done only when the {@link com.hazelcast.core.IMap} is not being
-     * mutated and the cluster is stable (there are no migrations or membership changes).
-     * In other cases, the iterator may not return some entries or may return an entry twice.
+     * The {@code IMap} must be read only while it is not being mutated and the
+     * cluster is stable (there are no migrations or membership changes).
+     * Otherwise the processors may miss and/or duplicate some entries.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier readMap(
@@ -92,12 +92,12 @@ public final class SourceProcessors {
 
     /**
      * Returns a meta-supplier of processor that will fetch entries from a
-     * Hazelcast {@code IMap} in a remote cluster. Processor will emit the
-     * entries as {@code Map.Entry}.
+     * Hazelcast {@code IMap} in a remote cluster identified by the supplied
+     * {@code ClientConfig}and emit them as {@code Map.Entry}.
      * <p>
-     * Iterating the map should be done only when the {@link com.hazelcast.core.IMap} is not being
-     * mutated and the cluster is stable (there are no migrations or membership changes).
-     * In other cases, the iterator may not return some entries or may return an entry twice.
+     * The {@code IMap} must be read only while it is not being mutated and the
+     * cluster is stable (there are no migrations or membership changes).
+     * Otherwise the processors may miss and/or duplicate some entries.
      */
     @Nonnull
     public static ProcessorMetaSupplier readMap(@Nonnull String mapName, @Nonnull ClientConfig clientConfig) {
@@ -105,14 +105,18 @@ public final class SourceProcessors {
     }
 
     /**
-     * Returns a meta-supplier of processor that will fetch entries from a
-     * Hazelcast {@code IMap} in a remote cluster.
-     * Entries will be filtered according to the given predicate and the result of the
-     * projection will be emitted to downstream.
+     * Returns a meta-supplier of processor that will fetch entries from the
+     * Hazelcast {@code IMap} with the specified name in a remote cluster
+     * identified by the supplied {@code ClientConfig}. It will filter the
+     * entries with the given predicate and transform them with the given
+     * projection function. Processors will only access data local to the
+     * member and, if {@code localParallelism} for the vertex is above one,
+     * processors will divide the labor within the member so that each one gets
+     * a subset of all local partitions to read.
      * <p>
-     * Iterating the map should be done only when the {@link com.hazelcast.core.IMap} is not being
-     * mutated and the cluster is stable (there are no migrations or membership changes).
-     * In other cases, the iterator may not return some entries or may return an entry twice.
+     * The {@code IMap} must be read only while it is not being mutated and the
+     * cluster is stable (there are no migrations or membership changes).
+     * Otherwise the processors may miss and/or duplicate some entries.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier readMap(
@@ -126,19 +130,19 @@ public final class SourceProcessors {
 
     /**
      * Returns a meta-supplier of processor that will fetch entries from the
-     * Hazelcast {@code ICache} with the specified name and will emit them as
-     * {@code Cache.Entry}. The processors will only access data local to the
+     * Hazelcast {@code ICache} with the specified name and emit them as
+     * {@code Cache.Entry}. Processors will only access data local to the
      * member and, if {@code localParallelism} for the vertex is above one,
-     * processors will divide the labor within the member so that each one gets
-     * a subset of all local partitions to read.
+     * they will divide the labor within the member so that each one gets a
+     * subset of all local partitions to read.
      * <p>
      * The number of Hazelcast partitions should be configured to at least
      * {@code localParallelism * clusterSize}, otherwise some processors will
      * have no partitions assigned to them.
      * <p>
-     * Iterating the map should be done only when the {@link com.hazelcast.cache.ICache} is not being
-     * mutated and the cluster is stable (there are no migrations or membership changes).
-     * In other cases, the iterator may not return some entries or may return an entry twice.
+     * The {@code ICache} must be read only while it is not being mutated and the
+     * cluster is stable (there are no migrations or membership changes).
+     * Otherwise the processors may miss and/or duplicate some entries.
      */
     @Nonnull
     public static ProcessorMetaSupplier readCache(@Nonnull String cacheName) {
@@ -147,12 +151,12 @@ public final class SourceProcessors {
 
     /**
      * Returns a meta-supplier of processor that will fetch entries from a
-     * Hazelcast {@code ICache} in a remote cluster. Processor will emit the
-     * entries as {@code Cache.Entry}.
+     * Hazelcast {@code ICache} in a remote cluster identified by the supplied
+     * {@code ClientConfig} and emit them as {@code Cache.Entry}.
      * <p>
-     * Iterating the map should be done only when the {@link com.hazelcast.cache.ICache} is not being
-     * mutated and the cluster is stable (there are no migrations or membership changes).
-     * In other cases, the iterator may not return some entries or may return an entry twice.
+     * The {@code ICache} must be read only while it is not being mutated and the
+     * cluster is stable (there are no migrations or membership changes).
+     * Otherwise the processors may miss and/or duplicate some entries.
      */
     @Nonnull
     public static ProcessorMetaSupplier readCache(@Nonnull String cacheName, @Nonnull ClientConfig clientConfig) {
@@ -160,9 +164,9 @@ public final class SourceProcessors {
     }
 
     /**
-     * Returns a meta-supplier of processor that emits items retrieved from an
-     * IMDG IList. Note that all elements from the list are emitted on a single
-     * member &mdash; the one where the entire list is stored by the IMDG.
+     * Returns a meta-supplier of processor that emits items retrieved from a
+     * Hazelcast {@code IList}. All elements are emitted on a single member
+     * &mdash; the one where the entire list is stored by the IMDG.
      */
     @Nonnull
     public static ProcessorMetaSupplier readList(@Nonnull String listName) {
@@ -170,10 +174,10 @@ public final class SourceProcessors {
     }
 
     /**
-     * Returns a meta-supplier of processor that emits items retrieved from an
-     * IMDG IList in a remote cluster. Note that all elements from the list are
-     * emitted on a single member &mdash; the one where the entire list is
-     * stored by the IMDG.
+     * Returns a meta-supplier of processor that emits items retrieved from a
+     * Hazelcast {@code IList} in a remote cluster identified by the supplied
+     * {@code ClientConfig}. All elements are emitted on a single member
+     * &mdash; the one where the entire list is stored by the IMDG.
      */
     @Nonnull
     public static ProcessorMetaSupplier readList(@Nonnull String listName, @Nonnull ClientConfig clientConfig) {
@@ -204,11 +208,11 @@ public final class SourceProcessors {
     }
 
     /**
-     * A source that emits lines from all files in a directory (but not its
-     * subdirectories), or only the files matching the supplied {@code glob}
-     * pattern. The files must not change while being read; if they do, the
-     * behavior is unspecified. There will be no indication which file a
-     * particular line comes from.
+     * Returns a supplier of processor that emits lines from all files in a
+     * directory (but not its subdirectories), or only the files matching the
+     * supplied {@code glob} pattern. The files must not change while being
+     * read; if they do, the behavior is unspecified. There will be no
+     * indication which file a particular line comes from.
      * <p>
      * The same pathname should be available on all members, but it should not
      * contain the same files &mdash; (e.g., it shouldn't resolve to a
