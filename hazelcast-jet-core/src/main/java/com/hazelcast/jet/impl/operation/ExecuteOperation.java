@@ -17,19 +17,46 @@
 package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.impl.execution.init.JetImplDataSerializerHook;
+import com.hazelcast.logging.ILogger;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
 
+import java.io.IOException;
 import java.util.concurrent.CompletionStage;
 
-class ExecuteOperation extends AsyncExecutionOperation {
+import static com.hazelcast.jet.impl.util.Util.formatIds;
+
+public class ExecuteOperation extends AsyncExecutionOperation  {
 
     private volatile CompletionStage<Void> executionFuture;
 
-    ExecuteOperation(long executionId) {
-        super(executionId);
+    private long executionId;
+
+    public ExecuteOperation() {
     }
 
-    private ExecuteOperation() {
-        // for deserialization
+    public ExecuteOperation(long jobId, long executionId) {
+        super(jobId);
+        this.executionId = executionId;
+    }
+
+    @Override
+    protected void doRun() throws Exception {
+        ILogger logger = getLogger();
+        JetService service = getService();
+
+        executionFuture = service.execute(getCallerAddress(), jobId, executionId, f -> f.handle((r, error) -> error)
+                .thenAccept(value -> {
+                    if (value != null) {
+                        logger.fine("Execution of " + formatIds(jobId, executionId)
+                                + " completed with failure", value);
+                    } else {
+                        logger.fine("Execution of " + formatIds(jobId, executionId) + " completed");
+                    }
+
+                    doSendResponse(value);
+                }));
     }
 
     @Override
@@ -40,15 +67,19 @@ class ExecuteOperation extends AsyncExecutionOperation {
     }
 
     @Override
-    protected void doRun() throws Exception {
-        JetService service = getService();
-        getLogger().info("Start execution of plan for job " + executionId + " from caller " + getCallerAddress() + '.');
-        executionFuture = service
-                .getExecutionContext(executionId)
-                .execute(f -> f.handle((r, error) -> error != null ? error : null)
-                               .thenAccept((value) -> {
-                                   getLogger().fine("Execution of plan for job " + executionId + " completed.");
-                                   doSendResponse(value);
-                               }));
+    public int getId() {
+        return JetImplDataSerializerHook.EXECUTE_OP;
+    }
+
+    @Override
+    protected void writeInternal(ObjectDataOutput out) throws IOException {
+        super.writeInternal(out);
+        out.writeLong(executionId);
+    }
+
+    @Override
+    protected void readInternal(ObjectDataInput in) throws IOException {
+        super.readInternal(in);
+        executionId = in.readLong();
     }
 }

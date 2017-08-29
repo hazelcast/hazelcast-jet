@@ -81,7 +81,7 @@ public class StreamFilesP_integrationTest extends JetTestSupport {
         appendToFile(file, "hello", "pre-existing");
         sleepAtLeastMillis(50);
 
-        Future<Void> jobFuture = instance.newJob(dag).execute();
+        Future<Void> jobFuture = instance.newJob(dag).getFuture();
         // wait for the processor to initialize
         sleepAtLeastSeconds(2);
 
@@ -106,7 +106,7 @@ public class StreamFilesP_integrationTest extends JetTestSupport {
         }
         sleepAtLeastMillis(50);
 
-        Future<Void> jobFuture = instance.newJob(dag).execute();
+        Future<Void> jobFuture = instance.newJob(dag).getFuture();
         // wait for the processor to initialize
         sleepAtLeastSeconds(2);
 
@@ -133,7 +133,7 @@ public class StreamFilesP_integrationTest extends JetTestSupport {
         }
         sleepAtLeastMillis(50);
 
-        Future<Void> jobFuture = instance.newJob(dag).execute();
+        Future<Void> jobFuture = instance.newJob(dag).getFuture();
         // wait for the processor to initialize
         sleepAtLeastSeconds(2);
 
@@ -156,7 +156,7 @@ public class StreamFilesP_integrationTest extends JetTestSupport {
     public void when_newAndModified_then_pickupAddition() throws Exception {
         DAG dag = buildDag();
 
-        Future<Void> jobFuture = instance.newJob(dag).execute();
+        Future<Void> jobFuture = instance.newJob(dag).getFuture();
         // wait for the processor to initialize
         sleepAtLeastSeconds(2);
 
@@ -176,7 +176,7 @@ public class StreamFilesP_integrationTest extends JetTestSupport {
     public void when_fileWithManyLines_then_emitCooperatively() throws Exception {
         DAG dag = buildDag();
 
-        Future<Void> jobFuture = instance.newJob(dag).execute();
+        Future<Void> jobFuture = instance.newJob(dag).getFuture();
         // wait for the processor to initialize
         sleepAtLeastSeconds(2);
 
@@ -203,7 +203,7 @@ public class StreamFilesP_integrationTest extends JetTestSupport {
         // At the end, I'll check, if all the contents matches.
         DAG dag = buildDag();
 
-        Future<Void> jobFuture = instance.newJob(dag).execute();
+        Future<Void> jobFuture = instance.newJob(dag).getFuture();
         // wait for the processor to initialize
         sleepAtLeastSeconds(2);
         int numLines = 10_000;

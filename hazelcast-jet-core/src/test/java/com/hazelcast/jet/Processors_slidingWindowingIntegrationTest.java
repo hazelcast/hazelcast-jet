@@ -33,7 +33,6 @@ import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.StreamingTestSupport.streamToString;
@@ -124,10 +123,10 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
                     .edge(between(slidingWin, sink).isolated());
         }
 
-        Future<Void> future = instance.newJob(dag).execute();
+        Job job = instance.newJob(dag);
 
         if (isBatch) {
-            future.get();
+            job.join();
         }
 
         IList<MyEvent> sinkList = instance.getList("sink");

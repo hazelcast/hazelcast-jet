@@ -21,36 +21,41 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Edge;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestSupport;
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.Processor.Context;
 import com.hazelcast.jet.ProcessorSupplier;
-import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.processor.SinkProcessors;
-import com.hazelcast.test.HazelcastParallelClassRunner;
+import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Future;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyZeroInteractions;
 
 @Category(QuickTest.class)
-@RunWith(HazelcastParallelClassRunner.class)
+@RunWith(HazelcastSerialClassRunner.class)
 public class WriteBufferedPTest extends JetTestSupport {
 
-    private List<String> events = new ArrayList<>();
+    private static final List<String> events = new CopyOnWriteArrayList<>();
+
+    @Before
+    public void setup() {
+        events.clear();
+    }
 
     @Test
     public void writeBuffered_smokeTest() throws Exception {
@@ -94,10 +99,10 @@ public class WriteBufferedPTest extends JetTestSupport {
 
             dag.edge(Edge.between(source, sink));
 
-            Future<Void> future = instance.newJob(dag).execute();
+            Job job = instance.newJob(dag);
             // wait for the job to initialize
-            Thread.sleep(500);
-            future.cancel(true);
+            Thread.sleep(5000);
+            job.cancel();
 
             assertTrueEventually(() -> assertTrue("No \"dispose\", only: " + events, events.contains("dispose")), 60);
             System.out.println(events);
@@ -106,8 +111,8 @@ public class WriteBufferedPTest extends JetTestSupport {
         }
     }
 
-    private ProcessorSupplier getLoggingBufferedWriter() {
-        // returns a processor that will not write anywhere, just log the events instead
+    // returns a processor that will not write anywhere, just log the events
+    private static ProcessorSupplier getLoggingBufferedWriter() {
         List<String> localEvents = events;
         return SinkProcessors.writeBuffered(
                 idx -> {
@@ -131,7 +136,7 @@ public class WriteBufferedPTest extends JetTestSupport {
             try {
                 Thread.sleep(Long.MAX_VALUE);
             } catch (InterruptedException e) {
-                fail();
+//                fail();
             }
             return false;
         }

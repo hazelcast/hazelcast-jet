@@ -18,32 +18,42 @@ package com.hazelcast.jet.stream.impl.source;
 
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.ProcessorMetaSupplier;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.processor.SourceProcessors;
 import com.hazelcast.jet.stream.impl.pipeline.AbstractSourcePipe;
 import com.hazelcast.jet.stream.impl.pipeline.StreamContext;
 
-import java.util.Map.Entry;
+import java.util.Map;
 
-
-public class MapSourcePipe<K, V> extends AbstractSourcePipe<Entry<K, V>> {
+public class MapSourcePipe<K, V, E> extends AbstractSourcePipe<E> {
 
     private final IMap<K, V> map;
+    private final DistributedFunction<Map.Entry<K, V>, E> projectionF;
+    private final DistributedPredicate<Map.Entry<K, V>> predicate;
 
-    public MapSourcePipe(StreamContext context, IMap<K, V> map) {
+    public MapSourcePipe(
+            StreamContext context, IMap<K, V> map,
+            DistributedPredicate<Map.Entry<K, V>> predicate,
+            DistributedFunction<Map.Entry<K, V>, E> projectionF
+    ) {
         super(context);
         this.map = map;
+        this.predicate = predicate;
+        this.projectionF = projectionF;
     }
 
     @Override
     protected ProcessorMetaSupplier getSourceMetaSupplier() {
+        if (projectionF != null) {
+            return SourceProcessors.readMap(map.getName(), predicate, projectionF);
+        }
         return SourceProcessors.readMap(map.getName());
     }
 
     @Override
     protected String getName() {
-        return "read-map-" + map.getName();
+        return "readMap(" + map.getName() + ')';
     }
-
-
 }
 
