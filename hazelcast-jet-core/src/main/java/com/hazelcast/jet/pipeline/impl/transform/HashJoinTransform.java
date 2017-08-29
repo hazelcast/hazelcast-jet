@@ -61,16 +61,14 @@ import java.util.List;
  * In the other variant the output item type is {@code
  * Tuple2<E0, BagsByTag>} where component 0 is the stream-0 item and
  * component 1 is a container of all the stream-N iterables (which we call
- * "bags"). An individual bag is retrived using a {@link Tag} instance as
- * key. This lookup step cannot be statically type-checked, but once it
- * succeeds at runtime, the tag's type parameter is used to propagate the
- * static type information to the type of bag's items.
+ * "bags"). An individual bag is retrieved using a {@link Tag} instance as
+ * key.
  */
-public class JoinTransform<E0> implements MultiTransform {
+public class HashJoinTransform<E0> implements MultiTransform {
     private final List<JoinOn<?, E0, ?>> joinOns;
     private final List<Tag> tags;
 
-    public JoinTransform(@Nonnull List<JoinOn<?, E0, ?>> joinOns, @Nonnull List<Tag> tags) {
+    public HashJoinTransform(@Nonnull List<JoinOn<?, E0, ?>> joinOns, @Nonnull List<Tag> tags) {
         this.joinOns = joinOns;
         this.tags = tags;
     }

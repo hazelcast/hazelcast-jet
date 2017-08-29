@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.pipeline.impl.transform.JoinTransform;
+import com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform;
 import com.hazelcast.jet.pipeline.impl.PipelineImpl;
 import com.hazelcast.jet.pipeline.bag.BagsByTag;
 import com.hazelcast.jet.pipeline.bag.Tag;
@@ -35,10 +35,10 @@ import static java.util.stream.Collectors.toList;
 /**
  * Javadoc pending.
  */
-public class JoinBuilder<E0> {
+public class HashJoinBuilder<E0> {
     private final Map<Tag<?>, JoinClause<?, E0, ?>> clauses = new HashMap<>();
 
-    JoinBuilder(ComputeStage<E0> leftStream) {
+    HashJoinBuilder(ComputeStage<E0> leftStream) {
         add(leftStream, null);
     }
 
@@ -50,11 +50,13 @@ public class JoinBuilder<E0> {
 
     @SuppressWarnings("unchecked")
     public ComputeStage<Tuple2<E0, BagsByTag>> build() {
-        List<Entry<Tag<?>, JoinClause<?, E0, ?>>> orderedClauses = orderedClauses();
+        List<Entry<Tag<?>, JoinClause<?, E0, ?>>> orderedClauses = clauses.entrySet().stream()
+                                                                          .sorted(comparing(Entry::getKey))
+                                                                          .collect(toList());
         List<ComputeStage> upstream = orderedClauses.stream()
-                                                    .map(e -> e.getValue().pstream())
+                                                    .map(e -> e.getValue().stage())
                                                     .collect(toList());
-        JoinTransform transform = new JoinTransform(
+        HashJoinTransform transform = new HashJoinTransform(
                 orderedClauses.stream()
                               .skip(1)
                               .map(e -> e.getValue().joinOn())
@@ -64,27 +66,21 @@ public class JoinBuilder<E0> {
                               .map(Entry::getKey)
                               .collect(toList())
         );
-        PipelineImpl pipeline = (PipelineImpl) clauses.get(tag0()).pstream().getPipeline();
+        PipelineImpl pipeline = (PipelineImpl) clauses.get(tag0()).stage().getPipeline();
         return pipeline.attach(upstream, transform);
     }
 
-    private List<Entry<Tag<?>, JoinClause<?, E0, ?>>> orderedClauses() {
-        return clauses.entrySet().stream()
-                      .sorted(comparing(Entry::getKey))
-                      .collect(toList());
-    }
-
     private static class JoinClause<K, E0, E_RIGHT> {
-        private final ComputeStage<E_RIGHT> pstream;
+        private final ComputeStage<E_RIGHT> stage;
         private final JoinOn<K, E0, E_RIGHT> joinOn;
 
-        JoinClause(ComputeStage<E_RIGHT> pstream, JoinOn<K, E0, E_RIGHT> joinOn) {
-            this.pstream = pstream;
+        JoinClause(ComputeStage<E_RIGHT> stage, JoinOn<K, E0, E_RIGHT> joinOn) {
+            this.stage = stage;
             this.joinOn = joinOn;
         }
 
-        ComputeStage<E_RIGHT> pstream() {
-            return pstream;
+        ComputeStage<E_RIGHT> stage() {
+            return stage;
         }
 
         JoinOn<K, E0, E_RIGHT> joinOn() {

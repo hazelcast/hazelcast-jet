@@ -22,7 +22,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.pipeline.CoGroupBuilder;
 import com.hazelcast.jet.pipeline.ComputeStage;
-import com.hazelcast.jet.pipeline.JoinBuilder;
+import com.hazelcast.jet.pipeline.HashJoinBuilder;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -124,7 +124,7 @@ public class PipelineJoinAndCoGroup {
     }
 
     private ComputeStage<Entry<Integer, Tuple3<Trade, Collection<Product>, Collection<Broker>>>> joinDirect() {
-        ComputeStage<Tuple3<Trade, Collection<Product>, Collection<Broker>>> joined = trades.join(
+        ComputeStage<Tuple3<Trade, Collection<Product>, Collection<Broker>>> joined = trades.hashJoin(
                 products, onKeys(Trade::productId, Product::id),
                 brokers, onKeys(Trade::brokerId, Broker::id));
         return joined.map(t -> entry(t.f0().id(), t));
@@ -149,7 +149,7 @@ public class PipelineJoinAndCoGroup {
     }
 
     private ComputeStage<Entry<Integer, Tuple2<Trade, BagsByTag>>> joinBuild() {
-        JoinBuilder<Trade> builder = trades.joinBuilder();
+        HashJoinBuilder<Trade> builder = trades.hashJoinBuilder();
         productTag = builder.add(products, onKeys(Trade::productId, Product::id));
         brokerTag = builder.add(brokers, onKeys(Trade::brokerId, Broker::id));
         ComputeStage<Tuple2<Trade, BagsByTag>> joined = builder.build();

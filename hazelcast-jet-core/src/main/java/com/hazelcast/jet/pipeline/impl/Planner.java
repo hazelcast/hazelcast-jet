@@ -27,7 +27,7 @@ import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
 import com.hazelcast.jet.pipeline.impl.transform.FilterTransform;
 import com.hazelcast.jet.pipeline.impl.transform.FlatMapTransform;
 import com.hazelcast.jet.pipeline.impl.transform.GroupByTransform;
-import com.hazelcast.jet.pipeline.impl.transform.JoinTransform;
+import com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform;
 import com.hazelcast.jet.pipeline.impl.transform.MapTransform;
 import com.hazelcast.jet.pipeline.impl.transform.ProcessorTransform;
 import com.hazelcast.jet.processor.Processors;
@@ -73,23 +73,23 @@ class Planner {
                         new Vertex(procTransform.transformName + '.' + randomSuffix(), procTransform.procSupplier));
                 addEdges(stage, pv.v);
             } else if (transform instanceof FilterTransform) {
-                FilterTransform filterTransform = (FilterTransform) transform;
+                FilterTransform filter = (FilterTransform) transform;
                 PlannerVertex pv = addVertex(stage,
-                        new Vertex("filter." + randomSuffix(), Processors.filter(filterTransform.filterF)));
+                        new Vertex("filter." + randomSuffix(), Processors.filter(filter.filterF)));
                 addEdges(stage, pv.v);
             } else if (transform instanceof MapTransform) {
-                MapTransform mapTransform = (MapTransform) transform;
+                MapTransform map = (MapTransform) transform;
                 PlannerVertex pv = addVertex(stage,
-                        new Vertex("map." + randomSuffix(), Processors.map(mapTransform.mapF)));
+                        new Vertex("map." + randomSuffix(), Processors.map(map.mapF)));
                 addEdges(stage, pv.v);
             } else if (transform instanceof FlatMapTransform) {
-                FlatMapTransform flatMapTransform = (FlatMapTransform) transform;
+                FlatMapTransform flatMap = (FlatMapTransform) transform;
                 PlannerVertex pv = addVertex(stage,
-                        new Vertex("flat-map." + randomSuffix(), Processors.flatMap(flatMapTransform.flatMapF())));
+                        new Vertex("flatMap." + randomSuffix(), Processors.flatMap(flatMap.flatMapF())));
                 addEdges(stage, pv.v);
             } else if (transform instanceof GroupByTransform) {
                 GroupByTransform<Object, Object, Object> groupBy = (GroupByTransform) transform;
-                String name = "group-by-key." + randomSuffix() + ".stage";
+                String name = "groupByKey." + randomSuffix() + ".stage";
                 Vertex v1 = dag.newVertex(name + '1',
                         Processors.accumulateByKey(groupBy.keyF(), groupBy.aggregateOperation()));
                 PlannerVertex pv2 = addVertex(stage, new Vertex(name + '2',
@@ -99,16 +99,16 @@ class Planner {
             } else if (transform instanceof CoGroupTransform) {
                 CoGroupTransform<Object, Object, Object> coGroup = (CoGroupTransform) transform;
                 List<DistributedFunction<?, ?>> groupKeyFs = coGroup.groupKeyFs();
-                String name = "cogroup-by-key." + randomSuffix() + ".stage";
+                String name = "coGroup." + randomSuffix() + ".stage";
                 Vertex v1 = dag.newVertex(name + '1',
                         Processors.coAccumulateByKey(groupKeyFs, coGroup.aggregateOperation()));
                 PlannerVertex pv2 = addVertex(stage, new Vertex(name + '2',
                         Processors.combineByKey(coGroup.aggregateOperation())));
                 addEdges(stage, v1, (e, ord) -> e.partitioned(groupKeyFs.get(ord), HASH_CODE));
                 dag.edge(between(v1, pv2.v).distributed().partitioned(Entry<Object, Object>::getKey));
-            } else if (transform instanceof JoinTransform) {
-                JoinTransform hashJoin = (JoinTransform) transform;
-                PlannerVertex pv = addVertex(stage, new Vertex("hash-join." + randomSuffix(),
+            } else if (transform instanceof HashJoinTransform) {
+                HashJoinTransform hashJoin = (HashJoinTransform) transform;
+                PlannerVertex pv = addVertex(stage, new Vertex("hashJoin." + randomSuffix(),
                         () -> new HashJoinP(hashJoin.joinOns(), hashJoin.tags())));
                 addEdges(stage, pv.v, (e, ordinal) -> {
                     if (ordinal > 0) {
