@@ -63,9 +63,11 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public class StreamFilesP extends AbstractProcessor implements Closeable {
 
     /**
-     * Number of lines read in one batch, to allow for timely draining of watcher
-     * events even while reading a file to avoid
-     * {@link java.nio.file.StandardWatchEventKinds#OVERFLOW OVERFLOW}.
+     * The amount of data read from one file at once must be limited
+     * in order to prevent a possible {@link java.nio.file.StandardWatchEventKinds#OVERFLOW
+     * OVERFLOW} if too many Watcher events accumulate in the queue. This
+     * constant specifies the number of lines to read at once, before going
+     * back to polling the event queue.
      */
     private static final int LINES_IN_ONE_BATCH = 64;
 

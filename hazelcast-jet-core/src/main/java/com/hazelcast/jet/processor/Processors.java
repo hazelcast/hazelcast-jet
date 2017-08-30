@@ -17,18 +17,18 @@
 package com.hazelcast.jet.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
-import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorSupplier;
-import com.hazelcast.jet.WatermarkEmissionPolicy;
-import com.hazelcast.jet.WatermarkPolicy;
 import com.hazelcast.jet.ResettableSingletonTraverser;
 import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.WatermarkEmissionPolicy;
+import com.hazelcast.jet.WatermarkPolicy;
 import com.hazelcast.jet.WindowDefinition;
+import com.hazelcast.jet.aggregate.AggregateOperation;
+import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -39,7 +39,6 @@ import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
 import com.hazelcast.jet.impl.processor.TransformP;
-import com.hazelcast.jet.pipeline.bag.Tag;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
@@ -268,7 +267,8 @@ public final class Processors {
     /**
      * Returns a supplier of the first-stage processor in a two-stage
      * group-and-aggregate setup. The processor groups items by the grouping
-     * key and applies the {@link AggregateOperation#accumulateItemF(Tag)
+     * key and applies the {@link AggregateOperation#accumulateItemF(
+     *                            com.hazelcast.jet.pipeline.bag.Tag)
      * accumulate} primitive to each group. After exhausting all its input it
      * emits one {@code Map.Entry<K, A>} per observed key.
      * <p>

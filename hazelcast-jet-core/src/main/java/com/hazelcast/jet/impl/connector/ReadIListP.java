@@ -45,7 +45,7 @@ public final class ReadIListP extends AbstractProcessor {
 
     private final Traverser<Object> traverser;
 
-    ReadIListP(List<Object> list, int FETCH_SIZE) {
+    ReadIListP(List<Object> list) {
         final int size = list.size();
         traverser = size <= FETCH_SIZE
                 ? traverseIterable(list)
@@ -64,11 +64,11 @@ public final class ReadIListP extends AbstractProcessor {
     }
 
     public static ProcessorMetaSupplier supplier(String listName) {
-        return new MetaSupplier(listName, FETCH_SIZE);
+        return new MetaSupplier(listName);
     }
 
     public static ProcessorMetaSupplier supplier(String listName, ClientConfig clientConfig) {
-        return new MetaSupplier(listName, clientConfig, FETCH_SIZE);
+        return new MetaSupplier(listName, clientConfig);
     }
 
     private static class MetaSupplier implements ProcessorMetaSupplier {
@@ -76,18 +76,16 @@ public final class ReadIListP extends AbstractProcessor {
         static final long serialVersionUID = 1L;
         private final String name;
         private final SerializableClientConfig clientConfig;
-        private final int DEFAULT_FETCH_SIZE;
 
         private transient Address ownerAddress;
 
-        MetaSupplier(String name, int DEFAULT_FETCH_SIZE) {
-            this(name, null, DEFAULT_FETCH_SIZE);
+        MetaSupplier(String name) {
+            this(name, null);
         }
 
-        MetaSupplier(String name, ClientConfig clientConfig, int DEFAULT_FETCH_SIZE) {
+        MetaSupplier(String name, ClientConfig clientConfig) {
             this.name = name;
             this.clientConfig = clientConfig != null ? new SerializableClientConfig(clientConfig) : null;
-            this.DEFAULT_FETCH_SIZE = DEFAULT_FETCH_SIZE;
         }
 
         @Override
@@ -101,7 +99,7 @@ public final class ReadIListP extends AbstractProcessor {
         public DistributedFunction<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
             return address -> {
                 if (address.equals(ownerAddress)) {
-                    return new Supplier(name, clientConfig, DEFAULT_FETCH_SIZE);
+                    return new Supplier(name, clientConfig);
                 }
                 // return empty producer on all other nodes
                 return c -> {
@@ -118,14 +116,12 @@ public final class ReadIListP extends AbstractProcessor {
 
         private final String name;
         private final SerializableClientConfig clientConfig;
-        private final int DEFAULT_FETCH_SIZE;
-        private transient IList list;
+        private transient IList<Object> list;
         private transient HazelcastInstance client;
 
-        Supplier(String name, SerializableClientConfig clientConfig, int DEFAULT_FETCH_SIZE) {
+        Supplier(String name, SerializableClientConfig clientConfig) {
             this.name = name;
             this.clientConfig = clientConfig;
-            this.DEFAULT_FETCH_SIZE = DEFAULT_FETCH_SIZE;
         }
 
         @Override
@@ -153,7 +149,7 @@ public final class ReadIListP extends AbstractProcessor {
         @Override @Nonnull
         public List<Processor> get(int count) {
             assertCountIsOne(count);
-            return singletonList(new ReadIListP(list, DEFAULT_FETCH_SIZE));
+            return singletonList(new ReadIListP(list));
         }
     }
 

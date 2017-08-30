@@ -135,15 +135,16 @@ public final class Sinks {
     }
 
     /**
-     * Returns a sink that writes all items to a local file on each member. It
-     * converts an item to its string representation using the supplied {@code
-     * toStringF} function and encodes the string using the supplied {@code
-     * Charset}. It follows each item with a platform-specific line separator.
-     * <p>
-     * The same pathname must be available for writing on all members. Each
-     * processor writes to its own file whose name is equal to the
+     * Returns a sink that that writes the items it receives to files. Each
+     * processor will write to its own file whose name is equal to the
      * processor's global index (an integer unique to each processor of the
-     * vertex).
+     * vertex), but a single pathname is used to resolve the containing
+     * directory of all files, on all cluster members.
+     * <p>
+     * The sink converts an item to its string representation using the
+     * supplied {@code toStringF} function and encodes the string using the
+     * supplied {@code Charset}. It follows each item with a platform-specific
+     * line separator.
      *
      * @param directoryName directory to create the files in. Will be created
      *                      if it doesn't exist. Must be the same on all members.

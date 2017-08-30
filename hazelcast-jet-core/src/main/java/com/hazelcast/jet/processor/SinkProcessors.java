@@ -170,7 +170,6 @@ public final class SinkProcessors {
      * @param port the port number to connect to
      * @param toStringF a function that returns the string representation of an item
      * @param charset charset used to encode the string representation
-
      */
     public static <T> ProcessorSupplier writeSocket(
             @Nonnull String host,
@@ -197,16 +196,16 @@ public final class SinkProcessors {
     }
 
     /**
-     * Returns a supplier of processors for a vertex that writes all items
-     * to a local file on each member. It converts an item to its string
-     * representation using the supplied {@code toStringF} function and encodes
-     * the string using the supplied {@code Charset}. It follows each item with
-     * a platform-specific line separator.
+     * Returns a supplier of processors for a vertex that writes the items it
+     * receives to files. Each processor will write to its own file whose name
+     * is equal to the processor's global index (an integer unique to each
+     * processor of the vertex), but a single pathname is used to resolve the
+     * containing directory of all files, on all cluster members.
      * <p>
-     * The same pathname must be available for writing on all members. Each
-     * processor writes to its own file whose name is equal to the
-     * processor's global index (an integer unique to each processor of the
-     * vertex).
+     * The vertex converts an item to its string representation using the
+     * supplied {@code toStringF} function and encodes the string using the
+     * supplied {@code Charset}. It follows each item with a platform-specific
+     * line separator.
      * <p>
      * Since the work of this vertex is file IO-intensive, {@link
      * com.hazelcast.jet.Vertex#localParallelism(int) local parallelism} of the
@@ -214,8 +213,7 @@ public final class SinkProcessors {
      * underlying storage system. Most typically, local parallelism of 1 will
      * already reach the maximum available performance.
      *
-     * @param directoryName directory to create the files in. Will be created
-     *                      if it doesn't exist. Must be the same on all members.
+     * @param directoryName directory to create the files in. Will be created if it doesn't exist.
      * @param toStringF a function that returns the string representation of an item
      * @param charset charset used to encode the string representation
      * @param append whether to append ({@code true}) or overwrite ({@code false})

@@ -211,7 +211,7 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for a vertex that emits lines from
-     * files in a directory (but not its subdirectories. The files must not
+     * files in a directory (but not its subdirectories). The files must not
      * change while being read; if they do, the behavior is unspecified.
      * <p>
      * To be useful, the vertex should read files local to each member. For
@@ -264,12 +264,11 @@ public final class SourceProcessors {
      * performance if there aren't enough files to read.
      * <p>
      * Each time the vertex detects a change in a file, it opens it, reads the
-     * new content, and closes it.
-     * <p>
-     * The vertex completes when the directory is deleted. However, in order
-     * to delete the directory, all files in it must be deleted and if you
-     * delete a file that is currently being read from, the job may encounter
-     * an {@code IOException}. The directory must be deleted on all nodes.
+     * new content, and closes it. The vertex completes when the directory is
+     * deleted. However, in order to delete the directory, all files in it must
+     * be deleted and if you delete a file that is currently being read from,
+     * the job may encounter an {@code IOException}. The directory must be
+     * deleted on all nodes.
      * <p>
      * Any {@code IOException} will cause the job to fail.
      * <p>
