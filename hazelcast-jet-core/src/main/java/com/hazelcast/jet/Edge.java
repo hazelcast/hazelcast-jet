@@ -25,6 +25,7 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.util.UuidUtil;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.Serializable;
 
@@ -72,7 +73,7 @@ public class Edge implements IdentifiedDataSerializable {
     Edge() {
     }
 
-    private Edge(Vertex source, int sourceOrdinal, Vertex destination, int destOrdinal) {
+    private Edge(@Nonnull Vertex source, int sourceOrdinal, Vertex destination, int destOrdinal) {
         this.source = source;
         this.sourceName = source.getName();
         this.sourceOrdinal = sourceOrdinal;
@@ -89,7 +90,8 @@ public class Edge implements IdentifiedDataSerializable {
      * @param source        the source vertex
      * @param destination   the destination vertex
      */
-    public static Edge between(Vertex source, Vertex destination) {
+    @Nonnull
+    public static Edge between(@Nonnull Vertex source, @Nonnull Vertex destination) {
         return new Edge(source, 0, destination, 0);
     }
 
@@ -98,7 +100,8 @@ public class Edge implements IdentifiedDataSerializable {
      * The ordinal of the edge is 0. Typically followed by one of the
      * {@code to()} method calls.
      */
-    public static Edge from(Vertex source) {
+    @Nonnull
+    public static Edge from(@Nonnull Vertex source) {
         return from(source, 0);
     }
 
@@ -107,14 +110,16 @@ public class Edge implements IdentifiedDataSerializable {
      * and no destination vertex. Typically follewed by a call to one of
      * the {@code to()} methods.
      */
-    public static Edge from(Vertex source, int ordinal) {
+    @Nonnull
+    public static Edge from(@Nonnull Vertex source, int ordinal) {
         return new Edge(source, ordinal, null, 0);
     }
 
     /**
      * Sets the destination vertex of this edge, with ordinal 0.
      */
-    public Edge to(Vertex destination) {
+    @Nonnull
+    public Edge to(@Nonnull Vertex destination) {
         this.destination = destination;
         this.destName = destination.getName();
         return this;
@@ -123,7 +128,8 @@ public class Edge implements IdentifiedDataSerializable {
     /**
      * Sets the destination vertex and ordinal of this edge.
      */
-    public Edge to(Vertex destination, int ordinal) {
+    @Nonnull
+    public Edge to(@Nonnull Vertex destination, int ordinal) {
         this.destination = destination;
         this.destName = destination.getName();
         this.destOrdinal = ordinal;
@@ -133,6 +139,7 @@ public class Edge implements IdentifiedDataSerializable {
     /**
      * Returns this edge's source vertex.
      */
+    @Nonnull
     public Vertex getSource() {
         return source;
     }
@@ -147,6 +154,7 @@ public class Edge implements IdentifiedDataSerializable {
     /**
      * Returns the name of the source vertex.
      */
+    @Nonnull
     public String getSourceName() {
         return sourceName;
     }
@@ -180,6 +188,7 @@ public class Edge implements IdentifiedDataSerializable {
      * The data from the edge with priority 1 will be processed in full before
      * accepting any data from the edge with priority 2.
      */
+    @Nonnull
     public Edge priority(int priority) {
         this.priority = priority;
         return this;
@@ -199,7 +208,8 @@ public class Edge implements IdentifiedDataSerializable {
      * Hazelcast partitioning strategy. The strategy is applied to the result of
      * the {@code extractKeyF} function.
      */
-    public <T> Edge partitioned(DistributedFunction<T, ?> extractKeyF) {
+    @Nonnull
+    public <T> Edge partitioned(@Nonnull DistributedFunction<T, ?> extractKeyF) {
         return partitioned(extractKeyF, defaultPartitioner());
     }
 
@@ -208,7 +218,11 @@ public class Edge implements IdentifiedDataSerializable {
      * policy and applies the provided partitioning strategy. The strategy
      * is applied to the result of the {@code extractKeyF} function.
      */
-    public <T, K> Edge partitioned(DistributedFunction<T, K> extractKeyF, Partitioner<? super K> partitioner) {
+    @Nonnull
+    public <T, K> Edge partitioned(
+            @Nonnull DistributedFunction<T, K> extractKeyF,
+            @Nonnull Partitioner<? super K> partitioner
+    ) {
         checkSerializable(extractKeyF, "extractKeyF");
         checkSerializable(partitioner, "partitioner");
         this.routingPolicy = RoutingPolicy.PARTITIONED;
@@ -222,6 +236,7 @@ public class Edge implements IdentifiedDataSerializable {
      * chosen partition ID. Therefore all items will be directed to the same
      * processor.
      */
+    @Nonnull
     public Edge allToOne() {
         return partitioned(wholeItem(), new Single());
     }
@@ -229,6 +244,7 @@ public class Edge implements IdentifiedDataSerializable {
     /**
      * Activates the {@link RoutingPolicy#BROADCAST BROADCAST} routing policy.
      */
+    @Nonnull
     public Edge broadcast() {
         routingPolicy = RoutingPolicy.BROADCAST;
         return this;
@@ -246,6 +262,7 @@ public class Edge implements IdentifiedDataSerializable {
      * cannot be less than upstream's. Since all traffic will be local, this
      * policy is not allowed on a distributed edge.
      */
+    @Nonnull
     public Edge isolated() {
         routingPolicy = RoutingPolicy.ISOLATED;
         return this;
@@ -262,6 +279,7 @@ public class Edge implements IdentifiedDataSerializable {
     /**
      * Returns the {@link RoutingPolicy} in effect on the edge.
      */
+    @Nonnull
     public RoutingPolicy getRoutingPolicy() {
         return routingPolicy;
     }
@@ -309,7 +327,7 @@ public class Edge implements IdentifiedDataSerializable {
         return this;
     }
 
-    @Override
+    @Nonnull @Override
     public String toString() {
         final StringBuilder b = new StringBuilder();
         if (sourceOrdinal == 0 && destOrdinal == 0) {
@@ -363,7 +381,7 @@ public class Edge implements IdentifiedDataSerializable {
     // Implementation of IdentifiedDataSerializable
 
     @Override
-    public void writeData(ObjectDataOutput out) throws IOException {
+    public void writeData(@Nonnull ObjectDataOutput out) throws IOException {
         out.writeUTF(sourceName);
         out.writeInt(sourceOrdinal);
         out.writeUTF(destName);
@@ -376,7 +394,7 @@ public class Edge implements IdentifiedDataSerializable {
     }
 
     @Override
-    public void readData(ObjectDataInput in) throws IOException {
+    public void readData(@Nonnull ObjectDataInput in) throws IOException {
         sourceName = in.readUTF();
         sourceOrdinal = in.readInt();
         destName = in.readUTF();
@@ -468,7 +486,7 @@ public class Edge implements IdentifiedDataSerializable {
         private final DistributedFunction<T, K> keyExtractor;
         private final Partitioner<? super K> partitioner;
 
-        KeyPartitioner(DistributedFunction<T, K> keyExtractor, Partitioner<? super K> partitioner) {
+        KeyPartitioner(@Nonnull DistributedFunction<T, K> keyExtractor, @Nonnull Partitioner<? super K> partitioner) {
             this.keyExtractor = keyExtractor;
             this.partitioner = partitioner;
         }

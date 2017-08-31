@@ -17,6 +17,7 @@
 
 package com.hazelcast.jet.impl;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
@@ -46,8 +47,8 @@ public final class TopologicalSorter<V> {
     private int nextIndex;
 
     private TopologicalSorter(
-            Map<TarjanVertex<V>, List<TarjanVertex<V>>> adjacencyMap,
-            Function<V, String> vertexNameF
+            @Nonnull Map<TarjanVertex<V>, List<TarjanVertex<V>>> adjacencyMap,
+            @Nonnull Function<V, String> vertexNameF
     ) {
         this.adjacencyMap = adjacencyMap;
         this.vertexNameF = vertexNameF;
@@ -66,7 +67,7 @@ public final class TopologicalSorter<V> {
      * @param <V> type used to represent the vertices
      */
     public static <V> Iterable<V> topologicalSort(
-            Map<V, List<V>> adjacencyMap, Function<V, String> vertexNameF
+            @Nonnull Map<V, List<V>> adjacencyMap, @Nonnull Function<V, String> vertexNameF
     ) {
         // fill in missing map entries
         adjacencyMap.values().stream()
@@ -188,7 +189,7 @@ public final class TopologicalSorter<V> {
         int lowlink = -1;
         boolean onstack; // tells whether the vertex is currently on the Tarjan stack
 
-        TarjanVertex(V v) {
+        TarjanVertex(@Nonnull V v) {
             this.v = v;
         }
 
