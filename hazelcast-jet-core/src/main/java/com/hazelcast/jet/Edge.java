@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.config.EdgeConfig;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.SerializationConstants;
 import com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject;
 import com.hazelcast.nio.ObjectDataInput;
@@ -28,9 +28,10 @@ import com.hazelcast.util.UuidUtil;
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Map;
 
-import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static com.hazelcast.jet.Partitioner.defaultPartitioner;
+import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 /**
@@ -55,11 +56,11 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
  */
 public class Edge implements IdentifiedDataSerializable {
 
-    private Vertex source; // transient field
+    private Vertex source; // transient field, restored during DAG deserialization
     private String sourceName;
     private int sourceOrdinal;
 
-    private Vertex destination; // transient field
+    private Vertex destination; // transient field, restored during DAG deserialization
     private String destName;
     private int destOrdinal;
 
@@ -377,6 +378,12 @@ public class Edge implements IdentifiedDataSerializable {
         return 37 * sourceName.hashCode() + destName.hashCode();
     }
 
+    void restoreSourceAndDest(Map<String, Vertex> nameToVertex) {
+        source = nameToVertex.get(sourceName);
+        destination = nameToVertex.get(destName);
+        assert source != null : "Couldn't restore source vertex " + sourceName + " from map " + nameToVertex;
+        assert destination != null : "Couldn't restore destination vertex " + destName + " from map " + nameToVertex;
+    }
 
     // Implementation of IdentifiedDataSerializable
 
