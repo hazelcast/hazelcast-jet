@@ -18,8 +18,11 @@ package com.hazelcast.jet.pipeline.impl;
 
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Edge;
+import com.hazelcast.jet.Processor;
+import com.hazelcast.jet.ProcessorMetaSupplier;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.processor.HashJoinP;
 import com.hazelcast.jet.pipeline.Stage;
 import com.hazelcast.jet.pipeline.Transform;
@@ -42,10 +45,15 @@ import java.util.function.Consumer;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
+import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
+import static com.hazelcast.jet.processor.Processors.nonCooperative;
+import static com.hazelcast.util.Preconditions.checkFalse;
 import static com.hazelcast.util.UuidUtil.newUnsecureUUID;
 
 class Planner {
+
+    private static final int RANDOM_SUFFIX_LENGTH = 8;
 
     private final PipelineImpl pipeline;
     private final DAG dag = new DAG();
@@ -63,62 +71,23 @@ class Planner {
         for (AbstractStage stage : sorted) {
             Transform transform = stage.transform;
             if (transform instanceof SourceImpl) {
-                SourceImpl source = (SourceImpl) transform;
-                addVertex(stage, new Vertex(source.name(), source.metaSupplier())
-                        .localParallelism(1));
+                handleSource(stage, (SourceImpl) transform);
             } else if (transform instanceof ProcessorTransform) {
-                ProcessorTransform procTransform = (ProcessorTransform) transform;
-                PlannerVertex pv = addVertex(stage,
-                        new Vertex(procTransform.transformName + '.' + randomSuffix(), procTransform.procSupplier));
-                addEdges(stage, pv.v);
+                handleProcessorStage(stage, (ProcessorTransform) transform);
             } else if (transform instanceof FilterTransform) {
-                FilterTransform filter = (FilterTransform) transform;
-                PlannerVertex pv = addVertex(stage,
-                        new Vertex("filter." + randomSuffix(), Processors.filter(filter.filterF)));
-                addEdges(stage, pv.v);
+                handleFilter(stage, (FilterTransform) transform);
             } else if (transform instanceof MapTransform) {
-                MapTransform map = (MapTransform) transform;
-                PlannerVertex pv = addVertex(stage,
-                        new Vertex("map." + randomSuffix(), Processors.map(map.mapF)));
-                addEdges(stage, pv.v);
+                handleMap(stage, (MapTransform) transform);
             } else if (transform instanceof FlatMapTransform) {
-                FlatMapTransform flatMap = (FlatMapTransform) transform;
-                PlannerVertex pv = addVertex(stage,
-                        new Vertex("flatMap." + randomSuffix(), Processors.flatMap(flatMap.flatMapF())));
-                addEdges(stage, pv.v);
+                handleFlatMap(stage, (FlatMapTransform) transform);
             } else if (transform instanceof GroupByTransform) {
-                GroupByTransform<Object, Object, Object> groupBy = (GroupByTransform) transform;
-                String name = "groupByKey." + randomSuffix() + ".stage";
-                Vertex v1 = dag.newVertex(name + '1',
-                        Processors.accumulateByKey(groupBy.keyF(), groupBy.aggregateOperation()));
-                PlannerVertex pv2 = addVertex(stage, new Vertex(name + '2',
-                        Processors.combineByKey(groupBy.aggregateOperation())));
-                addEdges(stage, v1, e -> e.partitioned(groupBy.keyF(), HASH_CODE));
-                dag.edge(between(v1, pv2.v).distributed().partitioned(groupBy.keyF()));
+                handleGroupBy(stage, (GroupByTransform) transform);
             } else if (transform instanceof CoGroupTransform) {
-                CoGroupTransform<Object, Object, Object> coGroup = (CoGroupTransform) transform;
-                List<DistributedFunction<?, ?>> groupKeyFs = coGroup.groupKeyFs();
-                String name = "coGroup." + randomSuffix() + ".stage";
-                Vertex v1 = dag.newVertex(name + '1',
-                        Processors.coAccumulateByKey(groupKeyFs, coGroup.aggregateOperation()));
-                PlannerVertex pv2 = addVertex(stage, new Vertex(name + '2',
-                        Processors.combineByKey(coGroup.aggregateOperation())));
-                addEdges(stage, v1, (e, ord) -> e.partitioned(groupKeyFs.get(ord), HASH_CODE));
-                dag.edge(between(v1, pv2.v).distributed().partitioned(Entry<Object, Object>::getKey));
+                handleCoGroup(stage, (CoGroupTransform) transform);
             } else if (transform instanceof HashJoinTransform) {
-                HashJoinTransform hashJoin = (HashJoinTransform) transform;
-                PlannerVertex pv = addVertex(stage, new Vertex("hashJoin." + randomSuffix(),
-                        () -> new HashJoinP(hashJoin.joinOns(), hashJoin.tags())));
-                addEdges(stage, pv.v, (e, ordinal) -> {
-                    if (ordinal > 0) {
-                        e.distributed().broadcast().priority(-1);
-                    }
-                });
+                handleHashJoin(stage, (HashJoinTransform) transform);
             } else if (transform instanceof SinkImpl) {
-                SinkImpl sink = (SinkImpl) transform;
-                PlannerVertex pv = addVertex(stage, new Vertex(sink.name(), sink.metaSupplier())
-                        .localParallelism(1));
-                addEdges(stage, pv.v);
+                handleSink(stage, (SinkImpl) transform);
             } else {
                 throw new IllegalArgumentException("Unknown transform " + transform);
             }
@@ -126,10 +95,81 @@ class Planner {
         return dag;
     }
 
-    private PlannerVertex addVertex(Stage pel, Vertex v) {
-        dag.vertex(v);
+    private void handleSource(AbstractStage stage, SourceImpl source) {
+        addVertex(stage, source.name(), source.metaSupplier(), 1);
+    }
+
+    private void handleProcessorStage(AbstractStage stage, ProcessorTransform procTransform) {
+        PlannerVertex pv = addVertex(stage,
+                procTransform.transformName + '.' + randomSuffix(), procTransform.procSupplier);
+        addEdges(stage, pv.v);
+    }
+
+    private void handleMap(AbstractStage stage, MapTransform map) {
+        PlannerVertex pv = addVertex(stage, "map." + randomSuffix(), Processors.map(map.mapF));
+        addEdges(stage, pv.v);
+    }
+
+    private void handleFilter(AbstractStage stage, FilterTransform filter) {
+        PlannerVertex pv = addVertex(stage, "filter." + randomSuffix(), Processors.filter(filter.filterF));
+        addEdges(stage, pv.v);
+    }
+
+    private void handleFlatMap(AbstractStage stage, FlatMapTransform flatMap) {
+        PlannerVertex pv = addVertex(stage, "flatMap." + randomSuffix(),
+                Processors.flatMap(flatMap.flatMapF()));
+        addEdges(stage, pv.v);
+    }
+
+    private void handleGroupBy(AbstractStage stage, GroupByTransform<Object, Object, Object> groupBy) {
+        checkFalse(stage.isForceNonCooperative(), "non-cooperative group-by is not supported");
+        String name = "groupByKey." + randomSuffix() + ".stage";
+        Vertex v1 = dag.newVertex(name + '1',
+                Processors.accumulateByKey(groupBy.keyF(), groupBy.aggregateOperation()));
+        PlannerVertex pv2 = addVertex(stage, name + '2',
+                Processors.combineByKey(groupBy.aggregateOperation()));
+        addEdges(stage, v1, e -> e.partitioned(groupBy.keyF(), HASH_CODE));
+        dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
+    }
+
+    private void handleCoGroup(AbstractStage stage, CoGroupTransform<Object, Object, Object> coGroup) {
+        checkFalse(stage.isForceNonCooperative(), "non-cooperative co-group is not supported");
+        List<DistributedFunction<?, ?>> groupKeyFs = coGroup.groupKeyFs();
+        String name = "coGroup." + randomSuffix() + ".stage";
+        Vertex v1 = dag.newVertex(name + '1',
+                Processors.coAccumulateByKey(groupKeyFs, coGroup.aggregateOperation()));
+        PlannerVertex pv2 = addVertex(stage, name + '2',
+                Processors.combineByKey(coGroup.aggregateOperation()));
+        addEdges(stage, v1, (e, ord) -> e.partitioned(groupKeyFs.get(ord), HASH_CODE));
+        dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
+    }
+
+    private void handleHashJoin(AbstractStage stage, HashJoinTransform hashJoin) {
+        PlannerVertex pv = addVertex(stage, "hashJoin." + randomSuffix(),
+                () -> new HashJoinP(hashJoin.joinOns(), hashJoin.tags()));
+        addEdges(stage, pv.v, (e, ordinal) -> {
+            if (ordinal > 0) {
+                e.distributed().broadcast().priority(-1);
+            }
+        });
+    }
+
+    private void handleSink(AbstractStage stage, SinkImpl sink) {
+        PlannerVertex pv = addVertex(stage, sink.name(), sink.metaSupplier(), 1);
+        addEdges(stage, pv.v);
+    }
+
+    private PlannerVertex addVertex(Stage stage, String name, DistributedSupplier<Processor> procSupplier) {
+        return addVertex(stage, name, ProcessorMetaSupplier.of(procSupplier), -1);
+    }
+
+    private PlannerVertex addVertex(
+            Stage stage, String name, ProcessorMetaSupplier metaSupplier, int localParallelism
+    ) {
+        Vertex v = dag.newVertex(name, stage.isForceNonCooperative() ? nonCooperative(metaSupplier) : metaSupplier)
+                      .localParallelism(localParallelism);
         PlannerVertex pv = new PlannerVertex(v);
-        stage2vertex.put(pel, pv);
+        stage2vertex.put(stage, pv);
         return pv;
     }
 
@@ -149,12 +189,12 @@ class Planner {
     }
 
     private void addEdges(AbstractStage stage, Vertex toVertex) {
-        addEdges(stage, toVertex, e -> {});
+        addEdges(stage, toVertex, e -> { });
     }
 
     private static String randomSuffix() {
         String uuid = newUnsecureUUID().toString();
-        return uuid.substring(uuid.length() - 8, uuid.length());
+        return uuid.substring(uuid.length() - RANDOM_SUFFIX_LENGTH, uuid.length());
     }
 
     private static class PlannerVertex {
