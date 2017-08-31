@@ -27,9 +27,4 @@ class EndStageImpl extends AbstractStage implements EndStage {
     EndStageImpl(Stage upstream, Sink transform, PipelineImpl pipeline) {
         super(singletonList(upstream), transform, pipeline);
     }
-
-    @Override
-    public boolean isForceNonCooperative() {
-        return false;
-    }
 }

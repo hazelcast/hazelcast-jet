@@ -42,8 +42,6 @@ public interface ComputeStage<E> extends Stage {
 
     EndStage drainTo(Sink sink);
 
-    ComputeStage<E> nonCooperative();
-
     default <R> ComputeStage<R> map(DistributedFunction<? super E, ? extends R> mapF) {
         return attach(Transforms.map(mapF));
     }

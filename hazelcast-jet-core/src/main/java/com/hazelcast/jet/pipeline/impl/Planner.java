@@ -38,7 +38,6 @@ import com.hazelcast.jet.processor.Processors;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -47,10 +46,9 @@ import static com.hazelcast.jet.Edge.from;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
-import static com.hazelcast.jet.processor.Processors.nonCooperative;
-import static com.hazelcast.util.Preconditions.checkFalse;
 import static com.hazelcast.util.UuidUtil.newUnsecureUUID;
 
+@SuppressWarnings("unchecked")
 class Planner {
 
     private static final int RANDOM_SUFFIX_LENGTH = 8;
@@ -64,7 +62,6 @@ class Planner {
         this.pipeline = pipeline;
     }
 
-    @SuppressWarnings("unchecked")
     DAG createDag() {
         Iterable<AbstractStage> sorted = (Iterable<AbstractStage>) (Iterable<? extends Stage>)
                 topologicalSort(pipeline.adjacencyMap, Object::toString);
@@ -96,7 +93,7 @@ class Planner {
     }
 
     private void handleSource(AbstractStage stage, SourceImpl source) {
-        addVertex(stage, source.name(), source.metaSupplier(), 1);
+        addVertex(stage, source.name(), source.metaSupplier(), false);
     }
 
     private void handleProcessorStage(AbstractStage stage, ProcessorTransform procTransform) {
@@ -122,7 +119,6 @@ class Planner {
     }
 
     private void handleGroupBy(AbstractStage stage, GroupByTransform<Object, Object, Object> groupBy) {
-        checkFalse(stage.isForceNonCooperative(), "non-cooperative group-by is not supported");
         String name = "groupByKey." + randomSuffix() + ".stage";
         Vertex v1 = dag.newVertex(name + '1',
                 Processors.accumulateByKey(groupBy.keyF(), groupBy.aggregateOperation()));
@@ -133,7 +129,6 @@ class Planner {
     }
 
     private void handleCoGroup(AbstractStage stage, CoGroupTransform<Object, Object, Object> coGroup) {
-        checkFalse(stage.isForceNonCooperative(), "non-cooperative co-group is not supported");
         List<DistributedFunction<?, ?>> groupKeyFs = coGroup.groupKeyFs();
         String name = "coGroup." + randomSuffix() + ".stage";
         Vertex v1 = dag.newVertex(name + '1',
@@ -155,19 +150,18 @@ class Planner {
     }
 
     private void handleSink(AbstractStage stage, SinkImpl sink) {
-        PlannerVertex pv = addVertex(stage, sink.name(), sink.metaSupplier(), 1);
+        PlannerVertex pv = addVertex(stage, sink.name(), sink.metaSupplier(), false);
         addEdges(stage, pv.v);
     }
 
     private PlannerVertex addVertex(Stage stage, String name, DistributedSupplier<Processor> procSupplier) {
-        return addVertex(stage, name, ProcessorMetaSupplier.of(procSupplier), -1);
+        return addVertex(stage, name, ProcessorMetaSupplier.of(procSupplier), true);
     }
 
     private PlannerVertex addVertex(
-            Stage stage, String name, ProcessorMetaSupplier metaSupplier, int localParallelism
+            Stage stage, String name, ProcessorMetaSupplier metaSupplier, boolean parallellize
     ) {
-        Vertex v = dag.newVertex(name, stage.isForceNonCooperative() ? nonCooperative(metaSupplier) : metaSupplier)
-                      .localParallelism(localParallelism);
+        Vertex v = dag.newVertex(name, metaSupplier).localParallelism(parallellize ? -1 : 1);
         PlannerVertex pv = new PlannerVertex(v);
         stage2vertex.put(stage, pv);
         return pv;

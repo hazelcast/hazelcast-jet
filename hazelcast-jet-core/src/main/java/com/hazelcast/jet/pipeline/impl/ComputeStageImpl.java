@@ -38,8 +38,6 @@ import static java.util.stream.Collectors.toList;
 @SuppressWarnings("unchecked")
 public class ComputeStageImpl<E> extends AbstractStage implements ComputeStage<E> {
 
-    private boolean isForceNonCooperative;
-
     ComputeStageImpl(Source<E> source, PipelineImpl pipeline) {
         super(emptyList(), source, pipeline);
     }
@@ -67,16 +65,5 @@ public class ComputeStageImpl<E> extends AbstractStage implements ComputeStage<E
     @Override
     public EndStage drainTo(Sink sink) {
         return pipelineImpl.drainTo(this, sink);
-    }
-
-    @Override
-    public ComputeStage<E> nonCooperative() {
-        isForceNonCooperative = true;
-        return this;
-    }
-
-    @Override
-    public boolean isForceNonCooperative() {
-        return isForceNonCooperative;
     }
 }
