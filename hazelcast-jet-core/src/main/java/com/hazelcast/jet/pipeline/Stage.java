@@ -19,4 +19,6 @@ package com.hazelcast.jet.pipeline;
 public interface Stage {
 
     Pipeline getPipeline();
+
+    boolean isForceNonCooperative();
 }

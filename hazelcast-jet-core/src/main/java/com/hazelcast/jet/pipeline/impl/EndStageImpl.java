@@ -16,19 +16,20 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
+import com.hazelcast.jet.pipeline.EndStage;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Stage;
-import com.hazelcast.jet.pipeline.EndStage;
-import com.hazelcast.jet.pipeline.Transform;
 
 import static java.util.Collections.singletonList;
 
-/**
- * Javadoc pending.
- */
 class EndStageImpl extends AbstractStage implements EndStage {
 
     EndStageImpl(Stage upstream, Sink transform, PipelineImpl pipeline) {
         super(singletonList(upstream), transform, pipeline);
+    }
+
+    @Override
+    public boolean isForceNonCooperative() {
+        return false;
     }
 }

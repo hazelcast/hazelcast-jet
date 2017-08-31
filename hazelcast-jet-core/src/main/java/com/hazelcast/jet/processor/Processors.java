@@ -19,6 +19,7 @@ package com.hazelcast.jet.processor;
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Processor;
+import com.hazelcast.jet.ProcessorMetaSupplier;
 import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.jet.ResettableSingletonTraverser;
 import com.hazelcast.jet.TimestampKind;
@@ -39,11 +40,13 @@ import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
 import com.hazelcast.jet.impl.processor.TransformP;
+import com.hazelcast.nio.Address;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.function.Function;
 
 import static com.hazelcast.jet.TimestampKind.EVENT;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
@@ -163,7 +166,7 @@ import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
  *          aggregateByKey()}</td>
  *     <td>{@link #accumulateByKey(DistributedFunction, AggregateOperation1)
  *          accumulateByKey()}</td>
- *     <td>{@link #combineByKey(AggregateOperation1) combineByKey()}</td>
+ *     <td>{@link #combineByKey(AggregateOperation) combineByKey()}</td>
  * </tr><tr>
  *     <th>stream, group by key<br>and aligned window</th>
  *
@@ -641,16 +644,45 @@ public final class Processors {
     }
 
     /**
+     * Decorates a processor meta-supplier with one that will declare all its
+     * processors non-cooperative. The wrapped meta-supplier must return processors
+     * that are {@code instanceof} {@link AbstractProcessor}.
+     */
+    @Nonnull
+    public static ProcessorMetaSupplier nonCooperative(@Nonnull ProcessorMetaSupplier wrapped) {
+        return new ProcessorMetaSupplier() {
+            @Override
+            public void init(@Nonnull Context context) {
+                wrapped.init(context);
+            }
+
+            @Nonnull @Override
+            public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addrs) {
+                Function<Address, ProcessorSupplier> addrToProcSupplier = wrapped.get(addrs);
+                return addr -> nonCooperative(addrToProcSupplier.apply(addr));
+            }
+        };
+    }
+
+    /**
      * Decorates a {@code ProcessorSupplier} with one that will declare all its
      * processors non-cooperative. The wrapped supplier must return processors
      * that are {@code instanceof} {@link AbstractProcessor}.
      */
     @Nonnull
     public static ProcessorSupplier nonCooperative(@Nonnull ProcessorSupplier wrapped) {
-        return count -> {
-            final Collection<? extends Processor> ps = wrapped.get(count);
-            ps.forEach(p -> ((AbstractProcessor) p).setCooperative(false));
-            return ps;
+        return new ProcessorSupplier() {
+            @Override
+            public void init(@Nonnull Context context) {
+                wrapped.init(context);
+            }
+
+            @Nonnull @Override
+            public Collection<? extends Processor> get(int count) {
+                Collection<? extends Processor> ps = wrapped.get(count);
+                ps.forEach(p -> ((AbstractProcessor) p).setCooperative(false));
+                return ps;
+            }
         };
     }
 

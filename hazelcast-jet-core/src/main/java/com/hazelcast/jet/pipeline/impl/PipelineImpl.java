@@ -38,7 +38,7 @@ public class PipelineImpl implements Pipeline {
 
     @Override
     public <E> ComputeStage<E> drawFrom(Source<E> source) {
-        return new ComputeStageImpl<>(source, this);
+        return new ComputeStageImpl<>(source, this).nonCooperative();
     }
 
     @Nonnull @Override

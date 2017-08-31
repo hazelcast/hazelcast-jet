@@ -16,8 +16,6 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.aggregate.AggregateOperation3;
-import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.ComputeStage;
 import com.hazelcast.jet.pipeline.EndStage;
 import com.hazelcast.jet.pipeline.MultiTransform;
@@ -26,16 +24,10 @@ import com.hazelcast.jet.pipeline.Source;
 import com.hazelcast.jet.pipeline.Stage;
 import com.hazelcast.jet.pipeline.Transform;
 import com.hazelcast.jet.pipeline.UnaryTransform;
-import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
-import com.hazelcast.jet.pipeline.tuple.Tuple2;
 
 import java.util.List;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.pipeline.bag.Tag.tag0;
-import static com.hazelcast.jet.pipeline.bag.Tag.tag1;
-import static com.hazelcast.jet.pipeline.bag.Tag.tag2;
-import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
@@ -45,6 +37,8 @@ import static java.util.stream.Collectors.toList;
  */
 @SuppressWarnings("unchecked")
 public class ComputeStageImpl<E> extends AbstractStage implements ComputeStage<E> {
+
+    private boolean isForceNonCooperative;
 
     ComputeStageImpl(Source<E> source, PipelineImpl pipeline) {
         super(emptyList(), source, pipeline);
@@ -73,5 +67,16 @@ public class ComputeStageImpl<E> extends AbstractStage implements ComputeStage<E
     @Override
     public EndStage drainTo(Sink sink) {
         return pipelineImpl.drainTo(this, sink);
+    }
+
+    @Override
+    public ComputeStage<E> nonCooperative() {
+        isForceNonCooperative = true;
+        return this;
+    }
+
+    @Override
+    public boolean isForceNonCooperative() {
+        return isForceNonCooperative;
     }
 }

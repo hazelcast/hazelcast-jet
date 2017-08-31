@@ -17,7 +17,7 @@
 package com.hazelcast.jet.pipeline;
 
 /**
- * Javadoc pending.
+ * A stage that doesn't allow further stages to be attached to it.
  */
 public interface EndStage extends Stage {
 }
