@@ -58,6 +58,7 @@ public final class HazelcastWriters {
     }
 
     @Nonnull
+    @SuppressWarnings("unchecked")
     public static ProcessorSupplier writeMap(String name, ClientConfig clientConfig) {
         return new HazelcastWriterSupplier<>(
                 serializableConfig(clientConfig),
@@ -161,6 +162,11 @@ public final class HazelcastWriters {
             public int size() {
                 return entries.size();
             }
+        }
+
+        @Override
+        public String toString() {
+            return entries.toString();
         }
     }
 

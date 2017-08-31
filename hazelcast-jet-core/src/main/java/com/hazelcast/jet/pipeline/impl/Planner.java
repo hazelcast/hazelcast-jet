@@ -31,7 +31,6 @@ import com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform;
 import com.hazelcast.jet.pipeline.impl.transform.MapTransform;
 import com.hazelcast.jet.pipeline.impl.transform.ProcessorTransform;
 import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.SinkProcessors;
 
 import java.util.HashMap;
 import java.util.List;
@@ -117,8 +116,7 @@ class Planner {
                 });
             } else if (transform instanceof SinkImpl) {
                 SinkImpl sink = (SinkImpl) transform;
-                PlannerVertex pv = addVertex(stage, new Vertex(sink.name(),
-                        SinkProcessors.writeMap(sink.name()))
+                PlannerVertex pv = addVertex(stage, new Vertex(sink.name(), sink.metaSupplier())
                         .localParallelism(1));
                 addEdges(stage, pv.v);
             } else {
