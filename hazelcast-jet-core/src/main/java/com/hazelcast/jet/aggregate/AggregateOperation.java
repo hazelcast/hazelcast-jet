@@ -25,7 +25,6 @@ import com.hazelcast.jet.pipeline.bag.Tag;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
-import java.util.Map;
 
 import static com.hazelcast.util.Preconditions.checkNotNull;
 

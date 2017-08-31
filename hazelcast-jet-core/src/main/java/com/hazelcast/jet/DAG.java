@@ -35,7 +35,6 @@ import java.util.Set;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
-import static com.hazelcast.util.Preconditions.checkNotNull;
 import static com.hazelcast.util.Preconditions.checkTrue;
 import static java.util.Collections.newSetFromMap;
 import static java.util.stream.Collectors.groupingBy;

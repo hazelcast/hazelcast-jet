@@ -23,7 +23,7 @@ import java.io.Serializable;
 /**
  * Javadoc pending.
  */
-public class JoinOn<K, E_LEFT, E_RIGHT> implements Serializable {
+public final class JoinOn<K, E_LEFT, E_RIGHT> implements Serializable {
     private final DistributedFunction<E_LEFT, K> leftKeyFn;
     private final DistributedFunction<E_RIGHT, K> rightKeyFn;
 

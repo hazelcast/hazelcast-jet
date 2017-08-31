@@ -7,10 +7,12 @@
 
 
     <!-- TEMPORARY SUPPRESSION OF PROTOTYPE CODE -->
+    <suppress checks="Javadoc" files="com[\\/]hazelcast[\\/]jet[\\/]pipeline[\\/]"/>
+    <suppress checks="" files="com[\\/]hazelcast[\\/]jet[\\/]pipeline[\\/]samples[\\/]"/>
+    <suppress checks="Javadoc" files="com[\\/]hazelcast[\\/]jet[\\/]aggregate[\\/]"/>
 
-    <suppress checks="" files="com[\\/]hazelcast[\\/]jet[\\/]pipeline"/>
-    <suppress checks="" files="com[\\/]hazelcast[\\/]jet[\\/]aggregate"/>
-
+    <!-- impl packages are private API by contract, allow public members -->
+    <suppress checks="VisibilityModifier" files="[\\/]impl[\\/]"/>
 
     <!-- Files start with the license header -->
     <suppress checks="StrictDuplicateCode" files="\.java" lines="1-15"/>
