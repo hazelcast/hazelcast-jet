@@ -117,7 +117,7 @@ class Planner {
                 });
             } else if (transform instanceof SinkImpl) {
                 SinkImpl sink = (SinkImpl) transform;
-                PlannerVertex pv = addVertex(stage, new Vertex("sink." + sink.name(),
+                PlannerVertex pv = addVertex(stage, new Vertex(sink.name(),
                         SinkProcessors.writeMap(sink.name()))
                         .localParallelism(1));
                 addEdges(stage, pv.v);
