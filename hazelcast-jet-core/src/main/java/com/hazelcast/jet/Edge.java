@@ -63,7 +63,6 @@ public class Edge implements IdentifiedDataSerializable {
     private int destOrdinal;
 
     private int priority;
-    private boolean isBuffered;
     private boolean isDistributed;
     private Partitioner<?> partitioner;
     private RoutingPolicy routingPolicy = RoutingPolicy.UNICAST;
@@ -192,36 +191,6 @@ public class Edge implements IdentifiedDataSerializable {
      */
     public int getPriority() {
         return priority;
-    }
-
-    /**
-     * Activates unbounded buffering on this edge. Normally this should be
-     * avoided, but at some points the logic of the DAG requires it. This is
-     * one scenario: a vertex sends output to two edges, creating a fork in the
-     * DAG. The branches later rejoin at a downstream vertex which assigns
-     * different priorities to its two inbound edges. The one with the lower
-     * priority won't be consumed until the higher-priority one is consumed in
-     * full. However, since the data for both edges is generated simultaneously,
-     * and since the lower-priority input will apply backpressure while waiting
-     * for the higher-priority input to be consumed, this will result in a
-     * deadlock. The deadlock is resolved by activating unbounded buffering on
-     * the lower-priority edge.
-     * <p>
-     * <strong>NOTE:</strong> when this feature is activated, the
-     * {@link EdgeConfig#setOutboxCapacity(int) outbox capacity} property of
-     * {@code EdgeConfig} is ignored and the maximum value is used.
-     */
-    public Edge buffered() {
-        isBuffered = true;
-        return this;
-    }
-
-    /**
-     * Returns whether {@link #buffered() unbounded buffering} is activated for
-     * this edge.
-     */
-    public boolean isBuffered() {
-        return isBuffered;
     }
 
     /**
@@ -400,7 +369,6 @@ public class Edge implements IdentifiedDataSerializable {
         out.writeUTF(destName);
         out.writeInt(destOrdinal);
         out.writeInt(priority);
-        out.writeBoolean(isBuffered);
         out.writeBoolean(isDistributed);
         out.writeObject(routingPolicy);
         CustomClassLoadedObject.write(out, partitioner);
@@ -414,7 +382,6 @@ public class Edge implements IdentifiedDataSerializable {
         destName = in.readUTF();
         destOrdinal = in.readInt();
         priority = in.readInt();
-        isBuffered = in.readBoolean();
         isDistributed = in.readBoolean();
         routingPolicy = in.readObject();
         partitioner = CustomClassLoadedObject.read(in);
