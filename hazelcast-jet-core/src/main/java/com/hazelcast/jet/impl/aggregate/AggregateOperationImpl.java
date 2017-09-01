@@ -36,7 +36,7 @@ public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R> {
     public AggregateOperationImpl(
             @Nonnull DistributedSupplier<A> createAccumulatorF,
             @Nonnull DistributedBiConsumer<? super A, ?>[] accumulateFs,
-            @Nonnull DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF,
+            @Nullable DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF,
             @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorF,
             @Nonnull DistributedFunction<? super A, R> finishAccumulationF
     ) {
@@ -65,7 +65,7 @@ public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R> {
         return (DistributedBiConsumer<? super A, T>) accumulateFs[index];
     }
 
-    @Nonnull
+    @Nullable
     public DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF() {
         return combineAccumulatorsF;
     }

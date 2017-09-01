@@ -37,7 +37,7 @@ public class AggregateOperation3Impl<T0, T1, T2, A, R>
                                    @Nonnull DistributedBiConsumer<? super A, ? super T0> accumulateItemF0,
                                    @Nonnull DistributedBiConsumer<? super A, ? super T1> accumulateItemF1,
                                    @Nonnull DistributedBiConsumer<? super A, ? super T2> accumulateItemF2,
-                                   @Nonnull DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF,
+                                   @Nullable DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF,
                                    @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorF,
                                    @Nonnull DistributedFunction<? super A, R> finishAccumulationF
     ) {
@@ -47,7 +47,7 @@ public class AggregateOperation3Impl<T0, T1, T2, A, R>
 
     private AggregateOperation3Impl(@Nonnull DistributedSupplier<A> createAccumulatorF,
                                     @Nonnull DistributedBiConsumer<? super A, ?>[] accumulateFs,
-                                    @Nonnull DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF,
+                                    @Nullable DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF,
                                     @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorF,
                                     @Nonnull DistributedFunction<? super A, R> finishAccumulationF
     ) {

@@ -35,7 +35,7 @@ public class AggregateOperation1Impl<T0, A, R>
 
     public AggregateOperation1Impl(@Nonnull DistributedSupplier<A> createAccumulatorF,
                                    @Nonnull DistributedBiConsumer<? super A, ? super T0> accumulateItemF,
-                                   @Nonnull DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF,
+                                   @Nullable DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF,
                                    @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorF,
                                    @Nonnull DistributedFunction<? super A, R> finishAccumulationF
     ) {

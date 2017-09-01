@@ -62,8 +62,6 @@ public class HashJoinP<E0> extends AbstractProcessor {
      * element prepended to remove the mismatch between list index and ordinal.
      */
     public HashJoinP(@Nonnull List<Function<E0, Object>> keyFns, @Nonnull List<Tag> tags) {
-        // First list element is null so the indices in the list align with
-        // the edge ordinals whose data they hold
         this.keyFns = new ArrayList<>(singletonList(null));
         this.keyFns.addAll(keyFns);
         this.bagTables = Stream.generate(() -> (Map<Object, List<Object>>) null)
@@ -90,7 +88,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
     protected boolean tryProcess0(@Nonnull Object item) {
         E0 e0 = (E0) item;
         ordinal0consumed = true;
-        if (tags.size() == 0) {
+        if (tags.isEmpty()) {
             return tryEmit(keyFns.size() == 2
                     ? new Tuple2<>(e0, lookupBag(1, e0))
                     : new Tuple3<>(e0, lookupBag(1, e0), lookupBag(2, e0)));
@@ -103,10 +101,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
     }
 
     private List<Object> lookupBag(int ordinal, E0 item) {
-        return bagTables.get(ordinal).getOrDefault(leftKey(ordinal, item), emptyList());
+        return bagTables.get(ordinal).getOrDefault(keyFns.get(ordinal).apply(item), emptyList());
     }
 
-    private Object leftKey(int ordinal, E0 item) {
-        return keyFns.get(ordinal).apply(item);
-    }
 }

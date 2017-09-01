@@ -26,6 +26,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.processor.HashJoinP;
+import com.hazelcast.jet.pipeline.JoinOn;
 import com.hazelcast.jet.pipeline.Stage;
 import com.hazelcast.jet.pipeline.Transform;
 import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
@@ -43,14 +44,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.aggregate.AggregateOperations.toMap;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
 import static com.hazelcast.util.UuidUtil.newUnsecureUUID;
+import static java.util.stream.Collectors.toList;
 
 @SuppressWarnings("unchecked")
 class Planner {
@@ -143,35 +145,55 @@ class Planner {
         dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }
 
-    //   ---------
-    //  | primary |-------------------(distributed partitioned)-----------------------\
-    //   ---------                                                                    | ordinal 0
-    //                                                                                v
-    //   ----------                            -------------                      --------
-    //  | joined-1 |-(distributed broadcast)->| collector-1 |-(local broadcast)->| joiner |
-    //   ----------                            -------------         ordinal 1    --------
-    //                                                                               ^
-    //   ----------                            -------------                         | ordinal 2
-    //  | joined-2 |-(distributed broadcast)->| collector-2 |-(local broadcast)-----/
-    //   ----------                            -------------
+    //         ---------           ----------           ----------
+    //        | primary |         | joined-1 |         | joined-2 |
+    //         ---------           ----------           ----------
+    //             |                   |                     |
+    //        distributed         distributed          distributed
+    //        partitioned          broadcast            broadcast
+    //             |                   |                    |
+    //             |                   v                    v
+    //             |             -------------         -------------
+    //             |            | collector-1 |       | collector-2 |
+    //             |             -------------         -------------
+    //             |                   |                      |
+    //             |                 local                  local
+    //             |               broadcast              broadcast
+    //                            prioritized            prioritized
+    //             |                   |                      |
+    //         ordinal 0           ordinal 1               ordinal 2
+    //             \                   |                      |
+    //              ----------------\  |   /-----------------/
+    //                              v  v  v
+    //                              --------
+    //                             | joiner |
+    //                              --------
     private void handleHashJoin(AbstractStage stage, HashJoinTransform<?> hashJoin) {
         String hashJoinName = "hashJoin." + randomSuffix();
         PlannerVertex primary = stage2vertex.get(stage.upstream.get(0));
+        List<Function<Object, Object>> keyFns = (List<Function<Object, Object>>) (List)
+                hashJoin.joinOns().stream()
+                        .map(JoinOn::leftKeyFn)
+                        .collect(toList());
         Vertex joiner = addVertex(stage, hashJoinName + ".joiner",
-                () -> new HashJoinP(hashJoin.joinOns(), hashJoin.tags())).v;
+                () -> new HashJoinP<>(keyFns, hashJoin.tags())).v;
         dag.edge(from(primary.v, primary.availableOrdinal++).to(joiner, 0));
 
         String collectorName = hashJoinName + ".collector.";
         int collectorOrdinal = 1;
         for (Stage fromStage : tailList(stage.upstream)) {
             PlannerVertex fromPv = stage2vertex.get(fromStage);
+            DistributedFunction<Object, Object> getKeyF =
+                    (DistributedFunction<Object, Object>) hashJoin.joinOns().get(collectorOrdinal - 1).rightKeyFn();
             Vertex collector = dag.newVertex(collectorName + collectorOrdinal,
-                    Processors.aggregateByKey(hashJoin.joinOns().get(collectorOrdinal).rightKeyFn(), toList()));
+                    Processors.aggregate(toMultimap(getKeyF)));
             collector.localParallelism(1);
             dag.edge(from(fromPv.v, fromPv.availableOrdinal++)
                     .to(collector, 0)
-                    .distributed().broadcast().priority(-1));
-            dag.edge(from(collector, 0).to(joiner, collectorOrdinal).broadcast());
+                    .distributed().broadcast());
+            dag.edge(from(collector, 0)
+                    .to(joiner, collectorOrdinal)
+                    .broadcast().priority(-1));
             collectorOrdinal++;
         }
     }
@@ -222,11 +244,13 @@ class Planner {
         return list.subList(1, list.size());
     }
 
-    private static AggregateOperation1<Object, ArrayList<Object>, ArrayList<Object>> toList() {
+    private static AggregateOperation1<Object, Map<Object, List<Object>>, Map<Object, List<Object>>> toMultimap(
+            DistributedFunction<Object, Object> keyF
+    ) {
         return AggregateOperation
-                .withCreate(ArrayList::new)
-                .andAccumulate(ArrayList::add)
-                .andCombine(ArrayList::addAll)
+                .<Map<Object, List<Object>>>withCreate(HashMap::new)
+                .andAccumulate((map, item) -> map.computeIfAbsent(keyF.apply(item), k -> new ArrayList<>())
+                                                 .add(item))
                 .andFinish(x -> x);
     }
 
