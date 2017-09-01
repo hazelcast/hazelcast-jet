@@ -21,6 +21,8 @@ import com.hazelcast.jet.Edge;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorMetaSupplier;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.aggregate.AggregateOperation;
+import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.processor.HashJoinP;
@@ -35,6 +37,7 @@ import com.hazelcast.jet.pipeline.impl.transform.MapTransform;
 import com.hazelcast.jet.pipeline.impl.transform.ProcessorTransform;
 import com.hazelcast.jet.processor.Processors;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +47,7 @@ import java.util.function.Consumer;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
+import static com.hazelcast.jet.aggregate.AggregateOperations.toMap;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
 import static com.hazelcast.util.UuidUtil.newUnsecureUUID;
@@ -139,14 +143,37 @@ class Planner {
         dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }
 
-    private void handleHashJoin(AbstractStage stage, HashJoinTransform hashJoin) {
-        PlannerVertex pv = addVertex(stage, "hashJoin." + randomSuffix(),
-                () -> new HashJoinP(hashJoin.joinOns(), hashJoin.tags()));
-        addEdges(stage, pv.v, (e, ordinal) -> {
-            if (ordinal > 0) {
-                e.distributed().broadcast().priority(-1);
-            }
-        });
+    //   ---------
+    //  | primary |-------------------(distributed partitioned)-----------------------\
+    //   ---------                                                                    | ordinal 0
+    //                                                                                v
+    //   ----------                            -------------                      --------
+    //  | joined-1 |-(distributed broadcast)->| collector-1 |-(local broadcast)->| joiner |
+    //   ----------                            -------------         ordinal 1    --------
+    //                                                                               ^
+    //   ----------                            -------------                         | ordinal 2
+    //  | joined-2 |-(distributed broadcast)->| collector-2 |-(local broadcast)-----/
+    //   ----------                            -------------
+    private void handleHashJoin(AbstractStage stage, HashJoinTransform<?> hashJoin) {
+        String hashJoinName = "hashJoin." + randomSuffix();
+        PlannerVertex primary = stage2vertex.get(stage.upstream.get(0));
+        Vertex joiner = addVertex(stage, hashJoinName + ".joiner",
+                () -> new HashJoinP(hashJoin.joinOns(), hashJoin.tags())).v;
+        dag.edge(from(primary.v, primary.availableOrdinal++).to(joiner, 0));
+
+        String collectorName = hashJoinName + ".collector.";
+        int collectorOrdinal = 1;
+        for (Stage fromStage : tailList(stage.upstream)) {
+            PlannerVertex fromPv = stage2vertex.get(fromStage);
+            Vertex collector = dag.newVertex(collectorName + collectorOrdinal,
+                    Processors.aggregateByKey(hashJoin.joinOns().get(collectorOrdinal).rightKeyFn(), toList()));
+            collector.localParallelism(1);
+            dag.edge(from(fromPv.v, fromPv.availableOrdinal++)
+                    .to(collector, 0)
+                    .distributed().broadcast().priority(-1));
+            dag.edge(from(collector, 0).to(joiner, collectorOrdinal).broadcast());
+            collectorOrdinal++;
+        }
     }
 
     private void handleSink(AbstractStage stage, SinkImpl sink) {
@@ -189,6 +216,18 @@ class Planner {
     private static String randomSuffix() {
         String uuid = newUnsecureUUID().toString();
         return uuid.substring(uuid.length() - RANDOM_SUFFIX_LENGTH, uuid.length());
+    }
+
+    private static <E> List<E> tailList(List<E> list) {
+        return list.subList(1, list.size());
+    }
+
+    private static AggregateOperation1<Object, ArrayList<Object>, ArrayList<Object>> toList() {
+        return AggregateOperation
+                .withCreate(ArrayList::new)
+                .andAccumulate(ArrayList::add)
+                .andCombine(ArrayList::addAll)
+                .andFinish(x -> x);
     }
 
     private static class PlannerVertex {
