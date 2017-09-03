@@ -33,33 +33,33 @@ import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 
 /**
- * Javadoc pending.
+ * Builds a hash join transform with any number of joined streams.
  */
 public class HashJoinBuilder<E0> {
-    private final Map<Tag<?>, JoinClause<?, E0, ?>> clauses = new HashMap<>();
+    private final Map<Tag<?>, StageAndClause> clauses = new HashMap<>();
 
     HashJoinBuilder(ComputeStage<E0> leftStream) {
         add(leftStream, null);
     }
 
-    public <K, E_RIGHT> Tag<E_RIGHT> add(ComputeStage<E_RIGHT> s, JoinOn<K, E0, E_RIGHT> joinOn) {
-        Tag<E_RIGHT> tag = tag(clauses.size());
-        clauses.put(tag, new JoinClause<>(s, joinOn));
+    public <K, E1_IN, E1> Tag<E1> add(ComputeStage<E1_IN> s, JoinClause<K, E0, E1_IN, E1> joinClause) {
+        Tag<E1> tag = tag(clauses.size());
+        clauses.put(tag, new StageAndClause<>(s, joinClause));
         return tag;
     }
 
     @SuppressWarnings("unchecked")
     public ComputeStage<Tuple2<E0, BagsByTag>> build() {
-        List<Entry<Tag<?>, JoinClause<?, E0, ?>>> orderedClauses = clauses.entrySet().stream()
-                                                                          .sorted(comparing(Entry::getKey))
-                                                                          .collect(toList());
+        List<Entry<Tag<?>, StageAndClause>> orderedClauses = clauses.entrySet().stream()
+                                                                    .sorted(comparing(Entry::getKey))
+                                                                    .collect(toList());
         List<ComputeStage> upstream = orderedClauses.stream()
                                                     .map(e -> e.getValue().stage())
                                                     .collect(toList());
         HashJoinTransform transform = new HashJoinTransform(
                 orderedClauses.stream()
                               .skip(1)
-                              .map(e -> e.getValue().joinOn())
+                              .map(e -> e.getValue().clause())
                               .collect(toList()),
                 orderedClauses.stream()
                               .skip(1)
@@ -70,21 +70,21 @@ public class HashJoinBuilder<E0> {
         return pipeline.attach(upstream, transform);
     }
 
-    private static class JoinClause<K, E0, E_RIGHT> {
-        private final ComputeStage<E_RIGHT> stage;
-        private final JoinOn<K, E0, E_RIGHT> joinOn;
+    private static class StageAndClause<K, E0, E1, E1_OUT> {
+        private final ComputeStage<E1> stage;
+        private final JoinClause<K, E0, E1, E1_OUT> joinClause;
 
-        JoinClause(ComputeStage<E_RIGHT> stage, JoinOn<K, E0, E_RIGHT> joinOn) {
+        StageAndClause(ComputeStage<E1> stage, JoinClause<K, E0, E1, E1_OUT> joinClause) {
             this.stage = stage;
-            this.joinOn = joinOn;
+            this.joinClause = joinClause;
         }
 
-        ComputeStage<E_RIGHT> stage() {
+        ComputeStage<E1> stage() {
             return stage;
         }
 
-        JoinOn<K, E0, E_RIGHT> joinOn() {
-            return joinOn;
+        JoinClause<K, E0, E1, E1_OUT> clause() {
+            return joinClause;
         }
     }
 }

@@ -49,6 +49,7 @@ public interface ComputeStage<E> extends Stage {
     default ComputeStage<E> filter(DistributedPredicate<E> filterF) {
         return attach(Transforms.filter(filterF));
     }
+
     default <R> ComputeStage<R> flatMap(DistributedFunction<? super E, Traverser<? extends R>> flatMapF) {
         return attach(Transforms.flatMap(flatMapF));
     }
@@ -60,18 +61,18 @@ public interface ComputeStage<E> extends Stage {
     }
 
     @SuppressWarnings("unchecked")
-    default <K, E1> ComputeStage<Tuple2<E, Collection<E1>>> hashJoin(
-            ComputeStage<E1> s1, JoinOn<K, E, E1> joinOn
+    default <K, E1_IN, E1> ComputeStage<Tuple2<E, Collection<E1>>> hashJoin(
+            ComputeStage<E1_IN> s1, JoinClause<K, E, E1_IN, E1> joinClause
     ) {
-        return attach(new HashJoinTransform(singletonList(joinOn), emptyList()), singletonList(s1));
+        return attach(new HashJoinTransform(singletonList(joinClause), emptyList()), singletonList(s1));
     }
 
     @SuppressWarnings("unchecked")
-    default <K1, E1, K2, E2> ComputeStage<Tuple3<E, Collection<E1>, Collection<E2>>> hashJoin(
-            ComputeStage<E1> s1, JoinOn<K1, E, E1> joinOn1,
-            ComputeStage<E2> s2, JoinOn<K2, E, E2> joinOn2
+    default <K1, E1_IN, E1, K2, E2_IN, E2> ComputeStage<Tuple3<E, Collection<E1>, Collection<E2>>> hashJoin(
+            ComputeStage<E1_IN> s1, JoinClause<K1, E, E1_IN, E1> joinClause1,
+            ComputeStage<E2_IN> s2, JoinClause<K2, E, E2_IN, E2> joinClause2
     ) {
-        return attach(new HashJoinTransform(asList(joinOn1, joinOn2), emptyList()), asList(s1, s2));
+        return attach(new HashJoinTransform(asList(joinClause1, joinClause2), emptyList()), asList(s1, s2));
     }
 
     default HashJoinBuilder<E> hashJoinBuilder() {

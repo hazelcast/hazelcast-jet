@@ -40,7 +40,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.pipeline.JoinOn.onKeys;
+import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 
 public class PipelineJoinAndCoGroup {
 
@@ -52,12 +52,15 @@ public class PipelineJoinAndCoGroup {
 
     private final JetInstance jet;
     private Pipeline p = Pipeline.create();
-    private ComputeStage<Trade> trades = p.drawFrom(Sources.<Integer, Trade>readMap(TRADES))
-                                          .map(Entry::getValue);
-    private ComputeStage<Product> products = p.drawFrom(Sources.<Integer, Product>readMap(PRODUCTS))
-                                              .map(Entry::getValue);
-    private ComputeStage<Broker> brokers = p.drawFrom(Sources.<Integer, Broker>readMap(BROKERS))
-                                            .map(Entry::getValue);
+    private final ComputeStage<Entry<Integer, Trade>> tradEntries =
+            p.drawFrom(Sources.<Integer, Trade>readMap(TRADES));
+    private final ComputeStage<Trade> trades = tradEntries.map(Entry::getValue);
+    private final ComputeStage<Entry<Integer, Product>> prodEntries =
+            p.drawFrom(Sources.<Integer, Product>readMap(PRODUCTS));
+    private final ComputeStage<Entry<Integer, Broker>> brokEntries =
+            p.drawFrom(Sources.<Integer, Broker>readMap(BROKERS));
+    private final ComputeStage<Product> products = prodEntries.map(Entry::getValue);
+    private final ComputeStage<Broker> brokers = brokEntries.map(Entry::getValue);
 
     private Tag<Trade> tradeTag;
     private Tag<Product> productTag;
@@ -77,12 +80,12 @@ public class PipelineJoinAndCoGroup {
         PipelineJoinAndCoGroup sample = new PipelineJoinAndCoGroup(jet);
         try {
             sample.prepareSampleData();
-            sample.joinDirect().drainTo(Sinks.writeMap(RESULT));
+            sample.coGroupDirect().drainTo(Sinks.writeMap(RESULT));
             // This line added to test multiple outputs from a Stage
-            sample.trades.map(t -> entry(t.brokerId(), t)).drainTo(Sinks.writeMap(RESULT_BROKER));
+            sample.tradEntries.drainTo(Sinks.writeMap(RESULT_BROKER));
             sample.execute();
             printImap(jet.getMap(RESULT_BROKER));
-            sample.validateJoinDirectResults();
+            sample.validateCoGroupDirectResults();
         } finally {
             Jet.shutdownAll();
         }
@@ -125,8 +128,9 @@ public class PipelineJoinAndCoGroup {
 
     private ComputeStage<Entry<Integer, Tuple3<Trade, Collection<Product>, Collection<Broker>>>> joinDirect() {
         ComputeStage<Tuple3<Trade, Collection<Product>, Collection<Broker>>> joined = trades.hashJoin(
-                products, onKeys(Trade::productId, Product::id),
-                brokers, onKeys(Trade::brokerId, Broker::id));
+                prodEntries, joinMapEntries(Trade::productId),
+                brokEntries, joinMapEntries(Trade::brokerId)
+        );
         return joined.map(t -> entry(t.f0().id(), t));
     }
 
@@ -150,8 +154,8 @@ public class PipelineJoinAndCoGroup {
 
     private ComputeStage<Entry<Integer, Tuple2<Trade, BagsByTag>>> joinBuild() {
         HashJoinBuilder<Trade> builder = trades.hashJoinBuilder();
-        productTag = builder.add(products, onKeys(Trade::productId, Product::id));
-        brokerTag = builder.add(brokers, onKeys(Trade::brokerId, Broker::id));
+        productTag = builder.add(prodEntries, joinMapEntries(Trade::productId));
+        brokerTag = builder.add(brokEntries, joinMapEntries(Trade::brokerId));
         ComputeStage<Tuple2<Trade, BagsByTag>> joined = builder.build();
         return joined.map(t -> entry(t.f0().id(), t));
     }

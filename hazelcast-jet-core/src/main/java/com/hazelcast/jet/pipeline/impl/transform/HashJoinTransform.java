@@ -17,7 +17,7 @@
 package com.hazelcast.jet.pipeline.impl.transform;
 
 import com.hazelcast.jet.pipeline.MultiTransform;
-import com.hazelcast.jet.pipeline.JoinOn;
+import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.bag.Tag;
 
 import javax.annotation.Nonnull;
@@ -38,7 +38,7 @@ import java.util.List;
  * where all of {@code stream0.key1}, {@code stream0.key2}, {@code
  * stream1.key} and {@code stream2.key} are extracted by separate
  * functions. The pair of functions is captured in an instance of
- * {@link JoinOn}.
+ * {@link JoinClause}.
  * <p>
  * The data from positive-numbered streams is fully buffered before
  * consuming stream 0, which is processed eagerly without buffering.
@@ -65,16 +65,16 @@ import java.util.List;
  * key.
  */
 public class HashJoinTransform<E0> implements MultiTransform {
-    private final List<JoinOn<?, E0, ?>> joinOns;
+    private final List<JoinClause<?, E0, ?, ?>> clauses;
     private final List<Tag> tags;
 
-    public HashJoinTransform(@Nonnull List<JoinOn<?, E0, ?>> joinOns, @Nonnull List<Tag> tags) {
-        this.joinOns = joinOns;
+    public HashJoinTransform(@Nonnull List<JoinClause<?, E0, ?, ?>> clauses, @Nonnull List<Tag> tags) {
+        this.clauses = clauses;
         this.tags = tags;
     }
 
-    public List<JoinOn<?, E0, ?>> joinOns() {
-        return joinOns;
+    public List<JoinClause<?, E0, ?, ?>> clauses() {
+        return clauses;
     }
 
     public List<Tag> tags() {

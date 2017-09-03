@@ -21,12 +21,11 @@ import com.hazelcast.jet.Edge;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorMetaSupplier;
 import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.impl.processor.HashJoinCollectP;
 import com.hazelcast.jet.impl.processor.HashJoinP;
-import com.hazelcast.jet.pipeline.JoinOn;
+import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.Stage;
 import com.hazelcast.jet.pipeline.Transform;
 import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
@@ -38,7 +37,6 @@ import com.hazelcast.jet.pipeline.impl.transform.MapTransform;
 import com.hazelcast.jet.pipeline.impl.transform.ProcessorTransform;
 import com.hazelcast.jet.processor.Processors;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -149,21 +147,19 @@ class Planner {
     //        | primary |         | joined-1 |         | joined-2 |
     //         ---------           ----------           ----------
     //             |                   |                     |
-    //        distributed         distributed          distributed
-    //        partitioned          broadcast            broadcast
-    //             |                   |                    |
-    //             |                   v                    v
+    //             |              distributed          distributed
+    //             |               broadcast            broadcast
+    //             |                   v                     v
     //             |             -------------         -------------
     //             |            | collector-1 |       | collector-2 |
     //             |             -------------         -------------
-    //             |                   |                      |
-    //             |                 local                  local
-    //             |               broadcast              broadcast
-    //                            prioritized            prioritized
-    //             |                   |                      |
-    //         ordinal 0           ordinal 1               ordinal 2
-    //             \                   |                      |
-    //              ----------------\  |   /-----------------/
+    //             |                   |                     |
+    //             |                 local                 local
+    //        distributed          broadcast             broadcast
+    //        partitioned         prioritized           prioritized
+    //         ordinal 0           ordinal 1             ordinal 2
+    //             \                   |                     |
+    //              ----------------\  |   /----------------/
     //                              v  v  v
     //                              --------
     //                             | joiner |
@@ -172,8 +168,8 @@ class Planner {
         String hashJoinName = "hashJoin." + randomSuffix();
         PlannerVertex primary = stage2vertex.get(stage.upstream.get(0));
         List<Function<Object, Object>> keyFns = (List<Function<Object, Object>>) (List)
-                hashJoin.joinOns().stream()
-                        .map(JoinOn::leftKeyFn)
+                hashJoin.clauses().stream()
+                        .map(JoinClause::leftKeyFn)
                         .collect(toList());
         Vertex joiner = addVertex(stage, hashJoinName + ".joiner",
                 () -> new HashJoinP<>(keyFns, hashJoin.tags())).v;
@@ -183,10 +179,13 @@ class Planner {
         int collectorOrdinal = 1;
         for (Stage fromStage : tailList(stage.upstream)) {
             PlannerVertex fromPv = stage2vertex.get(fromStage);
+            JoinClause<?, ?, ?, ?> clause = hashJoin.clauses().get(collectorOrdinal - 1);
             DistributedFunction<Object, Object> getKeyF =
-                    (DistributedFunction<Object, Object>) hashJoin.joinOns().get(collectorOrdinal - 1).rightKeyFn();
+                    (DistributedFunction<Object, Object>) clause.rightKeyFn();
+            DistributedFunction<Object, Object> projectF =
+                    (DistributedFunction<Object, Object>) clause.rightProjectFn();
             Vertex collector = dag.newVertex(collectorName + collectorOrdinal,
-                    Processors.aggregate(toMultimap(getKeyF)));
+                    () -> new HashJoinCollectP(getKeyF, projectF));
             collector.localParallelism(1);
             dag.edge(from(fromPv.v, fromPv.availableOrdinal++)
                     .to(collector, 0)
@@ -242,16 +241,6 @@ class Planner {
 
     private static <E> List<E> tailList(List<E> list) {
         return list.subList(1, list.size());
-    }
-
-    private static AggregateOperation1<Object, Map<Object, List<Object>>, Map<Object, List<Object>>> toMultimap(
-            DistributedFunction<Object, Object> keyF
-    ) {
-        return AggregateOperation
-                .<Map<Object, List<Object>>>withCreate(HashMap::new)
-                .andAccumulate((map, item) -> map.computeIfAbsent(keyF.apply(item), k -> new ArrayList<>())
-                                                 .add(item))
-                .andFinish(x -> x);
     }
 
     private static class PlannerVertex {
