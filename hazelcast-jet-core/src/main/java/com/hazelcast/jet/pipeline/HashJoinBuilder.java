@@ -49,7 +49,7 @@ public class HashJoinBuilder<E0> {
     }
 
     @SuppressWarnings("unchecked")
-    public ComputeStage<Tuple2<E0, BagsByTag>> build() {
+    public ComputeStage<Tuple2<E0, TaggedMap>> build() {
         List<Entry<Tag<?>, StageAndClause>> orderedClauses = clauses.entrySet().stream()
                                                                     .sorted(comparing(Entry::getKey))
                                                                     .collect(toList());

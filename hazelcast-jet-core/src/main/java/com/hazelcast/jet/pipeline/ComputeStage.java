@@ -61,14 +61,14 @@ public interface ComputeStage<E> extends Stage {
     }
 
     @SuppressWarnings("unchecked")
-    default <K, E1_IN, E1> ComputeStage<Tuple2<E, Collection<E1>>> hashJoin(
+    default <K, E1_IN, E1> ComputeStage<Tuple2<E, E1>> hashJoin(
             ComputeStage<E1_IN> s1, JoinClause<K, E, E1_IN, E1> joinClause
     ) {
         return attach(new HashJoinTransform(singletonList(joinClause), emptyList()), singletonList(s1));
     }
 
     @SuppressWarnings("unchecked")
-    default <K1, E1_IN, E1, K2, E2_IN, E2> ComputeStage<Tuple3<E, Collection<E1>, Collection<E2>>> hashJoin(
+    default <K1, E1_IN, E1, K2, E2_IN, E2> ComputeStage<Tuple3<E, E1, E2>> hashJoin(
             ComputeStage<E1_IN> s1, JoinClause<K1, E, E1_IN, E1> joinClause1,
             ComputeStage<E2_IN> s2, JoinClause<K2, E, E2_IN, E2> joinClause2
     ) {

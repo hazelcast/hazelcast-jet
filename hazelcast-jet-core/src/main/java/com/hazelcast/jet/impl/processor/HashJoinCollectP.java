@@ -17,14 +17,9 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
-import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
-import com.hazelcast.jet.function.DistributedFunction;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -33,12 +28,12 @@ import java.util.function.Function;
  * stage collects the entire joined stream into a hashmap and then
  * broadcasts it to all local second-stage processors.
  */
-public class HashJoinCollectP<K, E1, E1_OUT> extends AbstractProcessor {
-    private final Map<K, List<E1_OUT>> map = new HashMap<>();
-    @Nonnull private final Function<E1, K> keyF;
-    @Nonnull private final Function<E1, E1_OUT> projectF;
+public class HashJoinCollectP<K, E, V> extends AbstractProcessor {
+    private final Map<K, V> map = new HashMap<>();
+    @Nonnull private final Function<E, K> keyF;
+    @Nonnull private final Function<E, V> projectF;
 
-    public HashJoinCollectP(@Nonnull Function<E1, K> keyF, @Nonnull Function<E1, E1_OUT> projectF) {
+    public HashJoinCollectP(@Nonnull Function<E, K> keyF, @Nonnull Function<E, V> projectF) {
         this.keyF = keyF;
         this.projectF = projectF;
     }
@@ -46,9 +41,13 @@ public class HashJoinCollectP<K, E1, E1_OUT> extends AbstractProcessor {
     @Override
     @SuppressWarnings("unchecked")
     protected boolean tryProcess0(@Nonnull Object item) throws Exception {
-        E1 e1 = (E1) item;
-        map.computeIfAbsent(keyF.apply(e1), k -> new ArrayList<>())
-           .add(projectF.apply(e1));
+        E e = (E) item;
+        K key = keyF.apply(e);
+        V value = projectF.apply(e);
+        V previous = map.put(key, value);
+        if (previous != null) {
+            throw new IllegalStateException("Duplicate values for key " + key + ": " + previous + " and " + value);
+        }
         return true;
     }
 

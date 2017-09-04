@@ -26,6 +26,7 @@ import com.hazelcast.jet.pipeline.HashJoinBuilder;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.pipeline.TaggedMap;
 import com.hazelcast.jet.pipeline.bag.BagsByTag;
 import com.hazelcast.jet.pipeline.bag.Tag;
 import com.hazelcast.jet.pipeline.bag.ThreeBags;
@@ -80,12 +81,12 @@ public class PipelineJoinAndCoGroup {
         PipelineJoinAndCoGroup sample = new PipelineJoinAndCoGroup(jet);
         try {
             sample.prepareSampleData();
-            sample.coGroupDirect().drainTo(Sinks.writeMap(RESULT));
+            sample.joinDirect().drainTo(Sinks.writeMap(RESULT));
             // This line added to test multiple outputs from a Stage
             sample.tradEntries.drainTo(Sinks.writeMap(RESULT_BROKER));
             sample.execute();
             printImap(jet.getMap(RESULT_BROKER));
-            sample.validateCoGroupDirectResults();
+            sample.validateJoinDirectResults();
         } finally {
             Jet.shutdownAll();
         }
@@ -126,8 +127,8 @@ public class PipelineJoinAndCoGroup {
         printImap(tradeMap);
     }
 
-    private ComputeStage<Entry<Integer, Tuple3<Trade, Collection<Product>, Collection<Broker>>>> joinDirect() {
-        ComputeStage<Tuple3<Trade, Collection<Product>, Collection<Broker>>> joined = trades.hashJoin(
+    private ComputeStage<Entry<Integer, Tuple3<Trade, Product, Broker>>> joinDirect() {
+        ComputeStage<Tuple3<Trade, Product, Broker>> joined = trades.hashJoin(
                 prodEntries, joinMapEntries(Trade::productId),
                 brokEntries, joinMapEntries(Trade::brokerId)
         );
@@ -135,44 +136,36 @@ public class PipelineJoinAndCoGroup {
     }
 
     private void validateJoinDirectResults() {
-        IMap<Integer, Tuple3<Trade, Collection<Product>, Collection<Broker>>> result = jet.getMap(RESULT);
+        IMap<Integer, Tuple3<Trade, Product, Broker>> result = jet.getMap(RESULT);
         printImap(result);
         for (int tradeId = 1; tradeId < 5; tradeId++) {
-            Tuple3<Trade, Collection<Product>, Collection<Broker>> value = result.get(tradeId);
+            Tuple3<Trade, Product, Broker> value = result.get(tradeId);
             Trade trade = value.f0();
-            Collection<Product> products = value.f1();
-            Collection<Broker> brokers = value.f2();
-            assertSingletonColl(products);
-            assertSingletonColl(brokers);
-            Product product = products.iterator().next();
-            Broker broker = brokers.iterator().next();
+            Product product = value.f1();
+            Broker broker = value.f2();
             assertEquals(trade.productId(), product.id());
             assertEquals(trade.brokerId(), broker.id());
         }
         System.err.println("JoinDirect results are valid");
     }
 
-    private ComputeStage<Entry<Integer, Tuple2<Trade, BagsByTag>>> joinBuild() {
+    private ComputeStage<Entry<Integer, Tuple2<Trade, TaggedMap>>> joinBuild() {
         HashJoinBuilder<Trade> builder = trades.hashJoinBuilder();
         productTag = builder.add(prodEntries, joinMapEntries(Trade::productId));
         brokerTag = builder.add(brokEntries, joinMapEntries(Trade::brokerId));
-        ComputeStage<Tuple2<Trade, BagsByTag>> joined = builder.build();
+        ComputeStage<Tuple2<Trade, TaggedMap>> joined = builder.build();
         return joined.map(t -> entry(t.f0().id(), t));
     }
 
     private void validateJoinBuildResults() {
-        IMap<Integer, Tuple2<Trade, BagsByTag>> result = jet.getMap(RESULT);
+        IMap<Integer, Tuple2<Trade, TaggedMap>> result = jet.getMap(RESULT);
         printImap(result);
         for (int tradeId = 1; tradeId < 5; tradeId++) {
-            Tuple2<Trade, BagsByTag> value = result.get(tradeId);
+            Tuple2<Trade, TaggedMap> value = result.get(tradeId);
             Trade trade = value.f0();
-            BagsByTag bags = value.f1();
-            Collection<Product> products = bags.bag(productTag);
-            Collection<Broker> brokers = bags.bag(brokerTag);
-            assertSingletonColl(products);
-            assertSingletonColl(brokers);
-            Product product = products.iterator().next();
-            Broker broker = brokers.iterator().next();
+            TaggedMap map = value.f1();
+            Product product = map.get(productTag);
+            Broker broker = map.get(brokerTag);
             assertEquals(trade.productId(), product.id());
             assertEquals(trade.brokerId(), broker.id());
         }
@@ -243,18 +236,9 @@ public class PipelineJoinAndCoGroup {
         }
     }
 
-    static <T> void assertEqual(Set<T> expected, Collection<T> actual) {
+    private static <T> void assertEqual(Set<T> expected, Collection<T> actual) {
         if (actual.size() != expected.size() || !expected.containsAll(actual)) {
             throw new AssertionError("Mismatch: expected " + expected + "; actual " + actual);
-        }
-    }
-
-    static void assertSingletonColl(Collection<?> coll) {
-        if (coll == null) {
-            throw new AssertionError("Null collection");
-        }
-        if (coll.size() != 1) {
-            throw new AssertionError("Not a singleton collection: " + coll);
         }
     }
 

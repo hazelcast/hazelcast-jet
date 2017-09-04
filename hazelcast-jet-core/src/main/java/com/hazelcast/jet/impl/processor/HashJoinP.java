@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
-import com.hazelcast.jet.pipeline.bag.BagsByTag;
+import com.hazelcast.jet.pipeline.TaggedMap;
 import com.hazelcast.jet.pipeline.bag.Tag;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
 import com.hazelcast.jet.pipeline.tuple.Tuple3;
@@ -28,11 +28,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
-import static java.util.stream.Collectors.toList;
 
 /**
  * Implements the {@link com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform
@@ -41,7 +39,7 @@ import static java.util.stream.Collectors.toList;
 public class HashJoinP<E0> extends AbstractProcessor {
 
     private final List<Function<E0, Object>> keyFs;
-    private final List<Map<Object, List<Object>>> bagTables;
+    private final List<Map<Object, Object>> lookupTables;
     private final List<Tag> tags;
     private boolean ordinal0consumed;
 
@@ -67,7 +65,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
             @Nonnull List<Tag> tags
     ) {
         this.keyFs = prependNull(keyFs);
-        this.bagTables = prependNull(Collections.nCopies(keyFs.size(), null));
+        this.lookupTables = prependNull(Collections.nCopies(keyFs.size(), null));
         this.tags = tags.isEmpty() ? emptyList() : prependNull(tags);
     }
 
@@ -75,7 +73,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
     @SuppressWarnings("unchecked")
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         assert !ordinal0consumed : "Edge 0 must have a lower priority than all other edges";
-        bagTables.set(ordinal, (Map) item);
+        lookupTables.set(ordinal, (Map) item);
         return true;
     }
 
@@ -86,18 +84,18 @@ public class HashJoinP<E0> extends AbstractProcessor {
         ordinal0consumed = true;
         if (tags.isEmpty()) {
             return tryEmit(keyFs.size() == 2
-                    ? new Tuple2<>(e0, lookupBag(1, e0))
-                    : new Tuple3<>(e0, lookupBag(1, e0), lookupBag(2, e0)));
+                    ? new Tuple2<>(e0, lookupJoined(1, e0))
+                    : new Tuple3<>(e0, lookupJoined(1, e0), lookupJoined(2, e0)));
         }
-        BagsByTag bags = new BagsByTag();
+        TaggedMap map = new TaggedMap();
         for (int i = 1; i < keyFs.size(); i++) {
-            bags.put(tags.get(i), lookupBag(i, e0));
+            map.put(tags.get(i), lookupJoined(i, e0));
         }
-        return tryEmit(new Tuple2<>(e0, bags));
+        return tryEmit(new Tuple2<>(e0, map));
     }
 
-    private List<Object> lookupBag(int ordinal, E0 item) {
-        return bagTables.get(ordinal).getOrDefault(keyFs.get(ordinal).apply(item), emptyList());
+    private Object lookupJoined(int ordinal, E0 item) {
+        return lookupTables.get(ordinal).get(keyFs.get(ordinal).apply(item));
     }
 
     private static <E> List<E> prependNull(List<E> in) {
