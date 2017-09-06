@@ -16,18 +16,19 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.pipeline.bag.Tag;
 import com.hazelcast.jet.pipeline.impl.PipelineImpl;
 import com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform;
-import com.hazelcast.jet.pipeline.tuple.Tuple2;
+import com.hazelcast.jet.pipeline.datamodel.Tuple2;
+import com.hazelcast.jet.pipeline.datamodel.Tag;
+import com.hazelcast.jet.pipeline.datamodel.TaggedMap;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.pipeline.bag.Tag.tag;
-import static com.hazelcast.jet.pipeline.bag.Tag.tag0;
+import static com.hazelcast.jet.pipeline.datamodel.Tag.tag;
+import static com.hazelcast.jet.pipeline.datamodel.Tag.tag0;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 

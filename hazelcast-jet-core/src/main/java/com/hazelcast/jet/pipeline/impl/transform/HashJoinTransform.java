@@ -18,7 +18,7 @@ package com.hazelcast.jet.pipeline.impl.transform;
 
 import com.hazelcast.jet.pipeline.MultiTransform;
 import com.hazelcast.jet.pipeline.JoinClause;
-import com.hazelcast.jet.pipeline.bag.Tag;
+import com.hazelcast.jet.pipeline.datamodel.Tag;
 
 import javax.annotation.Nonnull;
 import java.util.List;

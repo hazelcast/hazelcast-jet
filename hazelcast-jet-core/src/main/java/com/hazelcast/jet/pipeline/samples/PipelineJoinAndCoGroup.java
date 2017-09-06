@@ -26,12 +26,12 @@ import com.hazelcast.jet.pipeline.HashJoinBuilder;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.pipeline.TaggedMap;
-import com.hazelcast.jet.pipeline.bag.BagsByTag;
-import com.hazelcast.jet.pipeline.bag.Tag;
-import com.hazelcast.jet.pipeline.bag.ThreeBags;
-import com.hazelcast.jet.pipeline.tuple.Tuple2;
-import com.hazelcast.jet.pipeline.tuple.Tuple3;
+import com.hazelcast.jet.pipeline.datamodel.BagsByTag;
+import com.hazelcast.jet.pipeline.datamodel.Tag;
+import com.hazelcast.jet.pipeline.datamodel.TaggedMap;
+import com.hazelcast.jet.pipeline.datamodel.ThreeBags;
+import com.hazelcast.jet.pipeline.datamodel.Tuple2;
+import com.hazelcast.jet.pipeline.datamodel.Tuple3;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -81,12 +81,12 @@ public class PipelineJoinAndCoGroup {
         PipelineJoinAndCoGroup sample = new PipelineJoinAndCoGroup(jet);
         try {
             sample.prepareSampleData();
-            sample.joinDirect().drainTo(Sinks.writeMap(RESULT));
+            sample.coGroupBuild().drainTo(Sinks.writeMap(RESULT));
             // This line added to test multiple outputs from a Stage
             sample.tradEntries.drainTo(Sinks.writeMap(RESULT_BROKER));
             sample.execute();
             printImap(jet.getMap(RESULT_BROKER));
-            sample.validateJoinDirectResults();
+            sample.validateCoGroupBuildResults();
         } finally {
             Jet.shutdownAll();
         }

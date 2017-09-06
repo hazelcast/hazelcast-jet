@@ -14,18 +14,22 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.tuple;
+package com.hazelcast.jet.pipeline.datamodel;
 
-import java.util.Map;
 import java.util.Objects;
 
-public class Tuple2<E0, E1> implements Map.Entry<E0, E1> {
+/**
+ * Javadoc pending.
+ */
+public class Tuple3<E0, E1, E2> {
     private E0 f0;
     private E1 f1;
+    private E2 f2;
 
-    public Tuple2(E0 f0, E1 f1) {
+    public Tuple3(E0 f0, E1 f1, E2 f2) {
         this.f0 = f0;
         this.f1 = f1;
+        this.f2 = f2;
     }
 
     public E0 f0() {
@@ -36,38 +40,31 @@ public class Tuple2<E0, E1> implements Map.Entry<E0, E1> {
         return f1;
     }
 
-    @Override
-    public E0 getKey() {
-        return f0;
-    }
-
-    @Override
-    public E1 getValue() {
-        return f1;
-    }
-
-    @Override
-    public E1 setValue(E1 value) {
-        throw new UnsupportedOperationException("Tuple2 is immutable");
+    public E2 f2() {
+        return f2;
     }
 
     @Override
     public boolean equals(Object obj) {
-        final Tuple2 that;
+        final Tuple3 that;
         return this == obj
-                || obj instanceof Tuple2
-                && Objects.equals(this.f0, (that = (Tuple2) obj).f0)
-                && Objects.equals(this.f1, that.f1);
+                || obj instanceof Tuple3
+                && Objects.equals(this.f0, (that = (Tuple3) obj).f0)
+                && Objects.equals(this.f1, that.f1)
+                && Objects.equals(this.f2, that.f2);
     }
 
     @Override
     public int hashCode() {
-        // This implementation is specified by Map.Entry and must not be changed
-        return  f0.hashCode() ^ f1.hashCode();
+        int hc = 17;
+        hc = 73 * hc + f0.hashCode();
+        hc = 73 * hc + f1.hashCode();
+        hc = 73 * hc + f2.hashCode();
+        return hc;
     }
 
     @Override
     public String toString() {
-        return "Tuple2{" + f0 + ", " + f1 + '}';
+        return "Tuple3{" + f0 + ", " + f1 + ", " + f2 + '}';
     }
 }

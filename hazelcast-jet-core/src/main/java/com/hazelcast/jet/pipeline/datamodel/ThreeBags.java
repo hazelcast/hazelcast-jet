@@ -14,27 +14,51 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.bag;
+package com.hazelcast.jet.pipeline.datamodel;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * Javadoc pending.
  */
-public class TwoBags<E0, E1> implements Serializable {
+public class ThreeBags<E0, E1, E2> implements Serializable {
     private final Collection<E0> bag0;
     private final Collection<E1> bag1;
+    private final Collection<E2> bag2;
 
-    public TwoBags(Collection<E0> bag0, Collection<E1> bag1) {
+    public ThreeBags() {
+        this(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+    }
+
+    public ThreeBags(List<E0> bag0, List<E1> bag1, List<E2> bag2) {
         this.bag0 = bag0;
         this.bag1 = bag1;
+        this.bag2 = bag2;
     }
-    public Iterable<E0> bag0() {
+
+    public Collection<E0> bag0() {
         return bag0;
     }
 
-    public Iterable<E1> bag1() {
+    public Collection<E1> bag1() {
         return bag1;
+    }
+
+    public Collection<E2> bag2() {
+        return bag2;
+    }
+
+    public void combineWith(ThreeBags<E0, E1, E2> that) {
+        bag0.addAll(that.bag0());
+        bag1.addAll(that.bag1());
+        bag2.addAll(that.bag2());
+    }
+
+    @Override
+    public String toString() {
+        return "ThreeBags{" + bag0 + ", " + bag1 + ", " + bag2 + '}';
     }
 }

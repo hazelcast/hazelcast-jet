@@ -18,8 +18,8 @@ package com.hazelcast.jet.impl.serialization;
 
 import com.hazelcast.internal.serialization.impl.SerializationConstants;
 import com.hazelcast.jet.TimestampedEntry;
-import com.hazelcast.jet.pipeline.tuple.Tuple2;
-import com.hazelcast.jet.pipeline.tuple.Tuple3;
+import com.hazelcast.jet.pipeline.datamodel.Tuple2;
+import com.hazelcast.jet.pipeline.datamodel.Tuple3;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.Serializer;

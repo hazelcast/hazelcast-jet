@@ -14,18 +14,22 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.pipeline.datamodel;
 
-import com.hazelcast.jet.pipeline.bag.Tag;
-
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * A heterogeneous map, mapping a {@code Tag<E>} to a value of type {@code E}.
- * Each mapping can have a different {@code E}.
+ * A heterogeneous map, mapping a {@code Tag<E>} to a value of type {@code
+ * E}. Each mapping can have a different {@code E}.
+ * <p>
+ * A tagged map is a less typesafe, but more flexible alternative to a
+ * tuple. The tuple has a fixed number of integer-indexed, statically typed
+ * fields, and a tagged map has a variable number of tag-indexed fields
+ * whose whose static type is encoded in the tags.
  */
-public class TaggedMap {
+public class TaggedMap implements Serializable {
     private final Map<Tag, Object> map = new HashMap<>();
 
     @SuppressWarnings("unchecked")

@@ -14,24 +14,18 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.tuple;
+package com.hazelcast.jet.pipeline.datamodel;
 
+import java.util.Map;
 import java.util.Objects;
 
-/**
- * Javadoc pending.
- */
-public class Tuple4<E0, E1, E2, E3> {
+public class Tuple2<E0, E1> implements Map.Entry<E0, E1> {
     private E0 f0;
     private E1 f1;
-    private E2 f2;
-    private E3 f3;
 
-    public Tuple4(E0 f0, E1 f1, E2 f2, E3 f3) {
+    public Tuple2(E0 f0, E1 f1) {
         this.f0 = f0;
         this.f1 = f1;
-        this.f2 = f2;
-        this.f3 = f3;
     }
 
     public E0 f0() {
@@ -42,37 +36,38 @@ public class Tuple4<E0, E1, E2, E3> {
         return f1;
     }
 
-    public E2 f2() {
-        return f2;
+    @Override
+    public E0 getKey() {
+        return f0;
     }
 
-    public E3 f3() {
-        return f3;
+    @Override
+    public E1 getValue() {
+        return f1;
+    }
+
+    @Override
+    public E1 setValue(E1 value) {
+        throw new UnsupportedOperationException("Tuple2 is immutable");
     }
 
     @Override
     public boolean equals(Object obj) {
-        final Tuple4 that;
+        final Tuple2 that;
         return this == obj
-                || obj instanceof Tuple4
-                && Objects.equals(this.f0, (that = (Tuple4) obj).f0)
-                && Objects.equals(this.f1, that.f1)
-                && Objects.equals(this.f2, that.f2)
-                && Objects.equals(this.f3, that.f3);
+                || obj instanceof Tuple2
+                && Objects.equals(this.f0, (that = (Tuple2) obj).f0)
+                && Objects.equals(this.f1, that.f1);
     }
 
     @Override
     public int hashCode() {
-        int hc = 17;
-        hc = 73 * hc + f0.hashCode();
-        hc = 73 * hc + f1.hashCode();
-        hc = 73 * hc + f2.hashCode();
-        hc = 73 * hc + f3.hashCode();
-        return hc;
+        // This implementation is specified by Map.Entry and must not be changed
+        return  f0.hashCode() ^ f1.hashCode();
     }
 
     @Override
     public String toString() {
-        return "Tuple4{" + f0 + ", " + f1 + ", " + f2 + ", " + f3 + '}';
+        return "Tuple2{" + f0 + ", " + f1 + '}';
     }
 }

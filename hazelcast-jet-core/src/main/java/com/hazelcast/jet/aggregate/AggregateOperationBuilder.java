@@ -23,7 +23,7 @@ import com.hazelcast.jet.impl.aggregate.AggregateOperation1Impl;
 import com.hazelcast.jet.impl.aggregate.AggregateOperation2Impl;
 import com.hazelcast.jet.impl.aggregate.AggregateOperation3Impl;
 import com.hazelcast.jet.impl.aggregate.AggregateOperationImpl;
-import com.hazelcast.jet.pipeline.bag.Tag;
+import com.hazelcast.jet.pipeline.datamodel.Tag;
 
 import java.util.HashMap;
 import java.util.Map;

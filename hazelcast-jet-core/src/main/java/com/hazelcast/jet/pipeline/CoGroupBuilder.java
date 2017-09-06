@@ -18,15 +18,15 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.pipeline.bag.Tag;
 import com.hazelcast.jet.pipeline.impl.PipelineImpl;
 import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
-import com.hazelcast.jet.pipeline.tuple.Tuple2;
+import com.hazelcast.jet.pipeline.datamodel.Tuple2;
+import com.hazelcast.jet.pipeline.datamodel.Tag;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.hazelcast.jet.pipeline.bag.Tag.tag;
+import static com.hazelcast.jet.pipeline.datamodel.Tag.tag;
 import static java.util.stream.Collectors.toList;
 
 /**

@@ -14,22 +14,24 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.tuple;
+package com.hazelcast.jet.pipeline.datamodel;
 
 import java.util.Objects;
 
 /**
  * Javadoc pending.
  */
-public class Tuple3<E0, E1, E2> {
+public class Tuple4<E0, E1, E2, E3> {
     private E0 f0;
     private E1 f1;
     private E2 f2;
+    private E3 f3;
 
-    public Tuple3(E0 f0, E1 f1, E2 f2) {
+    public Tuple4(E0 f0, E1 f1, E2 f2, E3 f3) {
         this.f0 = f0;
         this.f1 = f1;
         this.f2 = f2;
+        this.f3 = f3;
     }
 
     public E0 f0() {
@@ -44,14 +46,19 @@ public class Tuple3<E0, E1, E2> {
         return f2;
     }
 
+    public E3 f3() {
+        return f3;
+    }
+
     @Override
     public boolean equals(Object obj) {
-        final Tuple3 that;
+        final Tuple4 that;
         return this == obj
-                || obj instanceof Tuple3
-                && Objects.equals(this.f0, (that = (Tuple3) obj).f0)
+                || obj instanceof Tuple4
+                && Objects.equals(this.f0, (that = (Tuple4) obj).f0)
                 && Objects.equals(this.f1, that.f1)
-                && Objects.equals(this.f2, that.f2);
+                && Objects.equals(this.f2, that.f2)
+                && Objects.equals(this.f3, that.f3);
     }
 
     @Override
@@ -60,11 +67,12 @@ public class Tuple3<E0, E1, E2> {
         hc = 73 * hc + f0.hashCode();
         hc = 73 * hc + f1.hashCode();
         hc = 73 * hc + f2.hashCode();
+        hc = 73 * hc + f3.hashCode();
         return hc;
     }
 
     @Override
     public String toString() {
-        return "Tuple3{" + f0 + ", " + f1 + ", " + f2 + '}';
+        return "Tuple4{" + f0 + ", " + f1 + ", " + f2 + ", " + f3 + '}';
     }
 }

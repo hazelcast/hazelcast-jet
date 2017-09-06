@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.bag;
+package com.hazelcast.jet.pipeline.datamodel;
 
 import java.io.Serializable;
 

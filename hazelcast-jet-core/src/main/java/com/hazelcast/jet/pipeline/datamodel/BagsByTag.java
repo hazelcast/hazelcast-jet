@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.bag;
+package com.hazelcast.jet.pipeline.datamodel;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -38,13 +38,9 @@ public class BagsByTag implements Serializable {
         return (Collection<E>) components.computeIfAbsent(k, x -> new ArrayList<>());
     }
 
-    public <E> void put(Tag<E> t, Collection<E> bag) {
-        components.put(t, bag);
-    }
-
     @SuppressWarnings("unchecked")
     public void combineWith(BagsByTag that) {
-        components.forEach((k, v) -> components.merge(k, that.components.get(k), (thisBag, thatBag) -> {
+        that.components.forEach((k, v) -> this.components.merge(k, v, (thisBag, thatBag) -> {
             thisBag.addAll(thatBag);
             return thisBag;
         }));
