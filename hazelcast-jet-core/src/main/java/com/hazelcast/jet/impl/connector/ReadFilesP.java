@@ -47,7 +47,7 @@ public class ReadFilesP extends AbstractProcessor {
     private final Path directory;
     private final String glob;
 
-    ReadFilesP(String directory, Charset charset, String glob, int parallelism, int id) {
+    private ReadFilesP(String directory, Charset charset, String glob, int parallelism, int id) {
         this.directory = Paths.get(directory);
         this.glob = glob;
         this.charset = charset;

@@ -29,8 +29,8 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.JetTestSupport;
 import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.processor.SinkProcessors;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.processor.SinkProcessors;
 import com.hazelcast.jet.stream.IStreamList;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.nio.Address;
@@ -46,7 +46,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Edge.between;
