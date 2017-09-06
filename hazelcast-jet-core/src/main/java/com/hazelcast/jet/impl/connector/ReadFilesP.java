@@ -39,7 +39,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 /**
  * @see SourceProcessors#readFiles(String, Charset, String)
  */
-public class ReadFilesP extends AbstractProcessor {
+public final class ReadFilesP extends AbstractProcessor {
 
     private final Charset charset;
     private final int parallelism;

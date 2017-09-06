@@ -27,7 +27,6 @@ import com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
 import com.hazelcast.jet.pipeline.tuple.Tuple3;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
 

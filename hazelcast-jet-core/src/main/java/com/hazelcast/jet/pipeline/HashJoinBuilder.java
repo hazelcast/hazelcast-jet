@@ -16,10 +16,9 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform;
-import com.hazelcast.jet.pipeline.impl.PipelineImpl;
-import com.hazelcast.jet.pipeline.bag.BagsByTag;
 import com.hazelcast.jet.pipeline.bag.Tag;
+import com.hazelcast.jet.pipeline.impl.PipelineImpl;
+import com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform;
 import com.hazelcast.jet.pipeline.tuple.Tuple2;
 
 import java.util.HashMap;
