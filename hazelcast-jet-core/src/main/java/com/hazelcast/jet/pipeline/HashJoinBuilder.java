@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Stream;
 
 import static com.hazelcast.jet.pipeline.datamodel.Tag.tag;
 import static com.hazelcast.jet.pipeline.datamodel.Tag.tag0;
@@ -55,16 +56,17 @@ public class HashJoinBuilder<E0> {
         List<ComputeStage> upstream = orderedClauses.stream()
                                                     .map(e -> e.getValue().stage())
                                                     .collect(toList());
+        // A probable javac bug forced us to extract this variable
+        Stream<JoinClause<?, E0, ?, ?>> joinClauses = orderedClauses
+                .stream()
+                .skip(1)
+                .map(e -> e.getValue().clause());
         MultiTransform hashJoinTransform = Transforms.hashJoin(
-                orderedClauses.stream()
-                              .skip(1)
-                              .map(e -> e.getValue().clause())
-                              .collect(toList()),
+                joinClauses.collect(toList()),
                 orderedClauses.stream()
                               .skip(1)
                               .map(Entry::getKey)
-                              .collect(toList())
-        );
+                              .collect(toList()));
         PipelineImpl pipeline = (PipelineImpl) clauses.get(tag0()).stage().getPipeline();
         return pipeline.attach(upstream, hashJoinTransform);
     }

@@ -40,7 +40,6 @@ import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
 import com.hazelcast.jet.impl.processor.TransformP;
-import com.hazelcast.jet.pipeline.datamodel.Tag;
 import com.hazelcast.nio.Address;
 
 import javax.annotation.Nonnull;
@@ -272,7 +271,7 @@ public final class Processors {
      * Returns a supplier of the first-stage processor in a two-stage
      * group-and-aggregate setup. The processor groups items by the grouping
      * key and applies the {@link AggregateOperation#accumulateItemF(
-     *Tag)
+     * com.hazelcast.jet.pipeline.datamodel.Tag)
      * accumulate} primitive to each group. After exhausting all its input it
      * emits one {@code Map.Entry<K, A>} per observed key.
      * <p>
