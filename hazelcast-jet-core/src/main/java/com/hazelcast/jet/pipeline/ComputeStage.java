@@ -22,16 +22,14 @@ import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
-import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
-import com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform;
 import com.hazelcast.jet.pipeline.datamodel.Tuple2;
 import com.hazelcast.jet.pipeline.datamodel.Tuple3;
+import com.hazelcast.jet.pipeline.impl.transform.CoGroupTransform;
 
 import java.util.List;
 import java.util.Map.Entry;
 
 import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
 public interface ComputeStage<E> extends Stage {
@@ -63,7 +61,7 @@ public interface ComputeStage<E> extends Stage {
     default <K, E1_IN, E1> ComputeStage<Tuple2<E, E1>> hashJoin(
             ComputeStage<E1_IN> s1, JoinClause<K, E, E1_IN, E1> joinClause
     ) {
-        return attach(new HashJoinTransform(singletonList(joinClause), emptyList()), singletonList(s1));
+        return attach(Transforms.hashJoin(joinClause), singletonList(s1));
     }
 
     @SuppressWarnings("unchecked")
@@ -71,7 +69,7 @@ public interface ComputeStage<E> extends Stage {
             ComputeStage<E1_IN> s1, JoinClause<K1, E, E1_IN, E1> joinClause1,
             ComputeStage<E2_IN> s2, JoinClause<K2, E, E2_IN, E2> joinClause2
     ) {
-        return attach(new HashJoinTransform(asList(joinClause1, joinClause2), emptyList()), asList(s1, s2));
+        return attach(Transforms.hashJoin(joinClause1, joinClause2), asList(s1, s2));
     }
 
     default HashJoinBuilder<E> hashJoinBuilder() {
@@ -84,7 +82,7 @@ public interface ComputeStage<E> extends Stage {
             ComputeStage<E1> s1, DistributedFunction<? super E1, ? extends K> key1F,
             AggregateOperation2<E, E1, A, R> aggrOp
     ) {
-        return attach(new CoGroupTransform<>(asList(thisKeyF, key1F), aggrOp), singletonList(s1));
+        return attach(Transforms.coGroup(thisKeyF, key1F, aggrOp), singletonList(s1));
     }
 
     @SuppressWarnings("unchecked")
@@ -94,7 +92,7 @@ public interface ComputeStage<E> extends Stage {
             ComputeStage<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
             AggregateOperation3<E, E1, E2, A, R> aggrOp
     ) {
-        return attach(new CoGroupTransform<>(asList(thisKeyF, key1F, key2F), aggrOp), asList(s1, s2));
+        return attach(Transforms.coGroup(thisKeyF, key1F, key2F, aggrOp), asList(s1, s2));
     }
 
     default <K> CoGroupBuilder<K, E> coGroupBuilder(DistributedFunction<? super E, K> thisKeyF) {

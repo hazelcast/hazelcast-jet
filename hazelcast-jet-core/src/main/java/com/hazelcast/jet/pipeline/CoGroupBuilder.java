@@ -55,7 +55,7 @@ public class CoGroupBuilder<K, E0> {
                 .stream()
                 .map(CoGroupClause::pstream)
                 .collect(toList());
-        CoGroupTransform<K, A, R> transform = new CoGroupTransform<>(clauses
+        MultiTransform transform = Transforms.coGroup(clauses
                 .stream()
                 .map(CoGroupClause::groupKeyF)
                 .collect(toList()),

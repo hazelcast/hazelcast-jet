@@ -16,11 +16,10 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.pipeline.impl.PipelineImpl;
-import com.hazelcast.jet.pipeline.impl.transform.HashJoinTransform;
-import com.hazelcast.jet.pipeline.datamodel.Tuple2;
 import com.hazelcast.jet.pipeline.datamodel.Tag;
 import com.hazelcast.jet.pipeline.datamodel.TaggedMap;
+import com.hazelcast.jet.pipeline.datamodel.Tuple2;
+import com.hazelcast.jet.pipeline.impl.PipelineImpl;
 
 import java.util.HashMap;
 import java.util.List;
@@ -56,7 +55,7 @@ public class HashJoinBuilder<E0> {
         List<ComputeStage> upstream = orderedClauses.stream()
                                                     .map(e -> e.getValue().stage())
                                                     .collect(toList());
-        HashJoinTransform transform = new HashJoinTransform(
+        MultiTransform hashJoinTransform = Transforms.hashJoin(
                 orderedClauses.stream()
                               .skip(1)
                               .map(e -> e.getValue().clause())
@@ -67,7 +66,7 @@ public class HashJoinBuilder<E0> {
                               .collect(toList())
         );
         PipelineImpl pipeline = (PipelineImpl) clauses.get(tag0()).stage().getPipeline();
-        return pipeline.attach(upstream, transform);
+        return pipeline.attach(upstream, hashJoinTransform);
     }
 
     private static class StageAndClause<K, E0, E1, E1_OUT> {
