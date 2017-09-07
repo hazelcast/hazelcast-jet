@@ -185,7 +185,7 @@ public class MasterContext {
         for (Vertex vertex : dag) {
             String mapName = snapshotDataMapName(jobId, snapshotId, vertex.getName());
             if (!nodeEngine.getHazelcastInstance().getMap(mapName).isEmpty()) {
-                Vertex readSnapshotVertex = dag.newVertex("__read_snapshot-" + vertex.getName(), readMap(mapName))
+                Vertex readSnapshotVertex = dag.newVertex("__read_snapshot:" + vertex.getName(), readMap(mapName))
                                                .localParallelism(vertex.getLocalParallelism());
                 int destOrdinal = dag.getInboundEdges(vertex.getName()).size();
                 dag.edge(new SnapshotRestoreEdge(readSnapshotVertex, vertex, destOrdinal));

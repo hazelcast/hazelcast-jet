@@ -85,7 +85,7 @@ public final class ExecutionPlanBuilder {
             int procIdxOffset = 0;
             for (Entry<MemberInfo, ExecutionPlan> e : plans.entrySet()) {
                 final ProcessorSupplier processorSupplier = procSupplierFn.apply(e.getKey().getAddress());
-                checkSerializable(processorSupplier, "ProcessorSupplier in vertex " + vertex.getName());
+                checkSerializable(processorSupplier, "ProcessorSupplier in vertex '" + vertex.getName() + '\'');
                 final VertexDef vertexDef = new VertexDef(vertexId, vertex.getName(), processorSupplier,
                         procIdxOffset, localParallelism);
                 vertexDef.addInboundEdges(inbound);

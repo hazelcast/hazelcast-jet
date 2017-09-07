@@ -155,6 +155,21 @@ public class InsertWatermarksPTest {
     }
 
     @Test
+    public void when_zeroLag() {
+        wmPolicy = withFixedLag(0).get();
+        doTest(
+                asList(
+                        item(10),
+                        item(13)),
+                asList(
+                        wm(10),
+                        item(10),
+                        wm(13),
+                        item(13))
+        );
+    }
+
+    @Test
     public void emitByFrame_when_eventsIncrease_then_wmIncreases() {
         wmEmissionPolicy = emitByFrame(tumblingWindowDef(2));
         doTest(

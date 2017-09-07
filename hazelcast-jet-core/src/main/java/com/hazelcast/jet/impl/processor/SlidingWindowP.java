@@ -142,7 +142,8 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
 
     private Map<Object, A> computeWindow(long frameTs) {
         assert bottomTs >= frameTs - wDef.windowLength() + wDef.frameLength()
-                : "probably missed a WM or received late event, bottomTs=" + bottomTs + ", frameTs=" + frameTs;
+                : "probably missed a WM or received late event, bottomTs=" + bottomTs + ", frameTs=" + frameTs
+                        + ", windowLength=" + wDef.windowLength() + ", frameLength=" + wDef.frameLength();
         if (wDef.isTumbling()) {
             return tsToKeyToAcc.getOrDefault(frameTs, emptyMap());
         }
