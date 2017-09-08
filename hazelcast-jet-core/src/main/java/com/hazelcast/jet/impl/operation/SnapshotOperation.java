@@ -18,20 +18,18 @@ package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.init.JetImplDataSerializerHook;
-import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 
 import java.io.IOException;
-import java.util.concurrent.CompletionStage;
 
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static com.hazelcast.jet.impl.util.Util.idToString;
 
 public class SnapshotOperation extends AsyncExecutionOperation {
 
     private long executionId;
     private long snapshotId;
-    private volatile CompletionStage<Void> executionFuture;
 
     // for deserialization
     public SnapshotOperation() {
@@ -46,21 +44,19 @@ public class SnapshotOperation extends AsyncExecutionOperation {
     @Override
     protected void doRun() throws Exception {
         JetService service = getService();
-
-        executionFuture = service.getJobExecutionService()
-                                 .beginSnapshot(getCallerAddress(), jobId, executionId,
-                                         snapshotId).whenComplete((r, v) -> {
-                    LoggingUtil.logFine(getLogger(), "Snapshot %s for job %s finished on member",
-                            snapshotId, idToString(jobId));
-                    doSendResponse(null);
-                });
+        service.getJobExecutionService()
+               .beginSnapshot(getCallerAddress(), jobId, executionId, snapshotId).whenComplete((r, v) -> {
+            logFine(getLogger(), "Snapshot %s for job %s finished on member", snapshotId, idToString(jobId));
+            doSendResponse(null);
+        });
     }
 
     @Override
     public void cancel() {
-        if (executionFuture != null) {
-            executionFuture.toCompletableFuture().cancel(true);
-        }
+        // TODO [basri] this call has no effect
+//        if (executionFuture != null) {
+//            executionFuture.toCompletableFuture().cancel(true);
+//        }
     }
 
     @Override

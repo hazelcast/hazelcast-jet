@@ -71,6 +71,13 @@ public class JobConfig implements Serializable {
     }
 
     /**
+     * TODO [basri] add javadoc
+     */
+    public boolean isSnapshottingEnabled() {
+        return snapshotInterval > 0;
+    }
+
+    /**
      * Return current {@link #setSnapshotIntervalMillis(long) snapshot interval}.
      */
     public long getSnapshotInterval() {

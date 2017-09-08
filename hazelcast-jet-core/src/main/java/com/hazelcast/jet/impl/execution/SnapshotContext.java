@@ -101,6 +101,7 @@ public class SnapshotContext {
      * SnapshotOperation}.
      */
     synchronized CompletableFuture<Void> startNewSnapshot(long snapshotId) {
+        // TODO [basri] is this really necessary? we should only verify monotonicity
         assert snapshotId == lastSnapshotId + 1
                 : "new snapshotId not incremented by 1. Previous=" + lastSnapshotId + ", new=" + snapshotId;
         assert numTasklets >= 0 : "numTasklets=" + numTasklets;
@@ -118,6 +119,7 @@ public class SnapshotContext {
             logger.warning("Snapshot " + snapshotId + " for " + formatIds(jobId, executionId) + " is postponed" +
                     " until all higher priority vertices are completed (number of vertices = "
                     + numHigherPriorityTasklets + ')');
+            // TODO [basri] should we throw retry exception here?
         }
         return (future = new CompletableFuture<>());
     }

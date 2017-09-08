@@ -16,8 +16,10 @@
 
 package com.hazelcast.jet.impl;
 
+import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
+import com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus;
 import com.hazelcast.jet.impl.util.MaxByAggregator;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.query.Predicate;
@@ -41,9 +43,11 @@ public class SnapshotRepository {
      */
     public static final String SNAPSHOT_NAME_PREFIX = "__jet.snapshots.";
 
+    private static final long LATEST_STARTED_SNAPSHOT_ID_KEY = -1;
+
     private final JetInstance instance;
 
-    public SnapshotRepository(JetInstance jetInstance) {
+    SnapshotRepository(JetInstance jetInstance) {
         this.instance = jetInstance;
     }
 
@@ -51,22 +55,35 @@ public class SnapshotRepository {
      * Registers a new snapshot with a proposedId, and increment until the next free snapshot sequence
      * can be found. Returns the ID for the registered snapshot
      */
-    long registerSnapshot(long jobId, long proposedId) {
-        IStreamMap<Long, SnapshotRecord> snapshots = getSnapshotMap(jobId);
+    long registerSnapshot(long jobId) {
+        IStreamMap<Long, Object> snapshots = getSnapshotMap(jobId);
+
         SnapshotRecord record;
         do {
-            record = new SnapshotRecord(jobId, proposedId++);
+            long nextSnapshotId = generateNextSnapshotId(snapshots);
+            record = new SnapshotRecord(jobId, nextSnapshotId);
         } while (snapshots.putIfAbsent(record.snapshotId(), record) != null);
         return record.snapshotId();
     }
 
+    private long generateNextSnapshotId(IStreamMap<Long, Object> snapshots) {
+        Long snapshotId;
+        long nextSnapshotId;
+        do {
+            snapshotId = (Long) snapshots.get(LATEST_STARTED_SNAPSHOT_ID_KEY);
+            nextSnapshotId = (snapshotId == null) ? 0 : (snapshotId + 1);
+        } while (!snapshots.replace(LATEST_STARTED_SNAPSHOT_ID_KEY, snapshotId, nextSnapshotId));
+
+        return nextSnapshotId;
+    }
+
     /**
-     * Mark the given snapshot as completed. Returns the elapsed time for the snapshot.
+     * Updates status of the given snapshot. Returns the elapsed time for the snapshot.
      */
-    long snapshotCompleted(long jobId, long snapshotId) {
+    long setSnapshotStatus(long jobId, long snapshotId, SnapshotStatus status) {
         IStreamMap<Long, SnapshotRecord> snapshots = getSnapshotMap(jobId);
         SnapshotRecord record = compute(snapshots, snapshotId, (k, r) -> {
-            r.setComplete();
+            r.setStatus(status);
             return r;
         });
         return System.currentTimeMillis() - record.startTime();
@@ -76,8 +93,13 @@ public class SnapshotRepository {
      */
     @Nullable
     Long latestCompleteSnapshot(long jobId) {
-        Predicate<Long, SnapshotRecord> completedSnapshots = mapEntry -> mapEntry.getValue().complete();
-        Entry<Long, SnapshotRecord> entry = getSnapshotMap(jobId).aggregate(maxByAggregator(), completedSnapshots);
+        IStreamMap<Long, Object> snapshotMap = getSnapshotMap(jobId);
+        MaxByAggregator<Entry<Long, Object>> entryMaxByAggregator = maxByAggregator();
+        Predicate<Long, Object> completedSnapshots = (Predicate<Long, Object>) e -> {
+            Object value = e.getValue();
+            return value instanceof SnapshotRecord && ((SnapshotRecord) value).isSuccessful();
+        };
+        Entry<Long, Object> entry = snapshotMap.aggregate(entryMaxByAggregator, completedSnapshots);
         return entry != null ? entry.getKey() : null;
     }
 
@@ -86,15 +108,15 @@ public class SnapshotRepository {
      */
     @Nullable
     Long latestStartedSnapshot(long jobId) {
-        Entry<Long, SnapshotRecord> entry = getSnapshotMap(jobId).aggregate(maxByAggregator());
-        return entry != null ? entry.getKey() : null;
+        IMap<Long, Long> map = getSnapshotMap(jobId);
+        return map.get(LATEST_STARTED_SNAPSHOT_ID_KEY);
     }
 
-    private IStreamMap<Long, SnapshotRecord> getSnapshotMap(long jobId) {
+    private <T> IStreamMap<Long, T> getSnapshotMap(long jobId) {
         return instance.getMap(SNAPSHOT_NAME_PREFIX + idToString(jobId));
     }
 
-    private MaxByAggregator<Entry<Long, SnapshotRecord>> maxByAggregator() {
+    private MaxByAggregator<Entry<Long, Object>> maxByAggregator() {
         return new MaxByAggregator<>("snapshotId");
     }
 
