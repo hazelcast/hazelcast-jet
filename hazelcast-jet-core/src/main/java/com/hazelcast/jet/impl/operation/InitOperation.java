@@ -36,7 +36,7 @@ import java.util.function.Supplier;
 
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isJobRestartRequired;
-import static com.hazelcast.jet.impl.util.Util.formatIds;
+import static com.hazelcast.jet.impl.util.Util.jobAndExecutionId;
 import static com.hazelcast.spi.ExceptionAction.THROW_EXCEPTION;
 
 public class InitOperation extends Operation implements IdentifiedDataSerializable {
@@ -66,7 +66,7 @@ public class InitOperation extends Operation implements IdentifiedDataSerializab
         JetService service = getService();
 
         Address caller = getCallerAddress();
-        logger.fine("Initializing execution plan for " + formatIds(jobId, executionId) + " from " + caller);
+        logger.fine("Initializing execution plan for " + jobAndExecutionId(jobId, executionId) + " from " + caller);
         ExecutionPlan plan = planSupplier.get();
         service.initExecution(jobId, executionId, caller, coordinatorMemberListVersion, participants, plan);
     }

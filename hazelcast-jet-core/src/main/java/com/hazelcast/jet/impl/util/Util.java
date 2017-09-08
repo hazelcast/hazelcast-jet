@@ -236,7 +236,7 @@ public final class Util {
         return Holder.NUMBER_GENERATOR.nextLong();
     }
 
-    public static String formatIds(long jobId, long executionId) {
+    public static String jobAndExecutionId(long jobId, long executionId) {
         return "job " + idToString(jobId) + ", execution " + idToString(executionId);
     }
 
