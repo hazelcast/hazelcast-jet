@@ -284,7 +284,7 @@ public class JobCoordinationService {
      * Completes the job which is coordinated with the given master context object.
      */
     void completeJob(MasterContext masterContext, long executionId, long completionTime, Throwable error) {
-        // the order of operations are important.
+        // the order of operations is important.
 
         long jobId = masterContext.getJobId();
         JobRecord jobRecord = jobRepository.getJob(jobId);

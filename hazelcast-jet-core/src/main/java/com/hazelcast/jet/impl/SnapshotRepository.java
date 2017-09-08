@@ -72,9 +72,20 @@ public class SnapshotRepository {
         do {
             snapshotId = (Long) snapshots.get(LATEST_STARTED_SNAPSHOT_ID_KEY);
             nextSnapshotId = (snapshotId == null) ? 0 : (snapshotId + 1);
-        } while (!snapshots.replace(LATEST_STARTED_SNAPSHOT_ID_KEY, snapshotId, nextSnapshotId));
+        } while (!replaceAllowingNull(snapshots, LATEST_STARTED_SNAPSHOT_ID_KEY, snapshotId, nextSnapshotId));
 
         return nextSnapshotId;
+    }
+
+    /**
+     * Alternative for {@link IMap#replace(Object, Object, Object)} allowing null for {@code oldValue}.
+     */
+    private static <K, V> boolean replaceAllowingNull(IMap<K, V> map, K key, V oldValue, V newValue) {
+        if (oldValue == null) {
+            return map.putIfAbsent(key, newValue) == null;
+        } else {
+            return map.replace(key, oldValue, newValue);
+        }
     }
 
     /**
