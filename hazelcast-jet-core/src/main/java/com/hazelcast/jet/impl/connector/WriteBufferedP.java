@@ -76,7 +76,8 @@ public final class WriteBufferedP<B, T> implements Processor {
 
             @Nonnull @Override
             public Collection<? extends Processor> get(int count) {
-                return processors = IntStream.range(0, count)
+                return processors = IntStream
+                        .range(0, count)
                         .mapToObj(i -> new WriteBufferedP<>(newBufferF, addToBufferF, flushBufferF, disposeBufferF))
                         .collect(toList());
             }

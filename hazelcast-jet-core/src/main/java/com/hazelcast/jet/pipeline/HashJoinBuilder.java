@@ -33,21 +33,45 @@ import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 
 /**
- * Builds a hash join transform with any number of joined streams.
+ * Offers a step-by-step fluent API to build a hash-join pipeline stage.
+ * To obtain it, call {@link ComputeStage#hashJoinBuilder()} on the primary
+ * stage, whose data will be enriched from all other stages.
+ * <p>
+ * This object is primarily intended to build a hash-join of the primary
+ * stage with three or more contributing stages. For one or two stages the
+ * direct {@code stage.hashJoin(...)} calls should be preferred because
+ * they offer more static type safety.
  */
 public class HashJoinBuilder<E0> {
     private final Map<Tag<?>, StageAndClause> clauses = new HashMap<>();
 
-    HashJoinBuilder(ComputeStage<E0> leftStream) {
-        add(leftStream, null);
+    HashJoinBuilder(ComputeStage<E0> stage0) {
+        add(stage0, null);
     }
 
-    public <K, E1_IN, E1> Tag<E1> add(ComputeStage<E1_IN> s, JoinClause<K, E0, E1_IN, E1> joinClause) {
+    /**
+     * Adds another contributing pipeline stage to the hash-join operation.
+     *
+     * @param stage the contributing stage
+     * @param joinClause specifies how to join the contributing stage
+     * @param <K> the type of the join key
+     * @param <E1_IN> the type of the contributing stage's data
+     * @param <E1> the type of result after applying the projecting transformation
+     *             to the contributing stage's data
+     * @return the tag that refers to the contributing stage
+     */
+    public <K, E1_IN, E1> Tag<E1> add(ComputeStage<E1_IN> stage, JoinClause<K, E0, E1_IN, E1> joinClause) {
         Tag<E1> tag = tag(clauses.size());
-        clauses.put(tag, new StageAndClause<>(s, joinClause));
+        clauses.put(tag, new StageAndClause<>(stage, joinClause));
         return tag;
     }
 
+    /**
+     * Builds a new pipeline stage that performs the hash-join operation. The
+     * stage is attached to all the contributing stages.
+     *
+     * @return the hash-join pipeline stage
+     */
     @SuppressWarnings("unchecked")
     public ComputeStage<Tuple2<E0, TaggedMap>> build() {
         List<Entry<Tag<?>, StageAndClause>> orderedClauses = clauses.entrySet().stream()

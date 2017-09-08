@@ -31,6 +31,13 @@ import java.util.Map.Entry;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
+/**
+ * Represents a stage in a distributed computation {@link Pipeline
+ * pipeline}. It accepts input from its upstream stages (if any) and
+ * passes its output to its downstream stages.
+ *
+ * @param <E> the type of items coming out of this stage
+ */
 public interface ComputeStage<E> extends Stage {
     <R> ComputeStage<R> attach(UnaryTransform<? super E, R> unaryTransform);
 

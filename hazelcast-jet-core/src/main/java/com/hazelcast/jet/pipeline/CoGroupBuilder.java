@@ -29,7 +29,15 @@ import static com.hazelcast.jet.pipeline.datamodel.Tag.tag;
 import static java.util.stream.Collectors.toList;
 
 /**
- * Javadoc pending.
+ * Offers a step-by-step fluent API to build a co-grouping pipeline stage by
+ * adding any number of contributing stages. To obtain the builder, call
+ * {@link ComputeStage#coGroupBuilder(DistributedFunction)
+ * stage.coGroupBuilder()} on the stage that will become the zero-indexed
+ * contributor to the co-grouping operation.
+ * <p>
+ * This object is primarily intended to build a co-grouping of four or more
+ * stages; for up to three stages the direct {@code stage.coGroup(...)}
+ * calls should be preferred because they offer more static type safety.
  */
 public class CoGroupBuilder<K, E0> {
     private final List<CoGroupClause<?, K>> clauses = new ArrayList<>();
@@ -38,16 +46,38 @@ public class CoGroupBuilder<K, E0> {
         add(s, groupKeyF);
     }
 
+    /**
+     * Returns the tag referring to the 0-indexed contributing pipeline
+     * stage, the one from which this builder was obtained.
+     */
     public Tag<E0> tag0() {
         return Tag.tag0();
     }
 
+    /**
+     * Adds another contributing pipeline stage to the co-grouping operation.
+     *
+     * @param stage the pipeline stage to be co-grouped
+     * @param groupKeyF a function that will extract the key from the data items of the
+     *                  pipeline stage
+     * @param <E> type of items on the pipeline stage
+     * @return the tag referring to the pipeline stage
+     */
     @SuppressWarnings("unchecked")
-    public <E> Tag<E> add(ComputeStage<E> s, DistributedFunction<? super E, K> groupKeyF) {
-        clauses.add(new CoGroupClause<>(s, groupKeyF));
+    public <E> Tag<E> add(ComputeStage<E> stage, DistributedFunction<? super E, K> groupKeyF) {
+        clauses.add(new CoGroupClause<>(stage, groupKeyF));
         return (Tag<E>) tag(clauses.size() - 1);
     }
 
+    /**
+     * Builds a new pipeline stage that performs the co-grouping operation. The
+     * stage is attached to all the contributing stages.
+     *
+     * @param aggrOp the aggregate operation to perform on the co-grouped items
+     * @param <A> the type of the accumulator in the aggregate operation
+     * @param <R> the type of the result of aggregation
+     * @return the co-grouping pipeline stage
+     */
     @SuppressWarnings("unchecked")
     public <A, R> ComputeStage<Tuple2<K, R>> build(AggregateOperation<A, R> aggrOp) {
         List<ComputeStage> upstream = clauses
