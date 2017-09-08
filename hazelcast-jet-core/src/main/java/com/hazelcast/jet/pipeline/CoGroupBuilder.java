@@ -82,28 +82,28 @@ public class CoGroupBuilder<K, E0> {
     public <A, R> ComputeStage<Tuple2<K, R>> build(AggregateOperation<A, R> aggrOp) {
         List<ComputeStage> upstream = clauses
                 .stream()
-                .map(CoGroupClause::pstream)
+                .map(CoGroupClause::stage)
                 .collect(toList());
         MultiTransform transform = Transforms.coGroup(clauses
                 .stream()
                 .map(CoGroupClause::groupKeyF)
                 .collect(toList()),
                 aggrOp);
-        PipelineImpl pipeline = (PipelineImpl) clauses.get(0).pstream.getPipeline();
+        PipelineImpl pipeline = (PipelineImpl) clauses.get(0).stage.getPipeline();
         return pipeline.attach(upstream, transform);
     }
 
     private static class CoGroupClause<E, K> {
-        private final ComputeStage<E> pstream;
+        private final ComputeStage<E> stage;
         private final DistributedFunction<? super E, K> groupKeyF;
 
-        CoGroupClause(ComputeStage<E> pstream, DistributedFunction<? super E, K> groupKeyF) {
-            this.pstream = pstream;
+        CoGroupClause(ComputeStage<E> stage, DistributedFunction<? super E, K> groupKeyF) {
+            this.stage = stage;
             this.groupKeyF = groupKeyF;
         }
 
-        ComputeStage<E> pstream() {
-            return pstream;
+        ComputeStage<E> stage() {
+            return stage;
         }
 
         DistributedFunction<? super E, K> groupKeyF() {

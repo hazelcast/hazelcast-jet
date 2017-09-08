@@ -16,37 +16,55 @@
 
 package com.hazelcast.jet.pipeline.datamodel;
 
+import javax.annotation.Nonnull;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
 /**
- * Javadoc pending.
+ * A container of three bags (collections), each with its own element
+ * type. Bags are identified by their index: 0, 1, and 2. Useful as
+ * a container of co-grouped data.
  */
 public class ThreeBags<E0, E1, E2> implements Serializable {
     private final Collection<E0> bag0;
     private final Collection<E1> bag1;
     private final Collection<E2> bag2;
 
+    /**
+     * Constructs an empty {@code ThreeBags} container.
+     */
     public ThreeBags() {
         this(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
     }
 
-    public ThreeBags(List<E0> bag0, List<E1> bag1, List<E2> bag2) {
+    private ThreeBags(@Nonnull List<E0> bag0, @Nonnull List<E1> bag1, @Nonnull List<E2> bag2) {
         this.bag0 = bag0;
         this.bag1 = bag1;
         this.bag2 = bag2;
     }
 
+    /**
+     * Retrieves the bag at index 0.
+     */
+    @Nonnull
     public Collection<E0> bag0() {
         return bag0;
     }
 
+    /**
+     * Retrieves the bag at index 1.
+     */
+    @Nonnull
     public Collection<E1> bag1() {
         return bag1;
     }
 
+    /**
+     * Retrieves the bag at index 2.
+     */
+    @Nonnull
     public Collection<E2> bag2() {
         return bag2;
     }

@@ -52,6 +52,7 @@ public class AggregateOperation3Impl<T0, T1, T2, A, R>
                                     @Nonnull DistributedFunction<? super A, R> finishAccumulationF
     ) {
         super(createAccumulatorF, accumulateFs, combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
+        validateCountOfAccumulateFs(accumulateFs);
     }
 
     @Nonnull @Override
@@ -87,10 +88,7 @@ public class AggregateOperation3Impl<T0, T1, T2, A, R>
     public AggregateOperation<A, R> withAccumulateItemFs(
             @Nonnull DistributedBiConsumer<? super A, ?>[] accumulateFs
     ) {
-        if (accumulateFs.length != 3) {
-            throw new IllegalArgumentException("AggregateOperationImpl2 needs exactly two accumulating functions," +
-                    " but got " + accumulateFs.length);
-        }
+        validateCountOfAccumulateFs(accumulateFs);
         return new AggregateOperation3Impl<>(createAccumulatorF(), accumulateFs, combineAccumulatorsF(),
                 deductAccumulatorF(), finishAccumulationF());
     }
@@ -101,5 +99,13 @@ public class AggregateOperation3Impl<T0, T1, T2, A, R>
     ) {
         return new AggregateOperation3Impl<>(createAccumulatorF(), accumulateFs, combineAccumulatorsF(),
                 deductAccumulatorF(), finishAccumulationF);
+    }
+
+    private static void validateCountOfAccumulateFs(@Nonnull DistributedBiConsumer[] accumulateFs) {
+        if (accumulateFs.length != 3) {
+            throw new IllegalArgumentException(
+                    "AggregateOperationImpl3 needs exactly three accumulating functions, but got "
+                            + accumulateFs.length);
+        }
     }
 }

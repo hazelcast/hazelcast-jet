@@ -203,7 +203,7 @@ public final class Processors {
      * its input it emits one {@code Map.Entry<K, R>} per observed key.
      *
      * @param getKeyF computes the key from the entry
-     * @param aggregateOperation the aggregate operation to perform
+     * @param aggrOp the aggregate operation to perform
      * @param <T> type of received item
      * @param <K> type of key
      * @param <A> type of accumulator returned from {@code aggregateOperation.
@@ -214,9 +214,9 @@ public final class Processors {
     @Nonnull
     public static <T, K, A, R> DistributedSupplier<Processor> aggregateByKey(
             @Nonnull DistributedFunction<? super T, K> getKeyF,
-            @Nonnull AggregateOperation1<? super T, A, R> aggregateOperation
+            @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        return () -> new CoGroupP<>(getKeyF, aggregateOperation);
+        return () -> new CoGroupP<>(getKeyF, aggrOp);
     }
 
     /**
@@ -252,19 +252,17 @@ public final class Processors {
      * contain a separate accumulation function for each edge.
      *
      * @param getKeyFs functions that compute the grouping key
-     * @param aggregateOperation the aggregate operation
+     * @param aggrOp the aggregate operation
      * @param <K> type of key
-     * @param <A> type of accumulator returned from {@code aggregateOperation.
-     *            createAccumulatorF()}
-     * @param <R> type of the finished result returned from {@code aggregateOperation.
-     *            finishAccumulationF()}
+     * @param <A> type of accumulator returned from {@code aggrOp.createAccumulatorF()}
+     * @param <R> type of the finished result returned from {@code aggrOp.finishAccumulationF()}
      */
     @Nonnull
     public static <K, A, R> DistributedSupplier<Processor> coAggregateByKey(
             @Nonnull List<DistributedFunction<?, ? extends K>> getKeyFs,
-            @Nonnull AggregateOperation<A, R> aggregateOperation
+            @Nonnull AggregateOperation<A, R> aggrOp
     ) {
-        return () -> new CoGroupP<>(getKeyFs, aggregateOperation);
+        return () -> new CoGroupP<>(getKeyFs, aggrOp);
     }
 
     /**

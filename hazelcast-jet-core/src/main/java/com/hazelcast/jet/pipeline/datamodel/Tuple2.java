@@ -19,22 +19,41 @@ package com.hazelcast.jet.pipeline.datamodel;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * A 2-tuple (pair) of statically typed fields. Also implements
+ * {@link Map.Entry}.
+ *
+ * @param <E0> the type of the field 0
+ * @param <E1> the type of the field 1
+ */
 public class Tuple2<E0, E1> implements Map.Entry<E0, E1> {
     private E0 f0;
     private E1 f1;
 
+    /**
+     * Constructs a new 2-tuple with the supplied values.
+     */
     public Tuple2(E0 f0, E1 f1) {
         this.f0 = f0;
         this.f1 = f1;
     }
 
+    /**
+     * Returns the value of the field 0.
+     */
     public E0 f0() {
         return f0;
     }
 
+    /**
+     * Returns the value of the field 1.
+     */
     public E1 f1() {
         return f1;
     }
+
+
+    // Implementation of Map.Entry
 
     @Override
     public E0 getKey() {
@@ -50,6 +69,8 @@ public class Tuple2<E0, E1> implements Map.Entry<E0, E1> {
     public E1 setValue(E1 value) {
         throw new UnsupportedOperationException("Tuple2 is immutable");
     }
+
+
 
     @Override
     public boolean equals(Object obj) {

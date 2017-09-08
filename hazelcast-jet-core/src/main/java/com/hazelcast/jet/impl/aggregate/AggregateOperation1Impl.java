@@ -64,10 +64,9 @@ public class AggregateOperation1Impl<T0, A, R>
     public AggregateOperation<A, R> withAccumulateItemFs(
             @Nonnull DistributedBiConsumer<? super A, ?>[] accumulateFs
     ) {
-        if (accumulateFs.length != 3) {
+        if (accumulateFs.length != 1) {
             throw new IllegalArgumentException(
-                    "AggregateOperationImpl3 needs exactly three accumulating functions, but got "
-                            + accumulateFs.length);
+                    "AggregateOperationImpl1 needs exactly one accumulating function, but got " + accumulateFs.length);
         }
         return new AggregateOperation1Impl<>(
                 createAccumulatorF(), (DistributedBiConsumer<? super A, ? super T0>) accumulateFs[0],

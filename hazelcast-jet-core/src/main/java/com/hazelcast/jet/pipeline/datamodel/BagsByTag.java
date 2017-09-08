@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.pipeline.datamodel;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,27 +25,53 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Javadoc pending.
+ * A heterogeneous map from {@code Tag<E>} to {@code Collection<E>}, where
+ * {@code E} can be different for each tag. Useful as a container of
+ * co-grouped items, where each tag corresponds to one contributing
+ * pipeline stage.
  */
 public class BagsByTag implements Serializable {
     private final Map<Tag<?>, Collection> components = new HashMap<>();
 
+    /**
+     * Retrieves the bag, if any, associated with the supplied tag.
+     *
+     * @param tag the lookup tag
+     * @param <E> the type of items in the returned bag
+     * @return the associated bag or {@code null} if there is none
+     */
+    @Nullable
     @SuppressWarnings("unchecked")
-    public <E> Collection<E> bag(Tag<E> k) {
-        return (Collection<E>) components.get(k);
+    public <E> Collection<E> bag(@Nonnull Tag<E> tag) {
+        return (Collection<E>) components.get(tag);
     }
 
+    /**
+     * Ensures that there is a mapping from the supplied tag to a bag,
+     * creating an empty one if necessary. Returns the bag.
+     *
+     * @param tag the lookup tag
+     * @param <E> the type of items in the returned bag
+     */
+    @Nonnull
     @SuppressWarnings("unchecked")
-    public <E> Collection<E> ensureBag(Tag<E> k) {
-        return (Collection<E>) components.computeIfAbsent(k, x -> new ArrayList<>());
+    public <E> Collection<E> ensureBag(@Nonnull Tag<E> tag) {
+        return (Collection<E>) components.computeIfAbsent(tag, x -> new ArrayList<>());
     }
 
+    /**
+     * Merges the contents of the supplied bag container into this one. If both
+     * containers have a mapping for a given tag, appends the supplied
+     * container's items to the bag in this container; otherwise establishes a
+     * new mapping in this container to a copy of the supplied container's bag.
+     * <p>
+     * Does not modify the supplied container.
+     *
+     * @param that the container to combine with this one.
+     */
     @SuppressWarnings("unchecked")
-    public void combineWith(BagsByTag that) {
-        that.components.forEach((k, v) -> this.components.merge(k, v, (thisBag, thatBag) -> {
-            thisBag.addAll(thatBag);
-            return thisBag;
-        }));
+    public void combineWith(@Nonnull BagsByTag that) {
+        that.components.forEach((k, v) -> ensureBag(k).addAll(v));
     }
 
     @Override

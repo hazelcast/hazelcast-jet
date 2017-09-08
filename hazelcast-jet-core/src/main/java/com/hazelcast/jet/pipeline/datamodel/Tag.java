@@ -19,7 +19,16 @@ package com.hazelcast.jet.pipeline.datamodel;
 import java.io.Serializable;
 
 /**
- * Javadoc pending.
+ * A tag object useful as a key in heterogeneous maps. Carries static type
+ * information in its type parameter, which is expected to correspond to
+ * the type of the item retrieved from the map.
+ * <p>
+ * Tags are also used by hash-join and co-group builder objects. The same
+ * tag supplied to the builder is used to retrieve the data from the
+ * heterogeneous maps ({@link TaggedMap}, {@link BagsByTag}) that appear in
+ * the output.
+ *
+ * @param <T> the type of the data associated with the tag
  */
 public final class Tag<T> implements Serializable, Comparable<Tag<?>> {
     public static final Tag TAG_0 = new Tag(0);
@@ -32,10 +41,21 @@ public final class Tag<T> implements Serializable, Comparable<Tag<?>> {
         this.index = index;
     }
 
+    /**
+     * Returns the index associated with this tag. It can refer to the
+     * index of a contributing stream in a hash-join or co-group operation,
+     * or to the index used internally to store the data associated with
+     * the tag.
+     */
     public int index() {
         return index;
     }
 
+    /**
+     * Returns a tag object associated with the specified index. The
+     * tag's type parameter is inferred from the call site. The method
+     * will not necessarily create a new tag object.
+     */
     public static <T> Tag<T> tag(int index) {
         return index == 0 ? TAG_0
              : index == 1 ? TAG_1
@@ -43,16 +63,25 @@ public final class Tag<T> implements Serializable, Comparable<Tag<?>> {
              : new Tag<>(index);
     }
 
+    /**
+     * Returns the tag constant {@link #TAG_0}.
+     */
     @SuppressWarnings("unchecked")
     public static <T> Tag<T> tag0() {
         return TAG_0;
     }
 
+    /**
+     * Returns the tag constant {@link #TAG_1}.
+     */
     @SuppressWarnings("unchecked")
     public static <T> Tag<T> tag1() {
         return TAG_1;
     }
 
+    /**
+     * Returns the tag constant {@link #TAG_2}.
+     */
     @SuppressWarnings("unchecked")
     public static <T> Tag<T> tag2() {
         return TAG_2;

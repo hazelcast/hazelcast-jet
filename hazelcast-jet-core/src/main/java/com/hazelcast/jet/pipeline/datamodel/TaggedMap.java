@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.pipeline.datamodel;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -25,19 +27,28 @@ import java.util.Map;
  * E}. Each mapping can have a different {@code E}.
  * <p>
  * A tagged map is a less typesafe, but more flexible alternative to a
- * tuple. The tuple has a fixed number of integer-indexed, statically typed
+ * tuple. The tuple has a fixed number of integer-indexed, statically-typed
  * fields, and a tagged map has a variable number of tag-indexed fields
  * whose whose static type is encoded in the tags.
  */
 public class TaggedMap implements Serializable {
     private final Map<Tag, Object> map = new HashMap<>();
 
+    /**
+     * Retrieves the object associated with the supplied tag, or {@code null}
+     * if there is none. The argument must not be {@code null}.
+     */
+    @Nullable
     @SuppressWarnings("unchecked")
-    public <E> E get(Tag<E> tag) {
+    public <E> E get(@Nonnull Tag<E> tag) {
         return (E) map.get(tag);
     }
 
-    public <E> void put(Tag<E> tag, E value) {
+    /**
+     * Associates the supplied object with the supplied tag. Neither the tag
+     * nor object may be {@code null}.
+     */
+    public <E> void put(@Nonnull Tag<E> tag, @Nonnull E value) {
         map.put(tag, value);
     }
 }
