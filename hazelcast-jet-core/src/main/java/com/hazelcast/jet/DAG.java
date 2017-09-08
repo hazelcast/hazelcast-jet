@@ -36,6 +36,7 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
 import static com.hazelcast.util.Preconditions.checkTrue;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.newSetFromMap;
 import static java.util.stream.Collectors.groupingBy;
 
@@ -67,6 +68,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
 
     private Set<Edge> edges = new LinkedHashSet<>();
     private Map<String, Vertex> nameToVertex = new HashMap<>();
+    // Transient field:
     private Set<Vertex> verticesByIdentity = newSetFromMap(new IdentityHashMap<Vertex, Boolean>());
 
     /**
@@ -245,6 +247,9 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
         for (Edge edge : edges) {
             adjacencyMap.computeIfAbsent(edge.getSource(), x -> new ArrayList<>())
                         .add(edge.getDestination());
+        }
+        for (Vertex v : nameToVertex.values()) {
+            adjacencyMap.computeIfAbsent(v, x -> emptyList());
         }
         return topologicalSort(adjacencyMap, Vertex::getName);
     }
