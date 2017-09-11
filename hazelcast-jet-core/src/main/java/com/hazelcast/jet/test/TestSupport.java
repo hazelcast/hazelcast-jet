@@ -31,8 +31,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
+import java.util.function.BiPredicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -60,35 +62,34 @@ public final class TestSupport {
     }
 
     /**
-     * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean)}
+     * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean, boolean, boolean, BiPredicate)}
      * with progress assertion and snapshot+restore enabled.
      */
     public static <T, U> void testProcessor(@Nonnull DistributedSupplier<Processor> supplier,
                                             @Nonnull List<T> input, @Nonnull List<U> expectedOutput) {
-        testProcessor(supplier, input, expectedOutput, true, true);
+        testProcessor(supplier, input, expectedOutput, true, true, false, true, Objects::equals);
     }
 
     /**
-     * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean)}
-     * with progress assertion and snapshot+restoreenabled.
+     * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean, boolean, boolean, BiPredicate)}
+     * with progress assertion and snapshot+restore enabled.
      */
     public static <T, U> void testProcessor(@Nonnull ProcessorSupplier supplier,
                                             @Nonnull List<T> input, @Nonnull List<U> expectedOutput) {
-        testProcessor(supplierFrom(supplier), input, expectedOutput, true, true);
+        testProcessor(supplierFrom(supplier), input, expectedOutput, true, true, false, true, Objects::equals);
     }
 
     /**
-     * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean)}
-     * with progress assertion and snapshot+restoreenabled.
+     * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean, boolean, boolean, BiPredicate)}
+     * with progress assertion and snapshot+restore enabled.
      */
     public static <T, U> void testProcessor(@Nonnull ProcessorMetaSupplier supplier,
                                             @Nonnull List<T> input, @Nonnull List<U> expectedOutput) {
-        testProcessor(supplierFrom(supplier), input, expectedOutput, true, true);
+        testProcessor(supplierFrom(supplier), input, expectedOutput, true, true, false, true, Objects::equals);
     }
 
     /**
-     * Convenience for {@link #testProcessor(Supplier, List, List, boolean,
-     * boolean)} with progress assertion enabled. Snapshot+restore is disabled
+     * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean, boolean, boolean, BiPredicate)} with progress assertion enabled. Snapshot+restore is disabled
      * since we don't have processor supplier and cannot create new instances
      * of the processor.
      */
@@ -102,7 +103,7 @@ public final class TestSupport {
             } finally {
                 p[0] = null;
             }
-        }, input, expectedOutput, true, false);
+        }, input, expectedOutput, true, false, false, true, Objects::equals);
     }
 
     /**
@@ -178,10 +179,8 @@ public final class TestSupport {
      *         asList("FOO", "BAR")
      * );
      * }</pre>
-     *
      * @param <T> input items type
      * @param <U> output items type
-     *
      * @param supplier a processor instance to test
      * @param input input to pass
      * @param expectedOutput expected output
@@ -190,18 +189,26 @@ public final class TestSupport {
      * @param doSnapshots if true, snapshot will be saved and restored before
      *                    first item and after each {@code process()} and {@code
      *                    complete()} call. The normal test will be performed too (as
-     *                    if this parameter was false)
+     * @param logInputOutput if {@code true}, input and output objects
+     * @param callComplete Whether to call {@code complete()} method. Suitable for
+     *                     testing of streaming processors to make sure that flushing code in
+     *                     complete is not executed.
+     * @param outputChecker Predicate to compare expected and actual output.
      */
     public static <T, U> void testProcessor(@Nonnull Supplier<Processor> supplier,
                                             @Nonnull List<T> input,
                                             @Nonnull List<U> expectedOutput,
                                             boolean assertProgress,
-                                            boolean doSnapshots) {
+                                            boolean doSnapshots,
+                                            boolean logInputOutput,
+                                            boolean callComplete,
+                                            @Nonnull BiPredicate<? super List<U>, ? super List<Object>> outputChecker) {
         if (doSnapshots) {
             // if we test with snapshots, also do the test without snapshots
-            System.out.println("Running the test with doSnapshots=false");
-            testProcessor(supplier, input, expectedOutput, assertProgress, false);
-            System.out.println("Running the test with doSnapshots=true");
+            System.out.println("### Running the test with doSnapshots=false");
+            testProcessor(supplier, input, expectedOutput, assertProgress, false, logInputOutput,
+                    callComplete, outputChecker);
+            System.out.println("### Running the test with doSnapshots=true");
         }
 
         TestInbox inbox = new TestInbox();
@@ -216,13 +223,16 @@ public final class TestSupport {
         processor.init(outbox, new TestProcessorContext());
 
         // do snapshot+restore before processing any item. This will test saveSnapshot() in this edge case
-        processor = snapshotAndRestore(processor, supplier, outbox, actualOutput, doSnapshots, assertProgress);
+        processor = snapshotAndRestore(processor, supplier, outbox, actualOutput, doSnapshots, assertProgress, logInputOutput);
 
         // call the process() method
         Iterator<T> inputIterator = input.iterator();
         while (inputIterator.hasNext() || !inbox.isEmpty()) {
             if (inbox.isEmpty()) {
                 inbox.add(inputIterator.next());
+                if (logInputOutput) {
+                    System.out.println("Input: " + inbox.peek());
+                }
             }
             processor.process(0, inbox);
             assertTrue("process() call without progress",
@@ -233,29 +243,33 @@ public final class TestSupport {
                 // more items to the outbox.
                 processor.process(0, inbox);
             }
-            drainOutbox(outbox.queueWithOrdinal(0), actualOutput);
+            drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
             if (inbox.isEmpty()) {
-                processor = snapshotAndRestore(processor, supplier, outbox, actualOutput, doSnapshots, assertProgress);
+                processor = snapshotAndRestore(processor, supplier, outbox, actualOutput, doSnapshots, assertProgress, logInputOutput);
             }
         }
 
         // call the complete() method
-        boolean done;
-        do {
-            done = processor.complete();
-            assertTrue("complete() call without progress",
-                    !assertProgress || done || !outbox.queueWithOrdinal(0).isEmpty());
-            drainOutbox(outbox.queueWithOrdinal(0), actualOutput);
-            processor = snapshotAndRestore(processor, supplier, outbox, actualOutput, doSnapshots, assertProgress);
-        } while (!done);
+        if (callComplete) {
+            boolean done;
+            do {
+                done = processor.complete();
+                assertTrue("complete() call without progress",
+                        !assertProgress || done || !outbox.queueWithOrdinal(0).isEmpty());
+                drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
+                processor = snapshotAndRestore(processor, supplier, outbox, actualOutput, doSnapshots, assertProgress, logInputOutput);
+            } while (!done);
+        }
 
         // assert the outbox
-        assertEquals("processor output doesn't match", listToString(expectedOutput), listToString(actualOutput));
+        if (!outputChecker.test(expectedOutput, actualOutput)) {
+            assertEquals("processor output doesn't match", listToString(expectedOutput), listToString(actualOutput));
+        }
     }
 
     private static Processor snapshotAndRestore(Processor currentProcessor, Supplier<Processor> supplier,
                                                 TestOutbox outbox, List<Object> actualOutput,
-                                                boolean enabled, boolean assertProgress) {
+                                                boolean enabled, boolean assertProgress, boolean logInputOutput) {
         if (!enabled) {
             return currentProcessor;
         }
@@ -275,7 +289,7 @@ public final class TestSupport {
             assertTrue("saveSnapshot() call without progress",
                     !assertProgress || done || !outbox.snapshotQueue().isEmpty()
                             || !outbox.queueWithOrdinal(0).isEmpty());
-            drainOutbox(outbox.queueWithOrdinal(0), actualOutput);
+            drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
             outbox.snapshotQueue().clear();
         } while (!done);
 
@@ -292,13 +306,13 @@ public final class TestSupport {
             newProcessor.restoreSnapshot(snapshotInbox);
             assertTrue("restoreSnapshot() call without progress",
                     !assertProgress || lastInboxSize > snapshotInbox.size() || !outbox.queueWithOrdinal(0).isEmpty());
-            drainOutbox(outbox.queueWithOrdinal(0), actualOutput);
+            drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
             lastInboxSize = snapshotInbox.size();
         }
         while (!newProcessor.finishSnapshotRestore()) {
             assertTrue("finishSnapshotRestore() call without progress",
                     !assertProgress || !outbox.queueWithOrdinal(0).isEmpty());
-            drainOutbox(outbox.queueWithOrdinal(0), actualOutput);
+            drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
         }
         return newProcessor;
     }
@@ -307,10 +321,14 @@ public final class TestSupport {
      * Move all items from the outbox to the {@code outputList}.
      * @param outboxBucket the queue from Outbox to drain
      * @param outputList target list
+     * @param log
      */
-    public static void drainOutbox(Queue<Object> outboxBucket, List<Object> outputList) {
+    public static void drainOutbox(Queue<Object> outboxBucket, List<Object> outputList, boolean log) {
         for (Object o; (o = outboxBucket.poll()) != null; ) {
             outputList.add(o);
+            if (log) {
+                System.out.println("Output: " + o);
+            }
         }
     }
 

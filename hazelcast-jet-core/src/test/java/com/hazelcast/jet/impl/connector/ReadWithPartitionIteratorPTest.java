@@ -47,7 +47,7 @@ public class ReadWithPartitionIteratorPTest {
 
         // Given
         final List<Integer> partitions = asList(0, 1);
-        final Iterator<Entry<Integer, Integer>>[] content = new Iterator[] {
+        final Iterator<Entry<Integer, Integer>>[] content = new Iterator[]{
                 iterate(51, 52, 53),
                 iterate(71, 72, 73),
         };

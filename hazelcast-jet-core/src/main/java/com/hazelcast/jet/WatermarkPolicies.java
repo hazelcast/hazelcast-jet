@@ -146,8 +146,9 @@ public final class WatermarkPolicies {
         return limitingTimestampAndWallClockLag(timestampLag, wallClockLag, System::currentTimeMillis);
     }
 
+    // TODO make package-private or move to impl package
     @Nonnull
-    static DistributedSupplier<WatermarkPolicy> limitingTimestampAndWallClockLag(
+    public static DistributedSupplier<WatermarkPolicy> limitingTimestampAndWallClockLag(
             long timestampLag, long wallClockLag, DistributedLongSupplier wallClock
     ) {
         checkNotNegative(timestampLag, "timestampLag must not be negative");

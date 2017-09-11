@@ -20,8 +20,8 @@ import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.accumulator.LongAccumulator;
-import com.hazelcast.jet.test.TestSupport;
 import com.hazelcast.test.HazelcastParallelClassRunner;
+import com.hazelcast.test.annotation.ParallelTest;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
 import org.junit.Before;
@@ -36,15 +36,17 @@ import static com.hazelcast.jet.AggregateOperations.summingLong;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
+import static com.hazelcast.jet.test.TestSupport.testProcessor;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.assertTrue;
 
-@Category(QuickTest.class)
+@Category({QuickTest.class, ParallelTest.class})
 @RunWith(HazelcastParallelClassRunner.class)
 public class SlidingWindowP_stage1Test {
 
     private static final long KEY = 77L;
+
     private SlidingWindowP<Entry<Long, Long>, Long, ?> processor;
 
     @Before
@@ -54,7 +56,7 @@ public class SlidingWindowP_stage1Test {
                 x -> KEY,
                 Entry::getKey,
                 TimestampKind.EVENT,
-                slidingWindowDef(16, 4),
+                slidingWindowDef(16, 4), // this will get converted to tumblingWindowDef(4)
                 summingLong(Entry<Long, Long>::getValue)
         ).get();
     }
@@ -67,62 +69,83 @@ public class SlidingWindowP_stage1Test {
 
     @Test
     public void smokeTest() {
-        TestSupport.testProcessor(processor,
+        testProcessor(() -> processor,
                 asList(
                         entry(0L, 1L), // to frame 4
                         entry(1L, 1L), // to frame 4
-                        wm(3), // does not close anything
                         wm(4), // closes frame 4
                         entry(4L, 1L), // to frame 8
                         entry(5L, 1L), // to frame 8
                         entry(8L, 1L), // to frame 12
-                        wm(6), // no effect
-                        wm(7), // no effect
                         entry(8L, 1L), // to frame 12
                         wm(8), // closes frame 8
                         entry(8L, 1L), // to frame 12
-                        wm(21) // closes everything
+                        wm(12),
+                        wm(16),
+                        wm(20) // closes everything
                 ),
                 asList(
-                        wm(3),
                         frame(4, 2),
                         wm(4),
-                        wm(6),
-                        wm(7),
                         frame(8, 2),
                         wm(8),
                         frame(12, 3),
-                        wm(21)
-                ));
+                        wm(12),
+                        wm(16),
+                        wm(20)
+                ), true, false, false, false, Object::equals);
     }
 
     @Test
     public void when_noEvents_then_wmsEmitted() {
         List<Watermark> someWms = asList(
-                wm(2),
-                wm(3),
                 wm(4),
-                wm(5),
-                wm(6),
                 wm(8),
-                wm(20)
+                wm(12)
         );
 
-        TestSupport.testProcessor(processor, someWms, someWms);
+        testProcessor(() -> processor, someWms, someWms, true, false, false, false, Object::equals);
     }
 
     @Test
     public void when_batch_then_emitEverything() {
         long start = System.nanoTime();
-        TestSupport.testProcessor(processor,
+        testProcessor(() -> processor,
                 asList(
                         entry(0L, 1L), // to frame 4
+                        entry(4L, 1L), // to frame 8
+                        entry(8L, 1L), // to frame 12
                         wm(4) // closes frame 4
+                        // no WM to emit any window, everything should be emitted in complete as if we received
+                        // wm(4), wm(8), wm(12)
                 ),
                 asList(
                         frame(4, 1),
-                        wm(4)
-                ));
+                        wm(4),
+                        frame(8, 1),
+                        frame(12, 1)
+                ), true, false, false, true, Object::equals);
+
+        long processTime = System.nanoTime() - start;
+        // this is to test that there is no iteration from current watermark up to Long.MAX_VALUE, which
+        // will take too long.
+        assertTrue("process took too long: " + processTime, processTime < MILLISECONDS.toNanos(300));
+    }
+
+    @Test
+    public void when_wmNeverReceived_then_emitEverythingInComplete() {
+        long start = System.nanoTime();
+        testProcessor(() -> processor,
+                asList(
+                        entry(0L, 1L), // to frame 4
+                        entry(4L, 1L) // to frame 8
+                        // no WM to emit any window, everything should be emitted in complete as if we received
+                        // wm(4), wm(8)
+                ),
+                asList(
+                        frame(4, 1),
+                        frame(8, 1)
+                ), true, false, false, true, Object::equals);
 
         long processTime = System.nanoTime() - start;
         // this is to test that there is no iteration from current watermark up to Long.MAX_VALUE, which

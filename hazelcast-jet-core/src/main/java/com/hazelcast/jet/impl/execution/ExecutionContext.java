@@ -25,12 +25,14 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.BufferObjectDataInput;
 import com.hazelcast.spi.NodeEngine;
+import com.hazelcast.spi.exception.RetryableHazelcastException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
@@ -163,7 +165,15 @@ public class ExecutionContext {
     }
 
     public CompletionStage<Void> beginSnapshot(long snapshotId) {
-        return snapshotContext.startNewSnapshot(snapshotId);
+        synchronized (executionLock) {
+            if (jobFuture == null) {
+                throw new RetryableHazelcastException();
+            } else if (jobFuture.toCompletableFuture().isDone()) {
+                throw new CancellationException();
+            }
+
+            return snapshotContext.startNewSnapshot(snapshotId);
+        }
     }
 
     public boolean isParticipating(Address member) {

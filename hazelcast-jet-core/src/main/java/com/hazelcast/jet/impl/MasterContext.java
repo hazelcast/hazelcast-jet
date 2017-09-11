@@ -48,8 +48,6 @@ import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -66,11 +64,12 @@ import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.SnapshotRepository.snapshotDataMapName;
 import static com.hazelcast.jet.impl.execution.SnapshotContext.NO_SNAPSHOT;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.isJobRestartRequired;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.isTopologicalFailure;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.Util.formatIds;
 import static com.hazelcast.jet.impl.util.Util.idToString;
-import static com.hazelcast.jet.processor.Sources.readMap;
+import static com.hazelcast.jet.processor.SourceProcessors.readMap;
+import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.partitioningBy;
 import static java.util.stream.Collectors.toList;
 
@@ -88,9 +87,6 @@ public class MasterContext {
     private volatile long executionId;
     private volatile long jobStartTime;
     private volatile Map<MemberInfo, ExecutionPlan> executionPlanMap;
-
-    private volatile long nextSnapshotId;
-    private volatile ScheduledFuture<?> scheduledSnapshotFuture;
 
     MasterContext(NodeEngineImpl nodeEngine, JobCoordinationService coordinationService, JobRecord jobRecord) {
         this.nodeEngine = nodeEngine;
@@ -111,6 +107,10 @@ public class MasterContext {
 
     public JobStatus jobStatus() {
         return jobStatus.get();
+    }
+
+    public JobConfig getJobConfig() {
+        return jobRecord.getConfig();
     }
 
     CompletableFuture<Boolean> completionFuture() {
@@ -145,10 +145,11 @@ public class MasterContext {
         // last started snapshot complete or not complete. The next started snapshot must be greater than this number
         long lastSnapshotId = NO_SNAPSHOT;
         if (jobStatus() == RESTARTING && jobRecord.getConfig().getSnapshotInterval() > 0) {
-            Long snapshotId = snapshotRepository.latestCompleteSnapshot(jobId);
+            // TODO [basri] verify snapshot
+            Long snapshotIdToRestore = snapshotRepository.latestCompleteSnapshot(jobId);
             Long lastStartedSnapshot = snapshotRepository.latestStartedSnapshot(jobId);
-            if (snapshotId != null) {
-                rewriteDagWithSnapshotRestore(dag, snapshotId);
+            if (snapshotIdToRestore != null) {
+                rewriteDagWithSnapshotRestore(dag, snapshotIdToRestore);
             } else {
                 logger.warning("No usable snapshot for job " + idToString(jobId) + " found.");
             }
@@ -165,6 +166,7 @@ public class MasterContext {
             logger.fine("Building execution plan for " + formatIds(jobId, executionId));
             //TODO: incomplete snapshot id needs to be skipped here
             JobConfig jobConfig = jobRecord.getConfig();
+            // TODO [basri] why do ExecutionPlan receive last snapshot id? is it for assertions?
             executionPlanMap = ExecutionPlanBuilder.createExecutionPlans(nodeEngine,
                     membersView, dag, jobConfig, lastSnapshotId);
         } catch (TopologyChangedException e) {
@@ -185,7 +187,7 @@ public class MasterContext {
         for (Vertex vertex : dag) {
             String mapName = snapshotDataMapName(jobId, snapshotId, vertex.getName());
             if (!nodeEngine.getHazelcastInstance().getMap(mapName).isEmpty()) {
-                Vertex readSnapshotVertex = dag.newVertex("__read_snapshot-" + vertex.getName(), readMap(mapName))
+                Vertex readSnapshotVertex = dag.newVertex("__read_snapshot:" + vertex.getName(), readMap(mapName))
                                                .localParallelism(vertex.getLocalParallelism());
                 int destOrdinal = dag.getInboundEdges(vertex.getName()).size();
                 dag.edge(new SnapshotRestoreEdge(readSnapshotVertex, vertex, destOrdinal));
@@ -305,7 +307,7 @@ public class MasterContext {
         return failures
                 .stream()
                 .map(e -> (Throwable) e.getValue())
-                .filter(t -> !isJobRestartRequired(t))
+                .filter(t -> !isTopologicalFailure(t))
                 .findFirst()
                 .map(ExceptionUtil::peel)
                 .orElse(new TopologyChangedException());
@@ -313,10 +315,15 @@ public class MasterContext {
 
     // true -> failures, false -> success responses
     private Map<Boolean, List<Entry<MemberInfo, Object>>> groupResponses(Map<MemberInfo, Object> responses) {
-        return responses
+        Map<Boolean, List<Entry<MemberInfo, Object>>> grouped = responses
                 .entrySet()
                 .stream()
                 .collect(partitioningBy(e -> e.getValue() instanceof Throwable));
+
+        grouped.putIfAbsent(true, emptyList());
+        grouped.putIfAbsent(false, emptyList());
+
+        return grouped;
     }
 
     // If a participant leaves or the execution fails in a participant locally, executions are cancelled
@@ -326,58 +333,52 @@ public class MasterContext {
         logger.fine("Executing " + formatIds(jobId, executionId));
         Function<ExecutionPlan, Operation> operationCtor = plan -> new ExecuteOperation(jobId, executionId);
         invoke(operationCtor, this::onExecuteStepCompleted, completionFuture);
-        scheduleSnapshot();
+
+        if (getJobConfig().isSnapshottingEnabled()) {
+            coordinationService.scheduleSnapshot(jobId, executionId);
+        }
     }
 
-    private void scheduleSnapshot() {
-        long interval = jobRecord.getConfig().getSnapshotInterval();
-        if (interval <= 0) {
+    void beginSnapshot(long executionId) {
+        if (this.executionId != executionId) {
+            // current execution is completed and probably a new execution has started
+            logger.warning("Not beginning snapshot since expected execution id " + idToString(executionId)
+            + " does not match to " + formatIds(jobId, executionId));
             return;
         }
 
-        String name = "jet.snapshot.job-" + idToString(jobId) + ".execution-" + idToString(executionId);
-        scheduledSnapshotFuture = nodeEngine.getExecutionService().schedule(
-                name, this::beginSnapshot, interval, TimeUnit.MILLISECONDS);
-    }
+        long newSnapshotId = snapshotRepository.registerSnapshot(jobId);
 
-    private void beginSnapshot() {
-        long snapshotId = snapshotRepository.registerSnapshot(jobId, nextSnapshotId);
-        nextSnapshotId = snapshotId + 1;
-
-        logger.info(String.format("Starting snapshot %s for job %s", snapshotId, idToString(jobId)));
+        logger.info(String.format("Starting snapshot %s for %s", newSnapshotId, formatIds(jobId, executionId)));
         Function<ExecutionPlan, Operation> factory =
-                plan -> new SnapshotOperation(jobId, executionId, snapshotId);
-        invoke(factory, responses -> onSnapshotCompleted(responses, snapshotId), completionFuture);
+                plan -> new SnapshotOperation(jobId, executionId, newSnapshotId);
+
+        invoke(factory, responses -> onSnapshotCompleted(responses, executionId, newSnapshotId), null);
     }
 
-    private void onSnapshotCompleted(Map<MemberInfo, Object> responses, long snapshotId) {
+    private void onSnapshotCompleted(Map<MemberInfo, Object> responses, long executionId, long snapshotId) {
         // check if all members were successful
-        boolean completed = true;
-        for (Object r : responses.values()) {
-            if (r instanceof Throwable) {
-                logger.warning(SnapshotOperation.class.getSimpleName() + " for " + formatIds(jobId, executionId)
-                        + " failed on some members: " + r, (Throwable) r);
-                completed = false;
-            }
+        // we don't check execution plan on purpose since this snapshot might be stale
+        Map<Boolean, List<Entry<MemberInfo, Object>>> grouped = groupResponses(responses);
+        List<Entry<MemberInfo, Object>> failures = grouped.get(true);
+        List<Entry<MemberInfo, Object>> nonTopologicalFailures = failures.stream()
+                                                                         .filter(e -> !(e.getValue()
+                                                                                 instanceof CancellationException ||
+                                                                                 isTopologicalFailure(e.getValue())))
+                                                                         .collect(toList());
+
+        if (!nonTopologicalFailures.isEmpty()) {
+            logger.warning(formatIds(jobId, executionId) + " snapshot " + snapshotId + " has failures: "
+                    + nonTopologicalFailures);
         }
 
-        if (completed) {
-            // mark the record in the map as completed
-            long elapsed = snapshotRepository.snapshotCompleted(jobId, snapshotId);
-            logger.info(String.format("Snapshot %s for job %s completed in %dms", snapshotId,
-                    idToString(jobId), elapsed));
-            //TODO: exception get swallowed here
-            //TODO: delete older snapshots
+        boolean successful = failures.isEmpty();
 
-            scheduleSnapshot();
-        }
+        coordinationService.completeSnapshot(jobId, executionId, snapshotId, successful);
     }
 
     // Called as callback when all ExecuteOperation invocations are done
     private void onExecuteStepCompleted(Map<MemberInfo, Object> responses) {
-        if (scheduledSnapshotFuture != null) {
-            scheduledSnapshotFuture.cancel(true);
-        }
         invokeComplete(getExecuteResult(responses));
     }
 
@@ -409,7 +410,7 @@ public class MasterContext {
         return failures
                 .stream()
                 .map(e -> (Throwable) e.getValue())
-                .filter(t -> !(t instanceof CancellationException || isJobRestartRequired(t)))
+                .filter(t -> !(t instanceof CancellationException || isTopologicalFailure(t)))
                 .findFirst()
                 .map(ExceptionUtil::peel)
                 .orElse(new TopologyChangedException());
@@ -451,6 +452,8 @@ public class MasterContext {
             return;
         }
 
+        long executionId = resetExecutionId();
+
         long completionTime = System.currentTimeMillis();
         if (failure instanceof TopologyChangedException) {
             scheduleRestart();
@@ -466,13 +469,19 @@ public class MasterContext {
         }
 
         try {
-            coordinationService.completeJob(this, completionTime, failure);
+            coordinationService.completeJob(this, executionId, completionTime, failure);
         } catch (RuntimeException e) {
             logger.warning("Completion of " + formatIds(jobId, executionId)
                     + " failed in " + elapsed + " ms", failure);
         } finally {
             setFinalResult(failure);
         }
+    }
+
+    private long resetExecutionId() {
+        long executionId = this.executionId;
+        this.executionId = 0;
+        return executionId;
     }
 
     void setFinalResult(Throwable failure) {

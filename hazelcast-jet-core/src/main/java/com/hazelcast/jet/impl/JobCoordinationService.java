@@ -26,6 +26,7 @@ import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.deployment.JetClassLoader;
+import com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.impl.NodeEngineImpl;
@@ -45,7 +46,11 @@ import java.util.concurrent.ConcurrentMap;
 
 import static com.hazelcast.cluster.memberselector.MemberSelectors.DATA_MEMBER_SELECTOR;
 import static com.hazelcast.jet.JobStatus.NOT_STARTED;
+import static com.hazelcast.jet.JobStatus.RUNNING;
 import static com.hazelcast.jet.impl.JobRepository.JOB_RESULTS_MAP_NAME;
+import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.FAILED;
+import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.SUCCESSFUL;
+import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.VALIDATION_NEEDED;
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
 import static com.hazelcast.jet.impl.util.Util.formatIds;
 import static com.hazelcast.jet.impl.util.Util.idToString;
@@ -278,8 +283,8 @@ public class JobCoordinationService {
     /**
      * Completes the job which is coordinated with the given master context object.
      */
-    void completeJob(MasterContext masterContext, long completionTime, Throwable error) {
-        // the order of operations are important.
+    void completeJob(MasterContext masterContext, long executionId, long completionTime, Throwable error) {
+        // the order of operations is important.
 
         long jobId = masterContext.getJobId();
         JobRecord jobRecord = jobRepository.getJob(jobId);
@@ -294,8 +299,6 @@ public class JobCoordinationService {
         if (prev != null) {
             throw new IllegalStateException(jobResult + " already exists in the " + JOB_RESULTS_MAP_NAME + " map");
         }
-
-        long executionId = masterContext.getExecutionId();
 
         jobRepository.deleteJob(jobId);
 
@@ -324,6 +327,73 @@ public class JobCoordinationService {
         } else {
             logger.severe("Master context for job " + idToString(jobId) + " not found to schedule restart");
         }
+    }
+
+    void scheduleSnapshot(long jobId, long executionId) {
+        MasterContext masterContext = masterContexts.get(jobId);
+        if (masterContext != null) {
+            long snapshotInterval = masterContext.getJobConfig().getSnapshotInterval();
+            InternalExecutionService executionService = nodeEngine.getExecutionService();
+            logger.fine(formatIds(jobId, executionId) + " snapshot is scheduled.");
+            executionService.schedule(COORDINATOR_EXECUTOR_NAME, () -> this.beginSnapshot(jobId, executionId),
+                    snapshotInterval, MILLISECONDS);
+        } else {
+            logger.warning("MasterContext not found to schedule snapshot of " + formatIds(jobId, executionId));
+        }
+    }
+
+    private void beginSnapshot(long jobId, long executionId) {
+        // TODO [basri] perform snapshot gc
+        logger.warning("Snapshot gc is missing " + formatIds(jobId, executionId));
+
+        MasterContext masterContext = masterContexts.get(jobId);
+        if (masterContext != null) {
+            if (masterContext.completionFuture().isDone() || masterContext.jobStatus() != RUNNING) {
+                logger.warning("Not starting snapshot since " + formatIds(jobId, executionId) + " is done.");
+                return;
+            }
+
+            if (!shouldStartJobs()) {
+                scheduleSnapshot(jobId, executionId);
+            }
+
+            masterContext.beginSnapshot(executionId);
+        } else {
+            logger.warning("MasterContext not found for schedule snapshot of " + formatIds(jobId, executionId));
+        }
+    }
+
+    void completeSnapshot(long jobId, long executionId, long snapshotId, boolean success) {
+        MasterContext masterContext = masterContexts.get(jobId);
+        if (masterContext != null) {
+            try {
+                SnapshotStatus status = success ? VALIDATION_NEEDED : FAILED;
+                long elapsed = snapshotRepository.setSnapshotStatus(jobId, snapshotId, status);
+                logger.info(String.format("Snapshot %s for job %s completed in %dms", snapshotId,
+                        idToString(jobId), elapsed));
+            } catch (Exception e) {
+                logger.warning("Cannot update snapshot status for " + formatIds(jobId, executionId) + " snapshot "
+                        + snapshotId + " success: " + success);
+                return;
+            }
+
+            if (success) {
+                validateSnapshot(jobId, executionId, snapshotId);
+            } else {
+                scheduleSnapshot(jobId, executionId);
+            }
+        } else {
+            logger.warning("MasterContext not found for finalize snapshot of " + formatIds(jobId, executionId)
+                    + " with result: " + success);
+        }
+    }
+
+    void validateSnapshot(long jobId, long executionId, long snapshotId) {
+        // TODO [basri] implement validation
+        logger.warning("Snapshot validation is not implemented yet. " + formatIds(jobId, executionId) + " snapshot "
+                + snapshotId);
+        snapshotRepository.setSnapshotStatus(jobId, snapshotId, SUCCESSFUL);
+        scheduleSnapshot(jobId, executionId);
     }
 
     /**

@@ -18,8 +18,6 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Watermark;
-import com.hazelcast.jet.impl.execution.OutboundCollector;
-import com.hazelcast.jet.impl.execution.SnapshotBarrier;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.nio.serialization.Data;
@@ -28,7 +26,6 @@ import com.hazelcast.spi.serialization.SerializationService;
 import javax.annotation.Nonnull;
 import java.util.BitSet;
 import java.util.Map.Entry;
-import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
@@ -142,11 +139,7 @@ public class OutboxImpl implements Outbox {
         return success;
     }
 
-    public final boolean offerToSnapshot(Object item) {
-        return offer(snapshotEdge, item);
-    }
-
-    public final boolean offerToEdgesAndSnapshot(Object item) {
+    final boolean offerToEdgesAndSnapshot(Object item) {
         return offer(allEdgesAndSnapshot, item);
     }
 }

@@ -22,10 +22,15 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import java.io.IOException;
-import java.util.Set;
 
+import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.FAILED;
+import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.ONGOING;
+import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.SUCCESSFUL;
+import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.VALIDATION_NEEDED;
 import static com.hazelcast.jet.impl.util.Util.idToString;
 import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
+import static com.hazelcast.util.Preconditions.checkFalse;
+import static com.hazelcast.util.Preconditions.checkTrue;
 
 /**
  * A record stored in the {@link
@@ -34,10 +39,14 @@ import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
  */
 public class SnapshotRecord implements IdentifiedDataSerializable {
 
+    public enum SnapshotStatus {
+        ONGOING, VALIDATION_NEEDED, SUCCESSFUL, FAILED
+    }
+
     private long jobId;
     private long snapshotId;
     private long startTime = System.currentTimeMillis();
-    private boolean complete;
+    private SnapshotStatus status = ONGOING;
 
     public SnapshotRecord() {
     }
@@ -55,12 +64,20 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         return jobId;
     }
 
-    public boolean complete() {
-        return complete;
-    }
+    public void setStatus(SnapshotStatus newStatus) {
+        checkFalse((newStatus == null || newStatus == ONGOING), "new status cannot be null or " + ONGOING);
 
-    public void setComplete() {
-        complete = true;
+        if (newStatus == VALIDATION_NEEDED || newStatus == FAILED) {
+            checkTrue(status == ONGOING, "new status can be " + newStatus
+                    + " only when current status is " + status);
+        }
+
+        if (newStatus == SUCCESSFUL) {
+            checkTrue(status == VALIDATION_NEEDED, "new status can be " + newStatus
+                    + " only when current status is " + status);
+        }
+
+        this.status = newStatus;
     }
 
     public long snapshotId() {
@@ -69,6 +86,10 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
 
     public long startTime() {
         return startTime;
+    }
+
+    public boolean isSuccessful() {
+        return status == SUCCESSFUL;
     }
 
     @Override
@@ -86,7 +107,7 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         out.writeLong(jobId);
         out.writeLong(snapshotId);
         out.writeLong(startTime);
-        out.writeBoolean(complete);
+        out.writeUTF(status.toString());
     }
 
     @Override
@@ -94,7 +115,7 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         jobId = in.readLong();
         snapshotId = in.readLong();
         startTime = in.readLong();
-        complete = in.readBoolean();
+        status = SnapshotStatus.valueOf(in.readUTF());
     }
 
     @Override public String toString() {
@@ -102,7 +123,7 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
                 "jobId=" + idToString(jobId) +
                 ", snapshotId=" + snapshotId +
                 ", startTime=" + toLocalDateTime(startTime) +
-                ", complete=" + complete +
+                ", status=" + status +
                 '}';
     }
 }

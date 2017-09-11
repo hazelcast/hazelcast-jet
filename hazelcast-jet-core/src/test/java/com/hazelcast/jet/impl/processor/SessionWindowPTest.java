@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
@@ -48,7 +49,6 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.shuffle;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertTrue;
 
@@ -124,25 +124,22 @@ public class SessionWindowPTest {
         expectedSessions("a").forEach(expectedOutbox::add);
 
         long start = System.nanoTime();
-        testProcessor(supplier, inbox, expectedOutbox, true, true);
+        testProcessor(supplier, inbox, expectedOutbox, true, true, false, true, Objects::equals);
         long processTime = System.nanoTime() - start;
 
         assertTrue("process took too long: " + processTime, processTime < MILLISECONDS.toNanos(300));
     }
 
     private void assertCorrectness(List<Object> events) {
-        // Use HashSet to store keys, it's used internally in SessionWindowP, its iteration order is the same as the order
-        // in which the Sessions will be emitted
         List<Session> expectedSessions = events.stream()
                                                .map(e -> ((Entry<String, Long>) e).getKey())
-                                               .collect(toCollection(HashSet::new))
-                                               .stream()
                                                .flatMap(SessionWindowPTest::expectedSessions)
                                                .collect(toList());
         events.add(new Watermark(100));
 
         try {
-            testProcessor(supplier, events, expectedSessions, true, true);
+            testProcessor(supplier, events, expectedSessions, true, true, false, true,
+                    (e, a) -> new HashSet(e).equals(new HashSet(a)));
         } catch (AssertionError e) {
             System.err.println("Tested with events: " + events);
             throw e;

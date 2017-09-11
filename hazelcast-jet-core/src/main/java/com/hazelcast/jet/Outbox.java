@@ -83,8 +83,7 @@ public interface Outbox {
     /**
      * Send one key-value pair to store to the snapshot. The key must be
      * globally unique for this vertex and this snapshot. This method can only
-     * be called from {@link Snapshottable#saveSnapshot()}
-     * method.
+     * be called from {@link Processor#saveSnapshot()} method.
      * <p>
      * If the {@code key} implements {@link com.hazelcast.core.PartitionAware}
      * then it will be used to choose the target partition, instead of the
@@ -97,8 +96,6 @@ public interface Outbox {
      *
      * @throws IllegalArgumentException If a duplicate key is stored.
      *     Implementation is allowed to throw it, but not required
-     * @throws IllegalStateException If the processor does not implement
-     *     {@link Snapshottable}
      */
     @CheckReturnValue
     boolean offerToSnapshot(Object key, Object value);

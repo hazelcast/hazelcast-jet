@@ -29,8 +29,10 @@ import com.hazelcast.test.annotation.ParallelTest;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
@@ -41,7 +43,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.function.Supplier;
+import java.util.Objects;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
@@ -51,8 +53,10 @@ import static com.hazelcast.jet.processor.Processors.aggregateToSlidingWindow;
 import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
 import static com.hazelcast.jet.test.TestSupport.testProcessor;
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.shuffle;
 import static java.util.Collections.singletonList;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertTrue;
 
@@ -63,13 +67,16 @@ public class SlidingWindowPTest {
 
     private static final Long KEY = 77L;
 
+    @Rule
+    public ExpectedException exception = ExpectedException.none();
+
     @Parameter
     public boolean hasDeduct;
 
     @Parameter(1)
     public boolean singleStageProcessor;
 
-    private Supplier<Processor> supplier;
+    private DistributedSupplier<Processor> supplier;
     private SlidingWindowP<?, ?, Long> lastSuppliedProcessor;
 
     @Parameters(name = "hasDeduct={0}, singleStageProcessor={1}")
@@ -109,13 +116,13 @@ public class SlidingWindowPTest {
         assertTrue("tsToKeyToFrame is not empty: " + lastSuppliedProcessor.tsToKeyToAcc,
                 lastSuppliedProcessor.tsToKeyToAcc.isEmpty());
         assertTrue("slidingWindow is not empty: " + lastSuppliedProcessor.slidingWindow,
-                lastSuppliedProcessor.slidingWindow.isEmpty());
+                lastSuppliedProcessor.slidingWindow == null || lastSuppliedProcessor.slidingWindow.isEmpty());
     }
 
     @Test
     public void when_noFramesReceived_then_onlyEmitWm() {
         List<Watermark> wmList = singletonList(wm(1));
-        testProcessor(supplier, wmList, wmList, true, true);
+        testProcessor(supplier, wmList, wmList, true, true, false, false, Objects::equals);
     }
 
     @Test
@@ -123,14 +130,11 @@ public class SlidingWindowPTest {
         testProcessor(supplier,
                 asList(
                         event(0, 1),
-                        wm(4)),
+                        wm(3)),
                 asList(
-                        outboxFrame(0, 1),
-                        outboxFrame(1, 1),
-                        outboxFrame(2, 1),
                         outboxFrame(3, 1),
-                        wm(4)
-                ), true, true);
+                        wm(3)
+                ), true, true, false, false, Objects::equals);
     }
 
     @Test
@@ -142,6 +146,7 @@ public class SlidingWindowPTest {
                         event(2, 1),
                         event(3, 1),
                         event(4, 1),
+                        wm(0),
                         wm(1),
                         wm(2),
                         wm(3),
@@ -151,6 +156,7 @@ public class SlidingWindowPTest {
                         wm(7)
                 ), asList(
                         outboxFrame(0, 1),
+                        wm(0),
                         outboxFrame(1, 2),
                         wm(1),
                         outboxFrame(2, 3),
@@ -165,7 +171,7 @@ public class SlidingWindowPTest {
                         wm(6),
                         outboxFrame(7, 1),
                         wm(7)
-                ), true, true);
+                ), true, true, true, false, Objects::equals);
     }
 
     @Test
@@ -177,6 +183,7 @@ public class SlidingWindowPTest {
                         event(2, 1),
                         event(1, 1),
                         event(0, 1),
+                        wm(0),
                         wm(1),
                         wm(2),
                         wm(3),
@@ -186,6 +193,7 @@ public class SlidingWindowPTest {
                         wm(7)
                 ), asList(
                         outboxFrame(0, 1),
+                        wm(0),
                         outboxFrame(1, 2),
                         wm(1),
                         outboxFrame(2, 3),
@@ -200,7 +208,7 @@ public class SlidingWindowPTest {
                         wm(6),
                         outboxFrame(7, 1),
                         wm(7)
-                ), true, true);
+                ), true, true, false, false, Objects::equals);
     }
 
     @Test
@@ -212,13 +220,14 @@ public class SlidingWindowPTest {
         for (long ts : timestampsToAdd) {
             inbox.add(event(ts, 1));
         }
-        for (long i = 1; i <= 105; i++) {
+        for (long i = 0; i <= 105; i++) {
             inbox.add(wm(i));
         }
 
         List<Object> expectedOutbox = new ArrayList<>();
         expectedOutbox.addAll(Arrays.asList(
                 outboxFrame(0, 1),
+                wm(0),
                 outboxFrame(1, 2),
                 wm(1),
                 outboxFrame(2, 3),
@@ -241,73 +250,43 @@ public class SlidingWindowPTest {
                 wm(104),
                 wm(105)
         ));
-        testProcessor(supplier, inbox, expectedOutbox, true, true);
+        testProcessor(supplier, inbox, expectedOutbox, true, true, false, false, Objects::equals);
     }
 
     @Test
-    public void when_receiveWithGaps_then_emitAscending() {
+    public void when_wmNeverReceived_then_emitEverythingInComplete() {
+        long start = System.nanoTime();
         testProcessor(supplier,
                 asList(
-                        event(0, 1),
-                        event(10, 1),
-                        event(11, 1),
-                        wm(15),
-                        event(16, 3),
-                        wm(19)
-                ), asList(
-                        outboxFrame(0, 1),
-                        outboxFrame(1, 1),
-                        outboxFrame(2, 1),
-                        outboxFrame(3, 1),
-
-                        outboxFrame(10, 1),
-                        outboxFrame(11, 2),
-                        outboxFrame(12, 2),
-                        outboxFrame(13, 2),
-                        outboxFrame(14, 1),
-
-                        wm(15),
-                        outboxFrame(16, 3),
-                        outboxFrame(17, 3),
-                        outboxFrame(18, 3),
-                        outboxFrame(19, 3),
-                        wm(19)
-                ), true, true);
-    }
-
-    @Test
-    public void when_receiveWithGaps_then_doNotSkipFrames() {
-        testProcessor(supplier,
+                        event(0L, 1L), // to frame 0
+                        event(1L, 1L) // to frame 1
+                        // no WM to emit any window, everything should be emitted in complete as if we received
+                        // wm(3), wm(4)
+                ),
                 asList(
-                        event(10, 1),
-                        event(11, 1),
-                        event(12, 1),
-                        wm(1),
-                        event(2, 1),
-                        event(3, 1),
-                        event(4, 1),
-                        wm(4),
-                        wm(12),
-                        wm(15)
-                ), asList(
-                        wm(1),
-                        outboxFrame(2, 1),
                         outboxFrame(3, 2),
-                        outboxFrame(4, 3),
-                        wm(4),
-                        outboxFrame(5, 3),
-                        outboxFrame(6, 2),
-                        outboxFrame(7, 1),
-                        outboxFrame(10, 1),
+                        outboxFrame(4, 1)
+                ), true, true, false, true, Objects::equals);
 
-                        outboxFrame(11, 2),
-                        outboxFrame(12, 3),
-                        wm(12),
-                        outboxFrame(13, 3),
-                        outboxFrame(14, 2),
-                        outboxFrame(15, 1),
-                        wm(15)
-                ), true, true);
+        long processTime = System.nanoTime() - start;
+        // this is to test that there is no iteration from current watermark up to Long.MAX_VALUE, which
+        // will take too long.
+        assertTrue("process took too long: " + processTime, processTime < MILLISECONDS.toNanos(300));
+    }
+
+
+    @Test
+    public void when_missedWm_then_error() {
+        exception.expectMessage("probably missed a WM");
+
+        testProcessor(supplier,
+                asList(
+                        event(0L, 1L), // to frame 0
+                        // We should have received wm(3), which includes frames 0..3, where 0 is our bottom frame.
+                        // Receiving wm(4) should produce and error, because it will leave leak frame0
+                        wm(4L)
+                ),
+                emptyList(), true, true, false, false, Objects::equals);
     }
 
     private Entry<Long, ?> event(long frameTs, long value) {

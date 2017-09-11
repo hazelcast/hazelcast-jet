@@ -109,6 +109,10 @@ public class AsyncMapWriter {
         this.opProvider = mapService.getMapServiceContext().getMapOperationProvider(mapName);
     }
 
+    /**
+     * @return false, if the parallel operation limit is exceeded. The call
+     * should be retried later.
+     */
     public boolean tryFlushAsync(CompletableFuture<Void> completionFuture) {
         Map<Address, List<Integer>> memberPartitionsMap = partitionService.getMemberPartitionsMap();
         List<PartitionOpBuilder> ops = memberPartitionsMap.entrySet()

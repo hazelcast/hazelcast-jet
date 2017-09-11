@@ -20,9 +20,9 @@ import com.hazelcast.core.PartitionAware;
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.Inbox;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.function.DistributedToLongFunction;
@@ -41,11 +41,9 @@ import java.util.function.Function;
 import java.util.stream.LongStream;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
+import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.function.DistributedComparator.naturalOrder;
-import static java.lang.Math.min;
 import static java.util.Collections.emptyMap;
-import static java.util.stream.Collectors.toSet;
 
 /**
  * Handles various setups of sliding and tumbling window aggregation.
@@ -59,7 +57,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
 
     // package-visible for testing
     final Map<Long, Map<Object, A>> tsToKeyToAcc = new HashMap<>();
-    final Map<Object, A> slidingWindow = new HashMap<>();
+    Map<Object, A> slidingWindow;
 
     private final WindowDefinition wDef;
     private final DistributedToLongFunction<? super T> getFrameTimestampF;
@@ -69,11 +67,13 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
 
     private final FlatMapper<Watermark, Object> flatMapper;
 
-    private long nextFrameTsToEmit = Long.MIN_VALUE;
     private final A emptyAcc;
     private Traverser<Object> flushTraverser;
-    private long topTs = Long.MIN_VALUE;
     private Traverser<Entry<SnapshotKey, A>> snapshotTraverser;
+
+    // following fields are optimizations to maintain lowest and highest key in the tsToKeyToAcc map
+    private long topTs = Long.MIN_VALUE;
+    private long bottomTs = Long.MAX_VALUE;
 
     public SlidingWindowP(
             Function<? super T, ?> getKeyF,
@@ -104,6 +104,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
                             .computeIfAbsent(key, k -> aggrOp.createAccumulatorF().get());
         aggrOp.accumulateItemF().accept(acc, t);
         topTs = Math.max(topTs, frameTimestamp);
+        bottomTs = Math.min(bottomTs, frameTimestamp);
         return true;
     }
 
@@ -122,45 +123,39 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
             if (tsToKeyToAcc.isEmpty()) {
                 return true;
             }
-            flushTraverser = windowTraverserAndEvictor(topTs + wDef.frameLength())
+            LongStream range = LongStream.iterate(bottomTs + wDef.windowLength() - wDef.frameLength(), ts -> ts + wDef.frameLength())
+                                         .limit(Math.max(0, (topTs - bottomTs) / wDef.frameLength() + 1));
+            flushTraverser = traverseStream(range.boxed())
+                    .flatMap(this::windowTraverserAndEvictor)
                     .onFirstNull(() -> flushTraverser = null);
         }
         return emitFromTraverser(flushTraverser);
     }
 
     private Traverser<Object> windowTraverserAndEvictor(long endTsExclusive) {
-        if (nextFrameTsToEmit == Long.MIN_VALUE) {
-            if (tsToKeyToAcc.isEmpty()) {
-                return Traversers.empty();
-            }
-            // This is the first watermark we are acting upon. Find the lowest frame
-            // timestamp that can be emitted: at most the top existing timestamp lower
-            // than wm, but even lower than that if there are older frames on record.
-            // The above guarantees that the sliding window can be correctly
-            // initialized using the "add leading/deduct trailing" approach because we
-            // start from a window that covers at most one existing frame -- the lowest
-            // one on record.
-            long bottomTs = tsToKeyToAcc
-                    .keySet().stream()
-                    .min(naturalOrder())
-                    .orElseThrow(() -> new AssertionError("Failed to find the min key in a non-empty map"));
-            nextFrameTsToEmit = min(bottomTs, wDef.floorFrameTs(endTsExclusive));
-        }
-
-        long rangeStart = nextFrameTsToEmit;
-        nextFrameTsToEmit = wDef.higherFrameTs(endTsExclusive);
-        return Traversers.traverseStream(range(rangeStart, nextFrameTsToEmit, wDef.frameLength()).boxed())
-                         .flatMap(frameTs -> traverseIterable(computeWindow(frameTs).entrySet())
-                               .map(e -> new TimestampedEntry<>(
-                                       frameTs, e.getKey(), aggrOp.finishAccumulationF().apply(e.getValue())))
-                               .onFirstNull(() -> completeWindow(frameTs)));
+        assert endTsExclusive == wDef.floorFrameTs(endTsExclusive) : "WM timestamp not on the verge of a frame";
+        return traverseIterable(computeWindow(endTsExclusive).entrySet())
+                .map(e -> (Object) new TimestampedEntry<>(
+                        endTsExclusive, e.getKey(), aggrOp.finishAccumulationF().apply(e.getValue())))
+                .onFirstNull(() -> completeWindow(endTsExclusive));
     }
 
     private Map<Object, A> computeWindow(long frameTs) {
+        assert bottomTs >= frameTs - wDef.windowLength() + wDef.frameLength()
+                : "probably missed a WM or received late event, bottomTs=" + bottomTs + ", frameTs=" + frameTs
+                        + ", windowLength=" + wDef.windowLength() + ", frameLength=" + wDef.frameLength();
         if (wDef.isTumbling()) {
             return tsToKeyToAcc.getOrDefault(frameTs, emptyMap());
         }
         if (aggrOp.deductAccumulatorF() != null) {
+            if (slidingWindow == null) {
+                // compute initial slidingWindow
+                slidingWindow = new HashMap<>();
+                for (long ts = frameTs - wDef.windowLength() + wDef.frameLength(); ts < frameTs;
+                        ts += wDef.frameLength()) {
+                    patchSlidingWindow(aggrOp.combineAccumulatorsF(), tsToKeyToAcc.get(ts));
+                }
+            }
             // add leading-edge frame
             patchSlidingWindow(aggrOp.combineAccumulatorsF(), tsToKeyToAcc.get(frameTs));
             return slidingWindow;
@@ -177,8 +172,13 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     }
 
     private void completeWindow(long frameTs) {
-        Map<Object, A> evictedFrame = tsToKeyToAcc.remove(frameTs - wDef.windowLength() + wDef.frameLength());
-        if (aggrOp.deductAccumulatorF() != null) {
+        long frameToEvict = frameTs - wDef.windowLength() + wDef.frameLength();
+        Map<Object, A> evictedFrame = tsToKeyToAcc.remove(frameToEvict);
+        // this could make bottomTs not exactly conform to the definition of being "lowest key in tsToKeyToAcc
+        // map", because the next frame after the one we just removed might not have any items, but it's enough
+        // for now.
+        bottomTs = frameToEvict + wDef.frameLength();
+        if (!wDef.isTumbling() && aggrOp.deductAccumulatorF() != null) {
             // deduct trailing-edge frame
             patchSlidingWindow(aggrOp.deductAccumulatorF(), evictedFrame);
         }
@@ -195,12 +195,6 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
                 return result.equals(emptyAcc) ? null : result;
             });
         }
-    }
-
-    private static LongStream range(long start, long end, long step) {
-        return start >= end
-                ? LongStream.empty()
-                : LongStream.iterate(start, n -> n + step).limit(1 + (end - start - 1) / step);
     }
 
     @Override
@@ -224,12 +218,12 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         for (Object o; (o = inbox.poll()) != null; ) {
             Entry<SnapshotKey, A> entry = (Entry<SnapshotKey, A>) o;
             SnapshotKey k = entry.getKey();
-            tsToKeyToAcc.computeIfAbsent(k.timestamp, x -> new HashMap<>())
-                        .merge(k.key, entry.getValue(), (oldV, newV) -> {
-                            aggrOp.combineAccumulatorsF().accept(oldV, newV);
-                            return oldV.equals(emptyAcc) ? null : oldV;
-                        });
+            if (tsToKeyToAcc.computeIfAbsent(k.timestamp, x -> new HashMap<>())
+                            .put(k.key, entry.getValue()) != null) {
+                throw new JetException("Duplicate key in snapshot: " + k);
+            }
             topTs = Math.max(topTs, k.timestamp);
+            bottomTs = Math.min(bottomTs, k.timestamp);
         }
     }
 
@@ -239,7 +233,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
 
         public SnapshotKey() { }
 
-        private SnapshotKey(long timestamp, Object key) {
+        private SnapshotKey(long timestamp, @Nonnull Object key) {
             this.timestamp = timestamp;
             this.key = key;
         }
@@ -269,6 +263,35 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         public void readData(ObjectDataInput in) throws IOException {
             timestamp = in.readLong();
             key = in.readObject();
+        }
+
+        @Override
+        public String toString() {
+            return "SnapshotKey{timestamp=" + timestamp + ", key=" + key + '}';
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            SnapshotKey that = (SnapshotKey) o;
+
+            if (timestamp != that.timestamp) {
+                return false;
+            }
+            return key.equals(that.key);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = (int) (timestamp ^ (timestamp >>> 32));
+            result = 31 * result + key.hashCode();
+            return result;
         }
     }
 }

@@ -25,49 +25,34 @@ import org.junit.runner.RunWith;
 import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByMinStep;
 import static com.hazelcast.jet.WindowDefinition.tumblingWindowDef;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
 public class WatermarkEmissionPolicyTest {
 
-    private static final int MIN_STEP = 2;
     private WatermarkEmissionPolicy p;
-    private long lastEmittedWm = Long.MIN_VALUE;
 
     @Test
     public void when_wmIncreasing_then_throttleByMinStep() {
-        p = emitByMinStep(MIN_STEP);
-        assertWm(2, true);
-        assertWm(3, false);
-        assertWm(4, true);
-        assertWm(6, true);
-        assertWm(9, true);
-        assertWm(10, false);
-        assertWm(11, true);
+        p = emitByMinStep(2);
+        assertWm(2, 0, 1);
+        assertWm(2, 0, 2);
+        assertWm(3, 0, 3);
+        assertWm(4, 0, 4);
     }
 
     @Test
     public void when_wmIncreasing_then_throttleByFrame() {
         p = emitByFrame(tumblingWindowDef(3));
-        assertWm(Long.MIN_VALUE, false);
-        assertWm(2, true);
-        assertWm(3, true);
-        assertWm(4, false);
-        assertWm(5, false);
-        assertWm(6, true);
-        assertWm(13, true);
-        assertWm(14, false);
-        assertWm(15, true);
+        assertWm(3, 0, 2);
+        assertWm(3, 0, 3);
+        assertWm(3, 0, 4);
     }
 
-    private void assertWm(long currentWm, boolean expectedToEmit) {
-        if (p.shouldEmit(currentWm, lastEmittedWm)) {
-            assertTrue(expectedToEmit);
-            lastEmittedWm = currentWm;
-        } else {
-            assertFalse(expectedToEmit);
-        }
+    private void assertWm(long expectedNextWm, long lastEmittedWm, long newWm) {
+        assertTrue(expectedNextWm > lastEmittedWm);
+        assertEquals(expectedNextWm, p.nextWatermark(lastEmittedWm, newWm));
     }
 }

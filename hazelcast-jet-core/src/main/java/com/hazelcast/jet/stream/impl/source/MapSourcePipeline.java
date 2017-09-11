@@ -18,25 +18,37 @@ package com.hazelcast.jet.stream.impl.source;
 
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.ProcessorMetaSupplier;
-import com.hazelcast.jet.processor.Sources;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedPredicate;
+import com.hazelcast.jet.processor.SourceProcessors;
 import com.hazelcast.jet.stream.impl.pipeline.AbstractSourcePipeline;
 import com.hazelcast.jet.stream.impl.pipeline.StreamContext;
 
 import java.util.Map;
 
 
-public class MapSourcePipeline<K, V> extends AbstractSourcePipeline<Map.Entry<K, V>> {
+public class MapSourcePipeline<K, V, T> extends AbstractSourcePipeline<T> {
 
     private final IMap<K, V> map;
+    private final DistributedFunction<Map.Entry<K, V>, T> projectionF;
+    private final DistributedPredicate<Map.Entry<K, V>> predicate;
 
-    public MapSourcePipeline(StreamContext context, IMap<K, V> map) {
+
+    public MapSourcePipeline(StreamContext context, IMap<K, V> map,
+                             DistributedPredicate<Map.Entry<K, V>> predicate,
+                             DistributedFunction<Map.Entry<K, V>, T> projectionF) {
         super(context);
         this.map = map;
+        this.predicate = predicate;
+        this.projectionF = projectionF;
     }
 
     @Override
     protected ProcessorMetaSupplier getSourceMetaSupplier() {
-        return Sources.readMap(map.getName());
+        if (projectionF != null) {
+            return SourceProcessors.readMap(map.getName(), predicate, projectionF);
+        }
+        return SourceProcessors.readMap(map.getName());
     }
 
     @Override
