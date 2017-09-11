@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.config.ProcessingGuarantee;
-import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.logging.ILogger;
 
 import java.util.concurrent.CompletableFuture;
@@ -98,7 +97,7 @@ public class SnapshotContext {
 
     /**
      * This method is called when the member received {@link
-     * SnapshotOperation}.
+     * com.hazelcast.jet.impl.operation.SnapshotOperation}.
      */
     synchronized CompletableFuture<Void> startNewSnapshot(long snapshotId) {
         // TODO [basri] is this really necessary? we should only verify monotonicity

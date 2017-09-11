@@ -179,18 +179,19 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         // check expected result
         if (!expectedMap.equals(result)) {
             System.out.println("Non-received expected items: " + expectedMap.keySet().stream()
-                                                                            .filter(key -> !result.containsKey(key))
-                                                                            .map(Object::toString)
-                                                                            .collect(joining(", ")));
+                    .filter(key -> !result.containsKey(key))
+                    .map(Object::toString)
+                    .collect(joining(", ")));
             System.out.println("Received non-expected items: " + result.entrySet().stream()
-                                                                       .filter(entry -> !expectedMap.containsKey(entry.getKey()))
-                                                                       .map(Object::toString)
-                                                                       .collect(joining(", ")));
+                    .filter(entry -> !expectedMap.containsKey(entry.getKey()))
+                    .map(Object::toString)
+                    .collect(joining(", ")));
             System.out.println("Different keys: ");
             for (Entry<List<Long>, Long> rEntry : result.entrySet()) {
                 Long expectedValue = expectedMap.get(rEntry.getKey());
                 if (expectedValue != null && !expectedValue.equals(rEntry.getValue())) {
-                    System.out.println("key: " + rEntry.getKey() + ", expected value: " + expectedValue + ", actual value: " + rEntry.getValue());
+                    System.out.println("key: " + rEntry.getKey() + ", expected value: " + expectedValue
+                            + ", actual value: " + rEntry.getValue());
                 }
             }
             System.out.println("-- end of different keys");

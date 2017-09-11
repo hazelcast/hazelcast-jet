@@ -124,8 +124,9 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
             if (tsToKeyToAcc.isEmpty()) {
                 return true;
             }
-            LongStream range = LongStream.iterate(bottomTs + wDef.windowLength() - wDef.frameLength(), ts -> ts + wDef.frameLength())
-                                         .limit(Math.max(0, (topTs - bottomTs) / wDef.frameLength() + 1));
+            LongStream range =
+                    LongStream.iterate(bottomTs + wDef.windowLength() - wDef.frameLength(), ts -> ts + wDef.frameLength())
+                              .limit(Math.max(0, (topTs - bottomTs) / wDef.frameLength() + 1));
             flushTraverser = traverseStream(range.boxed())
                     .flatMap(this::windowTraverserAndEvictor)
                     .onFirstNull(() -> flushTraverser = null);

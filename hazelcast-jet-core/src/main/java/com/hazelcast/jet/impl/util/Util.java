@@ -278,7 +278,7 @@ public final class Util {
         };
     }
 
-    public static <K,V> V compute(IMap<K,V> map, K key,
+    public static <K, V> V compute(IMap<K, V> map, K key,
                                   DistributedBiFunction<? super K, ? super V, ? extends V> remappingFunction) {
         return (V) map.executeOnKey(key, entryProcessor(remappingFunction));
     }

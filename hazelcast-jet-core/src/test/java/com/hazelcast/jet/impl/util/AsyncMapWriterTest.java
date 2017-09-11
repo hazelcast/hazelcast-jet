@@ -120,7 +120,7 @@ public class AsyncMapWriterTest extends JetTestSupport {
     public void when_flushedSeveralTimes_then_doesPut() throws Exception {
         // When
         List<CompletableFuture> futures = new ArrayList<>();
-        for (int i = 0; i< MAX_PARALLEL_ASYNC_OPS; i++) {
+        for (int i = 0; i < MAX_PARALLEL_ASYNC_OPS; i++) {
             CompletableFuture<Void> future = new CompletableFuture<>();
             writer.put(i, i);
             assertTrue("tryFlushAsync failed", writer.tryFlushAsync(future));

@@ -282,13 +282,13 @@ public class AsyncMapWriter {
     private class PartitionOpBuilder {
         private final Address address;
 
-        public PartitionOpBuilder(Address address) {
-            this.address = address;
-        }
-
         // PartitionIteratingOp doesn't expose these, so we have to track them separately
         private MapEntries[] entries; //entries in the operation
         private int[] partitions; // partitions in the operation
+
+        PartitionOpBuilder(Address address) {
+            this.address = address;
+        }
 
         private PartitionIteratingOperation build() {
             OperationFactory factory = opProvider.createPutAllOperationFactory(mapName,

@@ -22,6 +22,7 @@ import com.hazelcast.jet.WatermarkEmissionPolicy;
 import com.hazelcast.jet.WatermarkPolicies;
 import com.hazelcast.jet.WatermarkPolicy;
 import com.hazelcast.jet.test.TestOutbox;
+import com.hazelcast.jet.test.TestProcessorContext;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
 import com.hazelcast.test.annotation.QuickTest;
@@ -49,7 +50,6 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
 
 @RunWith(Parameterized.class)
 @Category({QuickTest.class, ParallelTest.class})
@@ -77,7 +77,7 @@ public class InsertWatermarksPTest {
     @Before
     public void setUp() {
         outbox = new TestOutbox(outboxCapacity);
-        context = mock(Context.class);
+        context = new TestProcessorContext();
     }
 
     @Test

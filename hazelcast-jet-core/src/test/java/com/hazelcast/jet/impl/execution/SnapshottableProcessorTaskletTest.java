@@ -20,7 +20,6 @@ import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.config.ProcessingGuarantee;
-import com.hazelcast.jet.impl.MasterContext;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.test.TestOutbox.MockData;
@@ -28,6 +27,7 @@ import com.hazelcast.jet.test.TestOutbox.MockSerializationService;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
+import com.hazelcast.util.UuidUtil;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -249,7 +248,7 @@ public class SnapshottableProcessorTaskletTest {
                 if (!outbox.offer(item)) {
                     return;
                 } else {
-                    snapshotQueue.offer(entry(UUID.randomUUID(), inbox.remove()));
+                    snapshotQueue.offer(entry(UuidUtil.newUnsecureUUID(), inbox.remove()));
                 }
             }
         }
@@ -261,7 +260,7 @@ public class SnapshottableProcessorTaskletTest {
             }
             boolean accepted = outbox.offer(completedCount);
             if (accepted) {
-                snapshotQueue.offer(entry(UUID.randomUUID(), completedCount));
+                snapshotQueue.offer(entry(UuidUtil.newUnsecureUUID(), completedCount));
                 completedCount++;
             }
             return completedCount == itemsToEmitInComplete;
