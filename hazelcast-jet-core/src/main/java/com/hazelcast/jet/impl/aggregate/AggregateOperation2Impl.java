@@ -56,19 +56,19 @@ public class AggregateOperation2Impl<T0, T1, A, R>
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    public DistributedBiConsumer<? super A, ? super T0> accumulateItemF0() {
+    public DistributedBiConsumer<? super A, ? super T0> accumulateFn0() {
         return (DistributedBiConsumer<? super A, ? super T0>) accumulateFs[0];
     }
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    public DistributedBiConsumer<? super A, ? super T1> accumulateItemF1() {
+    public DistributedBiConsumer<? super A, ? super T1> accumulateFn1() {
         return (DistributedBiConsumer<? super A, ? super T1>) accumulateFs[1];
     }
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    public <T> DistributedBiConsumer<? super A, T> accumulateItemF(Tag<T> tag) {
+    public <T> DistributedBiConsumer<? super A, T> accumulateFn(Tag<T> tag) {
         if (tag.index() > 1) {
             throw new IllegalArgumentException(
                     "AggregateOperation2 only recognizes tags with index 0 and 1, but asked for " + tag.index());
@@ -78,20 +78,20 @@ public class AggregateOperation2Impl<T0, T1, A, R>
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    public AggregateOperation<A, R> withAccumulateItemFs(
-            @Nonnull DistributedBiConsumer<? super A, ?>[] accumulateFs
+    public AggregateOperation<A, R> withAccumulateFns(
+            @Nonnull DistributedBiConsumer<? super A, ?>[] accumulateFns
     ) {
-        validateCountOfAccumulateFs(accumulateFs);
-        return new AggregateOperation2Impl<>(createAccumulatorF(), accumulateFs, combineAccumulatorsF(),
-                deductAccumulatorF(), finishAccumulationF());
+        validateCountOfAccumulateFs(accumulateFns);
+        return new AggregateOperation2Impl<>(createFn(), accumulateFns, combineFn(),
+                deductFn(), finishFn());
     }
 
     @Override
-    public <R1> AggregateOperation2<T0, T1, A, R1> withFinish(
-            @Nonnull DistributedFunction<? super A, R1> finishAccumulationF
+    public <R1> AggregateOperation2<T0, T1, A, R1> withFinishFn(
+            @Nonnull DistributedFunction<? super A, R1> finishFn
     ) {
-        return new AggregateOperation2Impl<>(createAccumulatorF(), accumulateFs, combineAccumulatorsF(),
-                deductAccumulatorF(), finishAccumulationF);
+        return new AggregateOperation2Impl<>(createFn(), accumulateFs, combineFn(),
+                deductFn(), finishFn);
     }
 
     private static void validateCountOfAccumulateFs(@Nonnull DistributedBiConsumer[] accumulateFs) {

@@ -36,9 +36,9 @@ public class AggregateP<T, A, R> extends AbstractProcessor {
     public AggregateP(
             @Nonnull AggregateOperation1<? super T, A, R> aggregateOperation
     ) {
-        this.accumulateF = aggregateOperation.accumulateItemF();
-        this.finishF = aggregateOperation.finishAccumulationF();
-        this.acc = aggregateOperation.createAccumulatorF().get();
+        this.accumulateF = aggregateOperation.accumulateFn();
+        this.finishF = aggregateOperation.finishFn();
+        this.acc = aggregateOperation.createFn().get();
     }
 
     @Override

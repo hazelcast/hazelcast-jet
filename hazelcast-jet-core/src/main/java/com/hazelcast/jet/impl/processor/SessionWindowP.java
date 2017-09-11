@@ -79,10 +79,10 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
     ) {
         this.getTimestampF = getTimestampF;
         this.getKeyF = getKeyF;
-        this.newAccumulatorF = aggrOp.createAccumulatorF();
-        this.accumulateF = aggrOp.accumulateItemF();
-        this.combineAccF = aggrOp.combineAccumulatorsF();
-        this.finishAccumulationF = aggrOp.finishAccumulationF();
+        this.newAccumulatorF = aggrOp.createFn();
+        this.accumulateF = aggrOp.accumulateFn();
+        this.combineAccF = aggrOp.combineFn();
+        this.finishAccumulationF = aggrOp.finishFn();
         this.sessionTimeout = sessionTimeout;
         this.expiredSessionFlatmapper = flatMapper(this::expiredSessionTraverser);
     }

@@ -92,10 +92,10 @@ import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
  * <h1>Two-stage aggregation</h1>
  *
  * In two-stage aggregation, the first stage applies just the
- * {@link AggregateOperation1#accumulateItemF() accumulate} aggregation
+ * {@link AggregateOperation1#accumulateFn() accumulate} aggregation
  * primitive and the second stage does {@link
- * AggregateOperation1#combineAccumulatorsF() combine} and {@link
- * AggregateOperation1#finishAccumulationF() finish}. The essential property
+ * AggregateOperation1#combineFn() combine} and {@link
+ * AggregateOperation1#finishFn() finish}. The essential property
  * of this setup is that the edge leading to the first stage is local,
  * incurring no network traffic, and only the edge from the first to the
  * second stage is distributed. There is only one item per group traveling on
@@ -223,7 +223,7 @@ public final class Processors {
      * Returns a supplier of the first-stage processor in a two-stage
      * group-and-aggregate setup. The processor groups items by the grouping
      * key (as obtained from the given key-extracting function) and applies the
-     * {@link AggregateOperation1#accumulateItemF()} accumulate} primitive to
+     * {@link AggregateOperation1#accumulateFn()} accumulate} primitive to
      * each group. After exhausting all its input it emits one {@code
      * Map.Entry<K, A>} per observed key.
      *
@@ -238,7 +238,7 @@ public final class Processors {
             @Nonnull DistributedFunction<? super T, K> getKeyF,
             @Nonnull AggregateOperation1<? super T, A, ?> aggrOp
     ) {
-        return () -> new CoGroupP<>(getKeyF, aggrOp.withFinish(identity()));
+        return () -> new CoGroupP<>(getKeyF, aggrOp.withFinishFn(identity()));
     }
 
     /**
@@ -268,7 +268,7 @@ public final class Processors {
     /**
      * Returns a supplier of the first-stage processor in a two-stage
      * group-and-aggregate setup. The processor groups items by the grouping
-     * key and applies the {@link AggregateOperation#accumulateItemF(
+     * key and applies the {@link AggregateOperation#accumulateFn(
      * com.hazelcast.jet.pipeline.datamodel.Tag)
      * accumulate} primitive to each group. After exhausting all its input it
      * emits one {@code Map.Entry<K, A>} per observed key.
@@ -288,13 +288,13 @@ public final class Processors {
             @Nonnull List<DistributedFunction<?, ? extends K>> getKeyFs,
             @Nonnull AggregateOperation<A, ?> aggrOp
     ) {
-        return () -> new CoGroupP<>(getKeyFs, aggrOp.withFinish(identity()));
+        return () -> new CoGroupP<>(getKeyFs, aggrOp.withFinishFn(identity()));
     }
 
     /**
      * Returns a supplier of the second-stage processor in a two-stage
      * group-and-aggregate setup. It applies the {@link
-     * AggregateOperation1#combineAccumulatorsF() combine} aggregation
+     * AggregateOperation1#combineFn() combine} aggregation
      * primitive to the entries received from several upstream instances of
      * {@link #accumulateByKey(DistributedFunction, AggregateOperation1)
      * accumulateByKey()}. After exhausting all its input it emits one
@@ -313,7 +313,7 @@ public final class Processors {
     public static <A, R> DistributedSupplier<Processor> combineByKey(
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
-        return () -> new CoGroupP<>(Entry::getKey, aggrOp.withCombiningAccumulateF(Entry<Object, A>::getValue));
+        return () -> new CoGroupP<>(Entry::getKey, aggrOp.withCombiningAccumulateFn(Entry<Object, A>::getValue));
     }
 
     /**
@@ -359,7 +359,7 @@ public final class Processors {
     public static <T, A, R> DistributedSupplier<Processor> accumulate(
             @Nonnull AggregateOperation1<T, A, R> aggrOp
     ) {
-        return () -> new AggregateP<>(aggrOp.withFinish(identity()));
+        return () -> new AggregateP<>(aggrOp.withFinishFn(identity()));
     }
 
     /**
@@ -382,7 +382,7 @@ public final class Processors {
     public static <T, A, R> DistributedSupplier<Processor> combine(
             @Nonnull AggregateOperation1<T, A, R> aggrOp
     ) {
-        return () -> new AggregateP<>(aggrOp.withCombiningAccumulateF(identity()));
+        return () -> new AggregateP<>(aggrOp.withCombiningAccumulateFn(identity()));
     }
 
     /**
@@ -422,7 +422,7 @@ public final class Processors {
      * items by the grouping key (as obtained from the given key-extracting
      * function) and by <em>frame</em>, which is a range of timestamps equal to
      * the sliding step. It applies the {@link
-     * AggregateOperation1#accumulateItemF() accumulate} aggregation primitive to
+     * AggregateOperation1#accumulateFn() accumulate} aggregation primitive to
      * each key-frame group.
      * <p>
      * The frame is identified by the timestamp denoting its end time (equal to
@@ -451,7 +451,7 @@ public final class Processors {
     ) {
         WindowDefinition tumblingByFrame = windowDef.toTumblingByFrame();
         return Processors.<T, K, A, A>aggregateByKeyAndWindow(getKeyF, getTimestampF, timestampKind, tumblingByFrame,
-                aggrOp.withFinish(identity())
+                aggrOp.withFinishFn(identity())
         );
     }
 
@@ -459,7 +459,7 @@ public final class Processors {
      * Returns a supplier of the second-stage processor in a two-stage sliding
      * window aggregation setup (see the {@link Processors class
      * Javadoc} for an explanation of aggregation stages). It applies the
-     * {@link AggregateOperation1#combineAccumulatorsF() combine} aggregation
+     * {@link AggregateOperation1#combineFn() combine} aggregation
      * primitive to frames received from several upstream instances of {@link
      * #accumulateByFrame(DistributedFunction, DistributedToLongFunction,
      * TimestampKind, WindowDefinition, AggregateOperation1)
@@ -487,7 +487,7 @@ public final class Processors {
     ) {
         return aggregateByKeyAndWindow(
                 TimestampedEntry::getKey, TimestampedEntry::getTimestamp, TimestampKind.FRAME,
-                windowDef, aggrOp.withCombiningAccumulateF(TimestampedEntry<K, A>::getValue)
+                windowDef, aggrOp.withCombiningAccumulateFn(TimestampedEntry<K, A>::getValue)
         );
     }
 

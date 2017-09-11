@@ -51,13 +51,13 @@ public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R> {
     }
 
     @Nonnull
-    public DistributedSupplier<A> createAccumulatorF() {
+    public DistributedSupplier<A> createFn() {
         return createAccumulatorF;
     }
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    public <T> DistributedBiConsumer<? super A, ? super T> accumulateItemF(int index) {
+    public <T> DistributedBiConsumer<? super A, ? super T> accumulateFn(int index) {
         if (index >= accumulateFs.length) {
             throw new IllegalArgumentException("This AggregateOperation has " + accumulateFs.length
                     + " accumulating functions, but was asked for function at index " + index);
@@ -66,34 +66,34 @@ public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R> {
     }
 
     @Nullable
-    public DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF() {
+    public DistributedBiConsumer<? super A, ? super A> combineFn() {
         return combineAccumulatorsF;
     }
 
     @Nullable
-    public DistributedBiConsumer<? super A, ? super A> deductAccumulatorF() {
+    public DistributedBiConsumer<? super A, ? super A> deductFn() {
         return deductAccumulatorF;
     }
 
     @Nonnull
-    public DistributedFunction<? super A, R> finishAccumulationF() {
+    public DistributedFunction<? super A, R> finishFn() {
         return finishAccumulationF;
     }
 
     @Nonnull @Override
-    public AggregateOperation<A, R> withAccumulateItemFs(
-            @Nonnull DistributedBiConsumer<? super A, ?>[] accumulateFs
+    public AggregateOperation<A, R> withAccumulateFns(
+            @Nonnull DistributedBiConsumer<? super A, ?>[] accumulateFns
     ) {
-        return new AggregateOperationImpl<>(createAccumulatorF(), accumulateFs, combineAccumulatorsF(),
-                deductAccumulatorF(), finishAccumulationF());
+        return new AggregateOperationImpl<>(createFn(), accumulateFns, combineFn(),
+                deductFn(), finishFn());
     }
 
     @Override
-    public <R1> AggregateOperation<A, R1> withFinish(
-            @Nonnull DistributedFunction<? super A, R1> finishAccumulationF
+    public <R1> AggregateOperation<A, R1> withFinishFn(
+            @Nonnull DistributedFunction<? super A, R1> finishFn
     ) {
-        return new AggregateOperationImpl<>(createAccumulatorF(), accumulateFs, combineAccumulatorsF(),
-                deductAccumulatorF(), finishAccumulationF);
+        return new AggregateOperationImpl<>(createFn(), accumulateFs, combineFn(),
+                deductFn(), finishFn);
     }
 
     @Nonnull

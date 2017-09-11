@@ -53,7 +53,7 @@ public class CoGroupP<K, A, R> extends AbstractProcessor {
         this.aggrOp = aggrOp;
         this.resultTraverser = traverseStream(keyToAcc
                 .entrySet().stream()
-                .map(e -> entry(e.getKey(), this.aggrOp.finishAccumulationF().apply(e.getValue()))));
+                .map(e -> entry(e.getKey(), this.aggrOp.finishFn().apply(e.getValue()))));
     }
 
     public <T> CoGroupP(
@@ -68,8 +68,8 @@ public class CoGroupP<K, A, R> extends AbstractProcessor {
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         Function<Object, ? extends K> keyF = (Function<Object, ? extends K>) groupKeyFs.get(ordinal);
         K key = keyF.apply(item);
-        A acc = keyToAcc.computeIfAbsent(key, k -> aggrOp.createAccumulatorF().get());
-        aggrOp.accumulateItemF(ordinal).accept(acc, item);
+        A acc = keyToAcc.computeIfAbsent(key, k -> aggrOp.createFn().get());
+        aggrOp.accumulateFn(ordinal).accept(acc, item);
         return true;
     }
 

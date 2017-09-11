@@ -76,7 +76,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         this.flatMapper = flatMapper(
                 wm -> windowTraverserAndEvictor(wm.timestamp())
                             .append(wm));
-        this.emptyAcc = aggrOp.createAccumulatorF().get();
+        this.emptyAcc = aggrOp.createFn().get();
     }
 
     @Override
@@ -86,8 +86,8 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         assert frameTimestamp == wDef.floorFrameTs(frameTimestamp) : "timestamp not on the verge of a frame";
         final Object key = getKeyF.apply(t);
         A acc = tsToKeyToAcc.computeIfAbsent(frameTimestamp, x -> new HashMap<>())
-                            .computeIfAbsent(key, k -> aggrOp.createAccumulatorF().get());
-        aggrOp.accumulateItemF().accept(acc, t);
+                            .computeIfAbsent(key, k -> aggrOp.createFn().get());
+        aggrOp.accumulateFn().accept(acc, t);
         return true;
     }
 
@@ -135,7 +135,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         return Traversers.traverseStream(range(rangeStart, nextFrameTsToEmit, wDef.frameLength()).boxed())
                          .flatMap(frameTs -> Traversers.traverseIterable(computeWindow(frameTs).entrySet())
                                .map(e -> new TimestampedEntry<>(
-                                       frameTs, e.getKey(), aggrOp.finishAccumulationF().apply(e.getValue())))
+                                       frameTs, e.getKey(), aggrOp.finishFn().apply(e.getValue())))
                                .onFirstNull(() -> completeWindow(frameTs)));
     }
 
@@ -143,17 +143,17 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         if (wDef.isTumbling()) {
             return tsToKeyToAcc.getOrDefault(frameTs, emptyMap());
         }
-        if (aggrOp.deductAccumulatorF() != null) {
+        if (aggrOp.deductFn() != null) {
             // add leading-edge frame
-            patchSlidingWindow(aggrOp.combineAccumulatorsF(), tsToKeyToAcc.get(frameTs));
+            patchSlidingWindow(aggrOp.combineFn(), tsToKeyToAcc.get(frameTs));
             return slidingWindow;
         }
         // without deductF we have to recompute the window from scratch
         Map<Object, A> window = new HashMap<>();
         for (long ts = frameTs - wDef.windowLength() + wDef.frameLength(); ts <= frameTs; ts += wDef.frameLength()) {
             tsToKeyToAcc.getOrDefault(ts, emptyMap())
-                        .forEach((key, currAcc) -> aggrOp.combineAccumulatorsF().accept(
-                                  window.computeIfAbsent(key, k -> aggrOp.createAccumulatorF().get()),
+                        .forEach((key, currAcc) -> aggrOp.combineFn().accept(
+                                  window.computeIfAbsent(key, k -> aggrOp.createFn().get()),
                                   currAcc));
         }
         return window;
@@ -161,9 +161,9 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
 
     private void completeWindow(long frameTs) {
         Map<Object, A> evictedFrame = tsToKeyToAcc.remove(frameTs - wDef.windowLength() + wDef.frameLength());
-        if (aggrOp.deductAccumulatorF() != null) {
+        if (aggrOp.deductFn() != null) {
             // deduct trailing-edge frame
-            patchSlidingWindow(aggrOp.deductAccumulatorF(), evictedFrame);
+            patchSlidingWindow(aggrOp.deductFn(), evictedFrame);
         }
     }
 
@@ -173,7 +173,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         }
         for (Entry<Object, A> e : patchingFrame.entrySet()) {
             slidingWindow.compute(e.getKey(), (k, acc) -> {
-                A result = acc != null ? acc : aggrOp.createAccumulatorF().get();
+                A result = acc != null ? acc : aggrOp.createFn().get();
                 patchOp.accept(result, e.getValue());
                 return result.equals(emptyAcc) ? null : result;
             });
