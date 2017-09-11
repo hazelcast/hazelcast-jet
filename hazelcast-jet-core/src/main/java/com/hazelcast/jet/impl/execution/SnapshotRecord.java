@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.jet.impl.execution.init.JetImplDataSerializerHook;
+import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -94,12 +94,12 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
 
     @Override
     public int getFactoryId() {
-        return JetImplDataSerializerHook.FACTORY_ID;
+        return JetInitDataSerializerHook.FACTORY_ID;
     }
 
     @Override
     public int getId() {
-        return JetImplDataSerializerHook.MASTER_SNAPSHOT_RECORD;
+        return JetInitDataSerializerHook.MASTER_SNAPSHOT_RECORD;
     }
 
     @Override

@@ -23,7 +23,7 @@ import com.hazelcast.logging.ILogger;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.hazelcast.jet.impl.util.Util.formatIds;
+import static com.hazelcast.jet.impl.util.Util.jobAndExecutionId;
 
 public class SnapshotContext {
 
@@ -116,7 +116,7 @@ public class SnapshotContext {
         if (numHigherPriorityTasklets == 0) {
             lastSnapshotId = snapshotId;
         } else {
-            logger.warning("Snapshot " + snapshotId + " for " + formatIds(jobId, executionId) + " is postponed" +
+            logger.warning("Snapshot " + snapshotId + " for " + jobAndExecutionId(jobId, executionId) + " is postponed" +
                     " until all higher priority vertices are completed (number of vertices = "
                     + numHigherPriorityTasklets + ')');
             // TODO [basri] should we throw retry exception here?
@@ -141,7 +141,7 @@ public class SnapshotContext {
             // after all higher priority vertices are done we can start the snapshot
             if (numHigherPriorityTasklets == 0) {
                 this.lastSnapshotId++;
-                logger.info("Postponed snapshot " + this.lastSnapshotId + " for " + formatIds(jobId, executionId)
+                logger.info("Postponed snapshot " + this.lastSnapshotId + " for " + jobAndExecutionId(jobId, executionId)
                         + " started");
             }
         }

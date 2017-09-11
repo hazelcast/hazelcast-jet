@@ -110,12 +110,12 @@ public class EdgeDef implements IdentifiedDataSerializable {
 
     @Override
     public int getFactoryId() {
-        return JetImplDataSerializerHook.FACTORY_ID;
+        return JetInitDataSerializerHook.FACTORY_ID;
     }
 
     @Override
     public int getId() {
-        return JetImplDataSerializerHook.EDGE_DEF;
+        return JetInitDataSerializerHook.EDGE_DEF;
     }
 
     @Override

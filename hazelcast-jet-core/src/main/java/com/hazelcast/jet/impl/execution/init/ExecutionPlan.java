@@ -207,12 +207,12 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
     @Override
     public int getFactoryId() {
-        return JetImplDataSerializerHook.FACTORY_ID;
+        return JetInitDataSerializerHook.FACTORY_ID;
     }
 
     @Override
     public int getId() {
-        return JetImplDataSerializerHook.EXECUTION_PLAN;
+        return JetInitDataSerializerHook.EXECUTION_PLAN;
     }
 
     @Override

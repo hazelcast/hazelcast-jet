@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.JetService;
-import com.hazelcast.jet.impl.execution.init.JetImplDataSerializerHook;
+import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -55,7 +55,7 @@ public class JoinSubmittedJobOperation extends AsyncExecutionOperation implement
 
     @Override
     public int getId() {
-        return JetImplDataSerializerHook.JOIN_SUBMITTED_JOB;
+        return JetInitDataSerializerHook.JOIN_SUBMITTED_JOB;
     }
 
     @Override
