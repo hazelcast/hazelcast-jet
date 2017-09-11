@@ -282,4 +282,17 @@ public final class Util {
                                   DistributedBiFunction<? super K, ? super V, ? extends V> remappingFunction) {
         return (V) map.executeOnKey(key, entryProcessor(remappingFunction));
     }
+
+    /**
+     * Sequentially search through an array, return the index of first {@code
+     * needle} element in {@code haystack} or -1, if not found.
+     */
+    public static int arrayIndexOf(int needle, int[] haystack) {
+        for (int i = 0; i < haystack.length; i++) {
+            if (haystack[i] == needle) {
+                return i;
+            }
+        }
+        return -1;
+    }
 }

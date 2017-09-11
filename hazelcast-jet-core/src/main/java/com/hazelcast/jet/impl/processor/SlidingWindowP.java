@@ -22,6 +22,7 @@ import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
@@ -133,11 +134,18 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     }
 
     private Traverser<Object> windowTraverserAndEvictor(long endTsExclusive) {
+        if (bottomTs == Long.MAX_VALUE) {
+            return Traversers.empty();
+        }
+
         assert endTsExclusive == wDef.floorFrameTs(endTsExclusive) : "WM timestamp not on the verge of a frame";
-        return traverseIterable(computeWindow(endTsExclusive).entrySet())
-                .map(e -> (Object) new TimestampedEntry<>(
-                        endTsExclusive, e.getKey(), aggrOp.finishAccumulationF().apply(e.getValue())))
-                .onFirstNull(() -> completeWindow(endTsExclusive));
+        long rangeStart = Math.min(bottomTs + wDef.windowLength() - wDef.frameLength(), endTsExclusive);
+        return Traversers.traverseStream(range(rangeStart, endTsExclusive, wDef.frameLength()).boxed())
+                .flatMap(ts ->
+                         traverseIterable(computeWindow(ts).entrySet())
+                        .map(e -> (Object) new TimestampedEntry<>(
+                                endTsExclusive, e.getKey(), aggrOp.finishAccumulationF().apply(e.getValue())))
+                        .onFirstNull(() -> completeWindow(endTsExclusive)));
     }
 
     private Map<Object, A> computeWindow(long frameTs) {
@@ -225,6 +233,15 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
             topTs = Math.max(topTs, k.timestamp);
             bottomTs = Math.min(bottomTs, k.timestamp);
         }
+    }
+
+    /**
+     * Returns a stream iterating {@code for (i=start; i<=end; i+=step)}
+     */
+    private static LongStream range(long start, long end, long step) {
+        return start > end
+                ? LongStream.empty()
+                : LongStream.iterate(start, n -> n + step).limit(1 + (end - start) / step);
     }
 
     public static final class SnapshotKey implements PartitionAware<Object>, IdentifiedDataSerializable {

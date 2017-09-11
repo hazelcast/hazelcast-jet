@@ -98,7 +98,7 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
         DAG dag = new DAG();
         boolean isBatchLocal = isBatch;
         Vertex source = dag.newVertex("source", () -> new EmitListP(sourceEvents, isBatchLocal)).localParallelism(1);
-        Vertex insertPP = dag.newVertex("insertPP", insertWatermarks(MyEvent::getTimestamp,
+        Vertex insertPP = dag.newVertex("insertWmP", insertWatermarks(MyEvent::getTimestamp,
                 limitingLagAndLull(500, 1000), emitByFrame(wDef)))
                 .localParallelism(1);
         Vertex sink = dag.newVertex("sink", writeList("sink"));
@@ -132,13 +132,13 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
 
         IList<MyEvent> sinkList = instance.getList("sink");
 
-        assertTrueEventually(() -> assertTrue(sinkList.size() == expectedOutput.size()), 5);
+        assertTrueEventually(() ->
+                assertEquals(streamToString(expectedOutput.stream()), streamToString(new ArrayList<>(sinkList).stream())),
+                5);
         // wait a little more and make sure, that there are no more frames
         Thread.sleep(1000);
 
-        String expected = streamToString(expectedOutput.stream());
-        String actual = streamToString(new ArrayList<>(sinkList).stream());
-        assertEquals(expected, actual);
+        assertTrue(sinkList.size() == expectedOutput.size());
     }
 
     private static String streamToString(Stream<?> stream) {

@@ -50,7 +50,7 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
     private final NextWatermarkTraverser nextWatermarkTraverser = new NextWatermarkTraverser();
     private final FlatMapper<Object, Object> flatMapper = flatMapper(this::traverser);
 
-    private long lastEmittedWm = Long.MIN_VALUE;
+    private long lastEmittedWm = Long.MAX_VALUE;
     private long nextWm = Long.MIN_VALUE;
     private int globalProcessorIndex;
 
@@ -80,6 +80,9 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
 
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
+        if (lastEmittedWm == Long.MAX_VALUE) {
+            lastEmittedWm = Long.MIN_VALUE;
+        }
         return flatMapper.tryProcess(item);
     }
 
@@ -92,6 +95,8 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
             proposedWm = wmPolicy.reportEvent(eventTs);
             if (Math.max(proposedWm, lastEmittedWm) <= eventTs) {
                 singletonTraverser.accept(item);
+            } else {
+                getLogger().fine("Dropped late event: " + item);
             }
         }
         if (proposedWm == Long.MIN_VALUE) {
@@ -106,15 +111,16 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
 
     @Override
     public boolean saveSnapshot() {
-        return lastEmittedWm == Long.MIN_VALUE
-                || tryEmitToSnapshot(globalProcessorIndex, lastEmittedWm);
+        return tryEmitToSnapshot(globalProcessorIndex, lastEmittedWm);
     }
 
     @Override
     public void restoreSnapshot(@Nonnull Inbox inbox) {
+        // we restart at the oldest WM any instance was at at the time of snapshot
         for (Object o; (o = inbox.poll()) != null; ) {
-            lastEmittedWm = Math.max(lastEmittedWm, ((Entry<?, Long>) o).getValue());
+            lastEmittedWm = Math.min(lastEmittedWm, ((Entry<?, Long>) o).getValue());
         }
+        getLogger().info("restored lastEmittedWm=" + lastEmittedWm);
     }
 
     private class NextWatermarkTraverser implements Traverser<Watermark> {
