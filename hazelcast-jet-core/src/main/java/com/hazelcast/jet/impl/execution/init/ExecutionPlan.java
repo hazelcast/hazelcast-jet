@@ -139,8 +139,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
             int processorIdx = 0;
             for (Processor p : processors) {
-                ILogger logger =
-                        nodeEngine.getLogger(p.getClass().getName() + '.' + srcVertex.name() + '#' + processorIdx);
+                ILogger logger = nodeEngine.getLogger(p.getClass().getName() + '.' + srcVertex.name()
+                                + '#' + (srcVertex.getProcIdxOffset() + processorIdx));
                 ProcCtx context = new ProcCtx(
                         instance,
                         nodeEngine.getSerializationService(),
