@@ -29,6 +29,7 @@ import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.Member;
 import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.JobStatus;
@@ -43,6 +44,7 @@ import com.hazelcast.spi.serialization.SerializationService;
 import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -129,9 +131,8 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     }
 
     private Address masterAddress() {
-        Set<Member> members = client.getCluster().getMembers();
-        Member master = members.iterator().next();
-        return master.getAddress();
+        Optional<Member> first = client.getCluster().getMembers().stream().findFirst();
+        return first.orElseThrow(() -> new IllegalStateException("No members found in cluster")).getAddress();
     }
 
     private class SubmittedJobImpl extends AbstractSubmittedJobImpl {
