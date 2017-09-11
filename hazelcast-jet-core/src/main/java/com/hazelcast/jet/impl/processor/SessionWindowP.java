@@ -17,17 +17,17 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
-import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Session;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Watermark;
+import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
-import com.hazelcast.jet.impl.execution.init.JetImplDataSerializerHook;
+import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -58,7 +58,7 @@ import static java.lang.System.arraycopy;
 /**
  * Session window processor. See {@link
  *      com.hazelcast.jet.processor.Processors#aggregateToSessionWindow(long,
- *      DistributedToLongFunction, DistributedFunction, AggregateOperation)
+ *      DistributedToLongFunction, DistributedFunction, AggregateOperation1)
  * WindowingProcessors.sessionWindow()} for documentation.
  *
  * @param <T> type of the stream item
@@ -87,7 +87,7 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
             long sessionTimeout,
             DistributedToLongFunction<? super T> getTimestampF,
             DistributedFunction<? super T, K> getKeyF,
-            AggregateOperation<? super T, A, R> aggrOp
+            AggregateOperation1<? super T, A, R> aggrOp
     ) {
         this.getTimestampF = getTimestampF;
         this.getKeyF = getKeyF;
@@ -275,12 +275,12 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
 
         @Override
         public int getFactoryId() {
-            return JetImplDataSerializerHook.FACTORY_ID;
+            return JetInitDataSerializerHook.FACTORY_ID;
         }
 
         @Override
         public int getId() {
-            return JetImplDataSerializerHook.SESSION_WINDOW_P_WINDOWS;
+            return JetInitDataSerializerHook.SESSION_WINDOW_P_WINDOWS;
         }
 
         @Override

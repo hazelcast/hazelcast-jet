@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.JetService;
-import com.hazelcast.jet.impl.execution.init.JetImplDataSerializerHook;
+import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 
@@ -61,7 +61,7 @@ public class SnapshotOperation extends AsyncExecutionOperation {
 
     @Override
     public int getId() {
-        return JetImplDataSerializerHook.SNAPSHOT_OP;
+        return JetInitDataSerializerHook.SNAPSHOT_OP;
     }
 
     @Override
