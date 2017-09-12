@@ -47,6 +47,7 @@ import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
@@ -253,7 +254,7 @@ public class CooperativeProcessorTaskletTest {
         }
 
         final CooperativeProcessorTasklet t = new CooperativeProcessorTasklet(context, processor, instreams, outstreams,
-                null, null);
+                mock(SnapshotContext.class), new MockOutboundCollector(10));
         t.init(new CompletableFuture<>());
         return t;
     }
