@@ -22,6 +22,7 @@ import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorMetaSupplier;
 import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.jet.ResettableSingletonTraverser;
+import com.hazelcast.jet.SnapshotRestorePolicy;
 import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Traverser;
@@ -40,13 +41,12 @@ import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
 import com.hazelcast.jet.impl.processor.TransformP;
-import com.hazelcast.nio.Address;
+import com.hazelcast.jet.impl.util.WrappingProcessorMetaSupplier;
+import com.hazelcast.jet.impl.util.WrappingProcessorSupplier;
 
 import javax.annotation.Nonnull;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.function.Function;
 
 import static com.hazelcast.jet.TimestampKind.EVENT;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
@@ -572,12 +572,13 @@ public final class Processors {
      * @param <T> the type of the stream item
      */
     @Nonnull
-    public static <T> DistributedSupplier<Processor> insertWatermarks(
+    public static <T> ProcessorMetaSupplier insertWatermarks(
             @Nonnull DistributedToLongFunction<T> getTimestampF,
             @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
             @Nonnull WatermarkEmissionPolicy wmEmitPolicy
     ) {
-        return () -> new InsertWatermarksP<>(getTimestampF, newWmPolicyF.get(), wmEmitPolicy);
+        return ProcessorMetaSupplier.of(() -> new InsertWatermarksP<>(getTimestampF, newWmPolicyF.get(), wmEmitPolicy),
+                SnapshotRestorePolicy.BROADCAST);
     }
 
     /**
@@ -653,18 +654,10 @@ public final class Processors {
      */
     @Nonnull
     public static ProcessorMetaSupplier nonCooperative(@Nonnull ProcessorMetaSupplier wrapped) {
-        return new ProcessorMetaSupplier() {
-            @Override
-            public void init(@Nonnull Context context) {
-                wrapped.init(context);
-            }
-
-            @Nonnull @Override
-            public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addrs) {
-                Function<Address, ProcessorSupplier> addrToProcSupplier = wrapped.get(addrs);
-                return addr -> nonCooperative(addrToProcSupplier.apply(addr));
-            }
-        };
+        return new WrappingProcessorMetaSupplier(wrapped, p -> {
+            ((AbstractProcessor) p).setCooperative(false);
+            return p;
+        });
     }
 
     /**
@@ -674,19 +667,10 @@ public final class Processors {
      */
     @Nonnull
     public static ProcessorSupplier nonCooperative(@Nonnull ProcessorSupplier wrapped) {
-        return new ProcessorSupplier() {
-            @Override
-            public void init(@Nonnull Context context) {
-                wrapped.init(context);
-            }
-
-            @Nonnull @Override
-            public Collection<? extends Processor> get(int count) {
-                Collection<? extends Processor> ps = wrapped.get(count);
-                ps.forEach(p -> ((AbstractProcessor) p).setCooperative(false));
-                return ps;
-            }
-        };
+        return new WrappingProcessorSupplier(wrapped, p -> {
+            ((AbstractProcessor) p).setCooperative(false);
+            return p;
+        });
     }
 
     /**

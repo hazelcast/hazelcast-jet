@@ -111,7 +111,7 @@ public final class ThrottleWrappedP implements Processor {
                 ts = currentTs;
                 emitCount = 0;
             } else {
-                double emitRate = TimeUnit.SECONDS.toNanos(1) * (double)emitCount / elapsed;
+                double emitRate = TimeUnit.SECONDS.toNanos(1) * (double) emitCount / elapsed;
                 if (emitRate > itemsPerSecond) {
                     return false;
                 }

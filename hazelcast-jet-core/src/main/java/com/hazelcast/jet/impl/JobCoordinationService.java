@@ -390,8 +390,8 @@ public class JobCoordinationService {
 
     void validateSnapshot(long jobId, long executionId, long snapshotId) {
         // TODO [basri] implement validation
-        logger.warning("Snapshot validation is not implemented yet. " + jobAndExecutionId(jobId, executionId) + " snapshot "
-                + snapshotId);
+        logger.warning("Snapshot validation is not implemented yet. " + jobAndExecutionId(jobId, executionId)
+                + " snapshot " + snapshotId);
         snapshotRepository.setSnapshotStatus(jobId, snapshotId, SUCCESSFUL);
         scheduleSnapshot(jobId, executionId);
     }

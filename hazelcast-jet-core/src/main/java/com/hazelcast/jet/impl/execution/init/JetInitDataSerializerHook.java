@@ -25,15 +25,14 @@ import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.operation.CompleteOperation;
 import com.hazelcast.jet.impl.operation.ExecuteOperation;
-import com.hazelcast.jet.impl.operation.GetJobStatusOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsOperation;
+import com.hazelcast.jet.impl.operation.GetJobStatusOperation;
 import com.hazelcast.jet.impl.operation.InitOperation;
 import com.hazelcast.jet.impl.operation.JoinSubmittedJobOperation;
-import com.hazelcast.jet.impl.operation.SubmitJobOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
+import com.hazelcast.jet.impl.operation.SubmitJobOperation;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
-import com.hazelcast.jet.impl.util.MaxByAggregator;
 import com.hazelcast.nio.serialization.DataSerializableFactory;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
@@ -55,12 +54,11 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
     public static final int SNAPSHOT_OP = 10;
     public static final int MASTER_SNAPSHOT_RECORD = 11;
     public static final int SESSION_WINDOW_P_WINDOWS = 12;
-    public static final int MAX_BY_AGGREGATOR = 13;
-    public static final int FILTER_EXECUTION_ID_BY_JOB_ID_PREDICATE = 14;
-    public static final int FILTER_JOB_ID = 15;
-    public static final int SLIDING_WINDOW_P_SNAPSHOT_KEY = 16;
-    public static final int GET_JOB_IDS = 17;
-    public static final int JOIN_SUBMITTED_JOB = 18;
+    public static final int FILTER_EXECUTION_ID_BY_JOB_ID_PREDICATE = 13;
+    public static final int FILTER_JOB_ID = 14;
+    public static final int SLIDING_WINDOW_P_SNAPSHOT_KEY = 15;
+    public static final int GET_JOB_IDS = 16;
+    public static final int JOIN_SUBMITTED_JOB = 17;
 
     public static final int FACTORY_ID = FactoryIdHelper.getFactoryId(JET_IMPL_DS_FACTORY, JET_IMPL_DS_FACTORY_ID);
 
@@ -106,8 +104,6 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
                     return new SnapshotRecord();
                 case SESSION_WINDOW_P_WINDOWS:
                     return new SessionWindowP.Windows<>();
-                case MAX_BY_AGGREGATOR:
-                    return new MaxByAggregator();
                 case FILTER_EXECUTION_ID_BY_JOB_ID_PREDICATE:
                     return new FilterExecutionIdByJobIdPredicate();
                 case FILTER_JOB_ID:

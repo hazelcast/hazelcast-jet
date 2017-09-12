@@ -64,8 +64,8 @@ public final class ExecutionPlanBuilder {
         final int clusterSize = members.size();
         final boolean isJobDistributed = clusterSize > 1;
         final EdgeConfig defaultEdgeConfig = instance.getConfig().getDefaultEdgeConfig();
-        final Map<MemberInfo, ExecutionPlan> plans =
-                members.stream().collect(toMap(m -> m, m -> new ExecutionPlan(partitionOwners, jobConfig, lastSnapshotId)));
+        final Map<MemberInfo, ExecutionPlan> plans = members.stream()
+                .collect(toMap(m -> m, m -> new ExecutionPlan(partitionOwners, jobConfig, lastSnapshotId)));
         final Map<String, Integer> vertexIdMap = assignVertexIds(dag);
         for (Entry<String, Integer> entry : vertexIdMap.entrySet()) {
             final Vertex vertex = dag.getVertex(entry.getKey());

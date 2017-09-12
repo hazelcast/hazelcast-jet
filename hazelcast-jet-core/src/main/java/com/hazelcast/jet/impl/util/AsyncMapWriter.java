@@ -50,8 +50,8 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.util.CollectionUtil.toIntArray;
 
 /**
- * Utility for cooperative writes to a Map
- * Not thread-safe
+ * Utility for cooperative writes to an IMap.
+ * Not thread-safe.
  */
 public class AsyncMapWriter {
 
@@ -128,19 +128,19 @@ public class AsyncMapWriter {
         return true;
     }
 
-    private boolean tryRetry(int[] partitions, MapEntries[] entriesPerPtition, CompletableFuture<Void> completionFuture) {
-        assert partitions.length == entriesPerPtition.length;
+    private boolean tryRetry(int[] partitions, MapEntries[] entriesPerPtion, CompletableFuture<Void> completionFuture) {
+        assert partitions.length == entriesPerPtion.length;
 
         IPartition[] partitionOwners = partitionService.getPartitions();
         Map<Address, Entry<List<Integer>, List<MapEntries>>> addrToEntries = new HashMap<>();
         for (int index = 0; index < partitions.length; index++) {
             int partition = partitions[index];
-            MapEntries entries = entriesPerPtition[index];
+            MapEntries entries = entriesPerPtion[index];
             Address owner = partitionOwners[partition].getOwnerOrNull();
-            Entry<List<Integer>, List<MapEntries>> ptitionsAndEntries
+            Entry<List<Integer>, List<MapEntries>> ptionsAndEntries
                     = addrToEntries.computeIfAbsent(owner, a -> entry(new ArrayList<>(), new ArrayList<>()));
-            ptitionsAndEntries.getValue().add(entries);
-            ptitionsAndEntries.getKey().add(partition);
+            ptionsAndEntries.getValue().add(entries);
+            ptionsAndEntries.getKey().add(partition);
         }
 
         List<PartitionOpBuilder> retryOps = addrToEntries
@@ -215,7 +215,7 @@ public class AsyncMapWriter {
                 numConcurrentOps.decrementAndGet();
 
                 // try to cherry-pick partitions which failed in this operation
-                List<Integer> failedPartitons = new ArrayList<>();
+                List<Integer> failedPartitions = new ArrayList<>();
                 List<MapEntries> failedEntries = new ArrayList<>();
                 Throwable t = null;
                 Object[] results = r.getResults();
@@ -224,7 +224,7 @@ public class AsyncMapWriter {
                     if (o instanceof Throwable) {
                         t = (Throwable) o;
                         if (t instanceof RetryableException) {
-                            failedPartitons.add(builder.partitions[idx]);
+                            failedPartitions.add(builder.partitions[idx]);
                             failedEntries.add(builder.entries[idx]);
                         } else {
                             completionFuture.completeExceptionally((Throwable) o);
@@ -233,7 +233,7 @@ public class AsyncMapWriter {
                     }
                 }
                 if (t != null) {
-                    if (!tryRetry(toIntArray(failedPartitons),
+                    if (!tryRetry(toIntArray(failedPartitions),
                             failedEntries.toArray(new MapEntries[failedEntries.size()]), completionFuture)) {
                         completionFuture.completeExceptionally(t);
                     }
@@ -282,13 +282,13 @@ public class AsyncMapWriter {
     private class PartitionOpBuilder {
         private final Address address;
 
-        public PartitionOpBuilder(Address address) {
-            this.address = address;
-        }
-
         // PartitionIteratingOp doesn't expose these, so we have to track them separately
         private MapEntries[] entries; //entries in the operation
         private int[] partitions; // partitions in the operation
+
+        PartitionOpBuilder(Address address) {
+            this.address = address;
+        }
 
         private PartitionIteratingOperation build() {
             OperationFactory factory = opProvider.createPutAllOperationFactory(mapName,

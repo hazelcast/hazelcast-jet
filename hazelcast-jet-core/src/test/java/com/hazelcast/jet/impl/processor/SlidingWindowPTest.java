@@ -54,7 +54,6 @@ import static com.hazelcast.jet.processor.Processors.aggregateToSlidingWindow;
 import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
 import static com.hazelcast.jet.test.TestSupport.testProcessor;
 import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
 import static java.util.Collections.shuffle;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -272,21 +271,6 @@ public class SlidingWindowPTest {
         // this is to test that there is no iteration from current watermark up to Long.MAX_VALUE, which
         // will take too long.
         assertTrue("process took too long: " + processTime, processTime < MILLISECONDS.toNanos(300));
-    }
-
-
-    @Test
-    public void when_missedWm_then_error() {
-        exception.expectMessage("probably missed a WM");
-
-        testProcessor(supplier,
-                asList(
-                        event(0L, 1L), // to frame 0
-                        // We should have received wm(3), which includes frames 0..3, where 0 is our bottom frame.
-                        // Receiving wm(4) should produce and error, because it will leave leak frame0
-                        wm(4L)
-                ),
-                emptyList(), true, true, false, false, Objects::equals);
     }
 
     private Entry<Long, ?> event(long frameTs, long value) {
