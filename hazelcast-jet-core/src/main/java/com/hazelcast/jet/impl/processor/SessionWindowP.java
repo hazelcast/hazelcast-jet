@@ -102,8 +102,8 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
     @Override
     protected boolean tryProcess0(@Nonnull Object item) {
         final T event = (T) item;
-        final long timestamp = getTimestampF.applyAsLong(event);
-        K key = getKeyF.apply(event);
+        final long timestamp = getTimestampFn.applyAsLong(event);
+        K key = getKeyFn.apply(event);
         addEvent(keyToWindows.computeIfAbsent(key, k -> new Windows()),
                 key, timestamp, event);
         return true;
@@ -179,14 +179,14 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
     }
 
     private void addEvent(Windows<A> w, K key, long timestamp, T event) {
-        accumulateF.accept(resolveAcc(w, key, timestamp), event);
+        accumulateFn.accept(resolveAcc(w, key, timestamp), event);
     }
 
     private List<Session<K, R>> closeWindows(Windows<A> w, K key, long wm) {
         List<Session<K, R>> sessions = new ArrayList<>();
         int i = 0;
         for (; i < w.size && w.ends[i] < wm; i++) {
-            sessions.add(new Session<>(key, w.starts[i], w.ends[i], finishAccumulationF.apply(w.accs[i])));
+            sessions.add(new Session<>(key, w.starts[i], w.ends[i], finishAccumulationFn.apply(w.accs[i])));
         }
         if (i != w.size) {
             w.removeHead(i);
@@ -225,7 +225,7 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
             // both `i` and `i + 1` windows overlap the event interval
             removeFromDeadlines(key, w.ends[i]);
             w.ends[i] = w.ends[i + 1];
-            combineAccF.accept(w.accs[i], w.accs[i + 1]);
+            combineAccFn.accept(w.accs[i], w.accs[i + 1]);
             w.removeWindow(i + 1);
             return w.accs[i];
         }
@@ -239,7 +239,7 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
         w.size++;
         w.starts[idx] = windowStart;
         w.ends[idx] = windowEnd;
-        w.accs[idx] = newAccumulatorF.get();
+        w.accs[idx] = newAccumulatorFn.get();
         return w.accs[idx];
     }
 

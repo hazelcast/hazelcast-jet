@@ -42,7 +42,7 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
 
     private static final Object NULL_OBJECT = new Object();
 
-    private final ToLongFunction<T> getTimestampF;
+    private final ToLongFunction<T> getTimestampFn;
     private final WatermarkPolicy wmPolicy;
     private final WatermarkEmissionPolicy wmEmitPolicy;
 
@@ -91,7 +91,7 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
         if (item == NULL_OBJECT) {
             proposedWm = wmPolicy.getCurrentWatermark();
         } else {
-            long eventTs = getTimestampF.applyAsLong((T) item);
+            long eventTs = getTimestampFn.applyAsLong((T) item);
             proposedWm = wmPolicy.reportEvent(eventTs);
             if (Math.max(proposedWm, lastEmittedWm) <= eventTs) {
                 singletonTraverser.accept(item);

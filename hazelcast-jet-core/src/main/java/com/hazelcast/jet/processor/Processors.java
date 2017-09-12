@@ -412,7 +412,7 @@ public final class Processors {
             @Nonnull WindowDefinition windowDef,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        return Processors.<T, K, A, R>aggregateByKeyAndWindow(getKeyF, getTimestampF, timestampKind,
+        return Processors.<T, K, A, R>aggregateByKeyAndWindow(getKeyFn, getTimestampFn, timestampKind,
                 windowDef, aggrOp, true);
     }
 
@@ -451,8 +451,8 @@ public final class Processors {
             @Nonnull AggregateOperation1<? super T, A, ?> aggrOp
     ) {
         WindowDefinition tumblingByFrame = windowDef.toTumblingByFrame();
-        return Processors.<T, K, A, A>aggregateByKeyAndWindow(getKeyF, getTimestampF, timestampKind, tumblingByFrame,
-                aggrOp.withFinish(identity()), false
+        return Processors.<T, K, A, A>aggregateByKeyAndWindow(getKeyFn, getTimestampFn, timestampKind, tumblingByFrame,
+                aggrOp.withFinishFn(identity()), false
         );
     }
 
@@ -488,7 +488,7 @@ public final class Processors {
     ) {
         return aggregateByKeyAndWindow(
                 TimestampedEntry::getKey, TimestampedEntry::getTimestamp, TimestampKind.FRAME,
-                windowDef, aggrOp.withCombiningAccumulateF(TimestampedEntry<K, A>::getValue), true
+                windowDef, aggrOp.withCombiningAccumulateFn(TimestampedEntry<K, A>::getValue), true
         );
     }
 
