@@ -28,31 +28,31 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 
 public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R> {
     final DistributedBiConsumer<? super A, ?>[] accumulateFs;
-    private final DistributedSupplier<A> createAccumulatorF;
-    private final DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF;
-    private final DistributedBiConsumer<? super A, ? super A> deductAccumulatorF;
-    private final DistributedFunction<? super A, R> finishAccumulationF;
+    private final DistributedSupplier<A> createAccumulatorFn;
+    private final DistributedBiConsumer<? super A, ? super A> combineAccumulatorsFn;
+    private final DistributedBiConsumer<? super A, ? super A> deductAccumulatorFn;
+    private final DistributedFunction<? super A, R> finishAccumulationFn;
 
     public AggregateOperationImpl(
-            @Nonnull DistributedSupplier<A> createAccumulatorF,
+            @Nonnull DistributedSupplier<A> createAccumulatorFn,
             @Nonnull DistributedBiConsumer<? super A, ?>[] accumulateFs,
-            @Nullable DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF,
-            @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorF,
-            @Nonnull DistributedFunction<? super A, R> finishAccumulationF
+            @Nullable DistributedBiConsumer<? super A, ? super A> combineAccumulatorsFn,
+            @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorFn,
+            @Nonnull DistributedFunction<? super A, R> finishAccumulationFn
     ) {
         for (Object f : accumulateFs) {
             checkNotNull(f, "accumulateFs array contains a null slot");
         }
-        this.createAccumulatorF = createAccumulatorF;
+        this.createAccumulatorFn = createAccumulatorFn;
         this.accumulateFs = accumulateFs.clone();
-        this.combineAccumulatorsF = combineAccumulatorsF;
-        this.deductAccumulatorF = deductAccumulatorF;
-        this.finishAccumulationF = finishAccumulationF;
+        this.combineAccumulatorsFn = combineAccumulatorsFn;
+        this.deductAccumulatorFn = deductAccumulatorFn;
+        this.finishAccumulationFn = finishAccumulationFn;
     }
 
     @Nonnull
     public DistributedSupplier<A> createFn() {
-        return createAccumulatorF;
+        return createAccumulatorFn;
     }
 
     @Nonnull @Override
@@ -67,17 +67,17 @@ public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R> {
 
     @Nullable
     public DistributedBiConsumer<? super A, ? super A> combineFn() {
-        return combineAccumulatorsF;
+        return combineAccumulatorsFn;
     }
 
     @Nullable
     public DistributedBiConsumer<? super A, ? super A> deductFn() {
-        return deductAccumulatorF;
+        return deductAccumulatorFn;
     }
 
     @Nonnull
     public DistributedFunction<? super A, R> finishFn() {
-        return finishAccumulationF;
+        return finishAccumulationFn;
     }
 
     @Nonnull @Override

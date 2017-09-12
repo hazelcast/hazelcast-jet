@@ -33,25 +33,25 @@ public class AggregateOperation3Impl<T0, T1, T2, A, R>
         extends AggregateOperationImpl<A, R>
         implements AggregateOperation3<T0, T1, T2, A, R> {
 
-    public AggregateOperation3Impl(@Nonnull DistributedSupplier<A> createAccumulatorF,
+    public AggregateOperation3Impl(@Nonnull DistributedSupplier<A> createAccumulatorFn,
                                    @Nonnull DistributedBiConsumer<? super A, ? super T0> accumulateItemF0,
                                    @Nonnull DistributedBiConsumer<? super A, ? super T1> accumulateItemF1,
                                    @Nonnull DistributedBiConsumer<? super A, ? super T2> accumulateItemF2,
-                                   @Nullable DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF,
-                                   @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorF,
-                                   @Nonnull DistributedFunction<? super A, R> finishAccumulationF
+                                   @Nullable DistributedBiConsumer<? super A, ? super A> combineAccumulatorsFn,
+                                   @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorFn,
+                                   @Nonnull DistributedFunction<? super A, R> finishAccumulationFn
     ) {
-        super(createAccumulatorF, accumulateFs(accumulateItemF0, accumulateItemF1, accumulateItemF2),
-                combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
+        super(createAccumulatorFn, accumulateFs(accumulateItemF0, accumulateItemF1, accumulateItemF2),
+                combineAccumulatorsFn, deductAccumulatorFn, finishAccumulationFn);
     }
 
-    private AggregateOperation3Impl(@Nonnull DistributedSupplier<A> createAccumulatorF,
+    private AggregateOperation3Impl(@Nonnull DistributedSupplier<A> createAccumulatorFn,
                                     @Nonnull DistributedBiConsumer<? super A, ?>[] accumulateFs,
-                                    @Nullable DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF,
-                                    @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorF,
-                                    @Nonnull DistributedFunction<? super A, R> finishAccumulationF
+                                    @Nullable DistributedBiConsumer<? super A, ? super A> combineAccumulatorsFn,
+                                    @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorFn,
+                                    @Nonnull DistributedFunction<? super A, R> finishAccumulationFn
     ) {
-        super(createAccumulatorF, accumulateFs, combineAccumulatorsF, deductAccumulatorF, finishAccumulationF);
+        super(createAccumulatorFn, accumulateFs, combineAccumulatorsFn, deductAccumulatorFn, finishAccumulationFn);
         validateCountOfAccumulateFs(accumulateFs);
     }
 

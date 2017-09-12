@@ -52,8 +52,8 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     final Map<Object, A> slidingWindow = new HashMap<>();
 
     private final WindowDefinition wDef;
-    private final DistributedToLongFunction<? super T> getFrameTimestampF;
-    private final Function<? super T, ?> getKeyF;
+    private final DistributedToLongFunction<? super T> getFrameTimestampFn;
+    private final Function<? super T, ?> getKeyFn;
     private final AggregateOperation1<? super T, A, R> aggrOp;
 
     private final FlatMapper<Watermark, Object> flatMapper;
@@ -63,14 +63,14 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     private Traverser<Object> finalTraverser;
 
     public SlidingWindowP(
-            Function<? super T, ?> getKeyF,
-            DistributedToLongFunction<? super T> getFrameTimestampF,
+            Function<? super T, ?> getKeyFn,
+            DistributedToLongFunction<? super T> getFrameTimestampFn,
             WindowDefinition winDef,
             AggregateOperation1<? super T, A, R> aggrOp
     ) {
         this.wDef = winDef;
-        this.getFrameTimestampF = getFrameTimestampF;
-        this.getKeyF = getKeyF;
+        this.getFrameTimestampFn = getFrameTimestampFn;
+        this.getKeyFn = getKeyFn;
         this.aggrOp = aggrOp;
 
         this.flatMapper = flatMapper(
@@ -82,9 +82,9 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     @Override
     protected boolean tryProcess0(@Nonnull Object item) {
         T t = (T) item;
-        final Long frameTimestamp = getFrameTimestampF.applyAsLong(t);
+        final Long frameTimestamp = getFrameTimestampFn.applyAsLong(t);
         assert frameTimestamp == wDef.floorFrameTs(frameTimestamp) : "timestamp not on the verge of a frame";
-        final Object key = getKeyF.apply(t);
+        final Object key = getKeyFn.apply(t);
         A acc = tsToKeyToAcc.computeIfAbsent(frameTimestamp, x -> new HashMap<>())
                             .computeIfAbsent(key, k -> aggrOp.createFn().get());
         aggrOp.accumulateFn().accept(acc, t);
@@ -148,7 +148,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
             patchSlidingWindow(aggrOp.combineFn(), tsToKeyToAcc.get(frameTs));
             return slidingWindow;
         }
-        // without deductF we have to recompute the window from scratch
+        // without deductFn we have to recompute the window from scratch
         Map<Object, A> window = new HashMap<>();
         for (long ts = frameTs - wDef.windowLength() + wDef.frameLength(); ts <= frameTs; ts += wDef.frameLength()) {
             tsToKeyToAcc.getOrDefault(ts, emptyMap())

@@ -57,17 +57,17 @@ public class CoGroupP<K, A, R> extends AbstractProcessor {
     }
 
     public <T> CoGroupP(
-            @Nonnull DistributedFunction<? super T, ? extends K> groupKeyF,
+            @Nonnull DistributedFunction<? super T, ? extends K> groupKeyFn,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        this(singletonList(groupKeyF), aggrOp);
+        this(singletonList(groupKeyFn), aggrOp);
     }
 
     @Override
     @SuppressWarnings("unchecked")
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-        Function<Object, ? extends K> keyF = (Function<Object, ? extends K>) groupKeyFs.get(ordinal);
-        K key = keyF.apply(item);
+        Function<Object, ? extends K> keyFn = (Function<Object, ? extends K>) groupKeyFs.get(ordinal);
+        K key = keyFn.apply(item);
         A acc = keyToAcc.computeIfAbsent(key, k -> aggrOp.createFn().get());
         aggrOp.accumulateFn(ordinal).accept(acc, item);
         return true;

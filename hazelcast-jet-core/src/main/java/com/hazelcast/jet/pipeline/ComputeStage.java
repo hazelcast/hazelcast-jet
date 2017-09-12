@@ -121,9 +121,9 @@ public interface ComputeStage<E> extends Stage {
      * Co-groups the items of this stage and the items of the supplied stage
      * and returns a stage attached to both.
      *
-     * @param thisKeyF
+     * @param thisKeyFn
      * @param s1
-     * @param key1F
+     * @param key1Fn
      * @param aggrOp
      * @param <K>
      * @param <A>
@@ -132,20 +132,20 @@ public interface ComputeStage<E> extends Stage {
      * @return
      */
     <K, A, E1, R> ComputeStage<Tuple2<K, R>> coGroup(
-            DistributedFunction<? super E, ? extends K> thisKeyF,
-            ComputeStage<E1> s1, DistributedFunction<? super E1, ? extends K> key1F,
+            DistributedFunction<? super E, ? extends K> thisKeyFn,
+            ComputeStage<E1> s1, DistributedFunction<? super E1, ? extends K> key1Fn,
             AggregateOperation2<E, E1, A, R> aggrOp
     );
 
     <K, A, E1, E2, R> ComputeStage<Tuple2<K, R>> coGroup(
-            DistributedFunction<? super E, ? extends K> thisKeyF,
-            ComputeStage<E1> s1, DistributedFunction<? super E1, ? extends K> key1F,
-            ComputeStage<E2> s2, DistributedFunction<? super E2, ? extends K> key2F,
+            DistributedFunction<? super E, ? extends K> thisKeyFn,
+            ComputeStage<E1> s1, DistributedFunction<? super E1, ? extends K> key1Fn,
+            ComputeStage<E2> s2, DistributedFunction<? super E2, ? extends K> key2Fn,
             AggregateOperation3<E, E1, E2, A, R> aggrOp
     );
 
-    default <K> CoGroupBuilder<K, E> coGroupBuilder(DistributedFunction<? super E, K> thisKeyF) {
-        return new CoGroupBuilder<>(this, thisKeyF);
+    default <K> CoGroupBuilder<K, E> coGroupBuilder(DistributedFunction<? super E, K> thisKeyFn) {
+        return new CoGroupBuilder<>(this, thisKeyFn);
     }
 
     EndStage drainTo(Sink sink);

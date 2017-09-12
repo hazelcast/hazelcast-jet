@@ -202,21 +202,21 @@ public final class Processors {
      * the provided aggregate operation on each group. After exhausting all
      * its input it emits one {@code Map.Entry<K, R>} per observed key.
      *
-     * @param getKeyF computes the key from the entry
+     * @param getKeyFn computes the key from the entry
      * @param aggrOp the aggregate operation to perform
      * @param <T> type of received item
      * @param <K> type of key
      * @param <A> type of accumulator returned from {@code aggregateOperation.
-     *            createAccumulatorF()}
+     *            createAccumulatorFn()}
      * @param <R> type of the finished result returned from {@code aggregateOperation.
-     *            finishAccumulationF()}
+     *            finishAccumulationFn()}
      */
     @Nonnull
     public static <T, K, A, R> DistributedSupplier<Processor> aggregateByKey(
-            @Nonnull DistributedFunction<? super T, K> getKeyF,
+            @Nonnull DistributedFunction<? super T, K> getKeyFn,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        return () -> new CoGroupP<>(getKeyF, aggrOp);
+        return () -> new CoGroupP<>(getKeyFn, aggrOp);
     }
 
     /**
@@ -227,18 +227,18 @@ public final class Processors {
      * each group. After exhausting all its input it emits one {@code
      * Map.Entry<K, A>} per observed key.
      *
-     * @param getKeyF computes the key from the entry
+     * @param getKeyFn computes the key from the entry
      * @param aggrOp the aggregate operation to perform
      * @param <T> type of received item
      * @param <K> type of key
-     * @param <A> type of accumulator returned from {@code aggrOp.createAccumulatorF()}
+     * @param <A> type of accumulator returned from {@code aggrOp.createAccumulatorFn()}
      */
     @Nonnull
     public static <T, K, A> DistributedSupplier<Processor> accumulateByKey(
-            @Nonnull DistributedFunction<? super T, K> getKeyF,
+            @Nonnull DistributedFunction<? super T, K> getKeyFn,
             @Nonnull AggregateOperation1<? super T, A, ?> aggrOp
     ) {
-        return () -> new CoGroupP<>(getKeyF, aggrOp.withFinishFn(identity()));
+        return () -> new CoGroupP<>(getKeyFn, aggrOp.withFinishFn(identity()));
     }
 
     /**
@@ -254,8 +254,8 @@ public final class Processors {
      * @param getKeyFs functions that compute the grouping key
      * @param aggrOp the aggregate operation
      * @param <K> type of key
-     * @param <A> type of accumulator returned from {@code aggrOp.createAccumulatorF()}
-     * @param <R> type of the finished result returned from {@code aggrOp.finishAccumulationF()}
+     * @param <A> type of accumulator returned from {@code aggrOp.createAccumulatorFn()}
+     * @param <R> type of the finished result returned from {@code aggrOp.finishAccumulationFn()}
      */
     @Nonnull
     public static <K, A, R> DistributedSupplier<Processor> coAggregateByKey(
@@ -281,7 +281,7 @@ public final class Processors {
      * @param getKeyFs functions that compute the grouping key
      * @param aggrOp the aggregate operation to perform
      * @param <K> type of key
-     * @param <A> type of accumulator returned from {@code aggrOp.createAccumulatorF()}
+     * @param <A> type of accumulator returned from {@code aggrOp.createAccumulatorFn()}
      */
     @Nonnull
     public static <K, A> DistributedSupplier<Processor> coAccumulateByKey(
@@ -305,9 +305,9 @@ public final class Processors {
      *
      * @param aggrOp the aggregate operation to perform
      * @param <A> type of accumulator returned from {@code
-     *            aggrOp.createAccumulatorF()}
+     *            aggrOp.createAccumulatorFn()}
      * @param <R> type of the finished result returned from {@code aggrOp.
-     *            finishAccumulationF()}
+     *            finishAccumulationFn()}
      */
     @Nonnull
     public static <A, R> DistributedSupplier<Processor> combineByKey(
@@ -328,9 +328,9 @@ public final class Processors {
      * @param aggrOp the aggregate operation to perform
      * @param <T> type of received item
      * @param <A> type of accumulator returned from {@code
-     *            aggrOp.createAccumulatorF()}
+     *            aggrOp.createAccumulatorFn()}
      * @param <R> type of the finished result returned from {@code aggrOp.
-     *            finishAccumulationF()}
+     *            finishAccumulationFn()}
      */
     @Nonnull
     public static <T, A, R> DistributedSupplier<Processor> aggregate(
@@ -351,9 +351,9 @@ public final class Processors {
      * @param aggrOp the aggregate operation to perform
      * @param <T> type of received item
      * @param <A> type of accumulator returned from {@code
-     *            aggrOp.createAccumulatorF()}
+     *            aggrOp.createAccumulatorFn()}
      * @param <R> type of the finished result returned from {@code aggrOp.
-     *            finishAccumulationF()}
+     *            finishAccumulationFn()}
      */
     @Nonnull
     public static <T, A, R> DistributedSupplier<Processor> accumulate(
@@ -374,9 +374,9 @@ public final class Processors {
      * @param aggrOp the aggregate operation to perform
      * @param <T> type of received item
      * @param <A> type of accumulator returned from {@code
-     *            aggrOp.createAccumulatorF()}
+     *            aggrOp.createAccumulatorFn()}
      * @param <R> type of the finished result returned from {@code aggrOp.
-     *            finishAccumulationF()}
+     *            finishAccumulationFn()}
      */
     @Nonnull
     public static <T, A, R> DistributedSupplier<Processor> combine(
@@ -406,13 +406,13 @@ public final class Processors {
      */
     @Nonnull
     public static <T, K, A, R> DistributedSupplier<Processor> aggregateToSlidingWindow(
-            @Nonnull DistributedFunction<? super T, K> getKeyF,
-            @Nonnull DistributedToLongFunction<? super T> getTimestampF,
+            @Nonnull DistributedFunction<? super T, K> getKeyFn,
+            @Nonnull DistributedToLongFunction<? super T> getTimestampFn,
             @Nonnull TimestampKind timestampKind,
             @Nonnull WindowDefinition windowDef,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        return Processors.<T, K, A, R>aggregateByKeyAndWindow(getKeyF, getTimestampF, timestampKind, windowDef, aggrOp);
+        return Processors.<T, K, A, R>aggregateByKeyAndWindow(getKeyFn, getTimestampFn, timestampKind, windowDef, aggrOp);
     }
 
     /**
@@ -437,20 +437,20 @@ public final class Processors {
      * TimestampedEntry&lt;K, A>} so there is one item per key per frame.
      *
      * @param <T> input item type
-     * @param <K> type of key returned from {@code getKeyF}
+     * @param <K> type of key returned from {@code getKeyFn}
      * @param <A> type of accumulator returned from {@code aggrOp.
-     *            createAccumulatorF()}
+     *            createAccumulatorFn()}
      */
     @Nonnull
     public static <T, K, A> DistributedSupplier<Processor> accumulateByFrame(
-            @Nonnull DistributedFunction<? super T, K> getKeyF,
-            @Nonnull DistributedToLongFunction<? super T> getTimestampF,
+            @Nonnull DistributedFunction<? super T, K> getKeyFn,
+            @Nonnull DistributedToLongFunction<? super T> getTimestampFn,
             @Nonnull TimestampKind timestampKind,
             @Nonnull WindowDefinition windowDef,
             @Nonnull AggregateOperation1<? super T, A, ?> aggrOp
     ) {
         WindowDefinition tumblingByFrame = windowDef.toTumblingByFrame();
-        return Processors.<T, K, A, A>aggregateByKeyAndWindow(getKeyF, getTimestampF, timestampKind, tumblingByFrame,
+        return Processors.<T, K, A, A>aggregateByKeyAndWindow(getKeyFn, getTimestampFn, timestampKind, tumblingByFrame,
                 aggrOp.withFinishFn(identity())
         );
     }
@@ -478,7 +478,7 @@ public final class Processors {
      *
      * @param <A> type of the accumulator
      * @param <R> type of the finished result returned from {@code aggrOp.
-     *            finishAccumulationF()}
+     *            finishAccumulationFn()}
      */
     @Nonnull
     public static <K, A, R> DistributedSupplier<Processor> combineToSlidingWindow(
@@ -496,9 +496,9 @@ public final class Processors {
      * group-by-key-and-window operation and applies the provided aggregate
      * operation on groups.
      *
-     * @param getKeyF function that extracts the grouping key from the input item
-     * @param getTimestampF function that extracts the timestamp from the input item
-     * @param timestampKind the kind of timestamp extracted by {@code getTimestampF}: either the
+     * @param getKeyFn function that extracts the grouping key from the input item
+     * @param getTimestampFn function that extracts the timestamp from the input item
+     * @param timestampKind the kind of timestamp extracted by {@code getTimestampFn}: either the
      *                      event timestamp or the frame timestamp
      * @param windowDef definition of the window to compute
      * @param aggrOp aggregate operation to perform on each group in a window
@@ -509,17 +509,17 @@ public final class Processors {
      */
     @Nonnull
     private static <T, K, A, R> DistributedSupplier<Processor> aggregateByKeyAndWindow(
-            @Nonnull DistributedFunction<? super T, K> getKeyF,
-            @Nonnull DistributedToLongFunction<? super T> getTimestampF,
+            @Nonnull DistributedFunction<? super T, K> getKeyFn,
+            @Nonnull DistributedToLongFunction<? super T> getTimestampFn,
             @Nonnull TimestampKind timestampKind,
             @Nonnull WindowDefinition windowDef,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
         return () -> new SlidingWindowP<T, A, R>(
-                getKeyF,
+                getKeyFn,
                 timestampKind == EVENT
-                        ? item -> windowDef.higherFrameTs(getTimestampF.applyAsLong(item))
-                        : getTimestampF,
+                        ? item -> windowDef.higherFrameTs(getTimestampFn.applyAsLong(item))
+                        : getTimestampFn,
                 windowDef,
                 aggrOp);
     }
@@ -539,8 +539,8 @@ public final class Processors {
      * bridges the gap between them; in that case they are combined into one.
      *
      * @param sessionTimeout     maximum gap between consecutive events in the same session window
-     * @param getTimestampF      function to extract the timestamp from the item
-     * @param getKeyF            function to extract the grouping key from the item
+     * @param getTimestampFn      function to extract the timestamp from the item
+     * @param getKeyFn            function to extract the grouping key from the item
      * @param aggrOp contains aggregation logic
      *
      * @param <T> type of the stream event
@@ -551,11 +551,11 @@ public final class Processors {
     @Nonnull
     public static <T, K, A, R> DistributedSupplier<Processor> aggregateToSessionWindow(
             long sessionTimeout,
-            @Nonnull DistributedToLongFunction<? super T> getTimestampF,
-            @Nonnull DistributedFunction<? super T, K> getKeyF,
+            @Nonnull DistributedToLongFunction<? super T> getTimestampFn,
+            @Nonnull DistributedFunction<? super T, K> getKeyFn,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        return () -> new SessionWindowP<>(sessionTimeout, getTimestampF, getKeyF, aggrOp);
+        return () -> new SessionWindowP<>(sessionTimeout, getTimestampFn, getKeyFn, aggrOp);
     }
 
     /**
@@ -568,11 +568,11 @@ public final class Processors {
      */
     @Nonnull
     public static <T> DistributedSupplier<Processor> insertWatermarks(
-            @Nonnull DistributedToLongFunction<T> getTimestampF,
-            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull DistributedToLongFunction<T> getTimestampFn,
+            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyFn,
             @Nonnull WatermarkEmissionPolicy wmEmitPolicy
     ) {
-        return () -> new InsertWatermarksP<>(getTimestampF, newWmPolicyF.get(), wmEmitPolicy);
+        return () -> new InsertWatermarksP<>(getTimestampFn, newWmPolicyFn.get(), wmEmitPolicy);
     }
 
     /**

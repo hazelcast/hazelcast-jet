@@ -33,14 +33,14 @@ public class AggregateOperation1Impl<T0, A, R>
         extends AggregateOperationImpl<A, R>
         implements AggregateOperation1<T0, A, R> {
 
-    public AggregateOperation1Impl(@Nonnull DistributedSupplier<A> createAccumulatorF,
-                                   @Nonnull DistributedBiConsumer<? super A, ? super T0> accumulateItemF,
-                                   @Nullable DistributedBiConsumer<? super A, ? super A> combineAccumulatorsF,
-                                   @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorF,
-                                   @Nonnull DistributedFunction<? super A, R> finishAccumulationF
+    public AggregateOperation1Impl(@Nonnull DistributedSupplier<A> createAccumulatorFn,
+                                   @Nonnull DistributedBiConsumer<? super A, ? super T0> accumulateItemFn,
+                                   @Nullable DistributedBiConsumer<? super A, ? super A> combineAccumulatorsFn,
+                                   @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorFn,
+                                   @Nonnull DistributedFunction<? super A, R> finishAccumulationFn
     ) {
-        super(createAccumulatorF, accumulateFs(accumulateItemF), combineAccumulatorsF,
-                deductAccumulatorF, finishAccumulationF);
+        super(createAccumulatorFn, accumulateFs(accumulateItemFn), combineAccumulatorsFn,
+                deductAccumulatorFn, finishAccumulationFn);
     }
 
     @Nonnull
