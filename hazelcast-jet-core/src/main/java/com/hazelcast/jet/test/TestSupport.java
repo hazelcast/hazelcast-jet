@@ -89,7 +89,8 @@ public final class TestSupport {
     }
 
     /**
-     * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean, boolean, boolean, BiPredicate)} with progress assertion enabled. Snapshot+restore is disabled
+     * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean, boolean, boolean, BiPredicate)}
+     * with progress assertion enabled. Snapshot+restore is disabled
      * since we don't have processor supplier and cannot create new instances
      * of the processor.
      */
@@ -223,7 +224,8 @@ public final class TestSupport {
         processor.init(outbox, new TestProcessorContext());
 
         // do snapshot+restore before processing any item. This will test saveSnapshot() in this edge case
-        processor = snapshotAndRestore(processor, supplier, outbox, actualOutput, doSnapshots, assertProgress, logInputOutput);
+        processor = snapshotAndRestore(processor, supplier, outbox, actualOutput, doSnapshots,
+                assertProgress, logInputOutput);
 
         // call the process() method
         Iterator<T> inputIterator = input.iterator();
@@ -245,7 +247,8 @@ public final class TestSupport {
             }
             drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
             if (inbox.isEmpty()) {
-                processor = snapshotAndRestore(processor, supplier, outbox, actualOutput, doSnapshots, assertProgress, logInputOutput);
+                processor = snapshotAndRestore(processor, supplier, outbox, actualOutput, doSnapshots,
+                        assertProgress, logInputOutput);
             }
         }
 
@@ -257,7 +260,8 @@ public final class TestSupport {
                 assertTrue("complete() call without progress",
                         !assertProgress || done || !outbox.queueWithOrdinal(0).isEmpty());
                 drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
-                processor = snapshotAndRestore(processor, supplier, outbox, actualOutput, doSnapshots, assertProgress, logInputOutput);
+                processor = snapshotAndRestore(processor, supplier, outbox, actualOutput, doSnapshots,
+                        assertProgress, logInputOutput);
             } while (!done);
         }
 

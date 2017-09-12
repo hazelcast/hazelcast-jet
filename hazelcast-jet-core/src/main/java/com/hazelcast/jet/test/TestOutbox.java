@@ -129,6 +129,9 @@ public final class TestOutbox implements Outbox {
         return snapshotQueue;
     }
 
+    /**
+     * Javadoc pending
+     */
     public static class MockSerializationService implements SerializationService {
 
         @Override
@@ -157,13 +160,22 @@ public final class TestOutbox implements Outbox {
         }
     }
 
+    /**
+     * Javadoc pending
+     */
     public static class MockData implements Data {
         private final Object object;
 
+        /**
+         * Javadoc pending
+         */
         public MockData(Object object) {
             this.object = object;
         }
 
+        /**
+         * Javadoc pending
+         */
         public Object getObject() {
             return object;
         }

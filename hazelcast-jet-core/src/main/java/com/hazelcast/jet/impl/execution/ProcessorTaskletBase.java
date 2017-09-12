@@ -128,6 +128,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
         return progTracker.toProgressState();
     }
 
+    @SuppressWarnings("checkstyle:returncount")
     private void stateMachineStep() {
         switch (state) {
             case PROCESS_INBOX:
