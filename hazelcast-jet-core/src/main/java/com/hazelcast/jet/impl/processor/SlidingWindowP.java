@@ -61,8 +61,8 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     Map<Object, A> slidingWindow;
 
     private final WindowDefinition wDef;
-    private final DistributedToLongFunction<? super T> getFrameTimestampF;
-    private final Function<? super T, ?> getKeyF;
+    private final DistributedToLongFunction<? super T> getFrameTimestampFn;
+    private final Function<? super T, ?> getKeyFn;
     private final AggregateOperation1<? super T, A, R> aggrOp;
     private final boolean isLastStage;
 
@@ -77,30 +77,30 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     private long bottomTs = Long.MAX_VALUE;
 
     public SlidingWindowP(
-            Function<? super T, ?> getKeyF,
-            DistributedToLongFunction<? super T> getFrameTimestampF,
+            Function<? super T, ?> getKeyFn,
+            DistributedToLongFunction<? super T> getFrameTimestampFn,
             WindowDefinition winDef,
             AggregateOperation1<? super T, A, R> aggrOp,
             boolean isLastStage
     ) {
         this.wDef = winDef;
-        this.getFrameTimestampF = getFrameTimestampF;
-        this.getKeyF = getKeyF;
+        this.getFrameTimestampFn = getFrameTimestampFn;
+        this.getKeyFn = getKeyFn;
         this.aggrOp = aggrOp;
         this.isLastStage = isLastStage;
 
         this.flatMapper = flatMapper(
                 wm -> windowTraverserAndEvictor(wm.timestamp())
                             .append(wm));
-        this.emptyAcc = aggrOp.createAccumulatorF().get();
+        this.emptyAcc = aggrOp.createFn().get();
     }
 
     @Override
     protected boolean tryProcess0(@Nonnull Object item) {
         T t = (T) item;
-        final Long frameTimestamp = getFrameTimestampF.applyAsLong(t);
+        final Long frameTimestamp = getFrameTimestampFn.applyAsLong(t);
         assert frameTimestamp == wDef.floorFrameTs(frameTimestamp) : "timestamp not on the verge of a frame";
-        final Object key = getKeyF.apply(t);
+        final Object key = getKeyFn.apply(t);
         A acc = tsToKeyToAcc.computeIfAbsent(frameTimestamp, x -> new HashMap<>())
                             .computeIfAbsent(key, k -> aggrOp.createAccumulatorF().get());
         aggrOp.accumulateItemF().accept(acc, t);
@@ -166,15 +166,15 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
                 }
             }
             // add leading-edge frame
-            patchSlidingWindow(aggrOp.combineAccumulatorsF(), tsToKeyToAcc.get(frameTs));
+            patchSlidingWindow(aggrOp.combineFn(), tsToKeyToAcc.get(frameTs));
             return slidingWindow;
         }
-        // without deductF we have to recompute the window from scratch
+        // without deductFn we have to recompute the window from scratch
         Map<Object, A> window = new HashMap<>();
         for (long ts = frameTs - wDef.windowLength() + wDef.frameLength(); ts <= frameTs; ts += wDef.frameLength()) {
             tsToKeyToAcc.getOrDefault(ts, emptyMap())
-                        .forEach((key, currAcc) -> aggrOp.combineAccumulatorsF().accept(
-                                  window.computeIfAbsent(key, k -> aggrOp.createAccumulatorF().get()),
+                        .forEach((key, currAcc) -> aggrOp.combineFn().accept(
+                                  window.computeIfAbsent(key, k -> aggrOp.createFn().get()),
                                   currAcc));
         }
         return window;
@@ -189,7 +189,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         bottomTs = frameToEvict + wDef.frameLength();
         if (!wDef.isTumbling() && aggrOp.deductAccumulatorF() != null) {
             // deduct trailing-edge frame
-            patchSlidingWindow(aggrOp.deductAccumulatorF(), evictedFrame);
+            patchSlidingWindow(aggrOp.deductFn(), evictedFrame);
         }
     }
 
@@ -199,7 +199,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         }
         for (Entry<Object, A> e : patchingFrame.entrySet()) {
             slidingWindow.compute(e.getKey(), (k, acc) -> {
-                A result = acc != null ? acc : aggrOp.createAccumulatorF().get();
+                A result = acc != null ? acc : aggrOp.createFn().get();
                 patchOp.accept(result, e.getValue());
                 return result.equals(emptyAcc) ? null : result;
             });

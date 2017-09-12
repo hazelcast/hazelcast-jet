@@ -74,27 +74,27 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
     final SortedMap<Long, Set<K>> deadlineToKeys = new TreeMap<>();
 
     private final long sessionTimeout;
-    private final DistributedToLongFunction<? super T> getTimestampF;
-    private final DistributedFunction<? super T, K> getKeyF;
-    private final DistributedSupplier<A> newAccumulatorF;
-    private final BiConsumer<? super A, ? super T> accumulateF;
-    private final DistributedFunction<? super A, R> finishAccumulationF;
-    private final DistributedBiConsumer<? super A, ? super A> combineAccF;
+    private final DistributedToLongFunction<? super T> getTimestampFn;
+    private final DistributedFunction<? super T, K> getKeyFn;
+    private final DistributedSupplier<A> newAccumulatorFn;
+    private final BiConsumer<? super A, ? super T> accumulateFn;
+    private final DistributedFunction<? super A, R> finishAccumulationFn;
+    private final DistributedBiConsumer<? super A, ? super A> combineAccFn;
     private final FlatMapper<Watermark, Session<K, R>> expiredSessionFlatmapper;
     private Traverser snapshotTraverser;
 
     public SessionWindowP(
             long sessionTimeout,
-            DistributedToLongFunction<? super T> getTimestampF,
-            DistributedFunction<? super T, K> getKeyF,
+            DistributedToLongFunction<? super T> getTimestampFn,
+            DistributedFunction<? super T, K> getKeyFn,
             AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        this.getTimestampF = getTimestampF;
-        this.getKeyF = getKeyF;
-        this.newAccumulatorF = aggrOp.createAccumulatorF();
-        this.accumulateF = aggrOp.accumulateItemF();
-        this.combineAccF = aggrOp.combineAccumulatorsF();
-        this.finishAccumulationF = aggrOp.finishAccumulationF();
+        this.getTimestampFn = getTimestampFn;
+        this.getKeyFn = getKeyFn;
+        this.newAccumulatorFn = aggrOp.createFn();
+        this.accumulateFn = aggrOp.accumulateFn();
+        this.combineAccFn = aggrOp.combineFn();
+        this.finishAccumulationFn = aggrOp.finishFn();
         this.sessionTimeout = sessionTimeout;
         this.expiredSessionFlatmapper = flatMapper(this::expiredSessionTraverser);
     }

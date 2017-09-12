@@ -55,15 +55,15 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
     private int globalProcessorIndex;
 
     /**
-     * @param getTimestampF function that extracts the timestamp from the item
+     * @param getTimestampFn function that extracts the timestamp from the item
      * @param wmPolicy the watermark policy
      */
     public InsertWatermarksP(
-            @Nonnull DistributedToLongFunction<T> getTimestampF,
+            @Nonnull DistributedToLongFunction<T> getTimestampFn,
             @Nonnull WatermarkPolicy wmPolicy,
             @Nonnull WatermarkEmissionPolicy wmEmitPolicy
     ) {
-        this.getTimestampF = getTimestampF;
+        this.getTimestampFn = getTimestampFn;
         this.wmPolicy = wmPolicy;
         this.wmEmitPolicy = wmEmitPolicy;
     }
