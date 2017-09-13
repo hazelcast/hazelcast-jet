@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.Processor.Context;
 import com.hazelcast.jet.Watermark;
-import com.hazelcast.jet.WatermarkEmissionPolicy;
 import com.hazelcast.jet.WatermarkPolicies;
 import com.hazelcast.jet.WatermarkPolicy;
 import com.hazelcast.jet.WindowDefinition;
@@ -41,9 +40,6 @@ import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 
-import static com.hazelcast.jet.WatermarkEmissionPolicy.emitAll;
-import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByFrame;
-import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByMinStep;
 import static com.hazelcast.jet.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.WindowDefinition.tumblingWindowDef;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
