@@ -83,7 +83,8 @@ public final class WatermarkPolicyUtil {
                 ensureInitialized(now);
                 long millisPastMaxLull = max(0, now - maxLullAt);
                 maxLullAt += millisPastMaxLull;
-                return advanceWmBy(millisPastMaxLull);
+                long currentWm = super.getCurrentWatermark();
+                return currentWm > Long.MIN_VALUE ? advanceWmBy(millisPastMaxLull) : currentWm;
             }
 
             private void ensureInitialized(long now) {
