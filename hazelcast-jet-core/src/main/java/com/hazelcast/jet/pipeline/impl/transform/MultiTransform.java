@@ -17,7 +17,10 @@
 package com.hazelcast.jet.pipeline;
 
 /**
- * Javadoc pending.
+ * Represents a higher-arity transform (one which takes
+ * more than one data stream as input).
+ *
+ * @param <R> the type of the result item
  */
 public interface MultiTransform<R> extends Transform {
 }
