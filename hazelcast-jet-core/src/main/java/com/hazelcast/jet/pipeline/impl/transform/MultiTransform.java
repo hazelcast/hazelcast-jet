@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.pipeline.impl.transform;
+
+import com.hazelcast.jet.pipeline.Transform;
 
 /**
- * Represents a higher-arity transform (one which takes
- * more than one data stream as input).
+ * Represents a higher-arity transform, one which takes more than one data
+ * stream as input an produces a single stream as output.
  *
  * @param <R> the type of the result item
  */

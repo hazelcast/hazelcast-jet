@@ -16,15 +16,15 @@
 
 package com.hazelcast.jet.pipeline.impl;
 
-import com.hazelcast.jet.pipeline.EndStage;
+import com.hazelcast.jet.pipeline.SinkStage;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Stage;
 
 import static java.util.Collections.singletonList;
 
-class EndStageImpl extends AbstractStage implements EndStage {
+class SinkStageImpl extends AbstractStage implements SinkStage {
 
-    EndStageImpl(Stage upstream, Sink transform, PipelineImpl pipeline) {
+    SinkStageImpl(Stage upstream, Sink transform, PipelineImpl pipeline) {
         super(singletonList(upstream), transform, pipeline);
     }
 }

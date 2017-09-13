@@ -15,7 +15,7 @@
  */
 
 /**
- * Classes in this package are not a part of public API and can change
- * without notice.
+ * Contains {@code AggregateOperation} and several its variants, as well
+ * as a builder object for the aggregate operations.
  */
-package com.hazelcast.jet.pipeline.impl;
+package com.hazelcast.jet.aggregate;

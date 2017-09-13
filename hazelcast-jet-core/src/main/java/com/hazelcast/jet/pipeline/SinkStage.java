@@ -20,5 +20,5 @@ package com.hazelcast.jet.pipeline;
  * A pipeline stage that doesn't allow any downstream stages to be attached
  * to it. Corresponds to a data sink.
  */
-public interface EndStage extends Stage {
+public interface SinkStage extends Stage {
 }

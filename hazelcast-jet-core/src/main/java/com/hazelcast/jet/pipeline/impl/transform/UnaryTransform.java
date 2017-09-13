@@ -14,7 +14,16 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.pipeline.impl.transform;
 
+import com.hazelcast.jet.pipeline.Transform;
+
+/**
+ * Represents a unary transform, one that takes a single input stream
+ * and produces a single output stream.
+ *
+ * @param <T> type of the input item
+ * @param <U> type of the result item
+ */
 public interface UnaryTransform<T, U> extends Transform {
 }

@@ -15,7 +15,6 @@
  */
 
 /**
- * Classes in this package are not a part of public API and can change
- * without notice.
+ * Generic data containers used by the Pipeline API.
  */
-package com.hazelcast.jet.pipeline.impl;
+package com.hazelcast.jet.pipeline.datamodel;
