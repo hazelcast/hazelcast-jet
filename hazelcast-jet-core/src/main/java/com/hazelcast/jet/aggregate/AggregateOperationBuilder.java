@@ -135,7 +135,7 @@ public final class AggregateOperationBuilder<A> {
          * Registers the {@code combine} primitive.
          */
         @Nonnull
-        public Arity1<T0, A> andCombine(@Nonnull DistributedBiConsumer<? super A, ? super A> combineFn) {
+        public Arity1<T0, A> andCombine(DistributedBiConsumer<? super A, ? super A> combineFn) {
             this.combineFn = combineFn;
             return this;
         }
@@ -144,7 +144,7 @@ public final class AggregateOperationBuilder<A> {
          * Registers the {@code combine} primitive.
          */
         @Nonnull
-        public Arity1<T0, A> andDeduct(@Nonnull DistributedBiConsumer<? super A, ? super A> deductFn) {
+        public Arity1<T0, A> andDeduct(DistributedBiConsumer<? super A, ? super A> deductFn) {
             this.deductFn = deductFn;
             return this;
         }
@@ -212,7 +212,7 @@ public final class AggregateOperationBuilder<A> {
          * Registers the {@code combine} primitive.
          */
         @Nonnull
-        public Arity2<T0, T1, A> andCombine(@Nonnull DistributedBiConsumer<? super A, ? super A> combineFn) {
+        public Arity2<T0, T1, A> andCombine(DistributedBiConsumer<? super A, ? super A> combineFn) {
             this.combineFn = combineFn;
             return this;
         }
@@ -221,7 +221,7 @@ public final class AggregateOperationBuilder<A> {
          * Registers the {@code deduct} primitive.
          */
         @Nonnull
-        public Arity2<T0, T1, A> andDeduct(@Nonnull DistributedBiConsumer<? super A, ? super A> deductFn) {
+        public Arity2<T0, T1, A> andDeduct(DistributedBiConsumer<? super A, ? super A> deductFn) {
             this.deductFn = deductFn;
             return this;
         }
@@ -283,7 +283,7 @@ public final class AggregateOperationBuilder<A> {
          * Registers the {@code combine} primitive.
          */
         @Nonnull
-        public Arity3<T0, T1, T2, A> andCombine(@Nonnull DistributedBiConsumer<? super A, ? super A> combineFn) {
+        public Arity3<T0, T1, T2, A> andCombine(DistributedBiConsumer<? super A, ? super A> combineFn) {
             this.combineFn = combineFn;
             return this;
         }
@@ -292,7 +292,7 @@ public final class AggregateOperationBuilder<A> {
          * Registers the {@code deduct} primitive.
          */
         @Nonnull
-        public Arity3<T0, T1, T2, A> andDeduct(@Nonnull DistributedBiConsumer<? super A, ? super A> deductFn) {
+        public Arity3<T0, T1, T2, A> andDeduct(DistributedBiConsumer<? super A, ? super A> deductFn) {
             this.deductFn = deductFn;
             return this;
         }
@@ -370,7 +370,7 @@ public final class AggregateOperationBuilder<A> {
          * Registers the {@code combine} primitive.
          */
         @Nonnull
-        public VarArity<A> andCombine(@Nonnull DistributedBiConsumer<? super A, ? super A> combineFn) {
+        public VarArity<A> andCombine(DistributedBiConsumer<? super A, ? super A> combineFn) {
             this.combineFn = combineFn;
             return this;
         }
@@ -379,7 +379,7 @@ public final class AggregateOperationBuilder<A> {
          * Registers the {@code deduct} primitive.
          */
         @Nonnull
-        public VarArity<A> andDeduct(@Nonnull DistributedBiConsumer<? super A, ? super A> deductFn) {
+        public VarArity<A> andDeduct(DistributedBiConsumer<? super A, ? super A> deductFn) {
             this.deductFn = deductFn;
             return this;
         }
