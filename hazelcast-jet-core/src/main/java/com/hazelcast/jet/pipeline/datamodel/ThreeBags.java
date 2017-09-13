@@ -73,6 +73,10 @@ public class ThreeBags<E0, E1, E2> implements Serializable {
         return bag2;
     }
 
+    /**
+     * Combines this and the supplied container by merging all the supplied
+     * container's data into this one. Leaves the supplied container unchanged.
+     */
     public void combineWith(ThreeBags<E0, E1, E2> that) {
         bag0.addAll(that.bag0());
         bag1.addAll(that.bag1());
