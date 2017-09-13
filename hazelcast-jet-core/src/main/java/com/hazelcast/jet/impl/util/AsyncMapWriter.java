@@ -47,6 +47,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.impl.util.Util.completeVoidFuture;
 import static com.hazelcast.util.CollectionUtil.toIntArray;
 
 /**
@@ -202,7 +203,7 @@ public class AsyncMapWriter {
 
     private boolean invokeOnCluster(List<PartitionOpBuilder> opBuilders, CompletableFuture<Void> completionFuture) {
         if (opBuilders.isEmpty()) {
-            completionFuture.complete(null);
+            completeVoidFuture(completionFuture);
             return true;
         }
 

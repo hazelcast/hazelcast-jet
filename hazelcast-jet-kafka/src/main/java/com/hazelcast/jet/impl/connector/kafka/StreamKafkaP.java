@@ -35,14 +35,12 @@ import org.apache.kafka.common.TopicPartition;
 import javax.annotation.Nonnull;
 import java.io.Closeable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -58,26 +56,24 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
     private static final int POLL_TIMEOUT_MS = 1000;
 
     private final Properties properties;
-    private final String[] topicIds;
+    private final List<String> topicIds;
     private final int processorCount;
     private final int processorIndex;
-    private CompletableFuture<Void> jobFuture;
     private boolean snapshottingEnabled;
     private KafkaConsumer<?, ?> consumer;
 
     private final Map<TopicPartition, Long> offsets = new HashMap<>();
     private Traverser<Entry<TopicPartition, Long>> snapshotTraverser;
 
-    StreamKafkaP(Properties properties, String[] topicIds, int processorCount, int processorIndex) {
+    StreamKafkaP(Properties properties, List<String> topicIds, int processorCount, int processorIndex) {
         this.properties = properties;
-        this.topicIds = Arrays.copyOf(topicIds, topicIds.length);
+        this.topicIds = topicIds;
         this.processorCount = processorCount;
         this.processorIndex = processorIndex;
     }
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        jobFuture = context.jobFuture();
         snapshottingEnabled = context.snapshottingEnabled();
         consumer = new KafkaConsumer<>(properties);
 
@@ -145,14 +141,14 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
 
         static final long serialVersionUID = 1L;
 
-        private final String[] topicIds;
+        private final List<String> topicIds;
         private final int memberCount;
         private final int memberIndex;
         private final Properties properties;
         private transient List<StreamKafkaP> processors;
         private int localParallelism;
 
-        Supplier(Properties properties, String[] topicIds, int memberCount, int memberIndex) {
+        Supplier(Properties properties, List<String> topicIds, int memberCount, int memberIndex) {
             this.properties = properties;
             this.topicIds = topicIds;
             this.memberCount = memberCount;
@@ -183,9 +179,9 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
     public static class MetaSupplier implements ProcessorMetaSupplier {
 
         private final Properties properties;
-        private final String[] topicIds;
+        private final List<String> topicIds;
 
-        public MetaSupplier(Properties properties, String[] topicIds) {
+        public MetaSupplier(Properties properties, List<String> topicIds) {
             this.properties = properties;
             this.topicIds = topicIds;
         }

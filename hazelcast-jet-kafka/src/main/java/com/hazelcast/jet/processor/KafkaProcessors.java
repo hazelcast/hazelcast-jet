@@ -21,6 +21,7 @@ import com.hazelcast.jet.impl.connector.kafka.StreamKafkaP;
 import com.hazelcast.jet.impl.connector.kafka.WriteKafkaP;
 import com.hazelcast.util.Preconditions;
 
+import java.util.Arrays;
 import java.util.Properties;
 
 /**
@@ -53,7 +54,7 @@ public final class KafkaProcessors {
         Preconditions.checkTrue(properties.containsKey("group.id"), "Properties should contain `group.id`");
         properties.put("enable.auto.commit", false);
 
-        return new StreamKafkaP.MetaSupplier(properties, topics);
+        return new StreamKafkaP.MetaSupplier(properties, Arrays.asList(topics));
     }
 
     /**

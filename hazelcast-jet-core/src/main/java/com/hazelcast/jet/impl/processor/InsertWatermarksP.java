@@ -24,6 +24,7 @@ import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.WatermarkPolicy;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.impl.util.Util;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
@@ -54,6 +55,7 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
 
     private long lastEmittedWm = Long.MIN_VALUE;
     private long nextWm = Long.MIN_VALUE;
+
     private int globalProcessorIndex;
 
     /**
@@ -96,7 +98,7 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
 
             // check for item lateness
             if (Math.max(proposedWm, lastEmittedWm) > eventTs) {
-                logFine(getLogger(),"Dropped late event: %s", item);
+                logFine(getLogger(), "Dropped late event: %s", item);
             } else {
                 itemTraverser.accept(item);
             }
@@ -107,7 +109,7 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
         }
 
         if (lastEmittedWm == Long.MIN_VALUE && proposedWm > lastEmittedWm) {
-            lastEmittedWm = proposedWm - winDef.frameLength();
+            lastEmittedWm = Util.subtractClamped(proposedWm , winDef.frameLength());
         }
         wmTraverser.end = proposedWm;
         return itemTraverser.prependTraverser(wmTraverser);

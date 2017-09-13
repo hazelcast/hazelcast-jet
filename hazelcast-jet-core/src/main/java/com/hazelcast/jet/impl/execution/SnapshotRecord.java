@@ -118,7 +118,8 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         status = SnapshotStatus.valueOf(in.readUTF());
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
         return "SnapshotRecord{" +
                 "jobId=" + idToString(jobId) +
                 ", snapshotId=" + snapshotId +

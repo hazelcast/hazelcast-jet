@@ -18,10 +18,14 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.logging.ILogger;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
+import static com.hazelcast.jet.impl.util.Util.completeVoidFuture;
+import static com.hazelcast.jet.impl.util.Util.completedVoidFuture;
 import static com.hazelcast.jet.impl.util.Util.jobAndExecutionId;
 
 public class SnapshotContext {
@@ -38,7 +42,7 @@ public class SnapshotContext {
      * it and when they see changed value, they start a snapshot with that
      * ID. {@code -1} means no snapshot was started.
      */
-    private volatile long lastSnapshotId = NO_SNAPSHOT;
+    private final AtomicLong lastSnapshotId;
 
     /**
      * Current number of {@link StoreSnapshotTasklet}s in the job. It's
@@ -69,7 +73,7 @@ public class SnapshotContext {
     ) {
         this.jobId = jobId;
         this.executionId = executionId;
-        this.lastSnapshotId = lastSnapshotId;
+        this.lastSnapshotId = new AtomicLong(lastSnapshotId);
         this.guarantee = guarantee;
         this.logger = logger;
     }
@@ -78,14 +82,14 @@ public class SnapshotContext {
      * Id of the last started snapshot
      */
     long lastSnapshotId() {
-        return lastSnapshotId;
+        return lastSnapshotId.get();
     }
 
     ProcessingGuarantee processingGuarantee() {
         return guarantee;
     }
 
-    void initTaskletCount(int totalCount, int highPriorityCount) {
+    synchronized void initTaskletCount(int totalCount, int highPriorityCount) {
         assert this.numTasklets == Integer.MIN_VALUE : "Tasklet count already set once.";
         assert totalCount >= highPriorityCount : "totalCount=" + totalCount + ", highPriorityCount=" + highPriorityCount;
         assert totalCount > 0 : "totalCount=" + totalCount;
@@ -101,19 +105,19 @@ public class SnapshotContext {
      */
     synchronized CompletableFuture<Void> startNewSnapshot(long snapshotId) {
         // TODO [basri] is this really necessary? we should only verify monotonicity
-        assert snapshotId == lastSnapshotId + 1
+        assert snapshotId == lastSnapshotId.get() + 1
                 : "new snapshotId not incremented by 1. Previous=" + lastSnapshotId + ", new=" + snapshotId;
         assert numTasklets >= 0 : "numTasklets=" + numTasklets;
 
         if (numTasklets == 0) {
             // member is already done with the job and master didn't know it yet - we are immediately done.
-            return CompletableFuture.completedFuture(null);
+            return completedVoidFuture();
         }
         boolean success = numRemainingTasklets.compareAndSet(0, numTasklets);
         assert success : "previous snapshot was not finished, numRemainingTasklets=" + numRemainingTasklets.get();
         // if there are no higher priority tasklets, start the snapshot now
         if (numHigherPriorityTasklets == 0) {
-            lastSnapshotId = snapshotId;
+            lastSnapshotId.set(snapshotId);
         } else {
             logger.warning("Snapshot " + snapshotId + " for " + jobAndExecutionId(jobId, executionId) + " is postponed" +
                     " until all higher priority vertices are completed (number of vertices = "
@@ -131,7 +135,7 @@ public class SnapshotContext {
      */
     synchronized void taskletDone(long lastSnapshotId, boolean isHigherPrioritySource) {
         assert numTasklets > 0;
-        assert lastSnapshotId <= this.lastSnapshotId;
+        assert lastSnapshotId <= this.lastSnapshotId.get();
 
         numTasklets--;
         if (isHigherPrioritySource) {
@@ -139,12 +143,12 @@ public class SnapshotContext {
             numHigherPriorityTasklets--;
             // after all higher priority vertices are done we can start the snapshot
             if (numHigherPriorityTasklets == 0) {
-                this.lastSnapshotId++;
+                this.lastSnapshotId.incrementAndGet();
                 logger.info("Postponed snapshot " + this.lastSnapshotId + " for " + jobAndExecutionId(jobId, executionId)
                         + " started");
             }
         }
-        if (this.lastSnapshotId < lastSnapshotId) {
+        if (this.lastSnapshotId.get() < lastSnapshotId) {
             snapshotDoneForTasklet();
         }
     }
@@ -154,9 +158,10 @@ public class SnapshotContext {
      * (it received barriers from all its processors and all async flush
      * operations are done).
      */
+    @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
     void snapshotDoneForTasklet() {
         if (numRemainingTasklets.decrementAndGet() == 0) {
-            future.complete(null);
+            completeVoidFuture(future);
             future = null;
         }
     }

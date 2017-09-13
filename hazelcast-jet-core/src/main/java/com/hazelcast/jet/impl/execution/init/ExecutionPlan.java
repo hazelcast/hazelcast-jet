@@ -78,6 +78,9 @@ import static java.util.stream.Collectors.toMap;
 
 public class ExecutionPlan implements IdentifiedDataSerializable {
 
+    // TODO configure queue capacity
+    private static final int SNAPSHOT_QUEUE_CAPACITY = 2048;
+
     private final List<Tasklet> tasklets = new ArrayList<>();
     /** dest vertex id --> dest ordinal --> sender addr -> receiver tasklet */
     private final Map<Integer, Map<Integer, Map<Address, ReceiverTasklet>>> receiverMap = new HashMap<>();
@@ -129,8 +132,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
             // create StoreSnapshotTasklet and the queues to it
             QueuedPipe<Object>[] snapshotQueues = new QueuedPipe[srcVertex.parallelism()];
-            // TODO configure queue capacity
-            Arrays.setAll(snapshotQueues, i -> new OneToOneConcurrentArrayQueue<>(2000));
+            Arrays.setAll(snapshotQueues, i -> new OneToOneConcurrentArrayQueue<>(SNAPSHOT_QUEUE_CAPACITY));
             ConcurrentConveyor<Object> ssConveyor = ConcurrentConveyor.concurrentConveyor(null, snapshotQueues);
             StoreSnapshotTasklet ssTasklet = new StoreSnapshotTasklet(snapshotContext, jobId,
                     new ConcurrentInboundEdgeStream(ssConveyor, 0, 0, lastSnapshotId, true),

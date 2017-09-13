@@ -33,6 +33,7 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
@@ -53,6 +54,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import static com.hazelcast.jet.Util.entry;
@@ -294,5 +296,22 @@ public final class Util {
             }
         }
         return -1;
+    }
+
+
+    /**
+     * Util method to get around findbugs issue https://github.com/findbugsproject/findbugs/issues/79
+     */
+    @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
+    public static CompletableFuture<Void> completedVoidFuture() {
+        return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * Util method to get around findbugs issue https://github.com/findbugsproject/findbugs/issues/79
+     */
+    @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
+    public static void completeVoidFuture(CompletableFuture<Void> future) {
+        future.complete(null);
     }
 }

@@ -18,7 +18,6 @@ package com.hazelcast.jet;
 
 import com.hazelcast.core.IList;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
-import com.hazelcast.jet.processor.DiagnosticProcessors;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
 import com.hazelcast.test.annotation.QuickTest;
@@ -98,9 +97,8 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
         DAG dag = new DAG();
         boolean isBatchLocal = isBatch; // to prevent serialization of whole class
         Vertex source = dag.newVertex("source", () -> new EmitListP(sourceEvents, isBatchLocal)).localParallelism(1);
-        Vertex insertPP = dag.newVertex("insertWmP", DiagnosticProcessors.peekOutput(insertWatermarks(MyEvent::getTimestamp,
-                limitingLagAndLull(500, 1000), wDef)))
-                .localParallelism(1);
+        Vertex insertPP = dag.newVertex("insertWmP", insertWatermarks(MyEvent::getTimestamp,
+                limitingLagAndLull(500, 1000), wDef)).localParallelism(1);
         Vertex sink = dag.newVertex("sink", writeList("sink"));
 
         dag.edge(between(source, insertPP).isolated());

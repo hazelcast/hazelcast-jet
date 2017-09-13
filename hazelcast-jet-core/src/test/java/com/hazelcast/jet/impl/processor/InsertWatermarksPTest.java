@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.Processor.Context;
 import com.hazelcast.jet.Watermark;
-import com.hazelcast.jet.WatermarkPolicies;
 import com.hazelcast.jet.WatermarkPolicy;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.test.TestOutbox;
@@ -43,6 +42,7 @@ import java.util.stream.Collectors;
 import static com.hazelcast.jet.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.WindowDefinition.tumblingWindowDef;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
+import static com.hazelcast.jet.impl.util.WatermarkPolicyUtil.limitingTimestampAndWallClockLag;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
@@ -79,7 +79,7 @@ public class InsertWatermarksPTest {
 
     @Test
     public void when_firstEventLate_then_dropped() {
-        wmPolicy = WatermarkPolicies.limitingTimestampAndWallClockLag(0, 0, clock::now).get();
+        wmPolicy = limitingTimestampAndWallClockLag(0, 0, clock::now).get();
         doTest(
                 singletonList(item(clock.now - 1)),
                 singletonList(wm(100)));

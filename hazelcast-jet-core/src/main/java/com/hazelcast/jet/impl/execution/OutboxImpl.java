@@ -22,6 +22,7 @@ import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.serialization.SerializationService;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.util.BitSet;
@@ -50,6 +51,7 @@ public class OutboxImpl implements Outbox {
      * @param progTracker Tracker to track progress. Only madeProgress will be called,
      *                    done status won't be ever changed
      */
+    @SuppressFBWarnings("EI_EXPOSE_REP")
     public OutboxImpl(OutboundCollector[] outstreams, boolean hasSnapshot,
                       ProgressTracker progTracker, SerializationService serializationService) {
         this.outstreams = outstreams;

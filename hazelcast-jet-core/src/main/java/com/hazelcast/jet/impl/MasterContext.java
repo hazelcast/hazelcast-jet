@@ -572,7 +572,7 @@ public class MasterContext {
     /**
      * Specific type of edge to be used when restoring snapshots
      */
-    private class SnapshotRestoreEdge extends Edge {
+    private static class SnapshotRestoreEdge extends Edge {
 
         SnapshotRestoreEdge(Vertex source, Vertex destination, int destOrdinal) {
             super(source, 0, destination, destOrdinal);
