@@ -180,7 +180,7 @@ public class JobRepository {
 
     private void cleanupJobResourcesAndSnapshots(long jobId, IMap<String, Object> jobResourcesMap) {
         if (snapshotRepository != null) {
-            snapshotRepository.deleteSnapshots(jobId, true);
+            snapshotRepository.deleteSnapshots(jobId, null);
         }
         jobResourcesMap.destroy();
     }

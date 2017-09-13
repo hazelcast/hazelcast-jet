@@ -146,24 +146,27 @@ public class MasterContext {
         // save a copy of the vertex list, because it is going to change
         vertexNames = new HashSet<>();
         dag.iterator().forEachRemaining(e1 -> vertexNames.add(e1.getName()));
+        executionId = executionIdSupplier.apply(jobId);
 
         // last started snapshot complete or not complete. The next started snapshot must be greater than this number
         long lastSnapshotId = NO_SNAPSHOT;
         if (jobStatus() == RESTARTING && jobRecord.getConfig().getSnapshotInterval() > 0) {
             // TODO [basri] verify snapshot
             Long snapshotIdToRestore = snapshotRepository.latestCompleteSnapshot(jobId);
+            snapshotRepository.deleteSnapshots(jobId, snapshotIdToRestore);
             Long lastStartedSnapshot = snapshotRepository.latestStartedSnapshot(jobId);
             if (snapshotIdToRestore != null) {
+                logger.info("Restoring state of " + jobAndExecutionId(jobId, executionId) + " from snapshot "
+                        + snapshotIdToRestore);
                 rewriteDagWithSnapshotRestore(dag, snapshotIdToRestore);
             } else {
-                logger.warning("No usable snapshot for job " + idToString(jobId) + " found.");
+                logger.warning("No usable snapshot for " + jobAndExecutionId(jobId, executionId) + " found.");
             }
             if (lastStartedSnapshot != null) {
                 lastSnapshotId = lastStartedSnapshot;
             }
         }
 
-        executionId = executionIdSupplier.apply(jobId);
         MembersView membersView = getMembersView();
         try {
             logger.info("Start executing " + jobAndExecutionId(jobId, executionId) + ", status " + jobStatus()

@@ -343,9 +343,6 @@ public class JobCoordinationService {
     }
 
     private void beginSnapshot(long jobId, long executionId) {
-        // TODO [basri] perform snapshot gc
-        logger.warning("Snapshot gc is missing " + jobAndExecutionId(jobId, executionId));
-
         MasterContext masterContext = masterContexts.get(jobId);
         if (masterContext != null) {
             if (masterContext.completionFuture().isDone() || masterContext.jobStatus() != RUNNING) {
@@ -393,7 +390,7 @@ public class JobCoordinationService {
         logger.warning("Snapshot validation is not implemented yet. " + jobAndExecutionId(jobId, executionId)
                 + " snapshot " + snapshotId);
         snapshotRepository.setSnapshotStatus(jobId, snapshotId, SUCCESSFUL);
-        snapshotRepository.deleteSnapshots(jobId, false);
+        snapshotRepository.deleteSnapshots(jobId, snapshotId);
         scheduleSnapshot(jobId, executionId);
     }
 

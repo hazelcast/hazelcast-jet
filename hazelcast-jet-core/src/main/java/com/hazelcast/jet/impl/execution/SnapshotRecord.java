@@ -41,7 +41,7 @@ import static com.hazelcast.util.Preconditions.checkTrue;
 public class SnapshotRecord implements IdentifiedDataSerializable {
 
     public enum SnapshotStatus {
-        ONGOING, VALIDATION_NEEDED, SUCCESSFUL, FAILED
+        ONGOING, VALIDATION_NEEDED, SUCCESSFUL, FAILED, TO_DELETE
     }
 
     private long jobId;

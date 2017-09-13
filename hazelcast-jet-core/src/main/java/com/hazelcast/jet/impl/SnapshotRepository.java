@@ -140,31 +140,37 @@ public class SnapshotRepository {
 
     /**
      * Deletes snapshot data and records from snapshotsMap for single job.
+     * <p>
+     * Method must be run when there's no ongoing snapshot, because it also
+     * deletes the ongoing snapshots. If we omitted them, then interrupted
+     * snapshots will never be deleted.
      *
-     * @param deleteAll If true, all snapshots will be deleted and also the snapshotMap for the
-     *                  job. If false, latest complete snapshot will be kept.
+     * @param validatedSnapshotToKeep If not null, the snapshot with supplied ID will not be deleted. If null,
+     *                               all snapshots including the snapshotMap itself will be deleted
      */
-    void deleteSnapshots(long jobId, boolean deleteAll) {
+    void deleteSnapshots(long jobId, Long validatedSnapshotToKeep) {
         final IStreamMap<Long, SnapshotRecord> snapshotMap = getSnapshotMap(jobId);
-        Long ignoredSnapshotId = deleteAll ? null : latestCompleteSnapshot(jobId);
 
         Predicate<Long, SnapshotRecord> predicate =
-                e -> !e.getKey().equals(LATEST_STARTED_SNAPSHOT_ID_KEY) && !e.getKey().equals(ignoredSnapshotId);
+                e -> !e.getKey().equals(LATEST_STARTED_SNAPSHOT_ID_KEY) && !e.getKey().equals(validatedSnapshotToKeep);
 
         for (Entry<Long, SnapshotRecord> entry : snapshotMap.entrySet(predicate)) {
+            long snapshotId = entry.getValue().snapshotId();
+            // set the status so that it can't be used if the deletion fails
+            setSnapshotStatus(jobId, snapshotId, SnapshotStatus.TO_DELETE);
             for (String vertexName : entry.getValue().vertices()) {
-                String mapName = snapshotDataMapName(jobId, entry.getValue().snapshotId(), vertexName);
+                String mapName = snapshotDataMapName(jobId, snapshotId, vertexName);
                 instance.getHazelcastInstance().getMap(mapName).destroy();
             }
-            if (!deleteAll) {
+            if (validatedSnapshotToKeep != null) {
                 // This is optimized to most-common case, when we delete just one old snapshot:
                 // map.remove() sends operation to just one node, map.removeAll() to all nodes.
                 snapshotMap.remove(entry.getKey());
             }
-            logger.info("Deleted snapshot " + entry.getValue().snapshotId() + " for " + idToString(jobId));
+            logger.info("Deleted snapshot " + snapshotId + " for " + idToString(jobId));
         }
 
-        if (deleteAll) {
+        if (validatedSnapshotToKeep == null) {
             snapshotMap.destroy();
         }
     }
