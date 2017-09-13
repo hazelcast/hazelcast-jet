@@ -21,20 +21,22 @@ import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.ResettableSingletonTraverser;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Watermark;
-import com.hazelcast.jet.WatermarkEmissionPolicy;
 import com.hazelcast.jet.WatermarkPolicy;
+import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 import java.util.function.ToLongFunction;
 
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
+
 /**
  * A processor that inserts watermark into a data stream. See
  * {@link com.hazelcast.jet.processor.Processors#insertWatermarks(
  *     DistributedToLongFunction,
  *     com.hazelcast.jet.function.DistributedSupplier,
- *     WatermarkEmissionPolicy) Processors.insertWatermarks()}.
+ *     WindowDefinition) Processors.insertWatermarks()}.
  *
  * @param <T> type of the stream item
  */
@@ -44,28 +46,29 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
 
     private final ToLongFunction<T> getTimestampFn;
     private final WatermarkPolicy wmPolicy;
-    private final WatermarkEmissionPolicy wmEmitPolicy;
+    private final WindowDefinition winDef;
 
-    private final ResettableSingletonTraverser<Object> singletonTraverser = new ResettableSingletonTraverser<>();
-    private final NextWatermarkTraverser nextWatermarkTraverser = new NextWatermarkTraverser();
-    private final FlatMapper<Object, Object> flatMapper = flatMapper(this::traverser);
+    private final ResettableSingletonTraverser<Object> itemTraverser = new ResettableSingletonTraverser<>();
+    private final WatermarkPerFrameTraverser wmTraverser = new WatermarkPerFrameTraverser();
+    private final FlatMapper<Object, Object> flatMapper = flatMapper(this::traverserFor);
 
-    private long lastEmittedWm = Long.MAX_VALUE;
+    private long lastEmittedWm = Long.MIN_VALUE;
     private long nextWm = Long.MIN_VALUE;
     private int globalProcessorIndex;
 
     /**
      * @param getTimestampFn function that extracts the timestamp from the item
      * @param wmPolicy the watermark policy
+     * @param windowDefinition window definition to be used for watermark generation
      */
     public InsertWatermarksP(
             @Nonnull DistributedToLongFunction<T> getTimestampFn,
             @Nonnull WatermarkPolicy wmPolicy,
-            @Nonnull WatermarkEmissionPolicy wmEmitPolicy
+            WindowDefinition windowDefinition
     ) {
         this.getTimestampFn = getTimestampFn;
         this.wmPolicy = wmPolicy;
-        this.wmEmitPolicy = wmEmitPolicy;
+        this.winDef = windowDefinition;
     }
 
     @Override
@@ -80,33 +83,34 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
 
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
-        if (lastEmittedWm == Long.MAX_VALUE) {
-            lastEmittedWm = Long.MIN_VALUE;
-        }
         return flatMapper.tryProcess(item);
     }
 
-    private Traverser<Object> traverser(Object item) {
+    private Traverser<Object> traverserFor(Object item) {
         long proposedWm;
         if (item == NULL_OBJECT) {
-            proposedWm = wmPolicy.getCurrentWatermark();
+            proposedWm = winDef.floorFrameTs(wmPolicy.getCurrentWatermark());
         } else {
             long eventTs = getTimestampFn.applyAsLong((T) item);
-            proposedWm = wmPolicy.reportEvent(eventTs);
-            if (Math.max(proposedWm, lastEmittedWm) <= eventTs) {
-                singletonTraverser.accept(item);
+            proposedWm = winDef.floorFrameTs(wmPolicy.reportEvent(eventTs));
+
+            // check for item lateness
+            if (Math.max(proposedWm, lastEmittedWm) > eventTs) {
+                logFine(getLogger(),"Dropped late event: %s", item);
             } else {
-                getLogger().fine("Dropped late event: " + item);
+                itemTraverser.accept(item);
             }
         }
-        if (proposedWm == Long.MIN_VALUE) {
-            return singletonTraverser;
+
+        if (proposedWm == wmTraverser.end) {
+            return itemTraverser;
         }
-        if (proposedWm < nextWm || nextWatermarkTraverser.limit > proposedWm) {
-            return singletonTraverser;
+
+        if (lastEmittedWm == Long.MIN_VALUE && proposedWm > lastEmittedWm) {
+            lastEmittedWm = proposedWm - winDef.frameLength();
         }
-        nextWatermarkTraverser.limit = proposedWm;
-        return singletonTraverser.prependTraverser(nextWatermarkTraverser);
+        wmTraverser.end = proposedWm;
+        return itemTraverser.prependTraverser(wmTraverser);
     }
 
     @Override
@@ -120,22 +124,22 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
         for (Object o; (o = inbox.poll()) != null; ) {
             lastEmittedWm = Math.min(lastEmittedWm, ((Entry<?, Long>) o).getValue());
         }
-        getLogger().info("restored lastEmittedWm=" + lastEmittedWm);
+        logFine(getLogger(), "restored lastEmittedWm=%s", lastEmittedWm);
     }
 
-    private class NextWatermarkTraverser implements Traverser<Watermark> {
+    private class WatermarkPerFrameTraverser implements Traverser<Object> {
 
-        private long limit;
+        long end; //inclusive
 
         @Override
         public Watermark next() {
-            if (lastEmittedWm >= limit) {
+            if (lastEmittedWm >= end) {
                 return null;
             }
-            if (nextWm < limit) {
-                nextWm = wmEmitPolicy.nextWatermark(lastEmittedWm, limit);
+            if (nextWm < end) {
+                nextWm = lastEmittedWm + winDef.frameLength();
             }
-            if (nextWm <= limit) {
+            if (nextWm <= end) {
                 return new Watermark(lastEmittedWm = nextWm);
             }
             return null;

@@ -135,7 +135,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         Vertex generator = dag.newVertex("generator", throttle(sup, 10))
                               .localParallelism(1);
         Vertex insWm = dag.newVertex("insWm", insertWatermarks(entry -> ((Entry<Integer, Integer>) entry).getValue(),
-                withFixedLag(0), emitByFrame(wDef)))
+                withFixedLag(0), wDef))
                           .localParallelism(1);
         Vertex aggregate = dag.newVertex("aggregate", aggregateToSlidingWindow(
                 t -> ((Entry<Integer, Integer>) t).getKey(),

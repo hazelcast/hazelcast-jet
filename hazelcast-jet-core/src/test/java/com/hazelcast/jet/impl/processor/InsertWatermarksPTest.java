@@ -21,6 +21,7 @@ import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.WatermarkEmissionPolicy;
 import com.hazelcast.jet.WatermarkPolicies;
 import com.hazelcast.jet.WatermarkPolicy;
+import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.test.TestOutbox;
 import com.hazelcast.jet.test.TestProcessorContext;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
@@ -67,7 +68,7 @@ public class InsertWatermarksPTest {
     private List<Object> resultToCheck = new ArrayList<>();
     private Context context;
     private WatermarkPolicy wmPolicy = withFixedLag(LAG).get();
-    private WatermarkEmissionPolicy wmEmissionPolicy = emitAll();
+    private WindowDefinition winDef = WindowDefinition.tumblingWindowDef(1);
 
     @Parameters(name = "outboxCapacity={0}")
     public static Collection<Object> parameters() {
@@ -149,6 +150,8 @@ public class InsertWatermarksPTest {
                 asList(
                         wm(7),
                         item(10),
+                        wm(8),
+                        wm(9),
                         wm(10),
                         item(13))
         );
@@ -164,14 +167,16 @@ public class InsertWatermarksPTest {
                 asList(
                         wm(10),
                         item(10),
+                        wm(11),
+                        wm(12),
                         wm(13),
                         item(13))
         );
     }
 
     @Test
-    public void emitByFrame_when_eventsIncrease_then_wmIncreases() {
-        wmEmissionPolicy = emitByFrame(tumblingWindowDef(2));
+    public void frameSizeTwo_when_eventsIncrease_then_wmIncreases() {
+        winDef = tumblingWindowDef(2);
         doTest(
                 asList(
                         item(10),
@@ -180,6 +185,7 @@ public class InsertWatermarksPTest {
                         item(13)
                 ),
                 asList(
+                        wm(6),
                         item(10), // no WM before this item. WM would be 7 and this is not on the verge of a frame
                         wm(8),
                         item(11),
@@ -191,8 +197,8 @@ public class InsertWatermarksPTest {
     }
 
     @Test
-    public void emitByFrame_when_eventsIncreaseAndStartAtVergeOfFrame_then_wmIncreases() {
-        wmEmissionPolicy = emitByFrame(tumblingWindowDef(2));
+    public void frameSizeTwo_when_eventsIncreaseAndStartAtVergeOfFrame_then_wmIncreases() {
+        winDef = tumblingWindowDef(2);
         doTest(
                 asList(
                         item(11),
@@ -213,8 +219,8 @@ public class InsertWatermarksPTest {
     }
 
     @Test
-    public void emitByFrame_when_gapBetweenEvents_then_manyWms() {
-        wmEmissionPolicy = emitByFrame(tumblingWindowDef(2));
+    public void frameSizeTwo_when_gapBetweenEvents_then_manyWms() {
+        winDef = tumblingWindowDef(2);
         doTest(
                 asList(
                         item(11),
@@ -229,72 +235,28 @@ public class InsertWatermarksPTest {
     }
 
     @Test
-    public void emitByMinStep_when_eventsIncrease_then_wmIncreases() {
-        wmEmissionPolicy = emitByMinStep(2);
-        doTest(
-                asList(
-                        item(11),
-                        item(12),
-                        item(13),
-                        item(14)
-                ),
-                asList(
-                        wm(8),
-                        item(11),
-                        item(12),
-                        wm(10),
-                        item(13),
-                        item(14)
-                )
-        );
-    }
-
-    @Test
-    public void emitByMinStep_when_gapBetweenEvents_then_oneWm() {
-        wmEmissionPolicy = emitByMinStep(2);
+    public void frameSizeTwo_when_gapBetweenEvents_then_fillGaps() {
+        winDef = tumblingWindowDef(2);
         doTest(
                 asList(
                         item(10),
                         item(15),
                         item(20)),
                 asList(
-                        wm(7),
+                        wm(6),
                         item(10),
+                        wm(8),
+                        wm(10),
                         wm(12),
                         item(15),
-                        wm(17),
+                        wm(14),
+                        wm(16),
                         item(20))
         );
     }
 
     private void doTest(List<Object> input, List<Object> expectedOutput) {
-        // wrap the emission policy to check how it's used and what it returns
-        WatermarkEmissionPolicy wrappedEmissionPolicy = new WatermarkEmissionPolicy() {
-            long lastReturnedValue = Long.MIN_VALUE;
-
-            @Override
-            public long nextWatermark(long lastEmittedWm, long currentWm) {
-                assertTrue("nextWatermark() called with currentWm smaller than already returned value. " +
-                                "lastReturnedValue=" + lastReturnedValue + ", currentWm=" + currentWm
-                                + ", lastEmittedWm=" + lastEmittedWm,
-                        lastEmittedWm < currentWm);
-                if (lastReturnedValue > Long.MIN_VALUE) {
-                    assertTrue("higher emitted value than emission policy returned, lastEmittedWm=" + lastEmittedWm
-                                    + ", lastReturnedValue=" + lastReturnedValue,
-                            lastEmittedWm <= lastReturnedValue);
-                }
-                assertTrue("superfluous call, lastReturnedValue=" + lastReturnedValue + ", currentWm=" + currentWm,
-                        lastReturnedValue < currentWm);
-
-                lastReturnedValue = wmEmissionPolicy.nextWatermark(lastEmittedWm, currentWm);
-
-                assertTrue("emission policy returned value smaller than lastEmittedWm. lastEmittedWm=" + lastEmittedWm
-                                + ", lastReturnedValue=" + lastReturnedValue,
-                        lastReturnedValue > lastEmittedWm);
-                return lastReturnedValue;
-            }
-        };
-        p = new InsertWatermarksP<>(Item::getTimestamp, wmPolicy, wrappedEmissionPolicy);
+        p = new InsertWatermarksP<>(Item::getTimestamp, wmPolicy, winDef);
         p.init(outbox, context);
 
         for (Object inputItem : input) {

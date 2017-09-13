@@ -26,7 +26,6 @@ import com.hazelcast.jet.SnapshotRestorePolicy;
 import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.WatermarkEmissionPolicy;
 import com.hazelcast.jet.WatermarkPolicy;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation;
@@ -575,9 +574,9 @@ public final class Processors {
     public static <T> ProcessorMetaSupplier insertWatermarks(
             @Nonnull DistributedToLongFunction<T> getTimestampF,
             @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-            @Nonnull WatermarkEmissionPolicy wmEmitPolicy
+            @Nonnull WindowDefinition winDef
     ) {
-        return ProcessorMetaSupplier.of(() -> new InsertWatermarksP<>(getTimestampF, newWmPolicyF.get(), wmEmitPolicy),
+        return ProcessorMetaSupplier.of(() -> new InsertWatermarksP<>(getTimestampF, newWmPolicyF.get(), winDef),
                 SnapshotRestorePolicy.BROADCAST);
     }
 
