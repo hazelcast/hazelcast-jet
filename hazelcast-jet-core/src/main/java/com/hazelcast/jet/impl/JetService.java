@@ -101,8 +101,8 @@ public class JetService
         taskletExecutionService = new TaskletExecutionService(nodeEngine.getHazelcastInstance(),
                 config.getInstanceConfig().getCooperativeThreadCount());
 
-        jobRepository = new JobRepository(jetInstance);
         snapshotRepository = new SnapshotRepository(jetInstance);
+        jobRepository = new JobRepository(jetInstance, snapshotRepository);
 
         jobExecutionService = new JobExecutionService(nodeEngine, taskletExecutionService);
         jobCoordinationService = new JobCoordinationService(nodeEngine, config, jobRepository,

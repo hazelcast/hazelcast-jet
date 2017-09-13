@@ -285,8 +285,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     @Override
     public String toString() {
         final StringBuilder b = new StringBuilder("dag\n");
-        for (Iterator<Vertex> it = iterator(); it.hasNext();) {
-            final Vertex v = it.next();
+        for (Vertex v : this) {
             b.append("    .vertex(\"").append(v.getName()).append("\")");
             if (v.getLocalParallelism() != -1) {
                 b.append(".localParallelism(").append(v.getLocalParallelism()).append(')');

@@ -22,6 +22,7 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import java.io.IOException;
+import java.util.Set;
 
 import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.FAILED;
 import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.ONGOING;
@@ -47,13 +48,15 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
     private long snapshotId;
     private long startTime = System.currentTimeMillis();
     private SnapshotStatus status = ONGOING;
+    private Set<String> vertices;
 
     public SnapshotRecord() {
     }
 
-    public SnapshotRecord(long jobId, long snapshotId) {
+    public SnapshotRecord(long jobId, long snapshotId, Set<String> vertices) {
         this.jobId = jobId;
         this.snapshotId = snapshotId;
+        this.vertices = vertices;
     }
 
     /**
@@ -62,6 +65,10 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
      */
     public long jobId() {
         return jobId;
+    }
+
+    public Set<String> vertices() {
+        return vertices;
     }
 
     public void setStatus(SnapshotStatus newStatus) {
@@ -108,6 +115,7 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         out.writeLong(snapshotId);
         out.writeLong(startTime);
         out.writeUTF(status.toString());
+        out.writeObject(vertices);
     }
 
     @Override
@@ -116,6 +124,7 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         snapshotId = in.readLong();
         startTime = in.readLong();
         status = SnapshotStatus.valueOf(in.readUTF());
+        vertices = in.readObject();
     }
 
     @Override
@@ -125,6 +134,7 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
                 ", snapshotId=" + snapshotId +
                 ", startTime=" + toLocalDateTime(startTime) +
                 ", status=" + status +
+                ", vertices=" + vertices +
                 '}';
     }
 }

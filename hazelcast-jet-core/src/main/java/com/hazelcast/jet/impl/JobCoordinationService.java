@@ -378,7 +378,7 @@ public class JobCoordinationService {
             }
 
             if (success) {
-                validateSnapshot(jobId, executionId, snapshotId);
+                validateAndDeleteSnapshot(jobId, executionId, snapshotId);
             } else {
                 scheduleSnapshot(jobId, executionId);
             }
@@ -388,11 +388,12 @@ public class JobCoordinationService {
         }
     }
 
-    void validateSnapshot(long jobId, long executionId, long snapshotId) {
+    private void validateAndDeleteSnapshot(long jobId, long executionId, long snapshotId) {
         // TODO [basri] implement validation
         logger.warning("Snapshot validation is not implemented yet. " + jobAndExecutionId(jobId, executionId)
                 + " snapshot " + snapshotId);
         snapshotRepository.setSnapshotStatus(jobId, snapshotId, SUCCESSFUL);
+        snapshotRepository.deleteSnapshots(jobId, false);
         scheduleSnapshot(jobId, executionId);
     }
 

@@ -22,10 +22,12 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus;
 import com.hazelcast.jet.stream.IStreamMap;
+import com.hazelcast.logging.ILogger;
 import com.hazelcast.query.Predicate;
 
 import javax.annotation.Nullable;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import static com.hazelcast.jet.impl.util.Util.compute;
 import static com.hazelcast.jet.impl.util.Util.idToString;
@@ -46,22 +48,23 @@ public class SnapshotRepository {
     private static final long LATEST_STARTED_SNAPSHOT_ID_KEY = -1;
 
     private final JetInstance instance;
+    private final ILogger logger;
 
     SnapshotRepository(JetInstance jetInstance) {
         this.instance = jetInstance;
+        this.logger = jetInstance.getHazelcastInstance().getLoggingService().getLogger(getClass());
     }
 
     /**
-     * Registers a new snapshot with a proposedId, and increment until the next free snapshot sequence
-     * can be found. Returns the ID for the registered snapshot
+     * Registers a new snapshot. Returns the ID for the registered snapshot
      */
-    long registerSnapshot(long jobId) {
+    long registerSnapshot(long jobId, Set<String> vertexNames) {
         IStreamMap<Long, Object> snapshots = getSnapshotMap(jobId);
 
         SnapshotRecord record;
         do {
             long nextSnapshotId = generateNextSnapshotId(snapshots);
-            record = new SnapshotRecord(jobId, nextSnapshotId);
+            record = new SnapshotRecord(jobId, nextSnapshotId, vertexNames);
         } while (snapshots.putIfAbsent(record.snapshotId(), record) != null);
         return record.snapshotId();
     }
@@ -133,5 +136,36 @@ public class SnapshotRepository {
 
     public static String snapshotDataMapName(long jobId, long snapshotId, String vertexName) {
         return SNAPSHOT_NAME_PREFIX + idToString(jobId) + '.' + snapshotId + '.' + vertexName;
+    }
+
+    /**
+     * Deletes snapshot data and records from snapshotsMap for single job.
+     *
+     * @param deleteAll If true, all snapshots will be deleted and also the snapshotMap for the
+     *                  job. If false, latest complete snapshot will be kept.
+     */
+    void deleteSnapshots(long jobId, boolean deleteAll) {
+        final IStreamMap<Long, SnapshotRecord> snapshotMap = getSnapshotMap(jobId);
+        Long ignoredSnapshotId = deleteAll ? null : latestCompleteSnapshot(jobId);
+
+        Predicate<Long, SnapshotRecord> predicate =
+                e -> !e.getKey().equals(LATEST_STARTED_SNAPSHOT_ID_KEY) && !e.getKey().equals(ignoredSnapshotId);
+
+        for (Entry<Long, SnapshotRecord> entry : snapshotMap.entrySet(predicate)) {
+            for (String vertexName : entry.getValue().vertices()) {
+                String mapName = snapshotDataMapName(jobId, entry.getValue().snapshotId(), vertexName);
+                instance.getHazelcastInstance().getMap(mapName).destroy();
+            }
+            if (!deleteAll) {
+                // This is optimized to most-common case, when we delete just one old snapshot:
+                // map.remove() sends operation to just one node, map.removeAll() to all nodes.
+                snapshotMap.remove(entry.getKey());
+            }
+            logger.info("Deleted snapshot " + entry.getValue().snapshotId() + " for " + idToString(jobId));
+        }
+
+        if (deleteAll) {
+            snapshotMap.destroy();
+        }
     }
 }

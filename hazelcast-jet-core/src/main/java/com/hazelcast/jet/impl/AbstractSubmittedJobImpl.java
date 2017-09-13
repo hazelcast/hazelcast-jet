@@ -34,7 +34,7 @@ public abstract class AbstractSubmittedJobImpl extends AbstractJobImpl {
 
     AbstractSubmittedJobImpl(JetInstance jetInstance, ILogger logger, DAG dag, JobConfig config) {
         super(logger);
-        this.jobRepository = new JobRepository(jetInstance);
+        this.jobRepository = new JobRepository(jetInstance, null);
         this.dag = dag;
         this.config = config;
     }

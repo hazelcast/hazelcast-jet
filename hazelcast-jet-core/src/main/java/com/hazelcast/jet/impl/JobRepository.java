@@ -31,6 +31,7 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.query.Predicate;
 
+import javax.annotation.Nullable;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -59,7 +60,7 @@ public class JobRepository {
     /**
      * Name of internal IMap which is used for unique id generation
      */
-    public static final String IDS_MAP_NAME = "__jet.ids";
+    public static final String RANDOM_IDS_MAP_NAME = "__jet.ids";
 
     /**
      * Name of internal IMap which stores job records
@@ -71,28 +72,35 @@ public class JobRepository {
      */
     public static final String JOB_RESULTS_MAP_NAME = "__jet.results";
 
-
     private static final String RESOURCE_MARKER = "__jet.jobId";
     private static final long JOB_EXPIRATION_DURATION_IN_MILLIS = HOURS.toMillis(2);
 
     private final HazelcastInstance instance;
+    private final SnapshotRepository snapshotRepository;
+
     private final IMap<Long, Long> randomIds;
     private final IMap<Long, JobRecord> jobs;
     private long jobExpirationDurationInMillis = JOB_EXPIRATION_DURATION_IN_MILLIS;
 
-    public JobRepository(JetInstance jetInstance) {
+    /**
+     * @param snapshotRepository Can be {@code null} if used on client to upload resources.
+     */
+    JobRepository(JetInstance jetInstance, @Nullable SnapshotRepository snapshotRepository) {
         this.instance = jetInstance.getHazelcastInstance();
-        this.randomIds = instance.getMap(IDS_MAP_NAME);
+        this.snapshotRepository = snapshotRepository;
+
+        this.randomIds = instance.getMap(RANDOM_IDS_MAP_NAME);
         this.jobs = instance.getMap(JOB_RECORDS_MAP_NAME);
     }
 
+    // for tests
     void setJobExpirationDurationInMillis(long jobExpirationDurationInMillis) {
         this.jobExpirationDurationInMillis = jobExpirationDurationInMillis;
     }
 
     /**
      * Uploads job resources and returns a unique job id generated for the job.
-     * If the upload process fails for any reason, such as being unable to access to a resource,
+     * If the upload process fails for any reason, such as being unable to access a resource,
      * uploaded resources are cleaned up.
      */
     public long uploadJobResources(JobConfig jobConfig) {
@@ -105,7 +113,7 @@ public class JobRepository {
                 try {
                     loadJar(tmpMap, rc.getUrl());
                 } catch (IOException e) {
-                    cleanupJobResourcesMap(jobResourcesMap);
+                    cleanupJobResourcesAndSnapshots(jobId, jobResourcesMap);
                     randomIds.remove(jobId);
                     throw new JetException("Job resource upload failed", e);
                 }
@@ -114,7 +122,7 @@ public class JobRepository {
                     InputStream in = rc.getUrl().openStream();
                     readStreamAndPutCompressedToMap(rc.getId(), tmpMap, in);
                 } catch (IOException e) {
-                    cleanupJobResourcesMap(jobResourcesMap);
+                    cleanupJobResourcesAndSnapshots(jobId, jobResourcesMap);
                     randomIds.remove(jobId);
                     throw new JetException("Job resource upload failed", e);
                 }
@@ -170,8 +178,10 @@ public class JobRepository {
         map.put(resourceName, baos.toByteArray());
     }
 
-    private void cleanupJobResourcesMap(IMap<String, Object> jobResourcesMap) {
-        jobResourcesMap.clear();
+    private void cleanupJobResourcesAndSnapshots(long jobId, IMap<String, Object> jobResourcesMap) {
+        if (snapshotRepository != null) {
+            snapshotRepository.deleteSnapshots(jobId, true);
+        }
         jobResourcesMap.destroy();
     }
 
@@ -212,7 +222,7 @@ public class JobRepository {
         executionIds.forEach(randomIds::remove);
 
         // Delete job resources
-        cleanupJobResourcesMap(getJobResources(jobId));
+        cleanupJobResourcesAndSnapshots(jobId, getJobResources(jobId));
     }
 
     /**
@@ -234,21 +244,21 @@ public class JobRepository {
                  .stream()
                  .filter(jobId -> !validJobIds.contains(jobId))
                  .forEach(jobId -> {
-                  IMap<String, Object> resources = getJobResources(jobId);
-                  if (resources.isEmpty()) {
-                      return;
-                  }
+                     IMap<String, Object> resources = getJobResources(jobId);
+                     if (resources.isEmpty()) {
+                         return;
+                     }
 
-                  EntryView<String, Object> marker = resources.getEntryView(RESOURCE_MARKER);
-                  // If the marker is absent, then job resources may be still uploaded.
-                  // Just put the marker so that the job resources may be cleaned up eventually.
-                  // If the job resources are still being uploaded, then the marker will be overwritten, which is ok.
-                  if (marker == null) {
-                      resources.putIfAbsent(RESOURCE_MARKER, RESOURCE_MARKER);
-                  } else if (isJobExpired(marker.getCreationTime())) {
-                      cleanupJobResourcesMap(resources);
-                  }
-              });
+                     EntryView<String, Object> marker = resources.getEntryView(RESOURCE_MARKER);
+                     // If the marker is absent, then job resources may be still uploaded.
+                     // Just put the marker so that the job resources may be cleaned up eventually.
+                     // If the job resources are still being uploaded, then the marker will be overwritten, which is ok.
+                     if (marker == null) {
+                         resources.putIfAbsent(RESOURCE_MARKER, RESOURCE_MARKER);
+                     } else if (isJobExpired(marker.getCreationTime())) {
+                         cleanupJobResourcesAndSnapshots(jobId, resources);
+                     }
+                 });
     }
 
     private boolean isJobExpired(long creationTime) {
@@ -306,7 +316,6 @@ public class JobRepository {
         public void readData(ObjectDataInput in) throws IOException {
             jobId = in.readLong();
         }
-
     }
 
     public static class FilterJobIdPredicate implements Predicate<Long, Long>, IdentifiedDataSerializable {
@@ -336,7 +345,5 @@ public class JobRepository {
         @Override
         public void readData(ObjectDataInput in) throws IOException {
         }
-
     }
-
 }

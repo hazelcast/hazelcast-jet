@@ -41,6 +41,7 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -66,8 +67,8 @@ import static com.hazelcast.jet.impl.execution.SnapshotContext.NO_SNAPSHOT;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isTopologicalFailure;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
-import static com.hazelcast.jet.impl.util.Util.jobAndExecutionId;
 import static com.hazelcast.jet.impl.util.Util.idToString;
+import static com.hazelcast.jet.impl.util.Util.jobAndExecutionId;
 import static com.hazelcast.jet.processor.SourceProcessors.readMap;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.partitioningBy;
@@ -83,6 +84,7 @@ public class MasterContext {
     private final CompletableFuture<Boolean> completionFuture = new CompletableFuture<>();
     private final AtomicReference<JobStatus> jobStatus = new AtomicReference<>(NOT_STARTED);
     private final SnapshotRepository snapshotRepository;
+    private volatile Set<String> vertexNames;
 
     private volatile long executionId;
     private volatile long jobStartTime;
@@ -141,6 +143,9 @@ public class MasterContext {
         }
 
         DAG dag = deserializeDAG();
+        // save a copy of the vertex list, because it is going to change
+        vertexNames = new HashSet<>();
+        dag.iterator().forEachRemaining(e1 -> vertexNames.add(e1.getName()));
 
         // last started snapshot complete or not complete. The next started snapshot must be greater than this number
         long lastSnapshotId = NO_SNAPSHOT;
@@ -342,12 +347,12 @@ public class MasterContext {
     void beginSnapshot(long executionId) {
         if (this.executionId != executionId) {
             // current execution is completed and probably a new execution has started
-            logger.warning("Not beginning snapshot since expected execution id " + idToString(executionId)
-            + " does not match to " + jobAndExecutionId(jobId, executionId));
+            logger.warning("Not beginning snapshot since expected execution id " + idToString(this.executionId)
+                    + " does not match to " + jobAndExecutionId(jobId, executionId));
             return;
         }
 
-        long newSnapshotId = snapshotRepository.registerSnapshot(jobId);
+        long newSnapshotId = snapshotRepository.registerSnapshot(jobId, vertexNames);
 
         logger.info(String.format("Starting snapshot %s for %s", newSnapshotId, jobAndExecutionId(jobId, executionId)));
         Function<ExecutionPlan, Operation> factory =
@@ -358,7 +363,7 @@ public class MasterContext {
 
     private void onSnapshotCompleted(Map<MemberInfo, Object> responses, long executionId, long snapshotId) {
         // check if all members were successful
-        // we don't check execution plan on purpose since this snapshot might be stale
+        // we don't check member list in execution plan on purpose since this snapshot might be stale
         Map<Boolean, List<Entry<MemberInfo, Object>>> grouped = groupResponses(responses);
         List<Entry<MemberInfo, Object>> failures = grouped.get(true);
         List<Entry<MemberInfo, Object>> nonTopologicalFailures = failures.stream()
@@ -552,7 +557,7 @@ public class MasterContext {
     private void invokeOnParticipants(Map<MemberInfo, InternalCompletableFuture<Object>> futures,
                                       CompletableFuture<Void> doneFuture,
                                       Function<ExecutionPlan, Operation> opCtor) {
-        AtomicInteger doneLatch = new AtomicInteger(executionPlanMap.size());
+        AtomicInteger remainingCount = new AtomicInteger(executionPlanMap.size());
 
         for (Entry<MemberInfo, ExecutionPlan> e : executionPlanMap.entrySet()) {
             MemberInfo member = e.getKey();
@@ -560,7 +565,7 @@ public class MasterContext {
             InternalCompletableFuture<Object> future = nodeEngine.getOperationService()
                          .createInvocationBuilder(JetService.SERVICE_NAME, op, member.getAddress())
                          .setDoneCallback(() -> {
-                             if (doneLatch.decrementAndGet() == 0) {
+                             if (remainingCount.decrementAndGet() == 0) {
                                  doneFuture.complete(null);
                              }
                          })
