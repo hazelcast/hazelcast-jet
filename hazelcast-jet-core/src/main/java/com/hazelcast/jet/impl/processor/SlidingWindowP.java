@@ -136,6 +136,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
 
     private Traverser<Object> windowTraverserAndEvictor(long endTsExclusive) {
         if (bottomTs == Long.MAX_VALUE) {
+            bottomTs = endTsExclusive + wDef.frameLength();
             return Traversers.empty();
         }
 
