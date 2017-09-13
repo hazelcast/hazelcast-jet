@@ -29,7 +29,6 @@ import com.hazelcast.spi.OperationService;
 import com.hazelcast.spi.exception.RetryableException;
 import com.hazelcast.spi.impl.operationservice.impl.operations.PartitionIteratingOperation;
 import com.hazelcast.spi.impl.operationservice.impl.operations.PartitionIteratingOperation.PartitionResponse;
-import com.hazelcast.spi.partition.IPartition;
 import com.hazelcast.spi.partition.IPartitionService;
 import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.util.CollectionUtil;
@@ -131,13 +130,12 @@ public class AsyncMapWriter {
 
     private boolean tryRetry(int[] partitions, MapEntries[] entriesPerPtion, CompletableFuture<Void> completionFuture) {
         assert partitions.length == entriesPerPtion.length;
-
-        IPartition[] partitionOwners = partitionService.getPartitions();
         Map<Address, Entry<List<Integer>, List<MapEntries>>> addrToEntries = new HashMap<>();
         for (int index = 0; index < partitions.length; index++) {
             int partition = partitions[index];
             MapEntries entries = entriesPerPtion[index];
-            Address owner = partitionOwners[partition].getOwnerOrNull();
+            Address owner = partitionService.getPartitionOwnerOrWait(index);
+            assert owner != null : "null owner was returned";
             Entry<List<Integer>, List<MapEntries>> ptionsAndEntries
                     = addrToEntries.computeIfAbsent(owner, a -> entry(new ArrayList<>(), new ArrayList<>()));
             ptionsAndEntries.getValue().add(entries);
@@ -295,6 +293,15 @@ public class AsyncMapWriter {
             OperationFactory factory = opProvider.createPutAllOperationFactory(mapName,
                     partitions, entries);
             return new PartitionIteratingOperation(factory, partitions);
+        }
+
+        @Override
+        public String toString() {
+            return "PartitionOpBuilder{" +
+                    "address=" + address +
+                    ", entryCount=" + entries.length +
+                    ", partitions=" + Arrays.toString(partitions) +
+                    '}';
         }
     }
 }
