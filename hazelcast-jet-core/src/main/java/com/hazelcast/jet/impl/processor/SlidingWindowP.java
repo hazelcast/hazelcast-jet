@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.processor;
 
-import com.hazelcast.core.PartitionAware;
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.JetException;
@@ -27,13 +26,8 @@ import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedToLongFunction;
-import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
-import com.hazelcast.nio.ObjectDataInput;
-import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -44,6 +38,9 @@ import java.util.stream.LongStream;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.util.Preconditions.checkNotNull;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static java.util.Collections.emptyMap;
 
 /**
@@ -61,51 +58,54 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     Map<Object, A> slidingWindow;
 
     private final WindowDefinition wDef;
-    private final DistributedToLongFunction<? super T> getFrameTimestampFn;
+    private final DistributedToLongFunction<? super T> getFrameTsFn;
     private final Function<? super T, ?> getKeyFn;
     private final AggregateOperation1<? super T, A, R> aggrOp;
     private final boolean isLastStage;
 
-    private final FlatMapper<Watermark, Object> flatMapper;
+    private final FlatMapper<Watermark, ?> flatMapper;
 
     private final A emptyAcc;
     private Traverser<Object> flushTraverser;
     private Traverser<Entry<SnapshotKey, A>> snapshotTraverser;
 
-    // following fields are optimizations to maintain lowest and highest key in the tsToKeyToAcc map
+    // These two fields track the upper and lower bounds for the keyset of
+    // tsToKeyToAcc. They serve as an optimization that avoids a linear search
+    // over the entire keyset.
     private long topTs = Long.MIN_VALUE;
     private long bottomTs = Long.MAX_VALUE;
 
     public SlidingWindowP(
             Function<? super T, ?> getKeyFn,
-            DistributedToLongFunction<? super T> getFrameTimestampFn,
+            DistributedToLongFunction<? super T> getFrameTsFn,
             WindowDefinition winDef,
             AggregateOperation1<? super T, A, R> aggrOp,
             boolean isLastStage
     ) {
+        if (!winDef.isTumbling()) {
+            checkNotNull(aggrOp.combineFn(), "AggregateOperation lacks the combine primitive");
+        }
         this.wDef = winDef;
-        this.getFrameTimestampFn = getFrameTimestampFn;
+        this.getFrameTsFn = getFrameTsFn;
         this.getKeyFn = getKeyFn;
         this.aggrOp = aggrOp;
         this.isLastStage = isLastStage;
-
-        this.flatMapper = flatMapper(
-                wm -> windowTraverserAndEvictor(wm.timestamp())
-                            .append(wm));
+        this.flatMapper = flatMapper(wm -> windowTraverserAndEvictor(wm.timestamp()).append(wm));
         this.emptyAcc = aggrOp.createFn().get();
     }
 
     @Override
     protected boolean tryProcess0(@Nonnull Object item) {
+        @SuppressWarnings("unchecked")
         T t = (T) item;
-        final Long frameTimestamp = getFrameTimestampFn.applyAsLong(t);
-        assert frameTimestamp == wDef.floorFrameTs(frameTimestamp) : "timestamp not on the verge of a frame";
+        final Long frameTs = getFrameTsFn.applyAsLong(t);
+        assert frameTs == wDef.floorFrameTs(frameTs) : "timestamp not aligned on a frame";
         final Object key = getKeyFn.apply(t);
-        A acc = tsToKeyToAcc.computeIfAbsent(frameTimestamp, x -> new HashMap<>())
+        A acc = tsToKeyToAcc.computeIfAbsent(frameTs, x -> new HashMap<>())
                             .computeIfAbsent(key, k -> aggrOp.createFn().get());
         aggrOp.accumulateFn().accept(acc, t);
-        topTs = Math.max(topTs, frameTimestamp);
-        bottomTs = Math.min(bottomTs, frameTimestamp);
+        topTs = max(topTs, frameTs);
+        bottomTs = min(bottomTs, frameTs);
         return true;
     }
 
@@ -119,19 +119,28 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         return flushBuffers();
     }
 
-    private boolean flushBuffers() {
-        if (flushTraverser == null) {
-            if (tsToKeyToAcc.isEmpty()) {
-                return true;
-            }
-            LongStream range =
-                    LongStream.iterate(bottomTs + wDef.windowLength() - wDef.frameLength(), ts -> ts + wDef.frameLength())
-                              .limit(Math.max(0, (topTs - bottomTs) / wDef.frameLength() + 1));
-            flushTraverser = traverseStream(range.boxed())
-                    .flatMap(this::windowTraverserAndEvictor)
-                    .onFirstNull(() -> flushTraverser = null);
+    @Override
+    public boolean saveSnapshot() {
+        if (!isLastStage) {
+            return flushBuffers();
         }
-        return emitFromTraverser(flushTraverser);
+        ensureSnashotTraverser();
+        return emitSnapshotFromTraverser(snapshotTraverser);
+    }
+
+    @Override
+    public void restoreSnapshot(@Nonnull Inbox inbox) {
+        for (Object o; (o = inbox.poll()) != null; ) {
+            @SuppressWarnings("unchecked")
+            Entry<SnapshotKey, A> entry = (Entry<SnapshotKey, A>) o;
+            SnapshotKey k = entry.getKey();
+            if (tsToKeyToAcc.computeIfAbsent(k.timestamp, x -> new HashMap<>())
+                            .put(k.key, entry.getValue()) != null) {
+                throw new JetException("Duplicate key in snapshot: " + k);
+            }
+            topTs = max(topTs, k.timestamp);
+            bottomTs = min(bottomTs, k.timestamp);
+        }
     }
 
     private Traverser<Object> windowTraverserAndEvictor(long endTsExclusive) {
@@ -140,32 +149,25 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
             return Traversers.empty();
         }
 
-        assert endTsExclusive == wDef.floorFrameTs(endTsExclusive) : "WM timestamp not on the verge of a frame";
-        long rangeStart = Math.min(bottomTs + wDef.windowLength() - wDef.frameLength(), endTsExclusive);
-        return Traversers.traverseStream(range(rangeStart, endTsExclusive, wDef.frameLength()).boxed())
-                .flatMap(ts ->
-                         traverseIterable(computeWindow(ts).entrySet())
-                        .map(e -> (Object) new TimestampedEntry<>(
+        assert endTsExclusive == wDef.floorFrameTs(endTsExclusive) : "endTsExclusive not aligned on frame";
+        long rangeStart = min(bottomTs + wDef.windowLength() - wDef.frameLength(), endTsExclusive);
+        return traverseStream(range(rangeStart, endTsExclusive, wDef.frameLength()).boxed())
+                .flatMap(ts -> traverseIterable(computeWindow(ts).entrySet())
+                        .map(e -> new TimestampedEntry<>(
                                 endTsExclusive, e.getKey(), aggrOp.finishFn().apply(e.getValue())))
                         .onFirstNull(() -> completeWindow(endTsExclusive)));
     }
 
     private Map<Object, A> computeWindow(long frameTs) {
         assert bottomTs >= frameTs - wDef.windowLength() + wDef.frameLength()
-                : "probably missed a WM or received late event, bottomTs=" + bottomTs + ", frameTs=" + frameTs
-                        + ", windowLength=" + wDef.windowLength() + ", frameLength=" + wDef.frameLength();
+                : String.format("probably missed a WM or received a late event, "
+                        + "bottomTs=%d, frameTs=%d, windowLength=%d, frameLength=%d",
+                bottomTs, frameTs, wDef.windowLength(), wDef.frameLength());
         if (wDef.isTumbling()) {
             return tsToKeyToAcc.getOrDefault(frameTs, emptyMap());
         }
         if (aggrOp.deductFn() != null) {
-            if (slidingWindow == null) {
-                // compute initial slidingWindow
-                slidingWindow = new HashMap<>();
-                for (long ts = frameTs - wDef.windowLength() + wDef.frameLength(); ts < frameTs;
-                        ts += wDef.frameLength()) {
-                    patchSlidingWindow(aggrOp.combineFn(), tsToKeyToAcc.get(ts));
-                }
-            }
+            ensureSlidingWindow(frameTs);
             // add leading-edge frame
             patchSlidingWindow(aggrOp.combineFn(), tsToKeyToAcc.get(frameTs));
             return slidingWindow;
@@ -184,9 +186,6 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     private void completeWindow(long frameTs) {
         long frameToEvict = frameTs - wDef.windowLength() + wDef.frameLength();
         Map<Object, A> evictedFrame = tsToKeyToAcc.remove(frameToEvict);
-        // this could make bottomTs not exactly conform to the definition of being "lowest key in tsToKeyToAcc
-        // map", because the next frame after the one we just removed might not have any items, but it's enough
-        // for now.
         bottomTs = frameToEvict + wDef.frameLength();
         if (!wDef.isTumbling() && aggrOp.deductFn() != null) {
             // deduct trailing-edge frame
@@ -207,110 +206,48 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         }
     }
 
-    @Override
-    public boolean saveSnapshot() {
-        if (isLastStage) {
-            if (snapshotTraverser == null) {
-                snapshotTraverser = traverseIterable(tsToKeyToAcc.entrySet())
-                        .flatMap(entry -> traverseIterable(entry.getValue().entrySet())
-                                .map(entry2 -> entry(new SnapshotKey(entry.getKey(), entry2.getKey()), entry2.getValue()))
-                        )
-                        .onFirstNull(() -> snapshotTraverser = null);
-            }
-            return emitSnapshotFromTraverser(snapshotTraverser);
-        } else {
-            return flushBuffers();
+    private void ensureSlidingWindow(long frameTs) {
+        if (slidingWindow != null) {
+            return;
+        }
+        slidingWindow = new HashMap<>();
+        for (long ts = frameTs - wDef.windowLength() + wDef.frameLength(); ts < frameTs; ts += wDef.frameLength()) {
+            patchSlidingWindow(aggrOp.combineFn(), tsToKeyToAcc.get(ts));
         }
     }
 
-    @Override
-    public void restoreSnapshot(@Nonnull Inbox inbox) {
-        for (Object o; (o = inbox.poll()) != null; ) {
-            Entry<SnapshotKey, A> entry = (Entry<SnapshotKey, A>) o;
-            SnapshotKey k = entry.getKey();
-            if (tsToKeyToAcc.computeIfAbsent(k.timestamp, x -> new HashMap<>())
-                            .put(k.key, entry.getValue()) != null) {
-                throw new JetException("Duplicate key in snapshot: " + k);
+    private boolean flushBuffers() {
+        if (flushTraverser == null) {
+            if (tsToKeyToAcc.isEmpty()) {
+                return true;
             }
-            topTs = Math.max(topTs, k.timestamp);
-            bottomTs = Math.min(bottomTs, k.timestamp);
+            LongStream range = LongStream.iterate(bottomTs + wDef.windowLength() - wDef.frameLength(),
+                    ts -> ts + wDef.frameLength())
+                                         .limit(max(0, 1 + (topTs - bottomTs) / wDef.frameLength()));
+            flushTraverser = traverseStream(range.boxed())
+                    .flatMap(this::windowTraverserAndEvictor)
+                    .onFirstNull(() -> flushTraverser = null);
+        }
+        return emitFromTraverser(flushTraverser);
+    }
+
+    private void ensureSnashotTraverser() {
+        if (snapshotTraverser == null) {
+            snapshotTraverser = traverseIterable(tsToKeyToAcc.entrySet())
+                    .flatMap(e -> traverseIterable(e.getValue().entrySet())
+                            .map(e2 -> entry(new SnapshotKey(e.getKey(), e2.getKey()), e2.getValue()))
+                    )
+                    .onFirstNull(() -> snapshotTraverser = null);
         }
     }
 
     /**
-     * Returns a stream iterating {@code for (i=start; i<=end; i+=step)}
+     * Returns a stream of {@code long}s:
+     * {@code for (long i = start; i <= end; i += step) yield i;}
      */
     private static LongStream range(long start, long end, long step) {
         return start > end
                 ? LongStream.empty()
                 : LongStream.iterate(start, n -> n + step).limit(1 + (end - start) / step);
-    }
-
-    public static final class SnapshotKey implements PartitionAware<Object>, IdentifiedDataSerializable {
-        private long timestamp;
-        private Object key;
-
-        public SnapshotKey() { }
-
-        private SnapshotKey(long timestamp, @Nonnull Object key) {
-            this.timestamp = timestamp;
-            this.key = key;
-        }
-
-        @Override
-        public Object getPartitionKey() {
-            return key;
-        }
-
-        @Override
-        public int getFactoryId() {
-            return JetInitDataSerializerHook.FACTORY_ID;
-        }
-
-        @Override
-        public int getId() {
-            return JetInitDataSerializerHook.SLIDING_WINDOW_P_SNAPSHOT_KEY;
-        }
-
-        @Override
-        public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeLong(timestamp);
-            out.writeObject(key);
-        }
-
-        @Override
-        public void readData(ObjectDataInput in) throws IOException {
-            timestamp = in.readLong();
-            key = in.readObject();
-        }
-
-        @Override
-        public String toString() {
-            return "SnapshotKey{timestamp=" + timestamp + ", key=" + key + '}';
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-
-            SnapshotKey that = (SnapshotKey) o;
-
-            if (timestamp != that.timestamp) {
-                return false;
-            }
-            return key.equals(that.key);
-        }
-
-        @Override
-        public int hashCode() {
-            int result = (int) (timestamp ^ (timestamp >>> 32));
-            result = 31 * result + key.hashCode();
-            return result;
-        }
     }
 }
