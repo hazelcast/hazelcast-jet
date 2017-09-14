@@ -19,13 +19,13 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.aggregation.impl.MaxByAggregator;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.impl.execution.SnapshotContext;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.query.Predicate;
 
+import javax.annotation.Nullable;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -104,10 +104,10 @@ public class SnapshotRepository {
     }
 
     /**
-     * Return the newest complete snapshot ID for the specified job or
-     * {@link SnapshotContext#NO_SNAPSHOT} if no such snapshot is found.
+     * Return the newest complete snapshot ID for the specified job or null if no such snapshot is found.
      */
-    long latestCompleteSnapshot(long jobId) {
+    @Nullable
+    Long latestCompleteSnapshot(long jobId) {
         IStreamMap<Long, Object> snapshotMap = getSnapshotMap(jobId);
         MaxByAggregator<Entry<Long, Object>> entryMaxByAggregator = maxByAggregator();
         Predicate<Long, Object> completedSnapshots = (Predicate<Long, Object>) e -> {
@@ -115,7 +115,16 @@ public class SnapshotRepository {
             return value instanceof SnapshotRecord && ((SnapshotRecord) value).isSuccessful();
         };
         Entry<Long, Object> entry = snapshotMap.aggregate(entryMaxByAggregator, completedSnapshots);
-        return entry != null ? entry.getKey() : SnapshotContext.NO_SNAPSHOT;
+        return entry != null ? entry.getKey() : null;
+    }
+
+    /**
+     * Return the latest started snapshot ID for the specified job or null if no such snapshot is found.
+     */
+    @Nullable
+    Long latestStartedSnapshot(long jobId) {
+        IMap<Long, Long> map = getSnapshotMap(jobId);
+        return map.get(LATEST_STARTED_SNAPSHOT_ID_KEY);
     }
 
     public <T> IStreamMap<Long, T> getSnapshotMap(long jobId) {
@@ -155,8 +164,8 @@ public class SnapshotRepository {
                 instance.getHazelcastInstance().getMap(mapName).destroy();
             }
             if (validatedSnapshotToKeep != null) {
-                // This is optimized to most-common case, when we delete just one old snapshot:
-                // map.remove() sends operation to just one node, map.removeAll() to all nodes.
+                // This is optimized to most-common case, when we delete just one old snapshot: map.remove()
+                // sends operation to just one node, map.removeAll() would send one to all nodes.
                 snapshotMap.remove(entry.getKey());
             }
             logger.info("Deleted snapshot " + snapshotId + " for " + idToString(jobId));

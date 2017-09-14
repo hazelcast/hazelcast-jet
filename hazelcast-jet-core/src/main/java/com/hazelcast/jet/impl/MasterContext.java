@@ -151,18 +151,22 @@ public class MasterContext {
         executionId = executionIdSupplier.apply(jobId);
 
         // last started snapshot complete or not complete. The next started snapshot must be greater than this number
-        final long restoredSnapshotId;
+        long lastSnapshotId = NO_SNAPSHOT;
         if (jobStatus() == RESTARTING && jobRecord.getConfig().getSnapshotInterval() > 0) {
             // TODO [basri] verify snapshot
-            restoredSnapshotId = snapshotRepository.latestCompleteSnapshot(jobId);
-            snapshotRepository.deleteSnapshots(jobId, restoredSnapshotId);
-            if (restoredSnapshotId != NO_SNAPSHOT) {
-                rewriteDagWithSnapshotRestore(dag, restoredSnapshotId);
+            Long snapshotIdToRestore = snapshotRepository.latestCompleteSnapshot(jobId);
+            snapshotRepository.deleteSnapshots(jobId, snapshotIdToRestore);
+            Long lastStartedSnapshot = snapshotRepository.latestStartedSnapshot(jobId);
+            if (snapshotIdToRestore != null) {
+                logger.info("Restoring state of " + jobAndExecutionId(jobId, executionId) + " from snapshot "
+                        + snapshotIdToRestore);
+                rewriteDagWithSnapshotRestore(dag, snapshotIdToRestore);
             } else {
                 logger.warning("No usable snapshot for " + jobAndExecutionId(jobId, executionId) + " found.");
             }
-        } else {
-            restoredSnapshotId = NO_SNAPSHOT;
+            if (lastStartedSnapshot != null) {
+                lastSnapshotId = lastStartedSnapshot;
+            }
         }
 
         MembersView membersView = getMembersView();
@@ -174,7 +178,7 @@ public class MasterContext {
             JobConfig jobConfig = jobRecord.getConfig();
             // TODO [basri] why do ExecutionPlan receive last snapshot id? is it for assertions?
             executionPlanMap = ExecutionPlanBuilder.createExecutionPlans(nodeEngine,
-                    membersView, dag, jobConfig, restoredSnapshotId);
+                    membersView, dag, jobConfig, lastSnapshotId);
         } catch (TopologyChangedException e) {
             logger.severe("Execution plans could not be created for " + jobAndExecutionId(jobId, executionId), e);
             scheduleRestart();

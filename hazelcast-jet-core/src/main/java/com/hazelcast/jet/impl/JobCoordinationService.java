@@ -358,7 +358,7 @@ public class JobCoordinationService {
 
             masterContext.beginSnapshot(executionId);
         } else {
-            logger.warning("MasterContext not found for schedule snapshot of " + jobAndExecutionId(jobId, executionId));
+            logger.warning("MasterContext not found to schedule snapshot of " + jobAndExecutionId(jobId, executionId));
         }
     }
 

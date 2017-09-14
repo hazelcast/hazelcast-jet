@@ -20,6 +20,9 @@ import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.impl.SnapshotRepository;
+import com.hazelcast.jet.impl.execution.SnapshotRecord;
+import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.jet.test.TestProcessorMetaSupplierContext;
 import com.hazelcast.nio.Address;
 import com.hazelcast.test.HazelcastSerialClassRunner;
@@ -43,6 +46,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -58,10 +62,14 @@ import static com.hazelcast.jet.processor.Processors.insertWatermarks;
 import static com.hazelcast.jet.test.TestSupport.testProcessor;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
+import static java.util.Comparator.comparing;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastSerialClassRunner.class)
@@ -70,6 +78,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
     private static final int LOCAL_PARALLELISM = 4;
 
     private static final ConcurrentMap<List<Long>, Long> result = new ConcurrentHashMap<>();
+    private static final AtomicInteger numOverwrites = new AtomicInteger();
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
@@ -140,7 +149,6 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                 t -> ((Entry<Integer, Integer>) t).getKey(),
                 t -> ((Entry<Integer, Integer>) t).getValue(),
                 TimestampKind.EVENT, wDef, aggrOp));
-
         Vertex writeMap = dag.newVertex("writeMap", AddToMapP::new)
                              .localParallelism(1);
 
@@ -154,8 +162,25 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         config.setSnapshotIntervalMillis(1200);
         Job job = instance1.newJob(dag, config);
 
-        Thread.sleep(3000);
+        SnapshotRepository snapshotRepository = new SnapshotRepository(instance1);
+        int timeout = (int) (MILLISECONDS.toSeconds(config.getSnapshotInterval()) + 2);
+
+        // wait until we have at least one snapshot
+        IStreamMap<Long, Object> snapshotsMap = snapshotRepository.getSnapshotMap(job.getJobId());
+
+        assertTrueEventually(() -> assertTrue("No snapshot produced", snapshotsMap.entrySet().stream()
+                .anyMatch(en -> en.getValue() instanceof SnapshotRecord
+                        && ((SnapshotRecord) en.getValue()).isSuccessful())), timeout);
+
+        waitForNextSnapshot(snapshotsMap, timeout);
+
         instance2.shutdown();
+
+        // now the job should detect member shutdown and restart from snapshot
+        Thread.sleep(2000);
+
+        waitForNextSnapshot(snapshotsMap, timeout);
+        waitForNextSnapshot(snapshotsMap, timeout);
 
         job.join();
 
@@ -196,6 +221,29 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
             System.out.println("-- end of different keys");
             assertEquals(expectedMap, result);
         }
+
+        // This might be a bit racy if the abrupt shutdown of instance2 happens to be orderly (that is
+        // if nothing was processed after creating the snapshot). However, I produce 10 items/s, group
+        // them by 3, so every 300 ms new key should be written. And it takes more than 1 sec to
+        // detect the job failure and stop it, but some day it might break...
+        assertTrue("Nothing was overwritten in the map", numOverwrites.get() > 0);
+    }
+
+    private void waitForNextSnapshot(IStreamMap<Long, Object> snapshotsMap, int timeout) {
+        SnapshotRecord maxRecord1 = findMaxRecord(snapshotsMap);
+        assertNotNull(maxRecord1);
+        // wait until there is at least one more snapshot
+        assertTrueEventually(() -> assertTrue("No more snapshots produced after restart",
+                findMaxRecord(snapshotsMap).snapshotId() > maxRecord1.snapshotId()), timeout);
+    }
+
+    private SnapshotRecord findMaxRecord(IStreamMap<Long, Object> snapshotsMap) {
+        return snapshotsMap.entrySet().stream()
+                           .filter(en -> en.getValue() instanceof SnapshotRecord)
+                           .map(en -> (SnapshotRecord) en.getValue())
+                           .filter(SnapshotRecord::isSuccessful)
+                           .max(comparing(SnapshotRecord::snapshotId))
+                           .orElse(null);
     }
 
     // This is a "test of a test" - it checks, that SequencesInPartitionsGeneratorP generates correct output
@@ -372,6 +420,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
             // Let's check that the value for the key is the same as before.
             if (oldValue != null) {
                 assertEquals(oldValue, e.getValue());
+                numOverwrites.incrementAndGet();
             }
             return true;
         }
