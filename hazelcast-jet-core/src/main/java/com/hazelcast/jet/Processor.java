@@ -161,20 +161,20 @@ public interface Processor {
     }
 
     /**
-     * Stores the state to the snapshot. May add items to the outbox. If it
-     * returns {@code false}, it will be called again before proceeding to call
-     * any other method.
+     * Stores its snapshotted state by adding items to the outbox's snapshot
+     * bucket. If it returns {@code false}, it will be called again before
+     * proceeding to call any other method.
      * <p>
-     * It will only be called if the inbox is empty after the {@link
-     * Processor#process(int, Inbox)} method returns. After all the input is
-     * exhausted, it may be called between {@link Processor#complete()} calls.
+     * This method will only be called after a call to {@link #process(int,
+     * Inbox) process()} returns and the inbox is empty. After all the input is
+     * exhausted, it may also be called between {@link #complete()} calls. Once
+     * {@code complete()} returns {@code true}, this method won't be called
+     * anymore.
+     * <p>
      * Processors must ensure they give a chance to the system to call this
      * method. Especially, non-cooperative source processors must make sure not
      * to spend too much time per invocation of {@code complete()}, as this
-     * will prolong the snapshotting phase.
-     * <p>
-     * Once {@link Processor#complete()} returns {@code true}, this method
-     * won't be called anymore.
+     * will prolong the snapshotting phase and impede overall progress.
      * <p>
      * The default implementation takes no action and returns {@code true}.
      */
@@ -185,7 +185,7 @@ public interface Processor {
     /**
      * Called when a batch of items is received during the "restore from
      * snapshot" operation. The type of items in the inbox is {@code
-     * Map.Entry<Object, Object>}. May emit items to the outbox.
+     * Map.Entry}. May emit items to the outbox.
      * <p>
      * If there is no snapshot to restore, this method won't be called at all,
      * even if the processor is stateful and would otherwise be guaranteed to

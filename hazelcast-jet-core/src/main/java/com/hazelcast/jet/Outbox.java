@@ -21,16 +21,18 @@ import javax.annotation.Nonnull;
 
 /**
  * Data sink for a {@link Processor}. The outbox consists of individual
- * output buckets, one per outbound edge of the vertex represented by
- * the associated processor, plus one bucket for snapshot storage, if the
- * processor implements {@link Snapshottable}. The processor must deliver its
- * output items, separated by destination edge, into the outbox by calling
- * {@link #offer(int, Object)} or {@link #offer(Object)}.
+ * output buckets, one per outbound edge of the vertex represented by the
+ * associated processor, plus one bucket for snapshot storage. The
+ * processor must deliver its output items, separated by destination edge,
+ * into the outbox by calling {@link #offer(int, Object)} or {@link
+ * #offer(Object)}. {@link #offerToSnapshot(Object, Object)
+ * offerToSnapshot()} must only be called from {@link
+ * Processor#saveSnapshot()}.
  * <p>
- * In the case of a processor declared as <em>cooperative</em>, the
- * outbox might not be able to accept the item, if the downstream queues are
- * full. Therefore the processor must check the return value of {@code offer()}
- * and refrain from outputting more data when it returns {@code false}.
+ * A {@link Processor#isCooperative() cooperative} processor's outbox might
+ * not be able to accept the item if it is already full. The processor must
+ * check the return value of {@code offer()} and refrain from outputting
+ * more data when it returns {@code false}.
  * <p>
  * A non-cooperative processor's outbox will block until the item can fit into
  * the downstream buffers and the {@code offer} methods will always return
@@ -50,7 +52,7 @@ public interface Outbox {
      * ordinal. If {@code ordinal == -1}, offers the supplied item to
      * all edges (behaves the same as {@link #offer(Object)}).
      * <p>
-     * If any downstream queue is full it is skipped and this method returns
+     * If any downstream queue is full, it is skipped and this method returns
      * {@code false}. In that case the call must be retried later with the same
      * (or equal) item. The outbox internally keeps track which queues already
      * accepted the item.
@@ -81,21 +83,21 @@ public interface Outbox {
     }
 
     /**
-     * Send one key-value pair to store to the snapshot. The key must be
-     * globally unique for this vertex and this snapshot. This method can only
-     * be called from {@link Processor#saveSnapshot()} method.
+     * Send a key-value pair to the snapshot bucket. The key must be globally
+     * unique for this vertex and this snapshot. This method may only be
+     * called from {@link Processor#saveSnapshot()}.
      * <p>
      * If the {@code key} implements {@link com.hazelcast.core.PartitionAware}
      * then it will be used to choose the target partition, instead of the
      * whole key.
      *
-     * @return {@code true}, if the item was accepted by the queue. If {@code
-     * false} is returned the call should be retried later <b>with the same key
-     * and value</b>. For non-cooperative processor a blocking implementation
-     * is provided, that always returns {@code true}.
+     * @return {@code true} if the item was accepted by the queue. If it returns
+     * {@code false}, the call should be retried later <b>with the same key
+     * and value</b>. For non-cooperative processors a blocking implementation
+     * is provided which always returns {@code true}.
      *
-     * @throws IllegalArgumentException If a duplicate key is stored.
-     *     Implementation is allowed to throw it, but not required
+     * @throws IllegalArgumentException if attempting to add a duplicate key.
+     *                                  The implementation is allowed to throw it, but not required.
      */
     @CheckReturnValue
     boolean offerToSnapshot(Object key, Object value);
