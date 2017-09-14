@@ -76,6 +76,8 @@ import static java.util.stream.Collectors.toList;
 
 public class MasterContext {
 
+    public static final int SNAPSHOT_RESTORE_EDGE_PRIORITY = Integer.MIN_VALUE;
+
     private final NodeEngineImpl nodeEngine;
     private final JobCoordinationService coordinationService;
     private final ILogger logger;
@@ -595,7 +597,7 @@ public class MasterContext {
 
         @Override
         public int getPriority() {
-            return Integer.MIN_VALUE;
+            return SNAPSHOT_RESTORE_EDGE_PRIORITY;
         }
     }
 }
