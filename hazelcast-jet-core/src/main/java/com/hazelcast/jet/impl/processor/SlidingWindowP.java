@@ -168,13 +168,19 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         if (wDef.isTumbling()) {
             return tsToKeyToAcc.getOrDefault(frameTs, emptyMap());
         }
-        if (aggrOp.deductFn() != null) {
-            ensureSlidingWindow(frameTs);
+        if (aggrOp.deductFn() == null) {
+            return recomputeWindow(frameTs);
+        }
+        if (slidingWindow == null) {
+            slidingWindow = recomputeWindow(frameTs);
+        } else {
             // add leading-edge frame
             patchSlidingWindow(aggrOp.combineFn(), tsToKeyToAcc.get(frameTs));
-            return slidingWindow;
         }
-        // without deductFn we have to recompute the window from scratch
+        return slidingWindow;
+    }
+
+    private Map<Object, A> recomputeWindow(long frameTs) {
         Map<Object, A> window = new HashMap<>();
         for (long ts = frameTs - wDef.windowLength() + wDef.frameLength(); ts <= frameTs; ts += wDef.frameLength()) {
             tsToKeyToAcc.getOrDefault(ts, emptyMap())
@@ -183,16 +189,6 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
                                   currAcc));
         }
         return window;
-    }
-
-    private void completeWindow(long frameTs) {
-        long frameToEvict = frameTs - wDef.windowLength() + wDef.frameLength();
-        Map<Object, A> evictedFrame = tsToKeyToAcc.remove(frameToEvict);
-        bottomTs = frameToEvict + wDef.frameLength();
-        if (!wDef.isTumbling() && aggrOp.deductFn() != null) {
-            // deduct trailing-edge frame
-            patchSlidingWindow(aggrOp.deductFn(), evictedFrame);
-        }
     }
 
     private void patchSlidingWindow(BiConsumer<? super A, ? super A> patchOp, Map<Object, A> patchingFrame) {
@@ -208,13 +204,13 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         }
     }
 
-    private void ensureSlidingWindow(long frameTs) {
-        if (slidingWindow != null) {
-            return;
-        }
-        slidingWindow = new HashMap<>();
-        for (long ts = frameTs - wDef.windowLength() + wDef.frameLength(); ts < frameTs; ts += wDef.frameLength()) {
-            patchSlidingWindow(aggrOp.combineFn(), tsToKeyToAcc.get(ts));
+    private void completeWindow(long frameTs) {
+        long frameToEvict = frameTs - wDef.windowLength() + wDef.frameLength();
+        Map<Object, A> evictedFrame = tsToKeyToAcc.remove(frameToEvict);
+        bottomTs = frameToEvict + wDef.frameLength();
+        if (!wDef.isTumbling() && aggrOp.deductFn() != null) {
+            // deduct trailing-edge frame
+            patchSlidingWindow(aggrOp.deductFn(), evictedFrame);
         }
     }
 
@@ -234,13 +230,14 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     }
 
     private void ensureSnashotTraverser() {
-        if (snapshotTraverser == null) {
-            snapshotTraverser = traverseIterable(tsToKeyToAcc.entrySet())
-                    .flatMap(e -> traverseIterable(e.getValue().entrySet())
-                            .map(e2 -> entry(new SnapshotKey(e.getKey(), e2.getKey()), e2.getValue()))
-                    )
-                    .onFirstNull(() -> snapshotTraverser = null);
+        if (snapshotTraverser != null) {
+            return;
         }
+        snapshotTraverser = traverseIterable(tsToKeyToAcc.entrySet())
+                .flatMap(e -> traverseIterable(e.getValue().entrySet())
+                        .map(e2 -> entry(new SnapshotKey(e.getKey(), e2.getKey()), e2.getValue()))
+                )
+                .onFirstNull(() -> snapshotTraverser = null);
     }
 
     /**
