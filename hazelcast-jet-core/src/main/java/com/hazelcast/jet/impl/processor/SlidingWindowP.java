@@ -98,7 +98,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     @Override
     protected boolean tryProcess0(@Nonnull Object item) {
         T t = (T) item;
-        final Long frameTimestamp = getFrameTimestampFn.applyAsLong(t);
+        final long frameTimestamp = getFrameTimestampFn.applyAsLong(t);
         assert frameTimestamp == wDef.floorFrameTs(frameTimestamp) : "timestamp not on the verge of a frame";
         final Object key = getKeyFn.apply(t);
         A acc = tsToKeyToAcc.computeIfAbsent(frameTimestamp, x -> new HashMap<>())
@@ -124,9 +124,9 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
             if (tsToKeyToAcc.isEmpty()) {
                 return true;
             }
-            LongStream range =
-                    LongStream.iterate(bottomTs + wDef.windowLength() - wDef.frameLength(), ts -> ts + wDef.frameLength())
-                              .limit(Math.max(0, (topTs - bottomTs) / wDef.frameLength() + 1));
+            LongStream range = LongStream
+                .iterate(bottomTs + wDef.windowLength() - wDef.frameLength(), ts -> ts + wDef.frameLength())
+                .limit(Math.max(0, (topTs - bottomTs) / wDef.frameLength() + 1));
             flushTraverser = traverseStream(range.boxed())
                     .flatMap(this::windowTraverserAndEvictor)
                     .onFirstNull(() -> flushTraverser = null);
@@ -141,13 +141,15 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         }
 
         assert endTsExclusive == wDef.floorFrameTs(endTsExclusive) : "WM timestamp not on the verge of a frame";
+
+        // calculate the first window that should be emitted
         long rangeStart = Math.min(bottomTs + wDef.windowLength() - wDef.frameLength(), endTsExclusive);
         return Traversers.traverseStream(range(rangeStart, endTsExclusive, wDef.frameLength()).boxed())
-                .flatMap(ts ->
-                         traverseIterable(computeWindow(ts).entrySet())
+                .flatMap(window ->
+                         traverseIterable(computeWindow(window).entrySet())
                         .map(e -> (Object) new TimestampedEntry<>(
-                                endTsExclusive, e.getKey(), aggrOp.finishFn().apply(e.getValue())))
-                        .onFirstNull(() -> completeWindow(endTsExclusive)));
+                                window, e.getKey(), aggrOp.finishFn().apply(e.getValue())))
+                        .onFirstNull(() -> completeWindow(window)));
     }
 
     private Map<Object, A> computeWindow(long frameTs) {

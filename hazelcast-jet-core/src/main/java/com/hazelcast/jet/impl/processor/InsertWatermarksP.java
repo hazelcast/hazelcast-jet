@@ -131,7 +131,7 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
 
     private class WatermarkPerFrameTraverser implements Traverser<Object> {
 
-        long end; //inclusive
+        long end = Long.MIN_VALUE; //inclusive
 
         @Override
         public Watermark next() {
@@ -139,7 +139,7 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
                 return null;
             }
             if (nextWm < end) {
-                nextWm = lastEmittedWm + winDef.frameLength();
+                nextWm = Util.addClamped(lastEmittedWm , winDef.frameLength());
             }
             if (nextWm <= end) {
                 return new Watermark(lastEmittedWm = nextWm);

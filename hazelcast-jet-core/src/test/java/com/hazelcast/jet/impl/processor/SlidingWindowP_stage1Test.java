@@ -97,6 +97,20 @@ public class SlidingWindowP_stage1Test {
     }
 
     @Test
+    public void when_gapInwmAfterEvent_then_frameAndWmEmitted() {
+        testProcessor(() -> processor,
+                asList(
+                        entry(0L, 1L), // to frame 4
+                        entry(1L, 1L), // to frame 4
+                        wm(12) // closes frame
+                ),
+                asList(
+                        frame(4, 2),
+                        wm(12)
+                ), true, false, false, false, Object::equals);
+    }
+
+    @Test
     public void when_noEvents_then_wmsEmitted() {
         List<Watermark> someWms = asList(
                 wm(4),
