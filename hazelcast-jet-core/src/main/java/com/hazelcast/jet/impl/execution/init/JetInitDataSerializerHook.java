@@ -32,7 +32,7 @@ import com.hazelcast.jet.impl.operation.JoinSubmittedJobOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.operation.SubmitJobOperation;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
-import com.hazelcast.jet.impl.processor.SlidingWindowP;
+import com.hazelcast.jet.impl.processor.SnapshotKey;
 import com.hazelcast.nio.serialization.DataSerializableFactory;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
@@ -109,7 +109,7 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
                 case FILTER_JOB_ID:
                     return new FilterJobIdPredicate();
                 case SLIDING_WINDOW_P_SNAPSHOT_KEY:
-                    return new SlidingWindowP.SnapshotKey();
+                    return new SnapshotKey();
                 case GET_JOB_IDS:
                     return new GetJobIdsOperation();
                 case JOIN_SUBMITTED_JOB:

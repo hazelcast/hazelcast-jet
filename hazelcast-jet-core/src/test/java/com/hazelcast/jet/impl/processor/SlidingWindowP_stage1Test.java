@@ -32,13 +32,12 @@ import org.junit.runner.RunWith;
 import java.util.List;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
+import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
 import static com.hazelcast.jet.test.TestSupport.testProcessor;
 import static java.util.Arrays.asList;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.assertTrue;
 
 @Category({QuickTest.class, ParallelTest.class})
@@ -123,7 +122,6 @@ public class SlidingWindowP_stage1Test {
 
     @Test
     public void when_batch_then_emitEverything() {
-        long start = System.nanoTime();
         testProcessor(() -> processor,
                 asList(
                         entry(0L, 1L), // to frame 4
@@ -139,16 +137,10 @@ public class SlidingWindowP_stage1Test {
                         frame(8, 1),
                         frame(12, 1)
                 ), true, false, false, true, Object::equals);
-
-        long processTime = System.nanoTime() - start;
-        // this is to test that there is no iteration from current watermark up to Long.MAX_VALUE, which
-        // will take too long.
-        assertTrue("process took too long: " + processTime, processTime < MILLISECONDS.toNanos(300));
     }
 
     @Test
     public void when_wmNeverReceived_then_emitEverythingInComplete() {
-        long start = System.nanoTime();
         testProcessor(() -> processor,
                 asList(
                         entry(0L, 1L), // to frame 4
@@ -160,11 +152,6 @@ public class SlidingWindowP_stage1Test {
                         frame(4, 1),
                         frame(8, 1)
                 ), true, false, false, true, Object::equals);
-
-        long processTime = System.nanoTime() - start;
-        // this is to test that there is no iteration from current watermark up to Long.MAX_VALUE, which
-        // will take too long.
-        assertTrue("process took too long: " + processTime, processTime < MILLISECONDS.toNanos(300));
     }
 
     private static TimestampedEntry<Long, LongAccumulator> frame(long timestamp, long value) {
