@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.logging.ILogger;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -65,6 +64,13 @@ public class SnapshotContext {
      */
     private final AtomicInteger numRemainingTasklets = new AtomicInteger();
 
+    /**
+     * True, if a snapshot was started and postponed. If true, then when
+     * {@link #numHigherPriorityTasklets} is decremented to 0, snapshot is
+     * started.
+     */
+    private boolean snapshotPostponed;
+
     /** Future which will be completed when the current snapshot completes. */
     private volatile CompletableFuture<Void> future;
 
@@ -104,7 +110,6 @@ public class SnapshotContext {
      * com.hazelcast.jet.impl.operation.SnapshotOperation}.
      */
     synchronized CompletableFuture<Void> startNewSnapshot(long snapshotId) {
-        // TODO [basri] is this really necessary? we should only verify monotonicity
         assert snapshotId == lastSnapshotId.get() + 1
                 : "new snapshotId not incremented by 1. Previous=" + lastSnapshotId + ", new=" + snapshotId;
         assert numTasklets >= 0 : "numTasklets=" + numTasklets;
@@ -122,7 +127,7 @@ public class SnapshotContext {
             logger.warning("Snapshot " + snapshotId + " for " + jobAndExecutionId(jobId, executionId) + " is postponed" +
                     " until all higher priority vertices are completed (number of vertices = "
                     + numHigherPriorityTasklets + ')');
-            // TODO [basri] should we throw retry exception here?
+            snapshotPostponed = true;
         }
         return (future = new CompletableFuture<>());
     }
@@ -142,7 +147,7 @@ public class SnapshotContext {
             assert numHigherPriorityTasklets > 0;
             numHigherPriorityTasklets--;
             // after all higher priority vertices are done we can start the snapshot
-            if (numHigherPriorityTasklets == 0) {
+            if (numHigherPriorityTasklets == 0 && snapshotPostponed) {
                 this.lastSnapshotId.incrementAndGet();
                 logger.info("Postponed snapshot " + this.lastSnapshotId + " for " + jobAndExecutionId(jobId, executionId)
                         + " started");
@@ -158,8 +163,10 @@ public class SnapshotContext {
      * (it received barriers from all its processors and all async flush
      * operations are done).
      */
-    @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
     void snapshotDoneForTasklet() {
+        int oldValue = numRemainingTasklets.get();
+        assert oldValue > 0 : "oldValue=" + oldValue;
+
         if (numRemainingTasklets.decrementAndGet() == 0) {
             completeVoidFuture(future);
             future = null;

@@ -19,13 +19,13 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.aggregation.impl.MaxByAggregator;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.impl.execution.SnapshotContext;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.query.Predicate;
 
-import javax.annotation.Nullable;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -50,7 +50,7 @@ public class SnapshotRepository {
     private final JetInstance instance;
     private final ILogger logger;
 
-    SnapshotRepository(JetInstance jetInstance) {
+    public SnapshotRepository(JetInstance jetInstance) {
         this.instance = jetInstance;
         this.logger = jetInstance.getHazelcastInstance().getLoggingService().getLogger(getClass());
     }
@@ -102,11 +102,12 @@ public class SnapshotRepository {
         });
         return System.currentTimeMillis() - record.startTime();
     }
+
     /**
-     * Return the newest complete snapshot ID for the specified job or null if no such snapshot is found.
+     * Return the newest complete snapshot ID for the specified job or
+     * {@link SnapshotContext#NO_SNAPSHOT} if no such snapshot is found.
      */
-    @Nullable
-    Long latestCompleteSnapshot(long jobId) {
+    long latestCompleteSnapshot(long jobId) {
         IStreamMap<Long, Object> snapshotMap = getSnapshotMap(jobId);
         MaxByAggregator<Entry<Long, Object>> entryMaxByAggregator = maxByAggregator();
         Predicate<Long, Object> completedSnapshots = (Predicate<Long, Object>) e -> {
@@ -114,19 +115,10 @@ public class SnapshotRepository {
             return value instanceof SnapshotRecord && ((SnapshotRecord) value).isSuccessful();
         };
         Entry<Long, Object> entry = snapshotMap.aggregate(entryMaxByAggregator, completedSnapshots);
-        return entry != null ? entry.getKey() : null;
+        return entry != null ? entry.getKey() : SnapshotContext.NO_SNAPSHOT;
     }
 
-    /**
-     * Return the latest started snapshot ID for the specified job or null if no such snapshot is found.
-     */
-    @Nullable
-    Long latestStartedSnapshot(long jobId) {
-        IMap<Long, Long> map = getSnapshotMap(jobId);
-        return map.get(LATEST_STARTED_SNAPSHOT_ID_KEY);
-    }
-
-    private <T> IStreamMap<Long, T> getSnapshotMap(long jobId) {
+    public <T> IStreamMap<Long, T> getSnapshotMap(long jobId) {
         return instance.getMap(SNAPSHOT_NAME_PREFIX + idToString(jobId));
     }
 

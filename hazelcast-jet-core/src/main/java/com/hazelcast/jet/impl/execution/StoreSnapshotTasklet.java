@@ -63,7 +63,6 @@ public class StoreSnapshotTasklet implements Tasklet {
         this.mapWriter = new AsyncMapWriter(nodeEngine);
         this.mapWriter.setMapName(currMapName());
         this.pendingSnapshotId = snapshotContext.lastSnapshotId() + 1;
-
     }
 
     @Nonnull

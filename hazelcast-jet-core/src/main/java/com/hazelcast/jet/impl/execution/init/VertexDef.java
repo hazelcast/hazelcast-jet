@@ -97,8 +97,6 @@ public class VertexDef implements IdentifiedDataSerializable {
     }
 
     /**
-     * Returns true, if
-     *
      * Returns true, if either:<ul>
      *     <li>this vertex is higher priority source for some of it's
      *     downstream vertices

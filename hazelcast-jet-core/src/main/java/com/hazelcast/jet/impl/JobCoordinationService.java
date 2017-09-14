@@ -334,7 +334,9 @@ public class JobCoordinationService {
         if (masterContext != null) {
             long snapshotInterval = masterContext.getJobConfig().getSnapshotInterval();
             InternalExecutionService executionService = nodeEngine.getExecutionService();
-            logger.fine(jobAndExecutionId(jobId, executionId) + " snapshot is scheduled.");
+            if (logger.isFineEnabled()) {
+                logger.fine(jobAndExecutionId(jobId, executionId) + " snapshot is scheduled in " + snapshotInterval + "ms");
+            }
             executionService.schedule(COORDINATOR_EXECUTOR_NAME, () -> this.beginSnapshot(jobId, executionId),
                     snapshotInterval, MILLISECONDS);
         } else {
