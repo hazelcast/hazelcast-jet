@@ -23,13 +23,11 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.stream.IStreamMap;
-import com.hazelcast.jet.test.TestProcessorMetaSupplierContext;
 import com.hazelcast.nio.Address;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -40,7 +38,6 @@ import javax.annotation.Nonnull;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -59,15 +56,12 @@ import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.util.Util.arrayIndexOf;
 import static com.hazelcast.jet.processor.Processors.aggregateToSlidingWindow;
 import static com.hazelcast.jet.processor.Processors.insertWatermarks;
-import static com.hazelcast.jet.test.TestSupport.testProcessor;
 import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -227,6 +221,8 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         // them by 3, so every 300 ms new key should be written. And it takes more than 1 sec to
         // detect the job failure and stop it, but some day it might break...
         assertTrue("Nothing was overwritten in the map", numOverwrites.get() > 0);
+
+        assertTrue("Snapshots map not empty after job finished", snapshotsMap.isEmpty());
     }
 
     private void waitForNextSnapshot(IStreamMap<Long, Object> snapshotsMap, int timeout) {
@@ -247,8 +243,8 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
     }
 
     // This is a "test of a test" - it checks, that SequencesInPartitionsGeneratorP generates correct output
+    /*
     @Test
-    @Ignore
     public void test_SequencesInPartitionsGeneratorP() throws Exception {
         SequencesInPartitionsMetaSupplier pms = new SequencesInPartitionsMetaSupplier(3, 2);
         pms.init(new TestProcessorMetaSupplierContext().setLocalParallelism(1).setTotalParallelism(2));
@@ -274,6 +270,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                 entry(1, 1)
         ));
     }
+    */
 
     /**
      * A source, that will generate integer sequences from 0..ELEMENTS_IN_PARTITION,

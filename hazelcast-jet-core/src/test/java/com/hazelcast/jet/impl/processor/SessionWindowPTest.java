@@ -16,21 +16,19 @@
 
 package com.hazelcast.jet.impl.processor;
 
-import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.Session;
 import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.test.TestOutbox;
 import com.hazelcast.jet.test.TestProcessorContext;
-import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import com.hazelcast.test.annotation.Repeat;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -47,7 +45,6 @@ import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.test.TestSupport.testProcessor;
 import static java.util.Arrays.asList;
 import static java.util.Collections.shuffle;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertTrue;
@@ -123,11 +120,7 @@ public class SessionWindowPTest {
         List<Object> expectedOutbox = new ArrayList<>();
         expectedSessions("a").forEach(expectedOutbox::add);
 
-        long start = System.nanoTime();
-        testProcessor(supplier, inbox, expectedOutbox, true, true, false, true, Objects::equals);
-        long processTime = System.nanoTime() - start;
-
-        assertTrue("process took too long: " + processTime, processTime < MILLISECONDS.toNanos(300));
+        testProcessor(supplier, inbox, expectedOutbox, true, true, true, true, Objects::equals);
     }
 
     private void assertCorrectness(List<Object> events) {

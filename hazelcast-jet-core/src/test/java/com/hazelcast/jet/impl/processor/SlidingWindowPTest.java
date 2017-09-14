@@ -16,13 +16,13 @@
 
 package com.hazelcast.jet.impl.processor;
 
-import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
@@ -56,7 +56,6 @@ import static com.hazelcast.jet.test.TestSupport.testProcessor;
 import static java.util.Arrays.asList;
 import static java.util.Collections.shuffle;
 import static java.util.Collections.singletonList;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertTrue;
 
@@ -254,7 +253,6 @@ public class SlidingWindowPTest {
 
     @Test
     public void when_wmNeverReceived_then_emitEverythingInComplete() {
-        long start = System.nanoTime();
         testProcessor(supplier,
                 asList(
                         event(0L, 1L), // to frame 0
@@ -266,11 +264,6 @@ public class SlidingWindowPTest {
                         outboxFrame(3, 2),
                         outboxFrame(4, 1)
                 ), true, true, false, true, Objects::equals);
-
-        long processTime = System.nanoTime() - start;
-        // this is to test that there is no iteration from current watermark up to Long.MAX_VALUE, which
-        // will take too long.
-        assertTrue("process took too long: " + processTime, processTime < MILLISECONDS.toNanos(300));
     }
 
     private Entry<Long, ?> event(long frameTs, long value) {
