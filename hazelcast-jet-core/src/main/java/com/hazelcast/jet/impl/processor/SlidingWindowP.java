@@ -63,7 +63,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     private final AggregateOperation1<? super T, A, R> aggrOp;
     private final boolean isLastStage;
 
-    private final FlatMapper<Watermark, ?> flatMapper;
+    private final FlatMapper<Watermark, ?> wmFlatMapper;
 
     private final A emptyAcc;
     private Traverser<Object> flushTraverser;
@@ -90,7 +90,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         this.getKeyFn = getKeyFn;
         this.aggrOp = aggrOp;
         this.isLastStage = isLastStage;
-        this.flatMapper = flatMapper(wm -> windowTraverserAndEvictor(wm.timestamp()).append(wm));
+        this.wmFlatMapper = flatMapper(wm -> windowTraverserAndEvictor(wm.timestamp()).append(wm));
         this.emptyAcc = aggrOp.createFn().get();
     }
 
@@ -98,8 +98,8 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     protected boolean tryProcess0(@Nonnull Object item) {
         @SuppressWarnings("unchecked")
         T t = (T) item;
-        final Long frameTs = getFrameTsFn.applyAsLong(t);
-        assert frameTs == wDef.floorFrameTs(frameTs) : "timestamp not aligned on a frame";
+        final long frameTs = getFrameTsFn.applyAsLong(t);
+        assert frameTs == wDef.floorFrameTs(frameTs) : "getFrameTsFn returned an invalid frame timestamp";
         final Object key = getKeyFn.apply(t);
         A acc = tsToKeyToAcc.computeIfAbsent(frameTs, x -> new HashMap<>())
                             .computeIfAbsent(key, k -> aggrOp.createFn().get());
@@ -111,7 +111,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
 
     @Override
     protected boolean tryProcessWm0(@Nonnull Watermark wm) {
-        return flatMapper.tryProcess(wm);
+        return wmFlatMapper.tryProcess(wm);
     }
 
     @Override
@@ -124,7 +124,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         if (!isLastStage) {
             return flushBuffers();
         }
-        ensureSnashotTraverser();
+        ensureSnapshotTraverser();
         return emitSnapshotFromTraverser(snapshotTraverser);
     }
 
@@ -144,19 +144,16 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     }
 
     private Traverser<Object> windowTraverserAndEvictor(long endTsExclusive) {
+        assert endTsExclusive == wDef.floorFrameTs(endTsExclusive) : "endTsExclusive not aligned on frame";
         if (bottomTs == Long.MAX_VALUE) {
             bottomTs = endTsExclusive + wDef.frameLength();
             return Traversers.empty();
         }
-
-        assert endTsExclusive == wDef.floorFrameTs(endTsExclusive) : "endTsExclusive not aligned on frame";
-
         // compute the first window that needs to be emitted
         long rangeStart = min(bottomTs + wDef.windowLength() - wDef.frameLength(), endTsExclusive);
         return traverseStream(range(rangeStart, endTsExclusive, wDef.frameLength()).boxed())
                 .flatMap(window -> traverseIterable(computeWindow(window).entrySet())
-                        .map(e -> new TimestampedEntry<>(
-                                window, e.getKey(), aggrOp.finishFn().apply(e.getValue())))
+                        .map(e -> new TimestampedEntry<>(window, e.getKey(), aggrOp.finishFn().apply(e.getValue())))
                         .onFirstNull(() -> completeWindow(window)));
     }
 
@@ -229,7 +226,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         return emitFromTraverser(flushTraverser);
     }
 
-    private void ensureSnashotTraverser() {
+    private void ensureSnapshotTraverser() {
         if (snapshotTraverser != null) {
             return;
         }

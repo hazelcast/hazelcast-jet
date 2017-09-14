@@ -423,7 +423,18 @@ public abstract class AbstractProcessor implements Processor {
     }
 
     /**
-     * Javadoc pending
+     * Obtains items from the traverser and offers them to the outbox's
+     * snapshot bucket. Each item is a {@code Map.Entry} and its key and
+     * value are passed as the two arguments of {@link
+     * Outbox#offerToSnapshot(Object, Object) outbox.offerToSnapshot()}. If the
+     * outbox refuses an item, it backs off and returns {@code false}.
+     * <p>
+     * If this method returns {@code false}, then the same traverser must be
+     * retained by the caller and passed again in the subsequent invocation of
+     * this method, so as to resume emitting where it left off.
+     *
+     * @param traverser traverser over the items to emit to the snapshot
+     * @return whether the traverser has been exhausted
      */
     protected <T extends Entry<?, ?>> boolean emitSnapshotFromTraverser(@Nonnull Traverser<T> traverser) {
         Entry<?, ?> item;
