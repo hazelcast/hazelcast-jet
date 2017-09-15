@@ -29,7 +29,7 @@ import java.time.ZoneId;
  * windowing processors as anchoring points where the processor knows which
  * windows it can close and emit their aggregated results.
  */
-public final class Watermark {
+public final class Watermark implements BroadcastItem {
 
     private final long timestamp;
 

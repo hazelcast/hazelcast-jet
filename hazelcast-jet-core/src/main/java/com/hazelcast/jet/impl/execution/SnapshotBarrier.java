@@ -16,11 +16,13 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.jet.BroadcastItem;
+
 /**
  * Special item interleaved with other items on queue to signal a start of a
  * snapshot.
  */
-public class SnapshotBarrier {
+public class SnapshotBarrier implements BroadcastItem {
     private final long snapshotId;
 
     public SnapshotBarrier(long snapshotId) {

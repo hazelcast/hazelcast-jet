@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.jet.BroadcastItem;
 import com.hazelcast.jet.Outbox;
-import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.nio.serialization.Data;
@@ -30,7 +30,6 @@ import java.util.Map.Entry;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 
 public class OutboxImpl implements Outbox {
 
@@ -107,8 +106,8 @@ public class OutboxImpl implements Outbox {
     }
 
     protected ProgressState doOffer(OutboundCollector collector, Object item) {
-        if (item instanceof Watermark || item instanceof SnapshotBarrier || item == DONE_ITEM) {
-            return collector.offerBroadcast(item);
+        if (item instanceof BroadcastItem) {
+            return collector.offerBroadcast((BroadcastItem) item);
         }
         return collector.offer(item);
     }

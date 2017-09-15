@@ -14,24 +14,11 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.execution;
+package com.hazelcast.jet;
 
-import com.hazelcast.jet.BroadcastItem;
-
-import java.io.Serializable;
-
-final class DoneItem implements BroadcastItem, Serializable {
-
-    static final DoneItem DONE_ITEM = new DoneItem();
-
-    private DoneItem() { }
-
-    @Override
-    public String toString() {
-        return "DONE_ITEM";
-    }
-
-    protected Object readResolve() {
-        return DONE_ITEM;
-    }
+/**
+ * Marker interface for items which are always broadcast along an edge,
+ * regardless of the configured {@link com.hazelcast.jet.Edge.RoutingPolicy}.
+ */
+public interface BroadcastItem {
 }

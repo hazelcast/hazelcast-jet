@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.util.concurrent.ConcurrentConveyor;
+import com.hazelcast.jet.BroadcastItem;
 import com.hazelcast.jet.impl.util.ProgressState;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -39,8 +40,8 @@ public class ConveyorCollector implements OutboundCollector {
     }
 
     @Override
-    public ProgressState offerBroadcast(Object wm) {
-        return offerToConveyor(wm);
+    public ProgressState offerBroadcast(BroadcastItem item) {
+        return offerToConveyor(item);
     }
 
     @Override

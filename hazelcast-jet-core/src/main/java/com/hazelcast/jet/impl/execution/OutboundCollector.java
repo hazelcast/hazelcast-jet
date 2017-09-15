@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.jet.BroadcastItem;
 import com.hazelcast.jet.Partitioner;
 import com.hazelcast.jet.impl.execution.init.EdgeDef;
 import com.hazelcast.jet.impl.util.CircularListCursor;
@@ -39,7 +40,7 @@ public interface OutboundCollector {
     /**
      * Broadcasts an item to all sub-collectors, if any.
      */
-    default ProgressState offerBroadcast(Object item) {
+    default ProgressState offerBroadcast(BroadcastItem item) {
         return offer(item);
     }
 
@@ -93,13 +94,13 @@ public interface OutboundCollector {
         }
 
         @Override
-        public ProgressState offerBroadcast(Object wm) {
+        public ProgressState offerBroadcast(BroadcastItem item) {
             progTracker.reset();
             for (int i = 0; i < collectors.length; i++) {
                 if (broadcastTracker.get(i)) {
                     continue;
                 }
-                ProgressState result = collectors[i].offerBroadcast(wm);
+                ProgressState result = collectors[i].offerBroadcast(item);
                 progTracker.mergeWith(result);
                 if (result.isDone()) {
                     broadcastTracker.set(i);

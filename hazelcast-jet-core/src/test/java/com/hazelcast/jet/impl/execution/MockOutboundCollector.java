@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.jet.BroadcastItem;
 import com.hazelcast.jet.impl.util.ProgressState;
 
 import java.util.ArrayList;
@@ -45,8 +46,8 @@ class MockOutboundCollector implements OutboundCollector {
     }
 
     @Override
-    public ProgressState offerBroadcast(Object item) {
-        return offer((Object) item);
+    public ProgressState offerBroadcast(BroadcastItem item) {
+        return offer(item);
     }
 
     @Override
