@@ -17,45 +17,35 @@
 package com.hazelcast.jet;
 
 /**
- * Snapshot restore policies.
+ * Specifies what snapshot data to send to which processors upon snapshot
+ * restoration.
  */
 public enum SnapshotRestorePolicy {
 
     /**
-     * Specifies that only part of the state will be restored to each processor
-     * instance.
+     * Specifies that the snapshot data is partitioned and each processor will
+     * get only the keys whose partitions it is responsible for. This is
+     * analogous to sending the snapshot data over a partitioned-distributed
+     * edge with the default partitioning strategy and the partitioning key
+     * being the snapshot entry's key.
      * <p>
-     * The processor must be preceded with an edge which satisfies these
-     * conditions:<ol>
-     * <li>is {@link Edge#distributed() distributed}
-     * <li>is {@link Edge#partitioned(com.hazelcast.jet.function.DistributedFunction)
-     * partitioned}
-     * <li>is partitioned by the same key as is used in the snapshot.
-     * <li>use the default partitioner
-     * </ol>
-     *
-     * If there are multiple inbound edges, all must satisfy the conditions. If
-     * some condition is not met then state for some key might be restored to
-     * one processor instance and items for that key will be delivered to
-     * another. This situation is currently not detected and might go
-     * unnoticed, producing incorrect results.
-     *<p>
-     * With this type of state saving and restoring of a snapshot is done
-     * locally with two exceptions:<ul>
-     *
-     * <li>partition migration took place since the job started: job doesn't
-     * migrate partitions, but IMap does (unless disabled). In this case, some
-     * partitions of the snapshot will be stored remotely.
-     *
-     * <li>backup copies are always stored remotely, obviously.
-     * </ul>
+     * The partitioning of the data the processor receives over its inbound
+     * edges must exactly align with the partitioning of the snapshot data.
+     * Therefore all the processor's inbound edges must be distributed and
+     * partitioned with the default strategy, and the partitioning key must be
+     * the same as that used in the snapshot.
+     * <p>
+     * In the simple case when restarting with the unchanged cluster topology,
+     * all the snapshot data will be available locally on each member. However,
+     * if there was some rearrangement in IMDG partitioning, some partitions
+     * will have migrated away from the target processor because the Jet job
+     * has its own partitioning, frozen at job start.
      */
     PARTITIONED,
 
     /**
-     * Entire snapshot will be restored to all processor instances. Use this
-     * option if partitions of keys in the snapshot don't match the Hazelcast
-     * partitions of this processor.
+     * All the snapshot data will be broadcast to all processor instances. This
+     * is useful only for data global to all processors.
      */
     BROADCAST
 }
