@@ -33,13 +33,10 @@ public enum SnapshotRestorePolicy {
      * edges must exactly align with the partitioning of the snapshot data.
      * Therefore all the processor's inbound edges must be distributed and
      * partitioned with the default strategy, and the partitioning key must be
-     * the same as that used in the snapshot.
-     * <p>
-     * In the simple case when restarting with the unchanged cluster topology,
-     * all the snapshot data will be available locally on each member. However,
-     * if there was some rearrangement in IMDG partitioning, some partitions
-     * will have migrated away from the target processor because the Jet job
-     * has its own partitioning, frozen at job start.
+     * the same as that used in the snapshot. Note that the above pertains only
+     * to the edges that contribute to the snapshotted data. There may be other
+     * edges whose data is processed statelessly and their partitioning doesn't
+     * matter.
      */
     PARTITIONED,
 
