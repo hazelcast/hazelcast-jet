@@ -42,6 +42,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -56,6 +57,7 @@ import static java.util.stream.Collectors.toList;
  */
 public final class StreamKafkaP extends AbstractProcessor implements Closeable {
 
+    private static final long KAFKA_DEFAULT_REFRESH_INTERVAL = 300_000;
     private static final int POLL_TIMEOUT_MS = 50;
 
     private final Properties properties;
@@ -74,7 +76,8 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
     private Set<TopicPartition> assignment = new HashSet<>();
     private long metadataRefreshInterval;
 
-    StreamKafkaP(Properties properties, List<String> topicIds, int processorCount, int processorIndex) {
+    StreamKafkaP(Properties properties, List<String> topicIds, int processorCount, int processorIndex,
+                 long metadataRefreshInterval) {
         this.properties = properties;
         this.properties.putAll(properties);
 
@@ -83,7 +86,7 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
 
         this.nextAssignablePtions = new int[topicIds.size()];
         Arrays.fill(nextAssignablePtions, processorIndex);
-        metadataRefreshInterval = Long.parseLong(properties.getProperty("__jet.metadata.max.age.ms"));
+        this.metadataRefreshInterval = metadataRefreshInterval;
     }
 
     @Override
@@ -94,13 +97,12 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
     }
 
     private void reassignPartitions() {
-        getLogger().finest("checking partitions now");
         boolean changed = false;
         // check for added partitions (kafka doesn't support partition removal). Initially, all partitions are added.
         for (int topicIdx = 0; topicIdx < topicIds.size(); topicIdx++) {
             String topicName = topicIds.get(topicIdx);
             List<PartitionInfo> partitionInfos = consumer.partitionsFor(topicName);
-            getLogger().fine("Num of ptions for topic " + topicName + ": " + partitionInfos.size());
+            getLogger().finest("Num of ptions for topic " + topicName + ": " + partitionInfos.size());
             while (nextAssignablePtions[topicIdx] < partitionInfos.size()) {
                 int partition = nextAssignablePtions[topicIdx];
                 nextAssignablePtions[topicIdx] += processorCount;
@@ -123,15 +125,19 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
             reassignPartitions();
         }
 
-        ConsumerRecords<?, ?> records = consumer.poll(POLL_TIMEOUT_MS);
-        for (ConsumerRecord<?, ?> r : records) {
-            if (snapshottingEnabled) {
-                offsets.put(new TopicPartition(r.topic(), r.partition()), r.offset());
+        if (!assignment.isEmpty()) {
+            ConsumerRecords<?, ?> records = consumer.poll(POLL_TIMEOUT_MS);
+            for (ConsumerRecord<?, ?> r : records) {
+                if (snapshottingEnabled) {
+                    offsets.put(new TopicPartition(r.topic(), r.partition()), r.offset());
+                }
+                emit(entry(r.key(), r.value()));
             }
-            emit(entry(r.key(), r.value()));
-        }
-        if (!snapshottingEnabled) {
-            consumer.commitSync();
+            if (!snapshottingEnabled) {
+                consumer.commitSync();
+            }
+        } else {
+            LockSupport.parkNanos(MILLISECONDS.toNanos(POLL_TIMEOUT_MS));
         }
 
         return false;
@@ -177,16 +183,20 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
         private final List<String> topicIds;
         private final int memberCount;
         private final int memberIndex;
+        private final long metadataRefreshInterval;
+
         private final Properties properties;
         private transient List<StreamKafkaP> processors;
         private int localParallelism;
         private ILogger logger;
 
-        Supplier(Properties properties, List<String> topicIds, int memberCount, int memberIndex) {
+        Supplier(Properties properties, List<String> topicIds, int memberCount, int memberIndex,
+                 long metadataRefreshInterval) {
             this.properties = properties;
             this.topicIds = topicIds;
             this.memberCount = memberCount;
             this.memberIndex = memberIndex;
+            this.metadataRefreshInterval = metadataRefreshInterval;
         }
 
         @Override
@@ -200,7 +210,8 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
             // localParallelism is equal on all members
             processors = IntStream.range(0, count)
                                          .mapToObj(i -> new StreamKafkaP(properties, topicIds,
-                                                 memberCount * localParallelism, memberIndex * localParallelism + i))
+                                                 memberCount * localParallelism, memberIndex * localParallelism + i,
+                                                 metadataRefreshInterval))
                                          .collect(toList());
             return (List) processors;
         }
@@ -231,6 +242,7 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
 
         private final Properties properties;
         private final List<String> topicIds;
+        private final long metadataRefreshInterval;
 
         public MetaSupplier(Properties properties, List<String> topicIds) {
             this.properties = new Properties();
@@ -238,20 +250,23 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
 
             this.properties.putAll(properties);
 
-            // Prefix the metadata.max.age.ms with "__jet." and reset to 0, we'll use it to space
-            // out our own metadata refreshes
+            // Save the value of metadata.max.age.ms to a variable and zero it in the properties.
+            // We'll do metadata refresh on our own.
             if (properties.containsKey("metadata.max.age.ms")) {
-                this.properties.setProperty("__jet.metadata.max.age.ms", properties.getProperty("metadata.max.age.ms"));
+                metadataRefreshInterval = Long.parseLong(properties.getProperty("metadata.max.age.ms"));
             } else {
-                this.properties.setProperty("__jet.metadata.max.age.ms", "300000"); // kafka default
+                metadataRefreshInterval = KAFKA_DEFAULT_REFRESH_INTERVAL;
             }
-            this.properties.setProperty("metadata.max.age.ms", "0");
+            // Set metadata caching to 1 second: we get metadata for multiple partitions one by one, but
+            // internally it is fetched at once. This enables for the other calls to just query fetched metadata.
+            this.properties.setProperty("metadata.max.age.ms", "1000");
         }
 
         @Nonnull
         @Override
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-            return address -> new Supplier(properties, topicIds, addresses.size(), addresses.indexOf(address));
+            return address -> new Supplier(properties, topicIds, addresses.size(), addresses.indexOf(address),
+                    metadataRefreshInterval);
         }
 
         @Nonnull
