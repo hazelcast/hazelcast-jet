@@ -186,9 +186,10 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
         private final long metadataRefreshInterval;
 
         private final Properties properties;
-        private transient List<StreamKafkaP> processors;
         private int localParallelism;
-        private ILogger logger;
+
+        private transient List<StreamKafkaP> processors;
+        private transient ILogger logger;
 
         Supplier(Properties properties, List<String> topicIds, int memberCount, int memberIndex,
                  long metadataRefreshInterval) {
