@@ -133,8 +133,8 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
 
         result.clear();
 
-        SequencesInPartitionsMetaSupplier sup = new SequencesInPartitionsMetaSupplier(3, 40);
-        Vertex generator = dag.newVertex("generator", throttle(sup, 10))
+        SequencesInPartitionsMetaSupplier sup = new SequencesInPartitionsMetaSupplier(3, 120);
+        Vertex generator = dag.newVertex("generator", throttle(sup, 30))
                               .localParallelism(1);
         Vertex insWm = dag.newVertex("insWm", insertWatermarks(entry -> ((Entry<Integer, Integer>) entry).getValue(),
                 withFixedLag(0), wDef))
@@ -167,6 +167,8 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                         && ((SnapshotRecord) en.getValue()).isSuccessful())), timeout);
 
         waitForNextSnapshot(snapshotsMap, timeout);
+        // wait a little more to emit something, so that it will be overwritten in the sink map
+        Thread.sleep(300);
 
         instance2.shutdown();
 
@@ -217,9 +219,8 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         }
 
         // This might be a bit racy if the abrupt shutdown of instance2 happens to be orderly (that is
-        // if nothing was processed after creating the snapshot). However, I produce 10 items/s, group
-        // them by 3, so every 300 ms new key should be written. And it takes more than 1 sec to
-        // detect the job failure and stop it, but some day it might break...
+        // if nothing was processed after creating the snapshot). However, we produce 30 items/s, group
+        // them by 3, so every 100 ms new key should be written. And we wait for 300ms after snapshot...
         assertTrue("Nothing was overwritten in the map", numOverwrites.get() > 0);
 
         assertTrue("Snapshots map not empty after job finished", snapshotsMap.isEmpty());
