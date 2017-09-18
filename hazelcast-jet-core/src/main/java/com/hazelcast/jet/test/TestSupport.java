@@ -54,7 +54,7 @@ public final class TestSupport {
     // 1ms should be enough for a cooperative call. We warn, when it's more than 5ms and
     // fail when it's more than 100ms, possibly due to other  activity in the system, such as
     // parallel tests or GC.
-    private static final long COOPERATIVE_TIME_LIMIT_MS_FAIL = 100;
+    private static final long COOPERATIVE_TIME_LIMIT_MS_FAIL = 1000;
     private static final long COOPERATIVE_TIME_LIMIT_MS_WARN = 5;
 
     static {
