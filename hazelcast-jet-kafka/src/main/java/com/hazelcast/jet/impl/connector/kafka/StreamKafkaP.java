@@ -24,7 +24,7 @@ import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.jet.SnapshotRestorePolicy;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
-import com.hazelcast.jet.impl.util.Util;
+import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -34,8 +34,9 @@ import org.apache.kafka.common.TopicPartition;
 
 import javax.annotation.Nonnull;
 import java.io.Closeable;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -45,6 +46,8 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -53,44 +56,74 @@ import static java.util.stream.Collectors.toList;
  */
 public final class StreamKafkaP extends AbstractProcessor implements Closeable {
 
-    private static final int POLL_TIMEOUT_MS = 1000;
+    private static final int POLL_TIMEOUT_MS = 50;
 
     private final Properties properties;
     private final List<String> topicIds;
     private final int processorCount;
-    private final int processorIndex;
     private boolean snapshottingEnabled;
     private KafkaConsumer<?, ?> consumer;
 
+    // next possible partition index assignable to this processor, index is the topic index in topicIds
+    private final int[] nextAssignablePtions;
+
+    private long nextPartitionCheck = Long.MIN_VALUE;
+
     private final Map<TopicPartition, Long> offsets = new HashMap<>();
     private Traverser<Entry<TopicPartition, Long>> snapshotTraverser;
+    private Set<TopicPartition> assignment = new HashSet<>();
+    private long metadataRefreshInterval;
 
     StreamKafkaP(Properties properties, List<String> topicIds, int processorCount, int processorIndex) {
         this.properties = properties;
+        this.properties.putAll(properties);
+
         this.topicIds = topicIds;
         this.processorCount = processorCount;
-        this.processorIndex = processorIndex;
+
+        this.nextAssignablePtions = new int[topicIds.size()];
+        Arrays.fill(nextAssignablePtions, processorIndex);
+        metadataRefreshInterval = Long.parseLong(properties.getProperty("__jet.metadata.max.age.ms"));
     }
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
         snapshottingEnabled = context.snapshottingEnabled();
         consumer = new KafkaConsumer<>(properties);
+        reassignPartitions();
+    }
 
-        List<TopicPartition> assignment = new ArrayList<>();
-        for (String topicId : topicIds) {
-            List<PartitionInfo> partitionInfos = consumer.partitionsFor(topicId);
-            for (int i = processorIndex; i < partitionInfos.size(); i += processorCount) {
-                assignment.add(new TopicPartition(topicId, partitionInfos.get(i).partition()));
+    private void reassignPartitions() {
+        getLogger().finest("checking partitions now");
+        boolean changed = false;
+        // check for added partitions (kafka doesn't support partition removal). Initially, all partitions are added.
+        for (int topicIdx = 0; topicIdx < topicIds.size(); topicIdx++) {
+            String topicName = topicIds.get(topicIdx);
+            List<PartitionInfo> partitionInfos = consumer.partitionsFor(topicName);
+            getLogger().fine("Num of ptions for topic " + topicName + ": " + partitionInfos.size());
+            while (nextAssignablePtions[topicIdx] < partitionInfos.size()) {
+                int partition = nextAssignablePtions[topicIdx];
+                nextAssignablePtions[topicIdx] += processorCount;
+                assert partitionInfos.get(partition).partition() == partition;
+                assignment.add(new TopicPartition(topicName, partition));
+                changed = true;
             }
         }
-        consumer.assign(assignment);
+
+        if (changed) {
+            getLogger().info("Partition assignment changed: " + assignment);
+            consumer.assign(assignment);
+        }
+        nextPartitionCheck = System.nanoTime() + MILLISECONDS.toNanos(metadataRefreshInterval);
     }
 
     @Override
     public boolean complete() {
-        ConsumerRecords<?, ?> records = consumer.poll(POLL_TIMEOUT_MS);
+        if (System.nanoTime() >= nextPartitionCheck) {
+            reassignPartitions();
+        }
 
+        ConsumerRecords<?, ?> records = consumer.poll(POLL_TIMEOUT_MS);
         for (ConsumerRecord<?, ?> r : records) {
             if (snapshottingEnabled) {
                 offsets.put(new TopicPartition(r.topic(), r.partition()), r.offset());
@@ -147,6 +180,7 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
         private final Properties properties;
         private transient List<StreamKafkaP> processors;
         private int localParallelism;
+        private ILogger logger;
 
         Supplier(Properties properties, List<String> topicIds, int memberCount, int memberIndex) {
             this.properties = properties;
@@ -158,6 +192,7 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
         @Override
         public void init(@Nonnull Context context) {
             localParallelism = context.localParallelism();
+            logger = context.jetInstance().getHazelcastInstance().getLoggingService().getLogger(getClass());
         }
 
         @Override @Nonnull
@@ -172,7 +207,23 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
 
         @Override
         public void complete(Throwable error) {
-            processors.forEach(p -> Util.uncheckRun(p::close));
+            Throwable firstError = null;
+            // close all processors, ignoring their failures and throwing the first failure (if any)
+            for (StreamKafkaP p : processors) {
+                try {
+                    p.close();
+                } catch (Throwable e) {
+                    if (firstError == null) {
+                        firstError = e;
+                    } else {
+                        logger.severe(e);
+                    }
+                }
+            }
+
+            if (firstError != null) {
+                throw sneakyThrow(firstError);
+            }
         }
     }
 
@@ -182,8 +233,19 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
         private final List<String> topicIds;
 
         public MetaSupplier(Properties properties, List<String> topicIds) {
-            this.properties = properties;
+            this.properties = new Properties();
             this.topicIds = topicIds;
+
+            this.properties.putAll(properties);
+
+            // Prefix the metadata.max.age.ms with "__jet." and reset to 0, we'll use it to space
+            // out our own metadata refreshes
+            if (properties.containsKey("metadata.max.age.ms")) {
+                this.properties.setProperty("__jet.metadata.max.age.ms", properties.getProperty("metadata.max.age.ms"));
+            } else {
+                this.properties.setProperty("__jet.metadata.max.age.ms", "300000"); // kafka default
+            }
+            this.properties.setProperty("metadata.max.age.ms", "0");
         }
 
         @Nonnull
