@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet;
 
+import com.hazelcast.jet.impl.execution.BroadcastItem;
+
 import java.time.Instant;
 import java.time.ZoneId;
 
@@ -59,6 +61,9 @@ public final class Watermark implements BroadcastItem {
 
     @Override
     public String toString() {
-        return "Watermark{timestamp=" + Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalTime() + '}';
+        return "Watermark{ts="
+                + timestamp
+                + ", formattedTs="
+                + Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalTime() + '}';
     }
 }

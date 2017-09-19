@@ -63,14 +63,14 @@ import java.util.concurrent.CompletableFuture;
 public interface Processor {
 
     /**
-     * Initializes this processor with the outbox that the processing methods
+     * Initializes this processor with the outboxes that the processing methods
      * must use to deposit their output items. This method will be called
      * exactly once and strictly before any calls to processing methods ({@link
      * #process(int, Inbox)} and {@link #complete()}).
      * <p>
      * The default implementation does nothing.
      */
-    default void init(@Nonnull Outbox outbox, @Nonnull Context context) {
+    default void init(@Nonnull Outbox outbox, @Nonnull SnapshotOutbox snapshotOutbox, @Nonnull Context context) {
     }
 
     /**

@@ -21,7 +21,6 @@ import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorMetaSupplier;
 import com.hazelcast.jet.ProcessorSupplier;
-import com.hazelcast.jet.SnapshotRestorePolicy;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.impl.util.Util;
@@ -120,7 +119,7 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
             snapshotTraverser = Traversers.traverseIterable(offsets.entrySet())
                     .onFirstNull(() -> snapshotTraverser = null);
         }
-        return emitSnapshotFromTraverser(snapshotTraverser);
+        return emitFromTraverserToSnapshot(snapshotTraverser);
     }
 
     @Override
@@ -190,12 +189,6 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
         @Override
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
             return address -> new Supplier(properties, topicIds, addresses.size(), addresses.indexOf(address));
-        }
-
-        @Nonnull
-        @Override
-        public SnapshotRestorePolicy snapshotRestorePolicy() {
-            return SnapshotRestorePolicy.BROADCAST;
         }
     }
 }

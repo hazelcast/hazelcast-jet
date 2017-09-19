@@ -118,7 +118,7 @@ public abstract class ProcessorTaskletBase implements Tasklet {
     @Override
     public void init(CompletableFuture<Void> jobFuture) {
         context.initJobFuture(jobFuture);
-        processor.init(outbox, context);
+        processor.init(outbox, outbox, context);
     }
 
     @Override @Nonnull

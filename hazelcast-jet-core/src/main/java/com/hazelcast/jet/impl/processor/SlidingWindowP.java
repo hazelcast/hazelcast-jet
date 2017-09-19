@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.AbstractProcessor;
+import com.hazelcast.jet.BroadcastKey;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.TimestampedEntry;
@@ -67,13 +68,15 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
 
     private final A emptyAcc;
     private Traverser<Object> flushTraverser;
-    private Traverser<Entry<SnapshotKey, A>> snapshotTraverser;
+    private Traverser<Entry> snapshotTraverser;
 
     // These two fields track the upper and lower bounds for the keyset of
     // tsToKeyToAcc. They serve as an optimization that avoids a linear search
     // over the entire keyset.
     private long topTs = Long.MIN_VALUE;
     private long bottomTs = Long.MAX_VALUE;
+
+    private long nextWinToEmit = Long.MIN_VALUE;
 
     public SlidingWindowP(
             Function<? super T, ?> getKeyFn,
@@ -124,15 +127,26 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         if (!isLastStage) {
             return flushBuffers();
         }
-        ensureSnapshotTraverser();
-        return emitSnapshotFromTraverser(snapshotTraverser);
+        if (snapshotTraverser == null) {
+            snapshotTraverser = traverseIterable(tsToKeyToAcc.entrySet())
+                    .<Entry>flatMap(e -> traverseIterable(e.getValue().entrySet())
+                            .map(e2 -> entry(new SnapshotKey(e.getKey(), e2.getKey()), e2.getValue()))
+                    )
+                    .append(entry(Keys.NEXT_WIN_TO_EMIT, nextWinToEmit))
+                    .onFirstNull(() -> snapshotTraverser = null);
+        }
+        return emitFromTraverserToSnapshot(snapshotTraverser);
     }
 
     @Override
     public void restoreSnapshot(@Nonnull Inbox inbox) {
-        for (Object o; (o = inbox.poll()) != null; ) {
-            @SuppressWarnings("unchecked")
-            Entry<SnapshotKey, A> entry = (Entry<SnapshotKey, A>) o;
+        System.out.println("Restoring snapshot");
+        for (Map.Entry e; (e = (Map.Entry) inbox.poll()) != null; ) {
+            if (e.getKey().equals(Keys.NEXT_WIN_TO_EMIT)) {
+                nextWinToEmit = (long) e.getValue();
+                continue;
+            }
+            Entry<SnapshotKey, A> entry = (Entry<SnapshotKey, A>) e;
             SnapshotKey k = entry.getKey();
             if (tsToKeyToAcc.computeIfAbsent(k.timestamp, x -> new HashMap<>())
                             .put(k.key, entry.getValue()) != null) {
@@ -143,25 +157,38 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         }
     }
 
-    private Traverser<Object> windowTraverserAndEvictor(long endTsExclusive) {
-        assert endTsExclusive == wDef.floorFrameTs(endTsExclusive) : "endTsExclusive not aligned on frame";
-        if (bottomTs == Long.MAX_VALUE) {
-            bottomTs = endTsExclusive + wDef.frameLength();
-            return Traversers.empty();
+    @Override
+    public boolean finishSnapshotRestore() {
+        System.out.println("finishSnapshotRestore: " + nextWinToEmit);
+        return true;
+    }
+
+    private Traverser<Object> windowTraverserAndEvictor(long wm) {
+        assert wm == wDef.floorFrameTs(wm) : "wm not aligned on frame";
+        if (nextWinToEmit == Long.MIN_VALUE) {
+            if (tsToKeyToAcc.isEmpty()) {
+                // no item was observed, but initialize nextWinToEmit
+                nextWinToEmit = wm + wDef.frameLength();
+                return Traversers.empty();
+            }
+            // This is the first watermark we are acting upon. Find the lowest frame
+            // timestamp that can be emitted: at most the top existing timestamp lower
+            // than wm, but even lower than that if there are older frames on record.
+            // The above guarantees that the sliding window can be correctly
+            // initialized using the "add leading/deduct trailing" approach because we
+            // start from a window that covers at most one existing frame -- the lowest
+            // one on record.
+            nextWinToEmit = min(bottomTs, wm);
         }
         // compute the first window that needs to be emitted
-        long rangeStart = min(bottomTs + wDef.windowLength() - wDef.frameLength(), endTsExclusive);
-        return traverseStream(range(rangeStart, endTsExclusive, wDef.frameLength()).boxed())
+        long rangeStart = nextWinToEmit;
+        return traverseStream(range(rangeStart, wm, wDef.frameLength()).boxed())
                 .flatMap(window -> traverseIterable(computeWindow(window).entrySet())
                         .map(e -> new TimestampedEntry<>(window, e.getKey(), aggrOp.finishFn().apply(e.getValue())))
                         .onFirstNull(() -> completeWindow(window)));
     }
 
     private Map<Object, A> computeWindow(long frameTs) {
-        assert bottomTs >= frameTs - wDef.windowLength() + wDef.frameLength()
-                : String.format("probably missed a WM or received a late event, "
-                        + "bottomTs=%d, frameTs=%d, windowLength=%d, frameLength=%d",
-                bottomTs, frameTs, wDef.windowLength(), wDef.frameLength());
         if (wDef.isTumbling()) {
             return tsToKeyToAcc.getOrDefault(frameTs, emptyMap());
         }
@@ -182,8 +209,8 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         for (long ts = frameTs - wDef.windowLength() + wDef.frameLength(); ts <= frameTs; ts += wDef.frameLength()) {
             tsToKeyToAcc.getOrDefault(ts, emptyMap())
                         .forEach((key, currAcc) -> aggrOp.combineFn().accept(
-                                  window.computeIfAbsent(key, k -> aggrOp.createFn().get()),
-                                  currAcc));
+                                window.computeIfAbsent(key, k -> aggrOp.createFn().get()),
+                                currAcc));
         }
         return window;
     }
@@ -204,7 +231,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     private void completeWindow(long frameTs) {
         long frameToEvict = frameTs - wDef.windowLength() + wDef.frameLength();
         Map<Object, A> evictedFrame = tsToKeyToAcc.remove(frameToEvict);
-        bottomTs = frameToEvict + wDef.frameLength();
+        nextWinToEmit = frameTs + wDef.frameLength();
         if (!wDef.isTumbling() && aggrOp.deductFn() != null) {
             // deduct trailing-edge frame
             patchSlidingWindow(aggrOp.deductFn(), evictedFrame);
@@ -216,25 +243,10 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
             if (tsToKeyToAcc.isEmpty()) {
                 return true;
             }
-            LongStream range = LongStream
-                    .iterate(bottomTs + wDef.windowLength() - wDef.frameLength(), ts -> ts + wDef.frameLength())
-                    .limit(max(0, 1 + (topTs - bottomTs) / wDef.frameLength()));
-            flushTraverser = traverseStream(range.boxed())
-                    .flatMap(this::windowTraverserAndEvictor)
+            flushTraverser = windowTraverserAndEvictor(topTs + wDef.windowLength() - wDef.frameLength())
                     .onFirstNull(() -> flushTraverser = null);
         }
         return emitFromTraverser(flushTraverser);
-    }
-
-    private void ensureSnapshotTraverser() {
-        if (snapshotTraverser != null) {
-            return;
-        }
-        snapshotTraverser = traverseIterable(tsToKeyToAcc.entrySet())
-                .flatMap(e -> traverseIterable(e.getValue().entrySet())
-                        .map(e2 -> entry(new SnapshotKey(e.getKey(), e2.getKey()), e2.getValue()))
-                )
-                .onFirstNull(() -> snapshotTraverser = null);
     }
 
     /**
@@ -245,5 +257,14 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         return start > end
                 ? LongStream.empty()
                 : LongStream.iterate(start, n -> n + step).limit(1 + (end - start) / step);
+    }
+
+    private enum Keys implements BroadcastKey<Keys> {
+        NEXT_WIN_TO_EMIT;
+
+        @Override
+        public Keys key() {
+            return this;
+        }
     }
 }

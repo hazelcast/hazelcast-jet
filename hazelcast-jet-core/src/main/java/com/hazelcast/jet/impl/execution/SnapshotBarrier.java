@@ -16,8 +16,6 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.jet.BroadcastItem;
-
 /**
  * Special item interleaved with other items on queue to signal a start of a
  * snapshot.

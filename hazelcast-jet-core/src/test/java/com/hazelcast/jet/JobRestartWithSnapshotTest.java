@@ -47,9 +47,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
+import static com.hazelcast.jet.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.TestUtil.throttle;
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
@@ -137,7 +139,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         Vertex generator = dag.newVertex("generator", throttle(sup, 10))
                               .localParallelism(1);
         Vertex insWm = dag.newVertex("insWm", insertWatermarks(entry -> ((Entry<Integer, Integer>) entry).getValue(),
-                withFixedLag(0), wDef))
+                withFixedLag(0), emitByFrame(wDef)))
                           .localParallelism(1);
         Vertex aggregate = dag.newVertex("aggregate", aggregateToSlidingWindow(
                 t -> ((Entry<Integer, Integer>) t).getKey(),
@@ -286,15 +288,19 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
 
         private int ptionCursor;
         private MyTraverser traverser;
-        private Traverser<Entry<Integer, Integer>> snapshotTraverser;
+        private Traverser<Entry<BroadcastKey<Integer>, Integer>> snapshotTraverser;
 
         SequencesInPartitionsGeneratorP(int[] assignedPtions, int elementsInPartition) {
-            System.out.println("assignedPtions=" + Arrays.toString(assignedPtions));
             this.assignedPtions = assignedPtions;
             this.ptionOffsets = new int[assignedPtions.length];
             this.elementsInPartition = elementsInPartition;
 
             this.traverser = new MyTraverser();
+        }
+
+        @Override
+        protected void init(@Nonnull Context context) throws Exception {
+            getLogger().info("assignedPtions=" + Arrays.toString(assignedPtions));
         }
 
         @Override
@@ -307,29 +313,30 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
             if (snapshotTraverser == null) {
                 snapshotTraverser = Traversers.traverseStream(IntStream.range(0, assignedPtions.length).boxed())
                                               // save {partitionId; partitionOffset} tuples
-                                              .map(i -> entry(assignedPtions[i], ptionOffsets[i]))
+                                              .map(i -> entry(broadcastKey(assignedPtions[i]), ptionOffsets[i]))
                                               .onFirstNull(() -> snapshotTraverser = null);
                 getLogger().info("Saving snapshot, offsets=" + Arrays.toString(ptionOffsets) + ", assignedPtions="
                         + Arrays.toString(assignedPtions));
             }
-            return emitSnapshotFromTraverser(snapshotTraverser);
+            return emitFromTraverserToSnapshot(snapshotTraverser);
         }
 
         @Override
         public void restoreSnapshot(@Nonnull Inbox inbox) {
             for (Object o; (o = inbox.poll()) != null; ) {
-                Entry<Integer, Integer> e = (Entry<Integer, Integer>) o;
-                int partitionIndex = arrayIndexOf(e.getKey(), assignedPtions);
+                Entry<BroadcastKey<Integer>, Integer> e = (Entry<BroadcastKey<Integer>, Integer>) o;
+                int partitionIndex = arrayIndexOf(e.getKey().key(), assignedPtions);
                 // restore offset, if assigned to us. Ignore it otherwise
                 if (partitionIndex >= 0) {
                     ptionOffsets[partitionIndex] = e.getValue();
-                    getLogger().info("Restored offset for partition " + e);
                 }
             }
         }
 
         @Override
         public boolean finishSnapshotRestore() {
+            getLogger().info("Restored snapshot, offsets=" + Arrays.toString(ptionOffsets) + ", assignedPtions="
+                    + Arrays.toString(assignedPtions));
             // we'll start at the most-behind partition
             advanceCursor();
             return true;
@@ -399,17 +406,12 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                             .filter(i -> i % totalProcessors == processorIndex)
                             .toArray();
         }
-
-        @Nonnull
-        @Override
-        public SnapshotRestorePolicy snapshotRestorePolicy() {
-            return SnapshotRestorePolicy.BROADCAST;
-        }
     }
 
     private static class AddToMapP extends AbstractProcessor implements Serializable {
         @Override
         protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
+            getLogger().info("Adding item: " + item);
             TimestampedEntry<Integer, Long> e = (TimestampedEntry) item;
             List<Long> key = asList(e.getTimestamp(), (long) e.getKey());
             Long oldValue = result.put(key, e.getValue());

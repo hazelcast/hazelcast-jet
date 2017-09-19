@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.jet.BroadcastItem;
 import com.hazelcast.jet.Partitioner;
 import com.hazelcast.jet.impl.execution.init.EdgeDef;
 import com.hazelcast.jet.impl.util.CircularListCursor;

@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.util;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorMetaSupplier;
 import com.hazelcast.jet.ProcessorSupplier;
-import com.hazelcast.jet.SnapshotRestorePolicy;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.nio.Address;
 
@@ -52,10 +51,5 @@ public final class WrappingProcessorMetaSupplier implements ProcessorMetaSupplie
     @Override
     public void init(@Nonnull Context context) {
         wrapped.init(context);
-    }
-
-    @Override
-    public SnapshotRestorePolicy snapshotRestorePolicy() {
-        return wrapped.snapshotRestorePolicy();
     }
 }

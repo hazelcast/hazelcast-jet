@@ -80,11 +80,11 @@ public class AbstractProcessorTest {
         Mockito.when(ctx.logger()).thenReturn(mock(ILogger.class));
 
         p = new RegisteringMethodCallsP();
-        p.init(outbox, ctx);
+        p.init(outbox, outbox, ctx);
         tryProcessP = new SpecializedByOrdinalP();
-        tryProcessP.init(outbox, ctx);
+        tryProcessP.init(outbox, outbox, ctx);
         nothingOverriddenP = new NothingOverriddenP();
-        nothingOverriddenP.init(outbox, ctx);
+        nothingOverriddenP.init(outbox, outbox, ctx);
     }
 
     @Test
@@ -119,7 +119,7 @@ public class AbstractProcessorTest {
             protected void init(@Nonnull Context context) throws UnknownHostException {
                 throw new UnknownHostException();
             }
-        }.init(mock(Outbox.class), mock(Processor.Context.class));
+        }.init(mock(Outbox.class), mock(SnapshotOutbox.class), mock(Processor.Context.class));
     }
 
     @Test
@@ -185,7 +185,7 @@ public class AbstractProcessorTest {
                 throw new UnknownHostException();
             }
         };
-        p.init(mock(Outbox.class), mock(Processor.Context.class));
+        p.init(mock(Outbox.class), mock(SnapshotOutbox.class), mock(Processor.Context.class));
 
         // When
         p.process(ORDINAL_0, inbox);

@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.jet.BroadcastItem;
 import com.hazelcast.jet.Outbox;
+import com.hazelcast.jet.SnapshotOutbox;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.nio.serialization.Data;
@@ -31,7 +31,7 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
 
-public class OutboxImpl implements Outbox {
+public class OutboxImpl implements Outbox, SnapshotOutbox {
 
     private final OutboundCollector[] outstreams;
     private final ProgressTracker progTracker;
@@ -105,20 +105,13 @@ public class OutboxImpl implements Outbox {
         return done;
     }
 
-    protected ProgressState doOffer(OutboundCollector collector, Object item) {
-        if (item instanceof BroadcastItem) {
-            return collector.offerBroadcast((BroadcastItem) item);
-        }
-        return collector.offer(item);
-    }
-
     @Override
     public final boolean offer(@Nonnull Object item) {
         return offer(allEdges, item);
     }
 
     @Override
-    public final boolean offerToSnapshot(Object key, Object value) {
+    public final boolean offer(Object key, Object value) {
         if (snapshotEdge == null) {
             throw new IllegalStateException("Outbox does not have snapshot queue");
         }
@@ -138,6 +131,13 @@ public class OutboxImpl implements Outbox {
             pendingSnapshotEntry = null;
         }
         return success;
+    }
+
+    protected ProgressState doOffer(OutboundCollector collector, Object item) {
+        if (item instanceof BroadcastItem) {
+            return collector.offerBroadcast((BroadcastItem) item);
+        }
+        return collector.offer(item);
     }
 
     final boolean offerToEdgesAndSnapshot(Object item) {

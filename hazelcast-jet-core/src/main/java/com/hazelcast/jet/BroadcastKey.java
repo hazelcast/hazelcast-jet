@@ -14,22 +14,31 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.execution;
+package com.hazelcast.jet;
+
+import com.hazelcast.jet.impl.execution.BroadcastKeyReference;
 
 import java.io.Serializable;
 
-final class DoneItem implements BroadcastItem, Serializable {
+/**
+ * Marker interface for a key in the snapshot state that indicates the
+ * corresponding entry should be broadcast to all processors
+ * when restoring the snapshot.
+ *
+ * @param <K> type of key
+ */
+public interface BroadcastKey<K> extends Serializable {
 
-    static final DoneItem DONE_ITEM = new DoneItem();
+    /**
+     * Returns the underlying key
+     */
+    K key();
 
-    private DoneItem() { }
-
-    @Override
-    public String toString() {
-        return "DONE_ITEM";
+    /**
+     * Returns a given key as a broadcast key
+     */
+    static <K> BroadcastKey<K> broadcastKey(K key) {
+        return new BroadcastKeyReference<>(key);
     }
 
-    protected Object readResolve() {
-        return DONE_ITEM;
-    }
 }

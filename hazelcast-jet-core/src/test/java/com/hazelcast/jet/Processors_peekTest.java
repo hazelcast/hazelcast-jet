@@ -103,7 +103,7 @@ public class Processors_peekTest {
                 ? peekInput(passThroughPSupplier)
                 : peekInput(toStringFn, shouldLogFn, passThroughPSupplier)
         ).get();
-        wrappedP.init(outbox, context);
+        wrappedP.init(outbox, outbox, context);
 
         // When+Then
         assertLogged(wrappedP);
@@ -117,7 +117,7 @@ public class Processors_peekTest {
                 ? peekInput(passThroughPSupplier)
                 : peekInput(toStringFn, shouldLogFn, passThroughPSupplier)
         ).get(1).iterator().next();
-        wrappedP.init(outbox, context);
+        wrappedP.init(outbox, outbox, context);
 
         // When+Then
         assertLogged(wrappedP);
@@ -132,7 +132,7 @@ public class Processors_peekTest {
                 ? peekInput(passThroughPSupplier)
                 : peekInput(toStringFn, shouldLogFn, passThroughPSupplier)
         ).get(Collections.singletonList(address)).apply(address).get(1).iterator().next();
-        wrappedP.init(outbox, context);
+        wrappedP.init(outbox, outbox, context);
 
         // When+Then
         assertLogged(wrappedP);
@@ -147,7 +147,7 @@ public class Processors_peekTest {
                 : peekOutput(toStringFn, shouldLogFn, passThroughPSupplier)
         ).get();
 
-        wrappedP.init(outbox, context);
+        wrappedP.init(outbox, outbox, context);
 
         // When+Then
         assertLogged(wrappedP);
@@ -161,7 +161,7 @@ public class Processors_peekTest {
                 ? peekOutput(passThroughPSupplier)
                 : peekOutput(toStringFn, shouldLogFn, passThroughPSupplier)
         ).get(1).iterator().next();
-        wrappedP.init(outbox, context);
+        wrappedP.init(outbox, outbox, context);
 
         // When+Then
         assertLogged(wrappedP);
@@ -176,7 +176,7 @@ public class Processors_peekTest {
                 ? peekOutput(passThroughPSupplier)
                 : peekOutput(toStringFn, shouldLogFn, passThroughPSupplier)
         ).get(Collections.singletonList(address)).apply(address).get(1).iterator().next();
-        wrappedP.init(outbox, context);
+        wrappedP.init(outbox, outbox, context);
 
         // When+Then
         assertLogged(wrappedP);
@@ -208,7 +208,7 @@ public class Processors_peekTest {
         protected Outbox outbox;
 
         @Override
-        public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
+        public void init(@Nonnull Outbox outbox, @Nonnull SnapshotOutbox snapshotOutbox, @Nonnull Context context) {
             this.outbox = outbox;
         }
 

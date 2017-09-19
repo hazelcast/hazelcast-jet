@@ -20,16 +20,17 @@ import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.ResettableSingletonTraverser;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Watermark;
+import com.hazelcast.jet.WatermarkEmissionPolicy;
 import com.hazelcast.jet.WatermarkPolicy;
-import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.function.DistributedToLongFunction;
-import com.hazelcast.jet.impl.util.Util;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 import java.util.function.ToLongFunction;
 
+import static com.hazelcast.jet.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 
 /**
@@ -37,50 +38,57 @@ import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
  * {@link com.hazelcast.jet.processor.Processors#insertWatermarks(
  *     DistributedToLongFunction,
  *     com.hazelcast.jet.function.DistributedSupplier,
- *     WindowDefinition) Processors.insertWatermarks()}.
+ *     WatermarkEmissionPolicy) Processors.insertWatermarks()}.
  *
  * @param <T> type of the stream item
  */
 public class InsertWatermarksP<T> extends AbstractProcessor {
 
-    private static final Object NULL_OBJECT = new Object();
-
-    private final ToLongFunction<T> getTimestampFn;
+    private final ToLongFunction<T> getTimestampF;
     private final WatermarkPolicy wmPolicy;
-    private final WindowDefinition winDef;
+    private final WatermarkEmissionPolicy wmEmitPolicy;
+    private final ResettableSingletonTraverser<Object> singletonTraverser;
+    private final FlatMapper<Object, Object> flatMapper;
 
-    private final ResettableSingletonTraverser<Object> itemTraverser = new ResettableSingletonTraverser<>();
-    private final WatermarkPerFrameTraverser wmTraverser = new WatermarkPerFrameTraverser();
-    private final FlatMapper<Object, Object> flatMapper = flatMapper(this::traverserFor);
-
+    private long currWm = Long.MIN_VALUE;
     private long lastEmittedWm = Long.MIN_VALUE;
-    private long nextWm = Long.MIN_VALUE;
+    private int index;
 
-    private int globalProcessorIndex;
+    // value to be used during temporarily snapshot restore
+    private long minRestoredWm = Long.MAX_VALUE;
 
     /**
-     * @param getTimestampFn function that extracts the timestamp from the item
+     * @param getTimestampF function that extracts the timestamp from the item
      * @param wmPolicy the watermark policy
-     * @param windowDefinition window definition to be used for watermark generation
      */
     public InsertWatermarksP(
-            @Nonnull DistributedToLongFunction<T> getTimestampFn,
+            @Nonnull DistributedToLongFunction<T> getTimestampF,
             @Nonnull WatermarkPolicy wmPolicy,
-            WindowDefinition windowDefinition
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy
     ) {
-        this.getTimestampFn = getTimestampFn;
+        this.getTimestampF = getTimestampF;
         this.wmPolicy = wmPolicy;
-        this.winDef = windowDefinition;
+        this.wmEmitPolicy = wmEmitPolicy;
+        this.flatMapper = flatMapper(this::traverser);
+        this.singletonTraverser = new ResettableSingletonTraverser<>();
     }
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        globalProcessorIndex = context.globalProcessorIndex();
+        index = context.globalProcessorIndex();
     }
 
     @Override
     public boolean tryProcess() {
-        return flatMapper.tryProcess(NULL_OBJECT);
+        currWm = wmPolicy.getCurrentWatermark();
+        if (!wmEmitPolicy.shouldEmit(currWm, lastEmittedWm)) {
+            return true;
+        }
+        boolean didEmit = tryEmit(new Watermark(currWm));
+        if (didEmit) {
+            lastEmittedWm = currWm;
+        }
+        return didEmit;
     }
 
     @Override
@@ -88,63 +96,38 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
         return flatMapper.tryProcess(item);
     }
 
-    private Traverser<Object> traverserFor(Object item) {
-        long proposedWm;
-        if (item == NULL_OBJECT) {
-            proposedWm = winDef.floorFrameTs(wmPolicy.getCurrentWatermark());
-        } else {
-            long eventTs = getTimestampFn.applyAsLong((T) item);
-            proposedWm = winDef.floorFrameTs(wmPolicy.reportEvent(eventTs));
-
-            // check for item lateness
-            if (Math.max(proposedWm, lastEmittedWm) > eventTs) {
-                logFine(getLogger(), "Dropped late event: %s", item);
-            } else {
-                itemTraverser.accept(item);
-            }
-        }
-
-        if (proposedWm == wmTraverser.end) {
-            return itemTraverser;
-        }
-
-        if (lastEmittedWm == Long.MIN_VALUE && proposedWm > lastEmittedWm) {
-            lastEmittedWm = Util.subtractClamped(proposedWm , winDef.frameLength());
-        }
-        wmTraverser.end = proposedWm;
-        return itemTraverser.prependTraverser(wmTraverser);
-    }
-
     @Override
     public boolean saveSnapshot() {
-        return tryEmitToSnapshot(globalProcessorIndex, lastEmittedWm);
+        return tryEmitToSnapshot(broadcastKey(index), lastEmittedWm);
     }
 
     @Override
     public void restoreSnapshot(@Nonnull Inbox inbox) {
         // we restart at the oldest WM any instance was at at the time of snapshot
         for (Object o; (o = inbox.poll()) != null; ) {
-            lastEmittedWm = Math.min(lastEmittedWm, ((Entry<?, Long>) o).getValue());
+            minRestoredWm = Math.min(minRestoredWm, ((Entry<?, Long>) o).getValue());
         }
-        logFine(getLogger(), "restored lastEmittedWm=%s", lastEmittedWm);
     }
 
-    private class WatermarkPerFrameTraverser implements Traverser<Object> {
+    @Override
+    public boolean finishSnapshotRestore() {
+        lastEmittedWm = minRestoredWm;
+        logFine(getLogger(), "restored lastEmittedWm=%s", lastEmittedWm);
+        return true;
+    }
 
-        long end = Long.MIN_VALUE; //inclusive
-
-        @Override
-        public Watermark next() {
-            if (lastEmittedWm >= end) {
-                return null;
-            }
-            if (nextWm < end) {
-                nextWm = Util.addClamped(lastEmittedWm , winDef.frameLength());
-            }
-            if (nextWm <= end) {
-                return new Watermark(lastEmittedWm = nextWm);
-            }
-            return null;
+    private Traverser<Object> traverser(Object item) {
+        long timestamp = getTimestampF.applyAsLong((T) item);
+        if (timestamp < currWm) {
+            // drop late event
+            return Traversers.empty();
         }
+        currWm = wmPolicy.reportEvent(timestamp);
+        singletonTraverser.accept(item);
+        if (wmEmitPolicy.shouldEmit(currWm, lastEmittedWm)) {
+            lastEmittedWm = currWm;
+            return singletonTraverser.prepend(new Watermark(currWm));
+        }
+        return singletonTraverser;
     }
 }

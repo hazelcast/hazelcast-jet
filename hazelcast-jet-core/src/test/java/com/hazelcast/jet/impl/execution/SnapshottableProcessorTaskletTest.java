@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
+import com.hazelcast.jet.SnapshotOutbox;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ProgressState;
@@ -234,12 +235,14 @@ public class SnapshottableProcessorTaskletTest {
         int itemsToEmitInComplete;
         int completedCount;
         private Outbox outbox;
+        private SnapshotOutbox snapshotOutbox;
 
         private Queue<Map.Entry> snapshotQueue = new ArrayDeque<>();
 
         @Override
-        public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
+        public void init(@Nonnull Outbox outbox, @Nonnull SnapshotOutbox snapshotOutbox, @Nonnull Context context) {
             this.outbox = outbox;
+            this.snapshotOutbox = snapshotOutbox;
         }
 
         @Override
@@ -274,7 +277,7 @@ public class SnapshottableProcessorTaskletTest {
         @Override
         public boolean saveSnapshot() {
             for (Map.Entry item; (item = snapshotQueue.peek()) != null; ) {
-                if (!outbox.offerToSnapshot(item.getKey(), item.getValue())) {
+                if (!snapshotOutbox.offer(item.getKey(), item.getValue())) {
                     return false;
                 } else {
                     snapshotQueue.remove();

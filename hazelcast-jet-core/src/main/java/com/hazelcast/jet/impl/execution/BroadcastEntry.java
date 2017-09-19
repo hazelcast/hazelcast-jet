@@ -16,20 +16,26 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import java.io.Serializable;
+import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.Map.Entry;
 
-final class DoneItem implements BroadcastItem, Serializable {
+/**
+ * A Map.Entry implementation which implements {@link BroadcastItem}.
+ *
+ * @param <K> type of key
+ * @param <V> type of value
+ */
+public class BroadcastEntry<K, V> extends SimpleImmutableEntry<K, V> implements BroadcastItem {
+    public BroadcastEntry(K key, V value) {
+        super(key, value);
+    }
 
-    static final DoneItem DONE_ITEM = new DoneItem();
-
-    private DoneItem() { }
+    public BroadcastEntry(Entry<? extends K, ? extends V> entry) {
+        super(entry);
+    }
 
     @Override
     public String toString() {
-        return "DONE_ITEM";
-    }
-
-    protected Object readResolve() {
-        return DONE_ITEM;
+        return getKey() + "=" + getValue();
     }
 }

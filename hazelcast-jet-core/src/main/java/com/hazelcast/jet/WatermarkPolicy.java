@@ -46,4 +46,5 @@ public interface WatermarkPolicy {
      * event. The watermark may advance based just on the passage of time.
      */
     long getCurrentWatermark();
+
 }

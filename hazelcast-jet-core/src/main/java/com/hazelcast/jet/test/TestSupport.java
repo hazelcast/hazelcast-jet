@@ -121,7 +121,7 @@ public final class TestSupport {
      * This method does the following:
      * <ul>
      *     <li>initializes the processor by calling {@link Processor#init(
-     *     com.hazelcast.jet.Outbox, com.hazelcast.jet.Processor.Context)}
+     *     com.hazelcast.jet.Outbox, com.hazelcast.jet.SnapshotOutbox, com.hazelcast.jet.Processor.Context)}
      *
      *     <li>does snapshot+restore (see below)
      *
@@ -220,7 +220,7 @@ public final class TestSupport {
 
         TestInbox inbox = new TestInbox();
         Processor[] processor = {supplier.get()};
-        boolean failOnTimeout = processor[0].isCooperative();
+        boolean failOnTimeout = false; // TODO
 
         // we'll use 1-capacity outbox to test cooperative emission, if the processor is cooperative
         int outboxCapacity = processor[0].isCooperative() ? 1 : Integer.MAX_VALUE;
@@ -228,7 +228,7 @@ public final class TestSupport {
         List<Object> actualOutput = new ArrayList<>();
 
         // create instance of your processor and call the init() method
-        processor[0].init(outbox, new TestProcessorContext());
+        processor[0].init(outbox, outbox, new TestProcessorContext());
 
         // do snapshot+restore before processing any item. This will test saveSnapshot() in this edge case
         snapshotAndRestore(processor, supplier, outbox, actualOutput, doSnapshots,
@@ -307,7 +307,7 @@ public final class TestSupport {
 
         // restore state to new processor
         processor[0] = supplier.get();
-        processor[0].init(outbox, new TestProcessorContext());
+        processor[0].init(outbox, outbox, new TestProcessorContext());
 
         if (snapshotInbox.isEmpty()) {
             // don't call finishSnapshotRestore, if snapshot was empty

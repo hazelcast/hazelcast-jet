@@ -85,15 +85,6 @@ public interface ProcessorMetaSupplier extends Serializable {
     }
 
     /**
-     * Factory method that wraps the given {@code ProcessorSupplier}
-     * and returns the same instance for each given {@code Address}.
-     */
-    @Nonnull
-    static ProcessorMetaSupplier of(@Nonnull ProcessorSupplier procSupplier, SnapshotRestorePolicy snapshotRestorePolicy) {
-        return of((Address x) -> procSupplier, snapshotRestorePolicy);
-    }
-
-    /**
      * Factory method that wraps the given {@code Supplier<Processor>}
      * and uses it as the supplier of all {@code Processor} instances.
      * Specifically, returns a meta-supplier that will always return the
@@ -102,18 +93,6 @@ public interface ProcessorMetaSupplier extends Serializable {
     @Nonnull
     static ProcessorMetaSupplier of(@Nonnull DistributedSupplier<? extends Processor> procSupplier) {
         return ProcessorMetaSupplier.of(ProcessorSupplier.of(procSupplier));
-    }
-
-    /**
-     * Factory method that wraps the given {@code Supplier<Processor>}
-     * and uses it as the supplier of all {@code Processor} instances.
-     * Specifically, returns a meta-supplier that will always return the
-     * result of calling {@link ProcessorSupplier#of(DistributedSupplier <Processor>)}.
-     */
-    @Nonnull
-    static ProcessorMetaSupplier of(@Nonnull DistributedSupplier<? extends Processor> procSupplier,
-                                    SnapshotRestorePolicy snapshotRestorePolicy) {
-        return ProcessorMetaSupplier.of(ProcessorSupplier.of(procSupplier), snapshotRestorePolicy);
     }
 
     /**
@@ -127,38 +106,6 @@ public interface ProcessorMetaSupplier extends Serializable {
                 return addressToSupplier;
             }
         };
-    }
-
-    /**
-     * Factory method that creates a {@link ProcessorMetaSupplier} based on a mapping to
-     * {@link ProcessorSupplier} for each given address
-     */
-    static ProcessorMetaSupplier of(DistributedFunction<Address, ProcessorSupplier> addressToSupplier,
-                                    SnapshotRestorePolicy snapshotRestorePolicy) {
-        return new ProcessorMetaSupplier() {
-            @Nonnull @Override
-            public
-            Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-                return addressToSupplier;
-            }
-
-            @Override
-            public SnapshotRestorePolicy snapshotRestorePolicy() {
-                return snapshotRestorePolicy;
-            }
-        };
-    }
-
-    /**
-     * Returns the {@link SnapshotRestorePolicy} for processors returned from
-     * this supplier.
-     * <p>
-     * The default implementation returns PARTITIONED. Override this method,
-     * if needed, or use #of
-     */
-    @Nonnull
-    default SnapshotRestorePolicy snapshotRestorePolicy() {
-        return SnapshotRestorePolicy.PARTITIONED;
     }
 
     /**

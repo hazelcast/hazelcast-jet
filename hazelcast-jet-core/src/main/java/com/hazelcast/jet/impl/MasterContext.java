@@ -20,12 +20,14 @@ import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.cluster.impl.MembersView;
+import com.hazelcast.jet.BroadcastKey;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Edge;
 import com.hazelcast.jet.JobStatus;
 import com.hazelcast.jet.TopologyChangedException;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.impl.execution.BroadcastEntry;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder;
 import com.hazelcast.jet.impl.operation.CompleteOperation;
@@ -60,7 +62,6 @@ import static com.hazelcast.jet.JobStatus.NOT_STARTED;
 import static com.hazelcast.jet.JobStatus.RESTARTING;
 import static com.hazelcast.jet.JobStatus.RUNNING;
 import static com.hazelcast.jet.JobStatus.STARTING;
-import static com.hazelcast.jet.SnapshotRestorePolicy.BROADCAST;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.SnapshotRepository.snapshotDataMapName;
 import static com.hazelcast.jet.impl.execution.SnapshotContext.NO_SNAPSHOT;
@@ -69,6 +70,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.isTopologicalFailure;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.Util.idToString;
 import static com.hazelcast.jet.impl.util.Util.jobAndExecutionId;
+import static com.hazelcast.jet.processor.Processors.map;
 import static com.hazelcast.jet.processor.SourceProcessors.readMap;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.partitioningBy;
@@ -197,10 +199,16 @@ public class MasterContext {
         for (Vertex vertex : dag) {
             String mapName = snapshotDataMapName(jobId, snapshotId, vertex.getName());
             if (!nodeEngine.getHazelcastInstance().getMap(mapName).isEmpty()) {
-                Vertex readSnapshotVertex = dag.newVertex("__read_snapshot:" + vertex.getName(), readMap(mapName))
-                                               .localParallelism(vertex.getLocalParallelism());
+                int parallelism = vertex.getLocalParallelism();
+                Vertex readSnapshotVertex = dag.newVertex("__read_snapshot." + vertex.getName(), readMap(mapName))
+                                               .localParallelism(parallelism);
+                // TODO: get rid of this additional vertex by adding a mapping option to readMap()
+                Vertex mapSnapshotEntry = dag.newVertex("__map_snapshot_entry." + vertex.getName(), map(
+                        (Map.Entry e) -> (e.getKey() instanceof BroadcastKey) ? new BroadcastEntry(e) : e)
+                ).localParallelism(parallelism);
                 int destOrdinal = dag.getInboundEdges(vertex.getName()).size();
-                dag.edge(new SnapshotRestoreEdge(readSnapshotVertex, vertex, destOrdinal));
+                dag.edge(Edge.between(readSnapshotVertex, mapSnapshotEntry).isolated())
+                   .edge(new SnapshotRestoreEdge(mapSnapshotEntry, vertex, destOrdinal));
             }
         }
     }
@@ -568,13 +576,13 @@ public class MasterContext {
             MemberInfo member = e.getKey();
             Operation op = opCtor.apply(e.getValue());
             InternalCompletableFuture<Object> future = nodeEngine.getOperationService()
-                         .createInvocationBuilder(JetService.SERVICE_NAME, op, member.getAddress())
-                         .setDoneCallback(() -> {
-                             if (remainingCount.decrementAndGet() == 0) {
-                                 doneFuture.complete(null);
-                             }
-                         })
-                         .invoke();
+                 .createInvocationBuilder(JetService.SERVICE_NAME, op, member.getAddress())
+                 .setDoneCallback(() -> {
+                     if (remainingCount.decrementAndGet() == 0) {
+                         doneFuture.complete(null);
+                     }
+                 })
+                 .invoke();
             futures.put(member, future);
         }
     }
@@ -586,13 +594,8 @@ public class MasterContext {
 
         SnapshotRestoreEdge(Vertex source, Vertex destination, int destOrdinal) {
             super(source, 0, destination, destOrdinal);
-
             distributed();
-            if (getDestination().getSupplier().snapshotRestorePolicy() == BROADCAST) {
-                broadcast();
-            } else {
-                partitioned(entryKey());
-            }
+            partitioned(entryKey());
         }
 
         @Override

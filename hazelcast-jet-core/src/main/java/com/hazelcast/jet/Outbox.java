@@ -22,12 +22,9 @@ import javax.annotation.Nonnull;
 /**
  * Data sink for a {@link Processor}. The outbox consists of individual
  * output buckets, one per outbound edge of the vertex represented by the
- * associated processor, plus one bucket for snapshot storage. The
- * processor must deliver its output items, separated by destination edge,
+ * associated processor. The processor must deliver its output items, separated by destination edge,
  * into the outbox by calling {@link #offer(int, Object)} or {@link
- * #offer(Object)}. {@link #offerToSnapshot(Object, Object)
- * offerToSnapshot()} must only be called from {@link
- * Processor#saveSnapshot()}.
+ * #offer(Object)}.
  * <p>
  * A {@link Processor#isCooperative() cooperative} processor's outbox might
  * not be able to accept the item if it is already full. The processor must
@@ -42,8 +39,7 @@ public interface Outbox {
 
     /**
      * Returns the number of buckets in this outbox. This is equal to the
-     * number of output edges of the vertex. The count does not include
-     * possible snapshot queue.
+     * number of output edges of the vertex.
      */
     int bucketCount();
 
@@ -82,23 +78,4 @@ public interface Outbox {
         return offer(-1, item);
     }
 
-    /**
-     * Send a key-value pair to the snapshot bucket. The key must be globally
-     * unique for this vertex and this snapshot. This method may only be
-     * called from {@link Processor#saveSnapshot()}.
-     * <p>
-     * If the {@code key} implements {@link com.hazelcast.core.PartitionAware}
-     * then it will be used to choose the target partition, instead of the
-     * whole key.
-     *
-     * @return {@code true} if the item was accepted by the queue. If it returns
-     * {@code false}, the call should be retried later <b>with the same key
-     * and value</b>. For non-cooperative processors a blocking implementation
-     * is provided which always returns {@code true}.
-     *
-     * @throws IllegalArgumentException if attempting to add a duplicate key.
-     *                                  The implementation is allowed to throw it, but not required.
-     */
-    @CheckReturnValue
-    boolean offerToSnapshot(Object key, Object value);
 }

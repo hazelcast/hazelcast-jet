@@ -70,6 +70,7 @@ public abstract class AbstractProcessor implements Processor {
 
     private Object pendingItem;
     private Entry<?, ?> pendingSnapshotItem;
+    private SnapshotOutbox snapshotOutbox;
 
     /**
      * Specifies what this processor's {@link #isCooperative()} method will return.
@@ -87,8 +88,9 @@ public abstract class AbstractProcessor implements Processor {
     }
 
     @Override
-    public final void init(@Nonnull Outbox outbox, @Nonnull Context context) {
+    public final void init(@Nonnull Outbox outbox, @Nonnull SnapshotOutbox snapshotOutbox, @Nonnull Context context) {
         this.outbox = outbox;
+        this.snapshotOutbox = snapshotOutbox;
         this.logger = context.logger();
         try {
             init(context);
@@ -334,9 +336,12 @@ public abstract class AbstractProcessor implements Processor {
         return outbox.offer(ordinals, item);
     }
 
+    /**
+     * Javadoc pending
+     */
     @CheckReturnValue
     protected boolean tryEmitToSnapshot(Object key, Object value) {
-        return outbox.offerToSnapshot(key, value);
+        return snapshotOutbox.offer(key, value);
     }
 
     /**
@@ -372,6 +377,9 @@ public abstract class AbstractProcessor implements Processor {
         ensureAccepted(tryEmit(ordinals, item));
     }
 
+    /**
+     * Javadoc pending
+     */
     protected void emitToSnapshot(Object key, Object value) {
         ensureAccepted(tryEmitToSnapshot(key, value));
     }
@@ -423,10 +431,10 @@ public abstract class AbstractProcessor implements Processor {
     }
 
     /**
-     * Obtains items from the traverser and offers them to the outbox's
-     * snapshot bucket. Each item is a {@code Map.Entry} and its key and
+     * Obtains items from the traverser and offers them to the snapshot outbox.
+     * Each item is a {@code Map.Entry} and its key and
      * value are passed as the two arguments of {@link
-     * Outbox#offerToSnapshot(Object, Object) outbox.offerToSnapshot()}. If the
+     * SnapshotOutbox#offer(Object, Object)}. If the
      * outbox refuses an item, it backs off and returns {@code false}.
      * <p>
      * If this method returns {@code false}, then the same traverser must be
@@ -436,7 +444,7 @@ public abstract class AbstractProcessor implements Processor {
      * @param traverser traverser over the items to emit to the snapshot
      * @return whether the traverser has been exhausted
      */
-    protected <T extends Entry<?, ?>> boolean emitSnapshotFromTraverser(@Nonnull Traverser<T> traverser) {
+    protected <T extends Entry<?, ?>> boolean emitFromTraverserToSnapshot(@Nonnull Traverser<T> traverser) {
         Entry<?, ?> item;
         if (pendingSnapshotItem != null) {
             item = pendingSnapshotItem;
@@ -445,7 +453,7 @@ public abstract class AbstractProcessor implements Processor {
             item = traverser.next();
         }
         for (; item != null; item = traverser.next()) {
-            if (!outbox.offerToSnapshot(item.getKey(), item.getValue())) {
+            if (!snapshotOutbox.offer(item.getKey(), item.getValue())) {
                 pendingSnapshotItem = item;
                 return false;
             }

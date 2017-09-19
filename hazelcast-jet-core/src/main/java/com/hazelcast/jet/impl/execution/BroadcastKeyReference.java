@@ -16,41 +16,40 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.jet.impl.util.ProgressState;
+import com.hazelcast.jet.BroadcastKey;
 
-import java.util.ArrayList;
-import java.util.List;
+public class BroadcastKeyReference<K> implements BroadcastKey<K> {
+    private final K key;
 
-class MockOutboundCollector implements OutboundCollector {
-
-    private final ArrayList<Object> buffer;
-    private final int capacity;
-
-    MockOutboundCollector(int capacity) {
-        this.capacity = capacity;
-        this.buffer = new ArrayList<>(capacity);
-    }
-
-    List<Object> getBuffer() {
-        return buffer;
+    public BroadcastKeyReference(K key) {
+        this.key = key;
     }
 
     @Override
-    public ProgressState offer(Object item) {
-        if (buffer.size() == capacity) {
-            return ProgressState.NO_PROGRESS;
+    public K key() {
+        return key;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
         }
-        buffer.add(item);
-        return ProgressState.DONE;
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        BroadcastKeyReference<?> that = (BroadcastKeyReference<?>) o;
+        return key.equals(that.key);
     }
 
     @Override
-    public ProgressState offerBroadcast(BroadcastItem item) {
-        return offer(item);
+    public int hashCode() {
+        return key.hashCode();
     }
 
     @Override
-    public int[] getPartitions() {
-        return null;
+    public String toString() {
+        return key.toString();
     }
 }

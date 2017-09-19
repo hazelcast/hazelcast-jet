@@ -22,10 +22,10 @@ import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorMetaSupplier;
 import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.jet.ResettableSingletonTraverser;
-import com.hazelcast.jet.SnapshotRestorePolicy;
 import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.WatermarkEmissionPolicy;
 import com.hazelcast.jet.WatermarkPolicy;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation;
@@ -571,13 +571,12 @@ public final class Processors {
      * @param <T> the type of the stream item
      */
     @Nonnull
-    public static <T> ProcessorMetaSupplier insertWatermarks(
+    public static <T> DistributedSupplier<Processor> insertWatermarks(
             @Nonnull DistributedToLongFunction<T> getTimestampF,
             @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-            @Nonnull WindowDefinition winDef
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy
     ) {
-        return ProcessorMetaSupplier.of(() -> new InsertWatermarksP<>(getTimestampF, newWmPolicyF.get(), winDef),
-                SnapshotRestorePolicy.BROADCAST);
+        return () -> new InsertWatermarksP<>(getTimestampF, newWmPolicyF.get(), wmEmitPolicy);
     }
 
     /**

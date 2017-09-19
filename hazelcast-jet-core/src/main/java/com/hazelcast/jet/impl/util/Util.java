@@ -298,7 +298,6 @@ public final class Util {
         return -1;
     }
 
-
     /**
      * Util method to get around findbugs issue https://github.com/findbugsproject/findbugs/issues/79
      */

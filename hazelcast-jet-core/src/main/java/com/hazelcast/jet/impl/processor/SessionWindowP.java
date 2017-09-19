@@ -155,7 +155,7 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
             snapshotTraverser = Traversers.traverseIterable(keyToWindows.entrySet())
                     .onFirstNull(() -> snapshotTraverser = null);
         }
-        return emitSnapshotFromTraverser(snapshotTraverser);
+        return emitFromTraverserToSnapshot(snapshotTraverser);
     }
 
     @Override

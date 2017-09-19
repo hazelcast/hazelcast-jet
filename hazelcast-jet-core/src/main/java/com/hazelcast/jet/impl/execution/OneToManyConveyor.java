@@ -14,11 +14,23 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet;
+package com.hazelcast.jet.impl.execution;
 
-/**
- * Marker interface for items which are always broadcast along an edge,
- * regardless of the configured {@link com.hazelcast.jet.Edge.RoutingPolicy}.
- */
-public interface BroadcastItem {
+import com.hazelcast.jet.impl.util.ProgressState;
+
+import java.util.function.Function;
+
+public class OneToManyConveyor {
+
+    public OneToManyConveyor(Function<Object, ProgressState>[] consumers) {
+
+    }
+
+    ProgressState offer() {
+        return null;
+    }
+
+    ProgressState offerBroadcast() {
+        return null;
+    }
 }

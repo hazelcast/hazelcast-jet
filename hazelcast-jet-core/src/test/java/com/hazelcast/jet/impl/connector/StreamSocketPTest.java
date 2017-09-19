@@ -70,7 +70,7 @@ public class StreamSocketPTest extends JetTestSupport {
             thread.start();
 
             Processor processor = SourceProcessors.streamSocket("localhost", serverSocket.getLocalPort(), UTF_8).get();
-            processor.init(outbox, context);
+            processor.init(outbox, outbox, context);
 
             assertTrue(processor.complete());
             assertEquals("hello", bucket.poll());

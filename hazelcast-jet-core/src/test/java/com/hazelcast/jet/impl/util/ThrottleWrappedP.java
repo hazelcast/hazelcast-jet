@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.util;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.Outbox;
 import com.hazelcast.jet.Processor;
+import com.hazelcast.jet.SnapshotOutbox;
 
 import javax.annotation.Nonnull;
 
@@ -44,9 +45,8 @@ public final class ThrottleWrappedP implements Processor {
     }
 
     @Override
-    public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
-        outbox = new ThrottlingOutbox(outbox);
-        wrappedProcessor.init(outbox, context);
+    public void init(@Nonnull Outbox outbox, @Nonnull SnapshotOutbox snapshotOutbox, @Nonnull Context context) {
+        wrappedProcessor.init(new ThrottlingOutbox(outbox), snapshotOutbox, context);
     }
 
     @Override
@@ -126,11 +126,6 @@ public final class ThrottleWrappedP implements Processor {
         @Override
         public boolean offer(int[] ordinals, @Nonnull Object item) {
             return wrappedOutbox.offer(ordinals, item);
-        }
-
-        @Override
-        public boolean offerToSnapshot(Object key, Object value) {
-            return wrappedOutbox.offerToSnapshot(key, value);
         }
     }
 }

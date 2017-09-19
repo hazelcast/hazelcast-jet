@@ -45,7 +45,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
 import static com.hazelcast.jet.Util.entry;
@@ -80,9 +79,12 @@ public class SlidingWindowPTest {
 
     @Parameters(name = "hasDeduct={0}, singleStageProcessor={1}")
     public static Collection<Object[]> parameters() {
-        return IntStream.range(0, 4)
-                        .mapToObj(i -> new Boolean[]{(i & 2) == 2, (i & 1) == 1})
-                        .collect(toList());
+        return Arrays.asList(
+                new Object[]{true, true},
+                new Object[]{true, false},
+                new Object[]{false, true},
+                new Object[]{false, false}
+        );
     }
 
     @Before
@@ -130,9 +132,12 @@ public class SlidingWindowPTest {
                         event(0, 1),
                         wm(3)),
                 asList(
+                        outboxFrame(0, 1),
+                        outboxFrame(1, 1),
+                        outboxFrame(2, 1),
                         outboxFrame(3, 1),
                         wm(3)
-                ), true, true, false, false, Objects::equals);
+                ), true, true, true, false, Objects::equals);
     }
 
     @Test
@@ -258,12 +263,15 @@ public class SlidingWindowPTest {
                         event(0L, 1L), // to frame 0
                         event(1L, 1L) // to frame 1
                         // no WM to emit any window, everything should be emitted in complete as if we received
-                        // wm(3), wm(4)
+                        // wm(5)
                 ),
                 asList(
+                        outboxFrame(0, 1),
+                        outboxFrame(1, 2),
+                        outboxFrame(2, 2),
                         outboxFrame(3, 2),
                         outboxFrame(4, 1)
-                ), true, true, false, true, Objects::equals);
+                ), true, true, true, true, Objects::equals);
     }
 
     private Entry<Long, ?> event(long frameTs, long value) {
