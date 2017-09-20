@@ -20,7 +20,6 @@ import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.Inbox;
 import com.hazelcast.jet.ResettableSingletonTraverser;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Watermark;
 import com.hazelcast.jet.WatermarkEmissionPolicy;
 import com.hazelcast.jet.WatermarkPolicy;
@@ -118,12 +117,11 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
 
     private Traverser<Object> traverser(Object item) {
         long timestamp = getTimestampF.applyAsLong((T) item);
-        if (timestamp < currWm) {
-            // drop late event
-            return Traversers.empty();
-        }
         currWm = wmPolicy.reportEvent(timestamp);
-        singletonTraverser.accept(item);
+        if (timestamp >= currWm) {
+            // only emit non-late events
+            singletonTraverser.accept(item);
+        }
         if (wmEmitPolicy.shouldEmit(currWm, lastEmittedWm)) {
             lastEmittedWm = currWm;
             return singletonTraverser.prepend(new Watermark(currWm));

@@ -66,7 +66,8 @@ public class InsertWatermarksPTest {
     private List<Object> resultToCheck = new ArrayList<>();
     private Context context;
     private WatermarkPolicy wmPolicy = withFixedLag(LAG).get();
-    private WatermarkEmissionPolicy wmEmissionPolicy = (WatermarkEmissionPolicy) (currentWm, lastEmittedWm) -> true;
+    private WatermarkEmissionPolicy wmEmissionPolicy = (WatermarkEmissionPolicy) (currentWm, lastEmittedWm) ->
+            currentWm > lastEmittedWm;
 
     @Parameters(name = "outboxCapacity={0}")
     public static Collection<Object> parameters() {
@@ -179,11 +180,12 @@ public class InsertWatermarksPTest {
                         item(13)
                 ),
                 asList(
-                        item(10), // no WM before this item. WM would be 7 and this is not on the verge of a frame
-                        wm(8),
+                        wm(7), // corresponds to frame(6)
+                        item(10),
+                        wm(8), // corresponds to frame(8)
                         item(11),
                         item(12),
-                        wm(10),
+                        wm(10), // corresponds to frame(10)
                         item(13)
                 )
         );
@@ -212,7 +214,7 @@ public class InsertWatermarksPTest {
     }
 
     @Test
-    public void emitByFrame_when_gapBetweenEvents_then_manyWms() {
+    public void emitByFrame_when_gapBetweenEvents_then_gapInWms() {
         wmEmissionPolicy = emitByFrame(tumblingWindowDef(2));
         doTest(
                 asList(
@@ -221,7 +223,6 @@ public class InsertWatermarksPTest {
                 asList(
                         wm(8),
                         item(11),
-                        wm(10),
                         wm(12),
                         item(15))
         );

@@ -18,8 +18,6 @@ package com.hazelcast.jet;
 
 import com.hazelcast.jet.impl.execution.BroadcastKeyReference;
 
-import java.io.Serializable;
-
 /**
  * Marker interface for a key in the snapshot state that indicates the
  * corresponding entry should be broadcast to all processors
@@ -27,7 +25,7 @@ import java.io.Serializable;
  *
  * @param <K> type of key
  */
-public interface BroadcastKey<K> extends Serializable {
+public interface BroadcastKey<K> {
 
     /**
      * Returns the underlying key

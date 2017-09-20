@@ -39,6 +39,8 @@ import java.util.stream.LongStream;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.function.DistributedComparator.naturalOrder;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static com.hazelcast.util.Preconditions.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -70,11 +72,10 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     private Traverser<Object> flushTraverser;
     private Traverser<Entry> snapshotTraverser;
 
-    // These two fields track the upper and lower bounds for the keyset of
-    // tsToKeyToAcc. They serve as an optimization that avoids a linear search
+    // This field tracks the upper bounds for the keyset of
+    // tsToKeyToAcc. It serves as an optimization that avoids a linear search
     // over the entire keyset.
     private long topTs = Long.MIN_VALUE;
-    private long bottomTs = Long.MAX_VALUE;
 
     private long nextWinToEmit = Long.MIN_VALUE;
 
@@ -108,7 +109,6 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
                             .computeIfAbsent(key, k -> aggrOp.createFn().get());
         aggrOp.accumulateFn().accept(acc, t);
         topTs = max(topTs, frameTs);
-        bottomTs = min(bottomTs, frameTs);
         return true;
     }
 
@@ -124,7 +124,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
 
     @Override
     public boolean saveSnapshot() {
-        if (!isLastStage) {
+        if (!isLastStage || flushTraverser != null) {
             return flushBuffers();
         }
         if (snapshotTraverser == null) {
@@ -140,7 +140,6 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
 
     @Override
     public void restoreSnapshot(@Nonnull Inbox inbox) {
-        System.out.println("Restoring snapshot");
         for (Map.Entry e; (e = (Map.Entry) inbox.poll()) != null; ) {
             if (e.getKey().equals(Keys.NEXT_WIN_TO_EMIT)) {
                 nextWinToEmit = (long) e.getValue();
@@ -153,22 +152,20 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
                 throw new JetException("Duplicate key in snapshot: " + k);
             }
             topTs = max(topTs, k.timestamp);
-            bottomTs = min(bottomTs, k.timestamp);
         }
     }
 
     @Override
     public boolean finishSnapshotRestore() {
-        System.out.println("finishSnapshotRestore: " + nextWinToEmit);
+        logFine(getLogger(), "Restored snapshot to: %s", nextWinToEmit);
         return true;
     }
 
     private Traverser<Object> windowTraverserAndEvictor(long wm) {
-        assert wm == wDef.floorFrameTs(wm) : "wm not aligned on frame";
         if (nextWinToEmit == Long.MIN_VALUE) {
             if (tsToKeyToAcc.isEmpty()) {
-                // no item was observed, but initialize nextWinToEmit
-                nextWinToEmit = wm + wDef.frameLength();
+                // no item was observed, but initialize nextWinToEmit to the next window
+                nextWinToEmit = wDef.higherFrameTs(wm);
                 return Traversers.empty();
             }
             // This is the first watermark we are acting upon. Find the lowest frame
@@ -178,10 +175,14 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
             // initialized using the "add leading/deduct trailing" approach because we
             // start from a window that covers at most one existing frame -- the lowest
             // one on record.
-            nextWinToEmit = min(bottomTs, wm);
+            long bottomTs = tsToKeyToAcc
+                    .keySet().stream()
+                    .min(naturalOrder())
+                    .orElseThrow(() -> new AssertionError("Failed to find the min key in a non-empty map"));
+            nextWinToEmit = min(bottomTs, wDef.floorFrameTs(wm));
         }
-        // compute the first window that needs to be emitted
         long rangeStart = nextWinToEmit;
+        nextWinToEmit = wDef.higherFrameTs(wm);
         return traverseStream(range(rangeStart, wm, wDef.frameLength()).boxed())
                 .flatMap(window -> traverseIterable(computeWindow(window).entrySet())
                         .map(e -> new TimestampedEntry<>(window, e.getKey(), aggrOp.finishFn().apply(e.getValue())))
@@ -231,7 +232,6 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     private void completeWindow(long frameTs) {
         long frameToEvict = frameTs - wDef.windowLength() + wDef.frameLength();
         Map<Object, A> evictedFrame = tsToKeyToAcc.remove(frameToEvict);
-        nextWinToEmit = frameTs + wDef.frameLength();
         if (!wDef.isTumbling() && aggrOp.deductFn() != null) {
             // deduct trailing-edge frame
             patchSlidingWindow(aggrOp.deductFn(), evictedFrame);
