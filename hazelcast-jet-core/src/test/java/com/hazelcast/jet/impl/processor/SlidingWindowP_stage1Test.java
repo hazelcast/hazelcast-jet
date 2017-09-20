@@ -49,10 +49,10 @@ public class SlidingWindowP_stage1Test {
 
     private static final long KEY = 77L;
 
-    private SlidingWindowP<Entry<Long, Long>, Long, ?> processor;
-
     @Rule
     public ExpectedException exception = ExpectedException.none();
+
+    private SlidingWindowP<Entry<Long, Long>, Long, ?> processor;
 
     @Before
     @SuppressWarnings("unchecked")
