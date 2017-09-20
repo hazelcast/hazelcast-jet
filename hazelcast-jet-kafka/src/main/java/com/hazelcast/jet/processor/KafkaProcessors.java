@@ -37,10 +37,17 @@ public final class KafkaProcessors {
      * topics and emits items from them as {@code Map.Entry} instances.
      * <p>
      * One {@code KafkaConsumer} is created per {@code Processor} instance
-     * using the supplied {@code properties}. All processors are in the same
-     * consumer group as specified by the {@code group.id} property. The
-     * supplied properties will be passed on to the {@code KafkaConsumer}
-     * instance.
+     * using the supplied {@code properties}. Subset of Kafka partitions is
+     * assigned to each of them using manual partition assignment (the {@code
+     * group.id} property is ignored).
+     * <p>
+     * If snapshotting is enabled, partition offsets are saved to the snapshot.
+     * After restart, the events are emitted from the same offset.
+     * <p>
+     * If snapshotting is disabled, offsets are committed to kafka using
+     * {@link org.apache.kafka.clients.consumer.KafkaConsumer#commitSync()
+     * commitSync()}. Note however, that offsets can be committed before or
+     * after the event is fully processed.
      * <p>
      * The processor completes only in case of an error or if the job is
      * cancelled.
@@ -51,7 +58,6 @@ public final class KafkaProcessors {
      */
     public static ProcessorMetaSupplier streamKafka(Properties properties, String... topics) {
         Preconditions.checkPositive(topics.length, "At least one topic must be supplied");
-        Preconditions.checkTrue(properties.containsKey("group.id"), "Properties should contain `group.id`");
         properties.put("enable.auto.commit", false);
 
         return new StreamKafkaP.MetaSupplier(properties, Arrays.asList(topics));
@@ -61,10 +67,14 @@ public final class KafkaProcessors {
      * Returns a meta-supplier of processor that publishes messages to an
      * Apache Kafka topic. It expects items of type {@code Map.Entry<K,V>} on
      * input and publishes them to Apache Kafka.
-     *
+     * <p>
      * A single {@code KafkaProducer} is created per node using the supplied
      * properties file. The producer instance is shared across all {@code
      * Processor} instances on that node.
+     * <p>
+     * Behavior on job restart: the processor is stateless. If the job is
+     * restarted, duplicate events can occur. If you need exactly once
+     * behaviour, idempotence must be ensured on the application level.
      *
      * @param <K>        type of keys written
      * @param <V>        type of values written
