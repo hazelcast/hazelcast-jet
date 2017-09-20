@@ -36,7 +36,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
@@ -44,7 +43,7 @@ import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
-import static com.hazelcast.jet.test.TestSupport.testProcessor;
+import static com.hazelcast.jet.test.TestSupport.verifyProcessor;
 import static java.util.Arrays.asList;
 import static java.util.Collections.shuffle;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -122,7 +121,9 @@ public class SessionWindowPTest {
         List<Object> expectedOutbox = new ArrayList<>();
         expectedSessions("a").forEach(expectedOutbox::add);
 
-        testProcessor(supplier, inbox, expectedOutbox, true, true, true, true, Objects::equals);
+        verifyProcessor(supplier)
+                .input(inbox)
+                .expectOutput(expectedOutbox);
     }
 
     private void assertCorrectness(List<Object> events) {
@@ -133,8 +134,10 @@ public class SessionWindowPTest {
         events.add(new Watermark(100));
 
         try {
-            testProcessor(supplier, events, expectedSessions, true, true, false, true,
-                    (e, a) -> new HashSet(e).equals(new HashSet(a)));
+            verifyProcessor(supplier)
+                    .outputChecker((e, a) -> new HashSet(e).equals(new HashSet(a)))
+                    .input(events)
+                    .expectOutput(expectedSessions);
         } catch (AssertionError e) {
             System.err.println("Tested with events: " + events);
             throw e;

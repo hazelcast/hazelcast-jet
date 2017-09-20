@@ -38,7 +38,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
-import static com.hazelcast.jet.test.TestSupport.testProcessor;
+import static com.hazelcast.jet.test.TestSupport.verifyProcessor;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static org.junit.Assert.assertTrue;
@@ -74,8 +74,10 @@ public class SlidingWindowP_stage1Test {
 
     @Test
     public void smokeTest() {
-        testProcessor(() -> processor,
-                asList(
+        verifyProcessor(processor)
+                .doSnapshots(false)
+                .callComplete(false)
+                .input(asList(
                         entry(0L, 1L), // to frame 4
                         entry(1L, 1L), // to frame 4
                         wm(4), // closes frame 4
@@ -88,8 +90,8 @@ public class SlidingWindowP_stage1Test {
                         wm(12),
                         wm(16),
                         wm(20) // closes everything
-                ),
-                asList(
+                ))
+                .expectOutput(asList(
                         frame(4, 2),
                         wm(4),
                         frame(8, 2),
@@ -98,21 +100,23 @@ public class SlidingWindowP_stage1Test {
                         wm(12),
                         wm(16),
                         wm(20)
-                ), true, false, false, false, Object::equals);
+                ));
     }
 
     @Test
-    public void when_gapInwmAfterEvent_then_frameAndWmEmitted() {
-        testProcessor(() -> processor,
-                asList(
+    public void when_gapInWmAfterEvent_then_frameAndWmEmitted() {
+        verifyProcessor(processor)
+                .doSnapshots(false)
+                .callComplete(false)
+                .input(asList(
                         entry(0L, 1L), // to frame 4
                         entry(1L, 1L), // to frame 4
                         wm(12) // closes frame
-                ),
-                asList(
+                ))
+                .expectOutput(asList(
                         frame(4, 2),
                         wm(12)
-                ), true, false, false, false, Object::equals);
+                ));
     }
 
     @Test
@@ -123,41 +127,48 @@ public class SlidingWindowP_stage1Test {
                 wm(12)
         );
 
-        testProcessor(() -> processor, someWms, someWms, true, false, false, false, Object::equals);
+        verifyProcessor(processor)
+                .doSnapshots(false)
+                .callComplete(false)
+                .input(someWms)
+                .expectOutput(someWms);
     }
 
     @Test
     public void when_batch_then_emitEverything() {
-        testProcessor(() -> processor,
-                asList(
+        verifyProcessor(processor)
+                .doSnapshots(false)
+                .callComplete(true)
+                .input(asList(
                         entry(0L, 1L), // to frame 4
                         entry(4L, 1L), // to frame 8
                         entry(8L, 1L), // to frame 12
                         wm(4) // closes frame 4
                         // no WM to emit any window, everything should be emitted in complete as if we received
                         // wm(4), wm(8), wm(12)
-                ),
-                asList(
+                ))
+                .expectOutput(asList(
                         frame(4, 1),
                         wm(4),
                         frame(8, 1),
                         frame(12, 1)
-                ), true, false, false, true, Object::equals);
+                ));
     }
 
     @Test
     public void when_wmNeverReceived_then_emitEverythingInComplete() {
-        testProcessor(() -> processor,
-                asList(
-                        entry(0L, 1L), // to frame 4
+        verifyProcessor(processor)
+                .doSnapshots(false)
+                .callComplete(true)
+                .input(asList(entry(0L, 1L), // to frame 4
                         entry(4L, 1L) // to frame 8
                         // no WM to emit any window, everything should be emitted in complete as if we received
                         // wm(4), wm(8)
-                ),
-                asList(
+                ))
+                .expectOutput(asList(
                         frame(4, 1),
                         frame(8, 1)
-                ), true, false, false, true, Object::equals);
+                ));
     }
 
     @Test
@@ -165,12 +176,13 @@ public class SlidingWindowP_stage1Test {
         exception.expect(AssertionError.class);
         exception.expectMessage("late");
 
-        testProcessor(() -> processor,
-                asList(
-                        wm(16),
+        verifyProcessor(processor)
+                .doSnapshots(false)
+                .callComplete(false)
+                .input(asList(wm(16),
                         entry(7, 1)
-                ),
-                emptyList(), true, false, false, false, Object::equals);
+                ))
+                .expectOutput(emptyList());
     }
 
     private static TimestampedEntry<Long, LongAccumulator> frame(long timestamp, long value) {

@@ -20,7 +20,6 @@ import com.hazelcast.config.NetworkConfig;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.ProcessorMetaSupplier;
 import com.hazelcast.jet.ProcessorSupplier;
-import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.test.TestOutbox.MockData;
 import com.hazelcast.nio.Address;
 
@@ -41,11 +40,81 @@ import java.util.stream.Collectors;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.test.JetAssert.assertEquals;
 import static com.hazelcast.jet.test.JetAssert.assertTrue;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
- * Utilities to write unit tests.
+ * A utility to test processors. It will initialize the processor instance,
+ * pass input items to it and assert the outbox contents.
+ * <p>
+ * This method does the following:
+ * <ul>
+ *     <li>initializes the processor by calling {@link Processor#init(
+ *     com.hazelcast.jet.Outbox, com.hazelcast.jet.SnapshotOutbox, com.hazelcast.jet.Processor.Context)
+ *     Processor.init()}
+ *
+ *     <li>does snapshot+restore (optional, see below)
+ *
+ *     <li>calls {@link Processor#process(int, com.hazelcast.jet.Inbox)
+ *     Processor.process(0, inbox)}, the inbox always contains one item
+ *     from {@code input} parameter
+ *
+ *     <li>every time the inbox gets empty does snapshot+restore
+ *
+ *     <li>calls {@link Processor#complete()} until it returns {@code true}
+ *     ({@link #callComplete(boolean) optional})
+ *
+ *     <li>does snapshot+restore after {@code complete()} returned {@code
+ *     false}
+ * </ul>
+ * The {@link #doSnapshots(boolean) optional} snapshot+restore test procedure:
+ * <ul>
+ *     <li>{@code saveSnapshot()} is called
+ *
+ *     <li>new processor instance is created, from now on only this
+ *     instance will be used
+ *
+ *     <li>snapshot is restored using {@code restoreSnapshot()}
+ *
+ *     <li>{@code finishSnapshotRestore()} is called
+ * </ul>
+ * <p>
+ * For each call to any processing method the progress is asserted ({@link
+ * #assertProgress(boolean) optional}). The processor must do at least one of
+ * these:<ul>
+ *     <li>take something from inbox
+ *     <li>put something to outbox
+ *     <li>for boolean-returning methods, returning {@code true} is
+ *     considered as making progress
+ * </ul>
+ * <h4>Cooperative processors</h4>
+ * For cooperative processors a 1-capacity outbox will be provided, which
+ * will additionally be full in every other call to {@code process()}. This
+ * will test the edge case: the {@code process()} method is called even
+ * when the outbox is full to give the processor a chance to process inbox.
+ * The snapshot outbox will also have capacity of 1 for a cooperative
+ * processor.
+ * <p>
+ * Additionally, time spent in each call to processing method must not
+ * exceed {@link #cooperativeTimeout(long)}.
+ * <h4>Not-covered cases</h4>
+ * This class does not cover these cases:<ul>
+ *     <li>Testing of processors which distinguish input or output edges
+ *     by ordinal
+ *     <li>Checking that the state of a stateful processor is empty at the
+ *     end (you can do that yourself afterwards with the last instance
+ *     returned from your supplier).
+ *     <li>This utility never calls {@link Processor#tryProcess()}.
+ * </ul>
+ *
+ * <h4>Example usage</h4>
+ * This will test one of the jet-provided processors:
+ * <pre>{@code
+ * TestSupport.verifyProcessor(Processors.map((String s) -> s.toUpperCase()))
+ *         .input(asList("foo", "bar"))
+ *         .expectOutput(asList("FOO", "BAR"));
+ * }</pre>
  */
 public final class TestSupport {
 
@@ -65,162 +134,163 @@ public final class TestSupport {
         }
     }
 
-    private TestSupport() {
+    private Supplier<Processor> supplier;
+    private List<?> input = emptyList();
+    private List<?> expectedOutput = emptyList();
+    private boolean assertProgress = true;
+    private boolean doSnapshots = true;
+    private boolean logInputOutput;
+    private boolean callComplete = true;
+    private long cooperativeTimeout = COOPERATIVE_TIME_LIMIT_MS_FAIL;
+    private BiPredicate<? super List<?>, ? super List<?>> outputChecker = Objects::equals;
+
+    private TestSupport(@Nonnull Supplier<Processor> supplier) {
+        this.supplier = supplier;
     }
 
     /**
-     * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean, boolean, boolean, BiPredicate)}
-     * with progress assertion and snapshot+restore enabled.
+     * @param processor a processor instance to test. {@link #doSnapshots(boolean)}
+     *                  will be set to {@code false}, because we'd need new instance after each
+     *                  restore.
      */
-    public static <T, U> void testProcessor(@Nonnull DistributedSupplier<Processor> supplier,
-                                            @Nonnull List<T> input, @Nonnull List<U> expectedOutput) {
-        testProcessor(supplier, input, expectedOutput, true, true, false, true, Objects::equals);
+    public static  TestSupport verifyProcessor(Processor processor) {
+        return new TestSupport(singletonSupplier(processor))
+                .doSnapshots(false);
     }
 
     /**
-     * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean, boolean, boolean, BiPredicate)}
-     * with progress assertion and snapshot+restore enabled.
+     * @param supplier a processor supplier create processor instances
      */
-    public static <T, U> void testProcessor(@Nonnull ProcessorSupplier supplier,
-                                            @Nonnull List<T> input, @Nonnull List<U> expectedOutput) {
-        testProcessor(supplierFrom(supplier), input, expectedOutput, true, true, false, true, Objects::equals);
+    public static  TestSupport verifyProcessor(@Nonnull Supplier<Processor> supplier) {
+        return new TestSupport(supplier);
     }
 
     /**
-     * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean, boolean, boolean, BiPredicate)}
-     * with progress assertion and snapshot+restore enabled.
+     * @param supplier a processor supplier create processor instances
      */
-    public static <T, U> void testProcessor(@Nonnull ProcessorMetaSupplier supplier,
-                                            @Nonnull List<T> input, @Nonnull List<U> expectedOutput) {
-        testProcessor(supplierFrom(supplier), input, expectedOutput, true, true, false, true, Objects::equals);
+    public static  TestSupport verifyProcessor(@Nonnull ProcessorSupplier supplier) {
+        return new TestSupport(supplierFrom(supplier));
     }
 
     /**
-     * Convenience for {@link #testProcessor(Supplier, List, List, boolean, boolean, boolean, boolean, BiPredicate)}
-     * with progress assertion enabled. Snapshot+restore is disabled
-     * since we don't have processor supplier and cannot create new instances
-     * of the processor.
+     * @param supplier a processor supplier create processor instances
      */
-    public static <T, U> void testProcessor(@Nonnull Processor processor, @Nonnull List<T> input,
-                                            @Nonnull List<U> expectedOutput) {
-        Processor[] p = {processor};
-        testProcessor(() -> {
-            try {
-                // return the processor only once: not suitable for snapshot testing
-                return p[0];
-            } finally {
-                p[0] = null;
-            }
-        }, input, expectedOutput, true, false, false, true, Objects::equals);
+    public static  TestSupport verifyProcessor(@Nonnull ProcessorMetaSupplier supplier) {
+        return new TestSupport(supplierFrom(supplier));
     }
 
     /**
-     * A utility to test processors. It will initialize the processor instance,
-     * pass input items to it and assert the outbox contents.
+     * Sets the input objects for processor.
      * <p>
-     * This method does the following:
-     * <ul>
-     *     <li>initializes the processor by calling {@link Processor#init(
-     *     com.hazelcast.jet.Outbox, com.hazelcast.jet.SnapshotOutbox, com.hazelcast.jet.Processor.Context)}
+     * Defaults to empty list.
      *
-     *     <li>does snapshot+restore (see below)
-     *
-     *     <li>calls {@link Processor#process(int, com.hazelcast.jet.Inbox)
-     *     Processor.process(0, inbox)}, the inbox always contains one item
-     *     from {@code input} parameter
-     *
-     *     <li>every time the inbox gets empty does does snapshot+restore
-     *
-     *     <li>calls {@link Processor#complete()} until it returns {@code true}
-     *
-     *     <li>does snapshot+restore after {@code complete()} returned {@code
-     *     false}
-     * </ul>
-     * The snapshot+restore test procedure:
-     * <ul>
-     *     <li>{@code saveSnapshot()} is called
-     *
-     *     <li>new processor instance is created, from now on only this
-     *     instance will be used
-     *
-     *     <li>snapshot is restored using {@code restoreSnapshot()}
-     *
-     *     <li>{@code finishSnapshotRestore()} is called
-     * </ul>
-     * <p>
-     * For each call to any processing method the progress is asserted. The
-     * processor must do at least one of these:<ul>
-     *     <li>take something from inbox
-     *     <li>put something to outbox
-     *     <li>for boolean-returning methods, returning {@code true} is
-     *     considered as making progress
-     * </ul>
-     * <h4>Cooperative processors</h4>
-     * For cooperative processors a 1-capacity outbox will be provided, which
-     * will additionally be full in every other call to {@code process()}. This
-     * will test the edge case: the {@code process()} method is called even
-     * when the outbox is full to give the processor a chance to process inbox.
-     * The snapshot outbox will also have capacity of 1 for a cooperative
-     * processor.
-     * <p>
-     * Additionally, time spent in each call to processing method must not
-     * exceed {@link #COOPERATIVE_TIME_LIMIT_MS_FAIL}.
-     * <h4>Not-covered cases</h4>
-     * This class does not cover these cases:<ul>
-     *     <li>Testing of processors which distinguish input or output edges
-     *     by ordinal
-     *     <li>Checking that the state of a stateful processor is empty at the
-     *     end (you can do that yourself afterwards with the last instance
-     *     returned from your supplier).
-     *     <li>This utility never calls {@link Processor#tryProcess()}.
-     * </ul>
-     *
-     * <h4>Example usage</h4>
-     * This will test one of the jet-provided processors:
-     * <pre>{@code
-     * TestSupport.testProcessor(
-     *         Processors.map((String s) -> s.toUpperCase()),
-     *         asList("foo", "bar"),
-     *         asList("FOO", "BAR")
-     * );
-     * }</pre>
-     * @param <T> input items type
-     * @param <U> output items type
-     * @param supplier a processor instance to test
-     * @param input input to pass
-     * @param expectedOutput expected output
-     * @param assertProgress if false, progress will not be asserted after
-     *                       {@code process()} and {@code complete()} calls
-     * @param doSnapshots if true, snapshot will be saved and restored before
-     *                    first item and after each {@code process()} and {@code
-     *                    complete()} call. The normal test will be performed too (as
-     *                    if this parameter was {@code false})
-     * @param logInputOutput if {@code true}, input and output objects
-     *                       will be logged
-     * @param callComplete Whether to call {@code complete()} method. Suitable for
-     *                     testing of streaming processors to make sure that flushing code in
-     *                     complete is not executed.
-     * @param outputChecker Predicate to compare expected and actual output.
+     * @return {@code this} instance for fluent API.
      */
-    public static <T, U> void testProcessor(@Nonnull Supplier<Processor> supplier,
-                                            @Nonnull List<T> input,
-                                            @Nonnull List<U> expectedOutput,
-                                            boolean assertProgress,
-                                            boolean doSnapshots,
-                                            boolean logInputOutput,
-                                            boolean callComplete,
-                                            @Nonnull BiPredicate<? super List<U>, ? super List<Object>> outputChecker) {
+    public TestSupport input(@Nonnull List<?> input) {
+        this.input = input;
+        return this;
+    }
+
+    /**
+     * Sets the expected output.
+     * <p>
+     * Defaults to empty list.
+     */
+    public void expectOutput(@Nonnull List<?> expectedOutput) {
+        this.expectedOutput = expectedOutput;
+        runTest(doSnapshots);
+    }
+
+    /**
+     * If {@code false}, progress will not be asserted after {@code process()}
+     * and {@code complete()} calls.
+     * <p>
+     * Defaults to {@code true}.
+     *
+     * @return {@code this} instance for fluent API.
+     */
+    public TestSupport assertProgress(boolean assertProgress) {
+        this.assertProgress = assertProgress;
+        return this;
+    }
+
+    /**
+     * If {@code true}, snapshot will be saved and restored before first item
+     * and after each {@code process()} and {@code complete()} call. The normal
+     * test will be performed too (as if this parameter was {@code false}).
+     * <p>
+     * Defaults to {@code true}.
+     *
+     * @return {@code this} instance for fluent API.
+     */
+    public TestSupport doSnapshots(boolean doSnapshots) {
+        this.doSnapshots = doSnapshots;
+        return this;
+    }
+
+    /**
+     * If {@code true}, input and output objects will be logged as they are
+     * processed to standard output.
+     * <p>
+     * Defaults to {@code false}.
+     *
+     * @return {@code this} instance for fluent API.
+     */
+    public TestSupport logInputOutput(boolean logInputOutput) {
+        this.logInputOutput = logInputOutput;
+        return this;
+    }
+
+    /**
+     * Whether to call {@code complete()} method. Suitable for testing of
+     * streaming processors to make sure that flushing code in {@code
+     * complete()} method is not executed.
+     * <p>
+     * Defaults to {@code true}.
+     *
+     * @return {@code this} instance for fluent API.
+     */
+    public TestSupport callComplete(boolean callComplete) {
+        this.callComplete = callComplete;
+        return this;
+    }
+
+    /**
+     * If {@code true}, the test will fail if any call to processing method in
+     * cooperative processor exceeds this timeout. Has no effect for
+     * non-cooperative processors.
+     * <p>
+     * Default value is 1000ms.
+     *
+     * @return {@code this} instance for fluent API.
+     */
+    public TestSupport cooperativeTimeout(long cooperativeTimeout) {
+        this.cooperativeTimeout = cooperativeTimeout;
+        return this;
+    }
+
+    /**
+     * Predicate to compare expected and actual output.
+     * <p>
+     * Defaults to {@code Objects::equals}
+     *
+     * @return {@code this} instance for fluent API.
+     */
+    public TestSupport outputChecker(@Nonnull BiPredicate<? super List<?>, ? super List<?>> outputChecker) {
+        this.outputChecker = outputChecker;
+        return this;
+    }
+
+    private void runTest(boolean doSnapshots) {
         if (doSnapshots) {
             // if we test with snapshots, also do the test without snapshots
             System.out.println("### Running the test with doSnapshots=false");
-            testProcessor(supplier, input, expectedOutput, assertProgress, false, logInputOutput,
-                    callComplete, outputChecker);
+            runTest(false);
             System.out.println("### Running the test with doSnapshots=true");
         }
 
         TestInbox inbox = new TestInbox();
         Processor[] processor = {supplier.get()};
-        boolean failOnTimeout = false; // TODO
 
         // we'll use 1-capacity outbox to test cooperative emission, if the processor is cooperative
         int outboxCapacity = processor[0].isCooperative() ? 1 : Integer.MAX_VALUE;
@@ -231,11 +301,10 @@ public final class TestSupport {
         processor[0].init(outbox, outbox, new TestProcessorContext());
 
         // do snapshot+restore before processing any item. This will test saveSnapshot() in this edge case
-        snapshotAndRestore(processor, supplier, outbox, actualOutput, doSnapshots,
-                assertProgress, logInputOutput, failOnTimeout);
+        snapshotAndRestore(processor, outbox, actualOutput, doSnapshots);
 
         // call the process() method
-        Iterator<T> inputIterator = input.iterator();
+        Iterator<?> inputIterator = input.iterator();
         while (inputIterator.hasNext() || !inbox.isEmpty()) {
             if (inbox.isEmpty()) {
                 inbox.add(inputIterator.next());
@@ -243,19 +312,18 @@ public final class TestSupport {
                     System.out.println("Input: " + inbox.peek());
                 }
             }
-            checkTime("process", () -> processor[0].process(0, inbox), failOnTimeout);
+            checkTime("process", () -> processor[0].process(0, inbox));
             assertTrue("process() call without progress",
                     !assertProgress || inbox.isEmpty() || !outbox.queueWithOrdinal(0).isEmpty());
             if (processor[0].isCooperative() && outbox.queueWithOrdinal(0).size() == 1 && !inbox.isEmpty()) {
                 // if the outbox is full, call the process() method again. Cooperative
                 // processor must be able to cope with this situation and not try to put
                 // more items to the outbox.
-                checkTime("process", () -> processor[0].process(0, inbox), failOnTimeout);
+                checkTime("process", () -> processor[0].process(0, inbox));
             }
             drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
             if (inbox.isEmpty()) {
-                snapshotAndRestore(processor, supplier, outbox, actualOutput, doSnapshots,
-                        assertProgress, logInputOutput, failOnTimeout);
+                snapshotAndRestore(processor, outbox, actualOutput, doSnapshots);
             }
         }
 
@@ -263,12 +331,11 @@ public final class TestSupport {
         if (callComplete) {
             boolean[] done = {false};
             do {
-                checkTime("complete", () -> done[0] = processor[0].complete(), failOnTimeout);
+                checkTime("complete", () -> done[0] = processor[0].complete());
                 assertTrue("complete() call without progress",
                         !assertProgress || done[0] || !outbox.queueWithOrdinal(0).isEmpty());
                 drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
-                snapshotAndRestore(processor, supplier, outbox, actualOutput, doSnapshots,
-                        assertProgress, logInputOutput, failOnTimeout);
+                snapshotAndRestore(processor, outbox, actualOutput, doSnapshots);
             } while (!done[0]);
         }
 
@@ -278,10 +345,11 @@ public final class TestSupport {
         }
     }
 
-    private static void snapshotAndRestore(Processor[] processor, Supplier<Processor> supplier,
-                                           TestOutbox outbox, List<Object> actualOutput,
-                                           boolean enabled, boolean assertProgress, boolean logInputOutput,
-                                           boolean failOnTimeout) {
+    private void snapshotAndRestore(
+            Processor[] processor,
+            TestOutbox outbox,
+            List<Object> actualOutput,
+            boolean enabled) {
         if (!enabled) {
             return;
         }
@@ -291,7 +359,7 @@ public final class TestSupport {
         boolean[] done = {false};
         Set<Object> keys = new HashSet<>();
         do {
-            checkTime("saveSnapshot", () -> done[0] = processor[0].saveSnapshot(), failOnTimeout);
+            checkTime("saveSnapshot", () -> done[0] = processor[0].saveSnapshot());
             for (Entry<MockData, MockData> entry : outbox.snapshotQueue()) {
                 Object key = entry.getKey().getObject();
                 assertTrue("Duplicate key produced in saveSnapshot()\n  Duplicate: " + key + "\n  Keys so far: " + keys,
@@ -315,26 +383,26 @@ public final class TestSupport {
         }
         int lastInboxSize = snapshotInbox.size();
         while (!snapshotInbox.isEmpty()) {
-            checkTime("restoreSnapshot", () -> processor[0].restoreSnapshot(snapshotInbox), failOnTimeout);
+            checkTime("restoreSnapshot", () -> processor[0].restoreSnapshot(snapshotInbox));
             assertTrue("restoreSnapshot() call without progress",
                     !assertProgress || lastInboxSize > snapshotInbox.size() || !outbox.queueWithOrdinal(0).isEmpty());
             drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
             lastInboxSize = snapshotInbox.size();
         }
         do {
-            checkTime("finishSnapshotRestore", () -> done[0] = processor[0].finishSnapshotRestore(), failOnTimeout);
+            checkTime("finishSnapshotRestore", () -> done[0] = processor[0].finishSnapshotRestore());
             assertTrue("finishSnapshotRestore() call without progress",
                     !assertProgress || done[0] || !outbox.queueWithOrdinal(0).isEmpty());
             drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
         } while (!done[0]);
     }
 
-    private static void checkTime(String methodName, Runnable r, boolean failOnTimeout) {
+    private void checkTime(String methodName, Runnable r) {
         long start = System.nanoTime();
         r.run();
         long elapsed = System.nanoTime() - start;
 
-        if (failOnTimeout) {
+        if (cooperativeTimeout > 0) {
             assertTrue(String.format("call to %s() took %.1fms, it should be <%dms", methodName,
                     elapsed / (double) MILLISECONDS.toNanos(1), COOPERATIVE_TIME_LIMIT_MS_FAIL),
                     elapsed < MILLISECONDS.toNanos(COOPERATIVE_TIME_LIMIT_MS_FAIL));
@@ -381,5 +449,19 @@ public final class TestSupport {
         return list.stream()
                 .map(String::valueOf)
                 .collect(Collectors.joining("\n"));
+    }
+
+    private static Supplier<Processor> singletonSupplier(Processor processor) {
+        Processor[] processor1 = {processor};
+        return () -> {
+            if (processor1[0] == null) {
+                throw new RuntimeException("More than one instance requested - didn't you enable 'doSnapshots'?");
+            }
+            try {
+                return processor1[0];
+            } finally {
+                processor1[0] = null;
+            }
+        };
     }
 }

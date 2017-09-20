@@ -44,14 +44,13 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.stream.LongStream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.processor.Processors.aggregateToSlidingWindow;
 import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
-import static com.hazelcast.jet.test.TestSupport.testProcessor;
+import static com.hazelcast.jet.test.TestSupport.verifyProcessor;
 import static java.util.Arrays.asList;
 import static java.util.Collections.shuffle;
 import static java.util.Collections.singletonList;
@@ -122,28 +121,33 @@ public class SlidingWindowPTest {
     @Test
     public void when_noFramesReceived_then_onlyEmitWm() {
         List<Watermark> wmList = singletonList(wm(1));
-        testProcessor(supplier, wmList, wmList, true, true, false, false, Objects::equals);
+        verifyProcessor(supplier)
+                .callComplete(false)
+                .input(wmList)
+                .expectOutput(wmList);
     }
 
     @Test
     public void simple_smokeTest() {
-        testProcessor(supplier,
-                asList(
+        verifyProcessor(supplier)
+                .callComplete(false)
+                .input(asList(
                         event(0, 1),
-                        wm(3)),
-                asList(
+                        wm(3)))
+                .expectOutput(asList(
                         outboxFrame(0, 1),
                         outboxFrame(1, 1),
                         outboxFrame(2, 1),
                         outboxFrame(3, 1),
                         wm(3)
-                ), true, true, true, false, Objects::equals);
+                ));
     }
 
     @Test
     public void when_receiveAscendingTimestamps_then_emitAscending() {
-        testProcessor(supplier,
-                asList(
+        verifyProcessor(supplier)
+                .callComplete(false)
+                .input(asList(
                         event(0, 1),
                         event(1, 1),
                         event(2, 1),
@@ -156,8 +160,8 @@ public class SlidingWindowPTest {
                         wm(4),
                         wm(5),
                         wm(6),
-                        wm(7)
-                ), asList(
+                        wm(7)))
+                .expectOutput(asList(
                         outboxFrame(0, 1),
                         wm(0),
                         outboxFrame(1, 2),
@@ -174,13 +178,14 @@ public class SlidingWindowPTest {
                         wm(6),
                         outboxFrame(7, 1),
                         wm(7)
-                ), true, true, true, false, Objects::equals);
+                ));
     }
 
     @Test
     public void when_receiveDescendingTimestamps_then_emitAscending() {
-        testProcessor(supplier,
-                asList(
+        verifyProcessor(supplier)
+                .callComplete(false)
+                .input(asList(
                         event(4, 1),
                         event(3, 1),
                         event(2, 1),
@@ -194,7 +199,7 @@ public class SlidingWindowPTest {
                         wm(5),
                         wm(6),
                         wm(7)
-                ), asList(
+                )).expectOutput(asList(
                         outboxFrame(0, 1),
                         wm(0),
                         outboxFrame(1, 2),
@@ -211,7 +216,7 @@ public class SlidingWindowPTest {
                         wm(6),
                         outboxFrame(7, 1),
                         wm(7)
-                ), true, true, false, false, Objects::equals);
+                ));
     }
 
     @Test
@@ -253,25 +258,27 @@ public class SlidingWindowPTest {
                 wm(104),
                 wm(105)
         ));
-        testProcessor(supplier, inbox, expectedOutbox, true, true, false, false, Objects::equals);
+        verifyProcessor(supplier)
+                .callComplete(false)
+                .input(inbox)
+                .expectOutput(expectedOutbox);
     }
 
     @Test
     public void when_wmNeverReceived_then_emitEverythingInComplete() {
-        testProcessor(supplier,
-                asList(
+        verifyProcessor(supplier)
+                .input(asList(
                         event(0L, 1L), // to frame 0
                         event(1L, 1L) // to frame 1
                         // no WM to emit any window, everything should be emitted in complete as if we received
                         // wm(5)
-                ),
-                asList(
+                )).expectOutput(asList(
                         outboxFrame(0, 1),
                         outboxFrame(1, 2),
                         outboxFrame(2, 2),
                         outboxFrame(3, 2),
                         outboxFrame(4, 1)
-                ), true, true, true, true, Objects::equals);
+                ));
     }
 
     private Entry<Long, ?> event(long frameTs, long value) {
