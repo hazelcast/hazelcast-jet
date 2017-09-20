@@ -120,7 +120,6 @@ public class OutboxImpl implements Outbox, SnapshotOutbox {
         if (pendingSnapshotEntry == null) {
             // We serialize the key and value immediately to effectively clone them,
             // so the caller can modify them right after they are accepted by this method.
-            // TODO use Map's partitioning strategy, as in MapProxySupport.toDataWithStrategy
             Data sKey = serializationService.toData(key);
             Data sValue = serializationService.toData(value);
             pendingSnapshotEntry = entry(sKey, sValue);

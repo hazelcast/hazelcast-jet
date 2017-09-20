@@ -155,7 +155,6 @@ public class MasterContext {
         // last started snapshot complete or not complete. The next started snapshot must be greater than this number
         long lastSnapshotId = NO_SNAPSHOT;
         if (jobRecord.getConfig().getSnapshotInterval() > 0) {
-            // TODO [basri] verify snapshot
             Long snapshotIdToRestore = snapshotRepository.latestCompleteSnapshot(jobId);
             snapshotRepository.deleteSnapshots(jobId, snapshotIdToRestore);
             Long lastStartedSnapshot = snapshotRepository.latestStartedSnapshot(jobId);
@@ -177,7 +176,6 @@ public class MasterContext {
                     + "\n" + dag);
             logger.fine("Building execution plan for " + jobAndExecutionId(jobId, executionId));
             JobConfig jobConfig = jobRecord.getConfig();
-            // TODO [basri] why do ExecutionPlan receive last snapshot id? is it for assertions?
             executionPlanMap = ExecutionPlanBuilder.createExecutionPlans(nodeEngine,
                     membersView, dag, jobConfig, lastSnapshotId);
         } catch (TopologyChangedException e) {

@@ -67,6 +67,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.internal.util.concurrent.ConcurrentConveyor.concurrentConveyor;
+import static com.hazelcast.jet.config.EdgeConfig.DEFAULT_QUEUE_SIZE;
 import static com.hazelcast.jet.impl.execution.OutboundCollector.compositeCollector;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 import static com.hazelcast.jet.impl.util.Util.idToString;
@@ -78,8 +79,9 @@ import static java.util.stream.Collectors.toMap;
 
 public class ExecutionPlan implements IdentifiedDataSerializable {
 
-    // TODO configure queue capacity
-    private static final int SNAPSHOT_QUEUE_CAPACITY = 2048;
+    // use same size as DEFAULT_QUEUE_SIZE from Edges. In the future we might
+    // want to make this configurable
+    private static final int SNAPSHOT_QUEUE_SIZE = DEFAULT_QUEUE_SIZE;
 
     private final List<Tasklet> tasklets = new ArrayList<>();
     /** dest vertex id --> dest ordinal --> sender addr -> receiver tasklet */
@@ -132,7 +134,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
             // create StoreSnapshotTasklet and the queues to it
             QueuedPipe<Object>[] snapshotQueues = new QueuedPipe[srcVertex.parallelism()];
-            Arrays.setAll(snapshotQueues, i -> new OneToOneConcurrentArrayQueue<>(SNAPSHOT_QUEUE_CAPACITY));
+            Arrays.setAll(snapshotQueues, i -> new OneToOneConcurrentArrayQueue<>(SNAPSHOT_QUEUE_SIZE));
             ConcurrentConveyor<Object> ssConveyor = ConcurrentConveyor.concurrentConveyor(null, snapshotQueues);
             StoreSnapshotTasklet ssTasklet = new StoreSnapshotTasklet(snapshotContext, jobId,
                     new ConcurrentInboundEdgeStream(ssConveyor, 0, 0, lastSnapshotId, true),

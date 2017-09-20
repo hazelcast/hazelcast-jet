@@ -376,25 +376,15 @@ public class JobCoordinationService {
                         + snapshotId + " success: " + success);
                 return;
             }
-
             if (success) {
-                validateAndDeleteSnapshot(jobId, executionId, snapshotId);
-            } else {
-                scheduleSnapshot(jobId, executionId);
+                snapshotRepository.setSnapshotStatus(jobId, snapshotId, SUCCESSFUL);
+                snapshotRepository.deleteSnapshots(jobId, snapshotId);
             }
+            scheduleSnapshot(jobId, executionId);
         } else {
             logger.warning("MasterContext not found for finalize snapshot of " + jobAndExecutionId(jobId, executionId)
                     + " with result: " + success);
         }
-    }
-
-    private void validateAndDeleteSnapshot(long jobId, long executionId, long snapshotId) {
-        // TODO [basri] implement validation
-        logger.warning("Snapshot validation is not implemented yet. " + jobAndExecutionId(jobId, executionId)
-                + " snapshot " + snapshotId);
-        snapshotRepository.setSnapshotStatus(jobId, snapshotId, SUCCESSFUL);
-        snapshotRepository.deleteSnapshots(jobId, snapshotId);
-        scheduleSnapshot(jobId, executionId);
     }
 
     /**

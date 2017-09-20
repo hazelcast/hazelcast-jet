@@ -17,16 +17,16 @@
 package com.hazelcast.jet.config;
 
 /**
- * TODO javadoc
+ * TODO: javadoc
  */
 public enum ProcessingGuarantee {
     /**
-     * TODO javadoc
+     * TODO: javadoc
      */
     EXACTLY_ONCE,
 
     /**
-     * TODO javadoc
+     * TODO: javadoc
      */
     AT_LEAST_ONCE;
 }

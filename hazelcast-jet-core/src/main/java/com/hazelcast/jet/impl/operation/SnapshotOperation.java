@@ -52,14 +52,6 @@ public class SnapshotOperation extends AsyncExecutionOperation {
     }
 
     @Override
-    public void cancel() {
-        // TODO [basri] this call has no effect
-//        if (executionFuture != null) {
-//            executionFuture.toCompletableFuture().cancel(true);
-//        }
-    }
-
-    @Override
     public int getId() {
         return JetInitDataSerializerHook.SNAPSHOT_OP;
     }

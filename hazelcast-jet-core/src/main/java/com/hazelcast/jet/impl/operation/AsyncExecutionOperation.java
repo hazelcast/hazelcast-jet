@@ -66,7 +66,8 @@ public abstract class AsyncExecutionOperation extends Operation implements Ident
         }
     }
 
-    public abstract void cancel();
+    public void cancel() {
+    }
 
     protected abstract void doRun() throws Exception;
 

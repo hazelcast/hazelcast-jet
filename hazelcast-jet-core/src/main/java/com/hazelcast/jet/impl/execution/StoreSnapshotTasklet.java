@@ -139,7 +139,6 @@ public class StoreSnapshotTasklet implements Tasklet {
     }
 
     private String currMapName() {
-        //TODO: replace jobId with executionId
         return SnapshotRepository.snapshotDataMapName(jobId, pendingSnapshotId, vertexName);
     }
 

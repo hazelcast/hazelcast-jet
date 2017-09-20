@@ -94,7 +94,6 @@ public class AsyncMapWriter {
     }
 
     public void put(Object key, Object value) {
-        // TODO use Map's partitioning strategy, as in MapProxySupport.toDataWithStrategy
         Data keyData = serializationService.toData(key);
         Data valueData = serializationService.toData(value);
         put(entry(keyData, valueData));
