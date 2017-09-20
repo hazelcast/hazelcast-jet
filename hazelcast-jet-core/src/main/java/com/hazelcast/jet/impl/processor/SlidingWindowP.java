@@ -104,6 +104,8 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
         T t = (T) item;
         final long frameTs = getFrameTsFn.applyAsLong(t);
         assert frameTs == wDef.floorFrameTs(frameTs) : "getFrameTsFn returned an invalid frame timestamp";
+        assert frameTs + wDef.windowLength() >= nextWinToEmit
+                : "late event received, it should have been filtered out by InsertWatermarksP: " + item;
         final Object key = getKeyFn.apply(t);
         A acc = tsToKeyToAcc.computeIfAbsent(frameTs, x -> new HashMap<>())
                             .computeIfAbsent(key, k -> aggrOp.createFn().get());
@@ -142,7 +144,11 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     public void restoreSnapshot(@Nonnull Inbox inbox) {
         for (Map.Entry e; (e = (Map.Entry) inbox.poll()) != null; ) {
             if (e.getKey().equals(Keys.NEXT_WIN_TO_EMIT)) {
-                nextWinToEmit = (long) e.getValue();
+                long newNextWinToEmit = (long) e.getValue();
+                assert nextWinToEmit == Long.MIN_VALUE || nextWinToEmit == newNextWinToEmit
+                        : "different values for nextWinToEmit restored, "
+                                + "before=" + nextWinToEmit + ", new=" + newNextWinToEmit;
+                nextWinToEmit = newNextWinToEmit;
                 continue;
             }
             Entry<SnapshotKey, A> entry = (Entry<SnapshotKey, A>) e;

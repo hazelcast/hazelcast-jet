@@ -25,8 +25,10 @@ import com.hazelcast.test.annotation.ParallelTest;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import java.util.List;
@@ -38,6 +40,7 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
 import static com.hazelcast.jet.test.TestSupport.testProcessor;
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static org.junit.Assert.assertTrue;
 
 @Category({QuickTest.class, ParallelTest.class})
@@ -47,6 +50,9 @@ public class SlidingWindowP_stage1Test {
     private static final long KEY = 77L;
 
     private SlidingWindowP<Entry<Long, Long>, Long, ?> processor;
+
+    @Rule
+    public ExpectedException exception = ExpectedException.none();
 
     @Before
     @SuppressWarnings("unchecked")
@@ -152,6 +158,19 @@ public class SlidingWindowP_stage1Test {
                         frame(4, 1),
                         frame(8, 1)
                 ), true, false, false, true, Object::equals);
+    }
+
+    @Test
+    public void when_lateEvent_then_fail() {
+        exception.expect(AssertionError.class);
+        exception.expectMessage("late");
+
+        testProcessor(() -> processor,
+                asList(
+                        wm(16),
+                        entry(7, 1)
+                ),
+                emptyList(), true, false, false, false, Object::equals);
     }
 
     private static TimestampedEntry<Long, LongAccumulator> frame(long timestamp, long value) {
