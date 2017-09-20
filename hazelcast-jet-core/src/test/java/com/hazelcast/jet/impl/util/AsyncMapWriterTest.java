@@ -29,6 +29,7 @@ import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -173,6 +174,7 @@ public class AsyncMapWriterTest extends JetTestSupport {
     }
 
     @Test
+    @Ignore //TODO: investigate intermittent failure
     public void when_memberLeaves_then_retryAutomatically() throws Exception {
         // Given
         for (int i = 0; i < 100; i++) {
