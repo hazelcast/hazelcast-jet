@@ -130,13 +130,13 @@ public class JobCoordinationService {
     /**
      * Starts the job if it is not already started or completed. Returns a future which represents result of the job.
      */
-    public CompletableFuture<Boolean> submitJob(long jobId, Data dag, JobConfig config) {
+    public CompletableFuture<Boolean> submitOrJoinJob(long jobId, Data dag, JobConfig config) {
         if (!isMaster()) {
             throw new JetException("Job cannot be started here. Master address: "
                     + nodeEngine.getClusterService().getMasterAddress());
         }
 
-        // the order of operations are important.
+        // the order of operations is important.
 
         // first, check if the job is already completed
         JobResult jobResult = jobResults.get(jobId);
@@ -165,7 +165,7 @@ public class JobCoordinationService {
         // If there is no master context and job result at the same time, it means this is the first submission
         jobRepository.putNewJobRecord(jobRecord);
 
-        logger.info("Starting new job " + idToString(jobId));
+        logger.info("Starting job " + idToString(jobId) + " based on join/submit request from client");
         tryStartJob(masterContext);
         return masterContext.completionFuture();
     }
@@ -178,7 +178,7 @@ public class JobCoordinationService {
 
         JobRecord jobRecord = jobRepository.getJob(jobId);
         if (jobRecord != null) {
-            return submitJob(jobId, jobRecord.getDag(), jobRecord.getConfig());
+            return submitOrJoinJob(jobId, jobRecord.getDag(), jobRecord.getConfig());
         }
 
         JobResult jobResult = jobResults.get(jobId);
@@ -191,7 +191,7 @@ public class JobCoordinationService {
 
     // Tries to automatically start a job if it is not already running or completed
     private void startJobIfNotStartedOrCompleted(JobRecord jobRecord) {
-        // the order of operations are important.
+        // the order of operations is important.
 
         long jobId = jobRecord.getJobId();
         if (jobResults.containsKey(jobId) || masterContexts.containsKey(jobId)) {
@@ -211,7 +211,7 @@ public class JobCoordinationService {
             return;
         }
 
-        logger.info("Starting new job " + idToString(masterContext.getJobId()));
+        logger.info("Starting job " + idToString(masterContext.getJobId()) + " discovered by scanning of JobRecord-s");
         tryStartJob(masterContext);
     }
 

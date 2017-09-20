@@ -224,7 +224,7 @@ public class JetService
     }
 
     public CompletableFuture<Boolean> submitJob(long jobId, Data dag, JobConfig config) {
-        return jobCoordinationService.submitJob(jobId, dag, config);
+        return jobCoordinationService.submitOrJoinJob(jobId, dag, config);
     }
 
     public CompletableFuture<Boolean> joinSubmittedJob(long jobId) {
