@@ -35,15 +35,11 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import javax.annotation.Nonnull;
-import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -58,7 +54,8 @@ import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.util.Util.arrayIndexOf;
 import static com.hazelcast.jet.processor.Processors.aggregateToSlidingWindow;
 import static com.hazelcast.jet.processor.Processors.insertWatermarks;
-import static java.util.Arrays.asList;
+import static com.hazelcast.jet.processor.Processors.map;
+import static com.hazelcast.jet.processor.SinkProcessors.writeMap;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.joining;
@@ -72,9 +69,6 @@ import static org.junit.Assert.assertTrue;
 public class JobRestartWithSnapshotTest extends JetTestSupport {
 
     private static final int LOCAL_PARALLELISM = 4;
-
-    private static final ConcurrentMap<List<Long>, Long> result = new ConcurrentHashMap<>();
-    private static final AtomicInteger numOverwrites = new AtomicInteger();
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
@@ -133,6 +127,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         WindowDefinition wDef = WindowDefinition.tumblingWindowDef(3);
         AggregateOperation1<Object, LongAccumulator, Long> aggrOp = counting();
 
+        Map<long[], Long> result = instance1.getMap("result");
         result.clear();
 
         SequencesInPartitionsMetaSupplier sup = new SequencesInPartitionsMetaSupplier(3, 120);
@@ -145,14 +140,16 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                 t -> ((Entry<Integer, Integer>) t).getKey(),
                 t -> ((Entry<Integer, Integer>) t).getValue(),
                 TimestampKind.EVENT, wDef, aggrOp));
-        Vertex writeMap = dag.newVertex("writeMap", AddToMapP::new)
-                             .localParallelism(1);
+        Vertex map = dag.newVertex("map",
+                map((TimestampedEntry e) -> entry(new long[] {e.getTimestamp(), (int) e.getKey()}, e.getValue())));
+        Vertex writeMap = dag.newVertex("writeMap", writeMap("result"));
 
         dag.edge(between(generator, insWm))
            .edge(between(insWm, aggregate)
                    .distributed()
                    .partitioned(entryKey()))
-           .edge(between(aggregate, writeMap));
+           .edge(between(aggregate, map))
+           .edge(between(map, writeMap));
 
         JobConfig config = new JobConfig();
         config.setSnapshotIntervalMillis(1200);
@@ -183,18 +180,18 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         job.join();
 
         // compute expected result
-        Map<List<Long>, Long> expectedMap = new HashMap<>();
+        Map<long[], Long> expectedMap = new HashMap<>();
         for (long partition = 0; partition < sup.numPartitions; partition++) {
             long cnt = 0;
             for (long value = 1; value <= sup.elementsInPartition; value++) {
                 cnt++;
                 if (value % wDef.frameLength() == 0) {
-                    expectedMap.put(asList(value, partition), cnt);
+                    expectedMap.put(new long[] {value, partition}, cnt);
                     cnt = 0;
                 }
             }
             if (cnt > 0) {
-                expectedMap.put(asList(wDef.higherFrameTs(sup.elementsInPartition - 1), partition), cnt);
+                expectedMap.put(new long[] {wDef.higherFrameTs(sup.elementsInPartition - 1), partition}, cnt);
             }
         }
 
@@ -209,31 +206,26 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                     .map(Object::toString)
                     .collect(joining(", ")));
             System.out.println("Different keys: ");
-            for (Entry<List<Long>, Long> rEntry : result.entrySet()) {
+            for (Entry<long[], Long> rEntry : result.entrySet()) {
                 Long expectedValue = expectedMap.get(rEntry.getKey());
                 if (expectedValue != null && !expectedValue.equals(rEntry.getValue())) {
-                    System.out.println("key: " + rEntry.getKey() + ", expected value: " + expectedValue
+                    System.out.println("key: " + Arrays.toString(rEntry.getKey()) + ", expected value: " + expectedValue
                             + ", actual value: " + rEntry.getValue());
                 }
             }
             System.out.println("-- end of different keys");
-            assertEquals(expectedMap, result);
+            assertEquals(expectedMap, new HashMap<>(result));
         }
-
-        // This might be a bit racy if the abrupt shutdown of instance2 happens to be orderly (that is
-        // if nothing was processed after creating the snapshot). However, we produce 30 items/s, group
-        // them by 3, so every 100 ms new key should be written. And we wait for 300ms after snapshot...
-        assertTrue("Nothing was overwritten in the map", numOverwrites.get() > 0);
 
         assertTrue("Snapshots map not empty after job finished", snapshotsMap.isEmpty());
     }
 
     private void waitForNextSnapshot(IStreamMap<Long, Object> snapshotsMap, int timeout) {
-        SnapshotRecord maxRecord1 = findMaxRecord(snapshotsMap);
-        assertNotNull(maxRecord1);
+        SnapshotRecord maxRecord = findMaxRecord(snapshotsMap);
+        assertNotNull(maxRecord);
         // wait until there is at least one more snapshot
         assertTrueEventually(() -> assertTrue("No more snapshots produced after restart",
-                findMaxRecord(snapshotsMap).snapshotId() > maxRecord1.snapshotId()), timeout);
+                findMaxRecord(snapshotsMap).snapshotId() > maxRecord.snapshotId()), timeout);
     }
 
     private SnapshotRecord findMaxRecord(IStreamMap<Long, Object> snapshotsMap) {
@@ -406,23 +398,6 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
             return IntStream.range(0, numPartitions)
                             .filter(i -> i % totalProcessors == processorIndex)
                             .toArray();
-        }
-    }
-
-    private static class AddToMapP extends AbstractProcessor implements Serializable {
-        @Override
-        protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
-            getLogger().info("Adding item: " + item);
-            TimestampedEntry<Integer, Long> e = (TimestampedEntry) item;
-            List<Long> key = asList(e.getTimestamp(), (long) e.getKey());
-            Long oldValue = result.put(key, e.getValue());
-            // We are an idempotent sink, so writing the same item duplicately doesn't affect the result.
-            // Let's check that the value for the key is the same as before.
-            if (oldValue != null) {
-                assertEquals(oldValue, e.getValue());
-                numOverwrites.incrementAndGet();
-            }
-            return true;
         }
     }
 }
