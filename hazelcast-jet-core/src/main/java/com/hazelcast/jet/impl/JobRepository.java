@@ -72,7 +72,7 @@ public class JobRepository {
      */
     public static final String JOB_RESULTS_MAP_NAME = "__jet.results";
 
-    private static final String RESOURCE_MARKER = "__jet.jobId";
+    private static final String RESOURCE_MARKER = "__jet.resourceMarker";
     private static final long JOB_EXPIRATION_DURATION_IN_MILLIS = HOURS.toMillis(2);
 
     private final HazelcastInstance instance;
