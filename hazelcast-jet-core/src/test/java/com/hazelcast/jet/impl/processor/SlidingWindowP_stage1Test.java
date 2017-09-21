@@ -75,8 +75,8 @@ public class SlidingWindowP_stage1Test {
     @Test
     public void smokeTest() {
         verifyProcessor(processor)
-                .doSnapshots(false)
-                .callComplete(false)
+                .disableSnapshots()
+                .disableCompleteCall()
                 .input(asList(
                         entry(0L, 1L), // to frame 4
                         entry(1L, 1L), // to frame 4
@@ -106,8 +106,8 @@ public class SlidingWindowP_stage1Test {
     @Test
     public void when_gapInWmAfterEvent_then_frameAndWmEmitted() {
         verifyProcessor(processor)
-                .doSnapshots(false)
-                .callComplete(false)
+                .disableSnapshots()
+                .disableCompleteCall()
                 .input(asList(
                         entry(0L, 1L), // to frame 4
                         entry(1L, 1L), // to frame 4
@@ -128,8 +128,8 @@ public class SlidingWindowP_stage1Test {
         );
 
         verifyProcessor(processor)
-                .doSnapshots(false)
-                .callComplete(false)
+                .disableSnapshots()
+                .disableCompleteCall()
                 .input(someWms)
                 .expectOutput(someWms);
     }
@@ -137,8 +137,7 @@ public class SlidingWindowP_stage1Test {
     @Test
     public void when_batch_then_emitEverything() {
         verifyProcessor(processor)
-                .doSnapshots(false)
-                .callComplete(true)
+                .disableSnapshots()
                 .input(asList(
                         entry(0L, 1L), // to frame 4
                         entry(4L, 1L), // to frame 8
@@ -158,8 +157,7 @@ public class SlidingWindowP_stage1Test {
     @Test
     public void when_wmNeverReceived_then_emitEverythingInComplete() {
         verifyProcessor(processor)
-                .doSnapshots(false)
-                .callComplete(true)
+                .disableSnapshots()
                 .input(asList(entry(0L, 1L), // to frame 4
                         entry(4L, 1L) // to frame 8
                         // no WM to emit any window, everything should be emitted in complete as if we received
@@ -177,8 +175,8 @@ public class SlidingWindowP_stage1Test {
         exception.expectMessage("late");
 
         verifyProcessor(processor)
-                .doSnapshots(false)
-                .callComplete(false)
+                .disableSnapshots()
+                .disableCompleteCall()
                 .input(asList(wm(16),
                         entry(7, 1)
                 ))

@@ -122,7 +122,7 @@ public class SlidingWindowPTest {
     public void when_noFramesReceived_then_onlyEmitWm() {
         List<Watermark> wmList = singletonList(wm(1));
         verifyProcessor(supplier)
-                .callComplete(false)
+                .disableCompleteCall()
                 .input(wmList)
                 .expectOutput(wmList);
     }
@@ -130,7 +130,7 @@ public class SlidingWindowPTest {
     @Test
     public void simple_smokeTest() {
         verifyProcessor(supplier)
-                .callComplete(false)
+                .disableCompleteCall()
                 .input(asList(
                         event(0, 1),
                         wm(3)))
@@ -146,7 +146,7 @@ public class SlidingWindowPTest {
     @Test
     public void when_receiveAscendingTimestamps_then_emitAscending() {
         verifyProcessor(supplier)
-                .callComplete(false)
+                .disableCompleteCall()
                 .input(asList(
                         event(0, 1),
                         event(1, 1),
@@ -184,7 +184,7 @@ public class SlidingWindowPTest {
     @Test
     public void when_receiveDescendingTimestamps_then_emitAscending() {
         verifyProcessor(supplier)
-                .callComplete(false)
+                .disableCompleteCall()
                 .input(asList(
                         event(4, 1),
                         event(3, 1),
@@ -259,7 +259,7 @@ public class SlidingWindowPTest {
                 wm(105)
         ));
         verifyProcessor(supplier)
-                .callComplete(false)
+                .disableCompleteCall()
                 .input(inbox)
                 .expectOutput(expectedOutbox);
     }

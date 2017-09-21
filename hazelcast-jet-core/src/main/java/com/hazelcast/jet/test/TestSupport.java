@@ -63,12 +63,12 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  *     <li>every time the inbox gets empty does snapshot+restore
  *
  *     <li>calls {@link Processor#complete()} until it returns {@code true}
- *     ({@link #callComplete(boolean) optional})
+ *     ({@link #disableCompleteCall() optional})
  *
  *     <li>does snapshot+restore after {@code complete()} returned {@code
  *     false}
  * </ul>
- * The {@link #doSnapshots(boolean) optional} snapshot+restore test procedure:
+ * The {@link #disableSnapshots() optional} snapshot+restore test procedure:
  * <ul>
  *     <li>{@code saveSnapshot()} is called
  *
@@ -81,8 +81,8 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * </ul>
  * <p>
  * For each call to any processing method the progress is asserted ({@link
- * #assertProgress(boolean) optional}). The processor must do at least one of
- * these:<ul>
+ * #disableProgressAssertion() optional}). The processor must do at least one
+ * of these:<ul>
  *     <li>take something from inbox
  *     <li>put something to outbox
  *     <li>for boolean-returning methods, returning {@code true} is
@@ -149,13 +149,13 @@ public final class TestSupport {
     }
 
     /**
-     * @param processor a processor instance to test. {@link #doSnapshots(boolean)}
-     *                  will be set to {@code false}, because we'd need new instance after each
+     * @param processor a processor instance to test. {@link #disableSnapshots()}
+     *                  will be set to {@code false}, because can't have new instance after each
      *                  restore.
      */
     public static  TestSupport verifyProcessor(Processor processor) {
         return new TestSupport(singletonSupplier(processor))
-                .doSnapshots(false);
+                .disableSnapshots();
     }
 
     /**
@@ -192,9 +192,9 @@ public final class TestSupport {
     }
 
     /**
-     * Sets the expected output.
-     * <p>
-     * Defaults to empty list.
+     * Sets the expected output and runs the test.
+     *
+     * @throws AssertionError If some assertion does not hold.
      */
     public void expectOutput(@Nonnull List<?> expectedOutput) {
         this.expectedOutput = expectedOutput;
@@ -202,70 +202,62 @@ public final class TestSupport {
     }
 
     /**
-     * If {@code false}, progress will not be asserted after {@code process()}
-     * and {@code complete()} calls.
-     * <p>
-     * Defaults to {@code true}.
+     * Disables checking of progress of processing methods (see {@link
+     * TestSupport class javadoc} for information on what is "progress").
      *
      * @return {@code this} instance for fluent API.
      */
-    public TestSupport assertProgress(boolean assertProgress) {
-        this.assertProgress = assertProgress;
+    public TestSupport disableProgressAssertion() {
+        this.assertProgress = false;
         return this;
     }
 
     /**
-     * If {@code true}, snapshot will be saved and restored before first item
-     * and after each {@code process()} and {@code complete()} call. The normal
-     * test will be performed too (as if this parameter was {@code false}).
-     * <p>
-     * Defaults to {@code true}.
+     * Disable snapshot save and restore before first item and after each
+     * {@code process()} and {@code complete()} call.
      *
      * @return {@code this} instance for fluent API.
      */
-    public TestSupport doSnapshots(boolean doSnapshots) {
-        this.doSnapshots = doSnapshots;
+    public TestSupport disableSnapshots() {
+        this.doSnapshots = false;
         return this;
     }
 
     /**
-     * If {@code true}, input and output objects will be logged as they are
-     * processed to standard output.
-     * <p>
-     * Defaults to {@code false}.
+     * Disables logging of input and output objects. Normally they are logged
+     * as they are processed to standard output.
      *
      * @return {@code this} instance for fluent API.
      */
-    public TestSupport logInputOutput(boolean logInputOutput) {
-        this.logInputOutput = logInputOutput;
+    public TestSupport disableLogging() {
+        this.logInputOutput = false;
         return this;
     }
 
     /**
-     * Whether to call {@code complete()} method. Suitable for testing of
-     * streaming processors to make sure that flushing code in {@code
-     * complete()} method is not executed.
-     * <p>
-     * Defaults to {@code true}.
+     * Disables calling {@code complete()} method during the test. Suitable for
+     * testing of streaming processors to make sure that the flushing code in
+     * {@code complete()} method is not executed.
      *
      * @return {@code this} instance for fluent API.
      */
-    public TestSupport callComplete(boolean callComplete) {
-        this.callComplete = callComplete;
+    public TestSupport disableCompleteCall() {
+        this.callComplete = false;
         return this;
     }
 
     /**
-     * If {@code true}, the test will fail if any call to processing method in
-     * cooperative processor exceeds this timeout. Has no effect for
-     * non-cooperative processors.
+     * If {@code timeout > 0}, the test will fail if any call to processing
+     * method in a cooperative processor exceeds this timeout. Has no effect
+     * for non-cooperative processors.
      * <p>
-     * Default value is 1000ms.
+     * Default value is {@link #COOPERATIVE_TIME_LIMIT_MS_FAIL} ms. Useful to
+     * set to 0 during debugging.
      *
      * @return {@code this} instance for fluent API.
      */
-    public TestSupport cooperativeTimeout(long cooperativeTimeout) {
-        this.cooperativeTimeout = cooperativeTimeout;
+    public TestSupport cooperativeTimeout(long timeout) {
+        this.cooperativeTimeout = timeout;
         return this;
     }
 
@@ -455,7 +447,7 @@ public final class TestSupport {
         Processor[] processor1 = {processor};
         return () -> {
             if (processor1[0] == null) {
-                throw new RuntimeException("More than one instance requested - didn't you enable 'doSnapshots'?");
+                throw new RuntimeException("More than one instance requested");
             }
             try {
                 return processor1[0];
