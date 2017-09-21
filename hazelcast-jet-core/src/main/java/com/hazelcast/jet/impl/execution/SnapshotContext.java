@@ -62,7 +62,7 @@ public class SnapshotContext {
      * snapshot. When it is decremented to 0, the snapshot is complete and new
      * one can start.
      */
-    private final AtomicInteger numRemainingTasklets = new AtomicInteger();
+    final AtomicInteger numRemainingTasklets = new AtomicInteger();
 
     /**
      * True, if a snapshot was started and postponed. If true, then when
@@ -153,7 +153,7 @@ public class SnapshotContext {
                         + " started");
             }
         }
-        if (this.lastSnapshotId.get() < lastSnapshotId) {
+        if (this.lastSnapshotId.get() > lastSnapshotId) {
             snapshotDoneForTasklet();
         }
     }
