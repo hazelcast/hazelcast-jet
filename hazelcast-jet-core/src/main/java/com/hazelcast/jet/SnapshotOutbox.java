@@ -24,9 +24,9 @@ import static com.hazelcast.jet.BroadcastKey.broadcastKey;
  * A {@link Outbox} which is used for offering items to processor snapshot state.
  * <p>
  * The methods on this class may only be called from inside the
- * {@link Processor#saveSnapshot()} method.
+ * {@link Processor#saveToSnapshot()} method.
  * <p>
- * As with the regular {@link Outbox}, anon-cooperative processor's outbox will
+ * As with the regular {@link Outbox}, a non-cooperative processor's outbox will
  * block until the item can fit into the downstream buffers
  * and the {@code offer} methods will always return
  * {@code true}.

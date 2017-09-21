@@ -351,7 +351,7 @@ public final class TestSupport {
         boolean[] done = {false};
         Set<Object> keys = new HashSet<>();
         do {
-            checkTime("saveSnapshot", () -> done[0] = processor[0].saveSnapshot());
+            checkTime("saveSnapshot", () -> done[0] = processor[0].saveToSnapshot());
             for (Entry<MockData, MockData> entry : outbox.snapshotQueue()) {
                 Object key = entry.getKey().getObject();
                 assertTrue("Duplicate key produced in saveSnapshot()\n  Duplicate: " + key + "\n  Keys so far: " + keys,
@@ -375,7 +375,7 @@ public final class TestSupport {
         }
         int lastInboxSize = snapshotInbox.size();
         while (!snapshotInbox.isEmpty()) {
-            checkTime("restoreSnapshot", () -> processor[0].restoreSnapshot(snapshotInbox));
+            checkTime("restoreSnapshot", () -> processor[0].restoreFromSnapshot(snapshotInbox));
             assertTrue("restoreSnapshot() call without progress",
                     !assertProgress || lastInboxSize > snapshotInbox.size() || !outbox.queueWithOrdinal(0).isEmpty());
             drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
