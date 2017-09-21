@@ -198,7 +198,8 @@ public interface Processor {
      * The default implementation throws an exception.
      */
     default void restoreFromSnapshot(@Nonnull Inbox inbox) {
-        throw new JetException("Processor " + getClass().getName() + " does not override the restoreSnapshot() method");
+        throw new JetException("Processor " + getClass().getName()
+                + " does not override the restoreFromSnapshot() method");
     }
 
     /**
