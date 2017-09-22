@@ -49,7 +49,7 @@ public class StoreSnapshotTasklet implements Tasklet {
 
     private long pendingSnapshotId;
 
-    private AtomicInteger numActiveFlushes = new AtomicInteger();
+    private final AtomicInteger numActiveFlushes = new AtomicInteger();
 
     private State state = DRAIN;
     private boolean hasReachedBarrier;
@@ -106,12 +106,14 @@ public class StoreSnapshotTasklet implements Tasklet {
                 CompletableFuture<Void> future = new CompletableFuture<>();
                 future.whenComplete(safeWhenComplete(logger, (r, t) -> {
                     if (t != null) {
-                        logger.severe("Error writing to snapshot map " + currMapName(), t);
+                        logger.severe("Error writing to snapshot map '" + currMapName() + "'", t);
                         snapshotContext.reportError(t);
                     }
+                    numActiveFlushes.decrementAndGet();
                 }));
                 if (mapWriter.tryFlushAsync(future)) {
                     progTracker.madeProgress();
+                    numActiveFlushes.incrementAndGet();
                     state = inputIsDone ? DONE : hasReachedBarrier ? REACHED_BARRIER : DRAIN;
                 }
                 return;

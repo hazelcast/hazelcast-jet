@@ -19,12 +19,15 @@ package com.hazelcast.jet.core;
 import com.hazelcast.client.map.helpers.AMapStore;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapStoreConfig;
+import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JobRestartWithSnapshotTest.SequencesInPartitionsMetaSupplier;
 import com.hazelcast.jet.impl.SnapshotRepository;
+import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
@@ -37,18 +40,26 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import java.io.Serializable;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.LockSupport;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.TestUtil.throttle;
 import static com.hazelcast.jet.core.processor.DiagnosticProcessors.peekOutput;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeMap;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastSerialClassRunner.class)
 public class SnapshotFailureTest extends JetTestSupport {
 
     private static final int LOCAL_PARALLELISM = 4;
+
+    private static volatile boolean storeFailed;
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
@@ -89,23 +100,40 @@ public class SnapshotFailureTest extends JetTestSupport {
 
         DAG dag = new DAG();
         SequencesInPartitionsMetaSupplier sup = new SequencesInPartitionsMetaSupplier(numPartitions, numElements);
-        Vertex generator = dag.newVertex("generator", peekOutput(throttle(sup, numPartitions)))
+        Vertex generator = dag.newVertex("generator", peekOutput(throttle(sup, 2)))
                               .localParallelism(1);
         Vertex writeMap = dag.newVertex("writeMap", writeMap(results.getName())).localParallelism(1);
         dag.edge(between(generator, writeMap));
 
         JobConfig config = new JobConfig();
         config.setSnapshotIntervalMillis(1200);
-        instance1.newJob(dag, config).join();
+        Job job = instance1.newJob(dag, config);
+
+        // Successful snapshot cannot happen in this test
+        AtomicInteger jobFinishedLatch = new AtomicInteger(1);
+        AtomicBoolean successfulFound = new AtomicBoolean(false);
+        new Thread(() -> {
+            IMap<Object, Object> snapshotsMap = instance1.getMap(SnapshotRepository.snapshotsMapName(job.getJobId()));
+            while (jobFinishedLatch.get() != 0) {
+                successfulFound.compareAndSet(false, snapshotsMap.values().stream()
+                        .anyMatch(r -> r instanceof SnapshotRecord && ((SnapshotRecord) r).isSuccessful()));
+                LockSupport.parkNanos(MILLISECONDS.toNanos(1));
+            }
+        }).start();
+        job.join();
+        jobFinishedLatch.decrementAndGet();
 
         assertEquals("numPartitions", numPartitions, results.size());
         assertEquals("offset partition 0", numElements - 1, results.get(0));
         assertEquals("offset partition 1", numElements - 1, results.get(1));
+        assertTrue("no failure occurred in store", storeFailed);
+        assertFalse("successful snapshot appeared in snapshotsMap", successfulFound.get());
     }
 
     public static class FailingMapStore extends AMapStore implements Serializable {
         @Override
         public void store(Object o, Object o2) {
+            storeFailed = true;
             throw new UnsupportedOperationException();
         }
     }

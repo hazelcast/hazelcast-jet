@@ -395,7 +395,7 @@ public class JobCoordinationService {
             }
             scheduleSnapshot(jobId, executionId);
         } else {
-            logger.warning("MasterContext not found for finalize snapshot of " + jobAndExecutionId(jobId, executionId)
+            logger.warning("MasterContext not found to finalize snapshot of " + jobAndExecutionId(jobId, executionId)
                     + " with result: " + isSuccess);
         }
     }
@@ -469,5 +469,4 @@ public class JobCoordinationService {
     public SnapshotRepository snapshotRepository() {
         return snapshotRepository;
     }
-
 }

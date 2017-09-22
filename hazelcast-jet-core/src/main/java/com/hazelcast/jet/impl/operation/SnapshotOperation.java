@@ -49,12 +49,13 @@ public class SnapshotOperation extends AsyncExecutionOperation {
                .beginSnapshot(getCallerAddress(), jobId, executionId, snapshotId)
                .thenAccept(r -> {
                    logFine(getLogger(),
-                           "Snapshot %s for job %s finished successfully on member.",
+                           "Snapshot %s for job %s finished successfully on member",
                            snapshotId, idToString(jobId));
                    doSendResponse(null);
                })
                .exceptionally(e -> {
-                   getLogger().warning("Snapshot %s for job %s finished with error on member", e);
+                   getLogger().warning(String.format("Snapshot %d for job %s finished with error on member",
+                           snapshotId, idToString(jobId)), e);
                    doSendResponse(new JetException("Exception during snapshot", e));
                    return null;
                });

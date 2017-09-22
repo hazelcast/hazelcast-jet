@@ -132,11 +132,15 @@ public class SnapshotRepository {
     }
 
     public <T> IStreamMap<Long, T> getSnapshotMap(long jobId) {
-        return instance.getMap(SNAPSHOT_NAME_PREFIX + idToString(jobId));
+        return instance.getMap(snapshotsMapName(jobId));
     }
 
     private MaxByAggregator<Entry<Long, Object>> maxByAggregator() {
         return new MaxByAggregator<>("snapshotId");
+    }
+
+    public static String snapshotsMapName(long jobId) {
+        return SNAPSHOT_NAME_PREFIX + idToString(jobId);
     }
 
     public static String snapshotDataMapName(long jobId, long snapshotId, String vertexName) {
@@ -148,7 +152,7 @@ public class SnapshotRepository {
      * <p>
      * Method must be run when there's no ongoing snapshot, because it also
      * deletes the ongoing snapshots. If we omitted them, then interrupted
-     * snapshots will never be deleted.
+     * ongoing snapshots will never be deleted.
      *
      * @param snapshotToKeep the current snapshot to keep
      */
@@ -198,7 +202,7 @@ public class SnapshotRepository {
         for (String vertexName : record.vertices()) {
             String mapName = snapshotDataMapName(record.jobId(), record.snapshotId(), vertexName);
             instance.getMap(mapName).destroy();
-            logFine(logger, "Deleted snapshot data for snapshot %d for job %s and vertex %s",
+            logFine(logger, "Deleted snapshot data for snapshot %d for job %s and vertex '%s'",
                     record.snapshotId(), idToString(record.jobId()), vertexName);
         }
     }

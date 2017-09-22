@@ -129,7 +129,7 @@ public final class ExceptionUtil {
         return (r, t) -> {
             try {
                 consumer.accept(r, t);
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 logger.severe(message, e);
             }
         };
