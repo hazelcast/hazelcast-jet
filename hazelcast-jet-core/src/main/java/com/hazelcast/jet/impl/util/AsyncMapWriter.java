@@ -120,7 +120,7 @@ public class AsyncMapWriter {
                                                           .filter(Objects::nonNull)
                                                           .collect(Collectors.toList());
 
-        if (!invokeOnCluster(ops, completionFuture)) {
+        if (!invokeOnCluster(ops, completionFuture, true)) {
             return false;
         }
         resetBuffers();
@@ -133,7 +133,7 @@ public class AsyncMapWriter {
         for (int index = 0; index < partitions.length; index++) {
             int partition = partitions[index];
             MapEntries entries = entriesPerPtion[index];
-            Address owner = partitionService.getPartitionOwnerOrWait(index);
+            Address owner = partitionService.getPartitionOwnerOrWait(partition);
             assert owner != null : "null owner was returned";
             Entry<List<Integer>, List<MapEntries>> ptionsAndEntries
                     = addrToEntries.computeIfAbsent(owner, a -> entry(new ArrayList<>(), new ArrayList<>()));
@@ -152,7 +152,7 @@ public class AsyncMapWriter {
                     return h;
                 }).collect(Collectors.toList());
 
-        return invokeOnCluster(retryOps, completionFuture);
+        return invokeOnCluster(retryOps, completionFuture, false);
     }
 
     private PartitionOpBuilder opForMember(Address member, List<Integer> partitions, MapEntries[] partitionToEntries) {
@@ -198,7 +198,9 @@ public class AsyncMapWriter {
         return true;
     }
 
-    private boolean invokeOnCluster(List<PartitionOpBuilder> opBuilders, CompletableFuture<Void> completionFuture) {
+    private boolean invokeOnCluster(List<PartitionOpBuilder> opBuilders,
+                                    CompletableFuture<Void> completionFuture,
+                                    boolean shouldRetry) {
         if (opBuilders.isEmpty()) {
             completeVoidFuture(completionFuture);
             return true;
@@ -231,7 +233,7 @@ public class AsyncMapWriter {
                     }
                 }
                 if (t != null) {
-                    if (!tryRetry(toIntArray(failedPartitions),
+                    if (!shouldRetry || !tryRetry(toIntArray(failedPartitions),
                             failedEntries.toArray(new MapEntries[failedEntries.size()]), completionFuture)) {
                         completionFuture.completeExceptionally(t);
                     }

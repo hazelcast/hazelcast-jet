@@ -16,31 +16,35 @@
 
 package com.hazelcast.jet.impl.util;
 
+import com.hazelcast.client.map.helpers.AMapStore;
 import com.hazelcast.config.Config;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
-import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.stream.IStreamMap;
+import com.hazelcast.spi.exception.RetryableHazelcastException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.properties.GroupProperty;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 import static com.hazelcast.jet.impl.util.AsyncMapWriter.MAX_PARALLEL_ASYNC_OPS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 @Category(QuickTest.class)
@@ -48,6 +52,9 @@ import static org.junit.Assert.assertTrue;
 public class AsyncMapWriterTest extends JetTestSupport {
 
     private static final int NODE_COUNT = 2;
+    private static final String ALWAYS_FAILING_MAP = "alwaysFailingMap";
+    private static final String RETRYABLE_MAP = "retryableMap";
+
     private JetTestInstanceFactory factory;
     private JetInstance instance1;
     private JetInstance instance2;
@@ -68,6 +75,16 @@ public class AsyncMapWriterTest extends JetTestSupport {
         config.getMapConfig("default")
               .setBackupCount(1)
               .setAsyncBackupCount(0);
+
+        config.getMapConfig(ALWAYS_FAILING_MAP)
+              .getMapStoreConfig()
+              .setEnabled(true)
+              .setImplementation(new AlwaysFailingMapStore());
+
+        config.getMapConfig(RETRYABLE_MAP)
+              .getMapStoreConfig()
+              .setEnabled(true)
+              .setImplementation(new RetryableMapStore());
 
         JetInstance[] instances = factory.newMembers(jetConfig, NODE_COUNT);
         instance1 = instances[0];
@@ -95,7 +112,7 @@ public class AsyncMapWriterTest extends JetTestSupport {
         boolean flushed = writer.tryFlushAsync(future);
 
         // Then
-        assertTrue("tryFlushAsync failed", flushed);
+        assertTrue("tryFlushAsync failOnNext", flushed);
 
         future.get();
 
@@ -113,7 +130,7 @@ public class AsyncMapWriterTest extends JetTestSupport {
         boolean flushed = writer.tryFlushAsync(future);
 
         // Then
-        assertTrue("tryFlushAsync failed", flushed);
+        assertTrue("tryFlushAsync failOnNext", flushed);
         future.get();
     }
 
@@ -124,7 +141,7 @@ public class AsyncMapWriterTest extends JetTestSupport {
         for (int i = 0; i < MAX_PARALLEL_ASYNC_OPS; i++) {
             CompletableFuture<Void> future = new CompletableFuture<>();
             writer.put(i, i);
-            assertTrue("tryFlushAsync failed", writer.tryFlushAsync(future));
+            assertTrue("tryFlushAsync failOnNext", writer.tryFlushAsync(future));
             futures.add(future);
         }
 
@@ -162,7 +179,7 @@ public class AsyncMapWriterTest extends JetTestSupport {
         JetService service = nodeEngine.getService(JetService.SERVICE_NAME);
         service.numConcurrentPutAllOps().set(MAX_PARALLEL_ASYNC_OPS - NODE_COUNT);
         // When
-        assertTrue("tryFlushAsync failed", writer.tryFlushAsync(future));
+        assertTrue("tryFlushAsync failOnNext", writer.tryFlushAsync(future));
 
         future.get();
 
@@ -170,11 +187,10 @@ public class AsyncMapWriterTest extends JetTestSupport {
         boolean flushed = writer.tryFlushAsync(future);
 
         // Then
-        assertTrue("tryFlushAsync failed", flushed);
+        assertTrue("tryFlushAsync failOnNext", flushed);
     }
 
     @Test
-    @Ignore //TODO: investigate intermittent failure
     public void when_memberLeaves_then_retryAutomatically() throws Exception {
         // Given
         for (int i = 0; i < 100; i++) {
@@ -186,7 +202,7 @@ public class AsyncMapWriterTest extends JetTestSupport {
         service.numConcurrentPutAllOps().set(MAX_PARALLEL_ASYNC_OPS - NODE_COUNT);
 
         // When
-        assertTrue("tryFlushAsync failed", writer.tryFlushAsync(future));
+        assertTrue("tryFlushAsync failOnNext", writer.tryFlushAsync(future));
         factory.terminate(instance2);
 
         // Then
@@ -194,6 +210,64 @@ public class AsyncMapWriterTest extends JetTestSupport {
         for (int i = 0; i < 100; i++) {
             assertEquals(i, map.get(i));
         }
+    }
 
+    @Test
+    public void when_writeError_then_failFuture() {
+        writer.setMapName(RETRYABLE_MAP);
+        for (int i = 0; i < 100; i++) {
+            writer.put(i, i);
+        }
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        writer.tryFlushAsync(future);
+        final Throwable[] actual = new Exception[1];
+        future.whenComplete((r, e) -> actual[0] = e);
+        try {
+            future.join();
+        } catch (CompletionException ignored) {
+        }
+        assertNotNull("No exception was thrown", actual[0]);
+    }
+
+    @Test
+    public void when_writeErrorOnlyOnce_then_retrySuccess() {
+        // make sure map store is initialized
+        IStreamMap<Object, Object> map = instance1.getMap(RETRYABLE_MAP);
+        map.put(1, 1);
+        map.clear();
+
+        writer.setMapName(RETRYABLE_MAP);
+        for (int i = 0; i < 100; i++) {
+            writer.put(i, i);
+        }
+        CompletableFuture<Void> future = new CompletableFuture<>();
+
+        RetryableMapStore.failOnNext = true;
+        writer.tryFlushAsync(future);
+        future.join();
+        for (int i = 0; i < 100; i++) {
+            assertEquals(i, map.get(i));
+        }
+    }
+
+    public static class AlwaysFailingMapStore extends AMapStore implements Serializable {
+
+        @Override
+        public void store(Object o, Object o2) {
+            throw new RuntimeException("Always failing store");
+        }
+    }
+
+    public static class RetryableMapStore extends AMapStore implements Serializable {
+
+        private static boolean failOnNext;
+
+        @Override
+        public void store(Object o, Object o2) {
+            if (failOnNext) {
+                failOnNext = false;
+                throw new RetryableHazelcastException("Failing once store");
+            }
+        }
     }
 }
