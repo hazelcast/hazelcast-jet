@@ -105,10 +105,12 @@ public class StoreSnapshotTasklet implements Tasklet {
                 progTracker.notDone();
                 CompletableFuture<Void> future = new CompletableFuture<>();
                 future.whenComplete(safeWhenComplete(logger, (r, t) -> {
+                    // this callback may be called from a non-tasklet thread
                     if (t != null) {
                         logger.severe("Error writing to snapshot map '" + currMapName() + "'", t);
                         snapshotContext.reportError(t);
                     }
+                    // numActiveFlushes must be decremented last otherwise we may miss the error
                     numActiveFlushes.decrementAndGet();
                 }));
                 if (mapWriter.tryFlushAsync(future)) {
