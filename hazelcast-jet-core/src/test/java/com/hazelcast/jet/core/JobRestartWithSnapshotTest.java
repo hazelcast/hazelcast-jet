@@ -229,7 +229,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
 
     private void waitForNextSnapshot(IStreamMap<Long, Object> snapshotsMap, int timeout) {
         SnapshotRecord maxRecord = findMaxRecord(snapshotsMap);
-        assertNotNull(maxRecord);
+        assertNotNull("no snapshot found", maxRecord);
         // wait until there is at least one more snapshot
         assertTrueEventually(() -> assertTrue("No more snapshots produced after restart",
                 findMaxRecord(snapshotsMap).snapshotId() > maxRecord.snapshotId()), timeout);

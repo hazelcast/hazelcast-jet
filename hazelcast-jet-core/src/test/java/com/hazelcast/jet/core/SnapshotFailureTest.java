@@ -40,8 +40,8 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import java.io.Serializable;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 
 import static com.hazelcast.jet.core.Edge.between;
@@ -50,7 +50,7 @@ import static com.hazelcast.jet.core.processor.DiagnosticProcessors.peekOutput;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeMap;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 @Category(QuickTest.class)
@@ -111,12 +111,14 @@ public class SnapshotFailureTest extends JetTestSupport {
 
         // Successful snapshot cannot happen in this test
         AtomicInteger jobFinishedLatch = new AtomicInteger(1);
-        AtomicBoolean successfulFound = new AtomicBoolean(false);
+        AtomicReference<SnapshotRecord> successfulRecord = new AtomicReference<>();
         new Thread(() -> {
             IMap<Object, Object> snapshotsMap = instance1.getMap(SnapshotRepository.snapshotsMapName(job.getJobId()));
             while (jobFinishedLatch.get() != 0) {
-                successfulFound.compareAndSet(false, snapshotsMap.values().stream()
-                        .anyMatch(r -> r instanceof SnapshotRecord && ((SnapshotRecord) r).isSuccessful()));
+                snapshotsMap.values().stream()
+                            .filter(r -> r instanceof SnapshotRecord && ((SnapshotRecord) r).isSuccessful())
+                            .findFirst()
+                            .ifPresent(r -> successfulRecord.compareAndSet(null, (SnapshotRecord) r));
                 LockSupport.parkNanos(MILLISECONDS.toNanos(1));
             }
         }).start();
@@ -127,7 +129,7 @@ public class SnapshotFailureTest extends JetTestSupport {
         assertEquals("offset partition 0", numElements - 1, results.get(0));
         assertEquals("offset partition 1", numElements - 1, results.get(1));
         assertTrue("no failure occurred in store", storeFailed);
-        assertFalse("successful snapshot appeared in snapshotsMap", successfulFound.get());
+        assertNull("successful snapshot appeared in snapshotsMap", successfulRecord.get());
     }
 
     public static class FailingMapStore extends AMapStore implements Serializable {

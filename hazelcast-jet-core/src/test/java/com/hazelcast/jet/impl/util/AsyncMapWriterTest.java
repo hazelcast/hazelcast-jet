@@ -31,6 +31,7 @@ import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -46,6 +47,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
@@ -93,6 +95,8 @@ public class AsyncMapWriterTest extends JetTestSupport {
         writer = new AsyncMapWriter(nodeEngine);
         map = instance1.getMap("testMap");
         writer.setMapName(map.getName());
+
+        warmUpPartitions(instance1.getHazelcastInstance(), instance2.getHazelcastInstance());
     }
 
     @After
@@ -112,7 +116,7 @@ public class AsyncMapWriterTest extends JetTestSupport {
         boolean flushed = writer.tryFlushAsync(future);
 
         // Then
-        assertTrue("tryFlushAsync failOnNext", flushed);
+        assertTrue("tryFlushAsync returned false", flushed);
 
         future.get();
 
@@ -130,7 +134,7 @@ public class AsyncMapWriterTest extends JetTestSupport {
         boolean flushed = writer.tryFlushAsync(future);
 
         // Then
-        assertTrue("tryFlushAsync failOnNext", flushed);
+        assertTrue("tryFlushAsync returned false", flushed);
         future.get();
     }
 
@@ -141,7 +145,7 @@ public class AsyncMapWriterTest extends JetTestSupport {
         for (int i = 0; i < MAX_PARALLEL_ASYNC_OPS; i++) {
             CompletableFuture<Void> future = new CompletableFuture<>();
             writer.put(i, i);
-            assertTrue("tryFlushAsync failOnNext", writer.tryFlushAsync(future));
+            assertTrue("tryFlushAsync returned false", writer.tryFlushAsync(future));
             futures.add(future);
         }
 
@@ -179,18 +183,20 @@ public class AsyncMapWriterTest extends JetTestSupport {
         JetService service = nodeEngine.getService(JetService.SERVICE_NAME);
         service.numConcurrentPutAllOps().set(MAX_PARALLEL_ASYNC_OPS - NODE_COUNT);
         // When
-        assertTrue("tryFlushAsync failOnNext", writer.tryFlushAsync(future));
+        boolean flushed = writer.tryFlushAsync(future);
+        assertTrue("tryFlushAsync returned false", flushed);
 
         future.get();
 
         writer.put("key2", "value2");
-        boolean flushed = writer.tryFlushAsync(future);
+        flushed = writer.tryFlushAsync(future);
 
         // Then
-        assertTrue("tryFlushAsync failOnNext", flushed);
+        assertTrue("tryFlushAsync returned false", flushed);
     }
 
     @Test
+    @Ignore("This test is currently racy as an operation is only retried once.")
     public void when_memberLeaves_then_retryAutomatically() throws Exception {
         // Given
         for (int i = 0; i < 100; i++) {
@@ -202,7 +208,8 @@ public class AsyncMapWriterTest extends JetTestSupport {
         service.numConcurrentPutAllOps().set(MAX_PARALLEL_ASYNC_OPS - NODE_COUNT);
 
         // When
-        assertTrue("tryFlushAsync failOnNext", writer.tryFlushAsync(future));
+        boolean flushed = writer.tryFlushAsync(future);
+        assertTrue("tryFlushAsync returned false", flushed);
         factory.terminate(instance2);
 
         // Then
@@ -214,12 +221,29 @@ public class AsyncMapWriterTest extends JetTestSupport {
 
     @Test
     public void when_writeError_then_failFuture() {
-        writer.setMapName(RETRYABLE_MAP);
+        // Given
+
+        // make sure map store is initialized
+        IStreamMap<Object, Object> map = instance1.getMap(ALWAYS_FAILING_MAP);
+        try {
+            map.put(1, 1);
+            fail("map.put() did not fail.");
+        } catch (RuntimeException ignored) {
+        }
+        map.clear();
+
+        writer.setMapName(ALWAYS_FAILING_MAP);
         for (int i = 0; i < 100; i++) {
             writer.put(i, i);
         }
         CompletableFuture<Void> future = new CompletableFuture<>();
-        writer.tryFlushAsync(future);
+
+        // When
+        boolean flushed = writer.tryFlushAsync(future);
+
+        // Then
+        assertTrue("tryFlush() returned false", flushed);
+
         final Throwable[] actual = new Exception[1];
         future.whenComplete((r, e) -> actual[0] = e);
         try {
@@ -231,6 +255,8 @@ public class AsyncMapWriterTest extends JetTestSupport {
 
     @Test
     public void when_writeErrorOnlyOnce_then_retrySuccess() {
+        // Given
+
         // make sure map store is initialized
         IStreamMap<Object, Object> map = instance1.getMap(RETRYABLE_MAP);
         map.put(1, 1);
@@ -242,8 +268,12 @@ public class AsyncMapWriterTest extends JetTestSupport {
         }
         CompletableFuture<Void> future = new CompletableFuture<>();
 
+        // When
         RetryableMapStore.failOnNext = true;
-        writer.tryFlushAsync(future);
+        boolean flushed = writer.tryFlushAsync(future);
+
+        // Then
+        assertTrue("tryFlush() returned false", flushed);
         future.join();
         for (int i = 0; i < 100; i++) {
             assertEquals(i, map.get(i));
