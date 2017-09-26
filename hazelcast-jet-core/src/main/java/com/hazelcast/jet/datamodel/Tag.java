@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.datamodel;
 
+import java.io.Serializable;
+
 /**
  * A tag object useful as a key in heterogeneous maps. Carries static type
  * information in its type parameter, which is expected to correspond to
@@ -28,7 +30,7 @@ package com.hazelcast.jet.datamodel;
  *
  * @param <T> the type of the data associated with the tag
  */
-public final class Tag<T> implements Comparable<Tag<?>> {
+public final class Tag<T> implements Comparable<Tag<?>>, Serializable {
     private static final Tag TAG_0 = new Tag(0);
     private static final Tag TAG_1 = new Tag(1);
     private static final Tag TAG_2 = new Tag(2);

@@ -17,24 +17,6 @@
 package com.hazelcast.jet.impl.serialization;
 
 import com.hazelcast.internal.serialization.impl.SerializationConstants;
-import com.hazelcast.jet.core.TimestampedEntry;
-import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.impl.execution.BroadcastEntry;
-import com.hazelcast.jet.impl.execution.BroadcastKeyReference;
-import com.hazelcast.jet.impl.execution.SnapshotBarrier;
-import com.hazelcast.jet.datamodel.Tuple2;
-import com.hazelcast.jet.datamodel.Tuple3;
-import com.hazelcast.nio.ObjectDataInput;
-import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Serializer;
-import com.hazelcast.nio.serialization.SerializerHook;
-import com.hazelcast.nio.serialization.StreamSerializer;
-
-import java.io.IOException;
-import java.util.Map;
-import java.util.Map.Entry;
-
-import static com.hazelcast.jet.Util.entry;
 
 public final class SerializerHookConstants {
 

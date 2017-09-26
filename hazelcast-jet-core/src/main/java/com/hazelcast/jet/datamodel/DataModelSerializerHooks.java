@@ -26,7 +26,6 @@ import com.hazelcast.nio.serialization.StreamSerializer;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -273,42 +272,13 @@ public class DataModelSerializerHooks {
 
         @Override
         public Serializer createSerializer() {
-            return new StreamSerializer<ItemsByTag>() {
-                @Override
-                public void write(ObjectDataOutput out, ItemsByTag ibt) throws IOException {
-                    Set<Entry<Tag<?>, Object>> entries = ibt.entrySet();
-                    out.writeInt(entries.size());
-                    for (Entry<Tag<?>, Object> e : entries) {
-                        out.writeObject(e.getKey());
-                        Object val = e.getValue();
-                        out.writeObject(val != NONE ? val : null);
-                    }
-                }
-
-                @Override
-                public ItemsByTag read(ObjectDataInput in) throws IOException {
-                    int size = in.readInt();
-                    ItemsByTag ibt = new ItemsByTag();
-                    for (int i = 0; i < size; i++) {
-                        ibt.put(in.readObject(), in.readObject());
-                    }
-                    return ibt;
-                }
-
-                @Override
-                public int getTypeId() {
-                    return SerializerHookConstants.ITEMS_BY_TAG;
-                }
-
-                @Override
-                public void destroy() {
-                }
-            };
+            return new ItemsByTagSerializer();
         }
 
         @Override public boolean isOverwritable() {
             return false;
         }
+
     }
 
     public static final class BagsByTagHook implements SerializerHook<BagsByTag> {
@@ -320,40 +290,75 @@ public class DataModelSerializerHooks {
 
         @Override
         public Serializer createSerializer() {
-            return new StreamSerializer<BagsByTag>() {
-                @Override
-                public void write(ObjectDataOutput out, BagsByTag bbt) throws IOException {
-                    Set<Entry<Tag<?>, Collection>> entries = bbt.entrySet();
-                    out.writeInt(entries.size());
-                    for (Entry<Tag<?>, Collection> e : entries) {
-                        out.writeObject(e.getKey());
-                        out.writeObject(e.getValue());
-                    }
-                }
-
-                @Override
-                public BagsByTag read(ObjectDataInput in) throws IOException {
-                    int size = in.readInt();
-                    BagsByTag bbt = new BagsByTag();
-                    for (int i = 0; i < size; i++) {
-                        bbt.put(in.readObject(), in.readObject());
-                    }
-                    return bbt;
-                }
-
-                @Override
-                public int getTypeId() {
-                    return SerializerHookConstants.BAGS_BY_TAG;
-                }
-
-                @Override
-                public void destroy() {
-                }
-            };
+            return new BagsByTagSerializer();
         }
 
         @Override public boolean isOverwritable() {
             return false;
+        }
+
+    }
+
+    private static class ItemsByTagSerializer implements StreamSerializer<ItemsByTag> {
+        @Override
+        public void write(ObjectDataOutput out, ItemsByTag ibt) throws IOException {
+            Set<Entry<Tag<?>, Object>> entries = ibt.entrySet();
+            out.writeInt(entries.size());
+            for (Entry<Tag<?>, Object> e : entries) {
+                out.writeObject(e.getKey());
+                Object val = e.getValue();
+                out.writeObject(val != NONE ? val : null);
+            }
+        }
+
+        @Override
+        public ItemsByTag read(ObjectDataInput in) throws IOException {
+            int size = in.readInt();
+            ItemsByTag ibt = new ItemsByTag();
+            for (int i = 0; i < size; i++) {
+                ibt.put(in.readObject(), in.readObject());
+            }
+            return ibt;
+        }
+
+        @Override
+        public int getTypeId() {
+            return SerializerHookConstants.ITEMS_BY_TAG;
+        }
+
+        @Override
+        public void destroy() {
+        }
+    }
+
+    private static class BagsByTagSerializer implements StreamSerializer<BagsByTag> {
+        @Override
+        public void write(ObjectDataOutput out, BagsByTag bbt) throws IOException {
+            Set<Entry<Tag<?>, Collection>> entries = bbt.entrySet();
+            out.writeInt(entries.size());
+            for (Entry<Tag<?>, Collection> e : entries) {
+                out.writeObject(e.getKey());
+                out.writeObject(e.getValue());
+            }
+        }
+
+        @Override
+        public BagsByTag read(ObjectDataInput in) throws IOException {
+            int size = in.readInt();
+            BagsByTag bbt = new BagsByTag();
+            for (int i = 0; i < size; i++) {
+                bbt.put(in.readObject(), in.readObject());
+            }
+            return bbt;
+        }
+
+        @Override
+        public int getTypeId() {
+            return SerializerHookConstants.BAGS_BY_TAG;
+        }
+
+        @Override
+        public void destroy() {
         }
     }
 }

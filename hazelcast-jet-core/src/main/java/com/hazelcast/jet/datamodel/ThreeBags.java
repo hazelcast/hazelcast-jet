@@ -17,10 +17,8 @@
 package com.hazelcast.jet.datamodel;
 
 import javax.annotation.Nonnull;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 
 /**
  * A container of three bags (collections), each with its own element

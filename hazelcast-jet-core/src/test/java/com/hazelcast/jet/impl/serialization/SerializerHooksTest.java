@@ -17,13 +17,6 @@
 package com.hazelcast.jet.impl.serialization;
 
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
-import com.hazelcast.jet.accumulator.DoubleAccumulator;
-import com.hazelcast.jet.accumulator.LinTrendAccumulator;
-import com.hazelcast.jet.accumulator.LongAccumulator;
-import com.hazelcast.jet.accumulator.LongDoubleAccumulator;
-import com.hazelcast.jet.accumulator.LongLongAccumulator;
-import com.hazelcast.jet.accumulator.MutableReference;
-import com.hazelcast.jet.core.TimestampedEntry;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
@@ -36,16 +29,12 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
-import java.io.Serializable;
-import java.math.BigInteger;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Map;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 
 @RunWith(Parameterized.class)

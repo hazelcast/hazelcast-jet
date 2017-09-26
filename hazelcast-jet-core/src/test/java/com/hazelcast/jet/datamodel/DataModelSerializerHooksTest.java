@@ -31,7 +31,6 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 
@@ -90,7 +89,7 @@ public class DataModelSerializerHooksTest {
 
     @Test
     public void testSerializerHook() throws Exception {
-        if (!(instance instanceof Map.Entry)) {
+        if (!(instance instanceof Map.Entry || instance instanceof Tag)) {
             assertFalse(instance.getClass() + " implements java.io.Serializable", instance instanceof Serializable);
         }
         SerializationService serializationService = new DefaultSerializationServiceBuilder().build();
