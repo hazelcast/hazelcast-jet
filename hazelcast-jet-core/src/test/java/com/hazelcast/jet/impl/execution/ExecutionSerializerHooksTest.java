@@ -14,16 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.serialization;
+package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
-import com.hazelcast.jet.accumulator.DoubleAccumulator;
-import com.hazelcast.jet.accumulator.LinTrendAccumulator;
-import com.hazelcast.jet.accumulator.LongAccumulator;
-import com.hazelcast.jet.accumulator.LongDoubleAccumulator;
-import com.hazelcast.jet.accumulator.LongLongAccumulator;
-import com.hazelcast.jet.accumulator.MutableReference;
-import com.hazelcast.jet.core.TimestampedEntry;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
@@ -37,13 +30,10 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
 import java.io.Serializable;
-import java.math.BigInteger;
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
@@ -51,7 +41,7 @@ import static org.junit.Assert.assertNotSame;
 @RunWith(Parameterized.class)
 @Category({QuickTest.class, ParallelTest.class})
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
-public class SerializerHooksTest {
+public class ExecutionSerializerHooksTest {
 
     @Parameter
     public Object instance;
@@ -59,24 +49,21 @@ public class SerializerHooksTest {
     @Parameters
     public static Collection<Object> data() throws Exception {
         return Arrays.asList(
-                new Object[]{new String[]{"a", "b", "c"}},
-                new SimpleImmutableEntry<>("key", "value")
+                new SnapshotBarrier(17L),
+                new BroadcastEntry<>("key", "value"),
+                new BroadcastKeyReference<>("broadcast-key")
         );
     }
 
     @Test
     public void testSerializerHooks() throws Exception {
+        if (!(instance instanceof Map.Entry)) {
+            assertFalse("Type implements java.io.Serializable", instance instanceof Serializable);
+        }
         SerializationService serializationService = new DefaultSerializationServiceBuilder().build();
-
         Data serialized = serializationService.toData(instance);
         Object deserialized = serializationService.toObject(serialized);
-
         assertNotSame("serialization/deserialization didn't take place", instance, deserialized);
-        if (instance instanceof Object[]) {
-            assertArrayEquals("objects are not equal after serialize/deserialize",
-                    (Object[]) instance, (Object[]) deserialized);
-        } else {
-            assertEquals("objects are not equal after serialize/deserialize", instance, deserialized);
-        }
+        assertEquals("objects are not equal after serialize/deserialize", instance, deserialized);
     }
 }

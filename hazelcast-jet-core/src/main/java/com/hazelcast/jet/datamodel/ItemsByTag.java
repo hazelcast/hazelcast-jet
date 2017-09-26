@@ -17,7 +17,6 @@
 package com.hazelcast.jet.datamodel;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,21 +26,27 @@ import java.util.Map;
  * can be different for each tag.
  * <p>
  * This is a less typesafe, but more flexible alternative to a tuple. The
- * tuple has a fixed (and limited) number of integer-indexed,
- * statically-typed fields, and {@code ItemsByTag} has a variable number of
- * tag-indexed fields whose whose static type is encoded in the tags.
+ * tuple has a fixed number of integer-indexed, statically-typed fields,
+ * and {@code ItemsByTag} has a variable number of tag-indexed fields whose
+ * whose static type is encoded in the tags.
  */
 public class ItemsByTag implements Serializable {
     private final Map<Tag, Object> map = new HashMap<>();
 
     /**
-     * Retrieves the object associated with the supplied tag, or {@code null}
-     * if there is none. The argument must not be {@code null}.
+     * Retrieves the object associated with the supplied tag and throws an
+     * exception if there is none. The argument must not be {@code null}.
+     *
+     * @throws IllegalArgumentException if there is no item registered under the supplied tag
      */
-    @Nullable
+    @Nonnull
     @SuppressWarnings("unchecked")
     public <E> E get(@Nonnull Tag<E> tag) {
-        return (E) map.get(tag);
+        Object got = map.get(tag);
+        if (got == null) {
+            throw new IllegalArgumentException("No item registered under " + tag);
+        }
+        return (E) got;
     }
 
     /**

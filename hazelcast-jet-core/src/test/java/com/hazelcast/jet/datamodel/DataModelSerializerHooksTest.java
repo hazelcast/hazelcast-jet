@@ -14,15 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.serialization;
+package com.hazelcast.jet.datamodel;
 
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
-import com.hazelcast.jet.accumulator.DoubleAccumulator;
-import com.hazelcast.jet.accumulator.LinTrendAccumulator;
-import com.hazelcast.jet.accumulator.LongAccumulator;
-import com.hazelcast.jet.accumulator.LongDoubleAccumulator;
-import com.hazelcast.jet.accumulator.LongLongAccumulator;
-import com.hazelcast.jet.accumulator.MutableReference;
 import com.hazelcast.jet.core.TimestampedEntry;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.serialization.SerializationService;
@@ -37,13 +31,14 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
 import java.io.Serializable;
-import java.math.BigInteger;
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 
-import static org.junit.Assert.assertArrayEquals;
+import static com.hazelcast.jet.datamodel.Tag.tag0;
+import static com.hazelcast.jet.datamodel.Tag.tag1;
+import static com.hazelcast.jet.datamodel.Tag.tag2;
+import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
@@ -51,32 +46,59 @@ import static org.junit.Assert.assertNotSame;
 @RunWith(Parameterized.class)
 @Category({QuickTest.class, ParallelTest.class})
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
-public class SerializerHooksTest {
+public class DataModelSerializerHooksTest {
 
     @Parameter
     public Object instance;
 
     @Parameters
     public static Collection<Object> data() throws Exception {
-        return Arrays.asList(
-                new Object[]{new String[]{"a", "b", "c"}},
-                new SimpleImmutableEntry<>("key", "value")
+        return asList(
+                new TimestampedEntry<>(1, "key", "value"),
+                new Tuple2<>("value-0", "value-1"),
+                new Tuple3<>("value-0", "value-1", "value-2"),
+                new TwoBags<>(asList("v1", "v2"), asList("v3", "v4")),
+                new ThreeBags<>(asList("v1", "v2"), asList("v3", "v4"), asList("v5", "v6")),
+                tag0(),
+                tag1(),
+                tag2(),
+                Tag.tag(0),
+                Tag.tag(1),
+                Tag.tag(2),
+                Tag.tag(3),
+                newItemsByTag(),
+                newBagsByTag()
         );
     }
 
-    @Test
-    public void testSerializerHooks() throws Exception {
-        SerializationService serializationService = new DefaultSerializationServiceBuilder().build();
+    private static ItemsByTag newItemsByTag() {
+        ItemsByTag ibt = new ItemsByTag();
+        ibt.put(tag0(), "val0");
+        ibt.put(tag1(), "val1");
+        ibt.put(tag2(), null);
+        return ibt;
+    }
 
+    private static BagsByTag newBagsByTag() {
+        BagsByTag bbt = new BagsByTag();
+        bbt.ensureBag(tag0()).add("bagv0");
+        bbt.ensureBag(tag0()).add("bagv1");
+        bbt.ensureBag(tag1()).add("bagv2");
+        bbt.ensureBag(tag1()).add("bagv3");
+        return bbt;
+    }
+
+    @Test
+    public void testSerializerHook() throws Exception {
+        if (!(instance instanceof Map.Entry)) {
+            assertFalse(instance.getClass() + " implements java.io.Serializable", instance instanceof Serializable);
+        }
+        SerializationService serializationService = new DefaultSerializationServiceBuilder().build();
         Data serialized = serializationService.toData(instance);
         Object deserialized = serializationService.toObject(serialized);
-
-        assertNotSame("serialization/deserialization didn't take place", instance, deserialized);
-        if (instance instanceof Object[]) {
-            assertArrayEquals("objects are not equal after serialize/deserialize",
-                    (Object[]) instance, (Object[]) deserialized);
-        } else {
-            assertEquals("objects are not equal after serialize/deserialize", instance, deserialized);
+        if (!(instance instanceof Tag)) {
+            assertNotSame("serialization/deserialization didn't take place", instance, deserialized);
         }
+        assertEquals("objects are not equal after serialize/deserialize", instance, deserialized);
     }
 }
