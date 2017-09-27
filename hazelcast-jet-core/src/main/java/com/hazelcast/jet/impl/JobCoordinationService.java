@@ -127,16 +127,29 @@ public class JobCoordinationService {
     }
 
     void checkQuorumValues() {
-        int currentQuorumSize = getQuorumSize();
-        for (JobRecord jobRecord : jobRepository.getJobRecords()) {
-            if (jobRecord.getConfig().isSplitBrainProtectionEnabled()) {
-                if (currentQuorumSize > jobRecord.getQuorumSize()) {
-                    logger.warning("Current quorum size: " + currentQuorumSize
-                            + " of cluster is larger than quorum size: " + jobRecord.getQuorumSize() + " of job "
-                            + idToString(jobRecord.getJobId()));
+        if (!shouldCheckQuorumValues()) {
+            return;
+        }
+
+        try {
+            int currentQuorumSize = getQuorumSize();
+            for (JobRecord jobRecord : jobRepository.getJobRecords()) {
+                if (jobRecord.getConfig().isSplitBrainProtectionEnabled()) {
+                    if (currentQuorumSize > jobRecord.getQuorumSize()) {
+                        logger.warning("Current quorum size: " + currentQuorumSize
+                                + " of cluster is larger than quorum size: " + jobRecord.getQuorumSize() + " of job "
+                                + idToString(jobRecord.getJobId()));
+                    }
                 }
             }
+        } catch (Exception e) {
+            logger.fine("check quorum values task failed", e);
         }
+    }
+
+    private boolean shouldCheckQuorumValues() {
+        return isMaster() && nodeEngine.isRunning()
+                && getInternalPartitionService().getPartitionStateManager().isInitialized();
     }
 
     /**
@@ -405,11 +418,15 @@ public class JobCoordinationService {
             return false;
         }
 
-        Node node = nodeEngine.getNode();
-        InternalPartitionServiceImpl partitionService = (InternalPartitionServiceImpl) node.getPartitionService();
+        InternalPartitionServiceImpl partitionService = getInternalPartitionService();
         return partitionService.getPartitionStateManager().isInitialized()
                 && partitionService.isMigrationAllowed()
                 && !partitionService.hasOnGoingMigrationLocal();
+    }
+
+    private InternalPartitionServiceImpl getInternalPartitionService() {
+        Node node = nodeEngine.getNode();
+        return (InternalPartitionServiceImpl) node.getPartitionService();
     }
 
     /**
