@@ -400,6 +400,18 @@ public class JobCoordinationService {
         }
     }
 
+    boolean shouldStartJobs() {
+        if (!(isMaster() && nodeEngine.isRunning())) {
+            return false;
+        }
+
+        Node node = nodeEngine.getNode();
+        InternalPartitionServiceImpl partitionService = (InternalPartitionServiceImpl) node.getPartitionService();
+        return partitionService.getPartitionStateManager().isInitialized()
+                && partitionService.isMigrationAllowed()
+                && !partitionService.hasOnGoingMigrationLocal();
+    }
+
     /**
      * Restarts a job for a new execution if the cluster is stable.
      * Otherwise, it reschedules the restart task.
@@ -409,11 +421,6 @@ public class JobCoordinationService {
         if (masterContext != null) {
             if (masterContext.isCancelled()) {
                 tryStartJob(masterContext);
-                return;
-            }
-
-            if (!shouldStartJobs()) {
-                scheduleRestart(jobId);
                 return;
             }
 
@@ -441,18 +448,6 @@ public class JobCoordinationService {
 
             logger.severe("Scanning jobs failed", e);
         }
-    }
-
-    private boolean shouldStartJobs() {
-        if (!(isMaster() && nodeEngine.isRunning())) {
-            return false;
-        }
-
-        Node node = nodeEngine.getNode();
-        InternalPartitionServiceImpl partitionService = (InternalPartitionServiceImpl) node.getPartitionService();
-        return partitionService.getPartitionStateManager().isInitialized()
-                && partitionService.isMigrationAllowed()
-                && !partitionService.hasOnGoingMigrationLocal();
     }
 
     private void performCleanup() {
