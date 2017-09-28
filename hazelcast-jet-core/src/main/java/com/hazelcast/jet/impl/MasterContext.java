@@ -258,8 +258,7 @@ public class MasterContext {
             return false;
         }
 
-        logger.fine("Rescheduling job " + idToString(jobId) + " restart since quorum size " + quorumSize
-                + " is not met");
+        logger.fine("Rescheduling restart of job " + idToString(jobId) + ": quorum size " + quorumSize + " is not met");
         scheduleRestart();
         return true;
     }
@@ -269,7 +268,7 @@ public class MasterContext {
             return false;
         }
 
-        logger.fine("Rescheduling job " + idToString(jobId) + " restart cluster is not safe");
+        logger.fine("Rescheduling restart of job " + idToString(jobId) + ": cluster is not safe");
         scheduleRestart();
         return true;
     }
