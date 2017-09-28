@@ -42,6 +42,7 @@ import java.util.Set;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -49,6 +50,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.idToString;
 import static com.hazelcast.jet.impl.util.Util.jobAndExecutionId;
 import static java.util.Collections.newSetFromMap;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toSet;
 
 public class JobExecutionService {
@@ -67,6 +69,9 @@ public class JobExecutionService {
     // does not guarantee at most one computation per key.
     // key: jobId
     private final ConcurrentHashMap<Long, JetClassLoader> classLoaders = new ConcurrentHashMap<>();
+
+    // used for test
+    private volatile long postponeSnapshotOperationMs;
 
     JobExecutionService(NodeEngineImpl nodeEngine, TaskletExecutionService taskletExecutionService) {
         this.nodeEngine = nodeEngine;
@@ -278,10 +283,19 @@ public class JobExecutionService {
             logger.fine("Execution " + idToString(executionId) + " not found for completion");
         }
     }
+
     public CompletionStage<Void> beginSnapshot(Address coordinator, long jobId, long executionId, long snapshotId) {
+        if (postponeSnapshotOperationMs > 0) {
+            LockSupport.parkNanos(MILLISECONDS.toNanos(postponeSnapshotOperationMs));
+        }
+
         ExecutionContext executionContext = verifyAndGetExecutionContext(coordinator, jobId, executionId,
                 SnapshotOperation.class.getSimpleName());
 
         return executionContext.beginSnapshot(snapshotId);
+    }
+
+    public void setPostponeSnapshotOperationMs(long postponeSnapshotOperationMs) {
+        this.postponeSnapshotOperationMs = postponeSnapshotOperationMs;
     }
 }
