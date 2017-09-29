@@ -48,7 +48,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -80,9 +79,6 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     private final Projection<E, T> projection;
     private final boolean startFromLatestSequence;
 
-    private CompletableFuture<Void> jobFuture;
-    private boolean fetched;
-
     private StreamEventJournalP(EventJournalReader<E> eventJournalReader,
                                 List<Integer> partitions,
                                 Predicate<E> predicate,
@@ -97,8 +93,6 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        jobFuture = context.jobFuture();
-
         List<ICompletableFuture<EventJournalInitialSubscriberState>> futures = new ArrayList<>(partitions.size());
         for (Integer partitionId : partitions) {
             futures.add(eventJournalReader.subscribeToEventJournal(partitionId));
@@ -118,29 +112,15 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
-        long idleCount = 0;
-        while (!jobFuture.isDone()) {
-            boolean fetched = poll();
-            if (fetched) {
-                idleCount = 0;
-            } else {
-                IDLER.idle(++idleCount);
-            }
-        }
-        return true;
-    }
-
-    private boolean poll() {
         Map<Integer, ICompletableFuture<ReadResultSet<T>>> futureMap =
                 offsetMap.entrySet().stream().collect(toMap(Map.Entry::getKey,
                         e -> eventJournalReader.readFromEventJournal(e.getValue(),
                                 MIN_FETCH_SIZE, MAX_FETCH_SIZE, e.getKey(), predicate, projection)
                 ));
-        fetched = false;
         futureMap.forEach((key, future) -> {
                     try {
                         ReadResultSet<T> resultSet = future.get();
-                        resultSet.forEach(this::emitEvent);
+                        resultSet.forEach(this::emit);
                         offsetMap.compute(key, (k, v) -> v + resultSet.readCount());
                     } catch (ExecutionException e) {
                         if (e.getCause() instanceof StaleSequenceException) {
@@ -155,12 +135,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                     }
                 }
         );
-        return fetched;
-    }
-
-    private void emitEvent(T event) {
-        emit(event);
-        fetched = true;
+        return false;
     }
 
     @Override

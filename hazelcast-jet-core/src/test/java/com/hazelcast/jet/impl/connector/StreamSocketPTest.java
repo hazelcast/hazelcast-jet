@@ -69,10 +69,11 @@ public class StreamSocketPTest extends JetTestSupport {
             }));
             thread.start();
 
-            Processor processor = SourceProcessors.streamSocket("localhost", serverSocket.getLocalPort(), UTF_8).get();
+            Processor processor = SourceProcessors.streamSocket("localhost", serverSocket.getLocalPort(), UTF_8)
+                                                  .get(1).iterator().next();
             processor.init(outbox, outbox, context);
 
-            assertTrue(processor.complete());
+            assertTrueEventually(() -> assertTrue(processor.complete()), 3);
             assertEquals("hello", bucket.poll());
             assertEquals("world", bucket.poll());
             assertEquals(null, bucket.poll());

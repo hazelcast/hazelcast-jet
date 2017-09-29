@@ -126,7 +126,12 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
-        return emitFromTraverser(outputTraverser);
+        T nextItem = outputTraverser.next();
+        if (nextItem == null) {
+            return true;
+        }
+        emit(nextItem);
+        return false;
     }
 
     @Override
