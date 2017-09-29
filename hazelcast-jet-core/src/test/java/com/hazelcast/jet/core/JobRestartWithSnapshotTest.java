@@ -33,9 +33,11 @@ import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.execution.SnapshotContext;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
+import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.nio.Address;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import com.hazelcast.test.PacketFiltersUtil;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
 import org.junit.Before;
@@ -67,6 +69,7 @@ import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.util.Util.arrayIndexOf;
+import static java.util.Collections.singletonList;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.joining;
@@ -240,11 +243,12 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         Edge between source and sink is distributed. This situation will cause that after the source completes on
         member2, the sink on member2 will only have remote source. This will allow that we can receive the
         barrier from remote member1 before member2 even starts the snapshot. This is the very purpose of this
-        test. To ensure that this happens, we postpone handling of SnapshotOperation on member2 by 1s.
+        test. To ensure that this happens, we postpone handling of SnapshotOperation on member2.
          */
         JetService jetService = ((HazelcastInstanceImpl) instance2.getHazelcastInstance())
                 .node.nodeEngine.getService(JetService.SERVICE_NAME);
-        jetService.getJobExecutionService().setPostponeSnapshotOperationMs(1000);
+        PacketFiltersUtil.delayOperationsFrom(instance1.getHazelcastInstance(),
+                JetInitDataSerializerHook.FACTORY_ID, singletonList(JetInitDataSerializerHook.SNAPSHOT_OP));
 
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", new NonBalancedSource(
