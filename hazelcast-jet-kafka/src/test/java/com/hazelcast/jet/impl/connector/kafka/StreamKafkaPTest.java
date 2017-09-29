@@ -55,6 +55,7 @@ import static com.hazelcast.jet.core.processor.KafkaProcessors.streamKafka;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeList;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.IntStream.range;
@@ -182,14 +183,13 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         // the second item should be produced one more time
         assertEquals(entry(1, "1"), consumeEventually(processor, outbox));
 
-        // assert no more items
         assertNoMoreItems(processor, outbox);
     }
 
     @Test
     public void when_partitionAdded_then_consumedFromBeginning() throws Exception {
         properties.setProperty("metadata.max.age.ms", "100");
-        StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name), 1, 0, 500);
+        StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name), 1, 0, 100);
         TestOutbox outbox = new TestOutbox(new int[] {10}, 10);
         processor.init(outbox, outbox, new TestProcessorContext().setSnapshottingEnabled(true));
 
@@ -200,8 +200,6 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         Thread.sleep(1000);
         resetProducer(); // this allows production to the added partition
 
-        // Now we have two partitions. We don't know to which partition particular event goes. So we produce 10
-        // of them hoping some will go to the new ption
         boolean somethingInPartition1 = false;
         for (int i = 1; i < 11; i++) {
             Future<RecordMetadata> future = produce(topic1Name, i, Integer.toString(i));
@@ -219,6 +217,42 @@ public class StreamKafkaPTest extends KafkaTestSupport {
             }
         }
         assertEquals(range(1, 11).mapToObj(i -> entry(i, Integer.toString(i))).collect(toSet()), receivedEvents);
+    }
+
+    @Test
+    public void when_emptyAssignment_then_noOutputAndPicksNewPartition() throws Exception {
+        // The processor will be the second of two processors and there's just
+        // one partition -> nothing will be assigned to it.
+        StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name), 2, 1, 500);
+        TestOutbox outbox = new TestOutbox(new int[] {10}, 10);
+        processor.init(outbox, outbox, new TestProcessorContext().setSnapshottingEnabled(true));
+
+        long endTime = System.nanoTime() + MILLISECONDS.toNanos(1000);
+        while (endTime > System.nanoTime()) {
+            produce(topic1Name, 0, "0");
+            assertFalse(processor.complete());
+            assertEquals(0, outbox.queueWithOrdinal(0).size());
+            Thread.sleep(10);
+        }
+
+        // now add partition, it should be assigned to our instance
+        addPartitions(topic1Name, 2);
+        Thread.sleep(1000);
+        resetProducer(); // this allows production to the added partition
+
+        // produce one event to the added partition
+        Entry<Integer, String> eventInPtion1 = null;
+        for (int i = 0; eventInPtion1 == null; i++) {
+            Future<RecordMetadata> future = produce(topic1Name, i, Integer.toString(i));
+            if (future.get().partition() == 1) {
+                eventInPtion1 = entry(i, Integer.toString(i));
+            }
+        }
+
+        Entry<Integer, String> receivedEvent = consumeEventually(processor, outbox);
+        assertEquals(eventInPtion1, receivedEvent);
+
+        assertNoMoreItems(processor, outbox);
     }
 
     private Entry<Integer, String> consumeEventually(Processor processor, TestOutbox outbox) {
