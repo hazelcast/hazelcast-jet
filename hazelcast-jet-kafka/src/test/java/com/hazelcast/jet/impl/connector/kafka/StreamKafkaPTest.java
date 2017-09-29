@@ -152,38 +152,38 @@ public class StreamKafkaPTest extends KafkaTestSupport {
 
     @Test
     public void when_snapshotSaved_then_offsetsRestored() throws Exception {
-        StreamKafkaP[] processor = {new StreamKafkaP(properties, singletonList(topic1Name), 1, 0, 60000)};
-        TestOutbox[] outbox = {new TestOutbox(new int[] {10}, 10)};
-        processor[0].init(outbox[0], outbox[0], new TestProcessorContext().setSnapshottingEnabled(true));
+        StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name), 1, 0, 60000);
+        TestOutbox outbox = new TestOutbox(new int[] {10}, 10);
+        processor.init(outbox, outbox, new TestProcessorContext().setSnapshottingEnabled(true));
 
         produce(topic1Name, 0, "0");
-        assertEquals(entry(0, "0"), consumeEventually(processor[0], outbox[0]));
+        assertEquals(entry(0, "0"), consumeEventually(processor, outbox));
 
         // create snapshot
-        TestInbox snapshot = saveSnapshot(processor[0], outbox[0]);
+        TestInbox snapshot = saveSnapshot(processor, outbox);
         Set snapshotItems = unwrapBroadcastKey(snapshot);
 
         // consume one more item
         produce(topic1Name, 1, "1");
-        assertEquals(entry(1, "1"), consumeEventually(processor[0], outbox[0]));
+        assertEquals(entry(1, "1"), consumeEventually(processor, outbox));
 
         // create new processor and restore snapshot
-        processor[0] = new StreamKafkaP(properties, asList(topic1Name, topic2Name), 1, 0, 60000);
-        outbox[0] = new TestOutbox(new int[] {10}, 10);
-        processor[0].init(outbox[0], outbox[0], new TestProcessorContext().setSnapshottingEnabled(true));
+        processor = new StreamKafkaP(properties, asList(topic1Name, topic2Name), 1, 0, 60000);
+        outbox = new TestOutbox(new int[] {10}, 10);
+        processor.init(outbox, outbox, new TestProcessorContext().setSnapshottingEnabled(true));
 
         // restore snapshot
-        processor[0].restoreFromSnapshot(snapshot);
+        processor.restoreFromSnapshot(snapshot);
         assertTrue("snapshot not fully processed", snapshot.isEmpty());
 
-        TestInbox snapshot2 = saveSnapshot(processor[0], outbox[0]);
+        TestInbox snapshot2 = saveSnapshot(processor, outbox);
         assertEquals("new snapshot not equal after restore", snapshotItems, unwrapBroadcastKey(snapshot2));
 
         // the second item should be produced one more time
-        assertEquals(entry(1, "1"), consumeEventually(processor[0], outbox[0]));
+        assertEquals(entry(1, "1"), consumeEventually(processor, outbox));
 
         // assert no more items
-        assertNoMoreItems(processor[0], outbox[0]);
+        assertNoMoreItems(processor, outbox);
     }
 
     @Test

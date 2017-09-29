@@ -106,17 +106,18 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
             String topicName = topicIds.get(topicIdx);
             List<PartitionInfo> partitionInfos = consumer.partitionsFor(topicName);
             LoggingUtil.logFinest(getLogger(), "Num of ptions for topic '%s': %d", topicName, partitionInfos.size());
-            if (nextAssignablePtions[topicIdx] < partitionInfos.size()) {
-                // Sort partitionInfos
-                // Kafka returns internal array in partitionsFor(), so I'd better do a copy first to avoid problems
-                partitionInfos = new ArrayList<>(partitionInfos);
-                partitionInfos.sort(comparing(PartitionInfo::partition));
-                while (nextAssignablePtions[topicIdx] < partitionInfos.size()) {
-                    int partition = nextAssignablePtions[topicIdx];
-                    nextAssignablePtions[topicIdx] += processorCount;
-                    assert partitionInfos.get(partition).partition() == partition;
-                    addedPartitions.add(new TopicPartition(topicName, partition));
-                }
+            if (nextAssignablePtions[topicIdx] >= partitionInfos.size()) {
+                continue;
+            }
+            // Sort partitionInfos
+            // Kafka returns internal array in partitionsFor(), so I'd better do a copy first to avoid problems
+            partitionInfos = new ArrayList<>(partitionInfos);
+            partitionInfos.sort(comparing(PartitionInfo::partition));
+            while (nextAssignablePtions[topicIdx] < partitionInfos.size()) {
+                int partition = nextAssignablePtions[topicIdx];
+                nextAssignablePtions[topicIdx] += processorCount;
+                assert partitionInfos.get(partition).partition() == partition;
+                addedPartitions.add(new TopicPartition(topicName, partition));
             }
         }
 
@@ -137,21 +138,22 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
             reassignPartitions(false);
         }
 
-        if (!assignment.isEmpty()) {
-            ConsumerRecords<?, ?> records = consumer.poll(POLL_TIMEOUT_MS);
-            for (ConsumerRecord<?, ?> r : records) {
-                if (snapshottingEnabled) {
-                    offsets.put(new TopicPartition(r.topic(), r.partition()), r.offset());
-                }
-                emit(entry(r.key(), r.value()));
-            }
-            if (!snapshottingEnabled) {
-                consumer.commitSync();
-            }
-        } else {
+        // this happens when there are less kafka partitions than globalParallelism of this vertex
+        if (assignment.isEmpty()) {
             LockSupport.parkNanos(MILLISECONDS.toNanos(POLL_TIMEOUT_MS));
+            return false;
         }
 
+        ConsumerRecords<?, ?> records = consumer.poll(POLL_TIMEOUT_MS);
+        for (ConsumerRecord<?, ?> r : records) {
+            if (snapshottingEnabled) {
+                offsets.put(new TopicPartition(r.topic(), r.partition()), r.offset());
+            }
+            emit(entry(r.key(), r.value()));
+        }
+        if (!snapshottingEnabled) {
+            consumer.commitSync();
+        }
         return false;
     }
 
