@@ -92,8 +92,8 @@ public final class KafkaProcessors {
      */
     public static <T, K, V> ProcessorMetaSupplier writeKafka(
             String topic, Properties properties,
-            DistributedFunction<T, K> extractKeyFn,
-            DistributedFunction<T, V> extractValueFn
+            DistributedFunction<? super T, K> extractKeyFn,
+            DistributedFunction<? super T, V> extractValueFn
     ) {
         return ProcessorMetaSupplier.of(new WriteKafkaP.Supplier<>(topic, properties, extractKeyFn, extractValueFn));
     }

@@ -53,12 +53,14 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
     private final RecordWriter<K, V> recordWriter;
     private final TaskAttemptContextImpl taskAttemptContext;
     private final OutputCommitter outputCommitter;
-    private final DistributedFunction<T, K> extractKeyFn;
-    private final DistributedFunction<T, V> extractValueFn;
+    private final DistributedFunction<? super T, K> extractKeyFn;
+    private final DistributedFunction<? super T, V> extractValueFn;
 
-    private WriteHdfsP(RecordWriter<K, V> recordWriter, TaskAttemptContextImpl taskAttemptContext,
+    private WriteHdfsP(RecordWriter<K, V> recordWriter,
+                       TaskAttemptContextImpl taskAttemptContext,
                        OutputCommitter outputCommitter,
-                       DistributedFunction<T, K> extractKeyFn, DistributedFunction<T, V> extractValueFn
+                       DistributedFunction<? super T, K> extractKeyFn,
+                       DistributedFunction<? super T, V> extractValueFn
     ) {
         this.recordWriter = recordWriter;
         this.taskAttemptContext = taskAttemptContext;
@@ -96,14 +98,14 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
         static final long serialVersionUID = 1L;
 
         private final SerializableJobConf jobConf;
-        private final DistributedFunction<T, K> extractKeyFn;
-        private final DistributedFunction<T, V> extractValueFn;
+        private final DistributedFunction<? super T, K> extractKeyFn;
+        private final DistributedFunction<? super T, V> extractValueFn;
 
         private transient Address address;
 
         public MetaSupplier(SerializableJobConf jobConf,
-                            DistributedFunction<T, K> extractKeyFn,
-                            DistributedFunction<T, V> extractValueFn
+                            DistributedFunction<? super T, K> extractKeyFn,
+                            DistributedFunction<? super T, V> extractValueFn
         ) {
             this.jobConf = jobConf;
             this.extractKeyFn = extractKeyFn;
@@ -127,8 +129,8 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
 
         private final boolean commitJob;
         private final SerializableJobConf jobConf;
-        private final DistributedFunction<T, K> extractKeyFn;
-        private final DistributedFunction<T, V> extractValueFn;
+        private final DistributedFunction<? super T, K> extractKeyFn;
+        private final DistributedFunction<? super T, V> extractValueFn;
 
         private transient Context context;
         private transient OutputCommitter outputCommitter;
@@ -136,8 +138,8 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
 
         Supplier(boolean commitJob,
                  SerializableJobConf jobConf,
-                 DistributedFunction<T, K> extractKeyFn,
-                 DistributedFunction<T, V> extractValueFn
+                 DistributedFunction<? super T, K> extractKeyFn,
+                 DistributedFunction<? super T, V> extractValueFn
         ) {
             this.commitJob = commitJob;
             this.jobConf = jobConf;

@@ -56,8 +56,8 @@ public final class HdfsSinks {
     @Nonnull
     public static <E, K, V> Sink<E> writeHdfs(
             @Nonnull JobConf jobConf,
-            @Nonnull DistributedFunction<E, K> extractKeyF,
-            @Nonnull DistributedFunction<E, V> extractValueF
+            @Nonnull DistributedFunction<? super E, K> extractKeyF,
+            @Nonnull DistributedFunction<? super E, V> extractValueF
     ) {
         return Sinks.fromProcessor("writeHdfs", HdfsProcessors.writeHdfs(jobConf, extractKeyF, extractValueF));
     }

@@ -40,11 +40,11 @@ public final class WriteKafkaP<T, K, V> extends AbstractProcessor {
 
     private final String topic;
     private final KafkaProducer<K, V> producer;
-    private final Function<T, K> extractKeyFn;
-    private final Function<T, V> extractValueFn;
+    private final Function<? super T, K> extractKeyFn;
+    private final Function<? super T, V> extractValueFn;
 
     WriteKafkaP(String topic, KafkaProducer<K, V> producer,
-                Function<T, K> extractKeyFn, Function<T, V> extractValueFn
+                Function<? super T, K> extractKeyFn, Function<? super T, V> extractValueFn
     ) {
         this.topic = topic;
         this.producer = producer;
@@ -77,13 +77,13 @@ public final class WriteKafkaP<T, K, V> extends AbstractProcessor {
 
         private final String topicId;
         private final Properties properties;
-        private final Function<T, K> extractKeyFn;
-        private final Function<T, V> extractValueFn;
+        private final Function<? super T, K> extractKeyFn;
+        private final Function<? super T, V> extractValueFn;
 
         private transient KafkaProducer<K, V> producer;
 
         public Supplier(String topicId, Properties properties,
-                        Function<T, K> extractKeyFn, Function<T, V> extractValueFn
+                        Function<? super T, K> extractKeyFn, Function<? super T, V> extractValueFn
         ) {
             this.topicId = topicId;
             this.properties = properties;

@@ -79,15 +79,15 @@ public final class HdfsProcessors {
      * @param extractKeyFn   mapper to map a key to another key
      * @param extractValueFn mapper to map a value to another value
      *
-     * @param <T> stream item type
+     * @param <E> stream item type
      * @param <K> type of key to write to HDFS
      * @param <V> type of value to write to HDFS
      */
     @Nonnull
-    public static <T, K, V> ProcessorMetaSupplier writeHdfs(
+    public static <E, K, V> ProcessorMetaSupplier writeHdfs(
             @Nonnull JobConf jobConf,
-            @Nonnull DistributedFunction<T, K> extractKeyFn,
-            @Nonnull DistributedFunction<T, V> extractValueFn
+            @Nonnull DistributedFunction<? super E, K> extractKeyFn,
+            @Nonnull DistributedFunction<? super E, V> extractValueFn
     ) {
         return new WriteHdfsP.MetaSupplier<>(SerializableJobConf.asSerializable(jobConf), extractKeyFn, extractValueFn);
     }

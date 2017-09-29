@@ -54,8 +54,8 @@ public final class KafkaSinks {
      */
     public static <E, K, V> Sink<E> writeKafka(
             String topic, Properties properties,
-            DistributedFunction<E, K> extractKeyFn,
-            DistributedFunction<E, V> extractValueFn
+            DistributedFunction<? super E, K> extractKeyFn,
+            DistributedFunction<? super E, V> extractValueFn
     ) {
         return Sinks.fromProcessor("writeKafka",
                 KafkaProcessors.writeKafka(topic, properties, extractKeyFn, extractValueFn));
