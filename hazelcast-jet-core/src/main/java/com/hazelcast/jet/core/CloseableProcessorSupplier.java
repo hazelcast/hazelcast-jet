@@ -37,10 +37,11 @@ import static java.util.stream.Collectors.toList;
 public class CloseableProcessorSupplier<E extends Processor & Closeable> implements ProcessorSupplier {
 
     static final long serialVersionUID = 1L;
+
     private final DistributedIntFunction<Collection<E>> supplier;
 
-    private ILogger logger;
-    private Collection<E> processors;
+    private transient ILogger logger;
+    private transient Collection<E> processors;
 
     /**
      * @param simpleSupplier Supplier to create processor instances.
