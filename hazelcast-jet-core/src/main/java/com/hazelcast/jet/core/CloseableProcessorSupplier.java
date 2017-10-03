@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.jet.function.DistributedIntFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.logging.ILogger;
 
@@ -36,32 +37,45 @@ import static java.util.stream.Collectors.toList;
 public class CloseableProcessorSupplier<E extends Processor & Closeable> implements ProcessorSupplier {
 
     static final long serialVersionUID = 1L;
-    private final DistributedSupplier<E> supplier;
+    private final DistributedIntFunction<Collection<E>> supplier;
 
     private ILogger logger;
     private Collection<E> processors;
 
     /**
+     * @param simpleSupplier Supplier to create processor instances.
+     *                       Parameter is the local processor index.
+     */
+    public CloseableProcessorSupplier(DistributedSupplier<E> simpleSupplier) {
+        this(count -> IntStream.range(0, count)
+                               .mapToObj(i -> simpleSupplier.get())
+                               .collect(toList()));
+    }
+
+    /**
      * @param supplier Supplier to create processor instances.
      */
-    public CloseableProcessorSupplier(DistributedSupplier<E> supplier) {
+    public CloseableProcessorSupplier(DistributedIntFunction<Collection<E>>  supplier) {
         this.supplier = supplier;
     }
 
     @Override
-    public final void init(@Nonnull Context context) {
+    public void init(@Nonnull Context context) {
         logger = context.logger();
     }
 
     @Nonnull @Override
-    public final Collection<E> get(int count) {
-        return processors = IntStream.range(0, count)
-                                     .mapToObj(i -> supplier.get())
-                                     .collect(toList());
+    public Collection<E> get(int count) {
+        assert processors == null;
+        return processors = supplier.apply(count);
     }
 
     @Override
-    public final void complete(Throwable error) {
+    public void complete(Throwable error) {
+        if (processors == null) {
+            return;
+        }
+
         Throwable firstError = null;
         // close all processors, ignoring their failures and throwing the first failure (if any)
         for (E p : processors) {

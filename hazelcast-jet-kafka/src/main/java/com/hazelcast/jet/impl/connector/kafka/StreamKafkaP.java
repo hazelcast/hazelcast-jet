@@ -68,7 +68,7 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
 
     private final Map<TopicPartition, Long> offsets = new HashMap<>();
     private Traverser<Entry<BroadcastKey<TopicPartition>, Long>> snapshotTraverser;
-    private Set<TopicPartition> currentAssignments = new HashSet<>();
+    private Set<TopicPartition> currentAssignment = new HashSet<>();
     private long metadataRefreshInterval;
     private int processorIndex;
 
@@ -92,14 +92,14 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
         List<Integer> partitionCounts = topics.stream().map(t -> consumer.partitionsFor(t).size()).collect(toList());
         KafkaPartitionAssigner assigner = new KafkaPartitionAssigner(topics, partitionCounts, globalParallelism);
         Set<TopicPartition> newAssignments = assigner.topicPartitionsFor(processorIndex);
-        logFinest(getLogger(), "New assigned partitions: %s", newAssignments);
+        logFinest(getLogger(), "Currently assigned partitions: %s", newAssignments);
 
-        newAssignments.removeAll(currentAssignments);
+        newAssignments.removeAll(currentAssignment);
 
         if (!newAssignments.isEmpty()) {
             getLogger().info("Partition assignments changed, new partitions: " + newAssignments);
-            currentAssignments.addAll(newAssignments);
-            consumer.assign(currentAssignments);
+            currentAssignment.addAll(newAssignments);
+            consumer.assign(currentAssignment);
             if (seekToBeginning) {
                 // for newly detected partitions, we should always seek to the beginning
                 consumer.seekToBeginning(newAssignments);
@@ -114,7 +114,7 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
             assignPartitions(true);
         }
 
-        if (currentAssignments.isEmpty()) {
+        if (currentAssignment.isEmpty()) {
             // this happens when there are less kafka partitions than globalParallelism of
             // this vertex. Processor will just idle rather then finish
             // as there might be more partitions that can be assigned in the future.
@@ -159,7 +159,7 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
     public void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
         TopicPartition partition = ((BroadcastKey<TopicPartition>) key).key();
         long offset = (long) value;
-        if (currentAssignments.contains(partition)) {
+        if (currentAssignment.contains(partition)) {
             Long oldValue = offsets.put(partition, offset);
             assert oldValue == null : "duplicate offset for partition '" + partition + "' restored, offset1="
                     + oldValue + ", offset2=" + offset;
@@ -205,7 +205,6 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
         }
     }
 
-
     /**
      * Helper class for assigning partitions to processor indices in a round robin fashion
      */
@@ -239,7 +238,5 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
             int startIndex = topicIndex * Math.max(1, globalParallelism / topics.size());
             return (startIndex + partition) % globalParallelism;
         }
-
-
     }
 }
