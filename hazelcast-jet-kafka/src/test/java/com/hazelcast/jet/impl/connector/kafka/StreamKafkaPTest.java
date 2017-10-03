@@ -153,7 +153,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
 
     @Test
     public void when_snapshotSaved_then_offsetsRestored() throws Exception {
-        StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name), 1, 0, 60000);
+        StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name), 1, 60000);
         TestOutbox outbox = new TestOutbox(new int[] {10}, 10);
         processor.init(outbox, outbox, new TestProcessorContext().setSnapshottingEnabled(true));
 
@@ -169,7 +169,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         assertEquals(entry(1, "1"), consumeEventually(processor, outbox));
 
         // create new processor and restore snapshot
-        processor = new StreamKafkaP(properties, asList(topic1Name, topic2Name), 1, 0, 60000);
+        processor = new StreamKafkaP(properties, asList(topic1Name, topic2Name), 1, 60000);
         outbox = new TestOutbox(new int[] {10}, 10);
         processor.init(outbox, outbox, new TestProcessorContext().setSnapshottingEnabled(true));
 
@@ -189,7 +189,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
     @Test
     public void when_partitionAdded_then_consumedFromBeginning() throws Exception {
         properties.setProperty("metadata.max.age.ms", "100");
-        StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name), 1, 0, 100);
+        StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name), 1, 100);
         TestOutbox outbox = new TestOutbox(new int[] {10}, 10);
         processor.init(outbox, outbox, new TestProcessorContext().setSnapshottingEnabled(true));
 
@@ -223,9 +223,10 @@ public class StreamKafkaPTest extends KafkaTestSupport {
     public void when_emptyAssignment_then_noOutputAndPicksNewPartition() throws Exception {
         // The processor will be the second of two processors and there's just
         // one partition -> nothing will be assigned to it.
-        StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name), 2, 1, 500);
+        StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name), 2, 500);
         TestOutbox outbox = new TestOutbox(new int[] {10}, 10);
-        processor.init(outbox, outbox, new TestProcessorContext().setSnapshottingEnabled(true));
+        TestProcessorContext context = new TestProcessorContext().setGlobalProcessorIndex(1).setSnapshottingEnabled(true);
+        processor.init(outbox, outbox, context);
 
         long endTime = System.nanoTime() + MILLISECONDS.toNanos(1000);
         while (endTime > System.nanoTime()) {
