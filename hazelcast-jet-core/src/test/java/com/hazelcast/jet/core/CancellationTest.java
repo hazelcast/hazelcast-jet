@@ -253,6 +253,7 @@ public class CancellationTest extends JetTestSupport {
         DAG dag = new DAG();
         dag.newVertex("blocking", new CloseableProcessorSupplier(BlockingProcessor::new)).localParallelism(1);
         jet.newJob(dag);
+        Thread.sleep(1000);
         jet.shutdown();
         Thread.sleep(3000);
         assertBlockingProcessorEventuallyNotRunning();
