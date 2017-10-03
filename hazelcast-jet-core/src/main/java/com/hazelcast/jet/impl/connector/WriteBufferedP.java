@@ -69,7 +69,8 @@ public final class WriteBufferedP<B, T> implements Processor, Closeable {
             DistributedConsumer<B> flushBufferFn,
             DistributedConsumer<B> disposeBufferFn
     ) {
-        return new CloseableProcessorSupplier<>(() -> new WriteBufferedP<>(newBufferFn, addToBufferFn, flushBufferFn, disposeBufferFn));
+        return new CloseableProcessorSupplier<>(
+                () -> new WriteBufferedP<>(newBufferFn, addToBufferFn, flushBufferFn, disposeBufferFn));
     }
 
     @Override
