@@ -14,23 +14,39 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.processor;
+package com.hazelcast.jet.core;
 
-import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.function.DistributedIntFunction;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
 import java.io.Closeable;
 import java.util.Collection;
+import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static java.util.stream.Collectors.toList;
 
-public abstract class AbstractCloseableProcessorSupplier<E extends Processor & Closeable> implements ProcessorSupplier {
+/**
+ * A {@link ProcessorSupplier} which closes created processor instances
+ * when the job is complete.
+ *
+ * @param <E> Processor type
+ */
+public class CloseableProcessorSupplier<E extends Processor & Closeable> implements ProcessorSupplier {
+
+    static final long serialVersionUID = 1L;
+    private final DistributedSupplier<E> supplier;
 
     private ILogger logger;
     private Collection<E> processors;
+
+    /**
+     * @param supplier Supplier to create processor instances.
+     */
+    public CloseableProcessorSupplier(DistributedSupplier<E> supplier) {
+        this.supplier = supplier;
+    }
 
     @Override
     public final void init(@Nonnull Context context) {
@@ -39,7 +55,9 @@ public abstract class AbstractCloseableProcessorSupplier<E extends Processor & C
 
     @Nonnull @Override
     public final Collection<E> get(int count) {
-        return processors = getProcessors(count);
+        return processors = IntStream.range(0, count)
+                                     .mapToObj(i -> supplier.get())
+                                     .collect(toList());
     }
 
     @Override
@@ -62,22 +80,4 @@ public abstract class AbstractCloseableProcessorSupplier<E extends Processor & C
         }
     }
 
-    protected void initInternal(@Nonnull Context context) {
-    }
-
-    protected abstract Collection<E> getProcessors(int count);
-
-    protected void completeInternal(Throwable error) {
-    }
-
-    public static <E extends Processor & Closeable> ProcessorSupplier closeableSupplier(
-            DistributedIntFunction<Collection<E>> processorSupplier
-    ) {
-        return new AbstractCloseableProcessorSupplier<E>() {
-            @Override
-            protected Collection<E> getProcessors(int count) {
-                return processorSupplier.apply(count);
-            }
-        };
-    }
 }

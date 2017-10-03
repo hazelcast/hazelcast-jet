@@ -20,6 +20,7 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
+import com.hazelcast.jet.core.CloseableProcessorSupplier;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.nio.Address;
@@ -41,11 +42,9 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
-import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
-import static com.hazelcast.jet.impl.processor.AbstractCloseableProcessorSupplier.closeableSupplier;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
@@ -201,11 +200,8 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
         @Nonnull
         @Override
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-            return address -> closeableSupplier(count ->
-                    IntStream.range(0, count)
-                             .mapToObj(i -> new StreamKafkaP(properties, topics, totalParallelism,
-                                     metadataRefreshInterval))
-                             .collect(toList()));
+            return address -> new CloseableProcessorSupplier<>(
+                    () -> new StreamKafkaP(properties, topics, totalParallelism, metadataRefreshInterval));
         }
     }
 
