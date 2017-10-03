@@ -17,10 +17,13 @@
 package com.hazelcast.jet.core.test;
 
 import com.hazelcast.config.NetworkConfig;
+import com.hazelcast.instance.BuildInfoProvider;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.test.TestOutbox.MockData;
+import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.LoggingServiceImpl;
 import com.hazelcast.nio.Address;
 
 import javax.annotation.Nonnull;
@@ -126,6 +129,9 @@ public final class TestSupport {
     // parallel tests or GC.
     private static final long COOPERATIVE_TIME_LIMIT_MS_FAIL = 1000;
     private static final long COOPERATIVE_TIME_LIMIT_MS_WARN = 5;
+    private static final LoggingServiceImpl LOGGING_SERVICE = new LoggingServiceImpl(
+            "test-group", null, BuildInfoProvider.getBuildInfo()
+    );
 
     static {
         try {
@@ -438,6 +444,14 @@ public final class TestSupport {
     public static Supplier<Processor> supplierFrom(ProcessorMetaSupplier supplier) {
         supplier.init(new TestProcessorMetaSupplierContext());
         return supplierFrom(supplier.get(singletonList(LOCAL_ADDRESS)).apply(LOCAL_ADDRESS));
+    }
+
+    static ILogger getLogger(String name) {
+        return LOGGING_SERVICE.getLogger(name);
+    }
+
+    static ILogger getLogger(Class clazz) {
+        return LOGGING_SERVICE.getLogger(clazz);
     }
 
     private static String listToString(List<?> list) {
