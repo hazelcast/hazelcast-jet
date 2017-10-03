@@ -49,11 +49,11 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
  *     {@link #tryProcess(int, Object)} to process the rest of the edges, which
  *     are treated uniformly.
  * </li><li>
- *     The {@code emit(...)} methods avoid the need to deal with {@code Outbox}
+ *     The {@code tryEmit(...)} methods avoid the need to deal with {@code Outbox}
  *     directly.
  * </li><li>
  *     The {@code emitFromTraverser(...)} methods handle the boilerplate of
- *     cooperative item emission. They are especially useful in the
+ *     emission from a traverser. They are especially useful in the
  *     {@link #complete()} step when there is a collection of items to emit.
  *     The {@link Traversers} class contains traversers tailored to simplify
  *     the implementation of {@code complete()}.
@@ -79,7 +79,7 @@ public abstract class AbstractProcessor implements Processor {
      * Specifies what this processor's {@link #isCooperative()} method will return.
      * The method will have no effect if called after the processor has been
      * submitted to the execution service; therefore it should be called from the
-     * {@link ProcessorSupplier} that creates it.
+     * {@link ProcessorSupplier} that creates it or in processor's constructor.
      */
     public final void setCooperative(boolean isCooperative) {
         this.isCooperative = isCooperative;
@@ -311,7 +311,8 @@ public abstract class AbstractProcessor implements Processor {
 
 
     /**
-     * Implements the boilerplate of polling the inbox and casting the items to Map.Entry
+     * Implements the boilerplate of polling the inbox and casting the items
+     * to {@code Map.Entry}.
      */
     @Override
     public final void restoreFromSnapshot(@Nonnull Inbox inbox) {

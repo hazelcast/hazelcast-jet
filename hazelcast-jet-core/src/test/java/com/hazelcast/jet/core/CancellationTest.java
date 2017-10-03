@@ -20,6 +20,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.properties.GroupProperty;
 import com.hazelcast.test.AssertTask;
@@ -34,16 +35,19 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import javax.annotation.Nonnull;
+import java.io.Closeable;
+import java.io.IOException;
 import java.net.UnknownHostException;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.locks.LockSupport.parkNanos;
+import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -247,7 +251,7 @@ public class CancellationTest extends JetTestSupport {
     public void when_shutdown_then_jobFuturesCanceled() throws Exception {
         JetInstance jet = newInstance();
         DAG dag = new DAG();
-        dag.newVertex("blocking", BlockingProcessor::new).localParallelism(1);
+        dag.newVertex("blocking", new CloseableProcessorSupplier(BlockingProcessor::new)).localParallelism(1);
         jet.newJob(dag);
         jet.shutdown();
         Thread.sleep(3000);
@@ -258,7 +262,7 @@ public class CancellationTest extends JetTestSupport {
     public void when_jobCanceled_then_jobFutureCanceled() throws Exception {
         JetInstance jet = newInstance();
         DAG dag = new DAG();
-        dag.newVertex("blocking", BlockingProcessor::new).localParallelism(1);
+        dag.newVertex("blocking", new CloseableProcessorSupplier(BlockingProcessor::new)).localParallelism(1);
         jet.newJob(dag).cancel();
         Thread.sleep(3000);
         assertBlockingProcessorEventuallyNotRunning();
@@ -285,12 +289,10 @@ public class CancellationTest extends JetTestSupport {
     }
 
     private static void assertBlockingProcessorEventuallyNotRunning() {
-        try {
-            assertTrueEventually(() -> assertTrue(BlockingProcessor.hasStarted == BlockingProcessor.isDone), 40);
-        } catch (AssertionError e) {
-            System.err.format("Test failing. Blocking processor has started? %b isDone? %b%n",
-                    BlockingProcessor.hasStarted, BlockingProcessor.isDone);
-        }
+        assertTrueEventually(() -> assertTrue(
+                String.format("BlockingProcessor should be started and done; hasStarted=%b, isDone=%b",
+                        BlockingProcessor.hasStarted, BlockingProcessor.isDone),
+                BlockingProcessor.hasStarted && BlockingProcessor.isDone), 10);
     }
 
     private static class StuckSource extends AbstractProcessor {
@@ -305,30 +307,49 @@ public class CancellationTest extends JetTestSupport {
         }
     }
 
-    private static class BlockingProcessor extends AbstractProcessor {
+    private static class BlockingProcessor extends AbstractProcessor implements Closeable {
 
         static volatile boolean hasStarted;
         static volatile boolean isDone;
-
-        private CompletableFuture<Void> jobFuture;
 
         BlockingProcessor() {
             setCooperative(false);
         }
 
         @Override
-        protected void init(@Nonnull Context context) throws Exception {
-            jobFuture = context.jobFuture();
+        public boolean complete() {
+            hasStarted = true;
+            return false;
         }
 
         @Override
-        public boolean complete() {
-            hasStarted = true;
-            while (!jobFuture.isDone()) {
-                parkNanos(MILLISECONDS.toNanos(200));
-            }
+        public void close() throws IOException {
             isDone = true;
-            return true;
+        }
+    }
+
+    // TODO replace with standard CloseableProcessorSupplier
+    private static final class CloseableProcessorSupplier implements ProcessorSupplier {
+
+        private final DistributedSupplier<Processor> simpleSupplier;
+        private List<Processor> processors;
+
+        private CloseableProcessorSupplier(DistributedSupplier<Processor> simpleSupplier) {
+            this.simpleSupplier = simpleSupplier;
+        }
+
+        @Nonnull
+        @Override
+        public Collection<? extends Processor> get(int count) {
+            assert processors == null;
+            return processors = IntStream.range(0, count)
+                                         .mapToObj(i -> simpleSupplier.get())
+                                         .collect(Collectors.toList());
+        }
+
+        @Override
+        public void complete(Throwable error) {
+            processors.forEach(p -> uncheckRun(((Closeable) p)::close));
         }
     }
 

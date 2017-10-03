@@ -114,7 +114,6 @@ public class ProcessorTasklet implements Tasklet {
 
     @Override
     public void init(CompletableFuture<Void> jobFuture) {
-        context.initJobFuture(jobFuture);
         processor.init(outbox, outbox, context);
     }
 

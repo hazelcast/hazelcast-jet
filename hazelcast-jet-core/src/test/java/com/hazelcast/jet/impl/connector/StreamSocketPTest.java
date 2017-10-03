@@ -32,7 +32,6 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Queue;
-import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -52,7 +51,6 @@ public class StreamSocketPTest extends JetTestSupport {
     public void before() {
         outbox = new TestOutbox(10);
         context = new TestProcessorContext();
-        context.setJobFuture(new CompletableFuture<>());
         bucket = outbox.queueWithOrdinal(0);
     }
 
