@@ -44,6 +44,7 @@ public final class StreamSocketP extends AbstractProcessor implements Closeable 
     private final int port;
     private final Charset charset;
     private BufferedReader bufferedReader;
+    private String pendingLine;
 
     private StreamSocketP(String host, int port, Charset charset) {
         this.host = host;
@@ -65,11 +66,16 @@ public final class StreamSocketP extends AbstractProcessor implements Closeable 
     }
 
     private boolean tryComplete() throws IOException {
-        String line = bufferedReader.readLine();
-        if (line == null) {
-            return true;
+        if (pendingLine == null) {
+            pendingLine = bufferedReader.readLine();
+            if (pendingLine == null) {
+                return true;
+            }
         }
-        emit(line);
+        boolean success = tryEmit(pendingLine);
+        if (success) {
+            pendingLine = null;
+        }
         return false;
     }
 

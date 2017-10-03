@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.connector.kafka;
 
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.CloseableProcessorSupplier;
@@ -31,6 +30,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,9 +40,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.locks.LockSupport;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
@@ -62,7 +63,7 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
     private final List<String> topics;
     private final int globalParallelism;
     private boolean snapshottingEnabled;
-    private KafkaConsumer<?, ?> consumer;
+    private KafkaConsumer<Object, Object> consumer;
 
     private long nextPartitionCheck = Long.MIN_VALUE;
 
@@ -71,6 +72,8 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
     private Set<TopicPartition> currentAssignment = new HashSet<>();
     private long metadataRefreshInterval;
     private int processorIndex;
+    private Traverser<ConsumerRecord<Object, Object>> traverser;
+    private Object pendingItem;
 
     StreamKafkaP(Properties properties, List<String> topics, int globalParallelism, long metadataRefreshInterval) {
         this.properties = properties;
@@ -112,26 +115,51 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
         if (System.nanoTime() >= nextPartitionCheck) {
             assignPartitions(true);
         }
-
         if (currentAssignment.isEmpty()) {
-            // this happens when there are less kafka partitions than globalParallelism of
-            // this vertex. Processor will just idle rather then finish
-            // as there might be more partitions that can be assigned in the future.
-            LockSupport.parkNanos(MILLISECONDS.toNanos(POLL_TIMEOUT_MS));
+            return false;
+        }
+        if (traverser == null) {
+            ConsumerRecords<Object, Object> records = consumer.poll(POLL_TIMEOUT_MS);
+            if (records.isEmpty()) {
+                return false;
+            }
+            traverser = traverseIterable(records);
             return false;
         }
 
-        ConsumerRecords<?, ?> records = consumer.poll(POLL_TIMEOUT_MS);
-        for (ConsumerRecord<?, ?> r : records) {
-            if (snapshottingEnabled) {
-                offsets.put(new TopicPartition(r.topic(), r.partition()), r.offset());
-            }
-            emit(entry(r.key(), r.value()));
-        }
+        mapAndEmitFromTraverser(traverser, r -> entry(r.key(), r.value()),
+                r -> offsets.put(new TopicPartition(r.topic(), r.partition()), r.offset()));
+
         if (!snapshottingEnabled) {
             consumer.commitSync();
         }
+
         return false;
+    }
+
+    private <T, U> void mapAndEmitFromTraverser(
+            @Nonnull Traverser<T> traverser,
+            @Nonnull Function<T, U> mapper,
+            @Nullable Consumer<? super T> onEmit
+    ) {
+        T item;
+        if (pendingItem != null) {
+            item = (T) pendingItem;
+            pendingItem = null;
+        } else {
+            item = traverser.next();
+        }
+        for (; item != null; item = traverser.next()) {
+            if (tryEmit(mapper.apply(item))) {
+                if (onEmit != null) {
+                    onEmit.accept(item);
+                }
+            } else {
+                pendingItem = item;
+                return;
+            }
+        }
+        this.traverser = null;
     }
 
     @Override
@@ -147,7 +175,7 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
     @Override
     public boolean saveToSnapshot() {
         if (snapshotTraverser == null) {
-            snapshotTraverser = Traversers.traverseIterable(offsets.entrySet())
+            snapshotTraverser = traverseIterable(offsets.entrySet())
                                           .map(e -> entry(broadcastKey(e.getKey()), e.getValue()))
                                           .onFirstNull(() -> snapshotTraverser = null);
         }

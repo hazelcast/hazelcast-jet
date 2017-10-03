@@ -77,12 +77,7 @@ public final class ReadFilesP extends AbstractProcessor implements Closeable {
 
     @Override
     public boolean complete() {
-        String nextItem = outputTraverser.next();
-        if (nextItem == null) {
-            return true;
-        }
-        emit(nextItem);
-        return false;
+        return emitFromTraverser(outputTraverser);
     }
 
     private boolean shouldProcessEvent(Path file) {

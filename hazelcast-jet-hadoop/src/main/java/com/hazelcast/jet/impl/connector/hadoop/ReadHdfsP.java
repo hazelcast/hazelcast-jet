@@ -83,12 +83,7 @@ public final class ReadHdfsP<K, V, R> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
-        R nextItem = trav.next();
-        if (nextItem == null) {
-            return true;
-        }
-        emit(nextItem);
-        return false;
+        return emitFromTraverser(trav);
     }
 
     private Traverser<R> traverseRecordReader(RecordReader<K, V> r) {

@@ -59,8 +59,6 @@ public class ReadWithPartitionIteratorPTest {
 
         // When
         assertFalse(r.complete());
-        assertFalse(r.complete());
-        assertFalse(r.complete());
 
         // Then
         assertEquals(entry(51), bucket.poll());
@@ -68,16 +66,12 @@ public class ReadWithPartitionIteratorPTest {
         assertEquals(entry(52), bucket.poll());
 
         // When
-        assertFalse(r.complete());
-        assertFalse(r.complete());
-        assertFalse(r.complete());
+        assertTrue(r.complete());
 
         // Then
         assertEquals(entry(72), bucket.poll());
         assertEquals(entry(53), bucket.poll());
         assertEquals(entry(73), bucket.poll());
-
-        assertTrue(r.complete());
     }
 
     private static Iterator<Entry<Integer, Integer>> iterate(Integer... content) {

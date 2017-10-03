@@ -36,6 +36,7 @@ public class OutboxImpl implements Outbox, SnapshotOutbox {
     private final OutboundCollector[] outstreams;
     private final ProgressTracker progTracker;
     private final SerializationService serializationService;
+    private final int batchSize;
 
     private final int[] singleEdge = {0};
     private final int[] allEdges;
@@ -43,19 +44,23 @@ public class OutboxImpl implements Outbox, SnapshotOutbox {
     private final int[] snapshotEdge;
     private final BitSet broadcastTracker;
     private Entry<Data, Data> pendingSnapshotEntry;
+    private int numRemainingInBatch;
 
     /**
      * @param outstreams The output queues
      * @param hasSnapshot If the last queue in {@code outstreams} is the snapshot queue
      * @param progTracker Tracker to track progress. Only madeProgress will be called,
      *                    done status won't be ever changed
+     * @param batchSize Maximum number of items that will be allowed to offer until
+     *                  {@link #resetBatch()} is called.
      */
     @SuppressFBWarnings("EI_EXPOSE_REP")
-    public OutboxImpl(OutboundCollector[] outstreams, boolean hasSnapshot,
-                      ProgressTracker progTracker, SerializationService serializationService) {
+    public OutboxImpl(OutboundCollector[] outstreams, boolean hasSnapshot, ProgressTracker progTracker,
+                      SerializationService serializationService, int batchSize) {
         this.outstreams = outstreams;
         this.progTracker = progTracker;
         this.serializationService = serializationService;
+        this.batchSize = batchSize;
 
         allEdges = IntStream.range(0, outstreams.length - (hasSnapshot ? 1 : 0)).toArray();
         allEdgesAndSnapshot = IntStream.range(0, outstreams.length).toArray();
@@ -84,6 +89,10 @@ public class OutboxImpl implements Outbox, SnapshotOutbox {
 
     @Override
     public final boolean offer(int[] ordinals, @Nonnull Object item) {
+        if (numRemainingInBatch <= 0) {
+            return false;
+        }
+        numRemainingInBatch--;
         boolean done = true;
         for (int i = 0; i < ordinals.length; i++) {
             if (broadcastTracker.get(i)) {
@@ -132,7 +141,11 @@ public class OutboxImpl implements Outbox, SnapshotOutbox {
         return success;
     }
 
-    protected ProgressState doOffer(OutboundCollector collector, Object item) {
+    public void resetBatch() {
+        numRemainingInBatch = batchSize;
+    }
+
+    private ProgressState doOffer(OutboundCollector collector, Object item) {
         if (item instanceof BroadcastItem) {
             return collector.offerBroadcast((BroadcastItem) item);
         }
