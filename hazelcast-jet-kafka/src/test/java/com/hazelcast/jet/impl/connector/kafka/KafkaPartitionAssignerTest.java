@@ -24,6 +24,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -101,18 +102,10 @@ public class KafkaPartitionAssignerTest {
     public void when_multipleTopicsWithSinglePartition() throws Exception {
         assigner = assigner(4, 1, 1, 1, 1);
 
-        assertAssignment(0,
-                tp(0, 0)
-        );
-        assertAssignment(1,
-                tp(1, 0)
-        );
-        assertAssignment(2,
-                tp(2, 0)
-        );
-        assertAssignment(3,
-                tp(3, 0)
-        );
+        assertAssignment(0, tp(0, 0));
+        assertAssignment(1, tp(1, 0));
+        assertAssignment(2, tp(2, 0));
+        assertAssignment(3, tp(3, 0));
     }
 
     @Test
@@ -131,7 +124,7 @@ public class KafkaPartitionAssignerTest {
     }
 
     private void assertAssignment(int processorIdx, TopicPartition... partitions) {
-        assertEquals(asList(partitions), assigner.topicPartitionsFor(processorIdx));
+        assertEquals(new HashSet<>(asList(partitions)), assigner.topicPartitionsFor(processorIdx));
     }
 
     private static TopicPartition tp(int topicIndex, int partition) {
