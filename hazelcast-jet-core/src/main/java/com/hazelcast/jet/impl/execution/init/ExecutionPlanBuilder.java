@@ -80,7 +80,7 @@ public final class ExecutionPlanBuilder {
                     e -> vertexIdMap.get(e.getDestName()), isJobDistributed);
             final ProcessorMetaSupplier metaSupplier = vertex.getSupplier();
             ILogger logger = nodeEngine.getLogger(metaSupplier.getClass().getName() + "." + vertex.getName() +
-                    "#MetaProcessorSupplier");
+                    "#ProcessorMetaSupplier");
             metaSupplier.init(new MetaSupplierCtx(instance, logger, totalParallelism, localParallelism,
                     jobConfig.getSnapshotInterval() >= 0));
 

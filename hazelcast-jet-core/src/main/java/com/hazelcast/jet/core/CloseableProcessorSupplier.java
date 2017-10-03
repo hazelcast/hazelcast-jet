@@ -78,7 +78,6 @@ public class CloseableProcessorSupplier<E extends Processor & Closeable> impleme
         }
 
         Throwable firstError = null;
-        // close all processors, ignoring their failures and throwing the first failure (if any)
         for (E p : processors) {
             try {
                 p.close();

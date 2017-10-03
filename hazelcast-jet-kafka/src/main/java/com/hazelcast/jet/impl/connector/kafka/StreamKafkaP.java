@@ -72,8 +72,7 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
     private long metadataRefreshInterval;
     private int processorIndex;
 
-    StreamKafkaP(Properties properties, List<String> topics, int globalParallelism,
-                 long metadataRefreshInterval) {
+    StreamKafkaP(Properties properties, List<String> topics, int globalParallelism, long metadataRefreshInterval) {
         this.properties = properties;
         this.topics = topics;
         this.globalParallelism = globalParallelism;
@@ -215,8 +214,8 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
         private final int globalParallelism;
 
         KafkaPartitionAssigner(List<String> topics, List<Integer> partitionCounts, int globalParallelism) {
-            Preconditions.checkTrue(topics.size() == partitionCounts.size(), "Different " +
-                    "length between topics and partition counts");
+            Preconditions.checkTrue(topics.size() == partitionCounts.size(),
+                    "Different length between topics and partition counts");
             this.topics = topics;
             this.partitionCounts = partitionCounts;
             this.globalParallelism = globalParallelism;
