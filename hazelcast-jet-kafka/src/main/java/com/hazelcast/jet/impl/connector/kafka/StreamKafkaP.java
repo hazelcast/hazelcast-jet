@@ -30,7 +30,6 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,7 +39,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
@@ -72,8 +70,8 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
     private Set<TopicPartition> currentAssignment = new HashSet<>();
     private long metadataRefreshInterval;
     private int processorIndex;
-    private Traverser<ConsumerRecord<Object, Object>> traverser;
-    private Object pendingItem;
+    private Traverser<Entry<Object, Object>> traverser;
+    private ConsumerRecord<Object, Object> lastEmittedItem;
 
     StreamKafkaP(Properties properties, List<String> topics, int globalParallelism, long metadataRefreshInterval) {
         this.properties = properties;
@@ -123,42 +121,20 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
             if (records.isEmpty()) {
                 return false;
             }
-            traverser = traverseIterable(records);
+            traverser = traverseIterable(records)
+                    .peek(r -> lastEmittedItem = r)
+                    .map(r -> entry(r.key(), r.value()))
+                    .onFirstNull(() -> traverser = null);
         }
 
-        mapAndEmitFromTraverser(traverser, r -> entry(r.key(), r.value()),
-                r -> offsets.put(new TopicPartition(r.topic(), r.partition()), r.offset()));
+        emitFromTraverser(traverser,
+                e -> offsets.put(new TopicPartition(lastEmittedItem.topic(), lastEmittedItem.partition()), lastEmittedItem.offset()));
 
         if (!snapshottingEnabled) {
             consumer.commitSync();
         }
 
         return false;
-    }
-
-    private <T, U> void mapAndEmitFromTraverser(
-            @Nonnull Traverser<T> traverser,
-            @Nonnull Function<T, U> mapper,
-            @Nullable Consumer<? super T> onEmit
-    ) {
-        T item;
-        if (pendingItem != null) {
-            item = (T) pendingItem;
-            pendingItem = null;
-        } else {
-            item = traverser.next();
-        }
-        for (; item != null; item = traverser.next()) {
-            if (tryEmit(mapper.apply(item))) {
-                if (onEmit != null) {
-                    onEmit.accept(item);
-                }
-            } else {
-                pendingItem = item;
-                return;
-            }
-        }
-        this.traverser = null;
     }
 
     @Override

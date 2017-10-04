@@ -20,7 +20,6 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.properties.GroupProperty;
 import com.hazelcast.test.AssertTask;
@@ -38,16 +37,12 @@ import javax.annotation.Nonnull;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.UnknownHostException;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
-import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -326,31 +321,6 @@ public class CancellationTest extends JetTestSupport {
         @Override
         public void close() throws IOException {
             isDone = true;
-        }
-    }
-
-    // TODO replace with standard CloseableProcessorSupplier
-    private static final class CloseableProcessorSupplier implements ProcessorSupplier {
-
-        private final DistributedSupplier<Processor> simpleSupplier;
-        private List<Processor> processors;
-
-        private CloseableProcessorSupplier(DistributedSupplier<Processor> simpleSupplier) {
-            this.simpleSupplier = simpleSupplier;
-        }
-
-        @Nonnull
-        @Override
-        public Collection<? extends Processor> get(int count) {
-            assert processors == null;
-            return processors = IntStream.range(0, count)
-                                         .mapToObj(i -> simpleSupplier.get())
-                                         .collect(Collectors.toList());
-        }
-
-        @Override
-        public void complete(Throwable error) {
-            processors.forEach(p -> uncheckRun(((Closeable) p)::close));
         }
     }
 
