@@ -40,11 +40,16 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.IntStream;
+import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
+import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
+import static java.lang.System.arraycopy;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
 
@@ -65,7 +70,12 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
 
     private long nextPartitionCheck = Long.MIN_VALUE;
 
-    private final Map<TopicPartition, Long> offsets = new HashMap<>();
+    /**
+     * Key: topicName<br>
+     * Value: partition offsets, at index I is offset for partition I.<br>
+     * Offsets are -1 initially and for unassigned partitions.
+     */
+    private final Map<String, long[]> offsets = new HashMap<>();
     private Traverser<Entry<BroadcastKey<TopicPartition>, Long>> snapshotTraverser;
     private Set<TopicPartition> currentAssignment = new HashSet<>();
     private long metadataRefreshInterval;
@@ -105,6 +115,15 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
                 consumer.seekToBeginning(newAssignments);
             }
         }
+        // initialize offsets
+        for (int topicIdx = 0; topicIdx < partitionCounts.size(); topicIdx++) {
+            int count = partitionCounts.get(topicIdx);
+            offsets.merge(topics.get(topicIdx), LongStream.generate(() -> -1).limit(count).toArray(),
+                    (o, n) -> {
+                        arraycopy(o, 0, n, 0, o.length);
+                        return n;
+                    });
+        }
         nextPartitionCheck = System.nanoTime() + MILLISECONDS.toNanos(metadataRefreshInterval);
     }
 
@@ -128,7 +147,7 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
         }
 
         emitFromTraverser(traverser,
-                e -> offsets.put(new TopicPartition(lastEmittedItem.topic(), lastEmittedItem.partition()), lastEmittedItem.offset()));
+                e -> offsets.get(lastEmittedItem.topic())[lastEmittedItem.partition()] = lastEmittedItem.offset());
 
         if (!snapshottingEnabled) {
             consumer.commitSync();
@@ -150,22 +169,38 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
     @Override
     public boolean saveToSnapshot() {
         if (snapshotTraverser == null) {
-            snapshotTraverser = traverseIterable(offsets.entrySet())
-                                          .map(e -> entry(broadcastKey(e.getKey()), e.getValue()))
-                                          .onFirstNull(() -> snapshotTraverser = null);
+            Stream<Entry<BroadcastKey<TopicPartition>, Long>> snapshotStream =
+                    offsets.entrySet().stream()
+                           .flatMap(entry -> IntStream.range(0, entry.getValue().length)
+                                  .filter(partition -> entry.getValue()[partition] >= 0)
+                                  .mapToObj(partition -> entry(
+                                          broadcastKey(new TopicPartition(entry.getKey(), partition)),
+                                          entry.getValue()[partition])));
+            snapshotTraverser = traverseStream(snapshotStream)
+                    .onFirstNull(() -> snapshotTraverser = null);
         }
         return emitFromTraverserToSnapshot(snapshotTraverser);
     }
 
     @Override
     public void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
-        TopicPartition partition = ((BroadcastKey<TopicPartition>) key).key();
+        TopicPartition topicPartition = ((BroadcastKey<TopicPartition>) key).key();
         long offset = (long) value;
-        if (currentAssignment.contains(partition)) {
-            Long oldValue = offsets.put(partition, offset);
-            assert oldValue == null : "duplicate offset for partition '" + partition + "' restored, offset1="
-                    + oldValue + ", offset2=" + offset;
-            consumer.seek(partition, offset + 1);
+        long[] topicOffsets = offsets.get(topicPartition.topic());
+        if (topicOffsets == null) {
+            getLogger().severe("Offset for topic '" + topicPartition.topic()
+                    + "' is present in snapshot, but the topic is not supposed to be read");
+            return;
+        }
+        if (topicPartition.partition() >= topicOffsets.length) {
+            getLogger().severe("Offset for partition '" + topicPartition + "' is present in snapshot," +
+                    " but that topic currently has only " + topicOffsets.length + " partitions");
+        }
+        if (currentAssignment.contains(topicPartition)) {
+            assert topicOffsets[topicPartition.partition()] < 0 : "duplicate offset for topicPartition '" + topicPartition
+                    + "' restored, offset1=" + topicOffsets[topicPartition.partition()] + ", offset2=" + offset;
+            topicOffsets[topicPartition.partition()] = offset;
+            consumer.seek(topicPartition, offset + 1);
         }
     }
 
