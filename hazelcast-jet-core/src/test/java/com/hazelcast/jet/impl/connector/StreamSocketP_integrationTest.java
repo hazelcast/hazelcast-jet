@@ -133,7 +133,7 @@ public class StreamSocketP_integrationTest extends JetTestSupport {
             acceptationLatch.await();
             job.cancel();
 
-            assertTrueEventually(() -> assertTrue("Socket not closed", accept.get().isClosed()), 15);
+            assertTrueEventually(() -> assertTrue("Socket not closed", accept.get().isClosed()));
         }
     }
 }
