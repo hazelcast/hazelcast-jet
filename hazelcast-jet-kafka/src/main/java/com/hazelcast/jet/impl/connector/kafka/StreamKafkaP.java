@@ -124,7 +124,6 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
                 return false;
             }
             traverser = traverseIterable(records);
-            return false;
         }
 
         mapAndEmitFromTraverser(traverser, r -> entry(r.key(), r.value()),
