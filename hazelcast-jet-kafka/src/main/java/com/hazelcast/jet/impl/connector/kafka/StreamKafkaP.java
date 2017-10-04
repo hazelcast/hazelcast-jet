@@ -31,6 +31,7 @@ import org.apache.kafka.common.TopicPartition;
 
 import javax.annotation.Nonnull;
 import java.io.Closeable;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -41,7 +42,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.IntStream;
-import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
@@ -105,7 +105,6 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
         logFinest(getLogger(), "Currently assigned partitions: %s", newAssignments);
 
         newAssignments.removeAll(currentAssignment);
-
         if (!newAssignments.isEmpty()) {
             getLogger().info("Partition assignments changed, new partitions: " + newAssignments);
             currentAssignment.addAll(newAssignments);
@@ -115,16 +114,26 @@ public final class StreamKafkaP extends AbstractProcessor implements Closeable {
                 consumer.seekToBeginning(newAssignments);
             }
         }
-        // initialize offsets
-        for (int topicIdx = 0; topicIdx < partitionCounts.size(); topicIdx++) {
-            int count = partitionCounts.get(topicIdx);
-            offsets.merge(topics.get(topicIdx), LongStream.generate(() -> -1).limit(count).toArray(),
-                    (o, n) -> {
-                        arraycopy(o, 0, n, 0, o.length);
-                        return n;
-                    });
-        }
+
+        createOrExtendOffsetsArrays(partitionCounts);
         nextPartitionCheck = System.nanoTime() + MILLISECONDS.toNanos(metadataRefreshInterval);
+    }
+
+    private void createOrExtendOffsetsArrays(List<Integer> partitionCounts) {
+        for (int topicIdx = 0; topicIdx < partitionCounts.size(); topicIdx++) {
+            int newPartitionCount = partitionCounts.get(topicIdx);
+            String topicName = topics.get(topicIdx);
+            long[] oldOffsets = offsets.get(topicName);
+            if (oldOffsets != null && oldOffsets.length == newPartitionCount) {
+                continue;
+            }
+            long[] newOffsets = new long[newPartitionCount];
+            Arrays.fill(newOffsets, -1);
+            if (oldOffsets != null) {
+                arraycopy(oldOffsets, 0, newOffsets, 0, oldOffsets.length);
+            }
+            offsets.put(topicName, newOffsets);
+        }
     }
 
     @Override
