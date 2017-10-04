@@ -19,7 +19,7 @@ package com.hazelcast.jet.impl.connector;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.CloseableProcessorSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 
@@ -31,15 +31,13 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collection;
-import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
+import static java.util.stream.Collectors.toList;
 
 /**
  * @see SourceProcessors#readFiles(String, Charset, String)
@@ -133,25 +131,9 @@ public final class ReadFilesP extends AbstractProcessor implements Closeable {
      * instead.
      */
     public static ProcessorSupplier supplier(@Nonnull String directory, @Nonnull String charset, @Nonnull String glob) {
-        return new ProcessorSupplier() {
-            static final long serialVersionUID = 1L;
-
-            private transient List<ReadFilesP> processors;
-
-            @Nonnull
-            @Override
-            public Collection<? extends Processor> get(int count) {
-                Charset charsetObj = Charset.forName(charset);
-                processors = IntStream.range(0, count)
-                        .mapToObj(i -> new ReadFilesP(directory, charsetObj, glob, count, i))
-                        .collect(Collectors.toList());
-                return processors;
-            }
-
-            @Override
-            public void complete(Throwable error) {
-                processors.forEach(p -> uncheckRun(p::close));
-            }
-        };
+        return new CloseableProcessorSupplier<>(
+                count -> IntStream.range(0, count)
+                                  .mapToObj(i -> new ReadFilesP(directory, Charset.forName(charset), glob, count, i))
+                                  .collect(toList()));
     }
 }

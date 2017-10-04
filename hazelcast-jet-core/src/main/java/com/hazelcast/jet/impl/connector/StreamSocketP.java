@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.CloseableProcessorSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 
@@ -28,12 +28,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.nio.charset.Charset;
-import java.util.List;
-import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
-import static com.hazelcast.jet.impl.util.Util.uncheckRun;
-import static java.util.stream.Collectors.toList;
 
 /**
  * @see SourceProcessors#streamSocket(String, int, Charset)
@@ -100,35 +96,6 @@ public final class StreamSocketP extends AbstractProcessor implements Closeable 
      * Internal API, use {@link SourceProcessors#streamSocket(String, int, Charset)}.
      */
     public static ProcessorSupplier supplier(String host, int port, @Nonnull String charset) {
-        return new Supplier(host, port, charset);
-    }
-
-    private static final class Supplier implements ProcessorSupplier {
-
-        static final long serialVersionUID = 1L;
-
-        private final String host;
-        private final int port;
-        private final String charset;
-        private transient List<StreamSocketP> processors;
-
-        private Supplier(@Nonnull String host, int port, @Nonnull String charset) {
-            this.host = host;
-            this.port = port;
-            this.charset = charset;
-        }
-
-        @Override @Nonnull
-        public List<? extends Processor> get(int count) {
-            processors = IntStream.range(0, count)
-                                  .mapToObj(i -> new StreamSocketP(host, port, Charset.forName(charset)))
-                                  .collect(toList());
-            return processors;
-        }
-
-        @Override
-        public void complete(Throwable error) {
-            processors.forEach(p -> uncheckRun(p::close));
-        }
+        return new CloseableProcessorSupplier<>(() -> new StreamSocketP(host, port, Charset.forName(charset)));
     }
 }
