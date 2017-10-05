@@ -57,7 +57,9 @@ public final class KafkaProcessors {
      * later are always consumed from the earliest offset.
      * <p>
      * The processor completes only in case of an error or if the job is
-     * cancelled.
+     * cancelled. IO failures are generally handled by Kafka consumer and
+     * generally do not cause the processor to fail. Refer to Kafka
+     * documentation for details.
      *
      * @param properties consumer properties which should contain consumer
      *                   group name, broker address and key/value deserializers
@@ -82,6 +84,9 @@ public final class KafkaProcessors {
      * Behavior on job restart: the processor is stateless. If the job is
      * restarted, duplicate events can occur. If you need exactly once
      * behaviour, idempotence must be ensured on the application level.
+     * <p>
+     * IO failures are generally handled by Kafka producer and generally do not
+     * cause the processor to fail. Refer to Kafka documentation for details.
      *
      * @param topic          name of the Kafka topic to publish to
      * @param properties     producer properties which should contain broker

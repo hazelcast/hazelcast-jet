@@ -53,6 +53,11 @@ public final class Sinks {
     /**
      * Returns a sink that puts {@code Map.Entry}s it receives into a Hazelcast
      * {@code IMap} with the specified name.
+     * <p>
+     * This sink provides exactly once guarantee thanks to  <i>idempotent
+     * updates</i>. It means, that the value with the same key is not appended,
+     * but overwritten. After the job is restarted from snapshot, duplicate
+     * items will not change the state in the target map.
      */
     public static <E extends Map.Entry> Sink<E> writeMap(String mapName) {
         return new SinkImpl<>("writeMap(" + mapName + ')', SinkProcessors.writeMapP(mapName));
@@ -62,6 +67,11 @@ public final class Sinks {
      * Returns a sink that puts {@code Map.Entry}s it receives into a Hazelcast
      * {@code IMap} with the specified name in a remote cluster identified by
      * the supplied {@code ClientConfig}.
+     * <p>
+     * This sink provides exactly once guarantee thanks to  <i>idempotent
+     * updates</i>. It means, that the value with the same key is not appended,
+     * but overwritten. After the job is restarted from snapshot, duplicate
+     * items will not change the state in the target map.
      */
     public static <E extends Map.Entry> Sink<E> writeMap(String mapName, ClientConfig clientConfig) {
         return new SinkImpl<>("writeMap(" + mapName + ')', SinkProcessors.writeMapP(mapName, clientConfig));
@@ -70,6 +80,11 @@ public final class Sinks {
     /**
      * Returns a sink that puts {@code Map.Entry}s it receives into a Hazelcast
      * {@code ICache} with the specified name.
+     * <p>
+     * This sink provides exactly once guarantee thanks to  <i>idempotent
+     * updates</i>. It means, that the value with the same key is not appended,
+     * but overwritten. After the job is restarted from snapshot, duplicate
+     * items will not change the state in the target map.
      */
     public static <E extends Map.Entry> Sink<E> writeCache(String cacheName) {
         return new SinkImpl<>("writeCache(" + cacheName + ')', SinkProcessors.writeCacheP(cacheName));
@@ -79,6 +94,11 @@ public final class Sinks {
      * Returns a sink that puts {@code Map.Entry}s it receives into a Hazelcast
      * {@code ICache} with the specified name in a remote cluster identified by
      * the supplied {@code ClientConfig}.
+     * <p>
+     * This sink provides exactly once guarantee thanks to  <i>idempotent
+     * updates</i>. It means, that the value with the same key is not appended,
+     * but overwritten. After the job is restarted from snapshot, duplicate
+     * items will not change the state in the target map.
      */
     public static <E extends Map.Entry> Sink<E> writeCache(String cacheName, ClientConfig clientConfig) {
         return new SinkImpl<>("writeCache(" + cacheName + ')', SinkProcessors.writeCacheP(cacheName, clientConfig));
@@ -87,6 +107,10 @@ public final class Sinks {
     /**
      * Returns a sink that adds the items it receives to a Hazelcast {@code
      * IList} with the specified name.
+     * <p>
+     * No state is saved to snapshot for this sink. After the job is restarted,
+     * the items will likely be duplicated, providing an <i>at least once</i>
+     * guarantee.
      */
     public static <E> Sink<E> writeList(String listName) {
         return new SinkImpl<>("writeList(" + listName + ')', SinkProcessors.writeListP(listName));
@@ -96,6 +120,10 @@ public final class Sinks {
      * Returns a sink that adds the items it receives to a Hazelcast {@code
      * IList} with the specified name in a remote cluster identified by the
      * supplied {@code ClientConfig}.
+     * <p>
+     * No state is saved to snapshot for this sink. After the job is restarted,
+     * the items will likely be duplicated, providing an <i>at least once</i>
+     * guarantee.
      */
     public static <E> Sink<E> writeList(String listName, ClientConfig clientConfig) {
         return new SinkImpl<>("writeList(" + listName + ')', SinkProcessors.writeListP(listName, clientConfig));
@@ -107,6 +135,10 @@ public final class Sinks {
      * item to its string representation using the supplied {@code toStringFn}
      * function and encodes the string using the supplied {@code Charset}. It
      * follows each item with a newline character.
+     * <p>
+     * No state is saved to snapshot for this sink. After the job is restarted,
+     * the items will likely be duplicated, providing an <i>at least once</i>
+     * guarantee.
      */
     public static <E> Sink<E> writeSocket(
             @Nonnull String host,
@@ -152,6 +184,16 @@ public final class Sinks {
      * supplied {@code toStringFn} function and encodes the string using the
      * supplied {@code Charset}. It follows each item with a platform-specific
      * line separator.
+     * <p>
+     * Since the work of this sink is file IO-intensive, {@link
+     * com.hazelcast.jet.core.Vertex#localParallelism(int) local parallelism} of
+     * the vertex should be set according to the performance characteristics of
+     * the underlying storage system. Most typically, local parallelism of 1 will
+     * already reach the maximum available performance.
+     * <p>
+     * No state is saved to snapshot for this sink. After the job is restarted,
+     * the items will likely be duplicated, providing an <i>at least once</i>
+     * guarantee.
      *
      * @param directoryName directory to create the files in. Will be created
      *                      if it doesn't exist. Must be the same on all members.
