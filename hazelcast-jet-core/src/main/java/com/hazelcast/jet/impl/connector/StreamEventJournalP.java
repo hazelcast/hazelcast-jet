@@ -24,6 +24,7 @@ import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.Partition;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
@@ -31,7 +32,6 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
-import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.journal.EventJournalInitialSubscriberState;
 import com.hazelcast.journal.EventJournalReader;
 import com.hazelcast.map.journal.EventJournalMapEvent;
@@ -42,21 +42,27 @@ import com.hazelcast.ringbuffer.StaleSequenceException;
 
 import javax.annotation.Nonnull;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.function.IntConsumer;
 
 import static com.hazelcast.client.HazelcastClient.newHazelcastClient;
 import static com.hazelcast.jet.Traversers.traverseIterable;
+import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.processorToPartitions;
-import static java.util.Collections.emptyMap;
+import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
@@ -68,104 +74,100 @@ import static java.util.stream.IntStream.range;
  */
 public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
-    private static final int MIN_FETCH_SIZE = 0;
-    private static final int MAX_FETCH_SIZE = 100;
+    private static final int MAX_FETCH_SIZE = 128;
 
     private final EventJournalReader<E> eventJournalReader;
-    private final List<Integer> partitions;
-    private final Map<Integer, Long> offsetMap = new HashMap<>();
-    private final SerializablePredicate<E> predicate;
-    private final Projection<E, T> projection;
-    private final boolean startFromLatestSequence;
-    private Map<Integer, ICompletableFuture<ReadResultSet<T>>> futureMap = emptyMap();
-    private Traverser<T> traverser;
+    private final Set<Integer> assignedPartitions;
+    private final SerializablePredicate<E> predicateFn;
+    private final Projection<E, T> projectionFn;
+    private final boolean startFromNewest;
 
-    private StreamEventJournalP(EventJournalReader<E> eventJournalReader,
-                                List<Integer> partitions,
-                                Predicate<E> predicate,
-                                Function<E, T> projectionFn,
-                                boolean startFromLatestSequence) {
+    // keep track of emitted and read offsets separately, as even when the
+    // outbox is full we can still poll for new items.
+    private final Map<Integer, Long> emittedOffsets = new HashMap<>();
+    private final Map<Integer, Long> readOffsets = new HashMap<>();
+
+    private Map<Integer, ICompletableFuture<ReadResultSet<T>>> readFutures;
+    private Map<Integer, EventJournalInitialSubscriberState> subscriptions = new HashMap<>();
+
+    private Traverser<T> eventTraverser;
+    private Traverser<Entry<BroadcastKey<Integer>, Long>> snapshotTraverser;
+
+    // keep track of pendingItem's offset and partition
+    private long pendingOffset;
+    private int pendingPartition;
+
+    // callback which will update the currently pending offset only after the item is emitted
+    private Consumer<T> updateOffsetFn = e -> emittedOffsets.put(pendingPartition, pendingOffset);
+
+    StreamEventJournalP(EventJournalReader<E> eventJournalReader,
+                        List<Integer> assignedPartitions,
+                        DistributedPredicate<E> predicateFn,
+                        DistributedFunction<E, T> projectionFn,
+                        boolean startFromNewest) {
         this.eventJournalReader = eventJournalReader;
-        this.partitions = partitions;
-        this.predicate = predicate != null ? predicate::test : null;
-        this.projection = createProjection(projectionFn);
-        this.startFromLatestSequence = startFromLatestSequence;
+        this.assignedPartitions = new HashSet<>(assignedPartitions);
+        this.predicateFn = predicateFn == null ? null : predicateFn::test;
+        this.projectionFn = projectionFn == null ? null : toProjection(projectionFn);
+        this.startFromNewest = startFromNewest;
     }
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        List<ICompletableFuture<EventJournalInitialSubscriberState>> futures = new ArrayList<>(partitions.size());
-        for (Integer partitionId : partitions) {
-            futures.add(eventJournalReader.subscribeToEventJournal(partitionId));
-        }
-        for (int i = 0; i < futures.size(); i++) {
-            ICompletableFuture<EventJournalInitialSubscriberState> future = futures.get(i);
-            offsetMap.put(partitions.get(i), getSequence(future.get()));
-        }
-    }
-
-    private long getSequence(EventJournalInitialSubscriberState state) {
-        if (startFromLatestSequence) {
-            return state.getNewestSequence() == -1 ? 0 : state.getNewestSequence();
-        }
-        return state.getOldestSequence();
+        Map<Integer, ICompletableFuture<EventJournalInitialSubscriberState>> futures = assignedPartitions.stream()
+            .map(partition -> entry(partition, eventJournalReader.subscribeToEventJournal(partition)))
+            .collect(toMap(Entry::getKey, Entry::getValue));
+        futures.forEach((partition, future) -> uncheckRun(() -> subscriptions.put(partition, future.get())));
     }
 
     @Override
     public boolean complete() {
-        pollIfNeeded();
-        nextTraverserIfNeeded();
-        if (traverser != null) {
-            emitFromTraverser(traverser);
+        if (readFutures == null) {
+            initialRead();
+        }
+        if (eventTraverser == null) {
+            Traverser<T> t = nextTraverser();
+            if (t != null) {
+                eventTraverser = t.onFirstNull(() -> eventTraverser = null);
+            }
+        }
+
+        if (eventTraverser != null) {
+            emitFromTraverser(eventTraverser, item -> {
+                updateOffsetFn.accept(item);
+            });
         }
         return false;
     }
 
-    private void nextTraverserIfNeeded() {
-        if (traverser != null) {
-            return;
+    @Override
+    public boolean saveToSnapshot() {
+        if (snapshotTraverser == null) {
+            snapshotTraverser = traverseIterable(emittedOffsets.entrySet())
+                    .map(e -> entry(broadcastKey(e.getKey()), e.getValue()))
+                    .onFirstNull(() -> snapshotTraverser = null);
         }
-        ReadResultSet<T> resultSet = null;
-        Iterator<Entry<Integer, ICompletableFuture<ReadResultSet<T>>>> iterator = futureMap.entrySet().iterator();
-        while (iterator.hasNext() && resultSet == null) {
-            Entry<Integer, ICompletableFuture<ReadResultSet<T>>> entry = iterator.next();
-            if (!entry.getValue().isDone()) {
-                continue;
-            }
-            iterator.remove(); // remove the entry from futureMap
-            try {
-                resultSet = entry.getValue().get();
-            } catch (ExecutionException e) {
-                // this happens if the ringbuffer storing the journal overflows
-                if (e.getCause() instanceof StaleSequenceException) {
-                    long headSeq = ((StaleSequenceException) e.getCause()).getHeadSeq();
-                    long oldOffset = offsetMap.put(entry.getKey(), headSeq);
-                    getLogger().severe("Stale sequence, requested: " + oldOffset + ", currentHead: " + headSeq);
-                    continue;
-                }
-                throw ExceptionUtil.rethrow(e);
-            } catch (InterruptedException e) {
-                throw ExceptionUtil.rethrow(e);
-            }
-            offsetMap.merge(entry.getKey(), (long) resultSet.readCount(), Long::sum);
-            if (resultSet.size() == 0) {
-                resultSet = null;
-            }
-        }
-        if (resultSet != null) {
-            traverser = traverseIterable(resultSet)
-                .onFirstNull(() -> traverser = null);
-        }
+        return emitFromTraverserToSnapshot(snapshotTraverser);
     }
 
-    private void pollIfNeeded() {
-        if (!futureMap.isEmpty()) {
-            return;
+    @Override
+    protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
+        int partition = ((BroadcastKey<Integer>) key).key();
+        long offset = (Long) value;
+
+        if (assignedPartitions.contains(partition)) {
+            // after snapshot restore, we try to continue where we left off. However the
+            // current oldest sequence might be greater than the restored offset. This would cause
+            // stale sequence exception, so we fast forward to the oldest sequence instead.
+            long oldest = subscriptions.get(partition).getOldestSequence();
+            long newOffset = Math.max(oldest, offset);
+            if (newOffset != offset) {
+                getLogger().warning("Events lost for partition " + partition + " when restoring from " +
+                        "snapshot. Requested was: " + offset + ", current head is: " + oldest);
+            }
+            readOffsets.put(partition, newOffset);
+            emittedOffsets.put(partition, newOffset);
         }
-        futureMap = offsetMap.entrySet().stream().collect(toMap(Map.Entry::getKey,
-                        e -> eventJournalReader.readFromEventJournal(e.getValue(),
-                                MIN_FETCH_SIZE, MAX_FETCH_SIZE, e.getKey(), predicate, projection)
-                ));
     }
 
     @Override
@@ -173,34 +175,101 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         return false;
     }
 
-    private static <E, T> Projection<E, T> createProjection(Function<E, T> projectionFn) {
-        if (projectionFn == null) {
+    private void initialRead() {
+        if (readOffsets.isEmpty()) {
+            subscriptions.forEach((partition, future) ->
+                    uncheckRun(() -> readOffsets.put(partition, getSequence(subscriptions.get(partition))))
+            );
+            emittedOffsets.putAll(readOffsets);
+        }
+        readFutures = readOffsets.entrySet().stream()
+            .collect(toMap(Entry::getKey, e -> readFromJournal(e.getKey(), e.getValue())));
+    }
+
+    private long getSequence(EventJournalInitialSubscriberState state) {
+        return startFromNewest ? state.getNewestSequence() + 1 : state.getOldestSequence();
+    }
+
+    private Traverser<T> nextTraverser() {
+        ReadResultSet<T> resultSet = nextResultSet();
+        if (resultSet == null) {
             return null;
         }
-        return new Projection<E, T>() {
-            @Override public T transform(E input) {
-                return projectionFn.apply(input);
+        Traverser<T> traverser = traverseIterable(resultSet);
+        final ReadResultSet<T> currentSet = resultSet;
+        return peekIndex(traverser, i -> {
+            pendingOffset = currentSet.getSequence(i) + 1;
+        });
+    }
+
+    private ReadResultSet<T> nextResultSet() {
+        Iterator<Entry<Integer, ICompletableFuture<ReadResultSet<T>>>> iterator = readFutures.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Entry<Integer, ICompletableFuture<ReadResultSet<T>>> entry = iterator.next();
+            int partition = entry.getKey();
+            if (!entry.getValue().isDone()) {
+                continue;
             }
+            ReadResultSet<T> resultSet = toResultSet(partition, entry.getValue());
+            if (resultSet == null) {
+                // we got stale sequence, make another read
+                readFutures.put(partition, readFromJournal(partition, readOffsets.get(partition)));
+                continue;
+            }
+            pendingPartition = partition;
+            long newOffset = readOffsets.merge(partition, (long) resultSet.readCount(), Long::sum);
+            // make another read on the same partition
+            readFutures.put(partition, readFromJournal(partition, newOffset));
+            return resultSet;
+        }
+        return null;
+    }
+
+    private ReadResultSet<T> toResultSet(int partition, ICompletableFuture<ReadResultSet<T>> future) {
+        try {
+            return future.get();
+        } catch (ExecutionException e) {
+            Throwable ex = peel(e);
+            if (ex instanceof StaleSequenceException) {
+                long headSeq = ((StaleSequenceException) e.getCause()).getHeadSeq();
+                // move both read and emitted offsets to the new head
+                long oldOffset = readOffsets.put(partition, headSeq);
+                emittedOffsets.put(partition, headSeq);
+                getLogger().warning("Events lost for partition " + partition + " due to journal overflow " +
+                        "when reading from event journal. Increase journal size to avoid this error. " +
+                        "Requested was: " + oldOffset + ", current head is: " + headSeq);
+                return null;
+            }
+            throw rethrow(ex);
+        } catch (InterruptedException e) {
+            throw rethrow(e);
+        }
+    }
+
+    private ICompletableFuture<ReadResultSet<T>> readFromJournal(int partition, long offset) {
+        logFinest(getLogger(), "Reading from partition %s and offset %s", partition, offset);
+        return eventJournalReader.readFromEventJournal(offset,
+                1, MAX_FETCH_SIZE, partition, predicateFn, projectionFn);
+    }
+
+    private static <T> Traverser<T> peekIndex(Traverser<T> traverser, IntConsumer action) {
+        int[] count = {0};
+        return () -> {
+            T t = traverser.next();
+            if (t != null) {
+                action.accept(count[0]++);
+            }
+            return t;
         };
     }
 
-    private static <E, T> List<Processor> getProcessors(int count, List<Integer> ownedPartitions,
-                                                        EventJournalReader<E> eventJournalReader,
-                                                        Predicate<E> predicate,
-                                                        Function<E, T> projection,
-                                                        boolean startFromLatestSequence) {
-
-        return processorToPartitions(count, ownedPartitions)
-                .values().stream()
-                .map(partitions -> !partitions.isEmpty()
-                        ? new StreamEventJournalP<>(eventJournalReader, partitions, predicate,
-                        projection, startFromLatestSequence)
-                        : Processors.noopP().get()
-                )
-                .collect(toList());
-    }
-
-    interface SerializablePredicate<E> extends com.hazelcast.util.function.Predicate<E>, Serializable {
+    private static <E, T> Projection<E, T> toProjection(Function<E, T> projectionFn) {
+        return new Projection<E, T>() {
+            @Override
+            public T transform(E input) {
+                return projectionFn.apply(input);
+            }
+        };
     }
 
     private static class ClusterMetaSupplier<E, T> implements ProcessorMetaSupplier {
@@ -211,7 +280,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         private final DistributedFunction<HazelcastInstance, EventJournalReader<E>> eventJournalReaderSupplier;
         private final DistributedPredicate<E> predicate;
         private final DistributedFunction<E, T> projection;
-        private final boolean startFromLatestSequence;
+        private final boolean startFromNewest;
 
         private transient int remotePartitionCount;
         private transient Map<Address, List<Integer>> addrToPartitions;
@@ -221,12 +290,12 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 DistributedFunction<HazelcastInstance, EventJournalReader<E>> eventJournalReaderSupplier,
                 DistributedPredicate<E> predicate,
                 DistributedFunction<E, T> projection,
-                boolean startFromLatestSequence) {
+                boolean startFromNewest) {
             this.serializableConfig = clientConfig == null ? null : new SerializableClientConfig(clientConfig);
             this.eventJournalReaderSupplier = eventJournalReaderSupplier;
             this.predicate = predicate;
             this.projection = projection;
-            this.startFromLatestSequence = startFromLatestSequence;
+            this.startFromNewest = startFromNewest;
         }
 
         @Override
@@ -265,7 +334,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             }
 
             return address -> new ClusterProcessorSupplier<>(addrToPartitions.get(address),
-                    serializableConfig, eventJournalReaderSupplier, predicate, projection, startFromLatestSequence);
+                    serializableConfig, eventJournalReaderSupplier, predicate, projection, startFromNewest);
         }
 
     }
@@ -277,9 +346,9 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         private final List<Integer> ownedPartitions;
         private final SerializableClientConfig serializableClientConfig;
         private final DistributedFunction<HazelcastInstance, EventJournalReader<E>> eventJournalReaderSupplier;
-        private final Predicate<E> predicate;
-        private final Function<E, T> projection;
-        private final boolean startFromLatestSequence;
+        private final DistributedPredicate<E> predicate;
+        private final DistributedFunction<E, T> projection;
+        private final boolean startFromNewest;
 
         private transient HazelcastInstance client;
         private transient EventJournalReader<E> eventJournalReader;
@@ -288,15 +357,15 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 List<Integer> ownedPartitions,
                 SerializableClientConfig serializableClientConfig,
                 DistributedFunction<HazelcastInstance, EventJournalReader<E>> eventJournalReaderSupplier,
-                Predicate<E> predicate,
-                Function<E, T> projection,
-                boolean startFromLatestSequence) {
+                DistributedPredicate<E> predicate,
+                DistributedFunction<E, T> projection,
+                boolean startFromNewest) {
             this.ownedPartitions = ownedPartitions;
             this.serializableClientConfig = serializableClientConfig;
             this.eventJournalReaderSupplier = eventJournalReaderSupplier;
             this.predicate = predicate;
             this.projection = projection;
-            this.startFromLatestSequence = startFromLatestSequence;
+            this.startFromNewest = startFromNewest;
         }
 
         @Override
@@ -318,8 +387,17 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
         @Override @Nonnull
         public List<Processor> get(int count) {
-            return getProcessors(count, ownedPartitions, eventJournalReader, predicate,
-                    projection, startFromLatestSequence);
+            return processorToPartitions(count, ownedPartitions)
+                    .values().stream()
+                    .map(this::processorForPartitions)
+                    .collect(toList());
+        }
+
+        private Processor processorForPartitions(List<Integer> partitions) {
+            return !partitions.isEmpty() ?
+                    new StreamEventJournalP<>(eventJournalReader, partitions, predicate, projection, startFromNewest)
+                    :
+                    Processors.noopP().get();
         }
 
     }
@@ -327,38 +405,41 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     public static <K, V, T> ProcessorMetaSupplier streamMap(String mapName,
                                                       DistributedPredicate<EventJournalMapEvent<K, V>> predicate,
                                                       DistributedFunction<EventJournalMapEvent<K, V>, T> projection,
-                                                      boolean startFromLatestSequence) {
+                                                      boolean startFromNewest) {
         return new ClusterMetaSupplier<>(null,
                 instance -> (EventJournalReader<EventJournalMapEvent<K, V>>) instance.getMap(mapName),
-                predicate, projection, startFromLatestSequence);
+                predicate, projection, startFromNewest);
     }
 
     public static <K, V, T> ProcessorMetaSupplier streamMap(String mapName,
                                                       ClientConfig clientConfig,
                                                       DistributedPredicate<EventJournalMapEvent<K, V>> predicate,
                                                       DistributedFunction<EventJournalMapEvent<K, V>, T> projection,
-                                                      boolean startFromLatestSequence) {
+                                                      boolean startFromNewest) {
         return new ClusterMetaSupplier<>(clientConfig,
                 instance -> (EventJournalReader<EventJournalMapEvent<K, V>>) instance.getMap(mapName),
-                predicate, projection, startFromLatestSequence);
+                predicate, projection, startFromNewest);
     }
 
     public static <K, V, T> ProcessorMetaSupplier streamCache(String cacheName,
                                                         DistributedPredicate<EventJournalCacheEvent<K, V>> predicate,
                                                         DistributedFunction<EventJournalCacheEvent<K, V>, T> projection,
-                                                        boolean startFromLatestSequence) {
+                                                        boolean startFromNewest) {
         return new ClusterMetaSupplier<>(null,
                 inst -> (EventJournalReader<EventJournalCacheEvent<K, V>>) inst.getCacheManager().getCache(cacheName),
-                predicate, projection, startFromLatestSequence);
+                predicate, projection, startFromNewest);
     }
 
     public static <K, V, T> ProcessorMetaSupplier streamCache(String cacheName,
                                                         ClientConfig clientConfig,
                                                         DistributedPredicate<EventJournalCacheEvent<K, V>> predicate,
                                                         DistributedFunction<EventJournalCacheEvent<K, V>, T> projection,
-                                                        boolean startFromLatestSequence) {
+                                                        boolean startFromNewest) {
         return new ClusterMetaSupplier<>(clientConfig,
                 inst -> (EventJournalReader<EventJournalCacheEvent<K, V>>) inst.getCacheManager().getCache(cacheName),
-                predicate, projection, startFromLatestSequence);
+                predicate, projection, startFromNewest);
+    }
+
+    interface SerializablePredicate<E> extends com.hazelcast.util.function.Predicate<E>, Serializable {
     }
 }
