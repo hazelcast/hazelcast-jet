@@ -25,6 +25,8 @@ import com.hazelcast.jet.core.test.TestOutbox.MockData;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingServiceImpl;
 import com.hazelcast.nio.Address;
+import com.hazelcast.util.concurrent.BackoffIdleStrategy;
+import com.hazelcast.util.concurrent.IdleStrategy;
 
 import javax.annotation.Nonnull;
 import java.net.UnknownHostException;
@@ -46,6 +48,7 @@ import static com.hazelcast.jet.core.test.JetAssert.assertEquals;
 import static com.hazelcast.jet.core.test.JetAssert.assertTrue;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
+import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
@@ -85,7 +88,8 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * <p>
  * For each call to any processing method the progress is asserted ({@link
  * #disableProgressAssertion() optional}). The processor must do at least one
- * of these:<ul>
+ * of these:
+ * <ul>
  *     <li>take something from inbox
  *     <li>put something to outbox
  *     <li>for boolean-returning methods, returning {@code true} is
@@ -101,7 +105,8 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * For cooperative processors, time spent in each call to processing method
  * must not exceed {@link #cooperativeTimeout(long)}.
  * <h4>Not-covered cases</h4>
- * This class does not cover these cases:<ul>
+ * This class does not cover these cases:
+ * <ul>
  *     <li>Testing of processors which distinguish input or output edges
  *     by ordinal
  *     <li>Checking that the state of a stateful processor is empty at the
@@ -109,7 +114,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  *     returned from your supplier).
  *     <li>This utility never calls {@link Processor#tryProcess()}.
  * </ul>
- *
+ * <p>
  * <h4>Example usage</h4>
  * This will test one of the jet-provided processors:
  * <pre>{@code
@@ -133,6 +138,9 @@ public final class TestSupport {
     // parallel tests or GC.
     private static final long COOPERATIVE_TIME_LIMIT_MS_FAIL = 1000;
     private static final long COOPERATIVE_TIME_LIMIT_MS_WARN = 5;
+
+    private static final long BLOCKING_TIME_LIMIT_MS_WARN = 10000;
+
     private static final LoggingServiceImpl LOGGING_SERVICE = new LoggingServiceImpl(
             "test-group", null, BuildInfoProvider.getBuildInfo()
     );
@@ -152,7 +160,10 @@ public final class TestSupport {
     private boolean doSnapshots = true;
     private boolean logInputOutput;
     private boolean callComplete = true;
+    private boolean runUntilCompleted = true;
     private long cooperativeTimeout = COOPERATIVE_TIME_LIMIT_MS_FAIL;
+    private long runUntilCompletedTimeout;
+
     private BiPredicate<? super List<?>, ? super List<?>> outputChecker = Objects::equals;
 
     private TestSupport(@Nonnull Supplier<Processor> supplier) {
@@ -164,7 +175,7 @@ public final class TestSupport {
      *                  will be set to {@code false}, because can't have new instance after each
      *                  restore.
      */
-    public static  TestSupport verifyProcessor(Processor processor) {
+    public static TestSupport verifyProcessor(Processor processor) {
         return new TestSupport(singletonSupplier(processor))
                 .disableSnapshots();
     }
@@ -172,21 +183,21 @@ public final class TestSupport {
     /**
      * @param supplier a processor supplier create processor instances
      */
-    public static  TestSupport verifyProcessor(@Nonnull Supplier<Processor> supplier) {
+    public static TestSupport verifyProcessor(@Nonnull Supplier<Processor> supplier) {
         return new TestSupport(supplier);
     }
 
     /**
      * @param supplier a processor supplier create processor instances
      */
-    public static  TestSupport verifyProcessor(@Nonnull ProcessorSupplier supplier) {
+    public static TestSupport verifyProcessor(@Nonnull ProcessorSupplier supplier) {
         return new TestSupport(supplierFrom(supplier));
     }
 
     /**
      * @param supplier a processor supplier create processor instances
      */
-    public static  TestSupport verifyProcessor(@Nonnull ProcessorMetaSupplier supplier) {
+    public static TestSupport verifyProcessor(@Nonnull ProcessorMetaSupplier supplier) {
         return new TestSupport(supplierFrom(supplier));
     }
 
@@ -220,6 +231,24 @@ public final class TestSupport {
      */
     public TestSupport disableProgressAssertion() {
         this.assertProgress = false;
+        return this;
+    }
+
+    /**
+     * During complete() phase of the processor, wait until
+     * given timeout instead of waiting for {@link Processor#complete()}
+     * to return {@code true}. Output will be eagerly checked after every call to
+     * {@code complete()} and if it diverges from expected output
+     * the test will fail earlier.
+     * <p>
+     * This setting is useful for testing streaming sources.
+     *
+     * @param timeoutMillis how long to wait until outputs match
+     * @return {@code this} instance for fluent API.
+     */
+    public TestSupport disableRunUntilCompleted(long timeoutMillis) {
+        this.runUntilCompleted = false;
+        this.runUntilCompletedTimeout = timeoutMillis;
         return this;
     }
 
@@ -285,6 +314,9 @@ public final class TestSupport {
     }
 
     private void runTest(boolean doSnapshots) {
+        IdleStrategy idler = new BackoffIdleStrategy(0, 0, MICROSECONDS.toNanos(1),
+                MILLISECONDS.toNanos(1));
+        int idleCount = 0;
         if (doSnapshots) {
             // if we test with snapshots, also do the test without snapshots
             System.out.println("### Running the test with doSnapshots=false");
@@ -294,9 +326,10 @@ public final class TestSupport {
 
         TestInbox inbox = new TestInbox();
         Processor[] processor = {supplier.get()};
+        boolean isCooperative = processor[0].isCooperative();
 
         // we'll use 1-capacity outbox to test outbox rejection
-        TestOutbox outbox = new TestOutbox(new int[] {1}, 1);
+        TestOutbox outbox = new TestOutbox(new int[]{1}, 1);
         List<Object> actualOutput = new ArrayList<>();
 
         // create instance of your processor and call the init() method
@@ -314,14 +347,15 @@ public final class TestSupport {
                     System.out.println("Input: " + inbox.peek());
                 }
             }
-            checkTime("process", () -> processor[0].process(0, inbox));
-            assertTrue("process() call without progress",
-                    !assertProgress || inbox.isEmpty() || !outbox.queueWithOrdinal(0).isEmpty());
-            if (processor[0].isCooperative() && outbox.queueWithOrdinal(0).size() == 1 && !inbox.isEmpty()) {
+            checkTime("process", isCooperative, () -> processor[0].process(0, inbox));
+            boolean madeProgress = inbox.isEmpty() || !outbox.queueWithOrdinal(0).isEmpty();
+            assertTrue("process() call without progress", !assertProgress || madeProgress);
+            idleCount = idle(idler, idleCount, madeProgress);
+            if (outbox.queueWithOrdinal(0).size() == 1 && !inbox.isEmpty()) {
                 // if the outbox is full, call the process() method again. Cooperative
                 // processor must be able to cope with this situation and not try to put
                 // more items to the outbox.
-                checkTime("process", () -> processor[0].process(0, inbox));
+                checkTime("process", isCooperative, () -> processor[0].process(0, inbox));
             }
             drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
             if (inbox.isEmpty()) {
@@ -331,20 +365,39 @@ public final class TestSupport {
 
         // call the complete() method
         if (callComplete) {
+            long completeStart = System.nanoTime();
             boolean[] done = {false};
+            double elapsed;
             do {
-                checkTime("complete", () -> done[0] = processor[0].complete());
-                assertTrue("complete() call without progress",
-                        !assertProgress || done[0] || !outbox.queueWithOrdinal(0).isEmpty());
+                checkTime("complete", isCooperative, () -> done[0] = processor[0].complete());
+                boolean madeProgress = done[0] || !outbox.queueWithOrdinal(0).isEmpty();
+                assertTrue("complete() call without progress", !assertProgress || madeProgress);
                 drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
                 snapshotAndRestore(processor, outbox, actualOutput, doSnapshots);
+                idleCount = idle(idler, idleCount, madeProgress);
+                if (!runUntilCompleted) {
+                    elapsed = toMillis(System.nanoTime() - completeStart);
+                    if (elapsed > runUntilCompletedTimeout) {
+                        break;
+                    }
+                }
             } while (!done[0]);
         }
 
         // assert the outbox
         if (!outputChecker.test(expectedOutput, actualOutput)) {
-            assertEquals("processor output doesn't match", listToString(expectedOutput), listToString(actualOutput));
+            assertEquals("processor output doesn't match",
+                    listToString(expectedOutput), listToString(actualOutput));
         }
+    }
+
+    private int idle(IdleStrategy idler, int idleCount, boolean madeProgress) {
+        if (!madeProgress) {
+            idler.idle(++idleCount);
+        } else {
+            idleCount = 0;
+        }
+        return idleCount;
     }
 
     private void snapshotAndRestore(
@@ -359,13 +412,14 @@ public final class TestSupport {
         // save state of current processor
         TestInbox snapshotInbox = new TestInbox();
         boolean[] done = {false};
+        boolean isCooperative = processor[0].isCooperative();
         Set<Object> keys = new HashSet<>();
         do {
-            checkTime("saveSnapshot", () -> done[0] = processor[0].saveToSnapshot());
+            checkTime("saveSnapshot", isCooperative, () -> done[0] = processor[0].saveToSnapshot());
             for (Entry<MockData, MockData> entry : outbox.snapshotQueue()) {
                 Object key = entry.getKey().getObject();
-                assertTrue("Duplicate key produced in saveToSnapshot()\n  Duplicate: " + key + "\n  Keys so far: " + keys,
-                        keys.add(key));
+                assertTrue("Duplicate key produced in saveToSnapshot()\n" +
+                        "Duplicate: " + key + "\n  Keys so far: " + keys, keys.add(key));
                 snapshotInbox.add(entry(key, entry.getValue().getObject()));
             }
             assertTrue("saveToSnapshot() call without progress",
@@ -385,35 +439,50 @@ public final class TestSupport {
         }
         int lastInboxSize = snapshotInbox.size();
         while (!snapshotInbox.isEmpty()) {
-            checkTime("restoreSnapshot", () -> processor[0].restoreFromSnapshot(snapshotInbox));
+            checkTime("restoreSnapshot", isCooperative,
+                    () -> processor[0].restoreFromSnapshot(snapshotInbox));
             assertTrue("restoreFromSnapshot() call without progress",
-                    !assertProgress || lastInboxSize > snapshotInbox.size() || !outbox.queueWithOrdinal(0).isEmpty());
+                    !assertProgress
+                            || lastInboxSize > snapshotInbox.size()
+                            || !outbox.queueWithOrdinal(0).isEmpty());
             drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
             lastInboxSize = snapshotInbox.size();
         }
         do {
-            checkTime("finishSnapshotRestore", () -> done[0] = processor[0].finishSnapshotRestore());
+            checkTime("finishSnapshotRestore", isCooperative,
+                    () -> done[0] = processor[0].finishSnapshotRestore());
             assertTrue("finishSnapshotRestore() call without progress",
                     !assertProgress || done[0] || !outbox.queueWithOrdinal(0).isEmpty());
             drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
         } while (!done[0]);
     }
 
-    private void checkTime(String methodName, Runnable r) {
+    private void checkTime(String methodName, boolean isCooperative, Runnable r) {
         long start = System.nanoTime();
         r.run();
         long elapsed = System.nanoTime() - start;
 
-        if (cooperativeTimeout > 0) {
-            assertTrue(String.format("call to %s() took %.1fms, it should be <%dms", methodName,
-                    elapsed / (double) MILLISECONDS.toNanos(1), COOPERATIVE_TIME_LIMIT_MS_FAIL),
-                    elapsed < MILLISECONDS.toNanos(COOPERATIVE_TIME_LIMIT_MS_FAIL));
+        if (isCooperative) {
+            if (cooperativeTimeout > 0) {
+                assertTrue(String.format("call to %s() took %.1fms, it should be <%dms", methodName,
+                        toMillis(elapsed), COOPERATIVE_TIME_LIMIT_MS_FAIL),
+                        elapsed < MILLISECONDS.toNanos(COOPERATIVE_TIME_LIMIT_MS_FAIL));
+            }
+            // print warning
+            if (elapsed > MILLISECONDS.toNanos(COOPERATIVE_TIME_LIMIT_MS_WARN)) {
+                System.out.println(String.format("Warning: call to %s() took %.2fms, it should be <%dms normally",
+                        methodName, toMillis(elapsed), COOPERATIVE_TIME_LIMIT_MS_WARN));
+            }
+        } else {
+            if (elapsed > MILLISECONDS.toNanos(BLOCKING_TIME_LIMIT_MS_WARN)) {
+                System.out.println(String.format("Warning: call to %s() took %.2fms in non-cooperative processor. Is " +
+                                "this to be expected?", methodName, toMillis(elapsed)));
+            }
         }
-        // print warning
-        if (elapsed > MILLISECONDS.toNanos(COOPERATIVE_TIME_LIMIT_MS_WARN)) {
-            System.out.println(String.format("Warning: call to %s() took %.2fms, it should be <%dms normally",
-                    methodName, elapsed / (double) MILLISECONDS.toNanos(1), COOPERATIVE_TIME_LIMIT_MS_WARN));
-        }
+    }
+
+    private double toMillis(long nanos) {
+        return nanos / (double) MILLISECONDS.toNanos(1);
     }
 
     /**
@@ -421,8 +490,8 @@ public final class TestSupport {
      * outbox available to accept more items.
      *
      * @param outboxBucket the queue from Outbox to drain
-     * @param target target list
-     * @param logItems whether to log drained items to {@code System.out}
+     * @param target       target list
+     * @param logItems     whether to log drained items to {@code System.out}
      */
     public static <T> void drainOutbox(Queue<T> outboxBucket, Collection<? super T> target, boolean logItems) {
         for (T o; (o = outboxBucket.poll()) != null; ) {
@@ -459,8 +528,8 @@ public final class TestSupport {
 
     private static String listToString(List<?> list) {
         return list.stream()
-                .map(String::valueOf)
-                .collect(Collectors.joining("\n"));
+                   .map(String::valueOf)
+                   .collect(Collectors.joining("\n"));
     }
 
     private static Supplier<Processor> singletonSupplier(Processor processor) {
