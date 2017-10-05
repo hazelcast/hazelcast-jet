@@ -41,6 +41,9 @@ import javax.annotation.Nonnull;
  * <p>
  * The processor accepts input from instances of {@link Inbox} and pushes
  * its output to an instance of {@link Outbox}.
+ * <p>
+ * See the {@link #isCooperative()} for important restrictions to how the
+ * processor should work.
  */
 public interface Processor {
 

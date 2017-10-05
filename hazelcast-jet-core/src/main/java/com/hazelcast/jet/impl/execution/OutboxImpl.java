@@ -30,6 +30,7 @@ import java.util.Map.Entry;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.util.Preconditions.checkPositive;
 
 public class OutboxImpl implements Outbox, SnapshotOutbox {
 
@@ -61,6 +62,7 @@ public class OutboxImpl implements Outbox, SnapshotOutbox {
         this.progTracker = progTracker;
         this.serializationService = serializationService;
         this.batchSize = batchSize;
+        checkPositive(batchSize, "batchSize must be positive");
 
         allEdges = IntStream.range(0, outstreams.length - (hasSnapshot ? 1 : 0)).toArray();
         allEdgesAndSnapshot = IntStream.range(0, outstreams.length).toArray();
@@ -89,9 +91,10 @@ public class OutboxImpl implements Outbox, SnapshotOutbox {
 
     @Override
     public final boolean offer(int[] ordinals, @Nonnull Object item) {
-        if (numRemainingInBatch <= 0) {
+        if (numRemainingInBatch == 0) {
             return false;
         }
+        assert numRemainingInBatch > 0 : "numRemainingInBatch=" + numRemainingInBatch;
         numRemainingInBatch--;
         boolean done = true;
         for (int i = 0; i < ordinals.length; i++) {

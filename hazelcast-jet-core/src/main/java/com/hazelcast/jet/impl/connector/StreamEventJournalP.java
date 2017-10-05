@@ -114,41 +114,48 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     @Override
     public boolean complete() {
         pollIfNeeded();
-        if (traverser == null) {
-            ReadResultSet<T> resultSet = null;
-            Iterator<Entry<Integer, ICompletableFuture<ReadResultSet<T>>>> iterator = futureMap.entrySet().iterator();
-            while (iterator.hasNext() && resultSet == null) {
-                Entry<Integer, ICompletableFuture<ReadResultSet<T>>> entry = iterator.next();
-                if (!entry.getValue().isDone()) {
+        nextTraverserIfNeeded();
+        if (traverser != null) {
+            emitFromTraverser(traverser);
+        }
+        return false;
+    }
+
+    private void nextTraverserIfNeeded() {
+        if (traverser != null) {
+            return;
+        }
+        ReadResultSet<T> resultSet = null;
+        Iterator<Entry<Integer, ICompletableFuture<ReadResultSet<T>>>> iterator = futureMap.entrySet().iterator();
+        while (iterator.hasNext() && resultSet == null) {
+            Entry<Integer, ICompletableFuture<ReadResultSet<T>>> entry = iterator.next();
+            if (!entry.getValue().isDone()) {
+                continue;
+            }
+            iterator.remove(); // remove the entry from futureMap
+            try {
+                resultSet = entry.getValue().get();
+            } catch (ExecutionException e) {
+                // this happens if the ringbuffer storing the journal overflows
+                if (e.getCause() instanceof StaleSequenceException) {
+                    long headSeq = ((StaleSequenceException) e.getCause()).getHeadSeq();
+                    long oldOffset = offsetMap.put(entry.getKey(), headSeq);
+                    getLogger().severe("Stale sequence, requested: " + oldOffset + ", currentHead: " + headSeq);
                     continue;
                 }
-                iterator.remove(); // remove the entry from futureMap
-                try {
-                    resultSet = entry.getValue().get();
-                } catch (ExecutionException e) {
-                    if (e.getCause() instanceof StaleSequenceException) {
-                        long headSeq = ((StaleSequenceException) e.getCause()).getHeadSeq();
-                        long oldOffset = offsetMap.put(entry.getKey(), headSeq);
-                        getLogger().severe("Stale sequence, requested: " + oldOffset + ", currentHead: " + headSeq);
-                        continue;
-                    }
-                    throw ExceptionUtil.rethrow(e);
-                } catch (InterruptedException e) {
-                    throw ExceptionUtil.rethrow(e);
-                }
-                offsetMap.merge(entry.getKey(), (long) resultSet.readCount(), Long::sum);
-                if (resultSet.size() == 0) {
-                    resultSet = null;
-                }
+                throw ExceptionUtil.rethrow(e);
+            } catch (InterruptedException e) {
+                throw ExceptionUtil.rethrow(e);
             }
-            if (resultSet == null) {
-                return false;
+            offsetMap.merge(entry.getKey(), (long) resultSet.readCount(), Long::sum);
+            if (resultSet.size() == 0) {
+                resultSet = null;
             }
+        }
+        if (resultSet != null) {
             traverser = traverseIterable(resultSet)
                 .onFirstNull(() -> traverser = null);
         }
-        emitFromTraverser(traverser);
-        return false;
     }
 
     private void pollIfNeeded() {
