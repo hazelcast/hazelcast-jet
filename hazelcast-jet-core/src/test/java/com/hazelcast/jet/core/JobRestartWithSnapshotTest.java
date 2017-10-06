@@ -32,6 +32,7 @@ import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.SnapshotRepository;
+import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.SnapshotContext;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
@@ -272,8 +273,12 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                     .mapToLong(Entry::getKey)
                     .findAny()
                     .orElseThrow(() -> new AssertionError("ExecutionId not found"));
-        SnapshotContext ssContext = jetService.getJobExecutionService().getExecutionContext(executionId)
-                                              .getSnapshotContext();
+        ExecutionContext executionContext = null;
+        // spin until the executionContext is available on the slave member
+        while (executionContext == null) {
+            executionContext = jetService.getJobExecutionService().getExecutionContext(executionId);
+        }
+        SnapshotContext ssContext = executionContext.getSnapshotContext();
         assertTrueEventually(() -> assertTrue("numRemainingTasklets was not negative, the tested scenario did not happen",
                 ssContext.getNumRemainingTasklets().get() < 0), 3);
 
