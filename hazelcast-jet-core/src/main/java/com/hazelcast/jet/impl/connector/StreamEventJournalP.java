@@ -60,6 +60,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.processorToPartitions;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
@@ -147,7 +148,11 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                     .map(e -> entry(broadcastKey(e.getKey()), e.getValue()))
                     .onFirstNull(() -> snapshotTraverser = null);
         }
-        return emitFromTraverserToSnapshot(snapshotTraverser);
+        boolean done = emitFromTraverserToSnapshot(snapshotTraverser);
+        if (done) {
+            logFinest(getLogger(), "Saved snapshot. Offsets: %s", emittedOffsets);
+        }
+        return done;
     }
 
     @Override
@@ -168,6 +173,12 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             readOffsets.put(partition, newOffset);
             emittedOffsets.put(partition, newOffset);
         }
+    }
+
+    @Override
+    public boolean finishSnapshotRestore() {
+        logFinest(getLogger(), "Restored snapshot. Offsets: %s", readOffsets);
+        return true;
     }
 
     @Override
@@ -247,7 +258,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     }
 
     private ICompletableFuture<ReadResultSet<T>> readFromJournal(int partition, long offset) {
-        logFinest(getLogger(), "Reading from partition %s and offset %s", partition, offset);
+        logFine(getLogger(), "Reading from partition %s and offset %s", partition, offset);
         return eventJournalReader.readFromEventJournal(offset,
                 1, MAX_FETCH_SIZE, partition, predicateFn, projectionFn);
     }

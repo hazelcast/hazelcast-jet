@@ -159,7 +159,7 @@ public final class TestSupport {
     private List<?> expectedOutput = emptyList();
     private boolean assertProgress = true;
     private boolean doSnapshots = true;
-    private boolean logInputOutput;
+    private boolean logInputOutput = true;
     private boolean callComplete = true;
     private long cooperativeTimeout = COOPERATIVE_TIME_LIMIT_MS_FAIL;
     private long runUntilCompletedTimeout;
@@ -336,7 +336,7 @@ public final class TestSupport {
         List<Object> actualOutput = new ArrayList<>();
 
         // create instance of your processor and call the init() method
-        processor[0].init(outbox, new TestProcessorContext());
+        initProcessor(processor[0], outbox);
 
         // do snapshot+restore before processing any item. This will test saveToSnapshot() in this edge case
         snapshotAndRestore(processor, outbox, actualOutput, doSnapshots);
@@ -376,7 +376,7 @@ public final class TestSupport {
                 boolean madeProgress = done[0] || !outbox.queueWithOrdinal(0).isEmpty();
                 assertTrue("complete() call without progress", !assertProgress || madeProgress);
                 drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
-                snapshotAndRestore(processor, outbox, actualOutput, doSnapshots && !done[0]);
+                snapshotAndRestore(processor, outbox, actualOutput, madeProgress && doSnapshots && !done[0]);
                 idleCount = idle(idler, idleCount, madeProgress);
                 if (runUntilCompletedTimeout > 0) {
                     elapsed = toMillis(System.nanoTime() - completeStart);
@@ -435,7 +435,7 @@ public final class TestSupport {
 
         // restore state to new processor
         processor[0] = supplier.get();
-        processor[0].init(outbox, new TestProcessorContext());
+        initProcessor(processor[0], outbox);
 
         if (snapshotInbox.isEmpty()) {
             // don't call finishSnapshotRestore, if snapshot was empty
@@ -485,7 +485,13 @@ public final class TestSupport {
         }
     }
 
-    private double toMillis(long nanos) {
+    private void initProcessor(Processor processor, TestOutbox outbox) {
+        TestProcessorContext context = new TestProcessorContext();
+        context.setLogger(getLogger(processor.getClass().getName()));
+        processor.init(outbox, context);
+    }
+
+    private static double toMillis(long nanos) {
         return nanos / (double) MILLISECONDS.toNanos(1);
     }
 

@@ -27,8 +27,12 @@ import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.map.impl.proxy.MapProxyImpl;
 import com.hazelcast.map.journal.EventJournalMapEvent;
+import com.hazelcast.test.HazelcastParallelClassRunner;
+import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,6 +52,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+@Category(QuickTest.class)
+@RunWith(HazelcastParallelClassRunner.class)
 public class StreamEventJournalPTest extends JetTestSupport {
 
     private static final int NUM_PARTITIONS = 2;
@@ -84,7 +90,7 @@ public class StreamEventJournalPTest extends JetTestSupport {
 
         TestSupport.verifyProcessor(supplier)
                    .disableProgressAssertion() // no progress assertion because of async calls
-                   .disableRunUntilCompleted(4000) // processor would never complete otherwise
+                   .disableRunUntilCompleted(1000) // processor would never complete otherwise
                    .outputChecker((e, a) -> new HashSet<>(e).equals(new HashSet<>(a))) // ordering is only per partition
                    .expectOutput(Arrays.asList(0, 1, 2, 3));
     }
