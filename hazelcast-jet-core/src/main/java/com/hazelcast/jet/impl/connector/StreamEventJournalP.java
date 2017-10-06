@@ -134,9 +134,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         }
 
         if (eventTraverser != null) {
-            emitFromTraverser(eventTraverser, item -> {
-                updateOffsetFn.accept(item);
-            });
+            emitFromTraverser(eventTraverser, updateOffsetFn);
         }
         return false;
     }
@@ -187,6 +185,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     }
 
     private void initialRead() {
+        // readOffsets and emittedOffsets are not empty if they were restored from snapshot
         if (readOffsets.isEmpty()) {
             subscriptions.forEach((partition, future) ->
                     uncheckRun(() -> readOffsets.put(partition, getSequence(subscriptions.get(partition))))
@@ -222,8 +221,8 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 continue;
             }
             ReadResultSet<T> resultSet = toResultSet(partition, entry.getValue());
-            if (resultSet == null) {
-                // we got stale sequence, make another read
+            if (resultSet == null || resultSet.size() == 0) {
+                // we got stale sequence or empty response, make another read
                 readFutures.put(partition, readFromJournal(partition, readOffsets.get(partition)));
                 continue;
             }
@@ -263,6 +262,11 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 1, MAX_FETCH_SIZE, partition, predicateFn, projectionFn);
     }
 
+    /**
+     * Returns a new traverser, that will return same items as supplied {@code
+     * traverser} and before each item is returned a zero-based index is sent
+     * to the {@code action}.
+     */
     private static <T> Traverser<T> peekIndex(Traverser<T> traverser, IntConsumer action) {
         int[] count = {0};
         return () -> {
@@ -341,7 +345,6 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 addrToPartitions = range(0, remotePartitionCount)
                         .boxed()
                         .collect(groupingBy(partition -> addresses.get(partition % addresses.size())));
-
             }
 
             return address -> new ClusterProcessorSupplier<>(addrToPartitions.get(address),
@@ -405,12 +408,10 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         }
 
         private Processor processorForPartitions(List<Integer> partitions) {
-            return !partitions.isEmpty() ?
-                    new StreamEventJournalP<>(eventJournalReader, partitions, predicate, projection, startFromNewest)
-                    :
-                    Processors.noopP().get();
+            return partitions.isEmpty()
+                    ? Processors.noopP().get()
+                    : new StreamEventJournalP<>(eventJournalReader, partitions, predicate, projection, startFromNewest);
         }
-
     }
 
     public static <K, V, T> ProcessorMetaSupplier streamMap(String mapName,

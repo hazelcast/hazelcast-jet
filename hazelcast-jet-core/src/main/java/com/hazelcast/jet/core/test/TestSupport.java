@@ -73,7 +73,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  *     specified timeout} elapses (for streaming sources)
  *
  *     <li>does snapshot+restore each time the {@code complete()} method
- *     returned {@code false}
+ *     returned {@code false} and made a progress
  * </ul>
  * The {@link #disableSnapshots() optional} snapshot+restore test procedure:
  * <ul>
@@ -486,8 +486,8 @@ public final class TestSupport {
     }
 
     private void initProcessor(Processor processor, TestOutbox outbox) {
-        TestProcessorContext context = new TestProcessorContext();
-        context.setLogger(getLogger(processor.getClass().getName()));
+        TestProcessorContext context = new TestProcessorContext()
+                .setLogger(getLogger(processor.getClass().getName()));
         processor.init(outbox, context);
     }
 
