@@ -385,7 +385,7 @@ public final class TestSupport {
                     }
                 }
             } while (!done[0]);
-            assertTrue("complete returned true", runUntilCompletedTimeout <= 0);
+            assertTrue("complete returned true", !done[0] || runUntilCompletedTimeout <= 0);
         }
 
         // assert the outbox
