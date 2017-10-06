@@ -68,11 +68,12 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  *
  *     <li>every time the inbox gets empty does snapshot+restore
  *
- *     <li>calls {@link Processor#complete()} until it returns {@code true}
- *     ({@link #disableCompleteCall() optional})
+ *     <li>{@link #disableCompleteCall() optionally} calls {@link Processor#complete()}
+ *     until it returns {@code true} or calls it until {@link #disableRunUntilCompleted(long)
+ *     specified timeout} elapses (for streaming sources)
  *
- *     <li>does snapshot+restore after {@code complete()} returned {@code
- *     false}
+ *     <li>does snapshot+restore each time the {@code complete()} method
+ *     returned {@code false}
  * </ul>
  * The {@link #disableSnapshots() optional} snapshot+restore test procedure:
  * <ul>
@@ -160,7 +161,6 @@ public final class TestSupport {
     private boolean doSnapshots = true;
     private boolean logInputOutput;
     private boolean callComplete = true;
-    private boolean runUntilCompleted = true;
     private long cooperativeTimeout = COOPERATIVE_TIME_LIMIT_MS_FAIL;
     private long runUntilCompletedTimeout;
 
@@ -235,19 +235,22 @@ public final class TestSupport {
     }
 
     /**
-     * During complete() phase of the processor, wait until
-     * given timeout instead of waiting for {@link Processor#complete()}
-     * to return {@code true}. Output will be eagerly checked after every call to
-     * {@code complete()} and if it diverges from expected output
-     * the test will fail earlier.
+     * If the timeout > 0, the {@code complete()} method is called repeatedly
+     * until the timeout elapses. After that, the output is compared using
+     * {@link #outputChecker(BiPredicate) output checker}. The {@code
+     * complete()} method is also not allowed to return {@code true} in this
+     * case. This setting is useful for testing of streaming sources.
      * <p>
-     * This setting is useful for testing streaming sources.
+     * If the timeout is <= 0 (the default), {@code complete()} method is
+     * called until it returns {@code true}, after which the output is checked.
+     * <p>
+     * Has no effect if {@code complete()} call is {@link #disableCompleteCall()
+     * disabled}.
      *
      * @param timeoutMillis how long to wait until outputs match
      * @return {@code this} instance for fluent API.
      */
     public TestSupport disableRunUntilCompleted(long timeoutMillis) {
-        this.runUntilCompleted = false;
         this.runUntilCompletedTimeout = timeoutMillis;
         return this;
     }
@@ -373,15 +376,16 @@ public final class TestSupport {
                 boolean madeProgress = done[0] || !outbox.queueWithOrdinal(0).isEmpty();
                 assertTrue("complete() call without progress", !assertProgress || madeProgress);
                 drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
-                snapshotAndRestore(processor, outbox, actualOutput, doSnapshots);
+                snapshotAndRestore(processor, outbox, actualOutput, doSnapshots && !done[0]);
                 idleCount = idle(idler, idleCount, madeProgress);
-                if (!runUntilCompleted) {
+                if (runUntilCompletedTimeout > 0) {
                     elapsed = toMillis(System.nanoTime() - completeStart);
                     if (elapsed > runUntilCompletedTimeout) {
                         break;
                     }
                 }
             } while (!done[0]);
+            assertTrue("complete returned true", runUntilCompletedTimeout <= 0);
         }
 
         // assert the outbox
@@ -418,7 +422,7 @@ public final class TestSupport {
             checkTime("saveSnapshot", isCooperative, () -> done[0] = processor[0].saveToSnapshot());
             for (Entry<MockData, MockData> entry : outbox.snapshotQueue()) {
                 Object key = entry.getKey().getObject();
-                assertTrue("Duplicate key produced in saveToSnapshot()\n" +
+                assertTrue("Duplicate key produced in saveToSnapshot()\n  " +
                         "Duplicate: " + key + "\n  Keys so far: " + keys, keys.add(key));
                 snapshotInbox.add(entry(key, entry.getValue().getObject()));
             }

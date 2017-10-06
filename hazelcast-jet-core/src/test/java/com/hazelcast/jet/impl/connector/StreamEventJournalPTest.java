@@ -84,7 +84,7 @@ public class StreamEventJournalPTest extends JetTestSupport {
 
         TestSupport.verifyProcessor(supplier)
                    .disableProgressAssertion() // no progress assertion because of async calls
-                   .disableRunUntilCompleted(2000) // processor would never complete otherwise
+                   .disableRunUntilCompleted(4000) // processor would never complete otherwise
                    .outputChecker((e, a) -> new HashSet<>(e).equals(new HashSet<>(a))) // ordering is only per partition
                    .expectOutput(Arrays.asList(0, 1, 2, 3));
     }
