@@ -83,9 +83,9 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     private final Projection<E, T> projectionFn;
     private final boolean startFromNewest;
 
-    // keep track of emitted and read offsets separately, as even when the
+    // keep track of next offset to emit and read separately, as even when the
     // outbox is full we can still poll for new items.
-    private final Map<Integer, Long> emittedOffsets = new HashMap<>();
+    private final Map<Integer, Long> emitOffsets = new HashMap<>();
     private final Map<Integer, Long> readOffsets = new HashMap<>();
 
     private final Map<Integer, ICompletableFuture<ReadResultSet<T>>> readFutures = new HashMap<>();
@@ -95,11 +95,11 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     private Traverser<Entry<BroadcastKey<Integer>, Long>> snapshotTraverser;
 
     // keep track of pendingItem's offset and partition
-    private long pendingOffset;
-    private int pendingPartition;
+    private long pendingItemOffset;
+    private int pendingItemPartition;
 
     // callback which will update the currently pending offset only after the item is emitted
-    private Consumer<T> updateOffsetFn = e -> emittedOffsets.put(pendingPartition, pendingOffset);
+    private Consumer<T> updateOffsetFn = e -> emitOffsets.put(pendingItemPartition, pendingItemOffset + 1);
     private Iterator<Entry<Integer, ICompletableFuture<ReadResultSet<T>>>> iterator;
 
     StreamEventJournalP(EventJournalReader<E> eventJournalReader,
@@ -143,13 +143,13 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     @Override
     public boolean saveToSnapshot() {
         if (snapshotTraverser == null) {
-            snapshotTraverser = traverseIterable(emittedOffsets.entrySet())
+            snapshotTraverser = traverseIterable(emitOffsets.entrySet())
                     .map(e -> entry(broadcastKey(e.getKey()), e.getValue()))
                     .onFirstNull(() -> snapshotTraverser = null);
         }
         boolean done = emitFromTraverserToSnapshot(snapshotTraverser);
         if (done) {
-            logFinest(getLogger(), "Saved snapshot. Offsets: %s", emittedOffsets);
+            logFinest(getLogger(), "Saved snapshot. Offsets: %s", emitOffsets);
         }
         return done;
     }
@@ -170,7 +170,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                         "snapshot. Requested was: " + offset + ", current head is: " + oldest);
             }
             readOffsets.put(partition, newOffset);
-            emittedOffsets.put(partition, newOffset);
+            emitOffsets.put(partition, newOffset);
         }
     }
 
@@ -186,16 +186,15 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     }
 
     private void initialRead() {
-        // readOffsets and emittedOffsets are not empty if they were restored from snapshot
+        // readOffsets and emitOffsets are empty if they were not restored from snapshot
         if (readOffsets.isEmpty()) {
             initialOffsets.forEach((partition, state) ->
                     readOffsets.put(partition, getSequence(state)));
-            emittedOffsets.putAll(readOffsets);
+            emitOffsets.putAll(readOffsets);
         }
         initialOffsets = null; // we no longer need them
-        for (Entry<Integer, Long> e : readOffsets.entrySet()) {
-            readFutures.put(e.getKey(), readFromJournal(e.getKey(), e.getValue()));
-        }
+        readOffsets.forEach((partition, offset) ->
+                readFutures.put(partition, readFromJournal(partition, offset)));
         iterator = readFutures.entrySet().iterator();
     }
 
@@ -209,9 +208,8 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             return null;
         }
         Traverser<T> traverser = traverseIterable(resultSet);
-        final ReadResultSet<T> currentSet = resultSet;
         return peekIndex(traverser, i -> {
-            pendingOffset = currentSet.getSequence(i) + 1;
+            pendingItemOffset = resultSet.getSequence(i);
         });
     }
 
@@ -228,7 +226,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 entry.setValue(readFromJournal(partition, readOffsets.get(partition)));
                 continue;
             }
-            pendingPartition = partition;
+            pendingItemPartition = partition;
             long newOffset = readOffsets.merge(partition, (long) resultSet.readCount(), Long::sum);
             // make another read on the same partition
             entry.setValue(readFromJournal(partition, newOffset));
@@ -247,7 +245,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 long headSeq = ((StaleSequenceException) e.getCause()).getHeadSeq();
                 // move both read and emitted offsets to the new head
                 long oldOffset = readOffsets.put(partition, headSeq);
-                emittedOffsets.put(partition, headSeq);
+                emitOffsets.put(partition, headSeq);
                 getLogger().warning("Events lost for partition " + partition + " due to journal overflow " +
                         "when reading from event journal. Increase journal size to avoid this error. " +
                         "Requested was: " + oldOffset + ", current head is: " + headSeq);

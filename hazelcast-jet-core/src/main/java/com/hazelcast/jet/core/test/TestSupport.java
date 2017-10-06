@@ -390,7 +390,7 @@ public final class TestSupport {
 
         // assert the outbox
         if (!outputChecker.test(expectedOutput, actualOutput)) {
-            assertEquals("processor output doesn't match",
+            assertEquals("processor output with doSnapshots=" + doSnapshots + " doesn't match",
                     listToString(expectedOutput), listToString(actualOutput));
         }
     }
