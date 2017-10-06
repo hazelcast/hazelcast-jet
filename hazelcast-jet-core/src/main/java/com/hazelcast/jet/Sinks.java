@@ -66,8 +66,8 @@ public final class Sinks {
      * Returns a sink that puts {@code Map.Entry}s it receives into a Hazelcast
      * {@code IMap} with the specified name.
      * <p>
-     * This sink provides exactly once guarantee thanks to  <i>idempotent
-     * updates</i>. It means, that the value with the same key is not appended,
+     * This sink provides the exactly once guarantee thanks to <i>idempotent
+     * updates</i>. It means that the value with the same key is not appended,
      * but overwritten. After the job is restarted from snapshot, duplicate
      * items will not change the state in the target map.
      */
@@ -80,8 +80,8 @@ public final class Sinks {
      * {@code IMap} with the specified name in a remote cluster identified by
      * the supplied {@code ClientConfig}.
      * <p>
-     * This sink provides exactly once guarantee thanks to  <i>idempotent
-     * updates</i>. It means, that the value with the same key is not appended,
+     * This sink provides the exactly once guarantee thanks to <i>idempotent
+     * updates</i>. It means that the value with the same key is not appended,
      * but overwritten. After the job is restarted from snapshot, duplicate
      * items will not change the state in the target map.
      */
@@ -93,8 +93,8 @@ public final class Sinks {
      * Returns a sink that puts {@code Map.Entry}s it receives into a Hazelcast
      * {@code ICache} with the specified name.
      * <p>
-     * This sink provides exactly once guarantee thanks to  <i>idempotent
-     * updates</i>. It means, that the value with the same key is not appended,
+     * This sink provides the exactly once guarantee thanks to <i>idempotent
+     * updates</i>. It means that the value with the same key is not appended,
      * but overwritten. After the job is restarted from snapshot, duplicate
      * items will not change the state in the target map.
      */
@@ -107,8 +107,8 @@ public final class Sinks {
      * {@code ICache} with the specified name in a remote cluster identified by
      * the supplied {@code ClientConfig}.
      * <p>
-     * This sink provides exactly once guarantee thanks to  <i>idempotent
-     * updates</i>. It means, that the value with the same key is not appended,
+     * This sink provides the exactly once guarantee thanks to <i>idempotent
+     * updates</i>. It means that the value with the same key is not appended,
      * but overwritten. After the job is restarted from snapshot, duplicate
      * items will not change the state in the target map.
      */
@@ -196,12 +196,6 @@ public final class Sinks {
      * supplied {@code toStringFn} function and encodes the string using the
      * supplied {@code Charset}. It follows each item with a platform-specific
      * line separator.
-     * <p>
-     * Since the work of this sink is file IO-intensive, {@link
-     * com.hazelcast.jet.core.Vertex#localParallelism(int) local parallelism} of
-     * the vertex should be set according to the performance characteristics of
-     * the underlying storage system. Most typically, local parallelism of 1 will
-     * already reach the maximum available performance.
      * <p>
      * No state is saved to snapshot for this sink. After the job is restarted,
      * the items will likely be duplicated, providing an <i>at least once</i>

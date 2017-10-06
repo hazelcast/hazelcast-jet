@@ -96,10 +96,6 @@ public final class Sources {
      * processors will leverage data locality by fetching only those entries
      * that are stored on the member where they are running.
      * <p>
-     * The number of Hazelcast partitions should be configured to at least
-     * {@code localParallelism * clusterSize}, otherwise some processors will
-     * have no partitions assigned to them.
-     * <p>
      * This source does not save any state to snapshot. If the job is restarted,
      * all entries will be emitted again.
      * <p>
@@ -118,10 +114,6 @@ public final class Sources {
      * them as {@code Map.Entry}. Its processors will leverage data locality
      * by fetching only those entries that are stored on the member where they
      * are running.
-     * <p>
-     * The number of Hazelcast partitions should be configured to at least
-     * {@code localParallelism * clusterSize}, otherwise some processors will
-     * have no partitions assigned to them.
      * <p>
      * This source does not save any state to snapshot. If the job is restarted,
      * all entries will be emitted again.
@@ -151,17 +143,12 @@ public final class Sources {
 
     /**
      * Returns a source that will stream the {@link EventJournalMapEvent}
-     * events of the Hazelcast {@code IMap} with the specified name. Given
+     * events of the Hazelcast {@code IMap} with the specified name. The given
      * predicate and projection will be applied to the events at the source.
      * <p>
-     * The processors will only access data local to the member and, if {@code
-     * localParallelism} for the vertex is above one, processors will divide
-     * the labor within the member so that each of them will get a subset of
-     * all local partitions to stream.
-     * <p>
-     * The number of Hazelcast partitions should be configured to at least
-     * {@code localParallelism * clusterSize}, otherwise some processors will have
-     * no partitions assigned to them.
+     * The processors will only access data local to the member and processors
+     * will divide the labor within the member so that each of them will get a
+     * subset of all local partitions to stream.
      * <p>
      * In order to stream from a map, event-journal should be configured.
      * See {@link com.hazelcast.config.EventJournalConfig}.
@@ -190,10 +177,6 @@ public final class Sources {
      * with the specified name in a remote cluster identified by the supplied
      * {@code ClientConfig} and emits them as {@code Map.Entry}.
      * <p>
-     * The number of Hazelcast partitions should be configured to at least
-     * {@code localParallelism * clusterSize}, otherwise some processors will
-     * have no partitions assigned to them.
-     * <p>
      * This source does not save any state to snapshot. If the job is restarted,
      * all entries will be emitted again.
      * <p>
@@ -212,10 +195,6 @@ public final class Sources {
      * {@code ClientConfig}, filters them using the supplied predicate,
      * transforms them using the supplied projection function, and emits
      * them as {@code Map.Entry}.
-     * <p>
-     * The number of Hazelcast partitions should be configured to at least
-     * {@code localParallelism * clusterSize}, otherwise some processors will
-     * have no partitions assigned to them.
      * <p>
      * This source does not save any state to snapshot. If the job is restarted,
      * all entries will be emitted again.
@@ -247,7 +226,7 @@ public final class Sources {
     /**
      * Returns a source that will stream the {@link EventJournalMapEvent}
      * events of the Hazelcast {@code IMap} with the specified name from a
-     * remote cluster. Given predicate and projection will be applied to the
+     * remote cluster. The given predicate and projection will be applied to the
      * events at the source.
      * <p>
      * In order to stream from a map, event-journal should be configured.
@@ -284,10 +263,6 @@ public final class Sources {
      * processors will leverage data locality by fetching only those entries
      * that are stored on the member where they are running.
      * <p>
-     * The number of Hazelcast partitions should be configured to at least
-     * {@code localParallelism * clusterSize}, otherwise some processors will
-     * have no partitions assigned to them.
-     * <p>
      * This source does not save any state to snapshot. If the job is restarted,
      * all entries will be emitted again.
      * <p>
@@ -313,16 +288,12 @@ public final class Sources {
 
     /**
      * Returns a source that will stream the {@link EventJournalCacheEvent}
-     * events of the Hazelcast {@code ICache} with the specified name. Given
+     * events of the Hazelcast {@code ICache} with the specified name. The given
      * predicate and projection will be applied to the events at the source.
      * <p>
-     * The processors will only access data local to the member and, if {@code
-     * localParallelism} for the vertex is above one, processors will divide
-     * the labor within the member so that each one gets a subset of all local partitions to stream.
-     * <p>
-     * The number of Hazelcast partitions should be configured to at least
-     * {@code localParallelism * clusterSize}, otherwise some processors will have
-     * no partitions assigned to them.
+     * The processors will only access data local to the member and processors
+     * will divide the labor within the member so that each of them will get a
+     * subset of all local partitions to stream.
      * <p>
      * In order to stream from a cache, event-journal should be configured.
      * Please see {@link com.hazelcast.config.EventJournalConfig}.
@@ -352,10 +323,6 @@ public final class Sources {
      * Returns a source that fetches entries from the Hazelcast {@code ICache}
      * with the specified name in a remote cluster identified by the supplied
      * {@code ClientConfig} and emits them as {@code Map.Entry}.
-     * <p>
-     * The number of Hazelcast partitions should be configured to at least
-     * {@code localParallelism * clusterSize}, otherwise some processors will
-     * have no partitions assigned to them.
      * <p>
      * This source does not save any state to snapshot. If the job is restarted,
      * all entries will be emitted again.
@@ -389,7 +356,7 @@ public final class Sources {
     /**
      * Returns a source that will stream the {@link EventJournalCacheEvent}
      * events of the Hazelcast {@code ICache} with the specified name from a
-     * remote cluster. Given predicate and projection will be applied to the
+     * remote cluster. The given predicate and projection will be applied to the
      * events at the source.
      * <p>
      * In order to stream from a cache, event-journal should be configured.
