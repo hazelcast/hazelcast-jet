@@ -488,7 +488,7 @@ public final class Sources {
      * @param charset charset to use to decode the files
      * @param glob the globbing mask, see {@link
      *             java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()}.
-     *             Use {@code "*"} for all (non-special) files.
+     *             Use {@code "*"} for all files.
      */
     @Nonnull
     public static Source<String> readFiles(
@@ -550,7 +550,7 @@ public final class Sources {
      * @param charset charset to use to decode the files
      * @param glob the globbing mask, see {@link
      *             java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()}.
-     *             Use {@code "*"} for all (non-special) files.
+     *             Use {@code "*"} for all files.
      */
     public static Source<String> streamFiles(
             @Nonnull String watchedDirectory, @Nonnull Charset charset, @Nonnull String glob
@@ -562,7 +562,7 @@ public final class Sources {
 
     /**
      * Convenience for {@link #streamFiles(String, Charset, String)
-     * streamFiles(watchedDirectory, UTF_8, ".")}.
+     * streamFiles(watchedDirectory, UTF_8, "*")}.
      */
     public static Source<String> streamFiles(@Nonnull String watchedDirectory) {
         return streamFiles(watchedDirectory, UTF_8, GLOB_WILDCARD);

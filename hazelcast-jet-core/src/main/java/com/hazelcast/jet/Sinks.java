@@ -18,6 +18,7 @@ package com.hazelcast.jet;
 
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.SinkImpl;
@@ -48,6 +49,17 @@ public final class Sinks {
      */
     public static <E> Sink<E> fromProcessor(String sinkName, ProcessorMetaSupplier metaSupplier) {
         return new SinkImpl<>(sinkName, metaSupplier);
+    }
+
+    /**
+     * Returns a sink constructed directly from the given Core API processor
+     * supplier.
+     *
+     * @param sinkName user-friendly sink name
+     * @param supplier the processor meta-supplier
+     */
+    public static <E> Sink<E> fromProcessor(String sinkName, ProcessorSupplier supplier) {
+        return new SinkImpl<>(sinkName, supplier);
     }
 
     /**
