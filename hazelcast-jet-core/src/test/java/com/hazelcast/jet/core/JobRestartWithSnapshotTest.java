@@ -17,6 +17,7 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.instance.HazelcastInstanceImpl;
+import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.Job;
@@ -67,6 +68,7 @@ import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
+import static com.hazelcast.jet.core.processor.Processors.noopP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.util.Util.arrayIndexOf;
 import static java.util.Collections.singletonList;
@@ -239,28 +241,32 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         /*
         Design of this test
 
-        The DAG is "source -> sink". Source completes immediately on member2 and is infinite on member1.
+        The DAG is "source -> sink". Source completes immediately on slave member and is infinite on master.
         Edge between source and sink is distributed. This situation will cause that after the source completes on
-        member2, the sink on member2 will only have remote source. This will allow that we can receive the
-        barrier from remote member1 before member2 even starts the snapshot. This is the very purpose of this
-        test. To ensure that this happens, we postpone handling of SnapshotOperation on member2.
+        slave, the sink on slave will only have remote source. This will allow that we can receive the
+        barrier from remote master before slave even starts the snapshot. This is the very purpose of this
+        test. To ensure that this happens, we postpone handling of SnapshotOperation on slave.
          */
-        JetService jetService = ((HazelcastInstanceImpl) instance2.getHazelcastInstance())
+        boolean i1IsMaster = ((ClusterServiceImpl) instance1.getHazelcastInstance().getCluster()).isMaster();
+        JetInstance masterInstance = i1IsMaster ? instance1 : instance2;
+        JetInstance slaveInstance = i1IsMaster ? instance2 : instance1;
+
+        JetService jetService = ((HazelcastInstanceImpl) slaveInstance.getHazelcastInstance())
                 .node.nodeEngine.getService(JetService.SERVICE_NAME);
-        PacketFiltersUtil.delayOperationsFrom(instance1.getHazelcastInstance(),
+        PacketFiltersUtil.delayOperationsFrom(masterInstance.getHazelcastInstance(),
                 JetInitDataSerializerHook.FACTORY_ID, singletonList(JetInitDataSerializerHook.SNAPSHOT_OP));
 
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", new NonBalancedSource(
-                instance2.getHazelcastInstance().getCluster().getLocalMember().getAddress().toString()));
+                slaveInstance.getHazelcastInstance().getCluster().getLocalMember().getAddress().toString()));
         Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLogger());
         dag.edge(between(source, sink).distributed());
 
         JobConfig config = new JobConfig();
         config.setSnapshotIntervalMillis(500);
-        Job job = instance1.newJob(dag, config);
+        Job job = masterInstance.newJob(dag, config);
 
-        IStreamMap<Long, Long> randomIdsMap = instance1.getMap(JobRepository.RANDOM_IDS_MAP_NAME);
+        IStreamMap<Long, Long> randomIdsMap = masterInstance.getMap(JobRepository.RANDOM_IDS_MAP_NAME);
         long executionId = randomIdsMap.entrySet().stream()
                     .filter(e -> e.getValue().equals(job.getJobId()) && !e.getValue().equals(e.getKey()))
                     .mapToLong(Entry::getKey)
@@ -463,10 +469,10 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
      * on designated member and never on others.
      */
     private static final class NonBalancedSource implements ProcessorMetaSupplier {
-        private final String noOutputAddress;
+        private final String finishingMemberAddress;
 
-        private NonBalancedSource(String noOutputAddress) {
-            this.noOutputAddress = noOutputAddress;
+        private NonBalancedSource(String finishingMemberAddress) {
+            this.finishingMemberAddress = finishingMemberAddress;
         }
 
         @Nonnull
@@ -474,8 +480,8 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
             return address -> {
                 String sAddress = address.toString();
-                return ProcessorSupplier.of(() -> sAddress.equals(noOutputAddress)
-                        ? new BatchNoopSourceP() : new StreamingNoopSourceP());
+                return ProcessorSupplier.of(() -> sAddress.equals(finishingMemberAddress)
+                        ? noopP().get() : new StreamingNoopSourceP());
             };
         }
     }
@@ -485,14 +491,6 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         @Override
         public boolean complete() {
             return false;
-        }
-    }
-
-    /** A source processor that emits nothing and completes immediately */
-    private static final class BatchNoopSourceP implements Processor {
-        @Override
-        public boolean complete() {
-            return true;
         }
     }
 }
