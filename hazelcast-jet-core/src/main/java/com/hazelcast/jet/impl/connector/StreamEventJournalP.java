@@ -88,8 +88,8 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     private final Map<Integer, Long> emittedOffsets = new HashMap<>();
     private final Map<Integer, Long> readOffsets = new HashMap<>();
 
-    private Map<Integer, ICompletableFuture<ReadResultSet<T>>> readFutures;
-    private Map<Integer, EventJournalInitialSubscriberState> subscriptions = new HashMap<>();
+    private final Map<Integer, ICompletableFuture<ReadResultSet<T>>> readFutures = new HashMap<>();
+    private Map<Integer, EventJournalInitialSubscriberState> initialOffsets = new HashMap<>();
 
     private Traverser<T> eventTraverser;
     private Traverser<Entry<BroadcastKey<Integer>, Long>> snapshotTraverser;
@@ -100,6 +100,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
     // callback which will update the currently pending offset only after the item is emitted
     private Consumer<T> updateOffsetFn = e -> emittedOffsets.put(pendingPartition, pendingOffset);
+    private Iterator<Entry<Integer, ICompletableFuture<ReadResultSet<T>>>> iterator;
 
     StreamEventJournalP(EventJournalReader<E> eventJournalReader,
                         List<Integer> assignedPartitions,
@@ -118,12 +119,12 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         Map<Integer, ICompletableFuture<EventJournalInitialSubscriberState>> futures = assignedPartitions.stream()
             .map(partition -> entry(partition, eventJournalReader.subscribeToEventJournal(partition)))
             .collect(toMap(Entry::getKey, Entry::getValue));
-        futures.forEach((partition, future) -> uncheckRun(() -> subscriptions.put(partition, future.get())));
+        futures.forEach((partition, future) -> uncheckRun(() -> initialOffsets.put(partition, future.get())));
     }
 
     @Override
     public boolean complete() {
-        if (readFutures == null) {
+        if (initialOffsets != null) {
             initialRead();
         }
         if (eventTraverser == null) {
@@ -162,7 +163,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             // after snapshot restore, we try to continue where we left off. However the
             // current oldest sequence might be greater than the restored offset. This would cause
             // stale sequence exception, so we fast forward to the oldest sequence instead.
-            long oldest = subscriptions.get(partition).getOldestSequence();
+            long oldest = initialOffsets.get(partition).getOldestSequence();
             long newOffset = Math.max(oldest, offset);
             if (newOffset != offset) {
                 getLogger().warning("Events lost for partition " + partition + " when restoring from " +
@@ -187,13 +188,15 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     private void initialRead() {
         // readOffsets and emittedOffsets are not empty if they were restored from snapshot
         if (readOffsets.isEmpty()) {
-            subscriptions.forEach((partition, future) ->
-                    uncheckRun(() -> readOffsets.put(partition, getSequence(subscriptions.get(partition))))
-            );
+            initialOffsets.forEach((partition, state) ->
+                    readOffsets.put(partition, getSequence(state)));
             emittedOffsets.putAll(readOffsets);
         }
-        readFutures = readOffsets.entrySet().stream()
-            .collect(toMap(Entry::getKey, e -> readFromJournal(e.getKey(), e.getValue())));
+        initialOffsets = null; // we no longer need them
+        for (Entry<Integer, Long> e : readOffsets.entrySet()) {
+            readFutures.put(e.getKey(), readFromJournal(e.getKey(), e.getValue()));
+        }
+        iterator = readFutures.entrySet().iterator();
     }
 
     private long getSequence(EventJournalInitialSubscriberState state) {
@@ -213,7 +216,6 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     }
 
     private ReadResultSet<T> nextResultSet() {
-        Iterator<Entry<Integer, ICompletableFuture<ReadResultSet<T>>>> iterator = readFutures.entrySet().iterator();
         while (iterator.hasNext()) {
             Entry<Integer, ICompletableFuture<ReadResultSet<T>>> entry = iterator.next();
             int partition = entry.getKey();
@@ -223,15 +225,16 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             ReadResultSet<T> resultSet = toResultSet(partition, entry.getValue());
             if (resultSet == null || resultSet.size() == 0) {
                 // we got stale sequence or empty response, make another read
-                readFutures.put(partition, readFromJournal(partition, readOffsets.get(partition)));
+                entry.setValue(readFromJournal(partition, readOffsets.get(partition)));
                 continue;
             }
             pendingPartition = partition;
             long newOffset = readOffsets.merge(partition, (long) resultSet.readCount(), Long::sum);
             // make another read on the same partition
-            readFutures.put(partition, readFromJournal(partition, newOffset));
+            entry.setValue(readFromJournal(partition, newOffset));
             return resultSet;
         }
+        iterator = readFutures.entrySet().iterator();
         return null;
     }
 
