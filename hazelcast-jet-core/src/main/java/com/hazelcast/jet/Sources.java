@@ -32,11 +32,14 @@ import com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP;
 import com.hazelcast.jet.impl.connector.StreamFilesP;
 import com.hazelcast.jet.impl.connector.StreamSocketP;
 import com.hazelcast.map.journal.EventJournalMapEvent;
+import com.hazelcast.projection.Projection;
+import com.hazelcast.query.Predicate;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.nio.charset.Charset;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -91,7 +94,7 @@ public final class Sources {
     }
 
     /**
-     * Returns a source that fetches entries from the Hazelcast {@code IMap}
+     * Returns a source that fetches entries from a local Hazelcast {@code IMap}
      * with the specified name and emits them as {@code Map.Entry}. Its
      * processors will leverage data locality by fetching only those entries
      * that are stored on the member where they are running.
@@ -108,12 +111,15 @@ public final class Sources {
     }
 
     /**
-     * Returns a source that fetches entries from the Hazelcast {@code IMap}
-     * with the specified name, filters them using the supplied predicate,
-     * transforms them using the supplied projection function, and emits
-     * them as {@code Map.Entry}. Its processors will leverage data locality
-     * by fetching only those entries that are stored on the member where they
-     * are running.
+     * Returns a source that fetches entries from a local Hazelcast {@code IMap}
+     * with the specified name. The supplied {@code predicate} and {@code projection}
+     * will be applied on the map before it is read by the source. If the predicate
+     * supplied is of type {@link com.hazelcast.query.IndexAwarePredicate}, then
+     * any existing indexes on the map will be used. It emits entries of type {@code T}
+     * as output by the supplied projection function.
+     * <p>
+     * The source leverages data locality by fetching only those entries
+     * that are stored on the member where it is running.
      * <p>
      * This source does not save any state to snapshot. If the job is restarted,
      * all entries will be emitted again.
@@ -124,11 +130,25 @@ public final class Sources {
      */
     public static <K, V, T> Source<T> readMap(
             @Nonnull String mapName,
-            @Nonnull DistributedPredicate<Map.Entry<K, V>> predicate,
+            @Nonnull Predicate<K, V> predicate,
+            @Nonnull Projection<Entry<K, V>, T> projection
+    ) {
+        return fromProcessor("readMap(" + mapName + ')',
+                SourceProcessors.readMapP(mapName, predicate, projection));
+    }
+
+    /**
+     * Convenience for {@link #readMap(String, Predicate, Projection)}
+     * which use a {@link DistributedPredicate} and {@link DistributedFunction}
+     * as the predicate and projection functions.
+     */
+    public static <K, V, T> Source<T> readMap(
+            @Nonnull String mapName,
+            @Nonnull DistributedPredicate<Map.Entry<K, V>> predicateFn,
             @Nonnull DistributedFunction<Map.Entry<K, V>, T> projectionFn
     ) {
         return fromProcessor("readMap(" + mapName + ')',
-                SourceProcessors.readMapP(mapName, predicate, projectionFn));
+                SourceProcessors.readMapP(mapName, predicateFn, projectionFn));
     }
 
     /**
@@ -202,11 +222,14 @@ public final class Sources {
     }
 
     /**
-     * Returns a source that fetches entries from the Hazelcast {@code IMap}
+     * Returns a source that fetches entries from a remote Hazelcast {@code IMap}
      * with the specified name in a remote cluster identified by the supplied
-     * {@code ClientConfig}, filters them using the supplied predicate,
-     * transforms them using the supplied projection function, and emits
-     * them as {@code Map.Entry}.
+     * {@code ClientConfig}. The supplied {@code predicate} and {@code projection}
+     * will be applied locally on the remote cluster before it is read
+     * by the source. If the predicate supplied is of type
+     * {@link com.hazelcast.query.IndexAwarePredicate}, then any existing indexes
+     * on the map will be used. It emits entries of type {@code T} as output by the
+     * supplied projection function.
      * <p>
      * This source does not save any state to snapshot. If the job is restarted,
      * all entries will be emitted again.
@@ -217,12 +240,27 @@ public final class Sources {
      */
     public static <K, V, T> Source<T> readRemoteMap(
             @Nonnull String mapName,
-            @Nonnull DistributedPredicate<Map.Entry<K, V>> predicate,
-            @Nonnull DistributedFunction<Map.Entry<K, V>, T> projectionFn,
-            @Nonnull ClientConfig clientConfig
+            @Nonnull ClientConfig clientConfig,
+            @Nonnull Predicate<K, V> predicate,
+            @Nonnull Projection<Entry<K, V>, T> projectionFn
     ) {
         return fromProcessor("readRemoteMap(" + mapName + ')',
-                SourceProcessors.readRemoteMapP(mapName, predicate, projectionFn, clientConfig));
+                SourceProcessors.readRemoteMapP(mapName, clientConfig, predicate, projectionFn));
+    }
+
+    /**
+     * Convenience for {@link #readRemoteMap(String, ClientConfig, Predicate, Projection)}
+     * which use a {@link DistributedPredicate} and {@link DistributedFunction}
+     * as the predicate and projection functions.
+     */
+    public static <K, V, T> Source<T> readRemoteMap(
+            @Nonnull String mapName,
+            @Nonnull ClientConfig clientConfig,
+            @Nonnull DistributedPredicate<Entry<K, V>> predicateFn,
+            @Nonnull DistributedFunction<Entry<K, V>, T> projectionFn
+    ) {
+        return fromProcessor("readRemoteMap(" + mapName + ')',
+                SourceProcessors.readRemoteMapP(mapName, clientConfig, predicateFn, projectionFn));
     }
 
     /**

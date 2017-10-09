@@ -37,6 +37,7 @@ import com.hazelcast.journal.EventJournalReader;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.nio.Address;
 import com.hazelcast.projection.Projection;
+import com.hazelcast.query.Predicate;
 import com.hazelcast.ringbuffer.ReadResultSet;
 import com.hazelcast.ringbuffer.StaleSequenceException;
 
