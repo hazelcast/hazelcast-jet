@@ -152,14 +152,12 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     }
 
     private void observeBarrier(int queueIndex, long snapshotId) {
-        // TODO basri is this necessary? can't we just check monotonicity?
         if (snapshotId != pendingSnapshotId) {
             throw new JetException("Unexpected snapshot barrier "
                     + snapshotId + ", expected " + pendingSnapshotId);
         }
         receivedBarriers.set(queueIndex);
     }
-
 
     private void observeWm(int queueIndex, final long wmValue) {
         if (queueWms[queueIndex] >= wmValue) {
