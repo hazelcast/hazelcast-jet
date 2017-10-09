@@ -151,7 +151,9 @@ public final class Sources {
      * subset of all local partitions to stream.
      * <p>
      * In order to stream from a map, event-journal should be configured.
-     * See {@link com.hazelcast.config.EventJournalConfig}.
+     * See {@link com.hazelcast.config.EventJournalConfig}. The event journal
+     * is backed by a fixed capacity ring buffer. If the capacity overflows,
+     * some events can be missed - make sure to configure that too.
      * <p>
      * Journal offset is saved to the state snapshot. If the job restarts,
      * emission starts at the saved offset, giving exactly-once guarantee.
@@ -230,7 +232,9 @@ public final class Sources {
      * events at the source.
      * <p>
      * In order to stream from a map, event-journal should be configured.
-     * Please see {@link com.hazelcast.config.EventJournalConfig}
+     * See {@link com.hazelcast.config.EventJournalConfig}. The event journal
+     * is backed by a fixed capacity ring buffer. If the capacity overflows,
+     * some events can be missed - make sure to configure that too.
      * <p>
      * Journal offset is saved to the state snapshot. If the job restarts,
      * emission starts at the saved offset, giving exactly-once guarantee.
@@ -296,7 +300,9 @@ public final class Sources {
      * subset of all local partitions to stream.
      * <p>
      * In order to stream from a cache, event-journal should be configured.
-     * Please see {@link com.hazelcast.config.EventJournalConfig}.
+     * See {@link com.hazelcast.config.EventJournalConfig}. The event journal
+     * is backed by a fixed capacity ring buffer. If the capacity overflows,
+     * some events can be missed - make sure to configure that too.
      * <p>
      * Journal offset is saved to the state snapshot. If the job restarts,
      * emission starts at the saved offset, giving exactly-once guarantee.
@@ -360,7 +366,9 @@ public final class Sources {
      * events at the source.
      * <p>
      * In order to stream from a cache, event-journal should be configured.
-     * Please see {@link com.hazelcast.config.EventJournalConfig}.
+     * See {@link com.hazelcast.config.EventJournalConfig}. The event journal
+     * is backed by a fixed capacity ring buffer. If the capacity overflows,
+     * some events can be missed - make sure to configure that too.
      * <p>
      * Journal offset is saved to the state snapshot. If the job restarts,
      * emission starts at the saved offset, giving exactly-once guarantee.
