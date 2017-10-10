@@ -113,20 +113,22 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                 return tracker.toProgressState();
             }
 
-            // coalesce WMs received and emit new WM if needed
-            long bottomWm = bottomObservedWm();
-            if (bottomWm > lastEmittedWm) {
-                lastEmittedWm = bottomWm;
-                dest.accept(new Watermark(bottomWm));
-                break;
-            }
+            if (itemDetector.item != null) {
+                // coalesce WMs received and emit new WM if needed
+                long bottomWm = bottomObservedWm();
+                if (bottomWm > lastEmittedWm) {
+                    lastEmittedWm = bottomWm;
+                    dest.accept(new Watermark(bottomWm));
+                    break;
+                }
 
-            // if we have received the current snapshot from all active queues, forward it
-            if (receivedBarriers.cardinality() == numActiveQueues) {
-                dest.accept(new SnapshotBarrier(pendingSnapshotId));
-                pendingSnapshotId++;
-                receivedBarriers.clear();
-                break;
+                // if we have received the current snapshot from all active queues, forward it
+                if (receivedBarriers.cardinality() == numActiveQueues) {
+                    dest.accept(new SnapshotBarrier(pendingSnapshotId));
+                    pendingSnapshotId++;
+                    receivedBarriers.clear();
+                    break;
+                }
             }
         }
 

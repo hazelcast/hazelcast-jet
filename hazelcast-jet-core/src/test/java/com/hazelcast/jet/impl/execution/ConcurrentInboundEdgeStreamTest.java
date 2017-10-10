@@ -122,7 +122,7 @@ public class ConcurrentInboundEdgeStreamTest {
     }
 
     @Test
-    public void when_receivingSnapshots_then_coalesce() {
+    public void when_receivingBarriers_then_coalesce() {
         add(q1, barrier(0));
         add(q2, 1);
         drainAndAssert(MADE_PROGRESS, 1);
@@ -133,7 +133,7 @@ public class ConcurrentInboundEdgeStreamTest {
     }
 
     @Test
-    public void when_receivingSnapshots_then_waitForSnapshot() {
+    public void when_receivingBarriers_then_waitForBarrier() {
         stream = new ConcurrentInboundEdgeStream(conveyor, 0, 0, -1, true);
 
         add(q1, barrier(0));
@@ -149,7 +149,7 @@ public class ConcurrentInboundEdgeStreamTest {
     }
 
     @Test
-    public void when_receivingSnapshotsWhileDone_then_coalesce() {
+    public void when_receivingBarriersWhileDone_then_coalesce() {
         stream = new ConcurrentInboundEdgeStream(conveyor, 0, 0, -1, true);
 
         add(q1, 1, barrier(0));
