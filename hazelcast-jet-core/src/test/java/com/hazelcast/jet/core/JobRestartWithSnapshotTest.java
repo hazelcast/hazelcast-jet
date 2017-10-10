@@ -72,6 +72,7 @@ import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.util.Util.arrayIndexOf;
+import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -144,7 +145,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         WindowDefinition wDef = WindowDefinition.tumblingWindowDef(3);
         AggregateOperation1<Object, LongAccumulator, Long> aggrOp = counting();
 
-        Map<long[], Long> result = instance1.getMap("result");
+        Map<List<Long>, Long> result = instance1.getMap("result");
         result.clear();
 
         SequencesInPartitionsMetaSupplier sup = new SequencesInPartitionsMetaSupplier(3, 120);
@@ -158,7 +159,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                 t -> ((Entry<Integer, Integer>) t).getValue(),
                 TimestampKind.EVENT, wDef, aggrOp));
         Vertex map = dag.newVertex("map",
-                mapP((TimestampedEntry e) -> entry(new long[] {e.getTimestamp(), (int) e.getKey()}, e.getValue())));
+                mapP((TimestampedEntry e) -> entry(asList(e.getTimestamp(), (int) e.getKey()), e.getValue())));
         Vertex writeMap = dag.newVertex("writeMap", SinkProcessors.writeMapP("result"));
 
         dag.edge(between(generator, insWm))
@@ -197,23 +198,29 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         job.join();
 
         // compute expected result
-        Map<long[], Long> expectedMap = new HashMap<>();
+        Map<List<Long>, Long> expectedMap = new HashMap<>();
         for (long partition = 0; partition < sup.numPartitions; partition++) {
             long cnt = 0;
             for (long value = 1; value <= sup.elementsInPartition; value++) {
                 cnt++;
                 if (value % wDef.frameLength() == 0) {
-                    expectedMap.put(new long[] {value, partition}, cnt);
+                    expectedMap.put(asList(value, partition), cnt);
                     cnt = 0;
                 }
             }
             if (cnt > 0) {
-                expectedMap.put(new long[] {wDef.higherFrameTs(sup.elementsInPartition - 1), partition}, cnt);
+                expectedMap.put(asList(wDef.higherFrameTs(sup.elementsInPartition - 1), partition), cnt);
             }
         }
 
         // check expected result
         if (!expectedMap.equals(result)) {
+            System.out.println("All expected entries: " + expectedMap.entrySet().stream()
+                    .map(Object::toString)
+                    .collect(joining(", ")));
+            System.out.println("All actual entries: " + result.entrySet().stream()
+                    .map(Object::toString)
+                    .collect(joining(", ")));
             System.out.println("Non-received expected items: " + expectedMap.keySet().stream()
                     .filter(key -> !result.containsKey(key))
                     .map(Object::toString)
@@ -223,10 +230,10 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                     .map(Object::toString)
                     .collect(joining(", ")));
             System.out.println("Different keys: ");
-            for (Entry<long[], Long> rEntry : result.entrySet()) {
+            for (Entry<List<Long>, Long> rEntry : result.entrySet()) {
                 Long expectedValue = expectedMap.get(rEntry.getKey());
                 if (expectedValue != null && !expectedValue.equals(rEntry.getValue())) {
-                    System.out.println("key: " + Arrays.toString(rEntry.getKey()) + ", expected value: " + expectedValue
+                    System.out.println("key: " + rEntry.getKey() + ", expected value: " + expectedValue
                             + ", actual value: " + rEntry.getValue());
                 }
             }
