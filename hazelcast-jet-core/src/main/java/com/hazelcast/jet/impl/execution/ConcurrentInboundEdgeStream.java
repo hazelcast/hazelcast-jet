@@ -102,6 +102,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             if (itemDetector.item == DONE_ITEM) {
                 conveyor.removeQueue(queueIndex);
                 receivedBarriers.clear(queueIndex);
+                queueWms[queueIndex] = Long.MAX_VALUE;
                 numActiveQueues--;
             } else if (itemDetector.item instanceof Watermark) {
                 observeWm(queueIndex, ((Watermark) itemDetector.item).timestamp());

@@ -194,6 +194,18 @@ public class ConcurrentInboundEdgeStreamTest {
         drainAndAssert(DONE);
     }
 
+    @Test
+    public void when_oneQueueDone_then_theOtherWorks() {
+        add(q1, DONE_ITEM);
+        drainAndAssert(MADE_PROGRESS);
+
+        add(q2, barrier(0));
+        drainAndAssert(MADE_PROGRESS, barrier(0));
+
+        add(q2, wm(0));
+        drainAndAssert(MADE_PROGRESS, wm(0));
+    }
+
     private void drainAndAssert(ProgressState expectedState, Object... expectedItems) {
         List<Object> list = new ArrayList<>();
         assertEquals("progressState", expectedState, stream.drainTo(list::add));
