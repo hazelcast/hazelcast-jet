@@ -206,6 +206,16 @@ public class ConcurrentInboundEdgeStreamTest {
         drainAndAssert(MADE_PROGRESS, wm(0));
     }
 
+    @Test
+    public void when_nonSpecificBroadcastItem_then_drained() {
+        // When
+        BroadcastEntry<String, String> entry = new BroadcastEntry<>("k", "v");
+        add(q1, entry);
+
+        // Then
+        drainAndAssert(MADE_PROGRESS, entry);
+    }
+
     private void drainAndAssert(ProgressState expectedState, Object... expectedItems) {
         List<Object> list = new ArrayList<>();
         assertEquals("progressState", expectedState, stream.drainTo(list::add));

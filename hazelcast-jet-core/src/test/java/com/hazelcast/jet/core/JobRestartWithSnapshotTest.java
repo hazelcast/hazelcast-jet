@@ -29,6 +29,8 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.processor.DiagnosticProcessors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.core.test.TestProcessorMetaSupplierContext;
+import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.SnapshotRepository;
@@ -43,6 +45,7 @@ import com.hazelcast.test.PacketFiltersUtil;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -52,6 +55,7 @@ import org.junit.runner.RunWith;
 import javax.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -79,6 +83,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -159,7 +164,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                 t -> ((Entry<Integer, Integer>) t).getValue(),
                 TimestampKind.EVENT, wDef, aggrOp));
         Vertex map = dag.newVertex("map",
-                mapP((TimestampedEntry e) -> entry(asList(e.getTimestamp(), (int) e.getKey()), e.getValue())));
+                mapP((TimestampedEntry e) -> entry(asList(e.getTimestamp(), (long) (int) e.getKey()), e.getValue())));
         Vertex writeMap = dag.newVertex("writeMap", SinkProcessors.writeMapP("result"));
 
         dag.edge(between(generator, insWm))
@@ -315,8 +320,8 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
     }
 
     // This is a "test of a test" - it checks, that SequencesInPartitionsGeneratorP generates correct output
-    /*
     @Test
+    @Ignore
     public void test_SequencesInPartitionsGeneratorP() throws Exception {
         SequencesInPartitionsMetaSupplier pms = new SequencesInPartitionsMetaSupplier(3, 2);
         pms.init(new TestProcessorMetaSupplierContext().setLocalParallelism(1).setTotalParallelism(2));
@@ -330,19 +335,18 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         Processor p2 = processors2.next();
         assertFalse(processors2.hasNext());
 
-        testProcessor(p1, emptyList(), asList(
+        TestSupport.verifyProcessor(p1).expectOutput(asList(
                 entry(0, 0),
                 entry(2, 0),
                 entry(0, 1),
                 entry(2, 1)
         ));
 
-        testProcessor(p2, emptyList(), asList(
+        TestSupport.verifyProcessor(p2).expectOutput(asList(
                 entry(1, 0),
                 entry(1, 1)
         ));
     }
-    */
 
     /**
      * A source, that will generate integer sequences from 0..ELEMENTS_IN_PARTITION,
