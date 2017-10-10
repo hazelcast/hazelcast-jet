@@ -71,15 +71,15 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#readMap(String, DistributedPredicate, DistributedFunction)}}.
+     * {@link com.hazelcast.jet.Sources#readMap(String, Predicate, DistributedFunction)}}.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier readMapP(
             @Nonnull String mapName,
-            @Nonnull DistributedPredicate<Entry<K, V>> predicateFn,
+            @Nonnull Predicate<K, V> predicate,
             @Nonnull DistributedFunction<Entry<K, V>, T> projectionFn
     ) {
-        return ReadWithPartitionIteratorP.readMap(mapName, predicateFn::test, toProjection(projectionFn));
+        return ReadWithPartitionIteratorP.readMap(mapName, predicate, toProjection(projectionFn));
     }
 
 
@@ -131,17 +131,17 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#readRemoteMap(String, ClientConfig, DistributedPredicate, DistributedFunction)}.
+     * {@link com.hazelcast.jet.Sources#readRemoteMap(String, ClientConfig, Predicate, DistributedFunction)}.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier readRemoteMapP(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
-            @Nonnull DistributedPredicate<Entry<K, V>> predicateFn,
+            @Nonnull Predicate<K, V> predicate,
             @Nonnull DistributedFunction<Entry<K, V>, T> projectionFn
     ) {
         return ReadWithPartitionIteratorP.readRemoteMap(
-                mapName, clientConfig, toProjection(projectionFn), predicateFn::test
+                mapName, clientConfig, toProjection(projectionFn), predicate
         );
     }
 

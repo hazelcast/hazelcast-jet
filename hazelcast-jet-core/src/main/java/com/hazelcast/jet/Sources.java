@@ -139,16 +139,15 @@ public final class Sources {
 
     /**
      * Convenience for {@link #readMap(String, Predicate, Projection)}
-     * which use a {@link DistributedPredicate} and {@link DistributedFunction}
-     * as the predicate and projection functions.
+     * which use a {@link DistributedFunction} as the projection function.
      */
     public static <K, V, T> Source<T> readMap(
             @Nonnull String mapName,
-            @Nonnull DistributedPredicate<Map.Entry<K, V>> predicateFn,
+            @Nonnull Predicate<K, V> predicate,
             @Nonnull DistributedFunction<Map.Entry<K, V>, T> projectionFn
     ) {
         return fromProcessor("readMap(" + mapName + ')',
-                SourceProcessors.readMapP(mapName, predicateFn, projectionFn));
+                SourceProcessors.readMapP(mapName, predicate, projectionFn));
     }
 
     /**
@@ -250,17 +249,16 @@ public final class Sources {
 
     /**
      * Convenience for {@link #readRemoteMap(String, ClientConfig, Predicate, Projection)}
-     * which use a {@link DistributedPredicate} and {@link DistributedFunction}
-     * as the predicate and projection functions.
+     * which use a {@link DistributedFunction} as the projection function.
      */
     public static <K, V, T> Source<T> readRemoteMap(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
-            @Nonnull DistributedPredicate<Entry<K, V>> predicateFn,
+            @Nonnull Predicate<K, V> predicate,
             @Nonnull DistributedFunction<Entry<K, V>, T> projectionFn
     ) {
         return fromProcessor("readRemoteMap(" + mapName + ')',
-                SourceProcessors.readRemoteMapP(mapName, clientConfig, predicateFn, projectionFn));
+                SourceProcessors.readRemoteMapP(mapName, clientConfig, predicate, projectionFn));
     }
 
     /**
