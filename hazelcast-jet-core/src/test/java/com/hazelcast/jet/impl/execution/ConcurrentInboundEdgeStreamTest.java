@@ -117,6 +117,7 @@ public class ConcurrentInboundEdgeStreamTest {
 
         add(q1, wm(3));
         add(q2, wm(3));
+        drainAndAssert(MADE_PROGRESS, wm(2));
         drainAndAssert(MADE_PROGRESS, wm(3));
     }
 
@@ -167,6 +168,30 @@ public class ConcurrentInboundEdgeStreamTest {
 
         add(q2, barrier(0));
         drainAndAssert(MADE_PROGRESS, barrier(0));
+    }
+
+    @Test
+    public void when_barrierAndWmInQueues_then_notReordered() {
+        // When
+        add(q1, wm(1));
+        add(q2, barrier(0));
+        drainAndAssert(MADE_PROGRESS);
+
+        add(q1, barrier(0));
+        add(q2, wm(1));
+
+        // Then
+        drainAndAssert(MADE_PROGRESS, barrier(0));
+        drainAndAssert(MADE_PROGRESS, wm(1));
+    }
+
+    @Test
+    public void when_barrierAndDone_then_barrierEmitted() {
+        add(q1, barrier(0), DONE_ITEM);
+        add(q2, barrier(0), DONE_ITEM);
+
+        drainAndAssert(MADE_PROGRESS, barrier(0));
+        drainAndAssert(DONE);
     }
 
     private void drainAndAssert(ProgressState expectedState, Object... expectedItems) {
