@@ -201,7 +201,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         @Override
         public boolean test(Object o) {
             if (o instanceof Watermark || o instanceof SnapshotBarrier || o == DONE_ITEM) {
-                assert item == null : "Received multiple BroadcastItem-s without a call to reset(): " + item;
+                assert item == null : "Received multiple special items without a call to reset(): " + item;
                 item = (BroadcastItem) o;
                 return false;
             }

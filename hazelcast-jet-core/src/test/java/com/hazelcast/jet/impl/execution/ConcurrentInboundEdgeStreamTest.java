@@ -207,13 +207,14 @@ public class ConcurrentInboundEdgeStreamTest {
     }
 
     @Test
-    public void when_nonSpecificBroadcastItem_then_drained() {
+    public void when_nonSpecificBroadcastItems_then_drainedInOneBatch() {
         // When
         BroadcastEntry<String, String> entry = new BroadcastEntry<>("k", "v");
         add(q1, entry);
+        add(q1, entry);
 
         // Then
-        drainAndAssert(MADE_PROGRESS, entry);
+        drainAndAssert(MADE_PROGRESS, entry, entry);
     }
 
     private void drainAndAssert(ProgressState expectedState, Object... expectedItems) {
