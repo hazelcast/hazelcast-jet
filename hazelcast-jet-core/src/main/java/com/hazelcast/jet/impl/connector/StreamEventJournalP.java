@@ -37,7 +37,6 @@ import com.hazelcast.journal.EventJournalReader;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.nio.Address;
 import com.hazelcast.projection.Projection;
-import com.hazelcast.query.Predicate;
 import com.hazelcast.ringbuffer.ReadResultSet;
 import com.hazelcast.ringbuffer.StaleSequenceException;
 
@@ -80,8 +79,8 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
     private final EventJournalReader<E> eventJournalReader;
     private final Set<Integer> assignedPartitions;
-    private final SerializablePredicate<E> predicateFn;
-    private final Projection<E, T> projectionFn;
+    private final SerializablePredicate<E> predicate;
+    private final Projection<E, T> projection;
     private final boolean startFromNewest;
 
     // keep track of next offset to emit and read separately, as even when the
@@ -109,8 +108,8 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                         boolean startFromNewest) {
         this.eventJournalReader = eventJournalReader;
         this.assignedPartitions = new HashSet<>(assignedPartitions);
-        this.predicateFn = predicateFn == null ? null : predicateFn::test;
-        this.projectionFn = projectionFn == null ? null : toProjection(projectionFn);
+        this.predicate = predicateFn == null ? null : predicateFn::test;
+        this.projection = projectionFn == null ? null : toProjection(projectionFn);
         this.startFromNewest = startFromNewest;
     }
 
@@ -244,7 +243,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     private ICompletableFuture<ReadResultSet<T>> readFromJournal(int partition, long offset) {
         logFine(getLogger(), "Reading from partition %s and offset %s", partition, offset);
         return eventJournalReader.readFromEventJournal(offset,
-                1, MAX_FETCH_SIZE, partition, predicateFn, projectionFn);
+                1, MAX_FETCH_SIZE, partition, predicate, projection);
     }
 
     /**
