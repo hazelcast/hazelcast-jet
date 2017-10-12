@@ -138,7 +138,7 @@ public class HazelcastConnectorTest extends JetTestSupport {
     }
 
     @Test
-    public void when_readMap_withDistributedPredicateAndFunction() throws ExecutionException, InterruptedException {
+    public void when_readMap_withPredicateAndDistributedFunction() throws ExecutionException, InterruptedException {
         IStreamMap<Integer, Integer> sourceMap = jetInstance.getMap(sourceName);
         range(0, ENTRY_COUNT).forEach(i -> sourceMap.put(i, i));
 

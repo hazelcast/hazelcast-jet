@@ -165,7 +165,7 @@ public class HazelcastRemoteConnectorTest extends JetTestSupport {
     }
 
     @Test
-    public void when_readRemoteMap_withDistributedPredicateAndFunction()
+    public void when_readRemoteMap_withPredicateAndDistributedFunction()
             throws Exception {
         populateMap(hz.getMap(SOURCE_NAME));
 
