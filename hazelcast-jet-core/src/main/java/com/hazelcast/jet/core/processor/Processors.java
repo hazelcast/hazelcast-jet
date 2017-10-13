@@ -432,11 +432,11 @@ public final class Processors {
      * This processor saves its state to snapshot. After restart, it can
      * continue accumulating where it left off.
      * <p>
-     * In at-least-once mode, the watermarks are allowed to resume at lower
-     * value than what was already processed after restart. Or simply,
-     * watermark can go back in time. This processor evicts state based on
-     * watermarks it received. If it receives duplicate watermark, it might
-     * emit windows with missing events, because they were already evicted.
+     * After a restart in at-least-once mode, watermarks are allowed to go back
+     * in time. If such a watermark is received, some windows that were emitted
+     * in previous execution, will be re-emitted. These windows might miss
+     * events as some of them had already been evicted before the snapshot was
+     * done in previous execution.
      */
     @Nonnull
     public static <T, K, A, R> DistributedSupplier<Processor> aggregateToSlidingWindowP(
