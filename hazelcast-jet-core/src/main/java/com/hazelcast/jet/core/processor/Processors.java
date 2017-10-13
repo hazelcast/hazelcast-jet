@@ -434,7 +434,7 @@ public final class Processors {
      * <p>
      * After a restart in at-least-once mode, watermarks are allowed to go back
      * in time. If such a watermark is received, some windows that were emitted
-     * in previous execution, will be re-emitted. These windows might miss
+     * in previous execution will be re-emitted. These windows might miss
      * events as some of them had already been evicted before the snapshot was
      * done in previous execution.
      */
