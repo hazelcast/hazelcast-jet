@@ -519,11 +519,11 @@ public final class Processors {
      * This processor saves its state to snapshot. After restart, it can
      * continue accumulating where it left off.
      * <p>
-     * In at-least-once mode, the watermarks are allowed to resume at lower
-     * value than what was already processed after restart. Or simply,
-     * watermark can go back in time. This processor evicts state based on
-     * watermarks it received. If it receives duplicate watermark, it might
-     * emit windows with missing events, because they were already evicted.
+     * After a restart in at-least-once mode, watermarks are allowed to go back
+     * in time. If such a watermark is received, some windows that were emitted
+     * in previous execution will be re-emitted. These windows might miss
+     * events as some of them had already been evicted before the snapshot was
+     * done in previous execution.
      *
      * @param <A> type of the accumulator
      * @param <R> type of the finished result returned from {@code aggrOp.
@@ -541,7 +541,7 @@ public final class Processors {
     }
 
     /**
-     * Returns a supplier of processors for a vertexs that performs a general
+     * Returns a supplier of processors for a vertex that performs a general
      * group-by-key-and-window operation and applies the provided aggregate
      * operation on groups.
      *
@@ -596,13 +596,11 @@ public final class Processors {
      * This processor saves its state to snapshot. After restart, it can
      * continue accumulating where it left off.
      * <p>
-     * In at-least-once mode, the watermarks are allowed to resume at lower
-     * value than what was already processed after restart. Or simply,
-     * watermark can go back in time. The processor evicts state based on
-     * watermarks it received. If it receives duplicate watermark, it might
-     * emit sessions with missing events, because they were already evicted.
-     * The sessions before and after snapshot might overlap, which they
-     * normally don't.
+     * After a restart in at-least-once mode, watermarks are allowed to go back
+     * in time. The processor evicts state based on watermarks it received. If
+     * it receives duplicate watermark, it might emit sessions with missing
+     * events, because they were already evicted. The sessions before and after
+     * snapshot might overlap, which they normally don't.
      *
      * @param sessionTimeout maximum gap between consecutive events in the same session window
      * @param getTimestampFn function to extract the timestamp from the item
