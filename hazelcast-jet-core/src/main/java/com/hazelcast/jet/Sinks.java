@@ -19,7 +19,6 @@ package com.hazelcast.jet;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.SinkImpl;
 
@@ -27,6 +26,14 @@ import javax.annotation.Nonnull;
 import java.nio.charset.Charset;
 import java.util.Map;
 
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeCacheP;
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeFileP;
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeMapP;
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteCacheP;
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteListP;
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteMapP;
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeSocketP;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -43,22 +50,26 @@ public final class Sinks {
     /**
      * Returns a sink constructed directly from the given Core API processor
      * meta-supplier.
-     *
-     * @param sinkName user-friendly sink name
+     *  @param sinkName user-friendly sink name
      * @param metaSupplier the processor meta-supplier
      */
-    public static <E> Sink<E> fromProcessor(String sinkName, ProcessorMetaSupplier metaSupplier) {
+    public static <E> Sink<E> fromProcessor(
+            String sinkName,
+            ProcessorMetaSupplier metaSupplier
+    ) {
         return new SinkImpl<>(sinkName, metaSupplier);
     }
 
     /**
      * Returns a sink constructed directly from the given Core API processor
      * supplier.
-     *
-     * @param sinkName user-friendly sink name
+     *  @param sinkName user-friendly sink name
      * @param supplier the processor meta-supplier
      */
-    public static <E> Sink<E> fromProcessor(String sinkName, ProcessorSupplier supplier) {
+    public static <E> Sink<E> fromProcessor(
+            String sinkName,
+            ProcessorSupplier supplier
+    ) {
         return new SinkImpl<>(sinkName, supplier);
     }
 
@@ -72,7 +83,7 @@ public final class Sinks {
      * items will not change the state in the target map.
      */
     public static <E extends Map.Entry> Sink<E> writeMap(String mapName) {
-        return new SinkImpl<>("writeMap(" + mapName + ')', SinkProcessors.writeMapP(mapName));
+        return new SinkImpl<>("writeMap(" + mapName + ')', writeMapP(mapName));
     }
 
     /**
@@ -86,9 +97,7 @@ public final class Sinks {
      * items will not change the state in the target map.
      */
     public static <E extends Map.Entry> Sink<E> writeRemoteMap(String mapName, ClientConfig clientConfig) {
-        return new SinkImpl<>("writeRemoteMap(" + mapName + ')', SinkProcessors.writeRemoteMapP(
-                mapName, clientConfig
-        ));
+        return new SinkImpl<>("writeRemoteMap(" + mapName + ')', writeRemoteMapP(mapName, clientConfig));
     }
 
     /**
@@ -101,7 +110,7 @@ public final class Sinks {
      * items will not change the state in the target map.
      */
     public static <E extends Map.Entry> Sink<E> writeCache(String cacheName) {
-        return new SinkImpl<>("writeCache(" + cacheName + ')', SinkProcessors.writeCacheP(cacheName));
+        return new SinkImpl<>("writeCache(" + cacheName + ')', writeCacheP(cacheName));
     }
 
     /**
@@ -115,8 +124,7 @@ public final class Sinks {
      * items will not change the state in the target map.
      */
     public static <E extends Map.Entry> Sink<E> writeRemoteCache(String cacheName, ClientConfig clientConfig) {
-        return new SinkImpl<>("writeRemoteCache(" + cacheName + ')', SinkProcessors.writeRemoteCacheP(cacheName,
-                clientConfig));
+        return new SinkImpl<>("writeRemoteCache(" + cacheName + ')', writeRemoteCacheP(cacheName, clientConfig));
     }
 
     /**
@@ -128,7 +136,7 @@ public final class Sinks {
      * guarantee.
      */
     public static <E> Sink<E> writeList(String listName) {
-        return new SinkImpl<>("writeList(" + listName + ')', SinkProcessors.writeListP(listName));
+        return new SinkImpl<>("writeList(" + listName + ')', writeListP(listName));
     }
 
     /**
@@ -141,8 +149,7 @@ public final class Sinks {
      * guarantee.
      */
     public static <E> Sink<E> writeRemoteList(String listName, ClientConfig clientConfig) {
-        return new SinkImpl<>("writeRemoteList(" + listName + ')', SinkProcessors.writeRemoteListP(listName,
-                clientConfig));
+        return new SinkImpl<>("writeRemoteList(" + listName + ')', writeRemoteListP(listName, clientConfig));
     }
 
     /**
@@ -162,8 +169,7 @@ public final class Sinks {
             @Nonnull DistributedFunction<E, String> toStringFn,
             @Nonnull Charset charset
     ) {
-        return new SinkImpl<>("writeSocket(" + host + ':' + port + ')',
-                SinkProcessors.writeSocketP(host, port, toStringFn, charset));
+        return new SinkImpl<>("writeSocket(" + host + ':' + port + ')', writeSocketP(host, port, toStringFn, charset));
     }
 
     /**
@@ -175,8 +181,7 @@ public final class Sinks {
             int port,
             @Nonnull DistributedFunction<E, String> toStringFn
     ) {
-        return new SinkImpl<>("writeSocket(" + host + ':' + port + ')',
-                SinkProcessors.writeSocketP(host, port, toStringFn, UTF_8));
+        return new SinkImpl<>("writeSocket(" + host + ':' + port + ')', writeSocketP(host, port, toStringFn, UTF_8));
     }
 
     /**
@@ -186,7 +191,7 @@ public final class Sinks {
      */
     public static <E> Sink<E> writeSocket(@Nonnull String host, int port) {
         return new SinkImpl<>("writeSocket(" + host + ':' + port + ')',
-                SinkProcessors.writeSocketP(host, port, Object::toString, UTF_8));
+                writeSocketP(host, port, Object::toString, UTF_8));
     }
 
     /**
@@ -220,7 +225,7 @@ public final class Sinks {
             boolean append
     ) {
         return new SinkImpl<>("writeFile(" + directoryName + ')',
-                SinkProcessors.writeFileP(directoryName, toStringFn, charset, append));
+                writeFileP(directoryName, toStringFn, charset, append));
     }
 
     /**

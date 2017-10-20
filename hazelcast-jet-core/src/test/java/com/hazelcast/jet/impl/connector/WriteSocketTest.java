@@ -25,6 +25,7 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.stream.IStreamMap;
+import com.hazelcast.nio.Address;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Test;
@@ -42,6 +43,7 @@ import static com.hazelcast.jet.core.processor.SinkProcessors.writeSocketP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.singletonList;
 import static java.util.stream.IntStream.range;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -70,8 +72,12 @@ public class WriteSocketTest extends JetTestSupport {
         TestInbox inbox = new TestInbox();
         range(0, ITEM_COUNT).forEach(inbox::add);
 
+        Address a = new Address();
         Processor p = writeSocketP("localhost", serverSocket.getLocalPort(), Object::toString, UTF_8)
-                .get(1).iterator().next();
+                .get(singletonList(a))
+                .apply(a)
+                .get(1)
+                .iterator().next();
         p.init(mock(Outbox.class), new TestProcessorContext());
         p.process(0, inbox);
         p.complete();
