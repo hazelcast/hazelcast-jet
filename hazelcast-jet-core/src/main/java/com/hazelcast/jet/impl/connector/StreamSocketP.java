@@ -51,7 +51,7 @@ public final class StreamSocketP extends AbstractProcessor implements Closeable 
     private SocketChannel socketChannel;
     private final ByteBuffer byteBuffer = ByteBuffer.allocate(BUFFER_SIZE);
     private final CharBuffer charBuffer = CharBuffer.allocate(BUFFER_SIZE);
-    private boolean done;
+    private boolean socketDone;
     private boolean maybeLfExpected;
 
     private StreamSocketP(String host, int port, Charset charset) {
@@ -72,7 +72,7 @@ public final class StreamSocketP extends AbstractProcessor implements Closeable 
         }
         getLogger().info("Connected to socket " + hostAndPort());
         byteBuffer.limit(0);
-        charBuffer.position(BUFFER_SIZE);
+        charBuffer.limit(0);
     }
 
     @Override
@@ -84,17 +84,17 @@ public final class StreamSocketP extends AbstractProcessor implements Closeable 
         fillCharBuffer();
         emitFromCharBuffer();
 
-        return done && pendingLine == null;
+        return socketDone && pendingLine == null;
     }
 
     private void fillCharBuffer() throws IOException {
-        if (done || charBuffer.hasRemaining()) {
+        if (socketDone || charBuffer.hasRemaining()) {
             return;
         }
-        done = socketChannel.read(byteBuffer) < 0;
+        socketDone = socketChannel.read(byteBuffer) < 0;
         byteBuffer.flip();
         charBuffer.clear();
-        charsetDecoder.decode(byteBuffer, charBuffer, done);
+        charsetDecoder.decode(byteBuffer, charBuffer, socketDone);
         charBuffer.flip();
         byteBuffer.compact();
         assert byteBuffer.position() < MAX_BYTES_PER_CHAR - 1 : "position=" + byteBuffer.position();
@@ -116,7 +116,7 @@ public final class StreamSocketP extends AbstractProcessor implements Closeable 
     }
 
     private String tryReadLineFromBuffer() {
-        for (int i = charBuffer.position(); i < charBuffer.limit(); i++) {
+        while (charBuffer.hasRemaining()) {
             char ch = charBuffer.get();
             if (ch == '\r') {
                 maybeLfExpected = true;
