@@ -91,15 +91,15 @@ public class StreamKafkaPTest extends KafkaTestSupport {
 
     @Test
     public void integrationTest_noSnapshotting() throws Exception {
-        integrationTest(false);
+        integrationTest(ProcessingGuarantee.NONE);
     }
 
     @Test
     public void integrationTest_withSnapshotting() throws Exception {
-        integrationTest(true);
+        integrationTest(ProcessingGuarantee.EXACTLY_ONCE);
     }
 
-    private void integrationTest(boolean withSnapshotting) throws Exception {
+    private void integrationTest(ProcessingGuarantee guarantee) throws Exception {
         int messageCount = 20;
         JetInstance[] instances = new JetInstance[2];
         Arrays.setAll(instances, i -> createJetMember());
@@ -114,7 +114,8 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         dag.edge(between(source, sink));
 
         JobConfig config = new JobConfig();
-        config.setSnapshotIntervalMillis(withSnapshotting ? 500 : 0);
+        config.setProcessingGuarantee(guarantee);
+        config.setSnapshotIntervalMillis(500);
         Job job = instances[0].newJob(dag, config);
         sleepAtLeastSeconds(3);
         for (int i = 0; i < messageCount; i++) {
@@ -131,7 +132,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
             }
         }, 5);
 
-        if (withSnapshotting) {
+        if (guarantee != ProcessingGuarantee.NONE) {
             // wait until the items are consumed and a new snapshot appears
             assertTrueEventually(() -> assertTrue(list.size() == messageCount * 2));
             IStreamMap<Long, Object> snapshotsMap =
