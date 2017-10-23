@@ -245,9 +245,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             ProcessorSupplier supplier = vertex.processorSupplier();
             ILogger logger = nodeEngine.getLogger(supplier.getClass().getName() + '.'
                     + vertex.name() + "#ProcessorSupplier");
-            supplier.init(
-                    new ProcSupplierCtx(service.getJetInstance(), logger, vertex.parallelism(),
-                            jobConfig.getSnapshotIntervalMillis() > 0));
+            supplier.init(new ProcSupplierCtx(service.getJetInstance(), logger, vertex.parallelism()));
         }
     }
 
