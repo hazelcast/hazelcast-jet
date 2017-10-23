@@ -41,9 +41,9 @@ import java.util.Collections;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 
-import static com.hazelcast.jet.core.processor.DiagnosticProcessors.peekInput;
-import static com.hazelcast.jet.core.processor.DiagnosticProcessors.peekOutput;
-import static com.hazelcast.jet.core.processor.DiagnosticProcessors.peekSnapshot;
+import static com.hazelcast.jet.core.processor.DiagnosticProcessors.peekInputP;
+import static com.hazelcast.jet.core.processor.DiagnosticProcessors.peekOutputP;
+import static com.hazelcast.jet.core.processor.DiagnosticProcessors.peekSnapshotP;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -90,8 +90,8 @@ public class Processors_peekTest {
         context = new TestProcessorContext().setLogger(logger);
     }
 
-    private DistributedSupplier<Processor> procSupplier(Class<? extends Processor> processor) {
-        return () -> uncheckCall(() -> processor.newInstance());
+    private static DistributedSupplier<Processor> procSupplier(Class<? extends Processor> processor) {
+        return () -> uncheckCall(processor::newInstance);
     }
 
     @Test
@@ -99,8 +99,8 @@ public class Processors_peekTest {
         // Given
         DistributedSupplier<Processor> passThroughPSupplier = procSupplier(TestPeekRemoveProcessor.class);
         wrappedP = (toStringFn == null
-                ? peekInput(passThroughPSupplier)
-                : peekInput(toStringFn, shouldLogFn, passThroughPSupplier)
+                ? peekInputP(passThroughPSupplier)
+                : peekInputP(toStringFn, shouldLogFn, passThroughPSupplier)
         ).get();
 
         // When+Then
@@ -112,8 +112,8 @@ public class Processors_peekTest {
         // Given
         DistributedSupplier<Processor> passThroughPSupplier = procSupplier(TestPollProcessor.class);
         wrappedP = (toStringFn == null
-                ? peekInput(passThroughPSupplier)
-                : peekInput(toStringFn, shouldLogFn, passThroughPSupplier)
+                ? peekInputP(passThroughPSupplier)
+                : peekInputP(toStringFn, shouldLogFn, passThroughPSupplier)
         ).get();
 
         // When+Then
@@ -125,8 +125,8 @@ public class Processors_peekTest {
         // Given
         ProcessorSupplier passThroughPSupplier = ProcessorSupplier.of(procSupplier(TestPeekRemoveProcessor.class));
         wrappedP = (toStringFn == null
-                ? peekInput(passThroughPSupplier)
-                : peekInput(toStringFn, shouldLogFn, passThroughPSupplier)
+                ? peekInputP(passThroughPSupplier)
+                : peekInputP(toStringFn, shouldLogFn, passThroughPSupplier)
         ).get(1).iterator().next();
 
         // When+Then
@@ -139,8 +139,8 @@ public class Processors_peekTest {
         ProcessorMetaSupplier passThroughPSupplier = ProcessorMetaSupplier.of(procSupplier(TestPeekRemoveProcessor.class));
         Address address = new Address();
         wrappedP = (toStringFn == null
-                ? peekInput(passThroughPSupplier)
-                : peekInput(toStringFn, shouldLogFn, passThroughPSupplier)
+                ? peekInputP(passThroughPSupplier)
+                : peekInputP(toStringFn, shouldLogFn, passThroughPSupplier)
         ).get(Collections.singletonList(address)).apply(address).get(1).iterator().next();
 
         // When+Then
@@ -152,8 +152,8 @@ public class Processors_peekTest {
         // Given
         DistributedSupplier<Processor> passThroughPSupplier = procSupplier(TestSourceProcessor.class);
         wrappedP = (toStringFn == null
-                ? peekOutput(passThroughPSupplier)
-                : peekOutput(toStringFn, shouldLogFn, passThroughPSupplier)
+                ? peekOutputP(passThroughPSupplier)
+                : peekOutputP(toStringFn, shouldLogFn, passThroughPSupplier)
         ).get();
 
         // When+Then
@@ -165,8 +165,8 @@ public class Processors_peekTest {
         // Given
         ProcessorSupplier passThroughPSupplier = ProcessorSupplier.of(procSupplier(TestSourceProcessor.class));
         wrappedP = (toStringFn == null
-                ? peekOutput(passThroughPSupplier)
-                : peekOutput(toStringFn, shouldLogFn, passThroughPSupplier)
+                ? peekOutputP(passThroughPSupplier)
+                : peekOutputP(toStringFn, shouldLogFn, passThroughPSupplier)
         ).get(1).iterator().next();
 
         // When+Then
@@ -179,8 +179,8 @@ public class Processors_peekTest {
         ProcessorMetaSupplier passThroughPSupplier = ProcessorMetaSupplier.of(procSupplier(TestSourceProcessor.class));
         Address address = new Address();
         wrappedP = (toStringFn == null
-                ? peekOutput(passThroughPSupplier)
-                : peekOutput(toStringFn, shouldLogFn, passThroughPSupplier)
+                ? peekOutputP(passThroughPSupplier)
+                : peekOutputP(toStringFn, shouldLogFn, passThroughPSupplier)
         ).get(Collections.singletonList(address)).apply(address).get(1).iterator().next();
 
         // When+Then
@@ -192,8 +192,8 @@ public class Processors_peekTest {
         // Given
         DistributedSupplier<Processor> passThroughPSupplier = procSupplier(TestSourceProcessor.class);
         wrappedP = (toStringFn == null
-                ? peekSnapshot(passThroughPSupplier)
-                : peekSnapshot(ssToStringFn, ssShouldLogFn, passThroughPSupplier)
+                ? peekSnapshotP(passThroughPSupplier)
+                : peekSnapshotP(ssToStringFn, ssShouldLogFn, passThroughPSupplier)
         ).get();
 
         // When+Then
@@ -205,8 +205,8 @@ public class Processors_peekTest {
         // Given
         ProcessorSupplier passThroughPSupplier = ProcessorSupplier.of(procSupplier(TestSourceProcessor.class));
         wrappedP = (toStringFn == null
-                ? peekSnapshot(passThroughPSupplier)
-                : peekSnapshot(ssToStringFn, ssShouldLogFn, passThroughPSupplier)
+                ? peekSnapshotP(passThroughPSupplier)
+                : peekSnapshotP(ssToStringFn, ssShouldLogFn, passThroughPSupplier)
         ).get(1).iterator().next();
 
         // When+Then
@@ -219,8 +219,8 @@ public class Processors_peekTest {
         ProcessorMetaSupplier passThroughPSupplier = ProcessorMetaSupplier.of(procSupplier(TestSourceProcessor.class));
         Address address = new Address();
         wrappedP = (toStringFn == null
-                ? peekSnapshot(passThroughPSupplier)
-                : peekSnapshot(ssToStringFn, ssShouldLogFn, passThroughPSupplier)
+                ? peekSnapshotP(passThroughPSupplier)
+                : peekSnapshotP(ssToStringFn, ssShouldLogFn, passThroughPSupplier)
         ).get(Collections.singletonList(address)).apply(address).get(1).iterator().next();
 
         // When+Then

@@ -19,9 +19,10 @@ package com.hazelcast.jet.impl.processor;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.DiagnosticProcessors;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
@@ -33,10 +34,17 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
- * A wrapper processor to peek at the input or output of a processor.
- * See {@link DiagnosticProcessors#peekInput(DistributedSupplier)},
- * {@link DiagnosticProcessors#peekOutput(DistributedSupplier)}.
- * and {@link DiagnosticProcessors#peekSnapshot(DistributedSupplier)}.
+ * A processor that wraps another one and logs its input, output or
+ * snapshot output on the local cluster member. See
+ * {@link DiagnosticProcessors#peekInputP(DistributedFunction,
+ *            DistributedPredicate, ProcessorMetaSupplier)
+ * DiagnosticProcessors.peekInput()},
+ * {@link DiagnosticProcessors#peekOutputP(DistributedFunction,
+ *        DistributedPredicate, ProcessorMetaSupplier)
+ * DiagnosticProcessors.peekOutput()}
+ * and {@link DiagnosticProcessors#peekSnapshotP(DistributedFunction,
+ *            DistributedPredicate, ProcessorMetaSupplier)
+ * DiagnosticProcessors.peekSnapshot()}.
  */
 public final class PeekWrappedP<T> implements Processor {
 

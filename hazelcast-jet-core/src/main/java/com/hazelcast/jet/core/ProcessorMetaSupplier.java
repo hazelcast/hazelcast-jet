@@ -129,6 +129,19 @@ public interface ProcessorMetaSupplier extends Serializable {
      * result of calling {@link ProcessorSupplier#of(DistributedSupplier)}.
      */
     @Nonnull
+    static ProcessorMetaSupplier dontParallelize(@Nonnull DistributedSupplier<? extends Processor> procSupplier) {
+        return of(ProcessorSupplier.of(procSupplier), 1);
+    }
+
+    /**
+     * Factory method that wraps the given {@code Supplier<Processor>}
+     * and uses it as the supplier of all {@code Processor} instances.
+     * Specifically, returns a meta-supplier that will always return the
+     * result of calling {@link ProcessorSupplier#of(DistributedSupplier)}.
+     * The {@link #preferredLocalParallelism()} of the meta-supplier will be
+     * {@link #LOCAL_PARALLELISM_USE_DEFAULT}.
+     */
+    @Nonnull
     static ProcessorMetaSupplier of(@Nonnull DistributedSupplier<? extends Processor> procSupplier) {
         return of(ProcessorSupplier.of(procSupplier));
     }
@@ -161,7 +174,8 @@ public interface ProcessorMetaSupplier extends Serializable {
     /**
      * Factory method that creates a {@link ProcessorMetaSupplier} from the
      * supplied function that maps a cluster member address to a {@link
-     * ProcessorSupplier}.
+     * ProcessorSupplier}. The {@link #preferredLocalParallelism()} of
+     * the meta-supplier will be {@link #LOCAL_PARALLELISM_USE_DEFAULT}.
      */
     static ProcessorMetaSupplier of(DistributedFunction<Address, ProcessorSupplier> addressToSupplier) {
         return of(addressToSupplier, LOCAL_PARALLELISM_USE_DEFAULT);
