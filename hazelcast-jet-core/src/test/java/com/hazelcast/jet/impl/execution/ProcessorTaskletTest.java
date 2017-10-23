@@ -67,7 +67,7 @@ public class ProcessorTaskletTest {
     public void setUp() {
         this.mockInput = IntStream.range(0, MOCK_INPUT_SIZE).boxed().collect(toList());
         this.processor = new PassThroughProcessor();
-        this.context = new ProcCtx(null, null, null, null, 0, false, EXACTLY_ONCE);
+        this.context = new ProcCtx(null, null, null, null, 0, EXACTLY_ONCE);
         this.instreams = new ArrayList<>();
         this.outstreams = new ArrayList<>();
     }

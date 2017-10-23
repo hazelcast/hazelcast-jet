@@ -66,7 +66,7 @@ public class ProcessorTaskletTest_Blocking {
     @Before
     public void setUp() {
         this.processor = new PassThroughProcessor();
-        this.context = new ProcCtx(null, null, null, null, 0, false, EXACTLY_ONCE);
+        this.context = new ProcCtx(null, null, null, null, 0, EXACTLY_ONCE);
         this.jobFuture = new CompletableFuture<>();
         this.mockInput = IntStream.range(0, MOCK_INPUT_SIZE).boxed().collect(toList());
         this.instreams = new ArrayList<>();

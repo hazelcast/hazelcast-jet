@@ -38,17 +38,15 @@ public final class Contexts {
         private final String vertexName;
         private final int index;
         private final SerializationService serService;
-        private final boolean snapshottingEnabled;
         private final ProcessingGuarantee processingGuarantee;
 
         public ProcCtx(JetInstance instance, SerializationService serService, ILogger logger, String vertexName,
-                       int index, boolean snapshottingEnabled, ProcessingGuarantee processingGuarantee) {
+                       int index, ProcessingGuarantee processingGuarantee) {
             this.instance = instance;
             this.serService = serService;
             this.logger = logger;
             this.vertexName = vertexName;
             this.index = index;
-            this.snapshottingEnabled = snapshottingEnabled;
             this.processingGuarantee = processingGuarantee;
         }
 
@@ -73,11 +71,6 @@ public final class Contexts {
         @Override
         public String vertexName() {
             return vertexName;
-        }
-
-        @Override
-        public boolean snapshottingEnabled() {
-            return snapshottingEnabled;
         }
 
         @Override

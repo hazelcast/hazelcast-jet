@@ -149,7 +149,6 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                         logger,
                         srcVertex.name(),
                         processorIdx + srcVertex.getProcIdxOffset(),
-                        jobConfig.getSnapshotIntervalMillis() > 0,
                         jobConfig.getProcessingGuarantee());
 
                  String probePrefix = String.format("jet.job.%s.%s#%d", idToString(executionId), srcVertex.name(),
