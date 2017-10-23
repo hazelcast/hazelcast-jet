@@ -81,46 +81,60 @@ public final class StreamSocketP extends AbstractProcessor implements Closeable 
     }
 
     private boolean tryComplete() throws IOException {
-        // read from socket
-        if (!done && !charBuffer.hasRemaining()) {
-            done = socketChannel.read(byteBuffer) < 0;
-            byteBuffer.flip();
-            charBuffer.clear();
-            charsetDecoder.decode(byteBuffer, charBuffer, done);
-            charBuffer.flip();
-            byteBuffer.compact();
-            assert byteBuffer.position() < MAX_BYTES_PER_CHAR - 1 : "position=" + byteBuffer.position();
+        fillCharBuffer();
+        emitFromCharBuffer();
+
+        return done && pendingLine == null;
+    }
+
+    private void fillCharBuffer() throws IOException {
+        if (done || charBuffer.hasRemaining()) {
+            return;
         }
-        // parse next line
+        done = socketChannel.read(byteBuffer) < 0;
+        byteBuffer.flip();
+        charBuffer.clear();
+        charsetDecoder.decode(byteBuffer, charBuffer, done);
+        charBuffer.flip();
+        byteBuffer.compact();
+        assert byteBuffer.position() < MAX_BYTES_PER_CHAR - 1 : "position=" + byteBuffer.position();
+    }
+
+    private void emitFromCharBuffer() {
         while (charBuffer.hasRemaining()) {
             if (pendingLine == null) {
-                for (int i = charBuffer.position(); i < charBuffer.limit(); i++) {
-                    char ch = charBuffer.get();
-                    if (ch == '\r') {
-                        maybeLfExpected = true;
-                    }
-                    if (ch == '\n' && maybeLfExpected) {
-                        maybeLfExpected = false;
-                    } else if (ch == '\r' || ch == '\n') {
-                        pendingLine = lineBuilder.toString();
-                        lineBuilder.setLength(0);
-                        break;
-                    } else {
-                        lineBuilder.append(ch);
-                    }
-                }
+                pendingLine = tryReadLineFromBuffer();
             }
-            // emit next line
             if (pendingLine != null) {
-                boolean success = tryEmit(pendingLine);
-                if (success) {
+                if (tryEmit(pendingLine)) {
                     pendingLine = null;
                 } else {
                     break;
                 }
             }
         }
-        return done && pendingLine == null;
+    }
+
+    private String tryReadLineFromBuffer() {
+        for (int i = charBuffer.position(); i < charBuffer.limit(); i++) {
+            char ch = charBuffer.get();
+            if (ch == '\r') {
+                maybeLfExpected = true;
+            }
+            if (ch == '\n' && maybeLfExpected) {
+                maybeLfExpected = false;
+            } else if (ch == '\r' || ch == '\n') {
+                try {
+                    return lineBuilder.toString();
+                } finally {
+                    lineBuilder.setLength(0);
+                }
+            } else {
+                lineBuilder.append(ch);
+                maybeLfExpected = false;
+            }
+        }
+        return null;
     }
 
     @Override

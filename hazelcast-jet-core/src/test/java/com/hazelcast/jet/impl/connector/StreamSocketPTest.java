@@ -67,6 +67,7 @@ public class StreamSocketPTest extends JetTestSupport {
                 new Object[]{"1\r\n2\r\n", onaAndTwo},
                 new Object[]{"1\n2\r\n", onaAndTwo},
                 new Object[]{"1\r\n2\n", onaAndTwo},
+                new Object[]{"1\r2\n", onaAndTwo}, // mixed line terminators
                 new Object[]{"", emptyList()},
                 new Object[]{"\n", singletonList("")},
                 new Object[]{"1", emptyList()}, // no line terminator after the only line
