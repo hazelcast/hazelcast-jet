@@ -118,18 +118,22 @@ public final class StreamSocketP extends AbstractProcessor implements Closeable 
     private String tryReadLineFromBuffer() {
         while (charBuffer.hasRemaining()) {
             char ch = charBuffer.get();
-            if (ch == '\r') {
-                maybeLfExpected = true;
-            }
-            if (ch == '\n' && maybeLfExpected) {
-                maybeLfExpected = false;
-            } else if (ch == '\r' || ch == '\n') {
+            if (ch == '\r' || ch == '\n') {
+                // Handle line ending
+                if (maybeLfExpected && ch == '\n') {
+                    maybeLfExpected = false;
+                    continue;
+                }
+                if (ch == '\r') {
+                    maybeLfExpected = true;
+                }
                 try {
                     return lineBuilder.toString();
                 } finally {
                     lineBuilder.setLength(0);
                 }
             } else {
+                // Handle line content
                 lineBuilder.append(ch);
                 maybeLfExpected = false;
             }
