@@ -91,10 +91,8 @@ public class StreamKafkaPTest extends KafkaTestSupport {
 
         topic1Name = randomString();
         topic2Name = randomString();
-        createTopic(topic1Name);
-        createTopic(topic2Name);
-        setPartitionCount(topic1Name, INITIAL_PARTITION_COUNT);
-        setPartitionCount(topic2Name, INITIAL_PARTITION_COUNT);
+        createTopic(topic1Name , INITIAL_PARTITION_COUNT);
+        createTopic(topic2Name, INITIAL_PARTITION_COUNT);
     }
 
     @Test
@@ -183,18 +181,18 @@ public class StreamKafkaPTest extends KafkaTestSupport {
      */
     private Long maxSuccessfulSnapshot(IStreamMap<Long, Object> snapshotsMap) {
         return snapshotsMap.entrySet().stream()
-                                 .filter(e -> e.getValue() instanceof SnapshotRecord)
-                                 .map(e -> (SnapshotRecord) e.getValue())
-                                 .filter(SnapshotRecord::isSuccessful)
-                                 .map(SnapshotRecord::snapshotId)
-                                 .max(Comparator.naturalOrder())
-                                 .orElse(null);
+                           .filter(e -> e.getValue() instanceof SnapshotRecord)
+                           .map(e -> (SnapshotRecord) e.getValue())
+                           .filter(SnapshotRecord::isSuccessful)
+                           .map(SnapshotRecord::snapshotId)
+                           .max(Comparator.naturalOrder())
+                           .orElse(null);
     }
 
     @Test
     public void when_snapshotSaved_then_offsetsRestored() throws Exception {
         StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name), Util::entry, 1, 60000);
-        TestOutbox outbox = new TestOutbox(new int[] {10}, 10);
+        TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
         processor.init(outbox, new TestProcessorContext().setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE));
 
         produce(topic1Name, 0, "0");
@@ -210,7 +208,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
 
         // create new processor and restore snapshot
         processor = new StreamKafkaP(properties, asList(topic1Name, topic2Name), Util::entry, 1, 60000);
-        outbox = new TestOutbox(new int[] {10}, 10);
+        outbox = new TestOutbox(new int[]{10}, 10);
         processor.init(outbox, new TestProcessorContext().setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE));
 
         // restore snapshot
@@ -230,7 +228,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
     public void when_partitionAdded_then_consumedFromBeginning() throws Exception {
         properties.setProperty("metadata.max.age.ms", "100");
         StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name), Util::entry, 1, 100);
-        TestOutbox outbox = new TestOutbox(new int[] {10}, 10);
+        TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
         processor.init(outbox, new TestProcessorContext().setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE));
 
         produce(topic1Name, 0, "0");
@@ -261,16 +259,15 @@ public class StreamKafkaPTest extends KafkaTestSupport {
 
     @Test
     public void when_notEnoughPartitions_thenFail() throws Exception {
-        // The processor will be the second of two processors and there's just
-        // one partition -> nothing will be assigned to it.
-        StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name), Util::entry, 2, 500);
-        TestOutbox outbox = new TestOutbox(new int[] {10}, 10);
+        // Set global parallelism to higher number than number of partitions
+        StreamKafkaP processor = new StreamKafkaP<>(properties, Arrays.asList(topic1Name, topic2Name), Util::entry,
+                INITIAL_PARTITION_COUNT * 2 + 1, 500);
+        TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
         TestProcessorContext context = new TestProcessorContext()
                 .setGlobalProcessorIndex(1)
                 .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
 
-        expectedException.expectMessage("Total number of Kafka topic partitions is less than the global " +
-                "parallelism for this vertex");
+        expectedException.expectMessage("global parallelism");
         processor.init(outbox, context);
     }
 
@@ -278,7 +275,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
     public void when_customProjection_then_used() {
         // When
         StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name), (k, v) -> k + "=" + v, 1, 500);
-        TestOutbox outbox = new TestOutbox(new int[] {10}, 10);
+        TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
         processor.init(outbox, new TestProcessorContext());
         produce(topic1Name, 0, "0");
 

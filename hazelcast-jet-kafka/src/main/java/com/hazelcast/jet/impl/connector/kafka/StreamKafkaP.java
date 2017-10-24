@@ -86,8 +86,10 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
     private Traverser<T> traverser;
     private ConsumerRecord<Object, Object> lastEmittedItem;
 
-    StreamKafkaP(Properties properties, List<String> topics, DistributedBiFunction<K, V, T> projectionFn,
-                 int globalParallelism, long metadataRefreshInterval) {
+    StreamKafkaP(@Nonnull Properties properties, @Nonnull List<String> topics,
+                 @Nonnull DistributedBiFunction<K, V, T> projectionFn, int globalParallelism,
+                 long metadataRefreshInterval
+    ) {
         this.properties = properties;
         this.topics = topics;
         this.projectionFn = projectionFn;
@@ -307,9 +309,9 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
             for (int i = 0; i < topics.size(); i++) {
                 topicToCount.put(topics.get(i), partitionCounts.get(i));
             }
-            throw new JetException("Total number of Kafka topic partitions is less than the global parallelism " +
-                    "for this vertex. Global parallelism=" + globalParallelism + ", total Kafka partition count=" +
-                    totalPartitionCount + ", number of Kafka partitions per topic=" + topicToCount);
+            throw new JetException("Total number of Kafka topic partitions (" + totalPartitionCount  + ")" +
+                    " is less than the global parallelism (" + globalParallelism + ") for this vertex. "
+                    + " The partition counts for individual Kafka topics are " + topicToCount);
         }
     }
 }

@@ -95,8 +95,8 @@ public class KafkaTestSupport extends JetTestSupport {
         return BROKER_HOST + ':' + brokerPort;
     }
 
-    void createTopic(String topicId) {
-        AdminUtils.createTopic(zkUtils, topicId, 1, 1, new Properties(), MODULE$);
+    void createTopic(String topicId, int partitionCount) {
+        AdminUtils.createTopic(zkUtils, topicId, partitionCount, 1, new Properties(), MODULE$);
     }
 
     void setPartitionCount(String topicId, int numPartitions) {
