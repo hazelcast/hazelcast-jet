@@ -67,40 +67,33 @@ public class DetermineLocalParallelismTest extends JetTestSupport {
 
     @Test
     public void when_preferredLowerThanDefault_then_preferred() {
-        testWithParallelism(1, 1);
+        testWithParallelism(1, -1, 1);
     }
 
     @Test
     public void when_preferredGreaterThanDefault_then_default() {
-        testWithParallelism(4, DEFAULT_PARALLELISM);
+        testWithParallelism(4, -1, DEFAULT_PARALLELISM);
     }
 
     @Test
-    public void when_preferredMinusOne_then_default() {
-        testWithParallelism(-1, DEFAULT_PARALLELISM);
+    public void when_preferredNotSet_then_default() {
+        testWithParallelism(-1, -1, DEFAULT_PARALLELISM);
     }
 
     @Test
     public void when_vertexSpecifiesParallelism_then_overridesPreferred() {
-        DAG dag = new DAG();
-        int specifiedParallelism = 8;
-        dag.newVertex("x", new ValidatingMetaSupplier(1, specifiedParallelism))
-           .localParallelism(specifiedParallelism);
-        validateExecutionPlans(dag);
+        testWithParallelism(1, 8, 8);
     }
 
     @Test
     public void when_vertexSpecifiesParallelism_then_overridesDefault() {
-        DAG dag = new DAG();
-        int specifiedParallelism = 8;
-        dag.newVertex("x", new ValidatingMetaSupplier(-1, specifiedParallelism))
-           .localParallelism(specifiedParallelism);
-        validateExecutionPlans(dag);
+        testWithParallelism(-1, 8, 8);
     }
 
-    private void testWithParallelism(int preferred, int expected) {
+    private void testWithParallelism(int preferred, int specified, int expected) {
         DAG dag = new DAG();
-        dag.newVertex("x", new ValidatingMetaSupplier(preferred, expected));
+        dag.newVertex("x", new ValidatingMetaSupplier(preferred, expected))
+           .localParallelism(specified);
         validateExecutionPlans(dag);
     }
 

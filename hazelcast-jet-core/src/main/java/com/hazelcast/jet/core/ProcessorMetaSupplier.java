@@ -138,12 +138,28 @@ public interface ProcessorMetaSupplier extends Serializable {
      * and uses it as the supplier of all {@code Processor} instances.
      * Specifically, returns a meta-supplier that will always return the
      * result of calling {@link ProcessorSupplier#of(DistributedSupplier)}.
+     *
+     * @param procSupplier              the supplier of processors
+     * @param preferredLocalParallelism the value to return from {@link #preferredLocalParallelism()}
+     */
+    @Nonnull
+    static ProcessorMetaSupplier of(
+            @Nonnull DistributedSupplier<? extends Processor> procSupplier, int preferredLocalParallelism
+    ) {
+        return of(ProcessorSupplier.of(procSupplier), preferredLocalParallelism);
+    }
+
+    /**
+     * Factory method that wraps the given {@code Supplier<Processor>}
+     * and uses it as the supplier of all {@code Processor} instances.
+     * Specifically, returns a meta-supplier that will always return the
+     * result of calling {@link ProcessorSupplier#of(DistributedSupplier)}.
      * The {@link #preferredLocalParallelism()} of the meta-supplier will be
      * {@link #LOCAL_PARALLELISM_USE_DEFAULT}.
      */
     @Nonnull
     static ProcessorMetaSupplier of(@Nonnull DistributedSupplier<? extends Processor> procSupplier) {
-        return of(ProcessorSupplier.of(procSupplier));
+        return of(procSupplier, LOCAL_PARALLELISM_USE_DEFAULT);
     }
 
     /**
