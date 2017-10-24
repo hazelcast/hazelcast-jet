@@ -41,8 +41,10 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
@@ -62,7 +64,6 @@ import static com.hazelcast.jet.core.processor.KafkaProcessors.streamKafkaP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.IntStream.range;
@@ -73,6 +74,9 @@ import static org.junit.Assert.assertTrue;
 @Category(QuickTest.class)
 @RunWith(HazelcastSerialClassRunner.class)
 public class StreamKafkaPTest extends KafkaTestSupport {
+
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
 
     private Properties properties;
     private String topic1Name;
@@ -252,7 +256,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
     }
 
     @Test
-    public void when_emptyAssignment_then_noOutputAndPicksNewPartition() throws Exception {
+    public void when_notEnoughPartitions_thenFail() throws Exception {
         // The processor will be the second of two processors and there's just
         // one partition -> nothing will be assigned to it.
         StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name), Util::entry, 2, 500);
@@ -260,34 +264,10 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         TestProcessorContext context = new TestProcessorContext()
                 .setGlobalProcessorIndex(1)
                 .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
+
+        expectedException.expectMessage("Total number of Kafka topic partitions is less than the global " +
+                "parallelism for this vertex");
         processor.init(outbox, context);
-
-        long endTime = System.nanoTime() + MILLISECONDS.toNanos(1000);
-        while (endTime > System.nanoTime()) {
-            produce(topic1Name, 0, "0");
-            assertFalse(processor.complete());
-            assertEquals(0, outbox.queueWithOrdinal(0).size());
-            Thread.sleep(10);
-        }
-
-        // now add partition, it should be assigned to our instance
-        addPartitions(topic1Name, 2);
-        Thread.sleep(1000);
-        resetProducer(); // this allows production to the added partition
-
-        // produce one event to the added partition
-        Entry<Integer, String> eventInPtion1 = null;
-        for (int i = 0; eventInPtion1 == null; i++) {
-            Future<RecordMetadata> future = produce(topic1Name, i, Integer.toString(i));
-            if (future.get().partition() == 1) {
-                eventInPtion1 = entry(i, Integer.toString(i));
-            }
-        }
-
-        Entry<Integer, String> receivedEvent = consumeEventually(processor, outbox);
-        assertEquals(eventInPtion1, receivedEvent);
-
-        assertNoMoreItems(processor, outbox);
     }
 
     @Test
