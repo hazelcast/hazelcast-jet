@@ -51,7 +51,7 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
  */
 public class Vertex implements IdentifiedDataSerializable {
 
-    private ProcessorMetaSupplier supplier;
+    private ProcessorMetaSupplier metaSupplier;
     private String name;
     private int localParallelism = -1;
 
@@ -100,7 +100,7 @@ public class Vertex implements IdentifiedDataSerializable {
         checkNotNull(metaSupplier, "supplier");
         checkSerializable(metaSupplier, "metaSupplier");
 
-        this.supplier = metaSupplier;
+        this.metaSupplier = metaSupplier;
         this.name = name;
     }
 
@@ -141,8 +141,8 @@ public class Vertex implements IdentifiedDataSerializable {
      * Returns this vertex's meta-supplier of processors.
      */
     @Nonnull
-    public ProcessorMetaSupplier getSupplier() {
-        return supplier;
+    public ProcessorMetaSupplier getMetaSupplier() {
+        return metaSupplier;
     }
 
     @Override
@@ -157,14 +157,14 @@ public class Vertex implements IdentifiedDataSerializable {
     public void writeData(@Nonnull ObjectDataOutput out) throws IOException {
         out.writeInt(localParallelism);
         out.writeUTF(name);
-        CustomClassLoadedObject.write(out, supplier);
+        CustomClassLoadedObject.write(out, metaSupplier);
     }
 
     @Override
     public void readData(@Nonnull ObjectDataInput in) throws IOException {
         localParallelism = in.readInt();
         name = in.readUTF();
-        supplier = CustomClassLoadedObject.read(in);
+        metaSupplier = CustomClassLoadedObject.read(in);
     }
 
     @Override
