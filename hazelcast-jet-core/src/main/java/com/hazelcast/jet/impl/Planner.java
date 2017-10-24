@@ -256,8 +256,7 @@ class Planner {
     }
 
     private PlannerVertex addVertex(Stage stage, String name, ProcessorMetaSupplier metaSupplier) {
-        Vertex v = dag.newVertex(name, metaSupplier).localParallelism(metaSupplier.preferredLocalParallelism());
-        PlannerVertex pv = new PlannerVertex(v);
+        PlannerVertex pv = new PlannerVertex(dag.newVertex(name, metaSupplier));
         stage2vertex.put(stage, pv);
         return pv;
     }
