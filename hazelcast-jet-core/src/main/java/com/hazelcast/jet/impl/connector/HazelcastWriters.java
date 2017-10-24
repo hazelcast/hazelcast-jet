@@ -95,7 +95,7 @@ public final class HazelcastWriters {
         boolean isLocal = clientConfig == null;
         return dontParallelize(new HazelcastWriterSupplier<>(
                 serializableConfig(clientConfig),
-                index -> new ArrayList(),
+                index -> new ArrayList<>(),
                 ArrayList::add,
                 instance -> {
                     IList<Object> list = instance.getList(name);
