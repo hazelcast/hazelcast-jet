@@ -75,6 +75,8 @@ import static org.junit.Assert.assertTrue;
 @RunWith(HazelcastSerialClassRunner.class)
 public class StreamKafkaPTest extends KafkaTestSupport {
 
+    private static final int INITIAL_PARTITION_COUNT = 4;
+
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
 
@@ -91,6 +93,8 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         topic2Name = randomString();
         createTopic(topic1Name);
         createTopic(topic2Name);
+        setPartitionCount(topic1Name, INITIAL_PARTITION_COUNT);
+        setPartitionCount(topic2Name, INITIAL_PARTITION_COUNT);
     }
 
     @Test
@@ -232,7 +236,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         produce(topic1Name, 0, "0");
         assertEquals(entry(0, "0"), consumeEventually(processor, outbox));
 
-        addPartitions(topic1Name, 2);
+        setPartitionCount(topic1Name, INITIAL_PARTITION_COUNT + 2);
         Thread.sleep(1000);
         resetProducer(); // this allows production to the added partition
 
