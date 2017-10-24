@@ -115,7 +115,7 @@ public class DetermineLocalParallelismTest extends JetTestSupport {
         private final int preferredLocalParallelism;
         private final int expectedLocalParallelism;
 
-        private ValidatingMetaSupplier(int preferredLocalParallelism, int expectedLocalParallelism) {
+        ValidatingMetaSupplier(int preferredLocalParallelism, int expectedLocalParallelism) {
             this.preferredLocalParallelism = preferredLocalParallelism;
             this.expectedLocalParallelism = expectedLocalParallelism;
         }

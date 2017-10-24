@@ -101,10 +101,11 @@ public class VertexDef implements IdentifiedDataSerializable {
      */
     boolean isHigherPriorityUpstream() {
         for (EdgeDef outboundEdge : outboundEdges) {
+            VertexDef downstream = outboundEdge.destVertex();
             if (outboundEdge.priority() == MasterContext.SNAPSHOT_RESTORE_EDGE_PRIORITY
-                    || outboundEdge.destVertex().isHigherPriorityUpstream()
-                    || outboundEdge.destVertex().inboundEdges.stream()
-                                                             .anyMatch(edge -> edge.priority() > outboundEdge.priority())) {
+                    || downstream.isHigherPriorityUpstream()
+                    || downstream.inboundEdges.stream()
+                                              .anyMatch(edge -> edge.priority() > outboundEdge.priority())) {
                 return true;
             }
         }
