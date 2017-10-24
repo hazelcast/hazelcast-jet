@@ -42,6 +42,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
 
+import static com.hazelcast.jet.core.Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 import static java.lang.Integer.min;
@@ -108,27 +109,26 @@ public final class ExecutionPlanBuilder {
     }
 
     private static int determineParallelism(Vertex vertex, int preferredLocalParallelism, int defaultParallelism) {
-        if (!isValidParallelism(preferredLocalParallelism)) {
+        if (!Vertex.isValidLocalParallelism(preferredLocalParallelism)) {
             throw new JetException(String.format(
                     "ProcessorMetaSupplier in vertex %s specifies preferred local parallelism of %d",
                     vertex.getName(), preferredLocalParallelism));
         }
         int localParallelism = vertex.getLocalParallelism();
-        if (!isValidParallelism(localParallelism)) {
+        if (!Vertex.isValidLocalParallelism(localParallelism)) {
             throw new JetException(String.format(
                     "Vertex %s specifies local parallelism of %d", vertex.getName(), localParallelism));
         }
-        return localParallelism != -1 ? localParallelism
-             : preferredLocalParallelism != -1 ? min(preferredLocalParallelism, defaultParallelism)
+        return localParallelism != LOCAL_PARALLELISM_USE_DEFAULT
+                        ? localParallelism
+             : preferredLocalParallelism != LOCAL_PARALLELISM_USE_DEFAULT
+                        ? min(preferredLocalParallelism, defaultParallelism)
              : defaultParallelism;
     }
 
-    private static boolean isValidParallelism(int parallelism) {
-        return parallelism == -1 || parallelism > 0;
-    }
-
-    private static List<EdgeDef> toEdgeDefs(List<Edge> edges, EdgeConfig defaultEdgeConfig,
-                                            Function<Edge, Integer> oppositeVtxId, boolean isJobDistributed
+    private static List<EdgeDef> toEdgeDefs(
+            List<Edge> edges, EdgeConfig defaultEdgeConfig,
+            Function<Edge, Integer> oppositeVtxId, boolean isJobDistributed
     ) {
         return edges.stream()
                     .map(edge -> new EdgeDef(edge, edge.getConfig() == null ? defaultEdgeConfig : edge.getConfig(),

@@ -201,11 +201,13 @@ public final class HazelcastWriters {
         private transient DistributedConsumer<B> flushBuffer;
         private transient HazelcastInstance client;
 
-            HazelcastWriterSupplier(SerializableClientConfig clientConfig,
-                                DistributedIntFunction<B> newBuffer,
-                                DistributedBiConsumer<B, T> addToBuffer,
-                                DistributedFunction<HazelcastInstance, DistributedConsumer<B>> instanceToFlushBuffer,
-                                DistributedConsumer<B> disposeBuffer) {
+        HazelcastWriterSupplier(
+                SerializableClientConfig clientConfig,
+                DistributedIntFunction<B> newBuffer,
+                DistributedBiConsumer<B, T> addToBuffer,
+                DistributedFunction<HazelcastInstance, DistributedConsumer<B>> instanceToFlushBuffer,
+                DistributedConsumer<B> disposeBuffer
+        ) {
             this.clientConfig = clientConfig;
             this.instanceToFlushBuffer = instanceToFlushBuffer;
             this.bufferSupplier = newBuffer;
