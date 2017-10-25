@@ -21,6 +21,7 @@ import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.instance.BuildInfoProvider;
 import com.hazelcast.instance.HazelcastInstanceImpl;
 import com.hazelcast.instance.JetBuildInfo;
+import com.hazelcast.internal.partition.InternalPartitionService;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.TopologyChangedException;
@@ -48,6 +49,8 @@ public class JetService
         implements ManagedService, ConfigurableService<JetConfig>, PacketHandler, MembershipAwareService,
         LiveOperationsTracker {
 
+    public static final int MAX_PARALLEL_ASYNC_OPS = 1000;
+
     public static final String SERVICE_NAME = "hz:impl:jetService";
 
     private final NodeEngineImpl nodeEngine;
@@ -63,7 +66,10 @@ public class JetService
     private JobCoordinationService jobCoordinationService;
     private JobExecutionService jobExecutionService;
 
-    private final AtomicInteger numConcurrentPutAllOps = new AtomicInteger();
+    private final AtomicInteger numConcurrentAsyncOps = new AtomicInteger();
+
+    /** At index i there's a key, that we know will go to partition i */
+    private volatile int[] sharedPartitionKeys;
 
     public JetService(NodeEngine nodeEngine) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
@@ -174,12 +180,34 @@ public class JetService
     public void memberAttributeChanged(MemberAttributeServiceEvent event) {
     }
 
-    public AtomicInteger numConcurrentPutAllOps() {
-        return numConcurrentPutAllOps;
+    public AtomicInteger numConcurrentAsyncOps() {
+        return numConcurrentAsyncOps;
     }
 
     @Override
     public void populate(LiveOperations liveOperations) {
         liveOperationRegistry.populate(liveOperations);
+    }
+
+    public int[] getSharedPartitionKeys() {
+        if (sharedPartitionKeys == null) {
+            synchronized (this) {
+                if (sharedPartitionKeys == null) {
+                    InternalPartitionService partitionService = nodeEngine.getPartitionService();
+                    int[] keys = new int[partitionService.getPartitionCount()];
+                    int remainingCount = partitionService.getPartitionCount();
+                    for (int i = 1; remainingCount > 0; i++) {
+                        int partitionId = partitionService.getPartitionId(i);
+                        if (keys[partitionId] == 0) {
+                            keys[partitionId] = i;
+                            remainingCount--;
+                        }
+                    }
+                    sharedPartitionKeys = keys;
+                }
+            }
+        }
+
+        return sharedPartitionKeys;
     }
 }
