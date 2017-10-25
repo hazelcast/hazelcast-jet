@@ -72,7 +72,7 @@ public final class HazelcastWriters {
                         try {
                             map.putAll(buffer);
                         } catch (HazelcastInstanceNotActiveException e) {
-                            handleInstaceNotActive(instance, e, isLocal);
+                            handleInstanceNotActive(instance, e, isLocal);
                         }
                         buffer.clear();
                     };
@@ -112,7 +112,7 @@ public final class HazelcastWriters {
                     try {
                         cache.putAll(buffer);
                     } catch (HazelcastInstanceNotActiveException e) {
-                        handleInstaceNotActive(instance, e, isLocal);
+                        handleInstanceNotActive(instance, e, isLocal);
                     }
                     buffer.clear();
                 };
@@ -138,7 +138,7 @@ public final class HazelcastWriters {
                         try {
                             list.addAll(buffer);
                         } catch (HazelcastInstanceNotActiveException e) {
-                            handleInstaceNotActive(instance, e, isLocal);
+                            handleInstanceNotActive(instance, e, isLocal);
                         }
                         buffer.clear();
                     };
@@ -147,14 +147,15 @@ public final class HazelcastWriters {
         );
     }
 
-    private static void handleInstaceNotActive(
+    private static void handleInstanceNotActive(
             HazelcastInstance instance, HazelcastInstanceNotActiveException e, boolean isLocal
     ) {
         if (isLocal) {
             // if we are writing to a local instance, we can safely ignore this exception
             // as the job will eventually restart on its own.
-            instance.getLoggingService().getLogger(HazelcastWriters.class).warning(
-                    "Ignored HazelcastInstanceNotActiveException, we expect the job will be restarted", e);
+            instance.getLoggingService().getLogger(HazelcastWriters.class).fine(
+                    "Ignoring HazelcastInstanceNotActiveException from local cluster as the job will be" +
+                            " restarted automatically.", e);
             return;
         }
         throw e;
