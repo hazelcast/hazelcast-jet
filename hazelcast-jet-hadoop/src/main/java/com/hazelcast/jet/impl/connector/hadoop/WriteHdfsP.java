@@ -37,7 +37,6 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.List;
 
-import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.lang.String.valueOf;
 import static java.util.stream.Collectors.toList;
@@ -79,12 +78,16 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
-        return uncheckCall(() -> {
+        close();
+        return true;
+    }
+
+    private void close() {
+        uncheckRun(() -> {
             recordWriter.close(Reporter.NULL);
             if (outputCommitter.needsTaskCommit(taskAttemptContext)) {
                 outputCommitter.commitTask(taskAttemptContext);
             }
-            return true;
         });
     }
 
@@ -140,6 +143,7 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
         private transient Context context;
         private transient OutputCommitter outputCommitter;
         private transient JobContextImpl jobContext;
+        private transient List<Processor> processorList;
 
         Supplier(boolean commitJob,
                  SerializableJobConf jobConf,
@@ -161,6 +165,9 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
 
         @Override
         public void complete(Throwable error) {
+            if (processorList != null) {
+                processorList.forEach(p -> ((WriteHdfsP) p).close());
+            }
             if (commitJob) {
                 uncheckRun(() -> outputCommitter.commitJob(jobContext));
             }
@@ -168,7 +175,7 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
 
         @Override @Nonnull
         public List<Processor> get(int count) {
-            return range(0, count).mapToObj(i -> {
+            return processorList = range(0, count).mapToObj(i -> {
                 try {
                     if (i == 0) {
                         outputCommitter.setupJob(jobContext);
