@@ -237,7 +237,7 @@ public class TestProcessors {
 
             assertTrue("Complete called without calling init()", initCalled);
             assertTrue("Complete called without init being called on all the nodes! init count: "
-                    + initCount.get() + " node count: " + nodeCount, initCount.get() <= nodeCount);
+                    + initCount.get() + " node count: " + nodeCount, initCount.get() >= nodeCount);
             assertTrue("Complete called " + completeCount.get() + " but init called "
                     + initCount.get() + " times!", completeCount.get() <= initCount.get());
         }
