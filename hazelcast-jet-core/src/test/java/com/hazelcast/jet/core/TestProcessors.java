@@ -32,8 +32,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
-import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -76,14 +74,8 @@ public class TestProcessors {
     }
 
     public static final class StuckProcessor implements Processor {
-        public static volatile CountDownLatch initLatch;
         public static volatile CountDownLatch executionStarted;
         public static volatile CountDownLatch proceedLatch;
-
-        @Override
-        public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
-//            uncheckRun(() -> initLatch.await());
-        }
 
         @Override
         public boolean complete() {

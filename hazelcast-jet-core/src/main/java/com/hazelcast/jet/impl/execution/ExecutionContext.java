@@ -144,12 +144,13 @@ public class ExecutionContext {
     }
 
     // should not leak exceptions thrown by processor suppliers
+    // should not leak exceptions thrown by processor suppliers
     public void complete(Throwable error) {
         ILogger logger = nodeEngine.getLogger(getClass());
         procSuppliers.forEach(s -> {
             try {
                 s.complete(error);
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 logger.severe(jobAndExecutionId(jobId, executionId)
                         + " encountered an exception in ProcessorSupplier.complete(), ignoring it", e);
             }
