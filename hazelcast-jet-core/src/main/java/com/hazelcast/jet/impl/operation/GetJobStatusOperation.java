@@ -56,10 +56,9 @@ public class GetJobStatusOperation extends Operation implements IdentifiedDataSe
 
     @Override
     public ExceptionAction onInvocationException(Throwable throwable) {
-        return throwable instanceof JobNotFoundException && retryOnNotFound ?
-                ExceptionAction.RETRY_INVOCATION
-                :
-                super.onInvocationException(throwable);
+        return throwable instanceof JobNotFoundException && retryOnNotFound
+                ? ExceptionAction.RETRY_INVOCATION
+                : super.onInvocationException(throwable);
     }
 
     @Override

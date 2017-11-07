@@ -144,7 +144,6 @@ public class ExecutionContext {
     }
 
     // should not leak exceptions thrown by processor suppliers
-    // should not leak exceptions thrown by processor suppliers
     public void complete(Throwable error) {
         ILogger logger = nodeEngine.getLogger(getClass());
         procSuppliers.forEach(s -> {
