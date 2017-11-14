@@ -58,22 +58,22 @@ public class JobRepository {
     /**
      * Name of internal IMap which stores job resources
      */
-    public static final String RESOURCES_MAP_NAME_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + ".resources.";
+    public static final String RESOURCES_MAP_NAME_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "resources.";
 
     /**
      * Name of internal IMap which is used for unique id generation
      */
-    public static final String RANDOM_IDS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + ".ids";
+    public static final String RANDOM_IDS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + "ids";
 
     /**
      * Name of internal IMap which stores job records
      */
-    public static final String JOB_RECORDS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + ".records";
+    public static final String JOB_RECORDS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + "records";
 
     /**
      * Name of internal IMap which stores job results
      */
-    public static final String JOB_RESULTS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + ".results";
+    public static final String JOB_RESULTS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + "results";
 
     private static final String RESOURCE_MARKER = "__jet.resourceMarker";
     private static final long JOB_EXPIRATION_DURATION_IN_MILLIS = HOURS.toMillis(2);

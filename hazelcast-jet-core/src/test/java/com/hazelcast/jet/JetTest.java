@@ -33,12 +33,10 @@ public class JetTest extends JetTestSupport {
         config.getHazelcastConfig().getMapConfig("default")
                 .setTimeToLiveSeconds(MapConfig.DEFAULT_TTL_SECONDS + 1);
         JetInstance instance = createJetMember(config);
-        assertEquals("This test needs updating if value of INTERNAL_JET_MAPS was changed",
-                "__jet.", INTERNAL_JET_OBJECTS_PREFIX);
 
         try {
             // Then
-            int actualTTL = instance.getConfig().getHazelcastConfig().findMapConfig("__jet.fooMap")
+            int actualTTL = instance.getConfig().getHazelcastConfig().findMapConfig(INTERNAL_JET_OBJECTS_PREFIX + "fooMap")
                                     .getTimeToLiveSeconds();
             assertEquals(MapConfig.DEFAULT_TTL_SECONDS, actualTTL);
         } finally {
