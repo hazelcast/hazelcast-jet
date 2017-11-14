@@ -21,7 +21,7 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JetTestSupport;
 import org.junit.Test;
 
-import static com.hazelcast.jet.Jet.INTERNAL_JET_MAPS;
+import static com.hazelcast.jet.Jet.INTERNAL_JET_OBJECTS_PREFIX;
 import static org.junit.Assert.assertEquals;
 
 public class JetTest extends JetTestSupport {
@@ -33,7 +33,8 @@ public class JetTest extends JetTestSupport {
         config.getHazelcastConfig().getMapConfig("default")
                 .setTimeToLiveSeconds(MapConfig.DEFAULT_TTL_SECONDS + 1);
         JetInstance instance = createJetMember(config);
-        assertEquals("This test needs updating if value of INTERNAL_JET_MAPS was changed", "__jet.*", INTERNAL_JET_MAPS);
+        assertEquals("This test needs updating if value of INTERNAL_JET_MAPS was changed",
+                "__jet.", INTERNAL_JET_OBJECTS_PREFIX);
 
         try {
             // Then
