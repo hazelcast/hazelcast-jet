@@ -51,6 +51,7 @@ import org.junit.runner.RunWith;
 
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
@@ -245,17 +246,19 @@ public class ExecutionLifecycleTest extends JetTestSupport {
         long jobId = 0;
         long executionId = 1;
 
-        jetService.initExecution(jobId, executionId, localAddress, memberListVersion,
-                new HashSet<>(membersView.getMembers()), executionPlan);
+        Set<MemberInfo> participants = new HashSet<>(membersView.getMembers());
+        jetService.getJobExecutionService().initExecution(
+                jobId, executionId, localAddress, memberListVersion, participants, executionPlan
+        );
 
         ExecutionContext executionContext = jetService.getJobExecutionService().getExecutionContext(executionId);
-        executionContext.cancel();
+        executionContext.cancelExecution();
 
         // When
         final AtomicReference<Object> result = new AtomicReference<>();
 
-        executionContext.execute(stage ->
-                stage.whenComplete((aVoid, throwable) -> result.compareAndSet(null, throwable)));
+        executionContext.jobFuture().whenComplete((aVoid, throwable) -> result.compareAndSet(null, throwable));
+        executionContext.beginExecution();
 
         // Then
         assertTrue(result.get() instanceof CancellationException);

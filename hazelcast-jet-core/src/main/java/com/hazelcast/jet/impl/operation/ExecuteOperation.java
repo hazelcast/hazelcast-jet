@@ -17,19 +17,17 @@
 package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
-import com.hazelcast.logging.ILogger;
+import com.hazelcast.nio.Address;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 
 import java.io.IOException;
-import java.util.concurrent.CompletionStage;
 
 import static com.hazelcast.jet.impl.util.Util.jobAndExecutionId;
 
 public class ExecuteOperation extends AsyncExecutionOperation  {
-
-    private volatile CompletionStage<Void> executionFuture;
 
     private long executionId;
 
@@ -43,27 +41,41 @@ public class ExecuteOperation extends AsyncExecutionOperation  {
 
     @Override
     protected void doRun() throws Exception {
-        ILogger logger = getLogger();
+        ExecutionContext execCtx = getExecutionCtx();
+        execCtx.doneFuture()
+               .exceptionally(ex -> {
+                   getLogger().warning("Unexpected exception from doneFuture", ex);
+                   return null;
+               })
+               .thenAccept(ignored ->
+                       execCtx.jobFuture().handle((r, ex) -> ex).thenAccept(this::handleJobExecution)
+               );
+        Address coordinator = getCallerAddress();
+        getLogger().info("Start execution of "
+                + jobAndExecutionId(jobId, executionId) + " from coordinator " + coordinator);
+        execCtx.beginExecution();
+    }
+
+    private ExecutionContext getExecutionCtx() {
         JetService service = getService();
+        return service.getJobExecutionService().assertExecutionContext(
+                getCallerAddress(), jobId, executionId, this
+        );
+    }
 
-        executionFuture = service.execute(getCallerAddress(), jobId, executionId, f -> f.handle((r, error) -> error)
-                .thenAccept(value -> {
-                    if (value != null) {
-                        logger.fine("Execution of " + jobAndExecutionId(jobId, executionId)
-                                + " completed with failure", value);
-                    } else {
-                        logger.fine("Execution of " + jobAndExecutionId(jobId, executionId) + " completed");
-                    }
-
-                    doSendResponse(value);
-                }));
+    private void handleJobExecution(Throwable error) {
+        if (error != null) {
+            getLogger().fine("Execution of " + jobAndExecutionId(jobId, executionId)
+                    + " completed with failure", error);
+        } else {
+            getLogger().fine("Execution of " + jobAndExecutionId(jobId, executionId) + " completed");
+        }
+        doSendResponse(error);
     }
 
     @Override
     public void cancel() {
-        if (executionFuture != null) {
-            executionFuture.toCompletableFuture().cancel(true);
-        }
+        getExecutionCtx().cancelExecution();
     }
 
     @Override

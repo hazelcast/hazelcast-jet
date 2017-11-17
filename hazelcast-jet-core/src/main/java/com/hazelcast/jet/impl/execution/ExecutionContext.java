@@ -25,7 +25,6 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.BufferObjectDataInput;
 import com.hazelcast.spi.NodeEngine;
-import com.hazelcast.spi.exception.RetryableHazelcastException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import java.util.HashSet;
@@ -35,7 +34,6 @@ import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.function.Consumer;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.jobAndExecutionId;
@@ -63,7 +61,8 @@ public class ExecutionContext {
     private List<Processor> processors = emptyList();
 
     private List<Tasklet> tasklets;
-    private CompletionStage<Void> jobFuture;
+    private final CompletableFuture<Void> jobFuture = new CompletableFuture<>();
+    private final CompletableFuture<Void> doneFuture = new CompletableFuture<>();
 
     private final NodeEngine nodeEngine;
     private final TaskletExecutionService execService;
@@ -96,38 +95,35 @@ public class ExecutionContext {
         return this;
     }
 
-    public CompletionStage<Void> execute(Consumer<CompletionStage<Void>> doneCallback) {
+    public void beginExecution() {
         synchronized (executionLock) {
-            if (jobFuture != null) {
-                jobFuture.whenComplete(withTryCatch(logger, (r, e) -> doneCallback.accept(jobFuture)));
-            } else {
+            // check for job completion in case the job was cancelled before execute() was called.
+            if (!jobFuture.isDone()) {
                 JetService service = nodeEngine.getService(JetService.SERVICE_NAME);
                 ClassLoader cl = service.getClassLoader(jobId);
-                jobFuture = execService.execute(tasklets, doneCallback, cl);
-                jobFuture.whenComplete(withTryCatch(logger, (r, e) -> tasklets.clear()));
+                doneFuture.whenComplete(withTryCatch(logger, (r, e) -> tasklets.clear()));
+                execService.beginExecute(tasklets, jobFuture, doneFuture, cl);
             }
-
-            return jobFuture;
         }
     }
 
-    public CompletionStage<Void> cancel() {
-        synchronized (executionLock) {
-            if (jobFuture == null) {
-                jobFuture = new CompletableFuture<>();
-            }
-
-            jobFuture.toCompletableFuture().cancel(true);
-
-            return jobFuture;
-        }
+    public boolean cancelExecution() {
+        return jobFuture.cancel(true);
     }
 
-    public long getJobId() {
+    public CompletableFuture<Void> doneFuture() {
+        return doneFuture;
+    }
+
+    public CompletableFuture<Void> jobFuture() {
+        return jobFuture;
+    }
+
+    public long jobId() {
         return jobId;
     }
 
-    public long getExecutionId() {
+    public long executionId() {
         return executionId;
     }
 
@@ -167,12 +163,9 @@ public class ExecutionContext {
 
     public CompletionStage<Void> beginSnapshot(long snapshotId) {
         synchronized (executionLock) {
-            if (jobFuture == null) {
-                throw new RetryableHazelcastException();
-            } else if (jobFuture.toCompletableFuture().isDone()) {
+            if (jobFuture.isDone()) {
                 throw new CancellationException();
             }
-
             return snapshotContext.startNewSnapshot(snapshotId);
         }
     }
@@ -185,8 +178,8 @@ public class ExecutionContext {
         return coordinator;
     }
 
-    public boolean isCoordinatorOrParticipating(Address member) {
-        return coordinator.equals(member) || isParticipating(member);
+    public boolean isCoordinator(Address member) {
+        return coordinator.equals(member);
     }
 
     public SnapshotContext getSnapshotContext() {
