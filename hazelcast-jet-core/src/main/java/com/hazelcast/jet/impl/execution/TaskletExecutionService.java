@@ -22,7 +22,6 @@ import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.util.concurrent.BackoffIdleStrategy;
 import com.hazelcast.util.concurrent.IdleStrategy;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -168,15 +167,15 @@ public class TaskletExecutionService {
             try {
                 t.init();
                 long idleCount = 0;
-                for (ProgressState result;
-                     !(result = t.call()).isDone() && !tracker.executionTracker.executionCompleted() && !isShutdown;
-                 ) {
+                ProgressState result;
+                do {
+                    result = t.call();
                     if (result.isMadeProgress()) {
                         idleCount = 0;
                     } else {
                         IDLER.idle(++idleCount);
                     }
-                }
+                } while (!result.isDone() && !tracker.executionTracker.executionCompletedExceptionally() && !isShutdown);
             } catch (Throwable e) {
                 logger.warning("Exception in " + t, e);
                 tracker.executionTracker.exception(new JetException("Exception in " + t + ": " + e, e));
@@ -314,9 +313,9 @@ public class TaskletExecutionService {
             this.completionLatch = new AtomicInteger(taskletCount);
 
             jobFuture.whenComplete(withTryCatch(logger, (r, e) -> {
-               if (e instanceof CancellationException) {
-                   blockingFutures.forEach(f -> f.cancel(true)); // CompletableFuture.cancel ignores the flag
-               }
+                if (e instanceof CancellationException) {
+                    blockingFutures.forEach(f -> f.cancel(true)); // CompletableFuture.cancel ignores the flag
+                }
             }));
         }
 
@@ -324,7 +323,6 @@ public class TaskletExecutionService {
             jobFuture.completeExceptionally(t);
         }
 
-        @SuppressFBWarnings(value = "NP_NONNULL_PARAM_VIOLATION", justification = "CompletableFuture<Void>")
         void taskletDone() {
             if (completionLatch.decrementAndGet() == 0) {
                 completeVoidFuture(jobFuture);
@@ -334,10 +332,6 @@ public class TaskletExecutionService {
 
         boolean executionCompletedExceptionally() {
             return jobFuture.isCompletedExceptionally();
-        }
-
-        boolean executionCompleted() {
-            return jobFuture.isDone();
         }
     }
 }

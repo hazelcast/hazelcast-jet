@@ -42,6 +42,11 @@ import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Collections.unmodifiableMap;
 
+/**
+ * Data pertaining to single job execution on all cluster members. There's one
+ * instance per job execution; if the job is restarted, another instance will
+ * be used.
+ */
 public class ExecutionContext {
 
     private final long jobId;
