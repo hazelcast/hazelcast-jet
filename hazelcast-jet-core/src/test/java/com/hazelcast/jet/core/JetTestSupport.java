@@ -91,30 +91,28 @@ public class JetTestSupport extends HazelcastTestSupport {
     }
 
     public static void assertTrueEventually(UncheckedRunnable runnable) {
-        HazelcastTestSupport.assertTrueEventually(new AssertTask() {
-            @Override
-            public void run() throws Exception {
-                runnable.run();
-            }
-        });
+        HazelcastTestSupport.assertTrueEventually(assertTask(runnable));
     }
 
     public static void assertTrueEventually(UncheckedRunnable runnable, long timeoutSeconds) {
-        HazelcastTestSupport.assertTrueEventually(new AssertTask() {
-            @Override
-            public void run() throws Exception {
-                runnable.run();
-            }
-        }, timeoutSeconds);
+        HazelcastTestSupport.assertTrueEventually(assertTask(runnable), timeoutSeconds);
     }
 
     public static void assertTrueAllTheTime(UncheckedRunnable runnable, long durationSeconds) {
-        HazelcastTestSupport.assertTrueAllTheTime(new AssertTask() {
+        HazelcastTestSupport.assertTrueAllTheTime(assertTask(runnable), durationSeconds);
+    }
+
+    public static void assertTrueFiveSeconds(UncheckedRunnable runnable) {
+        HazelcastTestSupport.assertTrueFiveSeconds(assertTask(runnable));
+    }
+
+    private static AssertTask assertTask(UncheckedRunnable runnable) {
+        return new AssertTask() {
             @Override
             public void run() throws Exception {
                 runnable.run();
             }
-        }, durationSeconds);
+        };
     }
 
     public Address nextAddress() {

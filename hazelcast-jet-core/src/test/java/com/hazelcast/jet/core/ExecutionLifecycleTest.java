@@ -292,6 +292,33 @@ public class ExecutionLifecycleTest extends JetTestSupport {
         assertJobSucceeded(job);
     }
 
+    @Test
+    public void when_jobCancelled_then_psCompleteNotCalledBeforeTaskletsDone() throws Throwable {
+        // Given
+        DAG dag = new DAG().vertex(new Vertex("test", new MockPS(() ->
+                new StuckProcessor(10_000), NODE_COUNT)
+        ));
+
+        // When
+        Job job = instance.newJob(dag);
+
+        assertOpenEventually(StuckProcessor.executionStarted);
+
+        // Then
+        job.cancel();
+
+        assertTrueFiveSeconds(() -> {
+            assertEquals(JobStatus.RUNNING, job.getJobStatus());
+            assertEquals("PS.complete called before execution finished", 0, MockPS.completeCount.get());
+        });
+
+        StuckProcessor.proceedLatch.countDown();
+
+        expectedException.expect(CancellationException.class);
+        job.join();
+
+        assertEquals("PS.complete not called after execution finished", NODE_COUNT, MockPS.completeCount.get());
+    }
 
     private void assertPmsCompleted() {
         assertTrue("initCalled", MockPMS.initCalled.get());

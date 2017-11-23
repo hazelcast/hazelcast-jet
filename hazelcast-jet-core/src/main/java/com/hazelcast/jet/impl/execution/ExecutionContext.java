@@ -165,6 +165,18 @@ public class ExecutionContext {
         }
     }
 
+    /**
+     * Starts a new snapshot by incrementing the current snapshot id
+     */
+    public CompletionStage<Void> beginSnapshot(long snapshotId) {
+        synchronized (executionLock) {
+            if (cancellationFuture.isDone()) {
+                throw new CancellationException();
+            }
+            return snapshotContext.startNewSnapshot(snapshotId);
+        }
+    }
+
     public long jobId() {
         return jobId;
     }
@@ -191,15 +203,6 @@ public class ExecutionContext {
                    .get(ordinal)
                    .get(sender)
                    .receiveStreamPacket(in);
-    }
-
-    public CompletionStage<Void> beginSnapshot(long snapshotId) {
-        synchronized (executionLock) {
-            if (cancellationFuture.isDone()) {
-                throw new CancellationException();
-            }
-            return snapshotContext.startNewSnapshot(snapshotId);
-        }
     }
 
     public boolean isParticipating(Address member) {
