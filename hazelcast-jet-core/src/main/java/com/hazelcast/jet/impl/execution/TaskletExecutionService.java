@@ -108,16 +108,16 @@ public class TaskletExecutionService {
         }
     }
 
-    private void submitBlockingTasklets(ExecutionTracker jobFuture, ClassLoader jobClassLoader, List<Tasklet> tasklets) {
-        jobFuture.blockingFutures = tasklets
+    private void submitBlockingTasklets(ExecutionTracker executionTracker, ClassLoader jobClassLoader, List<Tasklet> tasklets) {
+        executionTracker.blockingFutures = tasklets
                 .stream()
-                .map(t -> new BlockingWorker(new TaskletTracker(t, jobFuture, jobClassLoader)))
+                .map(t -> new BlockingWorker(new TaskletTracker(t, executionTracker, jobClassLoader)))
                 .map(blockingTaskletExecutor::submit)
                 .collect(toList());
     }
 
     private void submitCooperativeTasklets(
-            ExecutionTracker jobFuture, ClassLoader jobClassLoader, List<Tasklet> tasklets
+            ExecutionTracker executionTracker, ClassLoader jobClassLoader, List<Tasklet> tasklets
     ) {
         ensureThreadsStarted();
         final List<TaskletTracker>[] trackersByThread = new List[cooperativeWorkers.length];
@@ -125,7 +125,7 @@ public class TaskletExecutionService {
         for (Tasklet t : tasklets) {
             t.init();
             trackersByThread[cooperativeThreadIndex.getAndUpdate(i -> (i + 1) % trackersByThread.length)]
-                    .add(new TaskletTracker(t, jobFuture, jobClassLoader));
+                    .add(new TaskletTracker(t, executionTracker, jobClassLoader));
         }
         for (int i = 0; i < trackersByThread.length; i++) {
             cooperativeWorkers[i].trackers.addAll(trackersByThread[i]);
@@ -299,6 +299,7 @@ public class TaskletExecutionService {
 
     /**
      * Internal utility class to track the overall state of tasklet execution.
+     * There's one instance of this class per job.
      */
     private final class ExecutionTracker {
 

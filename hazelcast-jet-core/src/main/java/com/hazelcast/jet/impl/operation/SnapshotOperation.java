@@ -57,7 +57,7 @@ public class SnapshotOperation extends AsyncExecutionOperation {
         }).exceptionally(e -> {
             getLogger().warning(String.format("Snapshot %d for job %s finished with error on member",
                     snapshotId, idToString(jobId)), e);
-            doSendResponse(new JetException("Exception during snapshot", e));
+            doSendResponse(new JetException("Exception during snapshot: " + e, e));
             return null;
         });
 
