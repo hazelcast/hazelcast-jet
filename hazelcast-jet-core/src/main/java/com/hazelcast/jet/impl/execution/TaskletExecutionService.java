@@ -22,6 +22,7 @@ import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.util.concurrent.BackoffIdleStrategy;
 import com.hazelcast.util.concurrent.IdleStrategy;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -31,6 +32,7 @@ import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
@@ -39,7 +41,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
-import static com.hazelcast.jet.impl.util.Util.completeVoidFuture;
+import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.lang.Thread.currentThread;
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
@@ -70,31 +72,32 @@ public class TaskletExecutionService {
     }
 
     /**
+     * Submits the tasklets for execution and returns a future which is completed only
+     * when execution of all the tasklets are completed. If an exception occurred during
+     * execution or execution was cancelled then the future will be completed exceptionally
+     * but only after all tasklets are finished executing. The returned future does not
+     * support cancellation, instead the supplied {@code cancellationFuture} should be used.
      *
-     * @param tasklets tasklets to run
-     * @param jobFuture future that will be completed when the job is done
-     *                  successfully, or upon the first exception
-     * @param doneFuture future that will be completed when all the tasklets are finished executing.
-     *                   Never completes with an exception even if the job fails.
-     * @param jobClassLoader classloader to use when running the tasklets
+     * @param tasklets        tasklets to run
+     * @param cancellationFuture A future when cancelled will cancel the execution of the tasklets
+     * @param jobClassLoader  classloader to use when running the tasklets
      */
-    void beginExecute(
+    CompletableFuture<Void> beginExecute(
             @Nonnull List<? extends Tasklet> tasklets,
-            @Nonnull CompletableFuture<Void> jobFuture,
-            @Nonnull CompletableFuture<Void> doneFuture,
+            @Nonnull CompletableFuture<Void> cancellationFuture,
             @Nonnull ClassLoader jobClassLoader
     ) {
         ensureStillRunning();
-        final ExecutionTracker executionTracker = new ExecutionTracker(tasklets.size(), jobFuture, doneFuture);
+        final ExecutionTracker executionTracker = new ExecutionTracker(tasklets.size(), cancellationFuture);
         try {
             final Map<Boolean, List<Tasklet>> byCooperation =
                     tasklets.stream().collect(partitioningBy(Tasklet::isCooperative));
             submitCooperativeTasklets(executionTracker, jobClassLoader, byCooperation.get(true));
             submitBlockingTasklets(executionTracker, jobClassLoader, byCooperation.get(false));
         } catch (Throwable t) {
-            executionTracker.exception(t);
-            completeVoidFuture(doneFuture);
+            executionTracker.future.internalCompleteExceptionally(t);
         }
+        return executionTracker.future;
     }
 
     public void shutdown() {
@@ -110,11 +113,17 @@ public class TaskletExecutionService {
 
     private void submitBlockingTasklets(ExecutionTracker executionTracker, ClassLoader jobClassLoader,
                                         List<Tasklet> tasklets) {
+        CountDownLatch startedLatch = new CountDownLatch(tasklets.size());
         executionTracker.blockingFutures = tasklets
                 .stream()
-                .map(t -> new BlockingWorker(new TaskletTracker(t, executionTracker, jobClassLoader)))
+                .map(t -> new BlockingWorker(new TaskletTracker(t, executionTracker, jobClassLoader), startedLatch))
                 .map(blockingTaskletExecutor::submit)
                 .collect(toList());
+
+        // do not return from this method until all workers have started. Otherwise on
+        // cancellation there is a race that the worker might not be started by the executor yet.
+        // This results the taskletDone() method never being called for a worker.
+        uncheckRun(startedLatch::await);
     }
 
     private void submitCooperativeTasklets(
@@ -155,9 +164,11 @@ public class TaskletExecutionService {
 
     private final class BlockingWorker implements Runnable {
         private final TaskletTracker tracker;
+        private final CountDownLatch startedLatch;
 
-        private BlockingWorker(TaskletTracker tracker) {
+        private BlockingWorker(TaskletTracker tracker, CountDownLatch startedLatch) {
             this.tracker = tracker;
+            this.startedLatch = startedLatch;
         }
 
         @Override
@@ -166,6 +177,7 @@ public class TaskletExecutionService {
             final Tasklet t = tracker.tasklet;
             currentThread().setContextClassLoader(tracker.jobClassLoader);
             try {
+                startedLatch.countDown();
                 t.init();
                 long idleCount = 0;
                 ProgressState result;
@@ -176,7 +188,9 @@ public class TaskletExecutionService {
                     } else {
                         IDLER.idle(++idleCount);
                     }
-                } while (!result.isDone() && !tracker.executionTracker.executionCompletedExceptionally() && !isShutdown);
+                } while (!result.isDone()
+                        && !tracker.executionTracker.executionCompletedExceptionally()
+                        && !isShutdown);
             } catch (Throwable e) {
                 logger.warning("Exception in " + t, e);
                 tracker.executionTracker.exception(new JetException("Exception in " + t + ": " + e, e));
@@ -304,36 +318,72 @@ public class TaskletExecutionService {
      */
     private final class ExecutionTracker {
 
-        private final AtomicInteger completionLatch;
-        private final CompletableFuture<Void> jobFuture;
-        private final CompletableFuture<Void> doneFuture;
-        private List<Future> blockingFutures;
+        final ExecutionFuture future = new ExecutionFuture();
+        List<Future> blockingFutures;
 
-        ExecutionTracker(int taskletCount, CompletableFuture<Void> jobFuture, CompletableFuture<Void> doneFuture) {
-            this.jobFuture = jobFuture;
-            this.doneFuture = doneFuture;
+        private final AtomicInteger completionLatch;
+        private final AtomicReference<Throwable> executionException = new AtomicReference<>();
+
+        ExecutionTracker(int taskletCount, CompletableFuture<Void> cancellationFuture) {
             this.completionLatch = new AtomicInteger(taskletCount);
 
-            jobFuture.whenComplete(withTryCatch(logger, (r, e) -> {
-                if (e instanceof CancellationException) {
-                    blockingFutures.forEach(f -> f.cancel(true)); // CompletableFuture.cancel ignores the flag
+            cancellationFuture.whenComplete(withTryCatch(logger, (r, e) -> {
+                if (!(e instanceof CancellationException)) {
+                    exception(new IllegalStateException("cancellationFuture was completed with another " +
+                            "exception than CancellationException"));
+                    return;
                 }
+                exception(e);
+                blockingFutures.forEach(f -> f.cancel(true)); // CompletableFuture.cancel ignores the flag
             }));
         }
 
         void exception(Throwable t) {
-            jobFuture.completeExceptionally(t);
+            executionException.compareAndSet(null, t);
         }
 
         void taskletDone() {
             if (completionLatch.decrementAndGet() == 0) {
-                completeVoidFuture(jobFuture);
-                completeVoidFuture(doneFuture);
+                Throwable ex = executionException.get();
+                if (ex == null) {
+                    future.internalComplete();
+                } else {
+                    future.internalCompleteExceptionally(ex);
+                }
             }
         }
 
         boolean executionCompletedExceptionally() {
-            return jobFuture.isCompletedExceptionally();
+            return executionException.get() != null;
+        }
+    }
+
+    /**
+     * ExecutionFuture which prevents completion from outside
+     */
+    private static class ExecutionFuture extends CompletableFuture<Void> {
+        @Override
+        public boolean completeExceptionally(Throwable ex) {
+            throw new UnsupportedOperationException("This future can't be completed by outside caller");
+        }
+
+        @Override
+        public boolean complete(Void value) {
+            throw new UnsupportedOperationException("This future can't be completed by outside caller");
+        }
+
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            throw new UnsupportedOperationException("This future can't be cancelled by outside caller");
+        }
+
+        @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
+        void internalComplete() {
+            super.complete(null);
+        }
+
+        void internalCompleteExceptionally(Throwable ex) {
+            super.completeExceptionally(ex);
         }
     }
 }

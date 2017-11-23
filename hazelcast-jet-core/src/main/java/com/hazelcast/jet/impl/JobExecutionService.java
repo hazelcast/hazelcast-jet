@@ -121,8 +121,7 @@ public class JobExecutionService {
      */
     private void cancelAndComplete(ExecutionContext exeCtx, String message, Throwable t) {
         try {
-            exeCtx.cancelExecution();
-            exeCtx.doneFuture().whenComplete(withTryCatch(logger, (r, e) -> {
+            exeCtx.cancelExecution().whenComplete(withTryCatch(logger, (r, e) -> {
                 long executionId = exeCtx.executionId();
                 logger.fine(message);
                 completeExecution(executionId, t);
@@ -281,7 +280,7 @@ public class JobExecutionService {
         ExecutionContext executionContext = executionContexts.remove(executionId);
         if (executionContext != null) {
             try {
-                executionContext.complete(error);
+                executionContext.completeExecution(error);
             } finally {
                 classLoaders.remove(executionContext.jobId());
                 executionContextJobIds.remove(executionContext.jobId());

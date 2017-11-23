@@ -53,8 +53,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static com.hazelcast.jet.core.TestUtil.assertExceptionInCauses;
 import static com.hazelcast.jet.core.TestUtil.getJetService;
@@ -228,7 +228,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
     }
 
     @Test
-    public void when_executionCancelledBeforeStart_then_jobFutureIsCancelledOnExecute() {
+    public void when_executionCancelledBeforeStart_then_jobFutureIsCancelledOnExecute() throws Exception {
         // Given
         DAG dag = new DAG().vertex(new Vertex("test", new MockPS(StuckProcessor::new, NODE_COUNT)));
 
@@ -255,13 +255,11 @@ public class ExecutionLifecycleTest extends JetTestSupport {
         executionContext.cancelExecution();
 
         // When
-        final AtomicReference<Object> result = new AtomicReference<>();
-
-        executionContext.jobFuture().whenComplete((aVoid, throwable) -> result.compareAndSet(null, throwable));
-        executionContext.beginExecution();
+        CompletableFuture<Void> future = executionContext.beginExecution();
 
         // Then
-        assertTrue(result.get() instanceof CancellationException);
+        expectedException.expect(CancellationException.class);
+        future.join();
     }
 
     @Test

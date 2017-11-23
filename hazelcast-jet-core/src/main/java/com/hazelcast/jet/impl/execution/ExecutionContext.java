@@ -66,8 +66,12 @@ public class ExecutionContext {
     private List<Processor> processors = emptyList();
 
     private List<Tasklet> tasklets;
-    private final CompletableFuture<Void> jobFuture = new CompletableFuture<>();
-    private final CompletableFuture<Void> doneFuture = new CompletableFuture<>();
+
+    // future which is completed only after all tasklets are completed and contains execution result
+    private volatile CompletableFuture<Void> executionFuture;
+
+    // future which can only be used to cancel the local execution.
+    private final CompletableFuture<Void> cancellationFuture = new CompletableFuture<>();
 
     private final NodeEngine nodeEngine;
     private final TaskletExecutionService execService;
@@ -100,28 +104,65 @@ public class ExecutionContext {
         return this;
     }
 
-    public void beginExecution() {
+    /**
+     * Starts local execution of job by submitting tasklets to execution service. If
+     * execution was cancelled earlier then execution will not be started.
+     *
+     * Returns a future which is completed only when all tasklets are completed. If
+     * execution was already cancelled before this method is called then the returned
+     * future is completed immediately. The future returned can't be cancelled,
+     * instead {@link #cancelExecution()} should be used.
+     */
+    public CompletableFuture<Void> beginExecution() {
         synchronized (executionLock) {
-            // check for job completion in case the job was cancelled before execute() was called.
-            if (!jobFuture.isDone()) {
+            if (executionFuture != null) {
+                // beginExecution was already called or execution was cancelled earlier.
+                return executionFuture;
+            } else {
+                // begin job execution
                 JetService service = nodeEngine.getService(JetService.SERVICE_NAME);
                 ClassLoader cl = service.getClassLoader(jobId);
-                doneFuture.whenComplete(withTryCatch(logger, (r, e) -> tasklets.clear()));
-                execService.beginExecute(tasklets, jobFuture, doneFuture, cl);
+                executionFuture = execService.beginExecute(tasklets, cancellationFuture, cl);
+                executionFuture.whenComplete(withTryCatch(logger, (r, e) -> tasklets.clear()));
             }
+            return executionFuture;
         }
     }
 
-    public boolean cancelExecution() {
-        return jobFuture.cancel(true);
+    /**
+     * Complete local execution. If local execution was started, it should be
+     * called after execution is completed.
+     */
+    public void completeExecution(Throwable error) {
+        assert executionFuture == null || (executionFuture != null && executionFuture.isDone())
+                : "If execution was begun, then completeExecution() should not be called until execution is done.";
+
+        ILogger logger = nodeEngine.getLogger(getClass());
+        procSuppliers.forEach(s -> {
+            try {
+                s.complete(error);
+            } catch (Throwable e) {
+                logger.severe(jobAndExecutionId(jobId, executionId)
+                        + " encountered an exception in ProcessorSupplier.complete(), ignoring it", e);
+            }
+        });
+        MetricsRegistry metricsRegistry = ((NodeEngineImpl) nodeEngine).getMetricsRegistry();
+        processors.forEach(metricsRegistry::deregister);
     }
 
-    public CompletableFuture<Void> doneFuture() {
-        return doneFuture;
-    }
-
-    public CompletableFuture<Void> jobFuture() {
-        return jobFuture;
+    /**
+     * Cancels local execution of tasklets and returns a future which is only completed
+     * when all tasklets are completed and contains the result of the execution.
+     */
+    public CompletableFuture<Void> cancelExecution() {
+        synchronized (executionLock) {
+            cancellationFuture.cancel(true);
+            if (executionFuture == null) {
+                // if cancelled before execution started, then assign the already completed future.
+                executionFuture = cancellationFuture;
+            }
+            return executionFuture;
+        }
     }
 
     public long jobId() {
@@ -144,20 +185,6 @@ public class ExecutionContext {
         return this.coordinator.equals(coordinator) && this.jobId == jobId;
     }
 
-    // should not leak exceptions thrown by processor suppliers
-    public void complete(Throwable error) {
-        ILogger logger = nodeEngine.getLogger(getClass());
-        procSuppliers.forEach(s -> {
-            try {
-                s.complete(error);
-            } catch (Throwable e) {
-                logger.severe(jobAndExecutionId(jobId, executionId)
-                        + " encountered an exception in ProcessorSupplier.complete(), ignoring it", e);
-            }
-        });
-        MetricsRegistry metricsRegistry = ((NodeEngineImpl) nodeEngine).getMetricsRegistry();
-        processors.forEach(metricsRegistry::deregister);
-    }
 
     public void handlePacket(int vertexId, int ordinal, Address sender, BufferObjectDataInput in) {
         receiverMap.get(vertexId)
@@ -168,7 +195,7 @@ public class ExecutionContext {
 
     public CompletionStage<Void> beginSnapshot(long snapshotId) {
         synchronized (executionLock) {
-            if (jobFuture.isDone()) {
+            if (cancellationFuture.isDone()) {
                 throw new CancellationException();
             }
             return snapshotContext.startNewSnapshot(snapshotId);
