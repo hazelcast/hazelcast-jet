@@ -78,7 +78,7 @@ public class TaskletExecutionService {
      *                   Never completes with an exception even if the job fails.
      * @param jobClassLoader classloader to use when running the tasklets
      */
-    public void beginExecute(
+    void beginExecute(
             @Nonnull List<? extends Tasklet> tasklets,
             @Nonnull CompletableFuture<Void> jobFuture,
             @Nonnull CompletableFuture<Void> doneFuture,
@@ -108,7 +108,8 @@ public class TaskletExecutionService {
         }
     }
 
-    private void submitBlockingTasklets(ExecutionTracker executionTracker, ClassLoader jobClassLoader, List<Tasklet> tasklets) {
+    private void submitBlockingTasklets(ExecutionTracker executionTracker, ClassLoader jobClassLoader,
+                                        List<Tasklet> tasklets) {
         executionTracker.blockingFutures = tasklets
                 .stream()
                 .map(t -> new BlockingWorker(new TaskletTracker(t, executionTracker, jobClassLoader)))
