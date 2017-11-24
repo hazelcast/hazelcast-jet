@@ -73,7 +73,7 @@ public class TaskletExecutionService {
 
     /**
      * Submits the tasklets for execution and returns a future which is completed only
-     * when execution of all the tasklets are completed. If an exception occurred during
+     * when execution of all the tasklets has completed. If an exception occurred during
      * execution or execution was cancelled then the future will be completed exceptionally
      * but only after all tasklets are finished executing. The returned future does not
      * support cancellation, instead the supplied {@code cancellationFuture} should be used.
@@ -329,8 +329,8 @@ public class TaskletExecutionService {
 
             cancellationFuture.whenComplete(withTryCatch(logger, (r, e) -> {
                 if (!(e instanceof CancellationException)) {
-                    exception(new IllegalStateException("cancellationFuture was completed with another " +
-                            "exception than CancellationException"));
+                    exception(new IllegalStateException("cancellationFuture was completed with an " +
+                            "exception other than CancellationException: " + e, e));
                     return;
                 }
                 exception(e);
@@ -364,17 +364,17 @@ public class TaskletExecutionService {
     private static class ExecutionFuture extends CompletableFuture<Void> {
         @Override
         public boolean completeExceptionally(Throwable ex) {
-            throw new UnsupportedOperationException("This future can't be completed by outside caller");
+            throw new UnsupportedOperationException("This future can't be completed by an outside caller");
         }
 
         @Override
         public boolean complete(Void value) {
-            throw new UnsupportedOperationException("This future can't be completed by outside caller");
+            throw new UnsupportedOperationException("This future can't be completed by an outside caller");
         }
 
         @Override
         public boolean cancel(boolean mayInterruptIfRunning) {
-            throw new UnsupportedOperationException("This future can't be cancelled by outside caller");
+            throw new UnsupportedOperationException("This future can't be cancelled by an outside caller");
         }
 
         @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")

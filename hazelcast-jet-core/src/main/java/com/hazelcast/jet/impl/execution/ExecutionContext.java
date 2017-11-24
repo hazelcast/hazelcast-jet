@@ -35,7 +35,6 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
-import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.jobAndExecutionId;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
@@ -116,14 +115,13 @@ public class ExecutionContext {
     public CompletableFuture<Void> beginExecution() {
         synchronized (executionLock) {
             if (executionFuture != null) {
-                // beginExecution was already called or execution was cancelled earlier.
+                // beginExecution was already called or execution was cancelled before it started.
                 return executionFuture;
             } else {
                 // begin job execution
                 JetService service = nodeEngine.getService(JetService.SERVICE_NAME);
                 ClassLoader cl = service.getClassLoader(jobId);
                 executionFuture = execService.beginExecute(tasklets, cancellationFuture, cl);
-                executionFuture.whenComplete(withTryCatch(logger, (r, e) -> tasklets.clear()));
             }
             return executionFuture;
         }
@@ -131,11 +129,11 @@ public class ExecutionContext {
 
     /**
      * Complete local execution. If local execution was started, it should be
-     * called after execution is completed.
+     * called after execution has completed.
      */
     public void completeExecution(Throwable error) {
-        assert executionFuture == null || (executionFuture != null && executionFuture.isDone())
-                : "If execution was begun, then completeExecution() should not be called until execution is done.";
+        assert executionFuture == null || executionFuture.isDone()
+                : "If execution was begun, then completeExecution() should not be called before execution is done.";
 
         ILogger logger = nodeEngine.getLogger(getClass());
         procSuppliers.forEach(s -> {
@@ -170,7 +168,7 @@ public class ExecutionContext {
      */
     public CompletionStage<Void> beginSnapshot(long snapshotId) {
         synchronized (executionLock) {
-            if (cancellationFuture.isDone()) {
+            if (cancellationFuture.isDone() || executionFuture.isDone()) {
                 throw new CancellationException();
             }
             return snapshotContext.startNewSnapshot(snapshotId);

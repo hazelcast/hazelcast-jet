@@ -289,7 +289,7 @@ public class TaskletExecutionServiceTest extends JetTestSupport {
     }
 
     @Test
-    public void when_tryCompleteReturnedFuture_then_fails() {
+    public void when_tryCompleteOnReturnedFuture_then_fails() {
         // Given
         final MockTasklet t = new MockTasklet().callsBeforeDone(Integer.MAX_VALUE);
         CompletableFuture<Void> f = es.beginExecute(singletonList(t), cancellationFuture, classLoaderMock);
@@ -300,7 +300,7 @@ public class TaskletExecutionServiceTest extends JetTestSupport {
     }
 
     @Test
-    public void when_tryCompleteExceptionallyReturnedFuture_then_fails() {
+    public void when_tryCompleteExceptionallyOnReturnedFuture_then_fails() {
         // Given
         final MockTasklet t = new MockTasklet().callsBeforeDone(Integer.MAX_VALUE);
         CompletableFuture<Void> f = es.beginExecute(singletonList(t), cancellationFuture, classLoaderMock);
@@ -311,7 +311,7 @@ public class TaskletExecutionServiceTest extends JetTestSupport {
     }
 
     @Test
-    public void when_tryCancelReturnedFuture_then_fails() {
+    public void when_tryCancelOnReturnedFuture_then_fails() {
         // Given
         final MockTasklet t = new MockTasklet().callsBeforeDone(Integer.MAX_VALUE);
         CompletableFuture<Void> f = es.beginExecute(singletonList(t), cancellationFuture, classLoaderMock);
