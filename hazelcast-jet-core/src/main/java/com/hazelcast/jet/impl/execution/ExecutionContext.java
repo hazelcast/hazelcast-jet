@@ -167,7 +167,7 @@ public class ExecutionContext {
      */
     public CompletionStage<Void> beginSnapshot(long snapshotId) {
         synchronized (executionLock) {
-            if (cancellationFuture.isDone() || executionFuture.isDone()) {
+            if (cancellationFuture.isDone() || executionFuture != null && executionFuture.isDone()) {
                 throw new CancellationException();
             }
             return snapshotContext.startNewSnapshot(snapshotId);

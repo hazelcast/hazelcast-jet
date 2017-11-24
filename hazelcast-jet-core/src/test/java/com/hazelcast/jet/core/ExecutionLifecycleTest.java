@@ -57,7 +57,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 
 import static com.hazelcast.jet.core.TestUtil.assertExceptionInCauses;
-import static com.hazelcast.jet.core.TestUtil.getJetService;
 import static com.hazelcast.jet.impl.execution.SnapshotContext.NO_SNAPSHOT;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static org.junit.Assert.assertEquals;
