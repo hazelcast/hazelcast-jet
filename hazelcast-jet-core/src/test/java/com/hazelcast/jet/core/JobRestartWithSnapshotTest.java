@@ -319,7 +319,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         while (executionContext == null) {
             executionContext = jetService.getJobExecutionService().getExecutionContext(executionId);
         }
-        SnapshotContext ssContext = executionContext.getSnapshotContext();
+        SnapshotContext ssContext = executionContext.snapshotContext();
         assertTrueEventually(() -> assertTrue("numRemainingTasklets was not negative, the tested scenario did not happen",
                 ssContext.getNumRemainingTasklets().get() < 0), 3);
 

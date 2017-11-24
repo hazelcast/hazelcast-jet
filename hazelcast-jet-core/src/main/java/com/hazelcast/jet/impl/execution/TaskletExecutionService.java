@@ -329,8 +329,8 @@ public class TaskletExecutionService {
 
             cancellationFuture.whenComplete(withTryCatch(logger, (r, e) -> {
                 if (!(e instanceof CancellationException)) {
-                    exception(new IllegalStateException("cancellationFuture was completed with an " +
-                            "exception other than CancellationException: " + e, e));
+                    exception(new IllegalStateException("cancellationFuture was completed with something " +
+                            "other than CancellationException:" + e, e));
                     return;
                 }
                 exception(e);

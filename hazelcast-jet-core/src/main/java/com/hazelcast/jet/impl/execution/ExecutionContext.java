@@ -135,7 +135,6 @@ public class ExecutionContext {
         assert executionFuture == null || executionFuture.isDone()
                 : "If execution was begun, then completeExecution() should not be called before execution is done.";
 
-        ILogger logger = nodeEngine.getLogger(getClass());
         procSuppliers.forEach(s -> {
             try {
                 s.complete(error);
@@ -175,12 +174,27 @@ public class ExecutionContext {
         }
     }
 
+    public void handlePacket(int vertexId, int ordinal, Address sender, BufferObjectDataInput in) {
+        receiverMap.get(vertexId)
+                   .get(ordinal)
+                   .get(sender)
+                   .receiveStreamPacket(in);
+    }
+
+    public boolean hasParticipant(Address member) {
+        return participants.contains(member);
+    }
+
     public long jobId() {
         return jobId;
     }
 
     public long executionId() {
         return executionId;
+    }
+
+    public Address coordinator() {
+        return coordinator;
     }
 
     public Map<Integer, Map<Integer, Map<Address, SenderTasklet>>> senderMap() {
@@ -191,31 +205,8 @@ public class ExecutionContext {
         return receiverMap;
     }
 
-    public boolean verify(Address coordinator, long jobId) {
-        return this.coordinator.equals(coordinator) && this.jobId == jobId;
-    }
-
-
-    public void handlePacket(int vertexId, int ordinal, Address sender, BufferObjectDataInput in) {
-        receiverMap.get(vertexId)
-                   .get(ordinal)
-                   .get(sender)
-                   .receiveStreamPacket(in);
-    }
-
-    public boolean isParticipating(Address member) {
-        return participants.contains(member);
-    }
-
-    public Address getCoordinator() {
-        return coordinator;
-    }
-
-    public boolean isCoordinator(Address member) {
-        return coordinator.equals(member);
-    }
-
-    public SnapshotContext getSnapshotContext() {
+    // visible for testing only
+    public SnapshotContext snapshotContext() {
         return snapshotContext;
     }
 }

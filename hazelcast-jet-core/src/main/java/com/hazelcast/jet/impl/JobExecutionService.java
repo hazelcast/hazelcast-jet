@@ -106,7 +106,7 @@ public class JobExecutionService {
      */
     void onMemberLeave(Address address) {
         executionContexts.values().stream()
-             .filter(exeCtx -> exeCtx.isCoordinator(address) || exeCtx.isParticipating(address))
+             .filter(exeCtx -> exeCtx.coordinator().equals(address) || exeCtx.hasParticipant(address))
              .forEach(exeCtx -> {
                  String message = String.format("Completing %s locally. Reason: Coordinator %s left the cluster",
                          jobAndExecutionId(exeCtx.jobId(), exeCtx.executionId()),
@@ -160,7 +160,7 @@ public class JobExecutionService {
             if (current != null) {
                 throw new IllegalStateException(String.format(
                         "Execution context for %s for coordinator %s already exists for coordinator %s",
-                        jobAndExecutionId(jobId, executionId), coordinator, current.getCoordinator()));
+                        jobAndExecutionId(jobId, executionId), coordinator, current.coordinator()));
             }
 
             executionContexts.values().stream()
@@ -169,7 +169,7 @@ public class JobExecutionService {
                                      "Execution context for %s for coordinator %s already exists"
                                              + " with local execution %s for coordinator %s",
                                      jobAndExecutionId(jobId, executionId), coordinator, idToString(e.jobId()),
-                                     e.getCoordinator())));
+                                     e.coordinator())));
 
             throw new RetryableHazelcastException();
         }
@@ -263,10 +263,10 @@ public class JobExecutionService {
             throw new TopologyChangedException(String.format(
                     "%s not found for coordinator %s for '%s'",
                     jobAndExecutionId(jobId, executionId), coordinator, callerOp.getClass().getSimpleName()));
-        } else if (!executionContext.verify(coordinator, jobId)) {
+        } else if (!(executionContext.coordinator().equals(coordinator) && executionContext.jobId() == jobId)) {
             throw new IllegalStateException(String.format(
                     "%s, originally from coordinator %s, cannot do '%s' by coordinator %s and execution %s",
-                    jobAndExecutionId(jobId, executionContext.executionId()), executionContext.getCoordinator(),
+                    jobAndExecutionId(jobId, executionContext.executionId()), executionContext.coordinator(),
                     callerOp.getClass().getSimpleName(), coordinator, idToString(executionId)));
         }
 
