@@ -48,8 +48,6 @@ public final class KafkaSinks {
      * <p>
      * IO failures are generally handled by Kafka producer and do not cause the
      * processor to fail. Refer to Kafka documentation for details.
-     * <p>
-     * The
      *
      * @param properties     producer properties which should contain broker
      *                       address and key/value serializers

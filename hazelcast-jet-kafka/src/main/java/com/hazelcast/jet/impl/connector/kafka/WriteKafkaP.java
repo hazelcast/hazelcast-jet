@@ -48,7 +48,7 @@ public final class WriteKafkaP<T, K, V> implements Processor {
     private final AtomicReference<Throwable> lastError = new AtomicReference<>();
 
     private final Callback callback = (metadata, exception) -> {
-        // Note: this method is called on different thread.
+        // Note: this method may be called on different thread.
         numPendingAsyncCalls.decrementAndGet();
         if (exception != null) {
             lastError.compareAndSet(null, exception);
