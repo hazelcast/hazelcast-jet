@@ -119,27 +119,27 @@ class Planner {
     }
 
     private void handleSource(AbstractStage stage, SourceImpl source) {
-        addVertex(stage, vertexName(source.name(), null), source.metaSupplier());
+        addVertex(stage, vertexName(source.name(), ""), source.metaSupplier());
     }
 
     private void handleProcessorStage(AbstractStage stage, ProcessorTransform procTransform) {
-        PlannerVertex pv = addVertex(stage, vertexName(procTransform.name(), null), procTransform.procSupplier);
+        PlannerVertex pv = addVertex(stage, vertexName(procTransform.name(), ""), procTransform.procSupplier);
         addEdges(stage, pv.v);
     }
 
     private void handleMap(AbstractStage stage, MapTransform map) {
-        PlannerVertex pv = addVertex(stage, vertexName(map.name(), null), Processors.mapP(map.mapFn));
+        PlannerVertex pv = addVertex(stage, vertexName(map.name(), ""), Processors.mapP(map.mapFn));
         addEdges(stage, pv.v);
     }
 
     private void handleFilter(AbstractStage stage, FilterTransform filter) {
-        PlannerVertex pv = addVertex(stage, vertexName(filter.name(), null),
+        PlannerVertex pv = addVertex(stage, vertexName(filter.name(), ""),
                 Processors.filterP(filter.filterFn));
         addEdges(stage, pv.v);
     }
 
     private void handleFlatMap(AbstractStage stage, FlatMapTransform flatMap) {
-        PlannerVertex pv = addVertex(stage, vertexName(flatMap.name(), null),
+        PlannerVertex pv = addVertex(stage, vertexName(flatMap.name(), ""),
                 Processors.flatMapP(flatMap.flatMapFn()));
         addEdges(stage, pv.v);
     }
@@ -161,7 +161,7 @@ class Planner {
     //                      | stage2  |
     //                       ---------
     private void handleGroupBy(AbstractStage stage, GroupByTransform<Object, Object, Object, Object> groupBy) {
-        String namePrefix = vertexName(groupBy.name(), "stage");
+        String namePrefix = vertexName(groupBy.name(), "-stage");
         Vertex v1 = dag.newVertex(namePrefix + '1',
                 Processors.accumulateByKeyP(groupBy.keyFn(), groupBy.aggregateOperation()));
         PlannerVertex pv2 = addVertex(stage, namePrefix + '2',
@@ -188,7 +188,7 @@ class Planner {
     //                        ---------
     private void handleCoGroup(AbstractStage stage, CoGroupTransform<Object, Object, Object> coGroup) {
         List<DistributedFunction<?, ?>> groupKeyFs = coGroup.groupKeyFs();
-        String namePrefix = vertexName(coGroup.name(), "stage");
+        String namePrefix = vertexName(coGroup.name(), "-stage");
         Vertex v1 = dag.newVertex(namePrefix + '1',
                 Processors.coAccumulateByKeyP(groupKeyFs, coGroup.aggregateOperation()));
         PlannerVertex pv2 = addVertex(stage, namePrefix + '2',
@@ -261,7 +261,7 @@ class Planner {
     }
 
     private void handleSink(AbstractStage stage, SinkImpl sink) {
-        PlannerVertex pv = addVertex(stage, vertexName(sink.name(), null), sink.metaSupplier());
+        PlannerVertex pv = addVertex(stage, vertexName(sink.name(), ""), sink.metaSupplier());
         addEdges(stage, pv.v);
     }
 
@@ -294,11 +294,11 @@ class Planner {
         addEdges(stage, toVertex, e -> { });
     }
 
-    private String vertexName(@Nonnull String name, String suffix) {
+    private String vertexName(@Nonnull String name, @Nonnull String suffix) {
         for (int index = 1; ; index++) {
             String candidate = name
                     + (index == 1 ? "" : "-" + index)
-                    + (suffix == null ? "" : "-" + suffix);
+                    + suffix;
             if (vertexNames.add(candidate)) {
                 return candidate;
             }
