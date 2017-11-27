@@ -65,7 +65,7 @@ class Planner {
     private final DAG dag = new DAG();
     private final Map<Stage, PlannerVertex> stage2vertex = new HashMap<>();
 
-    private Set<String> vertexNames = new HashSet<>();
+    private final Set<String> vertexNames = new HashSet<>();
 
     Planner(PipelineImpl pipeline) {
         this.pipeline = pipeline;
@@ -297,12 +297,11 @@ class Planner {
     private String vertexName(@Nonnull String name, String suffix) {
         for (int index = 1; ; index++) {
             String candidate = name
-                    + (index > 1 ? "-" + index : "")
+                    + (index == 1 ? "" : "-" + index)
                     + (suffix == null ? "" : "-" + suffix);
-            if (!vertexNames.add(candidate)) {
-                continue;
+            if (vertexNames.add(candidate)) {
+                return candidate;
             }
-            return candidate;
         }
     }
 
