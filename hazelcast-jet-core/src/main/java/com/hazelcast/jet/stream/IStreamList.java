@@ -28,19 +28,13 @@ import com.hazelcast.core.IList;
 public interface IStreamList<E> extends IList<E> {
 
     /**
-     * Returns a sequential {@code Stream} with this list as its source.
-     *
-     * @return a sequential {@code Stream} over the elements in this collection
-     * @since 1.8
+     * Returns a ordered {@link DistributedStream} with this list as its source.
      */
     @Override
     DistributedStream<E> stream();
 
     /**
-     * Returns a parallel {@code Stream} with this list as its source.
-     *
-     * @return a parallel {@code Stream} over the elements in this collection
-     * @since 1.8
+     * Returns an unordered {@link DistributedStream} with this list as its source.
      */
     @Override
     DistributedStream<E> parallelStream();

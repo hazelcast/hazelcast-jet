@@ -32,25 +32,19 @@ import javax.annotation.Nonnull;
 public interface IStreamMap<K, V> extends IMap<K, V> {
 
     /**
-     * Returns a parallel and distributed {@code Stream} with this map as its source.
+     * Returns a {@link DistributedStream} with this map as its source.
      * <p>
      * If the underlying map is concurrently being modified, there are no guarantees
      * given with respect to missing or duplicate items in a stream operation.
-     *
-     * @return a parallel {@code Stream} over the elements in this collection
-     * @since 1.8
      */
     DistributedStream<Entry<K, V>> stream();
 
     /**
-     * Returns a parallel and distributed {@code Stream} with this map as its source.
+     * Returns a {@link DistributedStream} with this map as its source.
      * Entries will be filtered and mapped according to the given predicate and projection.
      * <p>
      * If the underlying map is concurrently being modified, there are no guarantees
      * given with respect to missing or duplicate items in a stream operation.
-     *
-     * @return a parallel {@code Stream} over the elements in this collection
-     * @since 1.8
      */
     <T> DistributedStream<T> stream(@Nonnull Predicate<K, V> predicate,
                                     @Nonnull DistributedFunction<Entry<K, V>, T> projectionFn);

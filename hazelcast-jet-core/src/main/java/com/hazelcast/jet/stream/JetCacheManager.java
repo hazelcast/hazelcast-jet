@@ -20,14 +20,16 @@ package com.hazelcast.jet.stream;
 import com.hazelcast.jet.JetInstance;
 
 /**
- * {@code JetCacheManager} is the entry point to access JSR-107 (JCache) caches via {@link JetInstance} interface.
- * Hazelcast Jet's {@code JetCacheManager} provides access to JCache caches configured cluster-wide,
+ * {@code JetCacheManager} is the entry point to access JSR-107 (JCache) caches
+ * via {@link JetInstance} interface. Hazelcast Jet's {@code JetCacheManager}
+ * provides access to JCache caches configured cluster-wide,
  * even when created by different JCache {@link javax.cache.CacheManager}s.
  * <p>
- * <p>Note that this interface is not related to JCache {@link javax.cache.CacheManager}. Its purpose is to host
- * {@code IStreamCache} related methods, separately from {@link JetInstance}, in order to allow frameworks that make
- * use of reflection and/or dynamic proxies (e.g. Mockito, Spring etc) to operate on {@link JetInstance} when JCache
- * is not on the classpath.
+ * <p>Note that this interface is not related to JCache {@link javax.cache.CacheManager}.
+ * Its purpose is to host {@code IStreamCache} related methods, separately from
+ * {@link JetInstance}, in order to allow frameworks that make
+ * use of reflection and/or dynamic proxies (e.g. Mockito, Spring etc)
+ * to operate on {@link JetInstance} when JCache is not on the classpath.
  * </p>
  *
  * @since 0.5
