@@ -63,6 +63,12 @@ public final class WriteKafkaP<T, K, V> implements Processor {
     }
 
     @Override
+    public boolean tryProcess() {
+        checkError();
+        return true;
+    }
+
+    @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
         checkError();
         inbox.drain((T item) -> {
