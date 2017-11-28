@@ -26,7 +26,6 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -44,12 +43,10 @@ public final class WriteKafkaP<T, K, V> implements Processor {
 
     private final KafkaProducer<K, V> producer;
     private final Function<T, ProducerRecord<K, V>> toRecordFn;
-    private final AtomicInteger numPendingAsyncCalls = new AtomicInteger();
     private final AtomicReference<Throwable> lastError = new AtomicReference<>();
 
     private final Callback callback = (metadata, exception) -> {
         // Note: this method may be called on different thread.
-        numPendingAsyncCalls.decrementAndGet();
         if (exception != null) {
             lastError.compareAndSet(null, exception);
         }
@@ -68,25 +65,30 @@ public final class WriteKafkaP<T, K, V> implements Processor {
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
         checkError();
-        int drainedCount = inbox.drain((T item) -> {
+        inbox.drain((T item) -> {
             // Note: send() method can block even though it is declared to not. This is true for Kafka 1.0 and probably
             // will stay so, unless they change API.
             producer.send(toRecordFn.apply(item), callback);
         });
-        numPendingAsyncCalls.addAndGet(drainedCount);
-        producer.flush();
     }
 
     @Override
     public boolean complete() {
-        checkError();
-        return numPendingAsyncCalls.get() == 0;
+        ensureAllWritten();
+        return true;
     }
 
     @Override
     public boolean saveToSnapshot() {
+        ensureAllWritten();
+        return true;
+    }
+
+    private void ensureAllWritten() {
         checkError();
-        return numPendingAsyncCalls.get() == 0;
+        // flush() should ensure that all lingering records are sent and that all futures from
+        // producer.send() are done.
+        producer.flush();
     }
 
     private void checkError() {
