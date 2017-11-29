@@ -25,6 +25,7 @@ import com.hazelcast.jet.stream.IStreamList;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.jet.stream.JetCacheManager;
 
+import javax.annotation.Nonnull;
 import java.util.Collection;
 
 /**
@@ -36,6 +37,7 @@ public interface JetInstance {
     /**
      * Returns the name of the Jet instance.
      */
+    @Nonnull
     String getName();
 
     /**
@@ -43,35 +45,43 @@ public interface JetInstance {
      * be either a server node or a client, depending on the type of this
      * {@code JetInstance}.
      */
+    @Nonnull
     HazelcastInstance getHazelcastInstance();
 
     /**
      * Returns information about the cluster this Jet instance is part of.
      */
+    @Nonnull
     Cluster getCluster();
 
     /**
      * Returns the configuration for this Jet member. This method is not
      * available on client instances.
      */
+    @Nonnull
     JetConfig getConfig();
 
     /**
      * Creates and returns a Jet job based on the supplied DAG. Jet will
      * asynchronously start executing the job.
      */
-    Job newJob(DAG dag);
+    @Nonnull
+    default Job newJob(DAG dag) {
+        return newJob(dag, new JobConfig());
+    }
 
     /**
      * Creates and returns a Jet job based on the supplied DAG and job
      * configuration. Jet will asynchronously start executing the job.
      */
+    @Nonnull
     Job newJob(DAG dag, JobConfig config);
 
     /**
      * Creates and returns an executable job based on the supplied pipeline.
      * Jet will asynchronously start executing the job.
      */
+    @Nonnull
     default Job newJob(Pipeline pipeline) {
         return newJob(pipeline.toDag());
     }
@@ -80,6 +90,7 @@ public interface JetInstance {
      * Creates and returns a Jet job based on the supplied pipeline and job
      * configuration. Jet will asynchronously start executing the job.
      */
+    @Nonnull
     default Job newJob(Pipeline pipeline, JobConfig config) {
         return newJob(pipeline.toDag(), config);
     }
@@ -87,6 +98,7 @@ public interface JetInstance {
     /**
      * Returns all submitted jobs including running and completed ones
      */
+    @Nonnull
     Collection<Job> getJobs();
 
     /**
@@ -95,6 +107,7 @@ public interface JetInstance {
      * @param name name of the distributed map
      * @return distributed map instance with the specified name
      */
+    @Nonnull
     <K, V> IStreamMap<K, V> getMap(String name);
 
     /**
@@ -104,6 +117,7 @@ public interface JetInstance {
      * @param name name of the distributed list
      * @return distributed list instance with the specified name
      */
+    @Nonnull
     <E> IStreamList<E> getList(String name);
 
     /**
@@ -115,6 +129,7 @@ public interface JetInstance {
      * @return the Hazelcast Jet {@link JetCacheManager}
      * @see JetCacheManager
      */
+    @Nonnull
     JetCacheManager getCacheManager();
 
     /**
