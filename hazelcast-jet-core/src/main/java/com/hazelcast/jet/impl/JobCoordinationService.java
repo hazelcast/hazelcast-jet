@@ -295,6 +295,11 @@ public class JobCoordinationService {
                     + nodeEngine.getClusterService().getMasterAddress());
         }
 
+        JobResult jobResult = jobResults.get(jobId);
+        if (jobResult != null) {
+            return jobResult.getJobStatus();
+        }
+
         MasterContext currentMasterContext = masterContexts.get(jobId);
         if (currentMasterContext != null) {
             return currentMasterContext.jobStatus();
@@ -302,11 +307,6 @@ public class JobCoordinationService {
 
         JobRecord jobRecord = jobRepository.getJob(jobId);
         if (jobRecord == null) {
-            JobResult jobResult = jobResults.get(jobId);
-            if (jobResult != null) {
-                return jobResult.getJobStatus();
-            }
-
             throw new JobNotFoundException(jobId);
         } else {
             return NOT_STARTED;
