@@ -34,6 +34,7 @@ import com.hazelcast.spi.serialization.SerializationService;
 import javax.annotation.Nonnull;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
@@ -52,13 +53,14 @@ public abstract class AbstractJobProxy<T> implements Job {
     // the proxy is created with a new job
     private final boolean shouldRetryJobStatus;
 
+    // flag which indicates if this proxy has sent a request to join the job result or not
+    private volatile AtomicBoolean joinedJob = new AtomicBoolean();
+
     public AbstractJobProxy(T container, long jobId) {
         this.jobId = jobId;
         this.container = container;
         this.logger = createLogger();
         this.shouldRetryJobStatus = false;
-
-        handleInvocation(invokeJoinJob());
     }
 
     public AbstractJobProxy(T container, long jobId, DAG dag, JobConfig config) {
@@ -67,6 +69,7 @@ public abstract class AbstractJobProxy<T> implements Job {
         this.logger = createLogger();
         this.shouldRetryJobStatus = true;
 
+        joinedJob.set(true);
         handleInvocation(invokeSubmitJob(serializationService().toData(dag), config));
     }
 
@@ -77,7 +80,15 @@ public abstract class AbstractJobProxy<T> implements Job {
 
     @Nonnull @Override
     public CompletableFuture<Void> getFuture() {
+        if (joinedJob.compareAndSet(false, true)) {
+            handleInvocation(invokeJoinJob());
+        }
         return future;
+    }
+
+    @Override
+    public String toString() {
+        return "Job{id=" + idToString(jobId) + "}";
     }
 
     /**
@@ -172,4 +183,5 @@ public abstract class AbstractJobProxy<T> implements Job {
             return (cause instanceof LocalMemberResetException);
         }
     }
+
 }
