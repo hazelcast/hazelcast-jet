@@ -41,29 +41,39 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.completeVoidFuture;
 import static com.hazelcast.jet.impl.util.Util.idToString;
 
+/**
+ * Base {@link Job} implementation for both client and member proxy.
+ */
 public abstract class AbstractJobProxy<T> implements Job {
 
     private final long jobId;
-    private final CompletableFuture<Void> future = new CompletableFuture<>();
     private final ILogger logger;
     private final T container;
 
-    // flag to indicate if job status should be retried. This avoids the
-    // race between submitting a job and getting the status for it when
-    // the proxy is created with a new job
+    /**
+     * Future that will be completed when we learn that the coordinator
+     * completed the job, but only if {@link #joinedJob} is true.
+     */
+    private final CompletableFuture<Void> future = new CompletableFuture<>();
+
+    /**
+     * Flag to indicate if job status should be retried. This avoids the
+     * race between submitting a job and getting the status for it when
+     * the proxy is created with a new job.
+     */
     private final boolean shouldRetryJobStatus;
 
-    // flag which indicates if this proxy has sent a request to join the job result or not
-    private volatile AtomicBoolean joinedJob = new AtomicBoolean();
+    /** Flag which indicates if this proxy has sent a request to join the job result or not */
+    private final AtomicBoolean joinedJob = new AtomicBoolean();
 
-    public AbstractJobProxy(T container, long jobId) {
+    AbstractJobProxy(T container, long jobId) {
         this.jobId = jobId;
         this.container = container;
         this.logger = createLogger();
         this.shouldRetryJobStatus = false;
     }
 
-    public AbstractJobProxy(T container, long jobId, DAG dag, JobConfig config) {
+    AbstractJobProxy(T container, long jobId, DAG dag, JobConfig config) {
         this.jobId = jobId;
         this.container = container;
         this.logger = createLogger();
@@ -144,8 +154,7 @@ public abstract class AbstractJobProxy<T> implements Job {
         public synchronized void onFailure(Throwable t) {
             Throwable ex = peel(t);
             if (isSplitBrainMerge(ex)) {
-                String msg = "Job " + idToString(jobId) + " failed because the cluster is performing split-brain " +
-                        "merge.";
+                String msg = "Job " + idToString(jobId) + " failed because the cluster is performing split-brain merge.";
                 logger.fine(msg, ex);
                 future.completeExceptionally(new CancellationException(msg));
             } else if (!isRestartable(ex)) {

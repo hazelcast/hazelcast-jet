@@ -66,7 +66,7 @@ public interface JetInstance {
      * asynchronously start executing the job.
      */
     @Nonnull
-    default Job newJob(DAG dag) {
+    default Job newJob(@Nonnull DAG dag) {
         return newJob(dag, new JobConfig());
     }
 
@@ -75,14 +75,14 @@ public interface JetInstance {
      * configuration. Jet will asynchronously start executing the job.
      */
     @Nonnull
-    Job newJob(DAG dag, JobConfig config);
+    Job newJob(@Nonnull DAG dag, @Nonnull JobConfig config);
 
     /**
      * Creates and returns an executable job based on the supplied pipeline.
      * Jet will asynchronously start executing the job.
      */
     @Nonnull
-    default Job newJob(Pipeline pipeline) {
+    default Job newJob(@Nonnull Pipeline pipeline) {
         return newJob(pipeline.toDag());
     }
 
@@ -91,7 +91,7 @@ public interface JetInstance {
      * configuration. Jet will asynchronously start executing the job.
      */
     @Nonnull
-    default Job newJob(Pipeline pipeline, JobConfig config) {
+    default Job newJob(@Nonnull Pipeline pipeline, @Nonnull JobConfig config) {
         return newJob(pipeline.toDag(), config);
     }
 
@@ -108,7 +108,7 @@ public interface JetInstance {
      * @return distributed map instance with the specified name
      */
     @Nonnull
-    <K, V> IStreamMap<K, V> getMap(String name);
+    <K, V> IStreamMap<K, V> getMap(@Nonnull String name);
 
     /**
      * Returns the distributed list instance with the specified name.
@@ -118,7 +118,7 @@ public interface JetInstance {
      * @return distributed list instance with the specified name
      */
     @Nonnull
-    <E> IStreamList<E> getList(String name);
+    <E> IStreamList<E> getList(@Nonnull String name);
 
     /**
      * Obtain the {@link JetCacheManager} that provides access to JSR-107 (JCache) caches

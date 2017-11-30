@@ -34,6 +34,9 @@ import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 
+/**
+ * {@link com.hazelcast.jet.Job} proxy on member.
+ */
 public class JobProxy extends AbstractJobProxy<NodeEngineImpl> {
 
     public JobProxy(NodeEngineImpl nodeEngine, long jobId) {

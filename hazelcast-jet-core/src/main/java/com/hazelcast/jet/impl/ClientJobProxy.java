@@ -44,13 +44,16 @@ import java.util.concurrent.TimeoutException;
 import static com.hazelcast.jet.impl.util.Util.idToString;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 
+/**
+ * {@link com.hazelcast.jet.Job} proxy on client.
+ */
 public class ClientJobProxy extends AbstractJobProxy<HazelcastClientInstanceImpl> {
 
-    public ClientJobProxy(HazelcastClientInstanceImpl client, long jobId) {
+    ClientJobProxy(HazelcastClientInstanceImpl client, long jobId) {
         super(client, jobId);
     }
 
-    public ClientJobProxy(HazelcastClientInstanceImpl client, long jobId, DAG dag, JobConfig config) {
+    ClientJobProxy(HazelcastClientInstanceImpl client, long jobId, DAG dag, JobConfig config) {
         super(client, jobId, dag, config);
     }
 

@@ -55,12 +55,12 @@ abstract class AbstractJetInstance implements JetInstance {
     }
 
     @Nonnull @Override
-    public <K, V> IStreamMap<K, V> getMap(String name) {
+    public <K, V> IStreamMap<K, V> getMap(@Nonnull String name) {
         return new MapDecorator<>(hazelcastInstance.getMap(name), this);
     }
 
     @Nonnull @Override
-    public <E> IStreamList<E> getList(String name) {
+    public <E> IStreamList<E> getList(@Nonnull String name) {
         return new ListDecorator<>(hazelcastInstance.getList(name), this);
     }
 
