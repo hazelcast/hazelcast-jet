@@ -20,7 +20,8 @@ import java.io.Serializable;
 import java.util.function.ToLongBiFunction;
 
 /**
- * {@code Serializable} variant of {@link ToLongBiFunction java.util.function.ToLongBiFunction}.
+ * {@code Serializable} variant of {@link ToLongBiFunction
+ * java.util.function.ToLongBiFunction}.
  */
 @FunctionalInterface
 public interface DistributedToLongBiFunction<T, U> extends ToLongBiFunction<T, U>, Serializable {

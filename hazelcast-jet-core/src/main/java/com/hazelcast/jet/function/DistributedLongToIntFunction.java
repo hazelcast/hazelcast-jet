@@ -20,7 +20,8 @@ import java.io.Serializable;
 import java.util.function.LongToIntFunction;
 
 /**
- * {@code Serializable} variant of {@link LongToIntFunction java.util.function.LongToIntFunction}.
+ * {@code Serializable} variant of {@link LongToIntFunction
+ * java.util.function.LongToIntFunction}.
  */
 @FunctionalInterface
 public interface DistributedLongToIntFunction extends LongToIntFunction, Serializable {

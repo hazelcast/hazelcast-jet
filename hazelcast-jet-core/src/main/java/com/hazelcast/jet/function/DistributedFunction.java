@@ -21,20 +21,23 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * {@code Serializable} variant of {@link Function java.util.function.Function}.
+ * {@code Serializable} variant of {@link Function
+ * java.util.function.Function}.
  */
 @FunctionalInterface
 public interface DistributedFunction<T, R> extends Function<T, R>, Serializable {
 
     /**
-     * {@code Serializable} variant of {@link Function#identity() java.util.function.Function#identity()}.
+     * {@code Serializable} variant of {@link Function#identity()
+     * java.util.function.Function#identity()}.
      */
     static <T> DistributedFunction<T, T> identity() {
         return t -> t;
     }
 
     /**
-     * {@code Serializable} variant of {@link Function#compose(Function) java.util.function.Function#compose(Function)}.
+     * {@code Serializable} variant of {@link Function#compose(Function)
+     * java.util.function.Function#compose(Function)}.
      */
     default <V> DistributedFunction<V, R> compose(DistributedFunction<? super V, ? extends T> before) {
         Objects.requireNonNull(before);
@@ -42,7 +45,8 @@ public interface DistributedFunction<T, R> extends Function<T, R>, Serializable 
     }
 
     /**
-     * {@code Serializable} variant of {@link Function#andThen(Function) java.util.function.Function#andThen(Function)}.
+     * {@code Serializable} variant of {@link Function#andThen(Function)
+     * java.util.function.Function#andThen(Function)}.
      */
     default <V> DistributedFunction<T, V> andThen(DistributedFunction<? super R, ? extends V> after) {
         Objects.requireNonNull(after);

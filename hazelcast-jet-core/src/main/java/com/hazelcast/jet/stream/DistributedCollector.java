@@ -53,8 +53,8 @@ public interface DistributedCollector<T, A, R> extends Collector<T, A, R>, Seria
     DistributedFunction<A, R> finisher();
 
     /**
-     * {@code Serializable} variant of
-     * {@link Collector#of(Supplier, BiConsumer, BinaryOperator, Characteristics...)
+     * {@code Serializable} variant of {@link
+     * Collector#of(Supplier, BiConsumer, BinaryOperator, Characteristics...)
      * java.util.stream.Collector#of(Supplier, BiConsumer, BinaryOperator, Characteristics...) }
      */
     static <T, R> DistributedCollector<T, R, R> of(DistributedSupplier<R> supplier,
@@ -73,8 +73,8 @@ public interface DistributedCollector<T, A, R> extends Collector<T, A, R>, Seria
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link Collector#of(Supplier, BiConsumer, BinaryOperator, Function, Characteristics...)
+     * {@code Serializable} variant of {@link
+     * Collector#of(Supplier, BiConsumer, BinaryOperator, Function, Characteristics...)
      * java.util.stream.Collector#of(Supplier, BiConsumer, BinaryOperator, Function, Characteristics...) }
      */
     static <T, A, R> DistributedCollector<T, A, R> of(DistributedSupplier<A> supplier,
@@ -97,9 +97,10 @@ public interface DistributedCollector<T, A, R> extends Collector<T, A, R>, Seria
     }
 
     /**
-     * Interface for Jet specific distributed reducers which execute
-     * the terminal reduce operation over the current {@code DistributedStream}
-     * by building and executing a DAG. These reducers can't be used as downstream collectors.
+     * Interface for Jet-specific distributed reducers which execute the
+     * terminal reduce operation over the current {@code DistributedStream}
+     * by building and executing a DAG. These reducers can't be used as
+     * downstream collectors.
      *
      * @param <T> the type of input elements to the reduction operation
      * @param <R> the result type of the reduction operation

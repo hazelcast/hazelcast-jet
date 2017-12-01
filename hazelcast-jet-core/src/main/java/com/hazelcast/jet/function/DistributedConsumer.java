@@ -21,13 +21,15 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
- * {@code Serializable} variant of {@link Consumer java.util.function.Consumer}.
+ * {@code Serializable} variant of {@link Consumer
+ * java.util.function.Consumer}.
  */
 @FunctionalInterface
 public interface DistributedConsumer<T> extends Consumer<T>, Serializable {
 
     /**
-     * {@code Serializable} variant of {@link Consumer#andThen(Consumer) java.util.function.Consumer#andThen(Consumer)}.
+     * {@code Serializable} variant of {@link Consumer#andThen(Consumer)
+     * java.util.function.Consumer#andThen(Consumer)}.
      */
     default DistributedConsumer<T> andThen(DistributedConsumer<? super T> after) {
         Objects.requireNonNull(after);

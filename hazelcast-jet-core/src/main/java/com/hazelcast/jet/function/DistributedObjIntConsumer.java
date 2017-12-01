@@ -20,7 +20,8 @@ import java.io.Serializable;
 import java.util.function.ObjIntConsumer;
 
 /**
- * {@code Serializable} variant of {@link ObjIntConsumer java.util.function.ObjIntConsumer}.
+ * {@code Serializable} variant of {@link ObjIntConsumer
+ * java.util.function.ObjIntConsumer}.
  */
 @FunctionalInterface
 public interface DistributedObjIntConsumer<T> extends ObjIntConsumer<T>, Serializable {

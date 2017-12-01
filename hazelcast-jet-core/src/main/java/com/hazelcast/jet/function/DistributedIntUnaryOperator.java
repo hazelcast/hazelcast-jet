@@ -21,22 +21,23 @@ import java.util.Objects;
 import java.util.function.IntUnaryOperator;
 
 /**
- * {@code Serializable} variant of {@link IntUnaryOperator java.util.function.IntUnaryOperator}.
+ * {@code Serializable} variant of {@link IntUnaryOperator
+ * java.util.function.IntUnaryOperator}.
  */
 @FunctionalInterface
 public interface DistributedIntUnaryOperator extends IntUnaryOperator, Serializable {
 
     /**
-     * {@code Serializable} variant of
-     * {@link IntUnaryOperator#identity() java.util.function.IntUnaryOperator#identity()}.
+     * {@code Serializable} variant of {@link
+     * IntUnaryOperator#identity() java.util.function.IntUnaryOperator#identity()}.
      */
     static DistributedIntUnaryOperator identity() {
         return t -> t;
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link IntUnaryOperator#compose(IntUnaryOperator)
+     * {@code Serializable} variant of {@link
+     * IntUnaryOperator#compose(IntUnaryOperator)
      * java.util.function.IntUnaryOperator#compose(IntUnaryOperator)}.
      */
     default DistributedIntUnaryOperator compose(DistributedIntUnaryOperator before) {
@@ -45,8 +46,8 @@ public interface DistributedIntUnaryOperator extends IntUnaryOperator, Serializa
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link IntUnaryOperator#andThen(IntUnaryOperator)
+     * {@code Serializable} variant of {@link
+     * IntUnaryOperator#andThen(IntUnaryOperator)
      * java.util.function.IntUnaryOperator#andThen(IntUnaryOperator)}.
      */
     default DistributedIntUnaryOperator andThen(DistributedIntUnaryOperator after) {

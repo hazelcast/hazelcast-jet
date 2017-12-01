@@ -20,7 +20,8 @@ import java.io.Serializable;
 import java.util.function.ToIntBiFunction;
 
 /**
- * {@code Serializable} variant of {@link ToIntBiFunction java.util.function.ToIntBiFunction}.
+ * {@code Serializable} variant of {@link ToIntBiFunction
+ * java.util.function.ToIntBiFunction}.
  */
 @FunctionalInterface
 public interface DistributedToIntBiFunction<T, U> extends ToIntBiFunction<T, U>, Serializable {

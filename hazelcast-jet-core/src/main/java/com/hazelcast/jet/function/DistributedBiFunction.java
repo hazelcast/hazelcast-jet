@@ -19,17 +19,18 @@ package com.hazelcast.jet.function;
 import java.io.Serializable;
 import java.util.Objects;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 /**
- * {@code Serializable} variant of {@link BiFunction java.util.function.BiFunction}.
+ * {@code Serializable} variant of {@link
+ * BiFunction java.util.function.BiFunction}.
  */
 @FunctionalInterface
 public interface DistributedBiFunction<T, U, R> extends BiFunction<T, U, R>, Serializable {
 
     /**
-     * {@code Serializable} variant of
-     * {@link BiFunction#andThen(Function) java.util.function.BiFunction#andThen(Function)}.
+     * {@code Serializable} variant of {@link
+     * BiFunction#andThen(java.util.Function)
+     * java.util.function.BiFunction#andThen(Function)}.
      */
     default <V> DistributedBiFunction<T, U, V> andThen(DistributedFunction<? super R, ? extends V> after) {
         Objects.requireNonNull(after);

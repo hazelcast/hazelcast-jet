@@ -59,8 +59,8 @@ import java.util.stream.Stream;
 
 /**
  * An extension of {@link Stream} that supports distributed stream
- * operations by replacing functional interfaces with their {@code Serializable}
- * equivalents.
+ * operations by replacing functional interfaces with their {@code
+ * Serializable} equivalents.
  *
  * @param <T> the type of the stream elements
  */

@@ -20,7 +20,8 @@ import java.io.Serializable;
 import java.util.function.IntFunction;
 
 /**
- * {@code Serializable} variant of {@link IntFunction java.util.function.IntFunction}.
+ * {@code Serializable} variant of {@link IntFunction
+ * java.util.function.IntFunction}.
  */
 @FunctionalInterface
 public interface DistributedIntFunction<R> extends IntFunction<R>, Serializable {

@@ -25,7 +25,7 @@ import com.hazelcast.jet.JetInstance;
  * provides access to JCache caches configured cluster-wide,
  * even when created by different JCache {@link javax.cache.CacheManager}s.
  * <p>
- * <p>Note that this interface is not related to JCache {@link javax.cache.CacheManager}.
+ * Note that this interface is not related to JCache {@link javax.cache.CacheManager}.
  * Its purpose is to host {@code IStreamCache} related methods, separately from
  * {@link JetInstance}, in order to allow frameworks that make
  * use of reflection and/or dynamic proxies (e.g. Mockito, Spring etc)
@@ -37,28 +37,14 @@ import com.hazelcast.jet.JetInstance;
 public interface JetCacheManager {
 
     /**
-     * <p>
-     * Returns the cache instance with the specified prefixed cache name.
-     * </p>
-     *
-     * <p>
-     * Prefixed cache name is the name with URI and classloader prefixes if available.
-     * There is no Hazelcast prefix ({@code /hz/}). For example, {@code myURI/foo}.
-     *
+     * Returns the cache instance with the specified, optionally prefixed, cache
+     * name:
      * <pre>
-     * <code>
-     *     &lt;prefixed_cache_name&gt; = [&lt;uri_prefix&gt;/] + [&lt;cl_prefix&gt;/] + &lt;pure_cache_name&gt;
-     * </code>
+     * &lt;prefixed_cache_name&gt; = [&lt;uri_prefix&gt;/][&lt;cl_prefix&gt;/]&lt;simple_cache_name&gt;
      * </pre>
-     * where {@code <pure_cache_name>} is the cache name without any prefix. For example {@code foo}.
-     *
-     * As seen from the definition, URI and classloader prefixes are optional.
-     *
-     * URI prefix is generated as content of this URI as a US-ASCII string. ({@code uri.toASCIIString()})
-     * Classloader prefix is generated as string representation of the specified classloader. ({@code cl.toString()})
-     *
+     * where {@code <simple_cache_name>} is the cache name without any prefix.
+     * <p>
      * @see com.hazelcast.cache.CacheUtil#getPrefixedCacheName(String, java.net.URI, ClassLoader)
-     * </p>
      *
      * @param name the prefixed name of the cache
      * @return the cache instance with the specified prefixed name

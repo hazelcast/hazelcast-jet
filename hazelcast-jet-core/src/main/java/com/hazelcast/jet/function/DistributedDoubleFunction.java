@@ -20,7 +20,8 @@ import java.io.Serializable;
 import java.util.function.DoubleFunction;
 
 /**
- * {@code Serializable} variant of {@link DoubleFunction java.util.function.DoubleFunction}.
+ * {@code Serializable} variant of {@link DoubleFunction
+ * java.util.function.DoubleFunction}.
  */
 @FunctionalInterface
 public interface DistributedDoubleFunction<R> extends DoubleFunction<R>, Serializable {

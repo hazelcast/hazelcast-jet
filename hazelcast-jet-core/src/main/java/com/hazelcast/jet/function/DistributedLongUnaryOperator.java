@@ -21,22 +21,23 @@ import java.util.Objects;
 import java.util.function.LongUnaryOperator;
 
 /**
- * {@code Serializable} variant of {@link LongUnaryOperator java.util.function.LongUnaryOperator}.
+ * {@code Serializable} variant of {@link LongUnaryOperator
+ * java.util.function.LongUnaryOperator}.
  */
 @FunctionalInterface
 public interface DistributedLongUnaryOperator extends LongUnaryOperator, Serializable {
 
     /**
-     * {@code Serializable} variant of
-     * {@link LongUnaryOperator#identity() java.util.function.LongUnaryOperator#identity()}.
+     * {@code Serializable} variant of {@link LongUnaryOperator#identity()
+     * java.util.function.LongUnaryOperator#identity()}.
      */
     static DistributedLongUnaryOperator identity() {
         return t -> t;
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link LongUnaryOperator#compose(LongUnaryOperator)
+     * {@code Serializable} variant of {@link
+     * LongUnaryOperator#compose(LongUnaryOperator)
      * java.util.function.LongUnaryOperator#compose(LongUnaryOperator)}.
      */
     default DistributedLongUnaryOperator compose(DistributedLongUnaryOperator before) {
@@ -45,8 +46,8 @@ public interface DistributedLongUnaryOperator extends LongUnaryOperator, Seriali
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link LongUnaryOperator#andThen(LongUnaryOperator)
+     * {@code Serializable} variant of {@link
+     * LongUnaryOperator#andThen(LongUnaryOperator)
      * java.util.function.LongUnaryOperator#andThen(LongUnaryOperator)}.
      */
     default DistributedLongUnaryOperator andThen(DistributedLongUnaryOperator after) {

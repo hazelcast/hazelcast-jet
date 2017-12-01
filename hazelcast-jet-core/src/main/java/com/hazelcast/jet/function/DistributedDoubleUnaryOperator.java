@@ -21,22 +21,23 @@ import java.util.Objects;
 import java.util.function.DoubleUnaryOperator;
 
 /**
- * {@code Serializable} variant of {@link DoubleUnaryOperator java.util.function.DoubleUnaryOperator}.
+ * {@code Serializable} variant of {@link DoubleUnaryOperator
+ * java.util.function.DoubleUnaryOperator}.
  */
 @FunctionalInterface
 public interface DistributedDoubleUnaryOperator extends DoubleUnaryOperator, Serializable {
 
     /**
-     * {@code Serializable} variant of
-     * {@link DoubleUnaryOperator#identity() java.util.function.DoubleUnaryOperator#identity()}.
+     * {@code Serializable} variant of {@link
+     * DoubleUnaryOperator#identity() java.util.function.DoubleUnaryOperator#identity()}.
      */
     static DistributedDoubleUnaryOperator identity() {
         return t -> t;
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link DoubleUnaryOperator#compose(DoubleUnaryOperator)
+     * {@code Serializable} variant of {@link
+     * DoubleUnaryOperator#compose(DoubleUnaryOperator)
      * java.util.function.DoubleUnaryOperator#compose(DoubleUnaryOperator)}.
      */
     default DistributedDoubleUnaryOperator compose(DistributedDoubleUnaryOperator before) {
@@ -45,8 +46,8 @@ public interface DistributedDoubleUnaryOperator extends DoubleUnaryOperator, Ser
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link DoubleUnaryOperator#andThen(DoubleUnaryOperator)
+     * {@code Serializable} variant of {@link
+     * DoubleUnaryOperator#andThen(DoubleUnaryOperator)
      * java.util.function.DoubleUnaryOperator#andThen(DoubleUnaryOperator)}.
      */
     default DistributedDoubleUnaryOperator andThen(DistributedDoubleUnaryOperator after) {

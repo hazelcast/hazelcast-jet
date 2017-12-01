@@ -21,14 +21,16 @@ import java.util.Objects;
 import java.util.function.IntPredicate;
 
 /**
- * {@code Serializable} variant of {@link IntPredicate java.util.function.IntPredicate}.
+ * {@code Serializable} variant of {@link IntPredicate
+ * java.util.function.IntPredicate}.
  */
 @FunctionalInterface
 public interface DistributedIntPredicate extends IntPredicate, Serializable {
 
     /**
-     * {@code Serializable} variant of
-     * {@link IntPredicate#and(IntPredicate) java.util.function.IntPredicate#and(IntPredicate)}.
+     * {@code Serializable} variant of {@link
+     * IntPredicate#and(IntPredicate)
+     * java.util.function.IntPredicate#and(IntPredicate)}.
      */
     default DistributedIntPredicate and(DistributedIntPredicate other) {
         Objects.requireNonNull(other);
@@ -36,8 +38,7 @@ public interface DistributedIntPredicate extends IntPredicate, Serializable {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link IntPredicate#negate()}.
+     * {@code Serializable} variant of {@link IntPredicate#negate()}.
      */
     @Override
     default DistributedIntPredicate negate() {
@@ -45,8 +46,9 @@ public interface DistributedIntPredicate extends IntPredicate, Serializable {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link IntPredicate#or(IntPredicate) java.util.function.IntPredicate#or(IntPredicate)}.
+     * {@code Serializable} variant of {@link
+     * IntPredicate#or(IntPredicate)
+     * java.util.function.IntPredicate#or(IntPredicate)}.
      */
     default DistributedIntPredicate or(DistributedIntPredicate other) {
         Objects.requireNonNull(other);

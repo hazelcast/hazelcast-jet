@@ -20,7 +20,8 @@ import java.io.Serializable;
 import java.util.function.LongSupplier;
 
 /**
- * {@code Serializable} variant of {@link LongSupplier java.util.function.LongSupplier}.
+ * {@code Serializable} variant of {@link LongSupplier
+ * java.util.function.LongSupplier}.
  */
 @FunctionalInterface
 public interface DistributedLongSupplier extends LongSupplier, Serializable {

@@ -50,8 +50,8 @@ import java.util.stream.IntStream;
 public interface DistributedIntStream extends IntStream {
 
     /**
-     * {@code Serializable} variant of
-     * {@link IntStream#filter(IntPredicate) java.util.stream.IntStream#filter(IntPredicate)}.
+     * {@code Serializable} variant of {@link
+     * IntStream#filter(IntPredicate) java.util.stream.IntStream#filter(IntPredicate)}.
      */
     default DistributedIntStream filter(DistributedIntPredicate predicate) {
         return filter((IntPredicate) predicate);
@@ -75,7 +75,8 @@ public interface DistributedIntStream extends IntStream {
 
     /**
      * {@code Serializable} variant of
-     * {@link IntStream#mapToLong(IntToLongFunction) java.util.stream.IntStream#mapToLong(IntToLongFunction)}.
+     * {@link IntStream#mapToLong(IntToLongFunction)
+     * java.util.stream.IntStream#mapToLong(IntToLongFunction)}.
      */
     default DistributedLongStream mapToLong(DistributedIntToLongFunction mapper) {
         return mapToLong((IntToLongFunction) mapper);
@@ -83,7 +84,8 @@ public interface DistributedIntStream extends IntStream {
 
     /**
      * {@code Serializable} variant of
-     * {@link IntStream#mapToDouble(IntToDoubleFunction) java.util.stream.IntStream#mapToDouble(IntToDoubleFunction)}.
+     * {@link IntStream#mapToDouble(IntToDoubleFunction)
+     * java.util.stream.IntStream#mapToDouble(IntToDoubleFunction)}.
      */
     default DistributedDoubleStream mapToDouble(DistributedIntToDoubleFunction mapper) {
         return mapToDouble((IntToDoubleFunction) mapper);
@@ -91,7 +93,8 @@ public interface DistributedIntStream extends IntStream {
 
     /**
      * {@code Serializable} variant of
-     * {@link IntStream#flatMap(IntFunction) java.util.stream.IntStream#flatMap(IntFunction)}.
+     * {@link IntStream#flatMap(IntFunction)
+     * java.util.stream.IntStream#flatMap(IntFunction)}.
      */
     default DistributedIntStream flatMap(DistributedIntFunction<? extends IntStream> mapper) {
         return flatMap((IntFunction<? extends IntStream>) mapper);
@@ -105,7 +108,8 @@ public interface DistributedIntStream extends IntStream {
 
     /**
      * {@code Serializable} variant of
-     * {@link IntStream#peek(IntConsumer) java.util.stream.IntStream#peek(IntConsumer)}.
+     * {@link IntStream#peek(IntConsumer)
+     * java.util.stream.IntStream#peek(IntConsumer)}.
      */
     default DistributedIntStream peek(DistributedIntConsumer action) {
         return peek((IntConsumer) action);
@@ -119,7 +123,8 @@ public interface DistributedIntStream extends IntStream {
 
     /**
      * {@code Serializable} variant of
-     * {@link IntStream#reduce(int, IntBinaryOperator) java.util.stream.IntStream#reduce(int, IntBinaryOperator)}.
+     * {@link IntStream#reduce(int, IntBinaryOperator)
+     * java.util.stream.IntStream#reduce(int, IntBinaryOperator)}.
      */
     default int reduce(int identity, DistributedIntBinaryOperator op) {
         return reduce(identity, (IntBinaryOperator) op);
@@ -127,7 +132,8 @@ public interface DistributedIntStream extends IntStream {
 
     /**
      * {@code Serializable} variant of
-     * {@link IntStream#reduce(IntBinaryOperator) java.util.stream.IntStream#reduce(IntBinaryOperator)}.
+     * {@link IntStream#reduce(IntBinaryOperator)
+     * java.util.stream.IntStream#reduce(IntBinaryOperator)}.
      */
     default OptionalInt reduce(DistributedIntBinaryOperator op) {
         return reduce((IntBinaryOperator) op);
@@ -145,7 +151,8 @@ public interface DistributedIntStream extends IntStream {
 
     /**
      * {@code Serializable} variant of
-     * {@link IntStream#anyMatch(IntPredicate) java.util.stream.IntStream#anyMatch(IntPredicate)}.
+     * {@link IntStream#anyMatch(IntPredicate)
+     * java.util.stream.IntStream#anyMatch(IntPredicate)}.
      */
     default boolean anyMatch(DistributedIntPredicate predicate) {
         return anyMatch((IntPredicate) predicate);
@@ -161,7 +168,8 @@ public interface DistributedIntStream extends IntStream {
 
     /**
      * {@code Serializable} variant of
-     * {@link IntStream#noneMatch(IntPredicate) java.util.stream.IntStream#noneMatch(IntPredicate)}.
+     * {@link IntStream#noneMatch(IntPredicate)
+     * java.util.stream.IntStream#noneMatch(IntPredicate)}.
      */
     default boolean noneMatch(DistributedIntPredicate predicate) {
         return noneMatch((IntPredicate) predicate);
@@ -188,7 +196,8 @@ public interface DistributedIntStream extends IntStream {
     @Override
     DistributedIntStream map(IntUnaryOperator mapper);
 
-    @Override <U> DistributedStream<U> mapToObj(IntFunction<? extends U> mapper);
+    @Override
+    <U> DistributedStream<U> mapToObj(IntFunction<? extends U> mapper);
 
     @Override
     DistributedLongStream mapToLong(IntToLongFunction mapper);
@@ -208,7 +217,8 @@ public interface DistributedIntStream extends IntStream {
     @Override
     OptionalInt reduce(IntBinaryOperator op);
 
-    @Override <R> R collect(Supplier<R> supplier, ObjIntConsumer<R> accumulator, BiConsumer<R, R> combiner);
+    @Override
+    <R> R collect(Supplier<R> supplier, ObjIntConsumer<R> accumulator, BiConsumer<R, R> combiner);
 
     @Override
     boolean anyMatch(IntPredicate predicate);

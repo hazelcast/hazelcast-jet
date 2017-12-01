@@ -20,7 +20,8 @@ import java.io.Serializable;
 import java.util.function.ObjDoubleConsumer;
 
 /**
- * {@code Serializable} variant of {@link ObjDoubleConsumer java.util.function.ObjDoubleConsumer}.
+ * {@code Serializable} variant of {@link ObjDoubleConsumer
+ * java.util.function.ObjDoubleConsumer}.
  */
 @FunctionalInterface
 public interface DistributedObjDoubleConsumer<T> extends ObjDoubleConsumer<T>, Serializable {

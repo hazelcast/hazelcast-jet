@@ -20,14 +20,16 @@ import java.io.Serializable;
 import java.util.function.UnaryOperator;
 
 /**
- * {@code Serializable} variant of {@link UnaryOperator java.util.function.UnaryOperator}.
+ * {@code Serializable} variant of {@link UnaryOperator
+ * java.util.function.UnaryOperator}.
  */
 @FunctionalInterface
 public interface DistributedUnaryOperator<T>
         extends DistributedFunction<T, T>, UnaryOperator<T>, Serializable {
 
     /**
-     * {@code Serializable} variant of {@link UnaryOperator#identity() java.util.function.UnaryOperator#identity()}.
+     * {@code Serializable} variant of {@link UnaryOperator#identity()
+     * java.util.function.UnaryOperator#identity()}.
      */
     static <T> DistributedUnaryOperator<T> identity() {
         return t -> t;

@@ -22,8 +22,8 @@ import java.util.Map;
 
 
 /**
- * A decorator for {@link ICache} for supporting distributed {@link java.util.stream.Stream}
- * implementation.
+ * A decorator for {@link ICache} that provides a distributed
+ * {@link java.util.stream.Stream} implementation.
  *
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
@@ -33,9 +33,9 @@ public interface IStreamCache<K, V> extends ICache<K, V> {
     /**
      * Returns a {@link DistributedStream} with this cache as its source.
      * <p>
-     * If the underlying cache is concurrently being modified, there are no guarantees
-     * given with respect to missing or duplicate items in a stream operation.
+     * If the underlying cache is is being concurrently modified, there are no
+     * guarantees given with respect to missing or duplicate items in a
+     * stream operation.
      */
     DistributedStream<Map.Entry<K, V>> stream();
-
 }

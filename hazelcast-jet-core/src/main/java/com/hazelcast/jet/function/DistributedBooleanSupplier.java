@@ -20,7 +20,8 @@ import java.io.Serializable;
 import java.util.function.BooleanSupplier;
 
 /**
- * {@code Serializable} variant of {@link BooleanSupplier java.util.function.BooleanSupplier}.
+ * {@code Serializable} variant of {@link BooleanSupplier
+ * java.util.function.BooleanSupplier}.
  */
 @FunctionalInterface
 public interface DistributedBooleanSupplier extends BooleanSupplier, Serializable {

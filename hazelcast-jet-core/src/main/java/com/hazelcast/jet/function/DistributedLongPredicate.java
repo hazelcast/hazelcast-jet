@@ -21,14 +21,16 @@ import java.util.Objects;
 import java.util.function.LongPredicate;
 
 /**
- * {@code Serializable} variant of {@link LongPredicate java.util.function.LongPredicate}.
+ * {@code Serializable} variant of {@link LongPredicate
+ * java.util.function.LongPredicate}.
  */
 @FunctionalInterface
 public interface DistributedLongPredicate extends LongPredicate, Serializable {
 
     /**
-     * {@code Serializable} variant of
-     * {@link LongPredicate#and(LongPredicate) java.util.function.LongPredicate#and(LongPredicate)}.
+     * {@code Serializable} variant of {@link
+     * LongPredicate#and(LongPredicate)
+     * java.util.function.LongPredicate#and(LongPredicate)}.
      */
     default DistributedLongPredicate and(DistributedLongPredicate other) {
         Objects.requireNonNull(other);
@@ -36,8 +38,7 @@ public interface DistributedLongPredicate extends LongPredicate, Serializable {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link LongPredicate#negate()}.
+     * {@code Serializable} variant of {@link LongPredicate#negate()}.
      */
     @Override
     default DistributedLongPredicate negate() {
@@ -45,8 +46,9 @@ public interface DistributedLongPredicate extends LongPredicate, Serializable {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link LongPredicate#or(LongPredicate) java.util.function.LongPredicate#or(LongPredicate)}.
+     * {@code Serializable} variant of {@link
+     * LongPredicate#or(LongPredicate)
+     * java.util.function.LongPredicate#or(LongPredicate)}.
      */
     default DistributedLongPredicate or(DistributedLongPredicate other) {
         Objects.requireNonNull(other);

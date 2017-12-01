@@ -20,7 +20,8 @@ import java.io.Serializable;
 import java.util.function.LongBinaryOperator;
 
 /**
- * {@code Serializable} variant of {@link LongBinaryOperator java.util.function.LongBinaryOperator}.
+ * {@code Serializable} variant of {@link LongBinaryOperator
+ * java.util.function.LongBinaryOperator}.
  */
 @FunctionalInterface
 public interface DistributedLongBinaryOperator extends LongBinaryOperator, Serializable {

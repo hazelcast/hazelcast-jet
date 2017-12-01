@@ -20,7 +20,8 @@ import java.io.Serializable;
 import java.util.function.IntBinaryOperator;
 
 /**
- * {@code Serializable} variant of {@link IntBinaryOperator java.util.function.IntBinaryOperator}.
+ * {@code Serializable} variant of {@link IntBinaryOperator
+ * java.util.function.IntBinaryOperator}.
  */
 @FunctionalInterface
 public interface DistributedIntBinaryOperator extends IntBinaryOperator, Serializable {

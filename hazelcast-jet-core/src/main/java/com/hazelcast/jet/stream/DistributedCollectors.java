@@ -75,7 +75,8 @@ import static java.util.Collections.emptySet;
 import static java.util.Collections.unmodifiableSet;
 
 /**
- * {@code Serializable} variants of {@link java.util.stream.Collectors java.util.stream.Collectors}.
+ * {@code Serializable} variants of {@link java.util.stream.Collectors
+ * java.util.stream.Collectors}.
  */
 @SuppressWarnings("checkstyle:methodcount")
 public abstract class DistributedCollectors {
@@ -97,8 +98,9 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#toCollection(Supplier) java.util.stream.Collectors#toCollection(Supplier)}
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#toCollection(Supplier)
+     * java.util.stream.Collectors#toCollection(Supplier)}
      */
     public static <T, C extends Collection<T>> DistributedCollector<T, ?, C> toCollection(
             DistributedSupplier<C> collectionFactory
@@ -112,8 +114,9 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#toList() java.util.stream.Collectors#toList()}
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#toList()
+     * java.util.stream.Collectors#toList()}
      */
     public static <T> DistributedCollector<T, ?, List<T>> toList() {
         return new DistributedCollectorImpl<>(ArrayList::new, List::add,
@@ -125,8 +128,9 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#toSet() java.util.stream.Collectors#toSet()}
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#toSet()
+     * java.util.stream.Collectors#toSet()}
      */
     public static <T> DistributedCollector<T, ?, Set<T>> toSet() {
         return new DistributedCollectorImpl<>((DistributedSupplier<Set<T>>) HashSet::new, Set<T>::add,
@@ -138,8 +142,9 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#joining() java.util.stream.Collectors#joining()}
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#joining()
+     * java.util.stream.Collectors#joining()}
      */
     public static DistributedCollector<CharSequence, ?, String> joining() {
         return new DistributedCollectorImpl<>(
@@ -152,16 +157,17 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#joining(CharSequence) java.util.stream.Collectors#joining(CharSequence)}
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#joining(CharSequence)
+     * java.util.stream.Collectors#joining(CharSequence)}
      */
     public static DistributedCollector<CharSequence, ?, String> joining(CharSequence delimiter) {
         return joining(delimiter, "", "");
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#joining(CharSequence, CharSequence, CharSequence)
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#joining(CharSequence, CharSequence, CharSequence)
      * java.util.stream.Collectors#joining(CharSequence, CharSequence, CharSequence)}
      */
     public static DistributedCollector<CharSequence, ?, String> joining(
@@ -174,8 +180,8 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#mapping(Function, Collector)
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#mapping(Function, Collector)
      * java.util.stream.Collectors#mapping(Function, Collector)}
      */
     public static <T, U, A, R> DistributedCollector<T, ?, R> mapping(
@@ -189,9 +195,9 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#collectingAndThen(Collector, Function)
-     * java.util.stream.Collectors#mapping(Collector, Function)}
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#collectingAndThen(Collector, Function)
+     * java.util.stream.Collectors#collectingAndThen(Collector, Function)
      */
     public static <T, A, R, RR> DistributedCollector<T, A, RR> collectingAndThen(
             DistributedCollector<T, A, R> downstream,
@@ -215,16 +221,18 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#counting() java.util.stream.Collectors#counting()}
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#counting()
+     * java.util.stream.Collectors#counting()}
      */
     public static <T> DistributedCollector<T, ?, Long> counting() {
         return reducing(0L, e -> 1L, Long::sum);
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#minBy(Comparator) java.util.stream.Collectors#minBy(Comparator)}
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#minBy(Comparator)
+     * java.util.stream.Collectors#minBy(Comparator)}
      */
     public static <T> DistributedCollector<T, ?, DistributedOptional<T>> minBy(
             DistributedComparator<? super T> comparator
@@ -233,8 +241,9 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#maxBy(Comparator) java.util.stream.Collectors#maxBy(Comparator)}
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#maxBy(Comparator)
+     * java.util.stream.Collectors#maxBy(Comparator)}
      */
     public static <T> DistributedCollector<T, ?, DistributedOptional<T>> maxBy(
             DistributedComparator<? super T> comparator
@@ -243,8 +252,9 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#summingInt(ToIntFunction) java.util.stream.Collectors#summingInt(ToIntFunction)}
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#summingInt(ToIntFunction)
+     * java.util.stream.Collectors#summingInt(ToIntFunction)}
      */
     public static <T> DistributedCollector<T, ?, Integer> summingInt(DistributedToIntFunction<? super T> mapper) {
         return new DistributedCollectorImpl<>(
@@ -258,8 +268,8 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#summingLong(ToLongFunction)
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#summingLong(ToLongFunction)
      * java.util.stream.Collectors#summingLong(ToLongFunction)}
      */
     public static <T> DistributedCollector<T, ?, Long> summingLong(DistributedToLongFunction<? super T> mapper) {
@@ -276,8 +286,8 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#summingDouble(ToDoubleFunction)
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#summingDouble(ToDoubleFunction)
      * java.util.stream.Collectors#summingDouble(ToDoubleFunction)}
      */
     public static <T> DistributedCollector<T, ?, Double> summingDouble(DistributedToDoubleFunction<? super T> mapper) {
@@ -305,8 +315,8 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#averagingInt(ToIntFunction)
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#averagingInt(ToIntFunction)
      * java.util.stream.Collectors#averagingInt(ToIntFunction)}
      */
     public static <T> DistributedCollector<T, ?, Double> averagingInt(DistributedToIntFunction<? super T> mapper) {
@@ -325,8 +335,8 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#averagingLong(ToLongFunction)
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#averagingLong(ToLongFunction)
      * java.util.stream.Collectors#averagingLong(ToLongFunction)}
      */
     public static <T> DistributedCollector<T, ?, Double> averagingLong(DistributedToLongFunction<? super T> mapper) {
@@ -345,8 +355,8 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#averagingDouble(ToDoubleFunction)
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#averagingDouble(ToDoubleFunction)
      * java.util.stream.Collectors#averagingDouble(ToDoubleFunction)}
      */
     @SuppressWarnings("checkstyle:magicnumber")
@@ -378,8 +388,8 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#reducing(Object, BinaryOperator)}
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#reducing(Object, BinaryOperator)}
      * java.util.stream.Collectors#reducing(Object, BinaryOperator)}
      */
     public static <T> DistributedCollector<T, ?, T> reducing(T identity, DistributedBinaryOperator<T> op) {
@@ -395,15 +405,16 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#reducing(BinaryOperator) java.util.stream.Collectors#reducing(BinaryOperator)}
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#reducing(BinaryOperator)
+     * java.util.stream.Collectors#reducing(BinaryOperator)}
      */
     public static <T> DistributedCollector<T, ?, DistributedOptional<T>> reducing(
             DistributedBinaryOperator<T> op
     ) {
         class OptionalBox implements DistributedConsumer<T> {
-            T value;
-            boolean present;
+            private T value;
+            private boolean present;
 
             @Override
             public void accept(T t) {
@@ -428,8 +439,8 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#reducing(Object, Function, BinaryOperator)
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#reducing(Object, Function, BinaryOperator)
      * java.util.stream.Collectors#reducing(Object, Function, BinaryOperator)}
      */
     public static <T, U> DistributedCollector<T, ?, U> reducing(
@@ -446,8 +457,9 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#groupingBy(Function) java.util.stream.Collectors#reducing(Function)}
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#groupingBy(Function)
+     * java.util.stream.Collectors#groupingBy(Function)}
      */
     public static <T, K> DistributedCollector<T, ?, Map<K, List<T>>> groupingBy(
             DistributedFunction<? super T, ? extends K> classifier
@@ -456,8 +468,8 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#groupingBy(Function, Collector)
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#groupingBy(Function, Collector)
      * java.util.stream.Collectors#groupingBy(Function, Collector)}
      */
     public static <T, K, A, D> DistributedCollector<T, ?, Map<K, D>> groupingBy(
@@ -468,8 +480,8 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#groupingBy(Function, Supplier, Collector)
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#groupingBy(Function, Supplier, Collector)
      * java.util.stream.Collectors#groupingBy(Function, Supplier, Collector)}
      */
     public static <T, K, D, A, M extends Map<K, D>> DistributedCollector<T, ?, M> groupingBy(
@@ -505,8 +517,8 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#partitioningBy(Predicate)
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#partitioningBy(Predicate)
      * java.util.stream.Collectors#partitioningBy(Predicate)}
      */
     public static <T> Collector<T, ?, Map<Boolean, List<T>>> partitioningBy(
@@ -516,8 +528,8 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#partitioningBy(Predicate, Collector)
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#partitioningBy(Predicate, Collector)
      * java.util.stream.Collectors#partitioningBy(Predicate, Collector)}
      */
     public static <T, D, A> Collector<T, ?, Map<Boolean, D>> partitioningBy(
@@ -544,8 +556,8 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#toMap(Function, Function)
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#toMap(Function, Function)
      * java.util.stream.Collectors#toMap(Function, Function)}
      */
     public static <T, K, U> DistributedCollector<T, ?, Map<K, U>> toMap(
@@ -556,8 +568,8 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#toMap(Function, Function, BinaryOperator)
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#toMap(Function, Function, BinaryOperator)
      * java.util.stream.Collectors#toMap(Function, Function, BinaryOperator)}
      */
     public static <T, K, U> Collector<T, ?, Map<K, U>> toMap(
@@ -569,8 +581,8 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#toMap(Function, Function, BinaryOperator, Supplier)
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#toMap(Function, Function, BinaryOperator, Supplier)
      * java.util.stream.Collectors#toMap(Function, Function, BinaryOperator, Supplier)}
      */
     public static <T, K, U, M extends Map<K, U>> DistributedCollector<T, ?, M> toMap(
@@ -586,8 +598,8 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#summarizingInt(ToIntFunction)
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#summarizingInt(ToIntFunction)
      * java.util.stream.Collectors#summarizingInt(ToIntFunction)}
      */
     public static <T> DistributedCollector<T, ?, IntSummaryStatistics> summarizingInt(
@@ -603,8 +615,8 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#summarizingLong(ToLongFunction)
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#summarizingLong(ToLongFunction)
      * java.util.stream.Collectors#summarizingLong(ToLongFunction)}
      */
     public static <T> DistributedCollector<T, ?, LongSummaryStatistics> summarizingLong(
@@ -620,8 +632,8 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link java.util.stream.Collectors#summarizingDouble(ToDoubleFunction)
+     * {@code Serializable} variant of {@link
+     * java.util.stream.Collectors#summarizingDouble(ToDoubleFunction)
      * java.util.stream.Collectors#summarizingDouble(ToDoubleFunction)}
      */
     public static <T> DistributedCollector<T, ?, DoubleSummaryStatistics> summarizingDouble(
@@ -653,11 +665,7 @@ public abstract class DistributedCollectors {
         };
     }
 
-    static <I, R> DistributedFunction<I, R> castingIdentity() {
-        return i -> (R) i;
-    }
-
-    static double[] sumWithCompensation(double[] intermediateSum, double value) {
+    private static double[] sumWithCompensation(double[] intermediateSum, double value) {
         double tmp = value - intermediateSum[1];
         double sum = intermediateSum[0];
         // Little wolf of rounding error
@@ -667,7 +675,7 @@ public abstract class DistributedCollectors {
         return intermediateSum;
     }
 
-    static double computeFinalSum(double[] summands) {
+    private static double computeFinalSum(double[] summands) {
         // Better error bounds to add both terms as the final sum
         double tmp = summands[0] + summands[1];
         double simpleSum = summands[summands.length - 1];
@@ -707,14 +715,14 @@ public abstract class DistributedCollectors {
         }
     }
 
-    //** JET SPECIFIC REDUCERS **//
+    //                 JET-SPECIFIC REDUCERS
 
     /**
-     * Variant of {@link java.util.stream.Collectors#toMap(Function, Function)
-     * java.util.stream.Collectors#toMap(Function,Function)} which instead of
-     * returning a map as the result, will write the results to
-     * the distributed {@link IStreamMap} with the
-     * given name.
+     * Variant of {@link
+     * java.util.stream.Collectors#toMap(Function, Function)
+     * java.util.stream.Collectors#toMap(Function,Function)} which, instead of
+     * returning a map as the result, writes the results to the distributed
+     * {@link IStreamMap} with the given name.
      */
     public static <T, K, U> Reducer<T, IStreamMap<K, U>> toIMap(
             String mapName, DistributedFunction<? super T, ? extends K> keyMapper,
@@ -725,11 +733,11 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * Variant of {@link java.util.stream.Collectors#toMap(Function, Function)
-     * java.util.stream.Collectors#toMap(Function,Function)} which instead of
-     * returning a map as the result, will write the results to
-     * the distributed {@link IStreamMap} with the
-     * given name.
+     * Variant of {@link
+     * java.util.stream.Collectors#toMap(Function, Function)
+     * java.util.stream.Collectors#toMap(Function,Function)} which, instead of
+     * returning a map as the result, writes the results to the distributed
+     * {@link IStreamMap} with the given name.
      * <p>
      * The key and value of the will be used as the respective key and value to
      * put to the target {@code IStreamMap}.
@@ -739,11 +747,11 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * Variant of {@link java.util.stream.Collectors#toMap(Function, Function, BinaryOperator)
-     * java.util.stream.Collectors#toMap(Function,Function, BinaryOperator)} which instead of
-     * returning a map as the result, will write the results to
-     * the distributed {@link IStreamMap} with the
-     * given name.
+     * Variant of {@link
+     * java.util.stream.Collectors#toMap(Function, Function, BinaryOperator)
+     * java.util.stream.Collectors#toMap(Function, Function, BinaryOperator)}
+     * which, instead of returning a map as the result, writes the results
+     * to the distributed {@link IStreamMap} with the given name.
      */
     public static <T, K, U> Reducer<T, IStreamMap<K, U>> toIMap(
             String mapName, DistributedFunction<? super T, ? extends K> keyMapper,
@@ -755,11 +763,11 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * Variant of {@link java.util.stream.Collectors#toMap(Function, Function)
-     * java.util.stream.Collectors#toMap(Function,Function)} which instead of
-     * returning a map as the result, will write the results to
-     * the distributed {@link IStreamCache} with the
-     * given name.
+     * Variant of {@link
+     * java.util.stream.Collectors#toMap(Function, Function)
+     * java.util.stream.Collectors#toMap(Function, Function)} which, instead of
+     * returning a map as the result, writes the results to the distributed
+     * {@link IStreamCache} with the given name.
      */
     public static <T, K, U> Reducer<T, IStreamCache<K, U>> toICache(
             String cacheName,
@@ -771,25 +779,22 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * Variant of {@link java.util.stream.Collectors#toMap(Function, Function)
-     * java.util.stream.Collectors#toMap(Function,Function)} which instead of
-     * returning a map as the result, will write the results to
-     * the distributed {@link IStreamCache} with the
-     * given name.
-     * <p>
-     * The key and value of the will be used as the respective key and value to
-     * put to the target {@code IStreamCache}.
+     * Variant of {@link
+     * java.util.stream.Collectors#toMap(Function, Function)
+     * java.util.stream.Collectors#toMap(Function, Function)} which, instead of
+     * returning a map as the result, writes the results to the distributed
+     * {@link IStreamCache} with the given name.
      */
     public static <K, U> Reducer<Map.Entry<K, U>, IStreamCache<K, U>> toICache(String cacheName) {
         return toICache(cacheName, Entry::getKey, Entry::getValue);
     }
 
     /**
-     * Variant of {@link java.util.stream.Collectors#toMap(Function, Function)
-     * java.util.stream.Collectors#toMap(Function,Function)} which instead of
-     * returning a map as the result, will write the results to
-     * the distributed {@link IStreamCache} with the
-     * given name.
+     * Variant of {@link
+     * java.util.stream.Collectors#toMap(Function, Function)
+     * java.util.stream.Collectors#toMap(Function, Function)} which, instead of
+     * returning a map as the result, writes the results to the distributed
+     * {@link IStreamCache} with the given name.
      */
     public static <T, K, U> Reducer<T, IStreamCache<K, U>> toICache(
             String cacheName,
@@ -802,22 +807,22 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * Variant of {@link java.util.stream.Collectors#toList()
-     * java.util.stream.Collectors#toList()} which instead of
-     * returning a list as the result, will write the results to
-     * the distributed {@link IStreamList} with the
-     * given name.
+     * Variant of {@link
+     * java.util.stream.Collectors#toList()
+     * java.util.stream.Collectors#toList()} which, instead of returning a list
+     * as the result, writes the results to the distributed {@link
+     * IStreamList} with the given name.
      */
     public static <T> Reducer<T, IStreamList<T>> toIList(String listName) {
         return new IListReducer<>(listName);
     }
 
     /**
-     * Variant of {@link java.util.stream.Collectors#groupingBy(Function)
-     * java.util.stream.Collectors#groupingBy(Function)} which instead of
-     * returning a map as the result, will write the grouped results to
-     * the distributed {@link IStreamMap} with the
-     * given name.
+     * Variant of {@link
+     * java.util.stream.Collectors#groupingBy(Function)
+     * java.util.stream.Collectors#groupingBy(Function)} which, instead of
+     * returning a map as the result, writes the grouped results to the
+     * distributed {@link IStreamMap} with the given name.
      */
     public static <T, K> Reducer<T, IStreamMap<K, List<T>>> groupingByToIMap(
             String mapName, DistributedFunction<? super T, ? extends K> classifier
@@ -826,11 +831,11 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * Variant of {@link java.util.stream.Collectors#groupingBy(Function, Collector)
-     * java.util.stream.Collectors#groupingBy(Function, Collector)} which instead of
-     * returning a map as the result, will write the grouped results to
-     * the distributed {@link IStreamMap} with the
-     * given name.
+     * Variant of {@link
+     * java.util.stream.Collectors#groupingBy(Function, Collector)
+     * java.util.stream.Collectors#groupingBy(Function, Collector)} which, instead of
+     * returning a map as the result, writes the grouped results to the distributed
+     * {@link IStreamMap} with the given name.
      */
     public static <T, K, A, D> Reducer<T, IStreamMap<K, D>> groupingByToIMap(
             String mapName, DistributedFunction<? super T, ? extends K> classifier,
@@ -841,11 +846,11 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * Variant of {@link java.util.stream.Collectors#groupingBy(Function, Collector)
-     * java.util.stream.Collectors#groupingBy(Function, Collector)} which instead of
-     * returning a map as the result, will write the grouped results to
-     * the distributed {@link IStreamCache} with the
-     * given name.
+     * Variant of {@link
+     * java.util.stream.Collectors#groupingBy(Function, Collector)
+     * java.util.stream.Collectors#groupingBy(Function, Collector)} which, instead of
+     * returning a map as the result, writes the grouped results to the distributed
+     * {@link IStreamCache} with the given name.
      */
     public static <T, K> Reducer<T, IStreamCache<K, List<T>>> groupingByToICache(
             String cacheName, DistributedFunction<? super T, ? extends K> classifier
@@ -854,11 +859,11 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * Variant of {@link java.util.stream.Collectors#groupingBy(Function, Collector)
-     * java.util.stream.Collectors#groupingBy(Function, Collector)} which instead of
-     * returning a map as the result, will write the grouped results to
-     * the distributed {@link IStreamCache} with the
-     * given name.
+     * Variant of {@link
+     * java.util.stream.Collectors#groupingBy(Function, Collector)
+     * java.util.stream.Collectors#groupingBy(Function, Collector)} which, instead of
+     * returning a map as the result, writes the grouped results to the distributed
+     * {@link IStreamCache} with the given name.
      */
     public static <T, K, A, D> Reducer<T, IStreamCache<K, D>> groupingByToICache(
             String cacheName, DistributedFunction<? super T, ? extends K> classifier,
@@ -869,7 +874,9 @@ public abstract class DistributedCollectors {
     }
 
     /**
-     * This class is necessary to conceal the cache-api
+     * A class that allows the {@code DistributedCollectors} class to be
+     * loaded without immediately requiring the JCache types (which may not be
+     * on the classpath).
      */
     private static class CacheGetter {
 

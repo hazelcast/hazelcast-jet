@@ -20,7 +20,8 @@ import java.io.Serializable;
 import java.util.function.IntSupplier;
 
 /**
- * {@code Serializable} variant of {@link IntSupplier java.util.function.IntSupplier}.
+ * {@code Serializable} variant of {@link IntSupplier
+ * java.util.function.IntSupplier}.
  */
 @FunctionalInterface
 public interface DistributedIntSupplier extends IntSupplier, Serializable {

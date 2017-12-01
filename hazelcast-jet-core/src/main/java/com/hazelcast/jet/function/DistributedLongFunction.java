@@ -20,7 +20,8 @@ import java.io.Serializable;
 import java.util.function.LongFunction;
 
 /**
- * {@code Serializable} variant of {@link LongFunction java.util.function.LongFunction}.
+ * {@code Serializable} variant of {@link LongFunction
+ * java.util.function.LongFunction}.
  */
 @FunctionalInterface
 public interface DistributedLongFunction<R> extends LongFunction<R>, Serializable {

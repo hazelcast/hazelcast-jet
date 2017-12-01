@@ -21,7 +21,8 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 
 /**
- * {@code Serializable} variant of {@link BiConsumer java.util.function.BiConsumer}.
+ * {@code Serializable} variant of {@link BiConsumer
+ * java.util.function.BiConsumer}.
  */
 @FunctionalInterface
 public interface DistributedBiConsumer<T, U> extends BiConsumer<T, U>, Serializable {

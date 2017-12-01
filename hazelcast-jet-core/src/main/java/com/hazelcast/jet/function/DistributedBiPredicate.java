@@ -21,14 +21,15 @@ import java.util.Objects;
 import java.util.function.BiPredicate;
 
 /**
- * {@code Serializable} variant of {@link BiPredicate java.util.function.BiPredicate}.
+ * {@code Serializable} variant of {@link BiPredicate
+ * java.util.function.BiPredicate}.
  */
 @FunctionalInterface
 public interface DistributedBiPredicate<T, U> extends BiPredicate<T, U>, Serializable {
 
     /**
-     * {@code Serializable} variant of
-     * {@link BiPredicate#and(BiPredicate) java.util.function.BiPredicate#and(BiPredicate)}.
+     * {@code Serializable} variant of {@link
+     * BiPredicate#and(BiPredicate) java.util.function.BiPredicate#and(BiPredicate)}.
      */
     default DistributedBiPredicate<T, U> and(DistributedBiPredicate<? super T, ? super U> other) {
         Objects.requireNonNull(other);
@@ -36,7 +37,8 @@ public interface DistributedBiPredicate<T, U> extends BiPredicate<T, U>, Seriali
     }
 
     /**
-     * {@code Serializable} variant of {@link BiPredicate#negate() java.util.function.BiPredicate#negate()}.
+     * {@code Serializable} variant of {@link
+     * BiPredicate#negate() java.util.function.BiPredicate#negate()}.
      */
     @Override
     default DistributedBiPredicate<T, U> negate() {
@@ -44,8 +46,8 @@ public interface DistributedBiPredicate<T, U> extends BiPredicate<T, U>, Seriali
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link BiPredicate#or(BiPredicate) java.util.function.BiPredicate#or(BiPredicate)}.
+     * {@code Serializable} variant of {@link
+     * BiPredicate#or(BiPredicate) java.util.function.BiPredicate#or(BiPredicate)}.
      */
     default DistributedBiPredicate<T, U> or(DistributedBiPredicate<? super T, ? super U> other) {
         Objects.requireNonNull(other);

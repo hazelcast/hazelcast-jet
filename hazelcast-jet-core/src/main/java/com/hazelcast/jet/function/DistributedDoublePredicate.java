@@ -21,14 +21,16 @@ import java.util.Objects;
 import java.util.function.DoublePredicate;
 
 /**
- * {@code Serializable} variant of {@link DoublePredicate java.util.function.DoublePredicate}.
+ * {@code Serializable} variant of {@link DoublePredicate
+ * java.util.function.DoublePredicate}.
  */
 @FunctionalInterface
 public interface DistributedDoublePredicate extends DoublePredicate, Serializable {
 
     /**
-     * {@code Serializable} variant of
-     * {@link DoublePredicate#and(DoublePredicate) java.util.function.DoublePredicate#and(DoublePredicate)}.
+     * {@code Serializable} variant of {@link
+     * DoublePredicate#and(DoublePredicate)
+     * java.util.function.DoublePredicate#and(DoublePredicate)}.
      */
     default DistributedDoublePredicate and(DistributedDoublePredicate other) {
         Objects.requireNonNull(other);
@@ -36,8 +38,7 @@ public interface DistributedDoublePredicate extends DoublePredicate, Serializabl
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link DoublePredicate#negate()}.
+     * {@code Serializable} variant of {@link DoublePredicate#negate()}.
      */
     @Override
     default DistributedDoublePredicate negate() {
@@ -45,8 +46,9 @@ public interface DistributedDoublePredicate extends DoublePredicate, Serializabl
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link DoublePredicate#or(DoublePredicate) java.util.function.DoublePredicate#or(DoublePredicate)}.
+     * {@code Serializable} variant of {@link
+     * DoublePredicate#or(DoublePredicate)
+     * java.util.function.DoublePredicate#or(DoublePredicate)}.
      */
     default DistributedDoublePredicate or(DistributedDoublePredicate other) {
         Objects.requireNonNull(other);

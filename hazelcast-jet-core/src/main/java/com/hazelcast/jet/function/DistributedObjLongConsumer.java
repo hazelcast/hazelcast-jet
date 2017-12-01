@@ -20,7 +20,8 @@ import java.io.Serializable;
 import java.util.function.ObjLongConsumer;
 
 /**
- * {@code Serializable} variant of {@link ObjLongConsumer java.util.function.ObjLongConsumer}.
+ * {@code Serializable} variant of {@link ObjLongConsumer
+ * java.util.function.ObjLongConsumer}.
  */
 @FunctionalInterface
 public interface DistributedObjLongConsumer<T> extends ObjLongConsumer<T>, Serializable {

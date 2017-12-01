@@ -20,7 +20,8 @@ import java.io.Serializable;
 import java.util.function.ToDoubleBiFunction;
 
 /**
- * {@code Serializable} variant of {@link ToDoubleBiFunction java.util.function.ToDoubleBiFunction}.
+ * {@code Serializable} variant of {@link ToDoubleBiFunction
+ * java.util.function.ToDoubleBiFunction}.
  */
 @FunctionalInterface
 public interface DistributedToDoubleBiFunction<T, U> extends ToDoubleBiFunction<T, U>, Serializable {

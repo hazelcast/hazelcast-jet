@@ -20,7 +20,8 @@ import java.io.Serializable;
 import java.util.function.ToIntFunction;
 
 /**
- * {@code Serializable} variant of {@link ToIntFunction java.util.function.ToIntFunction}.
+ * {@code Serializable} variant of {@link ToIntFunction
+ * java.util.function.ToIntFunction}.
  */
 @FunctionalInterface
 public interface DistributedToIntFunction<T> extends ToIntFunction<T>, Serializable {

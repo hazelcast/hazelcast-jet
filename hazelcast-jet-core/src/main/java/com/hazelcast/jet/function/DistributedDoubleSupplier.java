@@ -20,7 +20,8 @@ import java.io.Serializable;
 import java.util.function.DoubleSupplier;
 
 /**
- * {@code Serializable} variant of {@link DoubleSupplier java.util.function.DoubleSupplier}.
+ * {@code Serializable} variant of {@link DoubleSupplier
+ * java.util.function.DoubleSupplier}.
  */
 @FunctionalInterface
 public interface DistributedDoubleSupplier extends DoubleSupplier, Serializable {

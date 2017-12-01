@@ -21,7 +21,8 @@ import java.util.Objects;
 import java.util.function.Predicate;
 
 /**
- * {@code Serializable} variant of {@link Predicate java.util.function.Predicate}.
+ * {@code Serializable} variant of {@link Predicate
+ * java.util.function.Predicate}.
  */
 @FunctionalInterface
 public interface DistributedPredicate<T> extends Predicate<T>, Serializable {

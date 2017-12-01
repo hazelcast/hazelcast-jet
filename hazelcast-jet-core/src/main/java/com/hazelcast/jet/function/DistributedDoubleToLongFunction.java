@@ -20,7 +20,8 @@ import java.io.Serializable;
 import java.util.function.DoubleToLongFunction;
 
 /**
- * {@code Serializable} variant of {@link DoubleToLongFunction java.util.function.DoubleToLongFunction}.
+ * {@code Serializable} variant of {@link DoubleToLongFunction
+ * java.util.function.DoubleToLongFunction}.
  */
 @FunctionalInterface
 public interface DistributedDoubleToLongFunction extends DoubleToLongFunction, Serializable {

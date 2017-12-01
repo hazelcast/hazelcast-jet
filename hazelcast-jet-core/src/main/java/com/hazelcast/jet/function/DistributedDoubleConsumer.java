@@ -21,14 +21,15 @@ import java.util.Objects;
 import java.util.function.DoubleConsumer;
 
 /**
- * {@code Serializable} variant of {@link DoubleConsumer java.util.function.DoubleConsumer}.
+ * {@code Serializable} variant of {@link DoubleConsumer
+ * java.util.function.DoubleConsumer}.
  */
 @FunctionalInterface
 public interface DistributedDoubleConsumer extends DoubleConsumer, Serializable {
 
     /**
-     * {@code Serializable} variant of
-     * {@link DoubleConsumer#andThen(DoubleConsumer) java.util.function.DoubleConsumer#andThen(DoubleConsumer)}.
+     * {@code Serializable} variant of {@link DoubleConsumer#andThen(DoubleConsumer)
+     * java.util.function.DoubleConsumer#andThen(DoubleConsumer)}.
      */
     default DistributedDoubleConsumer andThen(DistributedDoubleConsumer after) {
         Objects.requireNonNull(after);

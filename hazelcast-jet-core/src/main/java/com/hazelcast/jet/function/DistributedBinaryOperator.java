@@ -22,14 +22,15 @@ import java.util.Objects;
 import java.util.function.BinaryOperator;
 
 /**
- * {@code Serializable} variant of {@link BinaryOperator java.util.function.BinaryOperator}.
+ * {@code Serializable} variant of {@link
+ * BinaryOperator java.util.function.BinaryOperator}.
  */
 @FunctionalInterface
 public interface DistributedBinaryOperator<T> extends BinaryOperator<T>, Serializable {
 
     /**
-     * {@code Serializable} variant of
-     * {@link BinaryOperator#minBy(Comparator) java.util.function.BinaryOperator#minBy(Comparator)}.
+     * {@code Serializable} variant of {@link
+     * BinaryOperator#minBy(Comparator) java.util.function.BinaryOperator#minBy(Comparator)}.
      */
     static <T> DistributedBinaryOperator<T> minBy(java.util.Comparator<? super T> comparator) {
         Objects.requireNonNull(comparator);
@@ -37,8 +38,8 @@ public interface DistributedBinaryOperator<T> extends BinaryOperator<T>, Seriali
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link BinaryOperator#maxBy(Comparator) java.util.function.BinaryOperator#maxBy(Comparator)}.
+     * {@code Serializable} variant of {@link
+     * BinaryOperator#maxBy(Comparator) java.util.function.BinaryOperator#maxBy(Comparator)}.
      */
     static <T> DistributedBinaryOperator<T> maxBy(java.util.Comparator<? super T> comparator) {
         Objects.requireNonNull(comparator);

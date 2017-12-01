@@ -21,14 +21,16 @@ import java.util.Objects;
 import java.util.function.LongConsumer;
 
 /**
- * {@code Serializable} variant of {@link LongConsumer java.util.function.LongConsumer}.
+ * {@code Serializable} variant of {@link LongConsumer
+ * java.util.function.LongConsumer}.
  */
 @FunctionalInterface
 public interface DistributedLongConsumer extends LongConsumer, Serializable {
 
     /**
      * {@code Serializable} variant of
-     * {@link LongConsumer#andThen(LongConsumer) java.util.function.LongConsumer#andThen(LongConsumer)}.
+     * {@link LongConsumer#andThen(LongConsumer)
+     * java.util.function.LongConsumer#andThen(LongConsumer)}.
      */
     default DistributedLongConsumer andThen(DistributedLongConsumer after) {
         Objects.requireNonNull(after);

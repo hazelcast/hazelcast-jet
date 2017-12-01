@@ -20,10 +20,6 @@ import java.io.Serializable;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 /**
  * {@code Serializable} variant of {@link Optional java.util.Optional}.
@@ -43,7 +39,8 @@ public final class DistributedOptional<T> implements Serializable {
     }
 
     /**
-     * {@code Serializable} variant of {@link Optional#empty() java.util.Optional#empty()}.
+     * {@code Serializable} variant of {@link Optional#empty()
+     * java.util.Optional#empty()}.
      */
     public static <T> DistributedOptional<T> empty() {
         @SuppressWarnings("unchecked")
@@ -52,21 +49,24 @@ public final class DistributedOptional<T> implements Serializable {
     }
 
     /**
-     * {@code Serializable} variant of {@link Optional#of(T) java.util.Optional#of(T)}.
+     * {@code Serializable} variant of {@link Optional#of(T)
+     * java.util.Optional#of(T)}.
      */
     public static <T> DistributedOptional<T> of(T value) {
         return new DistributedOptional<>(value);
     }
 
     /**
-     * {@code Serializable} variant of {@link Optional#ofNullable(T) java.util.Optional#ofNullable(T)}.
+     * {@code Serializable} variant of {@link Optional#ofNullable(T)
+     * java.util.Optional#ofNullable(T)}.
      */
     public static <T> DistributedOptional<T> ofNullable(T value) {
         return value == null ? empty() : of(value);
     }
 
     /**
-     * {@code Serializable} variant of {@link Optional#get() java.util.Optional#get()}.
+     * {@code Serializable} variant of {@link Optional#get()
+     * java.util.Optional#get()}.
      */
     public T get() {
         if (value == null) {
@@ -76,15 +76,16 @@ public final class DistributedOptional<T> implements Serializable {
     }
 
     /**
-     * {@code Serializable} variant of {@link Optional#isPresent() java.util.Optional#isPresent()}.
+     * {@code Serializable} variant of {@link Optional#isPresent()
+     * java.util.Optional#isPresent()}.
      */
     public boolean isPresent() {
         return value != null;
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link Optional#ifPresent(Consumer) java.util.Optional#ifPresent(Consumer)}.
+     * {@code Serializable} variant of {@link
+     * Optional#ifPresent(java.util.function.Consumer) java.util.Optional#ifPresent(Consumer)}.
      */
     public void ifPresent(DistributedConsumer<? super T> consumer) {
         if (value != null) {
@@ -93,8 +94,8 @@ public final class DistributedOptional<T> implements Serializable {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link Optional#filter(Predicate) java.util.Optional#filter(Predicate)}.
+     * {@code Serializable} variant of {@link
+     * Optional#filter(java.util.function.Predicate) java.util.Optional#filter(Predicate)}.
      */
     public DistributedOptional<T> filter(DistributedPredicate<? super T> predicate) {
         Objects.requireNonNull(predicate);
@@ -106,8 +107,8 @@ public final class DistributedOptional<T> implements Serializable {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link Optional#map(Function) java.util.Optional#map(Function)}.
+     * {@code Serializable} variant of {@link
+     * Optional#map(java.util.function.Function) java.util.Optional#map(Function)}.
      */
     public <U> DistributedOptional<U> map(DistributedFunction<? super T, ? extends U> mapper) {
         Objects.requireNonNull(mapper);
@@ -119,8 +120,8 @@ public final class DistributedOptional<T> implements Serializable {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link Optional#flatMap(Function) java.util.Optional#flatMap(Function)}.
+     * {@code Serializable} variant of {@link
+     * Optional#flatMap(java.util.function.Function) java.util.Optional#flatMap(Function)}.
      */
     public <U> DistributedOptional<U> flatMap(DistributedFunction<? super T, DistributedOptional<U>> mapper) {
         Objects.requireNonNull(mapper);
@@ -132,24 +133,26 @@ public final class DistributedOptional<T> implements Serializable {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link Optional#orElseGet(Supplier) java.util.Optional#orElseGet(Supplier)}.
+     * {@code Serializable} variant of {@link
+     * Optional#orElseGet(java.util.function.Supplier)
+     * java.util.Optional#orElseGet(Supplier)}.
      */
     public T orElseGet(DistributedSupplier<? extends T> other) {
         return value != null ? value : other.get();
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link Optional#orElse(T) java.util.Optional#orElse(T)}.
+     * {@code Serializable} variant of {@link
+     * Optional#orElse(T) java.util.Optional#orElse(T)}.
      */
     public T orElse(T other) {
         return value != null ? value : other;
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link Optional#orElseThrow(Supplier) java.util.Optional#orElseThrow(Supplier)}.
+     * {@code Serializable} variant of {@link
+     * Optional#orElseThrow(java.util.function.Supplier)
+     * java.util.Optional#orElseThrow(Supplier)}.
      */
     public <X extends Throwable> T orElseThrow(DistributedSupplier<? extends X> exceptionSupplier) throws X {
         if (value != null) {
@@ -160,8 +163,8 @@ public final class DistributedOptional<T> implements Serializable {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link Optional#equals(Object) java.util.Optional#equals(Object)}.
+     * {@code Serializable} variant of {@link
+     * Optional#equals(Object) java.util.Optional#equals(Object)}.
      */
     @Override
     public boolean equals(Object obj) {
@@ -178,8 +181,8 @@ public final class DistributedOptional<T> implements Serializable {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link Optional#hashCode() java.util.Optional#hashCode()}.
+     * {@code Serializable} variant of {@link
+     * Optional#hashCode() java.util.Optional#hashCode()}.
      */
     @Override
     public int hashCode() {
@@ -187,8 +190,8 @@ public final class DistributedOptional<T> implements Serializable {
     }
 
     /**
-     * {@code Serializable} variant of
-     * {@link Optional#toString() java.util.Optional#toString()}.
+     * {@code Serializable} variant of {@link
+     * Optional#toString() java.util.Optional#toString()}.
      */
     @Override
     public String toString() {

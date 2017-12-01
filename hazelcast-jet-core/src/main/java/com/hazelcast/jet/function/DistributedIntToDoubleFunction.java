@@ -20,7 +20,8 @@ import java.io.Serializable;
 import java.util.function.IntToDoubleFunction;
 
 /**
- * {@code Serializable} variant of {@link IntToDoubleFunction java.util.function.IntToDoubleFunction}.
+ * {@code Serializable} variant of {@link IntToDoubleFunction
+ * java.util.function.IntToDoubleFunction}.
  */
 @FunctionalInterface
 public interface DistributedIntToDoubleFunction extends IntToDoubleFunction, Serializable {
