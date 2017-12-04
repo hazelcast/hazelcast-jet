@@ -10,7 +10,7 @@ The label in the brackets refer to the respective module.
 1. Fixes
 
 [pipeline-api] Generated vertex names are now deterministic instead of random [#623]
-[pipeline-api] Vertex names for sinks and maps should now be more explicit [#623]
+[pipeline-api] Vertex names for sources and sinks should now be more explicit [#623]
 [core] Update schema version in default Hazelcast configuration XML file [#627]
 [core] When peeking input and output of a processor, the logger name of peeked processor should be used [#617]
 [core] Fix race condition when calling ProcessorSupplier.complete() during job cancellation [#604]
