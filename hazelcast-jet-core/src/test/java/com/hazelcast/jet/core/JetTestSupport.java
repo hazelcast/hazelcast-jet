@@ -96,7 +96,11 @@ public class JetTestSupport extends HazelcastTestSupport {
     }
 
     protected static void assumeNotWindows() {
-        Assume.assumeFalse(System.getProperty("os.name").toLowerCase().contains("windows"));
+        Assume.assumeFalse(isWindows());
+    }
+
+    protected static boolean isWindows() {
+        return System.getProperty("os.name").toLowerCase().contains("windows");
     }
 
     public static void assertTrueEventually(UncheckedRunnable runnable) {
