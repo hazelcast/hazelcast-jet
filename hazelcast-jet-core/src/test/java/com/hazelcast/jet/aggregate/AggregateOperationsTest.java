@@ -44,6 +44,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
 import static com.hazelcast.jet.aggregate.AggregateOperations.averagingDouble;
 import static com.hazelcast.jet.aggregate.AggregateOperations.averagingLong;
+import static com.hazelcast.jet.aggregate.AggregateOperations.concatenating;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.aggregate.AggregateOperations.linearTrend;
 import static com.hazelcast.jet.aggregate.AggregateOperations.mapping;
@@ -314,6 +315,45 @@ public class AggregateOperationsTest {
         );
     }
 
+    @Test
+    public void when_concatenating_withoutDelimiter() {
+        validateOpWithoutDeduct(
+                concatenating(),
+                StringBuilder::toString,
+                "A",
+                "B",
+                "A",
+                "AB",
+                "AB"
+        );
+    }
+
+    @Test
+    public void when_concatenating_withDelimiter() {
+        validateOpWithoutDeduct(
+                concatenating(","),
+                StringBuilder::toString,
+                "A",
+                "B",
+                "A",
+                "A,B",
+                "A,B"
+        );
+    }
+
+    @Test
+    public void when_concatenating_withDelimiterPrefixSuffix() {
+        validateOpWithoutDeduct(
+                concatenating(",", "(", ")"),
+                StringBuilder::toString,
+                "A",
+                "B",
+                "(A",
+                "(A,B",
+                "(A,B)"
+        );
+    }
+
     private static <T, A, X, R> void validateOp(
             AggregateOperation1<T, A, R> op,
             Function<A, X> getAccValFn,
@@ -325,7 +365,7 @@ public class AggregateOperationsTest {
     ) {
         // Given
         BiConsumer<? super A, ? super A> deductAccFn = op.deductFn();
-        assertNotNull(deductAccFn);
+        assertNotNull("deductAccFn was null", deductAccFn);
 
         // When
         A acc1 = op.createFn().get();
@@ -373,7 +413,7 @@ public class AggregateOperationsTest {
             R expectFinished
     ) {
         // Then
-        assertNull(op.deductFn());
+        assertNull("deductFn must be null", op.deductFn());
 
         // When
         A acc1 = op.createFn().get();
