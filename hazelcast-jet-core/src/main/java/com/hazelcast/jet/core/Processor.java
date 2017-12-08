@@ -110,6 +110,37 @@ public interface Processor {
     }
 
     /**
+     * Tries to process the supplied watermark. The value is always higher than
+     * in previous call. The watermark is delivered for processing after it has
+     * been received from all edges or the {@link
+     * com.hazelcast.jet.config.JobConfig#setMaxWatermarkRetention(int)
+     * maximum retention time} elapsed.
+     * <p>
+     * Implementation may choose to process only partially and return {@code
+     * false}, in which case it will be called again later with the same {@code
+     * timestamp} before any other processing method is called. When the method
+     * returns {@code true}, the watermark is forwarded to downstream
+     * processors.
+     * <p>
+     * The default implementation just returns {@code true}.
+     * <p>
+     * <i>Caution for jobs with at-least-once guarantee</i><br>
+     * In snapshotted jobs with <i>at-least-once</i> processing guarantee it
+     * can happen that the watermarks break the monotonicity requirement when
+     * the job is restarted. This is caused by the fact that watermark, like any
+     * other stream item, can be delivered duplicately after restart. This
+     * means that after a restart, a processor can be asked to process a
+     * watermark older than it already processed.
+     *
+     * @param watermark watermark to be processed
+     * @return {@code true} if this watermark has now been processed,
+     *         {@code false} otherwise.
+     */
+    default boolean tryProcessWatermark(Watermark watermark) {
+        return true;
+    }
+
+    /**
      * This method will be called periodically and only when the current batch
      * of items in the inbox has been exhausted. It can be used to produce
      * output in the absence of input or to do general maintenance work.

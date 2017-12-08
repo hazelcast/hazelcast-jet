@@ -41,6 +41,7 @@ public class JobConfig implements Serializable {
     private boolean splitBrainProtectionEnabled;
     private final List<ResourceConfig> resourceConfigs = new ArrayList<>();
     private boolean autoRestartEnabled = true;
+    private int maxWatermarkRetention = -1;
 
     /**
      * Tells whether {@link #setSplitBrainProtection(boolean) split brain protection}
@@ -74,6 +75,8 @@ public class JobConfig implements Serializable {
      * This setting has no effect if
      * {@link #setAutoRestartOnMemberFailure(boolean) auto restart on member
      * failure} is disabled.
+     *
+     * @return {@code this} instance for fluent API
      */
     public JobConfig setSplitBrainProtection(boolean isEnabled) {
         this.splitBrainProtectionEnabled = isEnabled;
@@ -97,6 +100,8 @@ public class JobConfig implements Serializable {
      * latest snapshot.
      * <p>
      * By default, auto-restart is enabled.
+     *
+     * @return {@code this} instance for fluent API
      */
     public JobConfig setAutoRestartOnMemberFailure(boolean isEnabled) {
         this.autoRestartEnabled = isEnabled;
@@ -119,6 +124,8 @@ public class JobConfig implements Serializable {
      * 10 seconds.
      * <p>
      * The default value is {@link ProcessingGuarantee#NONE}.
+     *
+     * @return {@code this} instance for fluent API
      */
     public JobConfig setProcessingGuarantee(ProcessingGuarantee processingGuarantee) {
         this.processingGuarantee = processingGuarantee;
@@ -140,6 +147,8 @@ public class JobConfig implements Serializable {
      * <i>>at-least-once</i> or <i>exactly-once</i> processing guarantees are used.
      * <p>
      * Default value is set to 10 seconds.
+     *
+     * @return {@code this} instance for fluent API
      */
     public JobConfig setSnapshotIntervalMillis(long snapshotInterval) {
         Preconditions.checkNotNegative(snapshotInterval, "snapshotInterval can't be negative");
@@ -148,9 +157,61 @@ public class JobConfig implements Serializable {
     }
 
     /**
+     * Sets the maximum system-time interval to retain the watermarks when
+     * coalescing. Negative value disables the limit, watermarks are retained
+     * as long as needed. Has no effect on edges where there are no watermarks.
+     * <p>
+     * A vertex can have multiple input edges. Also on each edge, downstream
+     * processor typically has multiple upstream processors. The watermarks are
+     * received from each of those and are delivered to processor only when it
+     * is received from all contributing inputs. This process is called
+     * <em>coalescing of watermarks</em> and it's done on two levels: for
+     * multiple queues on single edge and for multiple edges on single vertex.
+     *
+     * <h3>Example</h3>
+     * Suppose we coalesce two inputs: <em>input0</em> and <em>input1</em>. We
+     * receive watermark with timestamp=1 <em>wm(1)</em> from <em>input0</em>.
+     * Later on, we receive <em>wm(1)</em> from <em>input1</em> as well and now
+     * is the time to forward the watermark for processing. However, it can
+     * happen that <em>input1</em> doesn't have any watermarks. If maximum
+     * retain time is configured, then the <em>wm(1)</em> watermark is
+     * forwarded after {@code retainMillis} of system time passed despite it
+     * hasn't been received from <em>input1</em>. This will allow the
+     * processing to continue.
+     *
+     * <h3>Effects on stream skew</h3>
+     * <em>Skew</em> is defined as the difference between top watermark from
+     * any two inputs. Small skew is normal, but it can grow large due to
+     * hiccup on one of the inputs (for example due to long GC pause, external
+     * source hiccup on some member or overload of events in single partition).
+     * <p>
+     * Limiting retain time can force the watermark to advance for some input
+     * even though the watermark wasn't received from it. This might cause that
+     * further events from that input might be dropped as late.
+     *
+     * @param retainMillis maximum time to retain watermarks for delayed queues
+     *                     or -1 to disable (the default)
+     * @return {@code this} instance for fluent API
+     */
+    public JobConfig setMaxWatermarkRetention(int retainMillis) {
+        maxWatermarkRetention = retainMillis;
+        return this;
+    }
+
+    /**
+     * Returns the maximum watermark retention time, see {@link
+     * #setMaxWatermarkRetention(int)}.
+     */
+    public int getMaxWatermarkRetention() {
+        return maxWatermarkRetention;
+    }
+
+    /**
      * Adds the supplied classes to the list of resources that will be
      * available on the job's classpath while it's executing in the Jet
      * cluster.
+     *
+     * @return {@code this} instance for fluent API
      */
     public JobConfig addClass(Class... classes) {
         checkNotNull(classes, "Classes can not be null");
@@ -165,6 +226,8 @@ public class JobConfig implements Serializable {
      * Adds the JAR identified by the supplied URL to the list of JARs that
      * will be a part of the job's classpath while it's executing in the Jet
      * cluster.
+     *
+     * @return {@code this} instance for fluent API
      */
     public JobConfig addJar(URL url) {
         return add(url, null, true);
@@ -174,6 +237,8 @@ public class JobConfig implements Serializable {
      * Adds the supplied JAR file to the list of JARs that will be a part of
      * the job's classpath while it's executing in the Jet cluster. The JAR
      * filename will be used as the ID of the resource.
+     *
+     * @return {@code this} instance for fluent API
      */
     public JobConfig addJar(File file) {
         try {
@@ -187,6 +252,8 @@ public class JobConfig implements Serializable {
      * Adds the JAR identified by the supplied pathname to the list of JARs
      * that will be a part of the job's classpath while it's executing in the
      * Jet cluster. The JAR filename will be used as the ID of the resource.
+     *
+     * @return {@code this} instance for fluent API
      */
     public JobConfig addJar(String path) {
         try {
@@ -201,6 +268,8 @@ public class JobConfig implements Serializable {
      * Adds the resource identified by the supplied URL to the list of
      * resources that will be on the job's classpath while it's executing in
      * the Jet cluster. The resource's filename will be used as its ID.
+     *
+     * @return {@code this} instance for fluent API
      */
     public JobConfig addResource(URL url) {
         return addResource(url, toFilename(url));
@@ -210,6 +279,8 @@ public class JobConfig implements Serializable {
      * Adds the resource identified by the supplied URL to the list of
      * resources that will be on the job's classpath while it's executing in
      * the Jet cluster. The resource will be registered under the supplied ID.
+     *
+     * @return {@code this} instance for fluent API
      */
     public JobConfig addResource(URL url, String id) {
         return add(url, id, false);
@@ -219,6 +290,8 @@ public class JobConfig implements Serializable {
      * Adds the supplied file to the list of resources that will be on the
      * job's classpath while it's executing in the Jet cluster. The resource's
      * filename will be used as its ID.
+     *
+     * @return {@code this} instance for fluent API
      */
     public JobConfig addResource(File file) {
         try {
@@ -232,6 +305,8 @@ public class JobConfig implements Serializable {
      * Adds the supplied file to the list of resources that will be on the
      * job's classpath while it's executing in the Jet cluster. The resource
      * will be registered under the supplied ID.
+     *
+     * @return {@code this} instance for fluent API
      */
     public JobConfig addResource(File file, String id) {
         try {
@@ -245,6 +320,8 @@ public class JobConfig implements Serializable {
      * Adds the resource identified by the supplied pathname to the list of
      * resources that will be on the job's classpath while it's executing in
      * the Jet cluster. The resource's filename will be used as its ID.
+     *
+     * @return {@code this} instance for fluent API
      */
     public JobConfig addResource(String path) {
         return addResource(new File(path));
@@ -254,6 +331,8 @@ public class JobConfig implements Serializable {
      * Adds the resource identified by the supplied pathname to the list of
      * resources that will be on the job's classpath while it's executing in
      * the Jet cluster. The resource will be registered under the supplied ID.
+     *
+     * @return {@code this} instance for fluent API
      */
     public JobConfig addResource(String path, String id) {
         return addResource(new File(path), id);

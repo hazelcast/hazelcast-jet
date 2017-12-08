@@ -22,6 +22,7 @@ import com.hazelcast.jet.impl.util.WatermarkPolicyUtil.WatermarkPolicyBase;
 
 import javax.annotation.Nonnull;
 
+import static com.hazelcast.jet.impl.util.TimestampHistory.DEFAULT_NUM_STORED_SAMPLES;
 import static com.hazelcast.util.Preconditions.checkNotNegative;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -29,8 +30,6 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * Utility class with factories of several useful watermark policies.
  */
 public final class WatermarkPolicies {
-
-    private static final int DEFAULT_NUM_STORED_SAMPLES = 16;
 
     private WatermarkPolicies() {
     }
@@ -59,8 +58,13 @@ public final class WatermarkPolicies {
     /**
      * Maintains watermark that lags behind the top observed timestamp by at
      * most the given amount and is additionally guaranteed to reach the
-     * timestamp of any given event within {@code maxDelayMs} after observing
-     * it.
+     * timestamp of any given event within {@code maxDelayMs} of system time
+     * after observing it.
+     * <p>
+     * This setting applies to individual processor instances using this
+     * policy. Each individual instance might stop at different watermark
+     * value. To overcome this, also configure {@link
+     * com.hazelcast.jet.config.JobConfig#setMaxWatermarkRetention}.
      *
      * @param lag upper bound on the difference between the top observed timestamp and the
      *               watermark
