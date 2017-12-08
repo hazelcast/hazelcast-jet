@@ -17,12 +17,11 @@
 package com.hazelcast.jet.stream;
 
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.accumulator.MutableReference;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedBinaryOperator;
 import com.hazelcast.jet.function.DistributedComparator;
-import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedOptional;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToDoubleFunction;
@@ -48,7 +47,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.DoubleSummaryStatistics;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IntSummaryStatistics;
@@ -58,6 +56,7 @@ import java.util.LongSummaryStatistics;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
@@ -72,8 +71,6 @@ import java.util.stream.Collectors;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeCacheP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeMapP;
-import static java.util.Collections.emptySet;
-import static java.util.Collections.unmodifiableSet;
 
 /**
  * {@code Serializable} variants of {@link Collectors
@@ -81,17 +78,6 @@ import static java.util.Collections.unmodifiableSet;
  */
 @SuppressWarnings("checkstyle:methodcount")
 public abstract class DistributedCollectors {
-
-    static final Set<Collector.Characteristics> CH_ID = unmodifiableSet(
-            EnumSet.of(Collector.Characteristics.IDENTITY_FINISH)
-    );
-
-    static final Set<Collector.Characteristics> CH_NOID = emptySet();
-
-    private static final Set<Collector.Characteristics> CH_UNORDERED_ID = unmodifiableSet(
-            EnumSet.of(Collector.Characteristics.UNORDERED, Collector.Characteristics.IDENTITY_FINISH)
-    );
-
 
     @SuppressWarnings("unchecked")
     private static <T> DistributedSupplier<T[]> boxSupplier(T identity) {
@@ -110,8 +96,7 @@ public abstract class DistributedCollectors {
                 (r1, r2) -> {
                     r1.addAll(r2);
                     return r1;
-                },
-                CH_ID);
+                });
     }
 
     /**
@@ -124,8 +109,7 @@ public abstract class DistributedCollectors {
                 (left, right) -> {
                     left.addAll(right);
                     return left;
-                },
-                CH_ID);
+                });
     }
 
     /**
@@ -138,8 +122,7 @@ public abstract class DistributedCollectors {
                 (left, right) -> {
                     left.addAll(right);
                     return left;
-                },
-                CH_UNORDERED_ID);
+                });
     }
 
     /**
@@ -154,7 +137,7 @@ public abstract class DistributedCollectors {
                     r1.append(r2);
                     return r1;
                 },
-                StringBuilder::toString, CH_NOID);
+                StringBuilder::toString);
     }
 
     /**
@@ -177,7 +160,7 @@ public abstract class DistributedCollectors {
         return new DistributedCollectorImpl<>(
                 () -> new DistributedStringJoiner(delimiter, prefix, suffix),
                 DistributedStringJoiner::add, DistributedStringJoiner::merge,
-                DistributedStringJoiner::toString, CH_NOID);
+                DistributedStringJoiner::toString);
     }
 
     /**
@@ -191,8 +174,7 @@ public abstract class DistributedCollectors {
         DistributedBiConsumer<A, ? super U> downstreamAccumulator = downstream.accumulator();
         return new DistributedCollectorImpl<>(downstream.supplier(),
                 (r, t) -> downstreamAccumulator.accept(r, mapper.apply(t)),
-                downstream.combiner(), downstream.finisher(),
-                downstream.characteristics());
+                downstream.combiner(), downstream.finisher());
     }
 
     /**
@@ -204,21 +186,10 @@ public abstract class DistributedCollectors {
             DistributedCollector<T, A, R> downstream,
             DistributedFunction<R, RR> finisher
     ) {
-        Set<Collector.Characteristics> characteristics = downstream.characteristics();
-        if (characteristics.contains(Collector.Characteristics.IDENTITY_FINISH)) {
-            if (characteristics.size() == 1) {
-                characteristics = DistributedCollectors.CH_NOID;
-            } else {
-                characteristics = EnumSet.copyOf(characteristics);
-                characteristics.remove(Collector.Characteristics.IDENTITY_FINISH);
-                characteristics = unmodifiableSet(characteristics);
-            }
-        }
         return new DistributedCollectorImpl<>(downstream.supplier(),
                 downstream.accumulator(),
                 downstream.combiner(),
-                downstream.finisher().andThen(finisher),
-                characteristics);
+                downstream.finisher().andThen(finisher));
     }
 
     /**
@@ -235,7 +206,7 @@ public abstract class DistributedCollectors {
      * Collectors#minBy(Comparator)
      * java.util.stream.Collectors#minBy(Comparator)}
      */
-    public static <T> DistributedCollector<T, ?, DistributedOptional<T>> minBy(
+    public static <T> DistributedCollector<T, ?, Optional<T>> minBy(
             DistributedComparator<? super T> comparator
     ) {
         return reducing(DistributedBinaryOperator.minBy(comparator));
@@ -246,7 +217,7 @@ public abstract class DistributedCollectors {
      * Collectors#maxBy(Comparator)
      * java.util.stream.Collectors#maxBy(Comparator)}
      */
-    public static <T> DistributedCollector<T, ?, DistributedOptional<T>> maxBy(
+    public static <T> DistributedCollector<T, ?, Optional<T>> maxBy(
             DistributedComparator<? super T> comparator
     ) {
         return reducing(DistributedBinaryOperator.maxBy(comparator));
@@ -265,7 +236,7 @@ public abstract class DistributedCollectors {
                     a[0] += b[0];
                     return a;
                 },
-                a -> a[0], CH_NOID);
+                a -> a[0]);
     }
 
     /**
@@ -283,7 +254,7 @@ public abstract class DistributedCollectors {
                     a[0] += b[0];
                     return a;
                 },
-                a -> a[0], CH_NOID);
+                a -> a[0]);
     }
 
     /**
@@ -311,8 +282,7 @@ public abstract class DistributedCollectors {
                     a[2] += b[2];
                     return sumWithCompensation(a, b[1]);
                 },
-                DistributedCollectors::computeFinalSum,
-                CH_NOID);
+                DistributedCollectors::computeFinalSum);
     }
 
     /**
@@ -332,7 +302,7 @@ public abstract class DistributedCollectors {
                     a[1] += b[1];
                     return a;
                 },
-                a -> (a[1] == 0) ? 0.0d : (double) a[0] / a[1], CH_NOID);
+                a -> (a[1] == 0) ? 0.0d : (double) a[0] / a[1]);
     }
 
     /**
@@ -352,7 +322,7 @@ public abstract class DistributedCollectors {
                     a[1] += b[1];
                     return a;
                 },
-                a -> (a[1] == 0) ? 0.0d : (double) a[0] / a[1], CH_NOID);
+                a -> (a[1] == 0) ? 0.0d : (double) a[0] / a[1]);
     }
 
     /**
@@ -384,8 +354,7 @@ public abstract class DistributedCollectors {
                     a[3] += b[3];
                     return a;
                 },
-                a -> (a[2] == 0) ? 0.0d : (computeFinalSum(a) / a[2]),
-                CH_NOID);
+                a -> (a[2] == 0) ? 0.0d : (computeFinalSum(a) / a[2]));
     }
 
     /**
@@ -401,8 +370,7 @@ public abstract class DistributedCollectors {
                     a[0] = op.apply(a[0], b[0]);
                     return a;
                 },
-                a -> a[0],
-                CH_NOID);
+                a -> a[0]);
     }
 
     /**
@@ -410,33 +378,30 @@ public abstract class DistributedCollectors {
      * Collectors#reducing(BinaryOperator)
      * java.util.stream.Collectors#reducing(BinaryOperator)}
      */
-    public static <T> DistributedCollector<T, ?, DistributedOptional<T>> reducing(
+    public static <T> DistributedCollector<T, ?, Optional<T>> reducing(
             DistributedBinaryOperator<T> op
     ) {
-        class OptionalBox implements DistributedConsumer<T> {
-            private T value;
-            private boolean present;
-
-            @Override
-            public void accept(T t) {
-                if (present) {
-                    value = op.apply(value, t);
-                } else {
-                    value = t;
-                    present = true;
-                }
-            }
-        }
-
         return new DistributedCollectorImpl<>(
-                OptionalBox::new, OptionalBox::accept,
-                (a, b) -> {
-                    if (b.present) {
-                        a.accept(b.value);
+                (DistributedSupplier<MutableReference<T>>) MutableReference::new,
+                (l, t) -> {
+                    T lt = l.get();
+                    if (lt == null) {
+                        l.set(t);
+                    } else {
+                        l.set(op.apply(lt, t));
                     }
-                    return a;
                 },
-                a -> DistributedOptional.ofNullable(a.value), CH_NOID);
+                (l, r) -> {
+                    T lt = l.get();
+                    T rt = r.get();
+                    if (lt == null) {
+                        l.set(rt);
+                    } else if (rt != null) {
+                        l.set(op.apply(lt, rt));
+                    }
+                    return l;
+                },
+                a -> Optional.ofNullable(a.get()));
     }
 
     /**
@@ -454,7 +419,7 @@ public abstract class DistributedCollectors {
                     a[0] = op.apply(a[0], b[0]);
                     return a;
                 },
-                a -> a[0], CH_NOID);
+                a -> a[0]);
     }
 
     /**
@@ -502,19 +467,15 @@ public abstract class DistributedCollectors {
         @SuppressWarnings("unchecked")
         DistributedSupplier<Map<K, A>> mangledFactory = (DistributedSupplier<Map<K, A>>) mapFactory;
 
-        if (downstream.characteristics().contains(Collector.Characteristics.IDENTITY_FINISH)) {
-            return new DistributedCollectorImpl<>(mangledFactory, accumulator, merger, CH_ID);
-        } else {
             @SuppressWarnings("unchecked")
-            DistributedFunction<A, A> downstreamFinisher = (DistributedFunction<A, A>) downstream.finisher();
-            DistributedFunction<Map<K, A>, M> finisher = intermediate -> {
-                intermediate.replaceAll((k, v) -> downstreamFinisher.apply(v));
-                @SuppressWarnings("unchecked")
-                M castResult = (M) intermediate;
-                return castResult;
-            };
-            return new DistributedCollectorImpl<>(mangledFactory, accumulator, merger, finisher, CH_NOID);
-        }
+        DistributedFunction<A, A> downstreamFinisher = (DistributedFunction<A, A>) downstream.finisher();
+        DistributedFunction<Map<K, A>, M> finisher = intermediate -> {
+            intermediate.replaceAll((k, v) -> downstreamFinisher.apply(v));
+            @SuppressWarnings("unchecked")
+            M castResult = (M) intermediate;
+            return castResult;
+        };
+        return new DistributedCollectorImpl<>(mangledFactory, accumulator, merger, finisher);
     }
 
     /**
@@ -546,14 +507,10 @@ public abstract class DistributedCollectors {
         DistributedSupplier<Partition<A>> supplier = () ->
                 new Partition<>(downstream.supplier().get(),
                         downstream.supplier().get());
-        if (downstream.characteristics().contains(Collector.Characteristics.IDENTITY_FINISH)) {
-            return new DistributedCollectorImpl<>(supplier, accumulator, merger, CH_ID);
-        } else {
-            DistributedFunction<Partition<A>, Map<Boolean, D>> finisher = par ->
-                    new Partition<>(downstream.finisher().apply(par.forTrue),
-                            downstream.finisher().apply(par.forFalse));
-            return new DistributedCollectorImpl<>(supplier, accumulator, merger, finisher, CH_NOID);
-        }
+        DistributedFunction<Partition<A>, Map<Boolean, D>> finisher = par ->
+                new Partition<>(downstream.finisher().apply(par.forTrue),
+                        downstream.finisher().apply(par.forFalse));
+        return new DistributedCollectorImpl<>(supplier, accumulator, merger, finisher);
     }
 
     /**
@@ -595,7 +552,7 @@ public abstract class DistributedCollectors {
         DistributedBiConsumer<M, T> accumulator
                 = (map, element) -> map.merge(keyMapper.apply(element),
                 valueMapper.apply(element), mergeFunction);
-        return new DistributedCollectorImpl<>(mapSupplier, accumulator, mapMerger(mergeFunction), CH_ID);
+        return new DistributedCollectorImpl<>(mapSupplier, accumulator, mapMerger(mergeFunction));
     }
 
     /**
@@ -612,7 +569,7 @@ public abstract class DistributedCollectors {
                 (l, r) -> {
                     l.combine(r);
                     return l;
-                }, CH_ID);
+                });
     }
 
     /**
@@ -629,7 +586,7 @@ public abstract class DistributedCollectors {
                 (l, r) -> {
                     l.combine(r);
                     return l;
-                }, CH_ID);
+                });
     }
 
     /**
@@ -646,7 +603,7 @@ public abstract class DistributedCollectors {
                 (l, r) -> {
                     l.combine(r);
                     return l;
-                }, CH_ID);
+                });
     }
 
     private static <K, V, M extends Map<K, V>> DistributedBinaryOperator<M> mapMerger(
