@@ -114,7 +114,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                         boolean isRemoteReader) {
         this.eventJournalReader = eventJournalReader;
         this.assignedPartitions = new HashSet<>(assignedPartitions);
-        this.predicate = (Serializable & Predicate<E>) (predicateFn::test);
+        this.predicate = (Serializable & Predicate<E>) predicateFn::test;
         this.projection = toProjection(projectionFn);
         this.startPoint = startPoint;
         this.isRemoteReader = isRemoteReader;

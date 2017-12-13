@@ -16,8 +16,6 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.cache.CacheEventType;
-import com.hazelcast.core.EntryEventType;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.map.journal.EventJournalMapEvent;
@@ -102,40 +100,5 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
                 .filter(i -> i % 2 == 0)
                 .collect(toList());
         assertEquals(toBag(expected), sinkToBag());
-    }
-
-    private abstract static class JournalEvent {
-
-        final String key;
-        final Integer oldValue;
-        final Integer newValue;
-
-        JournalEvent(String key, Integer oldValue, Integer newValue) {
-            this.key = key;
-            this.oldValue = oldValue;
-            this.newValue = newValue;
-        }
-
-        Integer newValue() {
-            return newValue;
-        }
-    }
-
-    private static class MapJournalEvent extends JournalEvent {
-        final EntryEventType type;
-
-        MapJournalEvent(String key, Integer oldValue, Integer newValue, EntryEventType type) {
-            super(key, oldValue, newValue);
-            this.type = type;
-        }
-    }
-
-    private static class CacheJournalEvent extends JournalEvent {
-        final CacheEventType type;
-
-        CacheJournalEvent(String key, Integer oldValue, Integer newValue, CacheEventType type) {
-            super(key, oldValue, newValue);
-            this.type = type;
-        }
     }
 }
