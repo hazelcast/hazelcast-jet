@@ -23,7 +23,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.Partition;
-import com.hazelcast.jet.JournalInitialSequence;
+import com.hazelcast.jet.JournalInitialPosition;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
@@ -58,7 +58,7 @@ import java.util.function.Function;
 import java.util.function.IntConsumer;
 
 import static com.hazelcast.client.HazelcastClient.newHazelcastClient;
-import static com.hazelcast.jet.JournalInitialSequence.LATEST;
+import static com.hazelcast.jet.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
@@ -75,7 +75,7 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.IntStream.range;
 
 /**
- * @see SourceProcessors#streamMapP(String, DistributedPredicate, DistributedFunction, JournalInitialSequence)
+ * @see SourceProcessors#streamMapP(String, DistributedPredicate, DistributedFunction, JournalInitialPosition)
  */
 public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
@@ -85,7 +85,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     private final Set<Integer> assignedPartitions;
     private final Predicate<E> predicate;
     private final Projection<E, T> projection;
-    private final JournalInitialSequence startPoint;
+    private final JournalInitialPosition initialPos;
     private final boolean isRemoteReader;
 
     // keep track of next offset to emit and read separately, as even when the
@@ -110,13 +110,13 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                         @Nonnull List<Integer> assignedPartitions,
                         @Nonnull DistributedPredicate<E> predicateFn,
                         @Nonnull DistributedFunction<E, T> projectionFn,
-                        @Nonnull JournalInitialSequence startPoint,
+                        @Nonnull JournalInitialPosition initialPos,
                         boolean isRemoteReader) {
         this.eventJournalReader = eventJournalReader;
         this.assignedPartitions = new HashSet<>(assignedPartitions);
         this.predicate = (Serializable & Predicate<E>) predicateFn::test;
         this.projection = toProjection(projectionFn);
-        this.startPoint = startPoint;
+        this.initialPos = initialPos;
         this.isRemoteReader = isRemoteReader;
     }
 
@@ -189,7 +189,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     }
 
     private long getSequence(EventJournalInitialSubscriberState state) {
-        return startPoint == LATEST ? state.getNewestSequence() + 1 : state.getOldestSequence();
+        return initialPos == START_FROM_CURRENT ? state.getNewestSequence() + 1 : state.getOldestSequence();
     }
 
     private Traverser<T> nextTraverser() {
@@ -289,7 +289,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         private final DistributedFunction<HazelcastInstance, EventJournalReader<E>> eventJournalReaderSupplier;
         private final DistributedPredicate<E> predicate;
         private final DistributedFunction<E, T> projection;
-        private final JournalInitialSequence startPoint;
+        private final JournalInitialPosition initialPos;
 
         private transient int remotePartitionCount;
         private transient Map<Address, List<Integer>> addrToPartitions;
@@ -299,13 +299,13 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 DistributedFunction<HazelcastInstance, EventJournalReader<E>> eventJournalReaderSupplier,
                 DistributedPredicate<E> predicate,
                 DistributedFunction<E, T> projection,
-                JournalInitialSequence startPoint
+                JournalInitialPosition initialPos
         ) {
             this.serializableConfig = clientConfig == null ? null : new SerializableClientConfig(clientConfig);
             this.eventJournalReaderSupplier = eventJournalReaderSupplier;
             this.predicate = predicate;
             this.projection = projection;
-            this.startPoint = startPoint;
+            this.initialPos = initialPos;
         }
 
         @Override
@@ -348,7 +348,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             }
 
             return address -> new ClusterProcessorSupplier<>(addrToPartitions.get(address),
-                    serializableConfig, eventJournalReaderSupplier, predicate, projection, startPoint);
+                    serializableConfig, eventJournalReaderSupplier, predicate, projection, initialPos);
         }
 
     }
@@ -362,7 +362,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         private final DistributedFunction<HazelcastInstance, EventJournalReader<E>> eventJournalReaderSupplier;
         private final DistributedPredicate<E> predicate;
         private final DistributedFunction<E, T> projection;
-        private final JournalInitialSequence startPoint;
+        private final JournalInitialPosition initialPos;
 
         private transient HazelcastInstance client;
         private transient EventJournalReader<E> eventJournalReader;
@@ -373,13 +373,13 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 DistributedFunction<HazelcastInstance, EventJournalReader<E>> eventJournalReaderSupplier,
                 DistributedPredicate<E> predicate,
                 DistributedFunction<E, T> projection,
-                JournalInitialSequence startPoint) {
+                JournalInitialPosition initialPos) {
             this.ownedPartitions = ownedPartitions;
             this.serializableClientConfig = serializableClientConfig;
             this.eventJournalReaderSupplier = eventJournalReaderSupplier;
             this.predicate = predicate;
             this.projection = projection;
-            this.startPoint = startPoint;
+            this.initialPos = initialPos;
         }
 
         @Override
@@ -411,7 +411,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             return partitions.isEmpty()
                     ? Processors.noopP().get()
                     : new StreamEventJournalP<>(eventJournalReader, partitions, predicate, projection,
-                    startPoint, client != null);
+                    initialPos, client != null);
         }
     }
 
@@ -420,11 +420,11 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull String mapName,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projection,
-            @Nonnull JournalInitialSequence startPoint
+            @Nonnull JournalInitialPosition initialPos
     ) {
         return new ClusterMetaSupplier<>(null,
                 instance -> (EventJournalReader<EventJournalMapEvent<K, V>>) instance.getMap(mapName),
-                predicate, projection, startPoint);
+                predicate, projection, initialPos);
     }
 
     @SuppressWarnings("unchecked")
@@ -433,11 +433,11 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projection,
-            @Nonnull JournalInitialSequence startPoint
+            @Nonnull JournalInitialPosition initialPos
     ) {
         return new ClusterMetaSupplier<>(clientConfig,
                 instance -> (EventJournalReader<EventJournalMapEvent<K, V>>) instance.getMap(mapName),
-                predicate, projection, startPoint);
+                predicate, projection, initialPos);
     }
 
     @SuppressWarnings("unchecked")
@@ -445,11 +445,11 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull String cacheName,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projection,
-            @Nonnull JournalInitialSequence startPoint
+            @Nonnull JournalInitialPosition initialPos
     ) {
         return new ClusterMetaSupplier<>(null,
                 inst -> (EventJournalReader<EventJournalCacheEvent<K, V>>) inst.getCacheManager().getCache(cacheName),
-                predicate, projection, startPoint);
+                predicate, projection, initialPos);
     }
 
     @SuppressWarnings("unchecked")
@@ -458,10 +458,10 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projection,
-            @Nonnull JournalInitialSequence startPoint
+            @Nonnull JournalInitialPosition initialPos
     ) {
         return new ClusterMetaSupplier<>(clientConfig,
                 inst -> (EventJournalReader<EventJournalCacheEvent<K, V>>) inst.getCacheManager().getCache(cacheName),
-                predicate, projection, startPoint);
+                predicate, projection, initialPos);
     }
 }

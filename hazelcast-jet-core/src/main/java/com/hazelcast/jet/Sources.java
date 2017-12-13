@@ -150,12 +150,12 @@ public final class Sources {
     }
 
     /**
-     * Returns a source that will stream the {@link EventJournalMapEvent}
-     * events of the Hazelcast {@code IMap} with the specified name. By
-     * supplying a {@code predicate} and {@code projection} here instead of
-     * in separate {@code map/filter} transforms you allow the source to apply
-     * these functions early, before generating any output, with the potential
-     * of significantly reducing data traffic.
+     * Returns a source that will stream {@link EventJournalMapEvent}s of the
+     * Hazelcast {@code IMap} with the specified name. By supplying a {@code
+     * predicate} and {@code projection} here instead of in separate {@code
+     * map/filter} transforms you allow the source to apply these functions
+     * early, before generating any output, with the potential of significantly
+     * reducing data traffic.
      * <p>
      * The source leverages data locality by making each of the underlying
      * processors fetch only those entries that are stored on the member where
@@ -176,7 +176,7 @@ public final class Sources {
      *      ADDED} and {@link com.hazelcast.core.EntryEventType#UPDATED UPDATED} events
      * @param projectionFn the projection to map the events, you may use
      *     {@link Util#mapEventToEntry()} to project new value from the event
-     * @param initialSequence starting point of the events in the event journal
+     * @param initialPos describes which event to start receiving from
      * @param <T> type of emitted item
      */
     @Nonnull
@@ -184,15 +184,15 @@ public final class Sources {
             @Nonnull String mapName,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialSequence initialSequence
+            @Nonnull JournalInitialPosition initialPos
     ) {
         return fromProcessor("mapJournalSource(" + mapName + ')',
-                streamMapP(mapName, predicateFn, projectionFn, initialSequence));
+                streamMapP(mapName, predicateFn, projectionFn, initialPos));
     }
 
     /**
      * Convenience for {@link #mapJournal(String, DistributedPredicate,
-     * DistributedFunction, JournalInitialSequence)} which will pass only
+     * DistributedFunction, JournalInitialPosition)} which will pass only
      * {@link com.hazelcast.core.EntryEventType#ADDED ADDED} and {@link
      * com.hazelcast.core.EntryEventType#UPDATED UPDATED} events and will
      * project the event's key and new value into a {@code Map.Entry}.
@@ -200,9 +200,9 @@ public final class Sources {
     @Nonnull
     public static <K, V> Source<Entry<K, V>> mapJournal(
             @Nonnull String mapName,
-            @Nonnull JournalInitialSequence initialSequence
+            @Nonnull JournalInitialPosition initialPos
     ) {
-        return mapJournal(mapName, mapPutEvents(), mapEventToEntry(), initialSequence);
+        return mapJournal(mapName, mapPutEvents(), mapEventToEntry(), initialPos);
     }
 
     /**
@@ -300,7 +300,7 @@ public final class Sources {
      *      ADDED} and {@link com.hazelcast.core.EntryEventType#UPDATED UPDATED} events
      * @param projectionFn the projection to map the events, you may use
      *     {@link Util#mapEventToEntry()} to project new value from the event
-     * @param initialSequence starting point of the events in the event journal
+     * @param initialPos describes which event to start receiving from
      * @param <K> type of key
      * @param <V> type of value
      * @param <T> type of emitted item
@@ -311,15 +311,15 @@ public final class Sources {
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialSequence initialSequence
+            @Nonnull JournalInitialPosition initialPos
     ) {
         return fromProcessor("remoteMapJournalSource(" + mapName + ')',
-                streamRemoteMapP(mapName, clientConfig, predicateFn, projectionFn, initialSequence));
+                streamRemoteMapP(mapName, clientConfig, predicateFn, projectionFn, initialPos));
     }
 
     /**
      * Convenience for {@link #remoteMapJournal(String, ClientConfig, DistributedPredicate,
-     * DistributedFunction, JournalInitialSequence)} which will pass only
+     * DistributedFunction, JournalInitialPosition)} which will pass only
      * {@link com.hazelcast.core.EntryEventType#ADDED ADDED} and {@link
      * com.hazelcast.core.EntryEventType#UPDATED UPDATED} events and will
      * project the event's key and new value into a {@code Map.Entry}.
@@ -328,9 +328,9 @@ public final class Sources {
     public static <K, V> Source<Entry<K, V>> remoteMapJournal(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
-            @Nonnull JournalInitialSequence initialSequence
+            @Nonnull JournalInitialPosition initialPos
     ) {
-        return remoteMapJournal(mapName, clientConfig, mapPutEvents(), mapEventToEntry(), initialSequence);
+        return remoteMapJournal(mapName, clientConfig, mapPutEvents(), mapEventToEntry(), initialPos);
     }
 
     /**
@@ -379,7 +379,7 @@ public final class Sources {
      *      CREATED} and {@link com.hazelcast.cache.CacheEventType#UPDATED UPDATED} events
      * @param projectionFn the projection to map the events, you may use
      *     {@link Util#cacheEventToEntry()} to project new value from the event
-     * @param initialSequence starting point of the events in the event journal
+     * @param initialPos describes which event to start receiving from
      * @param <T> type of emitted item
      */
     @Nonnull
@@ -387,16 +387,16 @@ public final class Sources {
             @Nonnull String cacheName,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialSequence initialSequence
+            @Nonnull JournalInitialPosition initialPos
     ) {
         return fromProcessor("cacheJournalSource(" + cacheName + ')',
-                streamCacheP(cacheName, predicateFn, projectionFn, initialSequence)
+                streamCacheP(cacheName, predicateFn, projectionFn, initialPos)
         );
     }
 
     /**
      * Convenience for {@link #cacheJournal(String, DistributedPredicate,
-     * DistributedFunction, JournalInitialSequence)} which will pass only
+     * DistributedFunction, JournalInitialPosition)} which will pass only
      * {@link com.hazelcast.cache.CacheEventType#CREATED CREATED} and {@link
      * com.hazelcast.cache.CacheEventType#UPDATED UPDATED} events and will
      * project the event's key and new value into a {@code Map.Entry}.
@@ -404,9 +404,9 @@ public final class Sources {
     @Nonnull
     public static <K, V> Source<Entry<K, V>> cacheJournal(
             @Nonnull String cacheName,
-            @Nonnull JournalInitialSequence initialSequence
+            @Nonnull JournalInitialPosition initialPos
     ) {
-        return cacheJournal(cacheName, cachePutEvents(), cacheEventToEntry(), initialSequence);
+        return cacheJournal(cacheName, cachePutEvents(), cacheEventToEntry(), initialPos);
     }
 
     /**
@@ -454,7 +454,7 @@ public final class Sources {
      *      CREATED} and {@link com.hazelcast.cache.CacheEventType#UPDATED UPDATED} events
      * @param projectionFn the projection to map the events, you may use
      *     {@link Util#cacheEventToEntry()} to project new value from the event
-     * @param initialSequence starting point of the events in the event journal
+     * @param initialPos describes which event to start receiving from
      * @param <T> type of emitted item
      */
     @Nonnull
@@ -463,15 +463,15 @@ public final class Sources {
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialSequence initialSequence
+            @Nonnull JournalInitialPosition initialPos
     ) {
         return fromProcessor("remoteCacheJournalSource(" + cacheName + ')',
-                streamRemoteCacheP(cacheName, clientConfig, predicateFn, projectionFn, initialSequence));
+                streamRemoteCacheP(cacheName, clientConfig, predicateFn, projectionFn, initialPos));
     }
 
     /**
      * Convenience for {@link #remoteCacheJournal(String, ClientConfig, DistributedPredicate,
-     * DistributedFunction, JournalInitialSequence)} which will pass only
+     * DistributedFunction, JournalInitialPosition)} which will pass only
      * {@link com.hazelcast.cache.CacheEventType#CREATED CREATED} and {@link
      * com.hazelcast.cache.CacheEventType#UPDATED UPDATED} events and will
      * project the event's key and new value into a {@code Map.Entry}.
@@ -480,9 +480,9 @@ public final class Sources {
     public static <K, V> Source<Entry<K, V>> remoteCacheJournal(
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig,
-            @Nonnull JournalInitialSequence initialSequence
+            @Nonnull JournalInitialPosition initialPos
     ) {
-        return remoteCacheJournal(cacheName, clientConfig, cachePutEvents(), cacheEventToEntry(), initialSequence);
+        return remoteCacheJournal(cacheName, clientConfig, cachePutEvents(), cacheEventToEntry(), initialPos);
     }
 
     /**

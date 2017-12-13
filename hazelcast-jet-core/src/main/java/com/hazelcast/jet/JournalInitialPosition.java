@@ -17,24 +17,29 @@
 package com.hazelcast.jet;
 
 /**
- * Selection of start point for IMap/ICache Journal streamer.
+ * When passed to an IMap/ICache Event Journal source, specifies which
+ * event to start from. You can start from the oldest event still in the
+ * journal or skip all the history and receive only the events that
+ * occur after connecting to the event journal.
  * <p>
- * See:<ul>
+ * See:
+ * <ul>
  *     <li>{@link Sources#mapJournal}
  *     <li>{@link Sources#remoteMapJournal}
  *     <li>{@link Sources#cacheJournal}
  *     <li>{@link Sources#remoteCacheJournal}
  * </ul>
  */
-public enum JournalInitialSequence {
+public enum JournalInitialPosition {
 
     /**
-     * Start emitting events from earliest available event.
+     * Start from the oldest event still available.
      */
-    EARLIEST,
+    START_FROM_OLDEST,
 
     /**
-     * Start emitting from events which occurred after the processor starts.
+     * Skip all the history and emit only the events that occur after
+     * connecting to the journal.
      */
-    LATEST
+    START_FROM_CURRENT
 }
