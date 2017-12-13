@@ -61,19 +61,24 @@ public final class Util {
     }
 
     /**
-     * Returns a projection for {@link Sources#mapJournal} and
-     * {@link Sources#remoteMapJournal} that extracts new value from the event.
+     * Returns a projection that converts the {@link EventJournalMapEvent} to a
+     * {@link java.util.Map.Entry} using the event's new value as a value.
+     *
+     * @see Sources#mapJournal
+     * @see Sources#remoteMapJournal
      */
-    public static <K, V> DistributedFunction<EventJournalMapEvent<K, V>, V> mapEventNewValue() {
-        return EventJournalMapEvent::getNewValue;
+    public static <K, V> DistributedFunction<EventJournalMapEvent<K, V>, Entry<K, V>> mapEventToEntry() {
+        return e -> entry(e.getKey(), e.getNewValue());
     }
 
     /**
-     * Returns a projection for {@link Sources#cacheJournal} and
-     * {@link Sources#remoteCacheJournal} that extracts new value from the
-     * event.
+     * Returns a projection that converts the {@link EventJournalCacheEvent} to a
+     * {@link java.util.Map.Entry} using the event's new value as a value.
+     *
+     * @see Sources#cacheJournal
+     * @see Sources#remoteCacheJournal
      */
-    public static <K, V> DistributedFunction<EventJournalCacheEvent<K, V>, V> cacheEventNewValue() {
-        return EventJournalCacheEvent::getNewValue;
+    public static <K, V> DistributedFunction<EventJournalCacheEvent<K, V>, Entry<K, V>> cacheEventToEntry() {
+        return e -> entry(e.getKey(), e.getNewValue());
     }
 }

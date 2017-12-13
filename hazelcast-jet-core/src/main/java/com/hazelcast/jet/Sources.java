@@ -32,9 +32,9 @@ import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.Util.cacheEventNewValue;
+import static com.hazelcast.jet.Util.cacheEventToEntry;
 import static com.hazelcast.jet.Util.cachePutEvents;
-import static com.hazelcast.jet.Util.mapEventNewValue;
+import static com.hazelcast.jet.Util.mapEventToEntry;
 import static com.hazelcast.jet.Util.mapPutEvents;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readCacheP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readFilesP;
@@ -187,7 +187,7 @@ public final class Sources {
      *      {@link Util#mapPutEvents} to pass only {@link com.hazelcast.core.EntryEventType#ADDED
      *      ADDED} and {@link com.hazelcast.core.EntryEventType#UPDATED UPDATED} events
      * @param projectionFn the projection to map the events, you may use
-     *     {@link Util#mapEventNewValue()} to project new value from the event
+     *     {@link Util#mapEventToEntry()} to project new value from the event
      * @param initialSequence starting point of the events in the event journal
      * @param <T> type of emitted item
      */
@@ -207,17 +207,14 @@ public final class Sources {
      * DistributedFunction, JournalInitialSequence)} which will pass only
      * {@link com.hazelcast.core.EntryEventType#ADDED ADDED} and {@link
      * com.hazelcast.core.EntryEventType#UPDATED UPDATED} events and will
-     * project only new value from the event (i.e. the <em>value</em> that was
-     * added/updated to).
-     * <p>
-     * It emits values from the map.
+     * project the event's key and new value into a {@code Map.Entry}.
      */
     @Nonnull
-    public static <V> Source<V> mapJournal(
+    public static <K, V> Source<Entry<K, V>> mapJournal(
             @Nonnull String mapName,
             @Nonnull JournalInitialSequence initialSequence
     ) {
-        return mapJournal(mapName, mapPutEvents(), mapEventNewValue(), initialSequence);
+        return mapJournal(mapName, mapPutEvents(), mapEventToEntry(), initialSequence);
     }
 
     /**
@@ -326,7 +323,7 @@ public final class Sources {
      *      {@link Util#mapPutEvents} to pass only {@link com.hazelcast.core.EntryEventType#ADDED
      *      ADDED} and {@link com.hazelcast.core.EntryEventType#UPDATED UPDATED} events
      * @param projectionFn the projection to map the events, you may use
-     *     {@link Util#mapEventNewValue()} to project new value from the event
+     *     {@link Util#mapEventToEntry()} to project new value from the event
      * @param initialSequence starting point of the events in the event journal
      * @param <K> type of key
      * @param <V> type of value
@@ -349,19 +346,15 @@ public final class Sources {
      * DistributedFunction, JournalInitialSequence)} which will pass only
      * {@link com.hazelcast.core.EntryEventType#ADDED ADDED} and {@link
      * com.hazelcast.core.EntryEventType#UPDATED UPDATED} events and will
-     * project only new value from the event (i.e. the <em>value</em> that was
-     * added/updated to).
-     * <p>
-     * It emits values from the map.
-
+     * project the event's key and new value into a {@code Map.Entry}.
      */
     @Nonnull
-    public static <V> Source<V> remoteMapJournal(
+    public static <K, V> Source<Entry<K, V>> remoteMapJournal(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull JournalInitialSequence initialSequence
     ) {
-        return remoteMapJournal(mapName, clientConfig, mapPutEvents(), mapEventNewValue(), initialSequence);
+        return remoteMapJournal(mapName, clientConfig, mapPutEvents(), mapEventToEntry(), initialSequence);
     }
 
     /**
@@ -421,7 +414,7 @@ public final class Sources {
      *      {@link Util#cachePutEvents()} to pass only {@link com.hazelcast.cache.CacheEventType#CREATED
      *      CREATED} and {@link com.hazelcast.cache.CacheEventType#UPDATED UPDATED} events
      * @param projectionFn the projection to map the events, you may use
-     *     {@link Util#cacheEventNewValue()} to project new value from the event
+     *     {@link Util#cacheEventToEntry()} to project new value from the event
      * @param initialSequence starting point of the events in the event journal
      * @param <T> type of emitted item
      */
@@ -442,17 +435,14 @@ public final class Sources {
      * DistributedFunction, JournalInitialSequence)} which will pass only
      * {@link com.hazelcast.cache.CacheEventType#CREATED CREATED} and {@link
      * com.hazelcast.cache.CacheEventType#UPDATED UPDATED} events and will
-     * project only new value from the event (i.e. the <em>value</em> that was
-     * created/updated to).
-     * <p>
-     * It emits values from the cache.
+     * project the event's key and new value into a {@code Map.Entry}.
      */
     @Nonnull
-    public static <V> Source<V> cacheJournal(
+    public static <K, V> Source<Entry<K, V>> cacheJournal(
             @Nonnull String cacheName,
             @Nonnull JournalInitialSequence initialSequence
     ) {
-        return cacheJournal(cacheName, cachePutEvents(), cacheEventNewValue(), initialSequence);
+        return cacheJournal(cacheName, cachePutEvents(), cacheEventToEntry(), initialSequence);
     }
 
     /**
@@ -511,7 +501,7 @@ public final class Sources {
      *      {@link Util#cachePutEvents()} to pass only {@link com.hazelcast.cache.CacheEventType#CREATED
      *      CREATED} and {@link com.hazelcast.cache.CacheEventType#UPDATED UPDATED} events
      * @param projectionFn the projection to map the events, you may use
-     *     {@link Util#cacheEventNewValue()} to project new value from the event
+     *     {@link Util#cacheEventToEntry()} to project new value from the event
      * @param initialSequence starting point of the events in the event journal
      * @param <T> type of emitted item
      */
@@ -532,18 +522,15 @@ public final class Sources {
      * DistributedFunction, JournalInitialSequence)} which will pass only
      * {@link com.hazelcast.cache.CacheEventType#CREATED CREATED} and {@link
      * com.hazelcast.cache.CacheEventType#UPDATED UPDATED} events and will
-     * project only new value from the event (i.e. the <em>value</em> that was
-     * created/updated to).
-     * <p>
-     * It emits values from the cache.
+     * project the event's key and new value into a {@code Map.Entry}.
      */
     @Nonnull
-    public static <K, V> Source<EventJournalCacheEvent<K, V>> remoteCacheJournal(
+    public static <K, V> Source<Entry<K, V>> remoteCacheJournal(
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull JournalInitialSequence initialSequence
     ) {
-        return remoteCacheJournal(cacheName, clientConfig, cachePutEvents(), cacheEventNewValue(), initialSequence);
+        return remoteCacheJournal(cacheName, clientConfig, cachePutEvents(), cacheEventToEntry(), initialSequence);
     }
 
     /**

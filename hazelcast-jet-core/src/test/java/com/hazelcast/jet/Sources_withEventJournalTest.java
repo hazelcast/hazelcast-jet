@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.JournalInitialSequence.EARLIEST;
+import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 
@@ -41,6 +42,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
 
         // When we start the job...
         pipeline.drawFrom(Sources.mapJournal(mapName, EARLIEST))
+                .map(entryValue())
                 .drainTo(sink);
         jet().newJob(pipeline);
 

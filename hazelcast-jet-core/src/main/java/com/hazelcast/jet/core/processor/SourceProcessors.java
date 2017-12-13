@@ -36,9 +36,9 @@ import javax.annotation.Nonnull;
 import java.nio.charset.Charset;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.Util.cacheEventNewValue;
+import static com.hazelcast.jet.Util.cacheEventToEntry;
 import static com.hazelcast.jet.Util.cachePutEvents;
-import static com.hazelcast.jet.Util.mapEventNewValue;
+import static com.hazelcast.jet.Util.mapEventToEntry;
 import static com.hazelcast.jet.Util.mapPutEvents;
 
 /**
@@ -93,7 +93,7 @@ public final class SourceProcessors {
      */
     @Nonnull
     public static ProcessorMetaSupplier streamMapP(@Nonnull String mapName, @Nonnull JournalInitialSequence startPoint) {
-        return streamMapP(mapName, mapPutEvents(), mapEventNewValue(), startPoint);
+        return streamMapP(mapName, mapPutEvents(), mapEventToEntry(), startPoint);
     }
 
     /**
@@ -160,7 +160,7 @@ public final class SourceProcessors {
             @Nonnull ClientConfig clientConfig,
             @Nonnull JournalInitialSequence startPoint
     ) {
-        return streamRemoteMapP(mapName, clientConfig, mapPutEvents(), mapEventNewValue(), startPoint);
+        return streamRemoteMapP(mapName, clientConfig, mapPutEvents(), mapEventToEntry(), startPoint);
     }
 
     /**
@@ -197,7 +197,7 @@ public final class SourceProcessors {
     @Nonnull
     public static ProcessorMetaSupplier streamCacheP(@Nonnull String cacheName,
                                                      @Nonnull JournalInitialSequence startPoint) {
-        return streamCacheP(cacheName, cachePutEvents(), cacheEventNewValue(), startPoint);
+        return streamCacheP(cacheName, cachePutEvents(), cacheEventToEntry(), startPoint);
     }
 
     /**
@@ -232,7 +232,7 @@ public final class SourceProcessors {
     public static ProcessorMetaSupplier streamRemoteCacheP(
             @Nonnull String cacheName, @Nonnull ClientConfig clientConfig, @Nonnull JournalInitialSequence startPoint
     ) {
-        return streamRemoteCacheP(cacheName, clientConfig, cachePutEvents(), cacheEventNewValue(), startPoint);
+        return streamRemoteCacheP(cacheName, clientConfig, cachePutEvents(), cacheEventToEntry(), startPoint);
     }
 
     /**
