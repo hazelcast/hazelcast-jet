@@ -16,6 +16,13 @@
 
 package com.hazelcast.jet;
 
+import com.hazelcast.cache.CacheEventType;
+import com.hazelcast.cache.journal.EventJournalCacheEvent;
+import com.hazelcast.core.EntryEventType;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedPredicate;
+import com.hazelcast.map.journal.EventJournalMapEvent;
+
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Map.Entry;
 
@@ -31,5 +38,42 @@ public final class Util {
      */
     public static <K, V> Entry<K, V> entry(K k, V v) {
         return new SimpleImmutableEntry<>(k, v);
+    }
+
+    /**
+     * Returns a predicate for {@link Sources#mapJournal} and
+     * {@link Sources#remoteMapJournal} that passes only
+     * {@link EntryEventType#ADDED ADDED} and {@link EntryEventType#UPDATED
+     * UPDATED} events.
+     */
+    public static <K, V> DistributedPredicate<EventJournalMapEvent<K, V>> mapPutEvents() {
+        return e -> e.getType() == EntryEventType.ADDED || e.getType() == EntryEventType.UPDATED;
+    }
+
+    /**
+     * Returns a predicate for {@link Sources#cacheJournal} and
+     * {@link Sources#remoteCacheJournal} that passes only
+     * {@link CacheEventType#CREATED CREATED} and {@link CacheEventType#UPDATED
+     * UPDATED} events.
+     */
+    public static <K, V> DistributedPredicate<EventJournalCacheEvent<K, V>> cachePutEvents() {
+        return e -> e.getType() == CacheEventType.CREATED || e.getType() == CacheEventType.UPDATED;
+    }
+
+    /**
+     * Returns a projection for {@link Sources#mapJournal} and
+     * {@link Sources#remoteMapJournal} that extracts new value from the event.
+     */
+    public static <K, V> DistributedFunction<EventJournalMapEvent<K, V>, V> mapEventNewValue() {
+        return EventJournalMapEvent::getNewValue;
+    }
+
+    /**
+     * Returns a projection for {@link Sources#cacheJournal} and
+     * {@link Sources#remoteCacheJournal} that extracts new value from the
+     * event.
+     */
+    public static <K, V> DistributedFunction<EventJournalCacheEvent<K, V>, V> cacheEventNewValue() {
+        return EventJournalCacheEvent::getNewValue;
     }
 }

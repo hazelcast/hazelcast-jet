@@ -18,6 +18,7 @@ package com.hazelcast.jet.core.processor;
 
 import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.jet.JournalInitialSequence;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
@@ -32,9 +33,13 @@ import com.hazelcast.projection.Projection;
 import com.hazelcast.query.Predicate;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.nio.charset.Charset;
 import java.util.Map.Entry;
+
+import static com.hazelcast.jet.Util.cacheEventNewValue;
+import static com.hazelcast.jet.Util.cachePutEvents;
+import static com.hazelcast.jet.Util.mapEventNewValue;
+import static com.hazelcast.jet.Util.mapPutEvents;
 
 /**
  * Static utility class with factories of source processors (the DAG
@@ -84,25 +89,26 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#mapJournal(String, boolean)}.
+     * {@link com.hazelcast.jet.Sources#mapJournal(String, JournalInitialSequence)}.
      */
     @Nonnull
-    public static ProcessorMetaSupplier streamMapP(@Nonnull String mapName, boolean startFromLatestSequence) {
-        return StreamEventJournalP.streamMapP(mapName, null, null, startFromLatestSequence);
+    public static ProcessorMetaSupplier streamMapP(@Nonnull String mapName, @Nonnull JournalInitialSequence startPoint) {
+        return streamMapP(mapName, mapPutEvents(), mapEventNewValue(), startPoint);
     }
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#mapJournal(String, DistributedPredicate, DistributedFunction, boolean)}.
+     * {@link com.hazelcast.jet.Sources#mapJournal(String, DistributedPredicate,
+     * DistributedFunction, JournalInitialSequence)}.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier streamMapP(
             @Nonnull String mapName,
-            @Nullable DistributedPredicate<EventJournalMapEvent<K, V>> predicate,
-            @Nullable DistributedFunction<EventJournalMapEvent<K, V>, T> projection,
-            boolean startFromLatestSequence
+            @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
+            @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
+            @Nonnull JournalInitialSequence startPoint
     ) {
-        return StreamEventJournalP.streamMapP(mapName, predicate, projection, startFromLatestSequence);
+        return StreamEventJournalP.streamMapP(mapName, predicateFn, projectionFn, startPoint);
     }
 
     /**
@@ -146,33 +152,33 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#remoteMapJournal(String, ClientConfig, boolean)}.
+     * {@link com.hazelcast.jet.Sources#remoteMapJournal(String, ClientConfig, JournalInitialSequence)}.
      */
     @Nonnull
     public static ProcessorMetaSupplier streamRemoteMapP(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
-            boolean startFromLatestSequence
+            @Nonnull JournalInitialSequence startPoint
     ) {
-        return StreamEventJournalP.streamRemoteMapP(mapName, clientConfig, null, null, startFromLatestSequence);
+        return streamRemoteMapP(mapName, clientConfig, mapPutEvents(), mapEventNewValue(), startPoint);
     }
 
     /**
      * Returns a supplier of processors for {@link
      * com.hazelcast.jet.Sources#remoteMapJournal(
-     * String, ClientConfig, DistributedPredicate, DistributedFunction, boolean
+     * String, ClientConfig, DistributedPredicate, DistributedFunction, JournalInitialSequence
      * )}.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier streamRemoteMapP(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
-            @Nullable DistributedPredicate<EventJournalMapEvent<K, V>> predicate,
-            @Nullable DistributedFunction<EventJournalMapEvent<K, V>, T> projection,
-            boolean startFromLatestSequence
+            @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
+            @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
+            @Nonnull JournalInitialSequence startPoint
     ) {
         return StreamEventJournalP.streamRemoteMapP(
-                mapName, clientConfig, predicate, projection, startFromLatestSequence);
+                mapName, clientConfig, predicateFn, projectionFn, startPoint);
     }
 
     /**
@@ -186,25 +192,27 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#cacheJournal(String, boolean)}.
+     * {@link com.hazelcast.jet.Sources#cacheJournal(String, JournalInitialSequence)}.
      */
     @Nonnull
-    public static ProcessorMetaSupplier streamCacheP(@Nonnull String cacheName, boolean startFromLatestSequence) {
-        return StreamEventJournalP.streamCacheP(cacheName, null, null, startFromLatestSequence);
+    public static ProcessorMetaSupplier streamCacheP(@Nonnull String cacheName,
+                                                     @Nonnull JournalInitialSequence startPoint) {
+        return streamCacheP(cacheName, cachePutEvents(), cacheEventNewValue(), startPoint);
     }
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#cacheJournal(String, DistributedPredicate, DistributedFunction, boolean)}.
+     * {@link com.hazelcast.jet.Sources#cacheJournal(String, DistributedPredicate,
+     * DistributedFunction, JournalInitialSequence)}.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier streamCacheP(
             @Nonnull String cacheName,
-            @Nullable DistributedPredicate<EventJournalCacheEvent<K, V>> predicate,
-            @Nullable DistributedFunction<EventJournalCacheEvent<K, V>, T> projection,
-            boolean startFromLatestSequence
+            @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
+            @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
+            @Nonnull JournalInitialSequence startPoint
     ) {
-        return StreamEventJournalP.streamCacheP(cacheName, predicate, projection, startFromLatestSequence);
+        return StreamEventJournalP.streamCacheP(cacheName, predicateFn, projectionFn, startPoint);
     }
 
     /**
@@ -218,31 +226,31 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#remoteCacheJournal(String, ClientConfig, boolean)}.
+     * {@link com.hazelcast.jet.Sources#remoteCacheJournal(String, ClientConfig, JournalInitialSequence)}.
      */
     @Nonnull
     public static ProcessorMetaSupplier streamRemoteCacheP(
-            @Nonnull String cacheName, @Nonnull ClientConfig clientConfig, boolean startFromLatestSequence
+            @Nonnull String cacheName, @Nonnull ClientConfig clientConfig, @Nonnull JournalInitialSequence startPoint
     ) {
-        return StreamEventJournalP.streamRemoteCacheP(cacheName, clientConfig, null, null, startFromLatestSequence);
+        return streamRemoteCacheP(cacheName, clientConfig, cachePutEvents(), cacheEventNewValue(), startPoint);
     }
 
     /**
      * Returns a supplier of processors for {@link
      * com.hazelcast.jet.Sources#remoteCacheJournal(
-     * String, ClientConfig, DistributedPredicate, DistributedFunction, boolean
+     * String, ClientConfig, DistributedPredicate, DistributedFunction, JournalInitialSequence
      * )}.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier streamRemoteCacheP(
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig,
-            @Nullable DistributedPredicate<EventJournalCacheEvent<K, V>> predicate,
-            @Nullable DistributedFunction<EventJournalCacheEvent<K, V>, T> projection,
-            boolean startFromLatestSequence
+            @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
+            @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
+            @Nonnull JournalInitialSequence startPoint
     ) {
         return StreamEventJournalP.streamRemoteCacheP(
-                cacheName, clientConfig, predicate, projection, startFromLatestSequence);
+                cacheName, clientConfig, predicateFn, projectionFn, startPoint);
     }
 
     /**

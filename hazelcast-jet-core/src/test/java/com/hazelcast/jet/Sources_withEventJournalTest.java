@@ -26,6 +26,7 @@ import org.junit.Test;
 import java.util.List;
 import java.util.stream.Stream;
 
+import static com.hazelcast.jet.JournalInitialSequence.EARLIEST;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 
@@ -41,8 +42,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
         input.forEach(i -> srcMap.put(String.valueOf(key[0]++), Integer.MIN_VALUE + i));
 
         // When we start the job...
-        pipeline.drawFrom(Sources.mapJournal(mapName, false))
-                .map(EventJournalMapEvent::getNewValue)
+        pipeline.drawFrom(Sources.mapJournal(mapName, EARLIEST))
                 .drainTo(sink);
         jet().newJob(pipeline);
 
@@ -55,6 +55,12 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
 
         // Then eventually we get all the updated values in the sink.
         assertSizeEventually(2 * ITEM_COUNT, sinkList);
+
+        // When we delete all map items...
+        input.forEach(i -> srcMap.remove(String.valueOf(key[0]++)));
+
+        // Then we won't get any more events in the sink.
+        assertTrueAllTheTime(() -> assertEquals(2 * ITEM_COUNT, sinkList.size()), 2);
 
         // The values we got are exactly all the original values
         // and all the updated values.
@@ -74,7 +80,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
 
         // When we start the job...
         DistributedPredicate<EventJournalMapEvent<String, Integer>> p = e -> e.getNewValue() % 2 == 0;
-        pipeline.drawFrom(Sources.mapJournal(mapName, p, EventJournalMapEvent::getNewValue, false))
+        pipeline.drawFrom(Sources.mapJournal(mapName, p, EventJournalMapEvent::getNewValue, EARLIEST))
                 .drainTo(sink);
         jet().newJob(pipeline);
 
