@@ -157,41 +157,33 @@ public class JobConfig implements Serializable {
     }
 
     /**
-     * Sets the maximum system-time interval to retain the watermarks when
-     * coalescing them. A negative value disables the limit and Jet will retain
-     * the watermark as long as needed. This setting has no effect on edges
-     * where there are no watermarks.
+     * Sets the maximum time to retain the watermarks while coalescing them.
+     * A negative value disables the limit and Jet will retain the watermark
+     * as long as needed. With this setting you choose a tradeoff between
+     * latency and correctness that arises when dealing with stream skew.
      *
      * <h3>Stream Skew</h3>
-     * The <em>skew</em> between two inputs is defined as the difference of
-     * their watermark values. There is always some skew in the system and it's
-     * acceptable, but it can grow very large due to various causes such as a
-     * hiccup on one of the members (a long GC pause), external source hiccup
-     * on a member, skew between partitions of a distributed source, and so on.
+     * The <em>skew</em> between two slices of a distributed stream is defined
+     * as the difference in their watermark values. There is always some skew
+     * in the system and it's acceptable, but it can grow very large due to
+     * various causes such as a hiccup on one of the cluster members (a long GC
+     * pause), external source hiccup on a member, skew between partitions of a
+     * distributed source, and so on.
      *
      * <h3>Detrimental Effects of Stream Skew</h3>
-     * To maintain full correctness, a processor must wait indefinitely for the
-     * watermark to advance in all the contributing inputs in order to advance
-     * its own watermark. This process is called the <em>coalescing of
-     * watermarks</em> and its effect is the increased latency of the output
-     * with respect to the input and possibly also increased memory usage due to
-     * the retention of all the pending data.
+     * To maintain full correctness, Jet must wait indefinitely for the
+     * watermark to advance in all the slices of the stream in order to advance
+     * the overall watermark. The process that does this is called <em>watermark
+     * coalescing</em> and it results in increased latency of the output with
+     * respect to the input and possibly also increased memory usage due to the
+     * retention of all the pending data.
      *
-     * <h3>Example</h3>
-     * Suppose we coalesce two inputs: <em>input0</em> and <em>input1</em>. We
-     * receive a watermark with timestamp=1 (<em>wm(1)</em> for short) from
-     * <em>input0</em>. Later on, we receive <em>wm(1)</em> from <em>input1</em>
-     * as well and now we can forward it to the processor. However, it can
-     * happen that <em>input1</em> doesn't receive any watermarks. If you have
-     * configured the maximum watermark retention time for the job, {@code
-     * retainMillis} after having received it from <em>input0</em> we give up
-     * and forward it anyway.
-     *
-     * <h3>Effects of Maximum Retention Time on Correctness</h3>
-     * Limiting the watermark retention time allows the processing to continue
-     * in the face of exceedingly large stream skew. However, since any event
-     * with a timestamp less than the current watermark is categorized as a
-     * <em>late event </em> and dropped, this setting can result in data loss.
+     * <h3>Detrimental Effects of Limiting Retention Time</h3>
+     * Limiting the watermark retention time allows it to advance, and therefore
+     * the processing to continue, in the face of exceedingly large stream skew.
+     * However, since any event with a timestamp less than the current watermark
+     * is categorized as a <em>late event </em> and dropped, this limit can
+     * result in data loss.
      *
      * @param retainMillis maximum time to retain watermarks for delayed queues
      *                     or -1 to disable (the default)
