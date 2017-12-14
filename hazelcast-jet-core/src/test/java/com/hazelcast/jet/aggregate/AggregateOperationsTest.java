@@ -354,6 +354,37 @@ public class AggregateOperationsTest {
         );
     }
 
+    @Test
+    public void when_concatenatingEmptyItems_withDelimiterPrefixSuffix() {
+        validateOpWithoutDeduct(
+                concatenating(",", "(", ")"),
+                StringBuilder::toString,
+                "A",
+                "",
+                "(A",
+                "(A",
+                "(A)"
+        );
+        validateOpWithoutDeduct(
+                concatenating(",", "(", ")"),
+                StringBuilder::toString,
+                "",
+                "B",
+                "(",
+                "(B",
+                "(B)"
+        );
+        validateOpWithoutDeduct(
+                concatenating(",", "(", ")"),
+                StringBuilder::toString,
+                "",
+                "",
+                "(",
+                "(",
+                "()"
+        );
+    }
+
     private static <T, A, X, R> void validateOp(
             AggregateOperation1<T, A, R> op,
             Function<A, X> getAccValFn,

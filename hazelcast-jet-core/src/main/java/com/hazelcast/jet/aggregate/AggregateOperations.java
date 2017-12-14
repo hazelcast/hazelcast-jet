@@ -318,7 +318,7 @@ public final class AggregateOperations {
         return AggregateOperation
                 .withCreate(() -> new StringBuilder().append(prefix))
                 .<CharSequence>andAccumulate((builder, val) -> {
-                            if (builder.length() != prefixLen) {
+                            if (builder.length() != prefixLen && val.length() > 0) {
                                 builder.append(delimiter);
                             }
                             builder.append(val);
@@ -512,8 +512,8 @@ public final class AggregateOperations {
     /**
      * Returns an {@code AggregateOperation1} that accumulates elements
      * into a {@code HashMap} where the keys are the result of applying the key
-     * mapping function and values are the values with same key accumulated into
-     * a list.
+     * mapping function and values are the input elements with same key
+     * accumulated into a list.
      * <p>
      * This aggregation is useful for creating a cascaded group by
      * operation where the values are re-grouped by a secondary key.
