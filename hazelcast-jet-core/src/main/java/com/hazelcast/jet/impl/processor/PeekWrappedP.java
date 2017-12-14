@@ -20,6 +20,7 @@ import com.hazelcast.instance.HazelcastInstanceImpl;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.logging.ILogger;
@@ -35,23 +36,8 @@ import static com.hazelcast.jet.impl.execution.init.ExecutionPlan.createLoggerNa
 import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
- * A processor that wraps another one and logs its input, output or
- * snapshot output on the local cluster member. See
- * {@link com.hazelcast.jet.core.processor.DiagnosticProcessors#peekInputP(
- *        DistributedFunction,
- *        com.hazelcast.jet.function.DistributedPredicate,
- *        com.hazelcast.jet.core.ProcessorMetaSupplier)
- * DiagnosticProcessors.peekInput()},
- * {@link com.hazelcast.jet.core.processor.DiagnosticProcessors#peekOutputP(
- *        DistributedFunction,
- *        com.hazelcast.jet.function.DistributedPredicate,
- *        com.hazelcast.jet.core.ProcessorMetaSupplier)
- * DiagnosticProcessors.peekOutput()}
- * and {@link com.hazelcast.jet.core.processor.DiagnosticProcessors#peekSnapshotP(
- *            DistributedFunction,
- *            com.hazelcast.jet.function.DistributedPredicate,
- *            com.hazelcast.jet.core.ProcessorMetaSupplier)
- * DiagnosticProcessors.peekSnapshot()}.
+ * Internal API, see
+ * {@link com.hazelcast.jet.core.processor.DiagnosticProcessors}.
  */
 public final class PeekWrappedP<T> implements Processor {
 
@@ -64,6 +50,8 @@ public final class PeekWrappedP<T> implements Processor {
     private final boolean peekInput;
     private final boolean peekOutput;
     private final boolean peekSnapshot;
+
+    private boolean peekedWatermarkLogged;
 
     public PeekWrappedP(@Nonnull Processor wrappedProcessor, @Nonnull DistributedFunction<T, String> toStringFn,
                         @Nonnull Predicate<T> shouldLogFn, boolean peekInput, boolean peekOutput, boolean peekSnapshot) {
@@ -146,6 +134,21 @@ public final class PeekWrappedP<T> implements Processor {
     @Override
     public void restoreFromSnapshot(@Nonnull Inbox inbox) {
         wrappedProcessor.restoreFromSnapshot(inbox);
+    }
+
+    @Override
+    public boolean tryProcessWatermark(Watermark watermark) {
+        if (peekInput && !peekedWatermarkLogged) {
+            if (shouldLogFn.test((T) watermark)) {
+                logger.info("Input: " + toStringFn.apply((T) watermark));
+                peekedWatermarkLogged = true;
+            }
+        }
+        if (wrappedProcessor.tryProcessWatermark(watermark)) {
+            peekedWatermarkLogged = false;
+            return true;
+        }
+        return false;
     }
 
     @Override

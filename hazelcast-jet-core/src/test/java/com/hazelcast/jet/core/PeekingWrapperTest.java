@@ -77,8 +77,8 @@ public class PeekingWrapperTest {
         return Arrays.asList(
                 new Object[]{null, null},
                 new Object[]{
-                        (DistributedFunction<Integer, String>) o -> "a" + o,
-                        (DistributedPredicate<Integer>) (Integer o) -> o % 2 == 0,
+                        (DistributedFunction<Object, String>) o -> "a" + o,
+                        (DistributedPredicate<Object>) o -> !(o instanceof Integer) || ((Integer) o) % 2 == 0,
                 }
         );
     }
@@ -240,8 +240,13 @@ public class PeekingWrapperTest {
         peekP.process(0, inbox);
         if (shouldLogFn == null) {
             verify(logger).info("Input from 0: " + format(1));
+        } else {
+            verifyZeroInteractions(logger);
         }
-        verifyZeroInteractions(logger);
+
+        Watermark wm = new Watermark(1);
+        peekP.tryProcessWatermark(wm);
+        verify(logger).info("Input: " + format(wm));
     }
 
     private void assertPeekOutput() {
@@ -282,7 +287,7 @@ public class PeekingWrapperTest {
         verifyZeroInteractions(logger);
     }
 
-    private String format(int s) {
+    private String format(Object s) {
         return toStringFn == null ? String.valueOf(s) : toStringFn.apply(s);
     }
 
