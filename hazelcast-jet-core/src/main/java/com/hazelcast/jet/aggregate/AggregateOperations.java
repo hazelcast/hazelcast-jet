@@ -325,7 +325,7 @@ public final class AggregateOperations {
                         }
                 )
                 .andCombine((l, r) -> {
-                    if (l.length() != prefixLen) {
+                    if (l.length() != prefixLen && r.length() != prefixLen) {
                         l.append(delimiter);
                     }
                     l.append(r, prefixLen, r.length());
