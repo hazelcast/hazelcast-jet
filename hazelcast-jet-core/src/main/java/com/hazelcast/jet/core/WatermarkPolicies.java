@@ -65,11 +65,11 @@ public final class WatermarkPolicies {
      * items received by an individual processor: the watermark of a processor
      * using this policy will never advance beyond the timestamp it observed in
      * isolation from the rest of the system. In the case of severe stream skew
-     * a given processor's watermark may lag significiantly behind that of other
+     * a given processor's watermark may lag significantly behind that of other
      * processors and cause delays when getting coalesced with them in
      * downstream processors. To overcome this you can also configure {@link
      * com.hazelcast.jet.config.JobConfig#setMaxWatermarkRetainMillis
-     * JobConfig.maxWatermarkRetention}.
+     * JobConfig.setMaxWatermarkRetainMillis}.
      *
      * @param lag upper bound on the difference between the top observed timestamp and the
      *               watermark

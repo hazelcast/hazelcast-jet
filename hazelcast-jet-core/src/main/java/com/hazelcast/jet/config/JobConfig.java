@@ -179,7 +179,7 @@ public class JobConfig implements Serializable {
      *
      * <h3>Example</h3>
      * Suppose we coalesce two inputs: <em>input0</em> and <em>input1</em>. We
-     * receive a watermark with timestamp=1 (<em>wm(1)</em> for shart) from
+     * receive a watermark with timestamp=1 (<em>wm(1)</em> for short) from
      * <em>input0</em>. Later on, we receive <em>wm(1)</em> from <em>input1</em>
      * as well and now we can forward it to the processor. However, it can
      * happen that <em>input1</em> doesn't receive any watermarks. If you have

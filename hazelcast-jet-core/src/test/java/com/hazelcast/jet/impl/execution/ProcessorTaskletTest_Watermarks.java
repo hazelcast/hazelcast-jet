@@ -177,14 +177,14 @@ public class ProcessorTaskletTest_Watermarks {
         assertEquals(singletonList("wm(100)-0"), outstream1.getBuffer());
     }
 
-    private ProcessorTasklet createTasklet(int maxWatermarkRetention) {
+    private ProcessorTasklet createTasklet(int maxWatermarkRetainMillis) {
         for (int i = 0; i < instreams.size(); i++) {
             instreams.get(i).setOrdinal(i);
         }
         SnapshotContext snapshotContext = new SnapshotContext(mock(ILogger.class), 0, 0, -1, EXACTLY_ONCE);
         snapshotContext.initTaskletCount(1, 0);
         final ProcessorTasklet t = new ProcessorTasklet(context, processor, instreams, outstreams,
-                snapshotContext, snapshotCollector, maxWatermarkRetention);
+                snapshotContext, snapshotCollector, maxWatermarkRetainMillis);
         t.init();
         return t;
     }
