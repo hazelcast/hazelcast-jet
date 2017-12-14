@@ -29,8 +29,8 @@ public final class DistributedComparators {
     private static class NaturalOrderComparator implements DistributedComparator<Comparable<Object>> {
 
         @Override
-        public int compare(Comparable<Object> c1, Comparable<Object> c2) {
-            return c1.compareTo(c2);
+        public int compare(Comparable<Object> left, Comparable<Object> right) {
+            return left.compareTo(right);
         }
 
         @Override
@@ -42,8 +42,8 @@ public final class DistributedComparators {
     private static class ReverseOrderComparator implements DistributedComparator<Comparable<Object>> {
 
         @Override
-        public int compare(Comparable<Object> c1, Comparable<Object> c2) {
-            return c2.compareTo(c1);
+        public int compare(Comparable<Object> left, Comparable<Object> right) {
+            return right.compareTo(left);
         }
 
         @Override
@@ -52,24 +52,20 @@ public final class DistributedComparators {
         }
     }
 
-    /**
-     * Null-friendly comparator
-     */
     public static final class NullComparator<T> implements DistributedComparator<T> {
-        private static final long serialVersionUID = -7569533591570686392L;
-        private final boolean nullFirst;
+        private final boolean isNullFirst;
 
         @SuppressWarnings("unchecked")
-        public NullComparator(boolean nullFirst) {
-            this.nullFirst = nullFirst;
+        public NullComparator(boolean isNullFirst) {
+            this.isNullFirst = isNullFirst;
         }
 
         @Override
-        public int compare(T a, T b) {
-            if (a == null) {
-                return (b == null) ? 0 : (nullFirst ? -1 : 1);
-            } else if (b == null) {
-                return nullFirst ? 1 : -1;
+        public int compare(T left, T right) {
+            if (left == null) {
+                return (right == null) ? 0 : (isNullFirst ? -1 : 1);
+            } else if (right == null) {
+                return isNullFirst ? 1 : -1;
             } else {
                 return 0;
             }

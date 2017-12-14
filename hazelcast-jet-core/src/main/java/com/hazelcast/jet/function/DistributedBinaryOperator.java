@@ -34,7 +34,7 @@ public interface DistributedBinaryOperator<T> extends BinaryOperator<T>, Seriali
      */
     static <T> DistributedBinaryOperator<T> minBy(java.util.Comparator<? super T> comparator) {
         Objects.requireNonNull(comparator);
-        return (l, r) -> comparator.compare(l, r) <= 0 ? l : r;
+        return (left, right) -> comparator.compare(left, right) <= 0 ? left : right;
     }
 
     /**
@@ -43,6 +43,6 @@ public interface DistributedBinaryOperator<T> extends BinaryOperator<T>, Seriali
      */
     static <T> DistributedBinaryOperator<T> maxBy(java.util.Comparator<? super T> comparator) {
         Objects.requireNonNull(comparator);
-        return (l, r) -> comparator.compare(l, r) >= 0 ? l : r;
+        return (left, right) -> comparator.compare(left, right) >= 0 ? left : right;
     }
 }

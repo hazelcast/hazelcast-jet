@@ -34,9 +34,9 @@ public interface DistributedBiConsumer<T, U> extends BiConsumer<T, U>, Serializa
     default DistributedBiConsumer<T, U> andThen(DistributedBiConsumer<? super T, ? super U> after) {
         Objects.requireNonNull(after);
 
-        return (l, r) -> {
-            accept(l, r);
-            after.accept(l, r);
+        return (left, right) -> {
+            accept(left, right);
+            after.accept(left, right);
         };
     }
 }
