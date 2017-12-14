@@ -291,7 +291,7 @@ public class ProcessorTasklet implements Tasklet {
                 numActiveOrdinals--;
             }
 
-            // check if last item was snapshot
+            // check if the last drained item is special
             Object lastItem = inbox.peekLast();
             if (lastItem instanceof Watermark) {
                 assert pendingWatermark == null;
