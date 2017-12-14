@@ -284,8 +284,8 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns an aggregate operation that concatenates the input
-     * items into a string.
+     * Returns an aggregate operation that concatenates the input items into a
+     * string.
      */
     public static AggregateOperation1<CharSequence, StringBuilder, String> concatenating() {
         return AggregateOperation
@@ -296,8 +296,8 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns an aggregate operation that concatenates the input
-     * items into a string with the given {@code delimiter}.
+     * Returns an aggregate operation that concatenates the input items into a
+     * string with the given {@code delimiter}.
      */
     public static AggregateOperation1<CharSequence, StringBuilder, String> concatenating(
             CharSequence delimiter
@@ -307,9 +307,9 @@ public final class AggregateOperations {
 
 
     /**
-     * Returns an aggregate operation that concatenates the input
-     * items into a string with the given {@code delimiter}. The resulting string
-     * will also have the given {@code prefix} and {@code suffix}.
+     * Returns an aggregate operation that concatenates the input items into a
+     * string with the given {@code delimiter}. The resulting string will also
+     * have the given {@code prefix} and {@code suffix}.
      **/
     public static AggregateOperation1<CharSequence, StringBuilder, String> concatenating(
             CharSequence delimiter, CharSequence prefix, CharSequence suffix
@@ -318,12 +318,11 @@ public final class AggregateOperations {
         return AggregateOperation
                 .withCreate(() -> new StringBuilder().append(prefix))
                 .<CharSequence>andAccumulate((builder, val) -> {
-                            if (builder.length() != prefixLen && val.length() > 0) {
-                                builder.append(delimiter);
-                            }
-                            builder.append(val);
-                        }
-                )
+                    if (builder.length() != prefixLen && val.length() > 0) {
+                        builder.append(delimiter);
+                    }
+                    builder.append(val);
+                })
                 .andCombine((l, r) -> {
                     if (l.length() != prefixLen && r.length() != prefixLen) {
                         l.append(delimiter);
@@ -434,7 +433,9 @@ public final class AggregateOperations {
             DistributedFunction<? super T, ? extends K> toKeyFn,
             DistributedFunction<? super T, ? extends U> toValueFn
     ) {
-        return toMap(toKeyFn, toValueFn, throwingMerger(), HashMap::new);
+        return toMap(toKeyFn, toValueFn,
+                (k, v) -> { throw new IllegalStateException("Duplicate key: " + k); },
+                HashMap::new);
     }
 
     /**
@@ -510,13 +511,12 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns an {@code AggregateOperation1} that accumulates elements
-     * into a {@code HashMap} where the keys are the result of applying the key
-     * mapping function and values are the input elements with same key
-     * accumulated into a list.
+     * Returns an {@code AggregateOperation1} that accumulates the items into a
+     * {@code HashMap} where the key is the result of applying {@code toKeyFn}
+     * and the value is a list of the items with that key.
      * <p>
-     * This aggregation is useful for creating a cascaded group by
-     * operation where the values are re-grouped by a secondary key.
+     * This operation achieves the effect of a cascaded group-by where the
+     * members of each group are further classified by a secondary key.
      *
      * @param toKeyFn a function to extract the key from input item
      * @param <T> input item type
@@ -532,13 +532,13 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns an {@code AggregateOperation1} that accumulates elements
-     * into a {@code HashMap} whose keys are the result of applying the key
-     * mapping function and values are the result of applying
-     * the downstream aggregation operation to the input elements.
+     * Returns an {@code AggregateOperation1} that accumulates the items into a
+     * {@code HashMap} where the key is the result of applying {@code toKeyFn}
+     * and the value is the result of applying the downstream aggregate
+     * operation to the items with that key.
      * <p>
-     * This aggregation is useful for creating a cascaded group by
-     * operation where the values are re-grouped by a secondary key.
+     * This operation achieves the effect of a cascaded group-by where the
+     * members of each group are further classified by a secondary key.
      *
      * @param toKeyFn a function to extract the key from input item
      * @param downstream the downstream aggregate operation
@@ -559,16 +559,14 @@ public final class AggregateOperations {
 
 
     /**
-     * Returns an {@code AggregateOperation1} that accumulates elements
-     * into a {@code Map} whose keys are the result of applying the key
-     * mapping function and values are the result of applying
-     * the downstream aggregation operation to the input elements.
+     * Returns an {@code AggregateOperation1} that accumulates the items into a
+     * {@code Map} (as obtained from {@code createMapFn}) where the key is the
+     * result of applying {@code toKeyFn} and the value is the result of
+     * applying the downstream aggregate operation to the items with that key.
      * <p>
-     * This aggregation is useful for creating a cascaded group by
-     * operation where the values are re-grouped by a secondary key.
-     * <p>
-     * The {@code Map} is created by a provided {@code createMapFn}
-     * function.
+     * This operation achieves the effect of a cascaded group-by where the
+     * members of each group are further classified by a secondary key.
+     *
      * @param toKeyFn a function to extract the key from input item
      * @param createMapFn a function which returns a new, empty {@code Map} into
      *                    which the results will be inserted
@@ -658,9 +656,4 @@ public final class AggregateOperations {
                 .andFinish(MutableReference::get);
     }
 
-    private static <T> DistributedBinaryOperator<T> throwingMerger() {
-        return (u, v) -> {
-            throw new IllegalStateException("Duplicate key: " + u);
-        };
-    }
 }

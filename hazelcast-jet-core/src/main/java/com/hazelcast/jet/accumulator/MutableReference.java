@@ -51,7 +51,8 @@ public class MutableReference<T> {
     }
 
     /**
-     * Returns {@code true} if the current value is not null, {@code false} otherwise.
+     * Returns {@code true} if the current value is not null, {@code false}
+     * otherwise.
      */
     public boolean isPresent() {
         return value != null;
