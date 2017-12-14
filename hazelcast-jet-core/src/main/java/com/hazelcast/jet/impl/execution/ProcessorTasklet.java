@@ -81,7 +81,7 @@ public class ProcessorTasklet implements Tasklet {
                             @Nonnull List<? extends OutboundEdgeStream> outstreams,
                             @Nonnull SnapshotContext ssContext,
                             @Nonnull OutboundCollector ssCollector,
-                            int maxWatermarkRetention) {
+                            int maxWatermarkRetainMillis) {
         Preconditions.checkNotNull(processor, "processor");
         this.context = context;
         this.processor = processor;
@@ -105,7 +105,7 @@ public class ProcessorTasklet implements Tasklet {
         state = initialProcessingState();
         pendingSnapshotId = ssContext.lastSnapshotId() + 1;
 
-        watermarkCoalescer = new WatermarkCoalescer(maxWatermarkRetention, instreams.size());
+        watermarkCoalescer = new WatermarkCoalescer(maxWatermarkRetainMillis, instreams.size());
     }
 
     private OutboxImpl createOutbox(OutboundCollector ssCollector) {

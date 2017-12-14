@@ -41,7 +41,7 @@ public class JobConfig implements Serializable {
     private boolean splitBrainProtectionEnabled;
     private final List<ResourceConfig> resourceConfigs = new ArrayList<>();
     private boolean autoRestartEnabled = true;
-    private int maxWatermarkRetention = -1;
+    private int maxWatermarkRetainMillis = -1;
 
     /**
      * Tells whether {@link #setSplitBrainProtection(boolean) split brain protection}
@@ -158,52 +158,56 @@ public class JobConfig implements Serializable {
 
     /**
      * Sets the maximum system-time interval to retain the watermarks when
-     * coalescing. Negative value disables the limit, watermarks are retained
-     * as long as needed. Has no effect on edges where there are no watermarks.
-     * <p>
-     * A vertex can have multiple input edges. Also on each edge, downstream
-     * processor typically has multiple upstream processors. The watermarks are
-     * received from each of those and are delivered to processor only when it
-     * is received from all contributing inputs. This process is called
-     * <em>coalescing of watermarks</em> and it's done on two levels: for
-     * multiple queues on single edge and for multiple edges on single vertex.
+     * coalescing them. A negative value disables the limit and Jet will retain
+     * the watermark as long as needed. This setting has no effect on edges
+     * where there are no watermarks.
+     *
+     * <h3>Stream Skew</h3>
+     * The <em>skew</em> between two inputs is defined as the difference of
+     * their watermark values. There is always some skew in the system and it's
+     * acceptable, but it can grow very large due to various causes such as a
+     * hiccup on one of the members (a long GC pause), external source hiccup
+     * on a member, skew between partitions of a distributed source, and so on.
+     *
+     * <h3>Detrimental Effects of Stream Skew</h3>
+     * To maintain full correctness, a processor must wait indefinitely for the
+     * watermark to advance in all the contributing inputs in order to advance
+     * its own watermark. This process is called the <em>coalescing of
+     * watermarks</em> and its effect is the increased latency of the output
+     * with respect to the input and possibly also increased memory usage due to
+     * the retention of all the pending data.
      *
      * <h3>Example</h3>
      * Suppose we coalesce two inputs: <em>input0</em> and <em>input1</em>. We
-     * receive watermark with timestamp=1 <em>wm(1)</em> from <em>input0</em>.
-     * Later on, we receive <em>wm(1)</em> from <em>input1</em> as well and now
-     * is the time to forward the watermark for processing. However, it can
-     * happen that <em>input1</em> doesn't have any watermarks. If maximum
-     * retain time is configured, then the <em>wm(1)</em> watermark is
-     * forwarded after {@code retainMillis} of system time passed despite it
-     * hasn't been received from <em>input1</em>. This will allow the
-     * processing to continue.
+     * receive a watermark with timestamp=1 (<em>wm(1)</em> for shart) from
+     * <em>input0</em>. Later on, we receive <em>wm(1)</em> from <em>input1</em>
+     * as well and now we can forward it to the processor. However, it can
+     * happen that <em>input1</em> doesn't receive any watermarks. If you have
+     * configured the maximum watermark retention time for the job, {@code
+     * retainMillis} after having received it from <em>input0</em> we give up
+     * and forward it anyway.
      *
-     * <h3>Effects on stream skew</h3>
-     * <em>Skew</em> is defined as the difference between top watermark from
-     * any two inputs. Small skew is normal, but it can grow large due to
-     * hiccup on one of the inputs (for example due to long GC pause, external
-     * source hiccup on some member or overload of events in single partition).
-     * <p>
-     * Limiting retain time can force the watermark to advance for some input
-     * even though the watermark wasn't received from it. This might cause that
-     * further events from that input might be dropped as late.
+     * <h3>Effects of Maximum Retention Time on Correctness</h3>
+     * Limiting the watermark retention time allows the processing to continue
+     * in the face of exceedingly large stream skew. However, since any event
+     * with a timestamp less than the current watermark is categorized as a
+     * <em>late event </em> and dropped, this setting can result in data loss.
      *
      * @param retainMillis maximum time to retain watermarks for delayed queues
      *                     or -1 to disable (the default)
      * @return {@code this} instance for fluent API
      */
-    public JobConfig setMaxWatermarkRetention(int retainMillis) {
-        maxWatermarkRetention = retainMillis;
+    public JobConfig setMaxWatermarkRetainMillis(int retainMillis) {
+        maxWatermarkRetainMillis = retainMillis;
         return this;
     }
 
     /**
      * Returns the maximum watermark retention time, see {@link
-     * #setMaxWatermarkRetention(int)}.
+     * #setMaxWatermarkRetainMillis(int)}.
      */
-    public int getMaxWatermarkRetention() {
-        return maxWatermarkRetention;
+    public int getMaxWatermarkRetainMillis() {
+        return maxWatermarkRetainMillis;
     }
 
     /**

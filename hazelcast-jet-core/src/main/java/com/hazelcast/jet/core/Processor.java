@@ -110,27 +110,28 @@ public interface Processor {
     }
 
     /**
-     * Tries to process the supplied watermark. The value is always higher than
-     * in previous call. The watermark is delivered for processing after it has
-     * been received from all edges or the {@link
-     * com.hazelcast.jet.config.JobConfig#setMaxWatermarkRetention(int)
-     * maximum retention time} elapsed.
+     * Tries to process the supplied watermark. The value is always greater
+     * than in the previous call. The watermark is delivered for processing
+     * after it has been received from all the edges or the {@link
+     * com.hazelcast.jet.config.JobConfig#setMaxWatermarkRetainMillis(int)
+     * maximum retention time} has elapsed.
      * <p>
-     * Implementation may choose to process only partially and return {@code
-     * false}, in which case it will be called again later with the same {@code
-     * timestamp} before any other processing method is called. When the method
-     * returns {@code true}, the watermark is forwarded to downstream
-     * processors.
+     * The implementation may choose to process only partially and return
+     * {@code false}, in which case it will be called again later with the same
+     * {@code timestamp} before any other processing method is called. When the
+     * method returns {@code true}, the watermark is forwarded to the
+     * downstream processors.
      * <p>
      * The default implementation just returns {@code true}.
-     * <p>
-     * <i>Caution for jobs with at-least-once guarantee</i><br>
-     * In snapshotted jobs with <i>at-least-once</i> processing guarantee it
-     * can happen that the watermarks break the monotonicity requirement when
-     * the job is restarted. This is caused by the fact that watermark, like any
-     * other stream item, can be delivered duplicately after restart. This
-     * means that after a restart, a processor can be asked to process a
-     * watermark older than it already processed.
+     *
+     * <h3>Caution for Jobs With the At-Least-Once Guarantee</h3>
+     * Jet propagates the value of the watermark by sending <em>watermark
+     * items</em> interleaved with the regular stream items. If a job
+     * configured with the <i>at-least-once</i> processing guarantee gets
+     * restarted, the same watermark, like any other stream item, can be
+     * delivered again. Therefore the processor may be asked to process
+     * a watermark older than the one it had already processed before the
+     * restart.
      *
      * @param watermark watermark to be processed
      * @return {@code true} if this watermark has now been processed,

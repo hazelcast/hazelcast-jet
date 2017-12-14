@@ -94,8 +94,8 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * </ul>
  *
  * <h3>Watermark handling</h3>
- * The input can contain {@link Watermark}s. They will be passed to {@link
- * Processor#tryProcessWatermark} method and they can be asserted in the
+ * The input can contain {@link Watermark}s. They will be passed to the
+ * {@link Processor#tryProcessWatermark} method and can be asserted in the
  * output.
  *
  * <h3>Progress assertion</h3>
@@ -221,7 +221,8 @@ public final class TestSupport {
      * Sets the input objects for processor.
      * <p>
      * The {@code input} can contain {@link com.hazelcast.jet.core.Watermark}s;
-     * they will be delivered to {@link Processor#tryProcessWatermark} method.
+     * they will be delivered to the {@link Processor#tryProcessWatermark}
+     * method.
      * <p>
      * Defaults to empty list.
      *
@@ -236,7 +237,7 @@ public final class TestSupport {
      * Sets the expected output and runs the test.
      * <p>
      * The {@code expectedOutput} can contain {@link
-     * com.hazelcast.jet.core.Watermark}s. Each Watermark in input will be
+     * com.hazelcast.jet.core.Watermark}s. Each Watermark in the input will be
      * found in the output, as well as other watermarks the processor emits.
      *
      * @throws AssertionError If some assertion does not hold.

@@ -35,7 +35,7 @@ public final class WatermarkPolicies {
     }
 
     /**
-     * Maintains watermark that lags behind the top observed timestamp by the
+     * Maintains a watermark that lags behind the top observed timestamp by the
      * given amount. In the case of a stream lull the watermark does not
      * advance towards the top observed timestamp and remains behind it
      * indefinitely.
@@ -56,15 +56,20 @@ public final class WatermarkPolicies {
     }
 
     /**
-     * Maintains watermark that lags behind the top observed timestamp by at
+     * Maintains a watermark that lags behind the top observed timestamp by at
      * most the given amount and is additionally guaranteed to reach the
      * timestamp of any given event within {@code maxDelayMs} of system time
      * after observing it.
      * <p>
-     * This setting applies to individual processor instances using this
-     * policy. Each individual instance might stop at different watermark
-     * value. To overcome this, also configure {@link
-     * com.hazelcast.jet.config.JobConfig#setMaxWatermarkRetention}.
+     * Keep in mind that the scope of the "top observed timestamp" is only the
+     * items received by an individual processor: the watermark of a processor
+     * using this policy will never advance beyond the timestamp it observed in
+     * isolation from the rest of the system. In the case of severe stream skew
+     * a given processor's watermark may lag significiantly behind that of other
+     * processors and cause delays when getting coalesced with them in
+     * downstream processors. To overcome this you can also configure {@link
+     * com.hazelcast.jet.config.JobConfig#setMaxWatermarkRetainMillis
+     * JobConfig.maxWatermarkRetention}.
      *
      * @param lag upper bound on the difference between the top observed timestamp and the
      *               watermark

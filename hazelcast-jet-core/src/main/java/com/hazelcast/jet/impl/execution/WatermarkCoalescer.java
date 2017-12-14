@@ -26,9 +26,10 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
  * Implements {@link Watermark} coalescing. Tracks WMs on queues and decides
- * when to forward the WM:<ul>
- *     <li>WM is forwarded, after it is received from all queues
- *     <li>or earlier, based on maximum watermark retention
+ * when to forward the WM. The watermark should be forwarded:
+ * <ul>
+ *     <li>when it has been received from all input streams
+ *     <li>if the maximum watermark retention time has elapsed
  * </ul>
  */
 class WatermarkCoalescer {
@@ -49,9 +50,10 @@ class WatermarkCoalescer {
     }
 
     /**
-     * Call when queue with this index is exhausted.
+     * Called when the queue with the given index is exhausted.
      *
-     * @return Watermark timestamp to emit or {@code Long.MIN_VALUE}
+     * @return the watermark value to emit or {@code Long.MIN_VALUE} if no watermark
+     *         should be emitted
      */
     public long queueDone(int queueIndex) {
         queueWms[queueIndex] = Long.MAX_VALUE;
@@ -66,15 +68,15 @@ class WatermarkCoalescer {
     }
 
     /**
-     * Call this method after receiving a WM.
+     * Called after receiving a new watermark.
      *
-     * @param realTime Current system time
-     * @param queueIndex Index of queue on which the WM was received.
-     * @param wmValue Watermark timestamp
+     * @param systemTime current system time
+     * @param queueIndex index of queue on which the WM was received.
+     * @param wmValue the watermark value
      *
-     * @return Watermark timestamp to emit or {@code Long.MIN_VALUE}
+     * @return the watermark value to emit or {@code Long.MIN_VALUE}
      */
-    public long observeWm(long realTime, int queueIndex, long wmValue) {
+    public long observeWm(long systemTime, int queueIndex, long wmValue) {
         if (queueWms[queueIndex] >= wmValue) {
             throw new JetException("Watermarks not monotonically increasing on queue: " +
                     "last one=" + queueWms[queueIndex] + ", new one=" + wmValue);
@@ -85,7 +87,7 @@ class WatermarkCoalescer {
 
         if (watermarkHistory != null && wmValue > topObservedWm) {
             topObservedWm = wmValue;
-            wmToEmit = watermarkHistory.sample(realTime, topObservedWm);
+            wmToEmit = watermarkHistory.sample(systemTime, topObservedWm);
         }
 
         wmToEmit = Math.max(wmToEmit, bottomObservedWm());
@@ -98,16 +100,17 @@ class WatermarkCoalescer {
     }
 
     /**
-     * Checks if there is watermark to emit now based on real time passage.
+     * Checks if there is a watermark to emit now based on the passage of
+     * system time.
      *
-     * @param realTime Current system time
+     * @param systemTime Current system time
      * @return Watermark timestamp to emit or {@code Long.MIN_VALUE}
      */
-    public long checkWmHistory(long realTime) {
+    public long checkWmHistory(long systemTime) {
         if (watermarkHistory == null) {
             return Long.MIN_VALUE;
         }
-        long historicWm = watermarkHistory.sample(realTime, topObservedWm);
+        long historicWm = watermarkHistory.sample(systemTime, topObservedWm);
         if (historicWm > lastEmittedWm) {
             lastEmittedWm = historicWm;
             return historicWm;

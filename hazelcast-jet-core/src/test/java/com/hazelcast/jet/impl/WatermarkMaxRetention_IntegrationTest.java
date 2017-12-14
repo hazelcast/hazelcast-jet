@@ -89,7 +89,7 @@ public class WatermarkMaxRetention_IntegrationTest extends JetTestSupport {
     private void doTest(DAG dag) {
         IList list = instance.getList(SINK_NAME);
         instance.newJob(dag, new JobConfig()
-                .setMaxWatermarkRetention(3000));
+                .setMaxWatermarkRetainMillis(3000));
 
         assertTrueAllTheTime(() -> assertEquals(list.toString(), 0, list.size()), 1);
 

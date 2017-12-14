@@ -18,57 +18,60 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.core.Processor;
 
+/**
+ * Describes what a processor is currently doing.
+ */
 enum ProcessorState {
 
     /**
-     * Doing calls to {@link Processor#tryProcessWatermark} until it returns
+     * Making calls to {@link Processor#tryProcessWatermark} until it returns
      * {@code true}.
      */
     PROCESS_WATERMARK,
 
     /**
-     * Waiting to accept the {@link com.hazelcast.jet.core.Watermark} by the
-     * outbox.
+     * Waiting to for the outbox to accept the {@link
+     * com.hazelcast.jet.core.Watermark}
      */
     EMIT_WATERMARK,
 
     /**
-     * Doing calls to {@link Processor#tryProcess()} and {@link
+     * Making calls to {@link Processor#tryProcess()} and {@link
      * Processor#process(int, com.hazelcast.jet.core.Inbox)} until the inbox
      * is empty.
      */
     PROCESS_INBOX,
 
     /**
-     * Doing calls to {@link Processor#completeEdge(int)} until it returns
+     * Making calls to {@link Processor#completeEdge(int)} until it returns
      * {@code true}.
      */
     COMPLETE_EDGE,
 
     /**
-     * Doing calls to {@link Processor#complete()} until it returns {@code
+     * Making calls to {@link Processor#complete()} until it returns {@code
      * true}.
      */
     COMPLETE,
 
     /**
-     * Doing calls to {@link Processor#saveToSnapshot()} until
-     * it returns {@code true}.
+     * Making calls to {@link Processor#saveToSnapshot()} until it returns
+     * {@code true}.
      */
     SAVE_SNAPSHOT,
 
     /**
-     * Waiting to accept the {@link SnapshotBarrier} by the outbox.
+     * Waiting for the outbox to accept the {@link SnapshotBarrier}.
      */
     EMIT_BARRIER,
 
     /**
-     * Waiting until the outbox accepts DONE_ITEM.
+     * Waiting for the outbox to accept the {@code DONE_ITEM}.
      */
     EMIT_DONE_ITEM,
 
     /**
-     * Terminal state.
+     * The processor is done.
      */
     END
 }

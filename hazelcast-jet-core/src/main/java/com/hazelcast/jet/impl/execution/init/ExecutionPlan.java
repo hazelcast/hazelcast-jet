@@ -163,7 +163,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 OutboundCollector snapshotCollector = new ConveyorCollector(ssConveyor, localProcessorIdx, null);
 
                 ProcessorTasklet processorTasklet = new ProcessorTasklet(context, p, inboundStreams, outboundStreams,
-                        snapshotContext, snapshotCollector, jobConfig.getMaxWatermarkRetention());
+                        snapshotContext, snapshotCollector, jobConfig.getMaxWatermarkRetainMillis());
                 tasklets.add(processorTasklet);
                 this.processors.add(p);
                 localProcessorIdx++;
@@ -453,7 +453,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     private ConcurrentInboundEdgeStream newEdgeStream(EdgeDef inEdge, ConcurrentConveyor<Object> conveyor) {
         return new ConcurrentInboundEdgeStream(conveyor, inEdge.destOrdinal(), inEdge.priority(),
                 lastSnapshotId, jobConfig.getProcessingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE,
-                jobConfig.getMaxWatermarkRetention());
+                jobConfig.getMaxWatermarkRetainMillis());
     }
 
     public List<Processor> getProcessors() {
