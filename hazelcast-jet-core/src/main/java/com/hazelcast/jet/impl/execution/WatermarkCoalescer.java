@@ -75,10 +75,35 @@ abstract class WatermarkCoalescer {
 
     public static WatermarkCoalescer create(int maxWatermarkRetainMillis, int queueCount) {
         checkNotNegative(queueCount, "queueCount must be >= 0, but is " + queueCount);
-        if (queueCount <= 1) {
-            return new SingleInputImpl();
-        } else {
-            return new StandardImpl(maxWatermarkRetainMillis, queueCount);
+        switch (queueCount) {
+            case 0:
+                return new ZeroInputImpl();
+            case 1:
+               return new SingleInputImpl();
+            default:
+                return new StandardImpl(maxWatermarkRetainMillis, queueCount);
+        }
+    }
+
+    private static final class ZeroInputImpl extends WatermarkCoalescer {
+        @Override
+        public long queueDone(int queueIndex) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long observeWm(long systemTime, int queueIndex, long wmValue) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long checkWmHistory(long systemTime) {
+            return Long.MIN_VALUE;
+        }
+
+        @Override
+        public long getTime() {
+            return Long.MIN_VALUE;
         }
     }
 
@@ -89,11 +114,13 @@ abstract class WatermarkCoalescer {
     private static final class SingleInputImpl extends WatermarkCoalescer {
         @Override
         public long queueDone(int queueIndex) {
+            assert queueIndex == 0 : "queueIndex=" + queueIndex;
             return Long.MIN_VALUE;
         }
 
         @Override
         public long observeWm(long systemTime, int queueIndex, long wmValue) {
+            assert queueIndex == 0 : "queueIndex=" + queueIndex;
             if (lastEmittedWm < wmValue) {
                 lastEmittedWm = wmValue;
                 return wmValue;
