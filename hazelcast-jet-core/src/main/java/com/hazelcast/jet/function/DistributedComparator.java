@@ -21,13 +21,13 @@ import com.hazelcast.jet.stream.impl.distributed.DistributedComparators.NullComp
 
 import java.io.Serializable;
 import java.util.Comparator;
-import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.ToDoubleFunction;
 import java.util.function.ToIntFunction;
 import java.util.function.ToLongFunction;
 
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
+import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * {@code Serializable} variant of {@link Comparator
@@ -43,7 +43,7 @@ public interface DistributedComparator<T> extends Comparator<T>, Serializable {
      */
     @SuppressWarnings("unchecked")
     static <T extends Comparable<? super T>> DistributedComparator<T> naturalOrder() {
-        return (DistributedComparator<T>) DistributedComparators.NATURAL_ORDER_COMPARATOR;
+        return (DistributedComparator<T>) DistributedComparators.NATURAL_ORDER;
     }
 
     /**
@@ -53,7 +53,7 @@ public interface DistributedComparator<T> extends Comparator<T>, Serializable {
      */
     @SuppressWarnings("unchecked")
     static <T extends Comparable<? super T>> DistributedComparator<T> reverseOrder() {
-        return (DistributedComparator<T>) DistributedComparators.REVERSE_ORDER_COMPARATOR;
+        return (DistributedComparator<T>) DistributedComparators.REVERSE_ORDER;
     }
 
     /**
@@ -105,8 +105,8 @@ public interface DistributedComparator<T> extends Comparator<T>, Serializable {
             java.util.function.Function<? super T, ? extends U> toKeyFn,
             java.util.Comparator<? super U> keyComparator
     ) {
-        Objects.requireNonNull(toKeyFn);
-        Objects.requireNonNull(keyComparator);
+        checkNotNull(toKeyFn, "toKeyFn");
+        checkNotNull(keyComparator, "keyComparator");
         checkSerializable(toKeyFn, "toKeyFn");
         checkSerializable(keyComparator, "keyComparator");
         return (c1, c2) -> keyComparator.compare(toKeyFn.apply(c1),
@@ -132,7 +132,7 @@ public interface DistributedComparator<T> extends Comparator<T>, Serializable {
     static <T, U extends Comparable<? super U>> DistributedComparator<T> comparing(
             Function<? super T, ? extends U> toKeyFn
     ) {
-        Objects.requireNonNull(toKeyFn);
+        checkNotNull(toKeyFn, "toKeyFn");
         checkSerializable(toKeyFn, "toKeyFn");
         return (left, right) -> toKeyFn.apply(left).compareTo(toKeyFn.apply(right));
     }
@@ -154,7 +154,7 @@ public interface DistributedComparator<T> extends Comparator<T>, Serializable {
      * java.util.Comparator#comparingInt(ToIntFunction)}.
      */
     static <T> DistributedComparator<T> comparingInt(ToIntFunction<? super T> toKeyFn) {
-        Objects.requireNonNull(toKeyFn);
+        checkNotNull(toKeyFn, "toKeyFn");
         checkSerializable(toKeyFn, "toKeyFn");
         return (c1, c2) -> Integer.compare(toKeyFn.applyAsInt(c1), toKeyFn.applyAsInt(c2));
     }
@@ -174,7 +174,7 @@ public interface DistributedComparator<T> extends Comparator<T>, Serializable {
      * java.util.Comparator#comparingLong(ToLongFunction)}.
      */
     static <T> DistributedComparator<T> comparingLong(ToLongFunction<? super T> toKeyFn) {
-        Objects.requireNonNull(toKeyFn);
+        checkNotNull(toKeyFn, "toKeyFn");
         checkSerializable(toKeyFn, "toKeyFn");
         return (c1, c2) -> Long.compare(toKeyFn.applyAsLong(c1), toKeyFn.applyAsLong(c2));
     }
@@ -194,7 +194,7 @@ public interface DistributedComparator<T> extends Comparator<T>, Serializable {
      * java.util.Comparator#comparingDouble(ToDoubleFunction)}.
      */
     static <T> DistributedComparator<T> comparingDouble(ToDoubleFunction<? super T> toKeyFn) {
-        Objects.requireNonNull(toKeyFn);
+        checkNotNull(toKeyFn, "toKeyFn");
         checkSerializable(toKeyFn, "toKeyFn");
         return (c1, c2) -> Double.compare(toKeyFn.applyAsDouble(c1), toKeyFn.applyAsDouble(c2));
     }
@@ -215,7 +215,7 @@ public interface DistributedComparator<T> extends Comparator<T>, Serializable {
      */
     @Override
     default DistributedComparator<T> thenComparing(Comparator<? super T> other) {
-        Objects.requireNonNull(other);
+        checkNotNull(other, "other");
         checkSerializable(other, "other");
         return (c1, c2) -> {
             int res = compare(c1, c2);

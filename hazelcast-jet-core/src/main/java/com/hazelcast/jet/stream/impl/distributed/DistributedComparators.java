@@ -20,8 +20,8 @@ import com.hazelcast.jet.function.DistributedComparator;
 
 public final class DistributedComparators {
 
-    public static final DistributedComparator<Comparable<Object>> NATURAL_ORDER_COMPARATOR = new NaturalOrderComparator();
-    public static final DistributedComparator<Comparable<Object>> REVERSE_ORDER_COMPARATOR = new ReverseOrderComparator();
+    public static final DistributedComparator<Comparable<Object>> NATURAL_ORDER = new NaturalOrderComparator();
+    public static final DistributedComparator<Comparable<Object>> REVERSE_ORDER = new ReverseOrderComparator();
 
     private DistributedComparators() {
     }
@@ -35,7 +35,7 @@ public final class DistributedComparators {
 
         @Override
         public DistributedComparator<Comparable<Object>> reversed() {
-            return REVERSE_ORDER_COMPARATOR;
+            return REVERSE_ORDER;
         }
     }
 
@@ -48,7 +48,7 @@ public final class DistributedComparators {
 
         @Override
         public DistributedComparator<Comparable<Object>> reversed() {
-            return NATURAL_ORDER_COMPARATOR;
+            return NATURAL_ORDER;
         }
     }
 
