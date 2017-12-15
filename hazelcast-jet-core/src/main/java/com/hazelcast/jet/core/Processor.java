@@ -137,7 +137,7 @@ public interface Processor {
      * @return {@code true} if this watermark has now been processed,
      *         {@code false} otherwise.
      */
-    default boolean tryProcessWatermark(Watermark watermark) {
+    default boolean tryProcessWatermark(@Nonnull Watermark watermark) {
         return true;
     }
 

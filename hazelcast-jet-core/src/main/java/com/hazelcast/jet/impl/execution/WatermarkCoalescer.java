@@ -22,6 +22,7 @@ import com.hazelcast.jet.impl.util.TimestampHistory;
 
 import java.util.Arrays;
 
+import static com.hazelcast.util.Preconditions.checkPositive;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
@@ -31,73 +32,31 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  *     <li>when it has been received from all input streams
  *     <li>if the maximum watermark retention time has elapsed
  * </ul>
+ * <p>
+ * There's no separate unit test for this class, it's tested as a part of
+ * {@link ConcurrentInboundEdgeStream}.
  */
-class WatermarkCoalescer {
+abstract class WatermarkCoalescer {
 
-    private final long[] queueWms;
-    private final TimestampHistory watermarkHistory;
-
-    private long lastEmittedWm = Long.MIN_VALUE;
-    private long topObservedWm = Long.MIN_VALUE;
-
-    WatermarkCoalescer(int maxWatermarkRetainMillis, int queueCount) {
-        queueWms = new long[queueCount];
-        Arrays.fill(queueWms, Long.MIN_VALUE);
-
-        watermarkHistory = maxWatermarkRetainMillis >= 0
-                ? new TimestampHistory(MILLISECONDS.toNanos(maxWatermarkRetainMillis))
-                : null;
-    }
+    long lastEmittedWm = Long.MIN_VALUE;
 
     /**
      * Called when the queue with the given index is exhausted.
      *
      * @return the watermark value to emit or {@code Long.MIN_VALUE} if no watermark
-     *         should be emitted
+     * should be emitted
      */
-    public long queueDone(int queueIndex) {
-        queueWms[queueIndex] = Long.MAX_VALUE;
-
-        long bottomVm = bottomObservedWm();
-        if (bottomVm > lastEmittedWm && bottomVm != Long.MAX_VALUE) {
-            lastEmittedWm = bottomVm;
-            return bottomVm;
-        }
-
-        return Long.MIN_VALUE;
-    }
+    public abstract long queueDone(int queueIndex);
 
     /**
      * Called after receiving a new watermark.
      *
      * @param systemTime current system time
      * @param queueIndex index of queue on which the WM was received.
-     * @param wmValue the watermark value
-     *
+     * @param wmValue    the watermark value
      * @return the watermark value to emit or {@code Long.MIN_VALUE}
      */
-    public long observeWm(long systemTime, int queueIndex, long wmValue) {
-        if (queueWms[queueIndex] >= wmValue) {
-            throw new JetException("Watermarks not monotonically increasing on queue: " +
-                    "last one=" + queueWms[queueIndex] + ", new one=" + wmValue);
-        }
-        queueWms[queueIndex] = wmValue;
-
-        long wmToEmit = Long.MIN_VALUE;
-
-        if (watermarkHistory != null && wmValue > topObservedWm) {
-            topObservedWm = wmValue;
-            wmToEmit = watermarkHistory.sample(systemTime, topObservedWm);
-        }
-
-        wmToEmit = Math.max(wmToEmit, bottomObservedWm());
-        if (wmToEmit > lastEmittedWm) {
-            lastEmittedWm = wmToEmit;
-            return wmToEmit;
-        }
-
-        return Long.MIN_VALUE;
-    }
+    public abstract long observeWm(long systemTime, int queueIndex, long wmValue);
 
     /**
      * Checks if there is a watermark to emit now based on the passage of
@@ -106,29 +65,135 @@ class WatermarkCoalescer {
      * @param systemTime Current system time
      * @return Watermark timestamp to emit or {@code Long.MIN_VALUE}
      */
-    public long checkWmHistory(long systemTime) {
-        if (watermarkHistory == null) {
+    public abstract long checkWmHistory(long systemTime);
+
+    /**
+     * Returns {@code System.nanoTime()} or a dummy value, if it is not needed,
+     * because the call is expensive in hot loop.
+     */
+    public abstract long getTime();
+
+    public static WatermarkCoalescer create(int maxWatermarkRetainMillis, int queueCount) {
+        checkPositive(queueCount, "queueCount must be >= 1, but is " + queueCount);
+        if (queueCount == 1) {
+            return new SingleInputImpl();
+        } else {
+            return new StandardImpl(maxWatermarkRetainMillis, queueCount);
+        }
+    }
+
+    /**
+     * Simple implementation for single input, when there's really nothing to
+     * coalesce.
+     */
+    private static final class SingleInputImpl extends WatermarkCoalescer {
+        @Override
+        public long queueDone(int queueIndex) {
+            return observeWm(-1, 0, Long.MAX_VALUE);
+        }
+
+        @Override
+        public long observeWm(long systemTime, int queueIndex, long wmValue) {
+            if (lastEmittedWm < wmValue) {
+                lastEmittedWm = wmValue;
+                return wmValue;
+            }
             return Long.MIN_VALUE;
         }
-        long historicWm = watermarkHistory.sample(systemTime, topObservedWm);
-        if (historicWm > lastEmittedWm) {
-            lastEmittedWm = historicWm;
-            return historicWm;
+
+        @Override
+        public long checkWmHistory(long systemTime) {
+            return Long.MIN_VALUE;
         }
-        return Long.MIN_VALUE;
+
+        @Override
+        public long getTime() {
+            return -1;
+        }
     }
 
-    public boolean usesWmHistory() {
-        return watermarkHistory != null;
-    }
+    /**
+     * Standard implementation for multiple queues.
+     */
+    private static final class StandardImpl extends WatermarkCoalescer {
 
-    private long bottomObservedWm() {
-        long min = queueWms[0];
-        for (int i = 1; i < queueWms.length; i++) {
-            if (queueWms[i] < min) {
-                min = queueWms[i];
+        private final long[] queueWms;
+        private final TimestampHistory watermarkHistory;
+
+        private long topObservedWm = Long.MIN_VALUE;
+
+        StandardImpl(int maxWatermarkRetainMillis, int queueCount) {
+            queueWms = new long[queueCount];
+            Arrays.fill(queueWms, Long.MIN_VALUE);
+
+            watermarkHistory = maxWatermarkRetainMillis >= 0
+                    ? new TimestampHistory(MILLISECONDS.toNanos(maxWatermarkRetainMillis))
+                    : null;
+        }
+
+        @Override
+        public long queueDone(int queueIndex) {
+            queueWms[queueIndex] = Long.MAX_VALUE;
+
+            long bottomVm = bottomObservedWm();
+            if (bottomVm > lastEmittedWm && bottomVm != Long.MAX_VALUE) {
+                lastEmittedWm = bottomVm;
+                return bottomVm;
             }
+
+            return Long.MIN_VALUE;
         }
-        return min;
+
+        @Override
+        public long observeWm(long systemTime, int queueIndex, long wmValue) {
+            if (queueWms[queueIndex] >= wmValue) {
+                throw new JetException("Watermarks not monotonically increasing on queue: " +
+                        "last one=" + queueWms[queueIndex] + ", new one=" + wmValue);
+            }
+            queueWms[queueIndex] = wmValue;
+
+            long wmToEmit = Long.MIN_VALUE;
+
+            if (watermarkHistory != null && wmValue > topObservedWm) {
+                topObservedWm = wmValue;
+                wmToEmit = watermarkHistory.sample(systemTime, topObservedWm);
+            }
+
+            wmToEmit = Math.max(wmToEmit, bottomObservedWm());
+            if (wmToEmit > lastEmittedWm) {
+                lastEmittedWm = wmToEmit;
+                return wmToEmit;
+            }
+
+            return Long.MIN_VALUE;
+        }
+
+        @Override
+        public long checkWmHistory(long systemTime) {
+            if (watermarkHistory == null) {
+                return Long.MIN_VALUE;
+            }
+            long historicWm = watermarkHistory.sample(systemTime, topObservedWm);
+            if (historicWm > lastEmittedWm) {
+                lastEmittedWm = historicWm;
+                return historicWm;
+            }
+            return Long.MIN_VALUE;
+        }
+
+        @Override
+        public long getTime() {
+            return watermarkHistory != null ? System.nanoTime() : -1;
+        }
+
+        private long bottomObservedWm() {
+            long min = queueWms[0];
+            for (int i = 1; i < queueWms.length; i++) {
+                if (queueWms[i] < min) {
+                    min = queueWms[i];
+                }
+            }
+            return min;
+        }
     }
 }

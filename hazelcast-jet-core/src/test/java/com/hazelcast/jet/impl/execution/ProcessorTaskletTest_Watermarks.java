@@ -230,7 +230,7 @@ public class ProcessorTaskletTest_Watermarks {
         }
 
         @Override
-        public boolean tryProcessWatermark(Watermark watermark) {
+        public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
             if (outbox.offer("wm(" + watermark.timestamp() + ")-" + processWatermarkCallCountdown)) {
                 if (processWatermarkCallCountdown > 0) {
                     processWatermarkCallCountdown--;

@@ -62,7 +62,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         this.priority = priority;
         this.waitForSnapshot = waitForSnapshot;
 
-        watermarkCoalescer = new WatermarkCoalescer(maxWatermarkRetainMillis, conveyor.queueCount());
+        watermarkCoalescer = WatermarkCoalescer.create(maxWatermarkRetainMillis, conveyor.queueCount());
 
         numActiveQueues = conveyor.queueCount();
         receivedBarriers = new BitSet(conveyor.queueCount());
@@ -81,16 +81,11 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
 
     @Override
     public ProgressState drainTo(Consumer<Object> dest) {
-        // nanoTime() is expensive, don't call it if we aren't going to use it
-        long now = watermarkCoalescer.usesWmHistory() ? System.nanoTime() : -1;
-        return drainTo(now, dest);
+        return drainTo(watermarkCoalescer.getTime(), dest);
     }
 
+    // package-visible for testing
     ProgressState drainTo(long now, Consumer<Object> dest) {
-        if (maybeEmitWm(watermarkCoalescer.checkWmHistory(now), dest)) {
-            return MADE_PROGRESS;
-        }
-
         tracker.reset();
         for (int queueIndex = 0; queueIndex < conveyor.queueCount(); queueIndex++) {
             final QueuedPipe<Object> q = conveyor.queue(queueIndex);
@@ -131,9 +126,14 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                     dest.accept(new SnapshotBarrier(pendingSnapshotId));
                     pendingSnapshotId++;
                     receivedBarriers.clear();
-                    break;
+                    return MADE_PROGRESS;
                 }
             }
+        }
+
+        // try to emit WM based on history
+        if (maybeEmitWm(watermarkCoalescer.checkWmHistory(now), dest)) {
+            return MADE_PROGRESS;
         }
 
         if (numActiveQueues > 0) {

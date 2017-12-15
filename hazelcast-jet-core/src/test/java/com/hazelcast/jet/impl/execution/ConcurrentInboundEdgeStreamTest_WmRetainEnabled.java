@@ -87,11 +87,6 @@ public class ConcurrentInboundEdgeStreamTest_WmRetainEnabled {
             add(q1, wm(100 + time));
             Object[] expectedItems = time < 16 ? new Object[0] : new Object[]{wm(time + 100 - 16)};
             drainAndAssert(time, MADE_PROGRESS, expectedItems);
-            // The previous drain() added the WM from history and didn't really drain the queue. Let's drain
-            // the queue in another drain() call and expect nothing is added.
-            if (expectedItems.length > 0) {
-                drainAndAssert(time, MADE_PROGRESS);
-            }
         }
     }
 
@@ -142,8 +137,8 @@ public class ConcurrentInboundEdgeStreamTest_WmRetainEnabled {
         add(q1, barrier(0));
 
         // Then
-        drainAndAssert(16, MADE_PROGRESS, wm(1));
         drainAndAssert(16, MADE_PROGRESS, barrier(0));
+        drainAndAssert(16, MADE_PROGRESS, wm(1));
     }
 
     @Test

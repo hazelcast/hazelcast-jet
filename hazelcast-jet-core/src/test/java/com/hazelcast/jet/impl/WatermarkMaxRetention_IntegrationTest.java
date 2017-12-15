@@ -33,6 +33,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
+import javax.annotation.Nonnull;
+
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
@@ -101,7 +103,7 @@ public class WatermarkMaxRetention_IntegrationTest extends JetTestSupport {
 
     private static final class MapWmToStringP extends AbstractProcessor {
         @Override
-        public boolean tryProcessWatermark(Watermark watermark) {
+        public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
             return tryEmit("wm(" + watermark.timestamp() + ')');
         }
     }

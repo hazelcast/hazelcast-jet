@@ -109,7 +109,7 @@ public class SessionWindowP<T, K, A, R> extends AbstractProcessor {
     }
 
     @Override
-    public boolean tryProcessWatermark(Watermark wm) {
+    public boolean tryProcessWatermark(@Nonnull Watermark wm) {
         return expiredSessionFlatmapper.tryProcess(wm);
     }
 
