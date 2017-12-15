@@ -22,7 +22,7 @@ import com.hazelcast.jet.impl.util.TimestampHistory;
 
 import java.util.Arrays;
 
-import static com.hazelcast.util.Preconditions.checkPositive;
+import static com.hazelcast.util.Preconditions.checkNotNegative;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
@@ -74,8 +74,8 @@ abstract class WatermarkCoalescer {
     public abstract long getTime();
 
     public static WatermarkCoalescer create(int maxWatermarkRetainMillis, int queueCount) {
-        checkPositive(queueCount, "queueCount must be >= 1, but is " + queueCount);
-        if (queueCount == 1) {
+        checkNotNegative(queueCount, "queueCount must be >= 0, but is " + queueCount);
+        if (queueCount <= 1) {
             return new SingleInputImpl();
         } else {
             return new StandardImpl(maxWatermarkRetainMillis, queueCount);
@@ -89,7 +89,7 @@ abstract class WatermarkCoalescer {
     private static final class SingleInputImpl extends WatermarkCoalescer {
         @Override
         public long queueDone(int queueIndex) {
-            return observeWm(-1, 0, Long.MAX_VALUE);
+            return Long.MIN_VALUE;
         }
 
         @Override
