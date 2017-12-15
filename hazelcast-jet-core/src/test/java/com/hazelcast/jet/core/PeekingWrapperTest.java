@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.jet.core.TestProcessors.ListSource;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
@@ -142,10 +143,14 @@ public class PeekingWrapperTest {
         assertPeekInput();
     }
 
+    private DistributedSupplier<Processor> peekOutputProcessorSupplier() {
+        return () -> new ListSource(0, 1, new Watermark(2));
+    }
+
     @Test
     public void when_peekOutput_distributedSupplier() {
         // Given
-        DistributedSupplier<Processor> passThroughPSupplier = procSupplier(TestSourceProcessor.class);
+        DistributedSupplier<Processor> passThroughPSupplier = peekOutputProcessorSupplier();
         peekP = (toStringFn == null
                 ? peekOutputP(passThroughPSupplier)
                 : peekOutputP(toStringFn, shouldLogFn, passThroughPSupplier)
@@ -158,7 +163,7 @@ public class PeekingWrapperTest {
     @Test
     public void when_peekOutput_processorSupplier() {
         // Given
-        ProcessorSupplier wrappedProcSupplier = ProcessorSupplier.of(procSupplier(TestSourceProcessor.class));
+        ProcessorSupplier wrappedProcSupplier = ProcessorSupplier.of(peekOutputProcessorSupplier());
         ProcessorSupplier peekingProcSupplier = toStringFn == null
                 ? peekOutputP(wrappedProcSupplier)
                 : peekOutputP(toStringFn, shouldLogFn, wrappedProcSupplier);
@@ -171,7 +176,7 @@ public class PeekingWrapperTest {
     @Test
     public void when_peekOutput_metaSupplier() {
         // Given
-        ProcessorMetaSupplier passThroughPSupplier = ProcessorMetaSupplier.of(procSupplier(TestSourceProcessor.class));
+        ProcessorMetaSupplier passThroughPSupplier = ProcessorMetaSupplier.of(peekOutputProcessorSupplier());
         ProcessorMetaSupplier peekingMetaSupplier = toStringFn == null
                 ? peekOutputP(passThroughPSupplier)
                 : peekOutputP(toStringFn, shouldLogFn, passThroughPSupplier);
@@ -246,7 +251,7 @@ public class PeekingWrapperTest {
 
         Watermark wm = new Watermark(1);
         peekP.tryProcessWatermark(wm);
-        verify(logger).info("Input: " + format(wm));
+        verify(logger).info("Input: " + wm);
     }
 
     private void assertPeekOutput() {
@@ -257,18 +262,23 @@ public class PeekingWrapperTest {
         verify(logger).info("Output to 0: " + format(0));
         verify(logger).info("Output to 1: " + format(0));
 
+        outbox.queueWithOrdinal(0).clear();
         outbox.queueWithOrdinal(1).clear();
 
+        // only one queue has available space, call complete() again to emit another object
+        peekP.complete();
         if (shouldLogFn == null) {
-            // only one queue has available space
-            peekP.complete();
             verify(logger).info("Output to 1: " + format(1));
-
-            outbox.queueWithOrdinal(0).clear();
-            peekP.complete();
             verify(logger).info("Output to 0: " + format(1));
         }
+        outbox.queueWithOrdinal(0).clear();
+        outbox.queueWithOrdinal(1).clear();
         verifyZeroInteractions(logger);
+
+        peekP.complete();
+        Watermark wm = new Watermark(2);
+        verify(logger).info("Output to 0: " + wm);
+        verify(logger).info("Output to 1: " + wm);
     }
 
     private void assertPeekSnapshot() {

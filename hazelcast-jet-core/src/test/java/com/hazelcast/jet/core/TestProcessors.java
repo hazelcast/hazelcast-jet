@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.dontParallelize;
 import static java.util.stream.Collectors.toList;
@@ -265,6 +266,10 @@ public class TestProcessors {
 
         public ListSource(List<?> list) {
             trav = traverseIterable(list);
+        }
+
+        public ListSource(Object ... list) {
+            trav = traverseArray(list);
         }
 
         @Override

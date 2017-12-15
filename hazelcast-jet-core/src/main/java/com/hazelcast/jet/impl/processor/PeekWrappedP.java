@@ -139,10 +139,8 @@ public final class PeekWrappedP<T> implements Processor {
     @Override
     public boolean tryProcessWatermark(Watermark watermark) {
         if (peekInput && !peekedWatermarkLogged) {
-            if (shouldLogFn.test((T) watermark)) {
-                logger.info("Input: " + toStringFn.apply((T) watermark));
-                peekedWatermarkLogged = true;
-            }
+            logger.info("Input: " + watermark);
+            peekedWatermarkLogged = true;
         }
         if (wrappedProcessor.tryProcessWatermark(watermark)) {
             peekedWatermarkLogged = false;
@@ -230,7 +228,12 @@ public final class PeekWrappedP<T> implements Processor {
                 return false;
             }
             if (logOutput) {
-                log("Output to " + ordinal, (T) item);
+                String prefix = "Output to " + ordinal;
+                if (item instanceof Watermark) {
+                    logger.info(prefix + ": " + item);
+                } else {
+                    log(prefix, (T) item);
+                }
             }
             return true;
         }
