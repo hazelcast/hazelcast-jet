@@ -138,7 +138,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         }
 
         // TODO
-        this.watermarkCoalescer = WatermarkCoalescer.create(-1, -1, assignedPartitions.size());
+        this.watermarkCoalescer = WatermarkCoalescer.create(-1, assignedPartitions.size());
     }
 
     @Override

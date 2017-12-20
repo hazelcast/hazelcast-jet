@@ -25,13 +25,15 @@ public class WatermarkCoalescerTest {
 
     @Test
     public void test() {
-        WatermarkCoalescer wc = WatermarkCoalescer.create(0, 10, 20, 2);
+        WatermarkCoalescer wc = WatermarkCoalescer.create(20, 2);
         assertEquals(Long.MIN_VALUE, wc.checkWmHistory(0));
-        assertEquals(Long.MIN_VALUE, wc.checkWmHistory(9));
-        assertEquals(IDLE_QUEUE_WATERMARK_VALUE, wc.checkWmHistory(10));
-        assertEquals(Long.MIN_VALUE, wc.checkWmHistory(11));
 
-        wc.observeEvent(11, 0);
-        assertEquals(Long.MIN_VALUE, );
+        assertEquals(Long.MIN_VALUE, wc.observeWm(0, 0, IDLE_QUEUE_WATERMARK_VALUE));
+        assertEquals(IDLE_QUEUE_WATERMARK_VALUE, wc.observeWm(0, 1, IDLE_QUEUE_WATERMARK_VALUE));
+        assertEquals(10, wc.observeWm(1, 0, 10));
+        assertEquals(11, wc.observeWm(1, 0, 11));
+        assertEquals(Long.MIN_VALUE, wc.observeWm(1, 1, 11));
+        assertEquals(Long.MIN_VALUE, wc.observeWm(1, 1, 12));
+        assertEquals(12, wc.observeWm(1, 0, 12));
     }
 }
