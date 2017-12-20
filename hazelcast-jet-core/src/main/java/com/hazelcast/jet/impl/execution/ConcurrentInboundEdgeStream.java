@@ -62,7 +62,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         this.priority = priority;
         this.waitForSnapshot = waitForSnapshot;
 
-        watermarkCoalescer = WatermarkCoalescer.create(maxWatermarkRetainMillis, conveyor.queueCount());
+        watermarkCoalescer = WatermarkCoalescer.create(-1, maxWatermarkRetainMillis, conveyor.queueCount());
 
         numActiveQueues = conveyor.queueCount();
         receivedBarriers = new BitSet(conveyor.queueCount());

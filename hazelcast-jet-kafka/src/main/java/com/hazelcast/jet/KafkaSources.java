@@ -54,8 +54,10 @@ public final class KafkaSources {
      * <p>
      * If snapshotting is disabled, the source commits the offsets to Kafka
      * using {@link org.apache.kafka.clients.consumer.KafkaConsumer#commitSync()
-     * commitSync()}. Note however that offsets can be committed before the
-     * event is fully processed.
+     * commitSync()}. Note however that offsets can be committed before or
+     * after the event is fully processed.
+     * <p>
+     * TODO: late events from added partition
      * <p>
      * The processor completes only in the case of an error or if the job is
      * cancelled. IO failures are generally handled by Kafka producer and
@@ -66,18 +68,6 @@ public final class KafkaSources {
      * snapshotting is enabled}, entire job might be blocked. This is a known
      * issue of Kafka (KAFKA-1894).
      * Refer to Kafka documentation for details.
-     *
-     * <h4>Issue when "catching up"</h4>
-     * The processor reads partitions one by one: it gets events from one
-     * partition and then moves to the next one etc. This adds time disorder to
-     * events: it might emit very recent event from partition1 while not yet
-     * emitting an old event from partition2. If watermarks are added to the
-     * stream later, the allowed event lag should accommodate this disorder.
-     * Most notably, the "catching up" happens after the job is restarted, when
-     * events since the last snapshot are reprocessed in a burst. In order to
-     * not lose any events, the lag should be configured to at least {@code
-     * snapshotInterval + timeToRestart + normalEventLag}.
-     * We plan to address this issue in a future release.
      *
      * @param properties consumer properties broker address and key/value deserializers
      * @param projectionFn function to create output objects from key and value

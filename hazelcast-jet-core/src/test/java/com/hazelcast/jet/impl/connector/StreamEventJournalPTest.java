@@ -76,8 +76,9 @@ public class StreamEventJournalPTest extends JetTestSupport {
         map = (MapProxyImpl<Integer, Integer>)
                 instance.getHazelcastInstance().<Integer, Integer>getMap("test");
         List<Integer> allPartitions = IntStream.range(0, NUM_PARTITIONS).boxed().collect(toList());
+        // TODO
         supplier = () -> new StreamEventJournalP<>(map, allPartitions, e -> true,
-                EventJournalMapEvent::getNewValue, START_FROM_OLDEST, true);
+                EventJournalMapEvent::getNewValue, START_FROM_OLDEST, true, null, null, null);
     }
 
     @Test

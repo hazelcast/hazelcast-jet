@@ -628,7 +628,7 @@ public final class Processors {
      * value of the watermark is determined by the supplied {@link
      * WatermarkPolicy} instance.
      * <p>
-     * This processor also drops late items. It never allows an event, which is
+     * This processor also drops late items. It never allows an event which is
      * late with regard to already emitted watermark to pass.
      * <p>
      * The processor saves value of the last emitted watermark to snapshot.

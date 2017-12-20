@@ -105,7 +105,7 @@ public class ProcessorTasklet implements Tasklet {
         state = initialProcessingState();
         pendingSnapshotId = ssContext.lastSnapshotId() + 1;
 
-        watermarkCoalescer = WatermarkCoalescer.create(maxWatermarkRetainMillis, instreams.size());
+        watermarkCoalescer = WatermarkCoalescer.create(-1, maxWatermarkRetainMillis, instreams.size());
     }
 
     private OutboxImpl createOutbox(OutboundCollector ssCollector) {

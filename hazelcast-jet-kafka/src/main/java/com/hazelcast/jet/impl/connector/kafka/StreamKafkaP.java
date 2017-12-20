@@ -159,6 +159,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
             try {
                 records = consumer.poll(POLL_TIMEOUT_MS);
             } catch (InterruptException e) {
+                // note this is Kafka's exception, not Java's
                 return true;
             }
             if (records.isEmpty()) {

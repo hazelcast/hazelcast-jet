@@ -30,10 +30,14 @@ import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.core.WatermarkEmissionPolicy;
+import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
+import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.impl.execution.WatermarkCoalescer;
 import com.hazelcast.journal.EventJournalInitialSubscriberState;
 import com.hazelcast.journal.EventJournalReader;
 import com.hazelcast.map.journal.EventJournalMapEvent;
@@ -45,8 +49,8 @@ import com.hazelcast.util.function.Predicate;
 
 import javax.annotation.Nonnull;
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +60,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.IntConsumer;
+import java.util.stream.IntStream;
 
 import static com.hazelcast.client.HazelcastClient.newHazelcastClient;
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_CURRENT;
@@ -82,11 +87,16 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     private static final int MAX_FETCH_SIZE = 128;
 
     private final EventJournalReader<E> eventJournalReader;
-    private final Set<Integer> assignedPartitions;
+    /**
+     * Index is the real HZ partition number, value is the 0-based partition index or -1,
+     * if that partition is not assigned to us.
+     */
+    private final int[] assignedPartitions;
     private final Predicate<E> predicate;
     private final Projection<E, T> projection;
     private final JournalInitialPosition initialPos;
     private final boolean isRemoteReader;
+    private final WatermarkCoalescer watermarkCoalescer;
 
     // keep track of next offset to emit and read separately, as even when the
     // outbox is full we can still poll for new items.
@@ -111,19 +121,31 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                         @Nonnull DistributedPredicate<E> predicateFn,
                         @Nonnull DistributedFunction<E, T> projectionFn,
                         @Nonnull JournalInitialPosition initialPos,
-                        boolean isRemoteReader) {
+                        boolean isRemoteReader,
+                        @Nonnull DistributedToLongFunction<T> getTimestampF,
+                        @Nonnull WatermarkPolicy wmPolicy,
+                        @Nonnull WatermarkEmissionPolicy wmEmitPolicy) {
         this.eventJournalReader = eventJournalReader;
-        this.assignedPartitions = new HashSet<>(assignedPartitions);
         this.predicate = (Serializable & Predicate<E>) predicateFn::test;
         this.projection = toProjection(projectionFn);
         this.initialPos = initialPos;
         this.isRemoteReader = isRemoteReader;
+
+        this.assignedPartitions = new int[assignedPartitions.stream().mapToInt(Integer::intValue).max().orElse(0)];
+        Arrays.fill(this.assignedPartitions, -1);
+        for (int i = 0; i < assignedPartitions.size(); i++) {
+            this.assignedPartitions[assignedPartitions.get(i)] = i;
+        }
+
+        // TODO
+        this.watermarkCoalescer = WatermarkCoalescer.create(-1, -1, assignedPartitions.size());
     }
 
     @Override
     protected void init(@Nonnull Context context) {
-        Map<Integer, ICompletableFuture<EventJournalInitialSubscriberState>> futures = assignedPartitions.stream()
-            .map(partition -> entry(partition, eventJournalReader.subscribeToEventJournal(partition)))
+        Map<Integer, ICompletableFuture<EventJournalInitialSubscriberState>> futures = IntStream.of(assignedPartitions)
+            .filter(i -> i >= 0)
+            .mapToObj(partition -> entry(partition, eventJournalReader.subscribeToEventJournal(partition)))
             .collect(toMap(Entry::getKey, Entry::getValue));
         futures.forEach((partition, future) -> uncheckRun(() -> readOffsets.put(partition, getSequence(future.get()))));
         emitOffsets.putAll(readOffsets);
@@ -165,7 +187,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
         int partition = ((BroadcastKey<Integer>) key).key();
         long offset = (Long) value;
-        if (assignedPartitions.contains(partition)) {
+        if (assignedPartitions[partition] >= 0) {
             readOffsets.put(partition, offset);
             emitOffsets.put(partition, offset);
         }
@@ -290,6 +312,9 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         private final DistributedPredicate<E> predicate;
         private final DistributedFunction<E, T> projection;
         private final JournalInitialPosition initialPos;
+        private final DistributedToLongFunction<T> getTimestampF;
+        private final WatermarkPolicy wmPolicy;
+        private final WatermarkEmissionPolicy wmEmitPolicy;
 
         private transient int remotePartitionCount;
         private transient Map<Address, List<Integer>> addrToPartitions;
@@ -299,13 +324,19 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 DistributedFunction<HazelcastInstance, EventJournalReader<E>> eventJournalReaderSupplier,
                 DistributedPredicate<E> predicate,
                 DistributedFunction<E, T> projection,
-                JournalInitialPosition initialPos
+                JournalInitialPosition initialPos,
+                DistributedToLongFunction<T> getTimestampF,
+                WatermarkPolicy wmPolicy,
+                WatermarkEmissionPolicy wmEmitPolicy
         ) {
             this.serializableConfig = clientConfig == null ? null : new SerializableClientConfig(clientConfig);
             this.eventJournalReaderSupplier = eventJournalReaderSupplier;
             this.predicate = predicate;
             this.projection = projection;
             this.initialPos = initialPos;
+            this.getTimestampF = getTimestampF;
+            this.wmPolicy = wmPolicy;
+            this.wmEmitPolicy = wmEmitPolicy;
         }
 
         @Override
@@ -348,7 +379,8 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             }
 
             return address -> new ClusterProcessorSupplier<>(addrToPartitions.get(address),
-                    serializableConfig, eventJournalReaderSupplier, predicate, projection, initialPos);
+                    serializableConfig, eventJournalReaderSupplier, predicate, projection, initialPos,
+                    getTimestampF, wmPolicy, wmEmitPolicy);
         }
 
     }
@@ -363,6 +395,9 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         private final DistributedPredicate<E> predicate;
         private final DistributedFunction<E, T> projection;
         private final JournalInitialPosition initialPos;
+        private final DistributedToLongFunction<T> getTimestampF;
+        private final WatermarkPolicy wmPolicy;
+        private final WatermarkEmissionPolicy wmEmitPolicy;
 
         private transient HazelcastInstance client;
         private transient EventJournalReader<E> eventJournalReader;
@@ -373,13 +408,19 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 DistributedFunction<HazelcastInstance, EventJournalReader<E>> eventJournalReaderSupplier,
                 DistributedPredicate<E> predicate,
                 DistributedFunction<E, T> projection,
-                JournalInitialPosition initialPos) {
+                JournalInitialPosition initialPos,
+                DistributedToLongFunction<T> getTimestampF,
+                WatermarkPolicy wmPolicy,
+                WatermarkEmissionPolicy wmEmitPolicy) {
             this.ownedPartitions = ownedPartitions;
             this.serializableClientConfig = serializableClientConfig;
             this.eventJournalReaderSupplier = eventJournalReaderSupplier;
             this.predicate = predicate;
             this.projection = projection;
             this.initialPos = initialPos;
+            this.getTimestampF = getTimestampF;
+            this.wmPolicy = wmPolicy;
+            this.wmEmitPolicy = wmEmitPolicy;
         }
 
         @Override
@@ -411,7 +452,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             return partitions.isEmpty()
                     ? Processors.noopP().get()
                     : new StreamEventJournalP<>(eventJournalReader, partitions, predicate, projection,
-                    initialPos, client != null);
+                    initialPos, client != null, getTimestampF, wmPolicy, wmEmitPolicy);
         }
     }
 
@@ -420,11 +461,14 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull String mapName,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projection,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<T> getTimestampF,
+            @Nonnull WatermarkPolicy wmPolicy,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy
     ) {
         return new ClusterMetaSupplier<>(null,
                 instance -> (EventJournalReader<EventJournalMapEvent<K, V>>) instance.getMap(mapName),
-                predicate, projection, initialPos);
+                predicate, projection, initialPos, getTimestampF, wmPolicy, wmEmitPolicy);
     }
 
     @SuppressWarnings("unchecked")
@@ -433,11 +477,14 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projection,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<T> getTimestampF,
+            @Nonnull WatermarkPolicy wmPolicy,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy
     ) {
         return new ClusterMetaSupplier<>(clientConfig,
                 instance -> (EventJournalReader<EventJournalMapEvent<K, V>>) instance.getMap(mapName),
-                predicate, projection, initialPos);
+                predicate, projection, initialPos, getTimestampF, wmPolicy, wmEmitPolicy);
     }
 
     @SuppressWarnings("unchecked")
@@ -445,11 +492,14 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull String cacheName,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projection,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<T> getTimestampF,
+            @Nonnull WatermarkPolicy wmPolicy,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy
     ) {
         return new ClusterMetaSupplier<>(null,
                 inst -> (EventJournalReader<EventJournalCacheEvent<K, V>>) inst.getCacheManager().getCache(cacheName),
-                predicate, projection, initialPos);
+                predicate, projection, initialPos, getTimestampF, wmPolicy, wmEmitPolicy);
     }
 
     @SuppressWarnings("unchecked")
@@ -458,10 +508,13 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projection,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<T> getTimestampF,
+            @Nonnull WatermarkPolicy wmPolicy,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy
     ) {
         return new ClusterMetaSupplier<>(clientConfig,
                 inst -> (EventJournalReader<EventJournalCacheEvent<K, V>>) inst.getCacheManager().getCache(cacheName),
-                predicate, projection, initialPos);
+                predicate, projection, initialPos, getTimestampF, wmPolicy, wmEmitPolicy);
     }
 }
