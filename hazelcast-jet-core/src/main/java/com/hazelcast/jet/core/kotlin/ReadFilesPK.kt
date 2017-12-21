@@ -36,7 +36,7 @@ class ReadFilesPK(
         private val parallelism: Int,
         private val id: Int
 ) : AbstractProcessorK(), Closeable {
-    override var isCooperative = true
+    override var isCooperative = false
 
     private val directory = Paths.get(directory)
 

@@ -55,7 +55,6 @@ private val watchEventModifiers: Array<WatchEvent.Modifier> = run {
         arrayOf()
 }
 
-
 /**
  * Private API. Access via [com.hazelcast.jet.core.processor.SourceProcessors.streamFilesP]
  */
@@ -77,8 +76,6 @@ class StreamFilesPK(
     private val lineBuilder = StringBuilder()
     private var watcher: WatchService? = null
 
-
-    @Throws(Exception::class)
     override fun init(context: Processor.Context) {
         Files.newDirectoryStream(watchedDirectory)
                 .filter { Files.isRegularFile(it) }
@@ -103,19 +100,18 @@ class StreamFilesPK(
     override fun close() {
         logger.info("Closing StreamFilesPK")
         try {
-            watcher?.close()
+            closeWatcher()
         } catch (e: IOException) {
             logger.severe("Failed to close the directory watcher", e)
-        } finally {
-            this.watcher = null
         }
     }
 
     private fun closeWatcher() {
-        val watcher = this.watcher!!
-        logger.info("Closing directory watcher. Will process any pending watch events after closing.")
-        watcher.close()
-        this.watcher = null
+        try {
+            watcher?.close()
+        } finally {
+            watcher = null
+        }
     }
 
     /**
@@ -129,14 +125,13 @@ class StreamFilesPK(
         if (watcher == null) {
             return eventQueue.isNotEmpty()
         }
-        val logger = logger
         // poll with blocking only when there is no other work to do
         val key = if (eventQueue.isEmpty())
             watcher!!.poll(1, SECONDS) else
             watcher!!.poll()
         if (key == null) {
             if (!Files.exists(watchedDirectory)) {
-                logger.info("Directory $watchedDirectory does not exist, stopped watching")
+                logger.info("Directory $watchedDirectory does not exist. Stopping the directory watcher.")
                 closeWatcher()
             }
             return watcher != null || eventQueue.isNotEmpty()
