@@ -47,7 +47,6 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
     private final ResettableSingletonTraverser<Object> singletonTraverser;
     private final FlatMapper<Object, Object> flatMapper;
 
-    private long currWm = Long.MIN_VALUE;
     private long lastEmittedWm = Long.MIN_VALUE;
 
     // value to be used temporarily during snapshot restore
@@ -71,7 +70,7 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
 
     @Override
     public boolean tryProcess() {
-        currWm = wmPolicy.getCurrentWatermark();
+        long currWm = wmPolicy.getCurrentWatermark();
         if (!wmEmitPolicy.shouldEmit(currWm, lastEmittedWm)) {
             return true;
         }
@@ -108,7 +107,7 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
 
     private Traverser<Object> traverser(Object item) {
         long timestamp = getTimestampF.applyAsLong((T) item);
-        currWm = wmPolicy.reportEvent(timestamp);
+        long currWm = wmPolicy.reportEvent(timestamp);
         if (timestamp >= currWm) {
             // only emit non-late events
             singletonTraverser.accept(item);

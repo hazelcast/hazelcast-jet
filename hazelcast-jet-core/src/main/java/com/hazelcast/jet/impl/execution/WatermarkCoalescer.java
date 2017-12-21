@@ -34,16 +34,14 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * </ul>
  *
  * The class also handles idle messages from inputs (coming in the form of a
- * watermark with {@link #IDLE_QUEUE_WATERMARK_VALUE} timestamp. When such
- * message is received, that input is switched to <em>idle</em> and excluded
- * from coalescing. Any event or watermark from such input will turn the input
- * back to <em>active</em> state.
- *
- * TODO move to public package?
+ * watermark equal to {@link #IDLE_MESSAGE}. When such message is received,
+ * that input is switched to <em>idle</em> and excluded from coalescing. Any
+ * event or watermark from such input will turn the input back to
+ * <em>active</em> state.
  */
 public abstract class WatermarkCoalescer {
 
-    static long IDLE_QUEUE_WATERMARK_VALUE = Long.MAX_VALUE;
+    public static final Watermark IDLE_MESSAGE = new Watermark(Long.MAX_VALUE);
 
     private WatermarkCoalescer() { }
 
@@ -197,7 +195,7 @@ public abstract class WatermarkCoalescer {
                         "last one=" + queueWms[queueIndex] + ", new one=" + wmValue);
             }
 
-            if (wmValue == IDLE_QUEUE_WATERMARK_VALUE) {
+            if (wmValue == IDLE_MESSAGE.timestamp()) {
                 if (isIdle[queueIndex]) {
                     throw new JetException("Duplicate IDLE message");
                 }
@@ -205,7 +203,7 @@ public abstract class WatermarkCoalescer {
                 numActiveQueues--;
                 if (numActiveQueues == 0) {
                     // all inputs are idle now, let's forward the message
-                    return IDLE_QUEUE_WATERMARK_VALUE;
+                    return IDLE_MESSAGE.timestamp();
                 }
             } else {
                 if (isIdle[queueIndex]) {

@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.execution;
 
 import org.junit.Test;
 
-import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_QUEUE_WATERMARK_VALUE;
+import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static org.junit.Assert.assertEquals;
 
 public class WatermarkCoalescerTest {
@@ -28,8 +28,8 @@ public class WatermarkCoalescerTest {
         WatermarkCoalescer wc = WatermarkCoalescer.create(20, 2);
         assertEquals(Long.MIN_VALUE, wc.checkWmHistory(0));
 
-        assertEquals(Long.MIN_VALUE, wc.observeWm(0, 0, IDLE_QUEUE_WATERMARK_VALUE));
-        assertEquals(IDLE_QUEUE_WATERMARK_VALUE, wc.observeWm(0, 1, IDLE_QUEUE_WATERMARK_VALUE));
+        assertEquals(Long.MIN_VALUE, wc.observeWm(0, 0, IDLE_MESSAGE.timestamp()));
+        assertEquals(IDLE_MESSAGE.timestamp(), wc.observeWm(0, 1, IDLE_MESSAGE.timestamp()));
         assertEquals(10, wc.observeWm(1, 0, 10));
         assertEquals(11, wc.observeWm(1, 0, 11));
         assertEquals(Long.MIN_VALUE, wc.observeWm(1, 1, 11));
