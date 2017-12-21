@@ -14,24 +14,29 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.transform;
+package com.hazelcast.jet;
 
-import com.hazelcast.jet.function.DistributedPredicate;
-
-public class FilterTransform<T> implements UnaryTransform<T, T> {
-    public final DistributedPredicate<? super T> filterFn;
-
-    public FilterTransform(DistributedPredicate<? super T> filterFn) {
-        this.filterFn = filterFn;
+/**
+ * Javadoc pending.
+ */
+public interface WindowDefinition {
+    enum WindowKind {
+        TUMBLING, SLIDING, SESSION
     }
 
-    @Override
-    public String toString() {
-        return "Filter";
+    WindowKind kind();
+
+    <W extends WindowDefinition> W downcast();
+
+    static SlidingWindowDef sliding(long frameSize, long framesPerWindow) {
+        return new SlidingWindowDef(frameSize, framesPerWindow);
     }
 
-    @Override
-    public String name() {
-        return "filter";
+    static TumblingWindowDef tumbling(long windowSize) {
+        return new TumblingWindowDef(windowSize);
+    }
+
+    static SessionWindowDef session(long sessionTimeout) {
+        return new SessionWindowDef(sessionTimeout);
     }
 }

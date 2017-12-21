@@ -22,7 +22,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBinaryOperator;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.impl.SinkImpl;
+import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.map.EntryProcessor;
 
 import javax.annotation.Nonnull;
@@ -48,7 +48,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Contains factory methods for various types of pipeline sinks. Formally,
- * a sink is a transform that has no output. A pipeline stage with a sink
+ * a sink is a transform that has no output. A pipeline pipeline with a sink
  * as its transform has the type {@link SinkStage} and accepts no
  * downstream stages.
  */
@@ -64,7 +64,7 @@ public final class Sinks {
      * @param sinkName user-friendly sink name
      * @param metaSupplier the processor meta-supplier
      */
-    public static <E> Sink<E> fromProcessor(String sinkName, ProcessorMetaSupplier metaSupplier) {
+    public static <T> Sink<T> fromProcessor(String sinkName, ProcessorMetaSupplier metaSupplier) {
         return new SinkImpl<>(sinkName, metaSupplier);
     }
 
@@ -77,7 +77,7 @@ public final class Sinks {
      * but overwritten. After the job is restarted from snapshot, duplicate
      * items will not change the state in the target map.
      */
-    public static <E extends Map.Entry> Sink<E> map(String mapName) {
+    public static <T extends Map.Entry> Sink<T> map(String mapName) {
         return fromProcessor("mapSink(" + mapName + ')', writeMapP(mapName));
     }
 
@@ -91,7 +91,7 @@ public final class Sinks {
      * but overwritten. After the job is restarted from snapshot, duplicate
      * items will not change the state in the target map.
      */
-    public static <E extends Map.Entry> Sink<E> remoteMap(String mapName, ClientConfig clientConfig) {
+    public static <T extends Map.Entry> Sink<T> remoteMap(String mapName, ClientConfig clientConfig) {
         return fromProcessor("remoteMapSink(" + mapName + ')', writeRemoteMapP(mapName, clientConfig));
     }
 
@@ -327,7 +327,7 @@ public final class Sinks {
      * but overwritten. After the job is restarted from snapshot, duplicate
      * items will not change the state in the target map.
      */
-    public static <E extends Map.Entry> Sink<E> cache(String cacheName) {
+    public static <T extends Map.Entry> Sink<T> cache(String cacheName) {
         return fromProcessor("cacheSink(" + cacheName + ')', writeCacheP(cacheName));
     }
 
@@ -341,7 +341,7 @@ public final class Sinks {
      * but overwritten. After the job is restarted from snapshot, duplicate
      * items will not change the state in the target map.
      */
-    public static <E extends Map.Entry> Sink<E> remoteCache(String cacheName, ClientConfig clientConfig) {
+    public static <T extends Map.Entry> Sink<T> remoteCache(String cacheName, ClientConfig clientConfig) {
         return fromProcessor("remoteCacheSink(" + cacheName + ')', writeRemoteCacheP(cacheName, clientConfig));
     }
 
@@ -353,7 +353,7 @@ public final class Sinks {
      * the items will likely be duplicated, providing an <i>at-least-once</i>
      * guarantee.
      */
-    public static <E> Sink<E> list(String listName) {
+    public static <T> Sink<T> list(String listName) {
         return fromProcessor("listSink(" + listName + ')', writeListP(listName));
     }
 
@@ -366,7 +366,7 @@ public final class Sinks {
      * the items will likely be duplicated, providing an <i>at-least-once</i>
      * guarantee.
      */
-    public static <E> Sink<E> remoteList(String listName, ClientConfig clientConfig) {
+    public static <T> Sink<T> remoteList(String listName, ClientConfig clientConfig) {
         return fromProcessor("remoteListSink(" + listName + ')', writeRemoteListP(listName, clientConfig));
     }
 
@@ -381,10 +381,10 @@ public final class Sinks {
      * the items will likely be duplicated, providing an <i>at-least-once</i>
      * guarantee.
      */
-    public static <E> Sink<E> socket(
+    public static <T> Sink<T> socket(
             @Nonnull String host,
             int port,
-            @Nonnull DistributedFunction<E, String> toStringFn,
+            @Nonnull DistributedFunction<T, String> toStringFn,
             @Nonnull Charset charset
     ) {
         return fromProcessor("socketSink(" + host + ':' + port + ')', writeSocketP(host, port, toStringFn, charset));
@@ -394,10 +394,10 @@ public final class Sinks {
      * Convenience for {@link #socket(String, int, DistributedFunction,
      * Charset)} with UTF-8 as the charset.
      */
-    public static <E> Sink<E> socket(
+    public static <T> Sink<T> socket(
             @Nonnull String host,
             int port,
-            @Nonnull DistributedFunction<E, String> toStringFn
+            @Nonnull DistributedFunction<T, String> toStringFn
     ) {
         return fromProcessor("socketSink(" + host + ':' + port + ')', writeSocketP(host, port, toStringFn, UTF_8));
     }
@@ -407,7 +407,7 @@ public final class Sinks {
      * Charset)} with {@code Object.toString} as the conversion function and
      * UTF-8 as the charset.
      */
-    public static <E> Sink<E> socket(@Nonnull String host, int port) {
+    public static <T> Sink<T> socket(@Nonnull String host, int port) {
         return fromProcessor("socketSink(" + host + ':' + port + ')',
                 writeSocketP(host, port, Object::toString, UTF_8));
     }
@@ -436,9 +436,9 @@ public final class Sinks {
      *               an existing file
      */
     @Nonnull
-    public static <E> Sink<E> files(
+    public static <T> Sink<T> files(
             @Nonnull String directoryName,
-            @Nonnull DistributedFunction<E, String> toStringFn,
+            @Nonnull DistributedFunction<T, String> toStringFn,
             @Nonnull Charset charset,
             boolean append
     ) {
@@ -451,8 +451,8 @@ public final class Sinks {
      * boolean)} with the UTF-8 charset and with overwriting of existing files.
      */
     @Nonnull
-    public static <E> Sink<E> files(
-            @Nonnull String directoryName, @Nonnull DistributedFunction<E, String> toStringFn
+    public static <T> Sink<T> files(
+            @Nonnull String directoryName, @Nonnull DistributedFunction<T, String> toStringFn
     ) {
         return files(directoryName, toStringFn, UTF_8, false);
     }
@@ -462,7 +462,7 @@ public final class Sinks {
      * boolean)} with the UTF-8 charset and with overwriting of existing files.
      */
     @Nonnull
-    public static <E> Sink<E> files(@Nonnull String directoryName) {
+    public static <T> Sink<T> files(@Nonnull String directoryName) {
         return files(directoryName, Object::toString, UTF_8, false);
     }
 
@@ -477,10 +477,10 @@ public final class Sinks {
      * on a local machine.
      *
      * @param toStringFn a function that returns a string representation of a stream item
-     * @param <E> stream item type
+     * @param <T> stream item type
      */
     @Nonnull
-    public static <E> Sink<E> logger(DistributedFunction<E, String> toStringFn) {
+    public static <T> Sink<T> logger(DistributedFunction<T, String> toStringFn) {
         return fromProcessor("loggerSink", writeLoggerP(toStringFn));
     }
 
@@ -489,7 +489,7 @@ public final class Sinks {
      * Object.toString()} as the {@code toStringFn}.
      */
     @Nonnull
-    public static <E> Sink<E> logger() {
+    public static <T> Sink<T> logger() {
         return logger(Object::toString);
     }
 }

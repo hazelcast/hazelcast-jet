@@ -14,29 +14,24 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.transform;
+package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.DistributedFunction;
 
-public class FlatMapTransform<E, R> implements UnaryTransform<E, R> {
-    private final DistributedFunction<? super E, Traverser<? extends R>> flatMapFn;
+public class MapTransform<T, R> implements UnaryTransform<T, R> {
+    public final DistributedFunction<? super T, ? extends R> mapFn;
 
-    public FlatMapTransform(DistributedFunction<? super E, Traverser<? extends R>> flatMapFn) {
-        this.flatMapFn = flatMapFn;
-    }
-
-    @Override
-    public String toString() {
-        return "FlatMap";
+    public MapTransform(DistributedFunction<? super T, ? extends R> mapFn) {
+        this.mapFn = mapFn;
     }
 
     @Override
     public String name() {
-        return "flatMap";
+        return "map";
     }
 
-    public DistributedFunction<? super E, Traverser<? extends R>> flatMapFn() {
-        return flatMapFn;
+    @Override
+    public String toString() {
+        return name();
     }
 }

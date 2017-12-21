@@ -29,8 +29,10 @@ import java.io.Serializable;
  * pipeline. It contains code that recognizes a closed set of {@code
  * Transform} types, which means you cannot add your own transformation to
  * Jet by implementing this type.
+ *
+ * @param <R> result type
  */
-public interface Transform extends Serializable {
+public interface Transform<R> extends Serializable {
     /**
      * Returns the name of this transformation.
      */

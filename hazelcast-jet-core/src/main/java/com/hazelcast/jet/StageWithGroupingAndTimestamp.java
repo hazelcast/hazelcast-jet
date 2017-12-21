@@ -14,26 +14,19 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.transform;
+package com.hazelcast.jet;
 
-import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 
 /**
- * A unary transform constructed directly from a provided Core API
- * processor supplier.
+ * Javadoc pending.
  */
-public class ProcessorTransform<E, R> implements UnaryTransform<E, R> {
-    public final DistributedSupplier<Processor> procSupplier;
-    private final String name;
+public interface StageWithGroupingAndTimestamp<T, K> {
 
-    public ProcessorTransform(String name, DistributedSupplier<Processor> procSupplier) {
-        this.name = name;
-        this.procSupplier = procSupplier;
-    }
+    DistributedFunction<? super T, ? extends K> keyFn();
 
-    @Override
-    public String name() {
-        return name;
-    }
+    DistributedToLongFunction<? super T> timestampFn();
+
+    StageWithGroupingAndWindow<T, K> window(WindowDefinition wDef);
 }

@@ -44,29 +44,29 @@ import static java.lang.Math.floorMod;
  * value beyond the range covered by the frame. That timestamp denotes the
  * exact moment on the event timeline where the frame was closed.
  */
-public class WindowDefinition implements Serializable {
+public class SlidingWindowPolicy implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    private final long frameLength;
+    private final long frameSize;
     private final long frameOffset;
-    private final long windowLength;
+    private final long windowSize;
 
-    WindowDefinition(long frameLength, long frameOffset, long framesPerWindow) {
-        checkPositive(frameLength, "frameLength must be positive");
+    SlidingWindowPolicy(long frameSize, long frameOffset, long framesPerWindow) {
+        checkPositive(frameSize, "frameLength must be positive");
         checkNotNegative(frameOffset, "frameOffset must not be negative");
-        checkTrue(frameOffset < frameLength, "frameOffset must be less than frameLength");
+        checkTrue(frameOffset < frameSize, "frameOffset must be less than frameLength");
         checkPositive(framesPerWindow, "framesPerWindow must be positive");
 
-        this.frameLength = frameLength;
+        this.frameSize = frameSize;
         this.frameOffset = frameOffset;
-        this.windowLength = frameLength * framesPerWindow;
+        this.windowSize = frameSize * framesPerWindow;
     }
 
     /**
      * Returns the length of the frame (equal to the sliding step).
      */
     public long frameLength() {
-        return frameLength;
+        return frameSize;
     }
 
     /**
@@ -82,7 +82,7 @@ public class WindowDefinition implements Serializable {
      * It is an integer multiple of {@link #frameLength()}.
      */
     public long windowLength() {
-        return windowLength;
+        return windowSize;
     }
 
     /**
@@ -91,7 +91,7 @@ public class WindowDefinition implements Serializable {
      * to its size.
      */
     public boolean isTumbling() {
-        return windowLength == frameLength;
+        return windowSize == frameSize;
     }
 
     /**
@@ -101,8 +101,8 @@ public class WindowDefinition implements Serializable {
      */
     public long floorFrameTs(long timestamp) {
         return subtractClamped(timestamp, floorMod(
-                (timestamp >= Long.MIN_VALUE + frameOffset ? timestamp : timestamp + frameLength) - frameOffset,
-                frameLength
+                (timestamp >= Long.MIN_VALUE + frameOffset ? timestamp : timestamp + frameSize) - frameOffset,
+                frameSize
         ));
     }
 
@@ -111,9 +111,9 @@ public class WindowDefinition implements Serializable {
      * there is no such {@code long} value, returns {@code Long.MAX_VALUE}.
      */
     public long higherFrameTs(long timestamp) {
-        long tsPlusFrame = timestamp + frameLength;
-        return sumHadOverflow(timestamp, frameLength, tsPlusFrame)
-                ? addClamped(floorFrameTs(timestamp), frameLength)
+        long tsPlusFrame = timestamp + frameSize;
+        return sumHadOverflow(timestamp, frameSize, tsPlusFrame)
+                ? addClamped(floorFrameTs(timestamp), frameSize)
                 : floorFrameTs(tsPlusFrame);
     }
 
@@ -127,46 +127,46 @@ public class WindowDefinition implements Serializable {
      * With {@code offset = 2} they will cover {@code ..., [-2, 2), [2..6),
      * ...}
      */
-    public WindowDefinition withOffset(long offset) {
-        return new WindowDefinition(frameLength, offset, windowLength / frameLength);
+    public SlidingWindowPolicy withOffset(long offset) {
+        return new SlidingWindowPolicy(frameSize, offset, windowSize / frameSize);
     }
 
     /**
      * Converts this definition to one defining a tumbling window of the
      * same length as this definition's frame.
      */
-    public WindowDefinition toTumblingByFrame() {
-        return new WindowDefinition(frameLength, frameOffset, 1);
+    public SlidingWindowPolicy toTumblingByFrame() {
+        return new SlidingWindowPolicy(frameSize, frameOffset, 1);
     }
 
     /**
      * Returns the definition of a sliding window of length {@code
-     * windowLength} that slides by {@code slideBy}. Given {@code
-     * windowLength = 4} and {@code slideBy = 2}, the generated windows would
+     * windowSize} that slides by {@code slideBy}. Given {@code
+     * windowSize = 4} and {@code slideBy = 2}, the generated windows would
      * cover timestamps {@code ..., [-2, 2), [0..4), [2..6), [4..8), [6..10),
      * ...}
      * <p>
      * Since the window will be computed internally by maintaining {@link
-     * WindowDefinition frames} of size equal to the sliding step, the
+     * SlidingWindowPolicy frames} of size equal to the sliding step, the
      * configured window length must be an integer multiple of the sliding
      * step.
      *
-     * @param windowLength the length of the window, must be a multiple of {@code slideBy}
+     * @param windowSize the length of the window, must be a multiple of {@code slideBy}
      * @param slideBy the amount to slide the window by
      */
-    public static WindowDefinition slidingWindowDef(long windowLength, long slideBy) {
-        Preconditions.checkTrue(windowLength % slideBy == 0, "windowLength must be a multiple of slideBy");
-        return new WindowDefinition(slideBy, 0, windowLength / slideBy);
+    public static SlidingWindowPolicy slidingWinPolicy(long windowSize, long slideBy) {
+        Preconditions.checkTrue(windowSize % slideBy == 0, "windowSize must be a multiple of slideBy");
+        return new SlidingWindowPolicy(slideBy, 0, windowSize / slideBy);
     }
 
     /**
      * Returns the definition of a tumbling window of length {@code
-     * windowLength}. The tumbling window is a special case of the sliding
-     * window with {@code slideBy = windowLength}. Given {@code
-     * windowLength = 4}, the generated windows would cover timestamps {@code
+     * windowSize}. The tumbling window is a special case of the sliding
+     * window with {@code slideBy = windowSize}. Given {@code
+     * windowSize = 4}, the generated windows would cover timestamps {@code
      * ..., [-4, 0), [0..4), [4..8), ...}
      */
-    public static WindowDefinition tumblingWindowDef(long windowLength) {
-        return slidingWindowDef(windowLength, windowLength);
+    public static SlidingWindowPolicy tumblingWinPolicy(long windowSize) {
+        return slidingWinPolicy(windowSize, windowSize);
     }
 }

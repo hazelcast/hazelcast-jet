@@ -14,16 +14,24 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.transform;
+package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.Transform;
+import com.hazelcast.jet.function.DistributedPredicate;
 
-/**
- * Represents a unary transform, one that takes a single input stream
- * and produces a single output stream.
- *
- * @param <T> type of the input item
- * @param <U> type of the result item
- */
-public interface UnaryTransform<T, U> extends Transform {
+public class FilterTransform<T> implements UnaryTransform<T, T> {
+    public final DistributedPredicate<? super T> filterFn;
+
+    public FilterTransform(DistributedPredicate<? super T> filterFn) {
+        this.filterFn = filterFn;
+    }
+
+    @Override
+    public String name() {
+        return "filter";
+    }
+
+    @Override
+    public String toString() {
+        return name();
+    }
 }

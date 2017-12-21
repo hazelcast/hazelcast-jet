@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl;
+package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.jet.ComputeStage;
 import com.hazelcast.jet.Sink;
 import com.hazelcast.jet.SinkStage;
-import com.hazelcast.jet.Stage;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
 class SinkStageImpl extends AbstractStage implements SinkStage {
 
-    SinkStageImpl(Stage upstream, Sink transform, PipelineImpl pipeline) {
+    SinkStageImpl(ComputeStage upstream, Sink transform, PipelineImpl pipeline) {
         super(singletonList(upstream), emptyList(), transform, pipeline);
     }
 }

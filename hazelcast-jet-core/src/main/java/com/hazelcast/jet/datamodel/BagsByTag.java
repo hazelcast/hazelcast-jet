@@ -28,7 +28,7 @@ import java.util.Set;
  * A heterogeneous map from {@code Tag<E>} to {@code Collection<E>}, where
  * {@code E} can be different for each tag. Useful as a container of
  * co-grouped items, where each tag corresponds to one contributing
- * pipeline stage.
+ * pipeline pipeline.
  * <p>
  * This is a less typesafe, but more flexible alternative to the {@link
  * TwoBags} and {@link ThreeBags} containers, which have a fixed (and

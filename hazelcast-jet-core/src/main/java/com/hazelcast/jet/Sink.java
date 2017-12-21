@@ -22,7 +22,7 @@ package com.hazelcast.jet;
  * <p>
  * See {@link Sinks} for possible choices.
  *
- * @param <E> the type of items the sink will receive
+ * @param <T> the type of items the sink will receive
  */
-public interface Sink<E> extends Transform {
+public interface Sink<T> extends Transform {
 }

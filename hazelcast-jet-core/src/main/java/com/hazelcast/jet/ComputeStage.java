@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -25,180 +25,140 @@ import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 
 import javax.annotation.Nonnull;
-import java.util.Map.Entry;
 
 import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
 
 /**
- * Represents a stage in a distributed computation {@link Pipeline
+ * Represents a pipeline in a distributed computation {@link Pipeline
  * pipeline}. It accepts input from its upstream stages (if any) and passes
  * its output to its downstream stages.
  *
- * @param <E> the type of items coming out of this stage
+ * @param <T> the type of items coming out of this pipeline
  */
-public interface ComputeStage<E> extends Stage {
+public interface ComputeStage<T> extends Stage {
 
     /**
-     * Attaches to this stage a mapping stage, one which applies the supplied
+     * Attaches to this pipeline a mapping pipeline, one which applies the supplied
      * function to each input item independently and emits the function's
-     * result as the output item. Returns the newly attached stage.
+     * result as the output item. Returns the newly attached pipeline.
      *
      * @param mapFn the mapping function
      * @param <R> the result type of the mapping function
      */
-    <R> ComputeStage<R> map(DistributedFunction<? super E, ? extends R> mapFn);
+    @Nonnull
+    <R> ComputeStage<R> map(@Nonnull DistributedFunction<? super T, ? extends R> mapFn);
 
     /**
-     * Attaches to this stage a filtering stage, one which applies the provided
+     * Attaches to this pipeline a filtering pipeline, one which applies the provided
      * predicate function to each input item to decide whether to pass the item
-     * to the output or to discard it. Returns the newly attached stage.
+     * to the output or to discard it. Returns the newly attached pipeline.
      *
      * @param filterFn the filter predicate function
      */
-    ComputeStage<E> filter(DistributedPredicate<E> filterFn);
+    @Nonnull
+    ComputeStage<T> filter(@Nonnull DistributedPredicate<T> filterFn);
 
     /**
-     * Attaches to this stage a flat-mapping stage, one which applies the
+     * Attaches to this pipeline a flat-mapping pipeline, one which applies the
      * supplied function to each input item independently and emits all items
      * from the {@link Traverser} it returns as the output items. Returns the
-     * newly attached stage.
+     * newly attached pipeline.
      *
      * @param flatMapFn the flatmapping function, whose result type is Jet's {@link Traverser}
      * @param <R> the type of items in the result's traversers
      */
-    <R> ComputeStage<R> flatMap(DistributedFunction<? super E, Traverser<? extends R>> flatMapFn);
+    @Nonnull
+    <R> ComputeStage<R> flatMap(@Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn);
 
     /**
-     * Attaches to this stage a group-by-key stage, one which will group all
-     * received items by the key returned from the provided key-extracting
-     * function. It will apply the provided aggregate operation to the items
-     * in each group and emit the result of aggregation per grouping key as
-     * the results.
-     *
-     * @param keyFn the function that extracts the grouping key from an item
-     * @param aggrOp the aggregate operation to perform
-     * @param <K> the type of key
-     * @param <A> the type of the accumulator
-     * @param <R> the type of the aggregation result
-     */
-    <K, A, R> ComputeStage<Entry<K, R>> groupBy(
-            DistributedFunction<? super E, ? extends K> keyFn, AggregateOperation1<? super E, A, R> aggrOp
-    );
-
-    /**
-     * Attaches to both this and the supplied stage a hash-joining stage and
-     * returns it. This stage plays the role of the <em>primary stage</em> in
+     * Attaches to both this and the supplied pipeline a hash-joining pipeline and
+     * returns it. This pipeline plays the role of the <em>primary pipeline</em> in
      * the hash-join. Please refer to the {@link com.hazelcast.jet
      * package Javadoc} for a detailed description of the hash-join transform.
      *
-     * @param stage1     the stage to hash-join with this one
+     * @param stage1     the pipeline to hash-join with this one
      * @param joinClause specifies how to join the two streams
      * @param <K>        the type of the join key
-     * @param <E1_IN>     the type of {@code stage1} items
-     * @param <E1>       the result type of projection on {@code stage1} items
+     * @param <T1_IN>    the type of {@code stage1} items
+     * @param <T1>       the result type of projection on {@code stage1} items
      */
-    <K, E1_IN, E1> ComputeStage<Tuple2<E, E1>> hashJoin(
-            ComputeStage<E1_IN> stage1, JoinClause<K, E, E1_IN, E1> joinClause
+    @Nonnull
+    <K, T1_IN, T1> ComputeStage<Tuple2<T, T1>> hashJoin(
+            @Nonnull ComputeStage<T1_IN> stage1,
+            @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause
     );
 
     /**
-     * Attaches to this and the two supplied stages a hash-joining stage and
-     * returns it. This stage plays the role of the <em>primary stage</em> in
+     * Attaches to this and the two supplied stages a hash-joining pipeline and
+     * returns it. This pipeline plays the role of the <em>primary pipeline</em> in
      * the hash-join. Please refer to the {@link com.hazelcast.jet package
      * Javadoc} for a detailed description of the hash-join transform.
      *
-     * @param stage1      the first stage to join
+     * @param stage1      the first pipeline to join
      * @param joinClause1 specifies how to join with {@code stage1}
-     * @param stage2      the second stage to join
+     * @param stage2      the second pipeline to join
      * @param joinClause2 specifices how to join with {@code stage2}
      * @param <K1>        the type of key for {@code stage1}
-     * @param <E1_IN>     the type of {@code stage1} items
-     * @param <E1>        the result type of projection of {@code stage1} items
+     * @param <T1_IN>     the type of {@code stage1} items
+     * @param <T1>        the result type of projection of {@code stage1} items
      * @param <K2>        the type of key for {@code stage2}
-     * @param <E2_IN>     the type of {@code stage2} items
-     * @param <E2>        the result type of projection of {@code stage2} items
+     * @param <T2_IN>     the type of {@code stage2} items
+     * @param <T2>        the result type of projection of {@code stage2} items
      */
-    <K1, E1_IN, E1, K2, E2_IN, E2> ComputeStage<Tuple3<E, E1, E2>> hashJoin(
-            ComputeStage<E1_IN> stage1, JoinClause<K1, E, E1_IN, E1> joinClause1,
-            ComputeStage<E2_IN> stage2, JoinClause<K2, E, E2_IN, E2> joinClause2
+    @Nonnull
+    <K1, T1_IN, T1, K2, T2_IN, T2> ComputeStage<Tuple3<T, T1, T2>> hashJoin(
+            @Nonnull ComputeStage<T1_IN> stage1,
+            @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
+            @Nonnull ComputeStage<T2_IN> stage2,
+            @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2
     );
 
     /**
      * Returns a fluent API builder object to construct a hash join operation
      * with any number of contributing stages. This object is mainly intended
-     * to build a hash-join of the primary stage with three or more
+     * to build a hash-join of the primary pipeline with three or more
      * contributing stages. For one or two stages the direct
-     * {@code stage.hashJoin(...)} calls should be preferred because they offer
+     * {@code pipeline.hashJoin(...)} calls should be preferred because they offer
      * more static type safety.
      */
-    default HashJoinBuilder<E> hashJoinBuilder() {
+    @Nonnull
+    default HashJoinBuilder<T> hashJoinBuilder() {
         return new HashJoinBuilder<>(this);
     }
 
-    /**
-     * Attaches to this and the supplied stage a stage that co-groups their items
-     * by a common key and applies the supplied aggregate operation to co-grouped
-     * items.
-     *
-     * @param thisKeyFn a function that extracts the grouping key from this stage's items
-     * @param stage1    the stage to co-group with this one
-     * @param key1Fn    a function that extracts the grouping key from {@code stage1} items
-     * @param aggrOp    the aggregate operation to perform on co-grouped items
-     * @param <K>       the type of the grouping key
-     * @param <A>       the type of the accumulator
-     * @param <E1>      the type of {@code stage1} items
-     * @param <R>       the result type of the aggregate operation
-     */
-    <K, A, E1, R> ComputeStage<Entry<K, R>> coGroup(
-            DistributedFunction<? super E, ? extends K> thisKeyFn,
-            ComputeStage<E1> stage1, DistributedFunction<? super E1, ? extends K> key1Fn,
-            AggregateOperation2<? super E, ? super E1, A, R> aggrOp
+    @Nonnull
+    <A, R> ComputeStage<R> aggregate(
+            @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
     );
 
-    /**
-     * Attaches to this and the supplied stages a stage that co-groups their items
-     * by a common key and applies the supplied aggregate operation to co-grouped
-     * items.
-     *
-     * @param thisKeyFn a function that extracts the grouping key from this stage's items
-     * @param stage1    the first stage to co-group with this one
-     * @param key1Fn    a function that extracts the grouping key from {@code stage1} items
-     * @param stage2    the second stage to co-group with this one
-     * @param key2Fn    a function that extracts the grouping key from {@code stage2} items
-     * @param aggrOp    the aggregate operation to perform on co-grouped items
-     * @param <K>       the type of the grouping key
-     * @param <A>       the type of the accumulator
-     * @param <E1>      the type of {@code stage1} items
-     * @param <E2>      the type of {@code stage1} items
-     * @param <R>       the result type of the aggregate operation
-     */
-    <K, A, E1, E2, R> ComputeStage<Entry<K, R>> coGroup(
-            DistributedFunction<? super E, ? extends K> thisKeyFn,
-            ComputeStage<E1> stage1, DistributedFunction<? super E1, ? extends K> key1Fn,
-            ComputeStage<E2> stage2, DistributedFunction<? super E2, ? extends K> key2Fn,
-            AggregateOperation3<? super E, ? super E1, ? super E2, A, R> aggrOp
-    );
+    @Nonnull
+    <T1, A, R> ComputeStage<R> aggregate2(
+            @Nonnull ComputeStage<T1> stage1,
+            @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp);
 
-    /**
-     * Returns a fluent API builder object to construct a co-group operation
-     * with any number of contributing stages. This object is mainly intended
-     * to build a co-grouping of the primary stage with three or more
-     * contributing stages. For one or two stages the direct {@code
-     * stage.coGroup(...)} calls should be preferred because they offer more
-     * static type safety.
-     *
-     * @param thisKeyFn a function that extracts the grouping key from this stage's items
-     * @param <K>       the type of the grouping key
-     */
-    default <K> CoGroupBuilder<K, E> coGroupBuilder(DistributedFunction<? super E, K> thisKeyFn) {
-        return new CoGroupBuilder<>(this, thisKeyFn);
+    @Nonnull
+    <T1, T2, A, R> ComputeStage<R> aggregate3(
+            @Nonnull ComputeStage<T1> stage1,
+            @Nonnull ComputeStage<T2> stage2,
+            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp);
+
+    @Nonnull
+    default AggregateBuilder<T> aggregateBuilder() {
+        return new AggregateBuilder<>(this);
     }
 
+    @Nonnull
+    <K> StageWithGrouping<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);
+
+    @Nonnull
+    StageWithTimestamp<T> timestamp(@Nonnull DistributedToLongFunction<? super T> timestampFn);
+
     /**
-     * Adds a peeking layer to this compute stage which logs its output. For
-     * each item the stage emits, it:
+     * Adds a peeking layer to this compute pipeline which logs its output. For
+     * each item the pipeline emits, it:
      * <ol><li>
      *     uses the {@code shouldLogFn} predicate to see whether to log the item
      * </li><li>
@@ -208,7 +168,7 @@ public interface ComputeStage<E> extends Stage {
      *     logs the string at the INFO level to the log category {@code
      *     com.hazelcast.jet.impl.processor.PeekWrappedP.<vertexName>#<processorIndex>}
      * </li></ol>
-     * The stage logs each item on whichever cluster member it happens to
+     * The pipeline logs each item on whichever cluster member it happens to
      * receive it. Its primary purpose is for development use, when running Jet
      * on a local machine.
      *
@@ -220,21 +180,22 @@ public interface ComputeStage<E> extends Stage {
      * @see #peek(DistributedFunction)
      * @see #peek()
      */
-    ComputeStage<E> peek(
-            @Nonnull DistributedPredicate<? super E> shouldLogFn,
-            @Nonnull DistributedFunction<? super E, String> toStringFn
+    @Nonnull
+    ComputeStage<T> peek(
+            @Nonnull DistributedPredicate<? super T> shouldLogFn,
+            @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn
     );
 
     /**
-     * Adds a peeking layer to this compute stage which logs its output. For
-     * each item the stage emits, it:
+     * Adds a peeking layer to this compute pipeline which logs its output. For
+     * each item the pipeline emits, it:
      * <ol><li>
      *     uses {@code toStringFn} to get a string representation of the item
      * </li><li>
      *     logs the string at the INFO level to the log category {@code
      *     com.hazelcast.jet.impl.processor.PeekWrappedP.<vertexName>#<processorIndex>}
      * </li></ol>
-     * The stage logs each item on whichever cluster member it happens to
+     * The pipeline logs each item on whichever cluster member it happens to
      * receive it. Its primary purpose is for development use, when running Jet
      * on a local machine.
      *
@@ -242,47 +203,51 @@ public interface ComputeStage<E> extends Stage {
      * @see #peek(DistributedPredicate, DistributedFunction)
      * @see #peek()
      */
-    default ComputeStage<E> peek(@Nonnull DistributedFunction<? super E, String> toStringFn) {
+    default ComputeStage<T> peek(@Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn) {
         return peek(alwaysTrue(), toStringFn);
     }
 
     /**
-     * Adds a peeking layer to this compute stage which logs its output. For
-     * each item the stage emits, it logs the result of its {@code toString()}
+     * Adds a peeking layer to this compute pipeline which logs its output. For
+     * each item the pipeline emits, it logs the result of its {@code toString()}
      * method at the INFO level to the log category {@code
      * com.hazelcast.jet.impl.processor.PeekWrappedP.<vertexName>#<processorIndex>}.
-     * The stage logs each item on whichever cluster member it happens to
+     * The pipeline logs each item on whichever cluster member it happens to
      * receive it. Its primary purpose is for development use, when running Jet
      * on a local machine.
      *
      * @see #peek(DistributedPredicate, DistributedFunction)
      * @see #peek(DistributedFunction)
      */
-    default ComputeStage<E> peek() {
+    @Nonnull
+    default ComputeStage<T> peek() {
         return peek(alwaysTrue(), Object::toString);
     }
 
     /**
-     * Attaches to this stage a sink stage, one that accepts data but doesn't
+     * Attaches to this pipeline a sink pipeline, one that accepts data but doesn't
      * emit any. The supplied argument specifies what to do with the received
      * data (typically push it to some outside resource).
      */
-    SinkStage drainTo(Sink<? super E> sink);
+    @Nonnull
+    SinkStage drainTo(@Nonnull Sink<? super T> sink);
 
     /**
-     * Attaches to this stage a stage with a custom transform based on the
+     * Attaches to this pipeline a pipeline with a custom transform based on the
      * provided supplier of Core API {@link Processor}s. To be compatible with
      * the rest of the pipeline, the processor must expect a single inbound
      * edge and arbitrarily many outbound edges, and it must push the same data
      * to all outbound edges.
      * <p>
-     * Note that the returned stage's type parameter is inferred from the call
+     * Note that the returned pipeline's type parameter is inferred from the call
      * site and not propagated from the processor that will produce the result,
      * so there is no actual type safety provided.
      *
-     * @param stageName a human-readable name for the custom stage
+     * @param stageName a human-readable name for the custom pipeline
      * @param procSupplier the supplier of processors
      * @param <R> the type of the output items
      */
-    <R> ComputeStage<R> customTransform(String stageName, DistributedSupplier<Processor> procSupplier);
+    @Nonnull
+    <R> ComputeStage<R> customTransform(
+            @Nonnull String stageName, @Nonnull DistributedSupplier<Processor> procSupplier);
 }

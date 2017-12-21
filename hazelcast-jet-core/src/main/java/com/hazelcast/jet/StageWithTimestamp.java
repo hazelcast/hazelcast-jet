@@ -16,12 +16,17 @@
 
 package com.hazelcast.jet;
 
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedToLongFunction;
+
 /**
- * A transform that takes no input streams and produces an output stream.
- * <p>
- * See {@link Sources} for possible choices.
- *
- * @param <T> the stream item type
+ * Javadoc pending.
  */
-public interface Source<T> extends Transform {
+public interface StageWithTimestamp<T> {
+
+    DistributedToLongFunction<? super T> timestampFn();
+
+    <K> StageWithGroupingAndTimestamp<T, K> groupingKey(DistributedFunction<? super T, ? extends K> keyFn);
+
+    StageWithWindow<T> window(WindowDefinition wDef);
 }

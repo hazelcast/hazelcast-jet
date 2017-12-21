@@ -16,12 +16,13 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor.Context;
-import com.hazelcast.jet.core.WindowDefinition;
+import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.impl.processor.SlidingWindowP.Keys;
@@ -52,8 +53,8 @@ public class SlidingWindowP_failoverTest {
     private SlidingWindowP<Entry<String, Long>, ?, Long> p;
 
     private void init(ProcessingGuarantee guarantee) {
-        WindowDefinition wDef = WindowDefinition.tumblingWindowDef(1);
-        AggregateOperation1<Object, ?, Long> aggrOp = counting();
+        SlidingWindowPolicy wDef = SlidingWindowPolicy.tumblingWinPolicy(1);
+        AggregateOperation1<Object, LongAccumulator, Long> aggrOp = counting();
         p = new SlidingWindowP<>(entryKey(), Entry::getValue, wDef, aggrOp, true);
 
         Outbox outbox = new TestOutbox(128);

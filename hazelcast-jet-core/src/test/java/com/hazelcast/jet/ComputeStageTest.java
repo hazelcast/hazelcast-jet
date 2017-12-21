@@ -132,7 +132,7 @@ public class ComputeStageTest extends PipelineTestSupport {
         putToSrcMap(input);
 
         // When
-        ComputeStage<Entry<Integer, Long>> grouped = srcStage.groupBy(wholeItem(), counting());
+        ComputeStage<Entry<Integer, Long>> grouped = srcStage.groupingKey(wholeItem()).aggregate(counting());
         grouped.drainTo(sink);
         execute();
 
@@ -227,16 +227,18 @@ public class ComputeStageTest extends PipelineTestSupport {
     @Test
     public void coGroupTwo() {
         //Given
+        String src1Name = randomName();
+        ComputeStage<Integer> srcStage1 = pipeline.drawFrom(mapValuesSource(src1Name));
         List<Integer> input = IntStream.range(1, 100).boxed()
                                        .flatMap(i -> Collections.nCopies(i, i).stream())
                                        .collect(toList());
         putToSrcMap(input);
-        String src1Name = randomName();
-        ComputeStage<Integer> src1 = pipeline.drawFrom(mapValuesSource(src1Name));
         putToMap(jet().getMap(src1Name), input);
 
         // When
-        ComputeStage<Entry<Integer, Long>> coGrouped = srcStage.coGroup(wholeItem(), src1, wholeItem(),
+        StageWithGrouping<Integer, Integer> stage0 = srcStage.groupingKey(wholeItem());
+        StageWithGrouping<Integer, Integer> stage1 = srcStage1.groupingKey(wholeItem());
+        ComputeStage<Entry<Integer, Long>> coGrouped = stage0.aggregate2(stage1,
                 AggregateOperation
                         .withCreate(LongAccumulator::new)
                         .andAccumulate0((count, item) -> count.add(1))
@@ -268,9 +270,10 @@ public class ComputeStageTest extends PipelineTestSupport {
         putToMap(jet().getMap(src2Name), input);
 
         // When
-        ComputeStage<Entry<Integer, Long>> coGrouped = srcStage.coGroup(wholeItem(),
-                src1, wholeItem(),
-                src2, wholeItem(),
+        StageWithGrouping<Integer, Integer> stage0 = srcStage.groupingKey(wholeItem());
+        StageWithGrouping<Integer, Integer> stage1 = src1.groupingKey(wholeItem());
+        StageWithGrouping<Integer, Integer> stage2 = src2.groupingKey(wholeItem());
+        ComputeStage<Entry<Integer, Long>> coGrouped = stage0.aggregate3(stage1, stage2,
                 AggregateOperation
                         .withCreate(LongAccumulator::new)
                         .andAccumulate0((count, item) -> count.add(1))
@@ -303,11 +306,14 @@ public class ComputeStageTest extends PipelineTestSupport {
         putToMap(jet().getMap(src2Name), input);
 
         // When
-        CoGroupBuilder<Integer, Integer> b = srcStage.coGroupBuilder(wholeItem());
+        StageWithGrouping<Integer, Integer> stage0 = srcStage.groupingKey(wholeItem());
+        StageWithGrouping<Integer, Integer> stage1 = src1.groupingKey(wholeItem());
+        StageWithGrouping<Integer, Integer> stage2 = src2.groupingKey(wholeItem());
+        GroupAggregateBuilder<Integer, Integer> b = stage0.aggregateBuilder();
         Tag<Integer> tag0 = b.tag0();
-        Tag<Integer> tag1 = b.add(src1, wholeItem());
-        Tag<Integer> tag2 = b.add(src2, wholeItem());
-        ComputeStage<Tuple2<Integer, Long>> coGrouped = b.build(AggregateOperation
+        Tag<Integer> tag1 = b.add(stage1);
+        Tag<Integer> tag2 = b.add(stage2);
+        ComputeStage<Entry<Integer, Long>> coGrouped = b.build(AggregateOperation
                 .withCreate(LongAccumulator::new)
                 .andAccumulate(tag0, (count, item) -> count.add(1))
                 .andAccumulate(tag1, (count, item) -> count.add(10))

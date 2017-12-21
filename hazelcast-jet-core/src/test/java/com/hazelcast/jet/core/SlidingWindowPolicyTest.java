@@ -23,15 +23,15 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import static com.hazelcast.jet.core.WindowDefinition.slidingWindowDef;
-import static com.hazelcast.jet.core.WindowDefinition.tumblingWindowDef;
+import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
+import static com.hazelcast.jet.core.SlidingWindowPolicy.tumblingWinPolicy;
 import static org.junit.Assert.assertEquals;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
-public class WindowDefinitionTest {
+public class SlidingWindowPolicyTest {
 
-    private WindowDefinition definition;
+    private SlidingWindowPolicy definition;
 
     @Before
     public void setup() {
@@ -39,7 +39,7 @@ public class WindowDefinitionTest {
 
     @Test
     public void when_noOffset() throws Exception {
-        definition = new WindowDefinition(4, 0, 10);
+        definition = new SlidingWindowPolicy(4, 0, 10);
         assertFrameTs(-5, -8, -4);
         assertFrameTs(-4, -4, 0);
         assertFrameTs(-3, -4, 0);
@@ -58,7 +58,7 @@ public class WindowDefinitionTest {
 
     @Test
     public void when_offset1() throws Exception {
-        definition = new WindowDefinition(4, 1, 10);
+        definition = new SlidingWindowPolicy(4, 1, 10);
 
         assertFrameTs(-4, -7, -3);
         assertFrameTs(-3, -3, 1);
@@ -78,7 +78,7 @@ public class WindowDefinitionTest {
 
     @Test
     public void when_offset2() throws Exception {
-        definition = new WindowDefinition(4, 2, 10);
+        definition = new SlidingWindowPolicy(4, 2, 10);
 
         assertFrameTs(-4, -6, -2);
         assertFrameTs(-3, -6, -2);
@@ -98,20 +98,20 @@ public class WindowDefinitionTest {
 
     @Test
     public void when_frameLength3() {
-        definition = new WindowDefinition(3, 0, 10);
+        definition = new SlidingWindowPolicy(3, 0, 10);
         assertEquals(Long.MIN_VALUE, definition.floorFrameTs(Long.MIN_VALUE));
     }
 
     @Test
     public void when_floorOutOfRange_then_minValue() {
-        definition = new WindowDefinition(4, 3, 10);
+        definition = new SlidingWindowPolicy(4, 3, 10);
         assertEquals(Long.MIN_VALUE, definition.floorFrameTs(Long.MIN_VALUE + 2));
         assertEquals(Long.MAX_VALUE, definition.floorFrameTs(Long.MAX_VALUE));
     }
 
     @Test
     public void when_higherOutOfRange_then_maxValue() {
-        definition = new WindowDefinition(4, 2, 10);
+        definition = new SlidingWindowPolicy(4, 2, 10);
         assertEquals(Long.MAX_VALUE, definition.higherFrameTs(Long.MAX_VALUE - 1));
         assertEquals(Long.MIN_VALUE + 2, definition.higherFrameTs(Long.MIN_VALUE));
     }
@@ -123,7 +123,7 @@ public class WindowDefinitionTest {
 
     @Test
     public void test_tumblingWindowDef() {
-        definition = tumblingWindowDef(123L);
+        definition = tumblingWinPolicy(123L);
         assertEquals(123L, definition.frameLength());
         assertEquals(123L, definition.windowLength());
         assertEquals(0, definition.frameOffset());
@@ -131,7 +131,7 @@ public class WindowDefinitionTest {
 
     @Test
     public void test_toTumblingByFrame() {
-        definition = slidingWindowDef(1000, 100);
+        definition = slidingWinPolicy(1000, 100);
         definition = definition.toTumblingByFrame();
         assertEquals(100, definition.windowLength());
         assertEquals(100, definition.frameLength());
@@ -139,7 +139,7 @@ public class WindowDefinitionTest {
 
     @Test
     public void test_withOffset() {
-        definition = slidingWindowDef(1000, 100);
+        definition = slidingWinPolicy(1000, 100);
         assertEquals(0, definition.frameOffset());
         definition = definition.withOffset(10);
         assertEquals(10, definition.frameOffset());

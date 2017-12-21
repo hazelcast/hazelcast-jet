@@ -34,7 +34,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
 /**
- * Implements the {@link com.hazelcast.jet.impl.transform.HashJoinTransform
+ * Implements the {@link com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform
  * hash-join transform}.
  */
 public class HashJoinP<E0> extends AbstractProcessor {

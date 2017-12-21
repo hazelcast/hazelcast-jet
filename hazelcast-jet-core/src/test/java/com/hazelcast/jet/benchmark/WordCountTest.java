@@ -88,7 +88,7 @@ public class WordCountTest extends HazelcastTestSupport implements Serializable 
     }
 
     @Before
-    public void before() throws Exception {
+    public void before() {
         JetConfig config = new JetConfig();
         config.getInstanceConfig().setCooperativeThreadCount(PARALLELISM);
         Config hazelcastConfig = config.getHazelcastConfig();
@@ -103,7 +103,7 @@ public class WordCountTest extends HazelcastTestSupport implements Serializable 
         generateMockInput();
     }
 
-    private void generateMockInput() throws Exception {
+    private void generateMockInput() {
         logger.info("Generating input");
         final DAG dag = new DAG();
         Vertex source = dag.newVertex("source",
@@ -164,7 +164,7 @@ public class WordCountTest extends HazelcastTestSupport implements Serializable 
         Vertex aggregateStage1 = dag.newVertex("aggregateStage1", aggregateByKeyP(wholeItem(), counting()));
         // (word, count) -> (word, count)
         Vertex aggregateStage2 = dag.newVertex("aggregateStage2",
-                aggregateByKeyP(entryKey(), summingLong(Entry<String, Long>::getValue)));
+                aggregateByKeyP(Entry::getKey, summingLong(Entry<String, Long>::getValue)));
         Vertex sink = dag.newVertex("sink", SinkProcessors.writeMapP("counts"));
 
         dag.edge(between(source.localParallelism(1), tokenize))

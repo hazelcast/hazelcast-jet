@@ -23,8 +23,8 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
+import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.core.WindowDefinition;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 
@@ -51,7 +51,7 @@ import static java.util.Collections.emptyMap;
  * Handles various setups of sliding and tumbling window aggregation.
  * See {@link com.hazelcast.jet.core.processor.Processors} for more documentation.
  *
- * @param <T> type of input item (stream item in 1st stage, Frame, if 2nd stage)
+ * @param <T> type of input item (stream item in 1st pipeline, Frame, if 2nd pipeline)
  * @param <A> type of the frame accumulator object
  * @param <R> type of the finished result
  */
@@ -62,7 +62,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     Map<Object, A> slidingWindow;
     long nextWinToEmit = Long.MIN_VALUE;
 
-    private final WindowDefinition wDef;
+    private final SlidingWindowPolicy wDef;
     private final DistributedToLongFunction<? super T> getFrameTsFn;
     private final Function<? super T, ?> getKeyFn;
     private final AggregateOperation1<? super T, A, R> aggrOp;
@@ -86,7 +86,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
     public SlidingWindowP(
             Function<? super T, ?> getKeyFn,
             DistributedToLongFunction<? super T> getFrameTsFn,
-            WindowDefinition winDef,
+            SlidingWindowPolicy winDef,
             AggregateOperation1<? super T, A, R> aggrOp,
             boolean isLastStage
     ) {
@@ -174,8 +174,8 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
 
     @Override
     public boolean finishSnapshotRestore() {
-        // For first-stage, we should theoretically have saved nextWinToEmit to snapshot. But we don't bother, since the
-        // first stage is always tumbling window and it makes no difference in that case. So we don't restore and remain
+        // For first-pipeline, we should theoretically have saved nextWinToEmit to snapshot. But we don't bother, since the
+        // first pipeline is always tumbling window and it makes no difference in that case. So we don't restore and remain
         // at MIN_VALUE.
         if (isLastStage) {
             nextWinToEmit = minRestoredNextWinToEmit;
@@ -197,7 +197,7 @@ public class SlidingWindowP<T, A, R> extends AbstractProcessor {
             // timestamp that can be emitted: at most the top existing timestamp lower
             // than wm, but even lower than that if there are older frames on record.
             // The above guarantees that the sliding window can be correctly
-            // initialized using the "add leading/deduct trailing" approach because we
+            // initialized using the "add leading/deduct trailing" approach because we§§
             // start from a window that covers at most one existing frame -- the lowest
             // one on record.
             long bottomTs = tsToKeyToAcc

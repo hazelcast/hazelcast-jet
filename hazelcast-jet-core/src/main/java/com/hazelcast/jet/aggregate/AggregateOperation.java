@@ -111,7 +111,7 @@ public interface AggregateOperation<A, R> extends Serializable {
      * A primitive that accepts two accumulators and updates the state of the
      * left-hand one by combining it with the state of the right-hand one.
      * The right-hand accumulator remains unchanged. In some cases, such as
-     * single-stage batch aggregation it is not needed and may be {@code null}.
+     * single-pipeline batch aggregation it is not needed and may be {@code null}.
      */
     @Nullable
     DistributedBiConsumer<? super A, ? super A> combineFn();

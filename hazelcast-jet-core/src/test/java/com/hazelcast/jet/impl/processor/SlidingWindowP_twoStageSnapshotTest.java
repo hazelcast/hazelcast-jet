@@ -21,9 +21,9 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.core.WindowDefinition;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
@@ -45,7 +45,7 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.core.WindowDefinition.slidingWindowDef;
+import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static java.util.Arrays.asList;
@@ -54,7 +54,7 @@ import static org.junit.Assert.assertTrue;
 
 /**
  * This test checks the flushing of internal buffer downstream instead of saving
- * anything to snapshot in stage 1 out of 2.
+ * anything to snapshot in pipeline 1 out of 2.
  */
 @RunWith(Parameterized.class)
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
@@ -78,7 +78,7 @@ public class SlidingWindowP_twoStageSnapshotTest {
 
     @Before
     public void before() {
-        WindowDefinition windowDef = slidingWindowDef(4, 1);
+        SlidingWindowPolicy windowDef = slidingWinPolicy(4, 1);
 
         AggregateOperation1<Entry<?, Long>, LongAccumulator, Long> operation = AggregateOperation
                 .withCreate(LongAccumulator::new)

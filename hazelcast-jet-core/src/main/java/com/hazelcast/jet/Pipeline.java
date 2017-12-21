@@ -17,14 +17,14 @@
 package com.hazelcast.jet;
 
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.impl.PipelineImpl;
+import com.hazelcast.jet.impl.pipeline.PipelineImpl;
 
 import javax.annotation.Nonnull;
 
 /**
  * Models a distributed computation job using an analogy with a system of
- * interconnected water pipes. The basic element is a <em>stage</em> which
- * can be attached to one or more other stages. A stage accepts the data
+ * interconnected water pipes. The basic element is a <em>pipeline</em> which
+ * can be attached to one or more other stages. A pipeline accepts the data
  * coming from its upstream stages, transforms it, and directs the
  * resulting data to its downstream stages.
  * <p>
@@ -43,14 +43,14 @@ import javax.annotation.Nonnull;
 public interface Pipeline {
 
     /**
-     * Returns a new pipeline stage that has no upstream stages and produces
+     * Returns a new pipeline pipeline that has no upstream stages and produces
      * some output for its downstream stages.
      *
-     * @param source the definition of the source from which the stage draws data
-     * @param <E> the type of source data items
+     * @param source the definition of the source from which the pipeline draws data
+     * @param <T> the type of source data items
      */
     @Nonnull
-    <E> ComputeStage<E> drawFrom(@Nonnull Source<E> source);
+    <T> ComputeStage<T> drawFrom(@Nonnull Source<? extends T> source);
 
     /**
      * Transforms the pipeline into a Jet DAG, which can be submitted for

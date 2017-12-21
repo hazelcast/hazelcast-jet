@@ -14,21 +14,31 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl;
+package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.Source;
+import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.Sink;
 
-public class SourceImpl<E> implements Source<E> {
+public class SinkImpl<E> implements Sink<E> {
     private final String name;
     private final ProcessorMetaSupplier metaSupplier;
 
-    public SourceImpl(String name, ProcessorMetaSupplier metaSupplier) {
+    public SinkImpl(String name, ProcessorMetaSupplier metaSupplier) {
         this.metaSupplier = metaSupplier;
         this.name = name;
     }
 
-    @Override
+    public SinkImpl(String name, ProcessorSupplier supplier) {
+        this(name, ProcessorMetaSupplier.of(supplier));
+    }
+
+    public SinkImpl(String name, DistributedSupplier<Processor> supplier) {
+        this(name, ProcessorMetaSupplier.of(supplier));
+    }
+
     public String name() {
         return name;
     }

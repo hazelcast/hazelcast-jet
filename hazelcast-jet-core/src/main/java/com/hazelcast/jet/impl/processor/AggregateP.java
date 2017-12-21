@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedBiConsumer;
@@ -24,33 +25,30 @@ import com.hazelcast.jet.function.DistributedFunction;
 import javax.annotation.Nonnull;
 
 /**
- * Batch processor that computes the supplied aggregate operation
- * on all received items.
+ * Batch processor that computes the supplied aggregate operation on all
+ * the received items. The number of inbound edges must not exceed the
+ * number of {@code accumulate} primitives in the aggregate operation.
  */
-public class AggregateP<T, A, R> extends AbstractProcessor {
-    private final DistributedBiConsumer<? super A, ? super T> accumulateFn;
-    private final DistributedFunction<? super A, R> finishFn;
-    private final A acc;
+public class AggregateP<A, R> extends AbstractProcessor {
+    @Nonnull private final AggregateOperation<A, R> aggrOp;
+    @Nonnull private final A acc;
     private R result;
 
-    public AggregateP(
-            @Nonnull AggregateOperation1<? super T, A, R> aggregateOperation
-    ) {
-        this.accumulateFn = aggregateOperation.accumulateFn();
-        this.finishFn = aggregateOperation.finishFn();
-        this.acc = aggregateOperation.createFn().get();
+    public AggregateP(@Nonnull AggregateOperation<A, R> aggrOp) {
+        this.acc = aggrOp.createFn().get();
+        this.aggrOp = aggrOp;
     }
 
     @Override
-    protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
-        accumulateFn.accept(acc, (T) item);
+    protected boolean tryProcess(int ordinal, @Nonnull Object item) {
+        aggrOp.accumulateFn(ordinal).accept(acc, item);
         return true;
     }
 
     @Override
     public boolean complete() {
         if (result == null) {
-            result = finishFn.apply(acc);
+            result = aggrOp.finishFn().apply(acc);
         }
         return tryEmit(result);
     }

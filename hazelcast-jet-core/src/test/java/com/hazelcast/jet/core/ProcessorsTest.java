@@ -22,6 +22,7 @@ import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
@@ -39,6 +40,8 @@ import java.util.function.Supplier;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
+import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -133,7 +136,7 @@ public class ProcessorsTest {
 
     @Test
     public void aggregateByKey() {
-        final Processor p = processorFrom(Processors.aggregateByKeyP(Object::toString, aggregateToListAndString()));
+        final Processor p = processorFrom(aggregateByKeyP(Object::toString, aggregateToListAndString()));
         // Given
         inbox.add(1);
         inbox.add(1);
@@ -164,7 +167,7 @@ public class ProcessorsTest {
 
     @Test
     public void accumulateByKey() {
-        final Processor p = processorFrom(Processors.accumulateByKeyP(Object::toString, aggregateToListAndString()));
+        final Processor p = processorFrom(Processors.accumulateByKeyP(Object::toString, aggregateToListAndString().withFinishFn(identity())));
         // Given
         inbox.add(1);
         inbox.add(1);

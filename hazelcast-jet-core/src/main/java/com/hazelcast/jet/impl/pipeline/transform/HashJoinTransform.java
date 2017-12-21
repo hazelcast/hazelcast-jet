@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.transform;
+package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.JoinClause;
 import com.hazelcast.jet.datamodel.Tag;
@@ -22,16 +22,16 @@ import com.hazelcast.jet.datamodel.Tag;
 import javax.annotation.Nonnull;
 import java.util.List;
 
-public class HashJoinTransform<E0> implements MultiTransform {
-    private final List<JoinClause<?, E0, ?, ?>> clauses;
+public class HashJoinTransform<T0> implements MultaryTransform {
+    private final List<JoinClause<?, ? super T0, ?, ?>> clauses;
     private final List<Tag> tags;
 
-    public HashJoinTransform(@Nonnull List<JoinClause<?, E0, ?, ?>> clauses, @Nonnull List<Tag> tags) {
+    public HashJoinTransform(@Nonnull List<JoinClause<?, ? super T0, ?, ?>> clauses, @Nonnull List<Tag> tags) {
         this.clauses = clauses;
         this.tags = tags;
     }
 
-    public List<JoinClause<?, E0, ?, ?>> clauses() {
+    public List<JoinClause<?, ? super T0, ?, ?>> clauses() {
         return clauses;
     }
 
@@ -40,12 +40,12 @@ public class HashJoinTransform<E0> implements MultiTransform {
     }
 
     @Override
-    public String toString() {
-        return tags.size() + "-way HashJoin";
+    public String name() {
+        return tags.size() + "-way hash-join";
     }
 
     @Override
-    public String name() {
-        return "hashJoin";
+    public String toString() {
+        return name();
     }
 }

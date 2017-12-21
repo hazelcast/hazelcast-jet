@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet;
+package com.hazelcast.jet.impl.pipeline.transform;
+
+import com.hazelcast.jet.Transform;
 
 /**
- * A transform that takes no input streams and produces an output stream.
- * <p>
- * See {@link Sources} for possible choices.
+ * Represents a higher-arity transform, one which takes more than one data
+ * stream as input an produces a single stream as output.
  *
- * @param <T> the stream item type
+ * @param <R> the type of the result item
  */
-public interface Source<T> extends Transform {
+public interface MultaryTransform<R> extends Transform<R> {
 }

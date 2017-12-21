@@ -14,15 +14,32 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.transform;
+package com.hazelcast.jet;
 
-import com.hazelcast.jet.Transform;
+import static com.hazelcast.jet.WindowDefinition.WindowKind.SESSION;
 
 /**
- * Represents a higher-arity transform, one which takes more than one data
- * stream as input an produces a single stream as output.
- *
- * @param <R> the type of the result item
+ * Javadoc pending.
  */
-public interface MultiTransform<R> extends Transform {
+public class SessionWindowDef<T> implements WindowDefinition {
+    private final long sessionTimeout;
+
+    SessionWindowDef(long sessionTimeout) {
+        this.sessionTimeout = sessionTimeout;
+    }
+
+    @Override
+    public WindowKind kind() {
+        return SESSION;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public SessionWindowDef<T> downcast() {
+        return this;
+    }
+
+    public long sessionTimeout() {
+        return sessionTimeout;
+    }
 }

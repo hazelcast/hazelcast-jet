@@ -25,7 +25,7 @@ package com.hazelcast.jet;
  */
 public interface Stage {
     /**
-     * Returns the {@link Pipeline} this stage belongs to.
+     * Returns the {@link Pipeline} this pipeline belongs to.
      */
     Pipeline getPipeline();
 }

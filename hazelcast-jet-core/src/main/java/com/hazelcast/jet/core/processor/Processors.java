@@ -27,7 +27,7 @@ import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.WatermarkEmissionPolicy;
 import com.hazelcast.jet.core.WatermarkPolicy;
-import com.hazelcast.jet.core.WindowDefinition;
+import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -170,12 +170,12 @@ import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
  *     <th>stream, group by key<br>and aligned window</th>
  *
  *     <td>{@link #aggregateToSlidingWindowP(DistributedFunction, DistributedToLongFunction,
- *          TimestampKind, WindowDefinition, AggregateOperation1)
+ *          TimestampKind, SlidingWindowPolicy, AggregateOperation1)
  *          aggregateToSlidingWindow()}</td>
  *     <td>{@link #accumulateByFrameP(DistributedFunction, DistributedToLongFunction,
- *          TimestampKind, WindowDefinition, AggregateOperation1)
+ *          TimestampKind, SlidingWindowPolicy, AggregateOperation1)
  *          accumulateByFrame()}</td>
- *     <td>{@link #combineToSlidingWindowP(WindowDefinition, AggregateOperation1)
+ *     <td>{@link #combineToSlidingWindowP(SlidingWindowPolicy, AggregateOperation1)
  *          combineToSlidingWindow()}</td>
  * </tr><tr>
  *     <th>stream, group by key<br>and session window</th>
@@ -205,7 +205,7 @@ public final class Processors {
      * This processor has state, but does not save it to snapshot. On job
      * restart, the state will be lost.
      *
-     * @param getKeyFn computes the key from the entry
+     * @param keyFn computes the key from the entry
      * @param aggrOp the aggregate operation to perform
      * @param <T> type of received item
      * @param <K> type of key
@@ -216,10 +216,10 @@ public final class Processors {
      */
     @Nonnull
     public static <T, K, A, R> DistributedSupplier<Processor> aggregateByKeyP(
-            @Nonnull DistributedFunction<? super T, K> getKeyFn,
+            @Nonnull DistributedFunction<? super T, K> keyFn,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        return () -> new CoGroupP<>(getKeyFn, aggrOp);
+        return () -> new CoGroupP<>(keyFn, aggrOp);
     }
 
     /**
@@ -233,7 +233,7 @@ public final class Processors {
      * This processor has state, but does not save it to snapshot. On job
      * restart, the state will be lost.
      *
-     * @param getKeyFn computes the key from the entry
+     * @param keyFn computes the key from the entry
      * @param aggrOp the aggregate operation to perform
      * @param <T> type of received item
      * @param <K> type of key
@@ -241,10 +241,10 @@ public final class Processors {
      */
     @Nonnull
     public static <T, K, A> DistributedSupplier<Processor> accumulateByKeyP(
-            @Nonnull DistributedFunction<? super T, K> getKeyFn,
+            @Nonnull DistributedFunction<? super T, K> keyFn,
             @Nonnull AggregateOperation1<? super T, A, ?> aggrOp
     ) {
-        return () -> new CoGroupP<>(getKeyFn, aggrOp.withFinishFn(identity()));
+        return () -> new CoGroupP<>(keyFn, aggrOp.withFinishFn(identity()));
     }
 
     /**
@@ -261,7 +261,7 @@ public final class Processors {
      * This processor has state, but does not save it to snapshot. On job
      * restart, the state will be lost.
      *
-     * @param getKeyFs functions that compute the grouping key
+     * @param getKeyFns functions that compute the grouping key
      * @param aggrOp the aggregate operation
      * @param <K> type of key
      * @param <A> type of accumulator returned from {@code aggrOp.createAccumulatorFn()}
@@ -269,10 +269,10 @@ public final class Processors {
      */
     @Nonnull
     public static <K, A, R> DistributedSupplier<Processor> coAggregateByKeyP(
-            @Nonnull List<DistributedFunction<?, ? extends K>> getKeyFs,
+            @Nonnull List<DistributedFunction<?, ? extends K>> getKeyFns,
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
-        return () -> new CoGroupP<>(getKeyFs, aggrOp);
+        return () -> new CoGroupP<>(getKeyFns, aggrOp);
     }
 
     /**
@@ -291,17 +291,17 @@ public final class Processors {
      * This processor has state, but does not save it to snapshot. On job
      * restart, the state will be lost.
      *
-     * @param getKeyFs functions that compute the grouping key
+     * @param getKeyFns functions that compute the grouping key
      * @param aggrOp the aggregate operation to perform
      * @param <K> type of key
      * @param <A> type of accumulator returned from {@code aggrOp.createAccumulatorFn()}
      */
     @Nonnull
     public static <K, A> DistributedSupplier<Processor> coAccumulateByKeyP(
-            @Nonnull List<DistributedFunction<?, ? extends K>> getKeyFs,
+            @Nonnull List<DistributedFunction<?, ? extends K>> getKeyFns,
             @Nonnull AggregateOperation<A, ?> aggrOp
     ) {
-        return () -> new CoGroupP<>(getKeyFs, aggrOp.withFinishFn(identity()));
+        return () -> new CoGroupP<>(getKeyFns, aggrOp.withFinishFn(identity()));
     }
 
     /**
@@ -440,13 +440,13 @@ public final class Processors {
      */
     @Nonnull
     public static <T, K, A, R> DistributedSupplier<Processor> aggregateToSlidingWindowP(
-            @Nonnull DistributedFunction<? super T, K> getKeyFn,
-            @Nonnull DistributedToLongFunction<? super T> getTimestampFn,
+            @Nonnull DistributedFunction<? super T, K> keyFn,
+            @Nonnull DistributedToLongFunction<? super T> timestampFn,
             @Nonnull TimestampKind timestampKind,
-            @Nonnull WindowDefinition windowDef,
+            @Nonnull SlidingWindowPolicy windowDef,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        return Processors.<T, K, A, R>aggregateByKeyAndWindowP(getKeyFn, getTimestampFn, timestampKind,
+        return Processors.<T, K, A, R>aggregateByKeyAndWindowP(keyFn, timestampFn, timestampKind,
                 windowDef, aggrOp, true);
     }
 
@@ -462,7 +462,7 @@ public final class Processors {
      * <p>
      * The frame is identified by the timestamp denoting its end time (equal to
      * the exclusive upper bound of its timestamp range). {@link
-     * WindowDefinition#higherFrameTs(long)} maps the event timestamp to the
+     * SlidingWindowPolicy#higherFrameTs(long)} maps the event timestamp to the
      * timestamp of the frame it belongs to.
      * <p>
      * When the processor receives a watermark with a given {@code wmVal}, it
@@ -475,20 +475,20 @@ public final class Processors {
      * processor and nothing is saved to snapshot.
      *
      * @param <T> input item type
-     * @param <K> type of key returned from {@code getKeyFn}
+     * @param <K> type of key returned from {@code keyFn}
      * @param <A> type of accumulator returned from {@code aggrOp.
      *            createAccumulatorFn()}
      */
     @Nonnull
     public static <T, K, A> DistributedSupplier<Processor> accumulateByFrameP(
-            @Nonnull DistributedFunction<? super T, K> getKeyFn,
-            @Nonnull DistributedToLongFunction<? super T> getTimestampFn,
+            @Nonnull DistributedFunction<? super T, K> keyFn,
+            @Nonnull DistributedToLongFunction<? super T> timestampFn,
             @Nonnull TimestampKind timestampKind,
-            @Nonnull WindowDefinition windowDef,
+            @Nonnull SlidingWindowPolicy windowDef,
             @Nonnull AggregateOperation1<? super T, A, ?> aggrOp
     ) {
-        WindowDefinition tumblingByFrame = windowDef.toTumblingByFrame();
-        return Processors.<T, K, A, A>aggregateByKeyAndWindowP(getKeyFn, getTimestampFn, timestampKind, tumblingByFrame,
+        SlidingWindowPolicy tumblingByFrame = windowDef.toTumblingByFrame();
+        return Processors.<T, K, A, A>aggregateByKeyAndWindowP(keyFn, timestampFn, timestampKind, tumblingByFrame,
                 aggrOp.withFinishFn(identity()), false
         );
     }
@@ -501,7 +501,7 @@ public final class Processors {
      * aggregation primitive to frames received from several upstream instances
      * of {@link #accumulateByFrameP(
      *      DistributedFunction, DistributedToLongFunction,
-     *      TimestampKind, WindowDefinition, AggregateOperation1)
+     *      TimestampKind, SlidingWindowPolicy, AggregateOperation1)
      * accumulateByFrame()}. It emits sliding window results labeled with
      * the timestamp denoting the window's end time. This timestamp is equal to
      * the exclusive upper bound of timestamps belonging to the window.
@@ -531,7 +531,7 @@ public final class Processors {
      */
     @Nonnull
     public static <K, A, R> DistributedSupplier<Processor> combineToSlidingWindowP(
-            @Nonnull WindowDefinition windowDef,
+            @Nonnull SlidingWindowPolicy windowDef,
             @Nonnull AggregateOperation1<?, A, R> aggrOp
     ) {
         return aggregateByKeyAndWindowP(
@@ -545,9 +545,9 @@ public final class Processors {
      * group-by-key-and-window operation and applies the provided aggregate
      * operation on groups.
      *
-     * @param getKeyFn function that extracts the grouping key from the input item
-     * @param getTimestampFn function that extracts the timestamp from the input item
-     * @param timestampKind the kind of timestamp extracted by {@code getTimestampFn}: either the
+     * @param keyFn function that extracts the grouping key from the input item
+     * @param timestampFn function that extracts the timestamp from the input item
+     * @param timestampKind the kind of timestamp extracted by {@code timestampFn}: either the
      *                      event timestamp or the frame timestamp
      * @param windowDef definition of the window to compute
      * @param aggrOp aggregate operation to perform on each group in a window
@@ -560,18 +560,18 @@ public final class Processors {
      */
     @Nonnull
     private static <T, K, A, R> DistributedSupplier<Processor> aggregateByKeyAndWindowP(
-            @Nonnull DistributedFunction<? super T, K> getKeyFn,
-            @Nonnull DistributedToLongFunction<? super T> getTimestampFn,
+            @Nonnull DistributedFunction<? super T, K> keyFn,
+            @Nonnull DistributedToLongFunction<? super T> timestampFn,
             @Nonnull TimestampKind timestampKind,
-            @Nonnull WindowDefinition windowDef,
+            @Nonnull SlidingWindowPolicy windowDef,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
             boolean isLastStage
     ) {
         return () -> new SlidingWindowP<T, A, R>(
-                getKeyFn,
+                keyFn,
                 timestampKind == EVENT
-                        ? item -> windowDef.higherFrameTs(getTimestampFn.applyAsLong(item))
-                        : getTimestampFn,
+                        ? item -> windowDef.higherFrameTs(timestampFn.applyAsLong(item))
+                        : timestampFn,
                 windowDef,
                 aggrOp,
                 isLastStage);
@@ -603,8 +603,8 @@ public final class Processors {
      * snapshot might overlap, which they normally don't.
      *
      * @param sessionTimeout maximum gap between consecutive events in the same session window
-     * @param getTimestampFn function to extract the timestamp from the item
-     * @param getKeyFn       function to extract the grouping key from the item
+     * @param timestampFn function to extract the timestamp from the item
+     * @param keyFn       function to extract the grouping key from the item
      * @param aggrOp         the aggregate operation
      *
      * @param <T> type of the stream event
@@ -615,11 +615,11 @@ public final class Processors {
     @Nonnull
     public static <T, K, A, R> DistributedSupplier<Processor> aggregateToSessionWindowP(
             long sessionTimeout,
-            @Nonnull DistributedToLongFunction<? super T> getTimestampFn,
-            @Nonnull DistributedFunction<? super T, K> getKeyFn,
+            @Nonnull DistributedToLongFunction<? super T> timestampFn,
+            @Nonnull DistributedFunction<? super T, K> keyFn,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        return () -> new SessionWindowP<>(sessionTimeout, getTimestampFn, getKeyFn, aggrOp);
+        return () -> new SessionWindowP<>(sessionTimeout, timestampFn, keyFn, aggrOp);
     }
 
     /**

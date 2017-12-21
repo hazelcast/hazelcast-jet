@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.core.WindowDefinition.slidingWindowDef;
+import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.test.TestSupport.verifyProcessor;
@@ -61,7 +61,7 @@ public class SlidingWindowP_stage1Test {
                 x -> KEY,
                 Entry::getKey,
                 TimestampKind.EVENT,
-                slidingWindowDef(16, 4), // this will get converted to tumblingWindowDef(4)
+                slidingWinPolicy(16, 4), // this will get converted to tumblingWindowDef(4)
                 summingLong(Entry<Long, Long>::getValue)
         ).get();
     }

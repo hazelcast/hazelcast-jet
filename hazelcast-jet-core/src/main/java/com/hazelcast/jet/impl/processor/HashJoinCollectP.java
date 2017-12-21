@@ -24,9 +24,9 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * Implements the "collector" stage in a hash join transformation. This
- * stage collects the entire joined stream into a hashmap and then
- * broadcasts it to all local second-stage processors.
+ * Implements the "collector" pipeline in a hash join transformation. This
+ * pipeline collects the entire joined stream into a hashmap and then
+ * broadcasts it to all local second-pipeline processors.
  */
 public class HashJoinCollectP<K, E, V> extends AbstractProcessor {
     private final Map<K, V> map = new HashMap<>();

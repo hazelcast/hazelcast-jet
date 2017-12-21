@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByMinStep;
 import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
-import static com.hazelcast.jet.core.WindowDefinition.tumblingWindowDef;
+import static com.hazelcast.jet.core.SlidingWindowPolicy.tumblingWinPolicy;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.WatermarkPolicyUtil.limitingTimestampAndWallClockLag;
 import static java.util.Arrays.asList;
@@ -171,7 +171,7 @@ public class InsertWatermarksPTest {
 
     @Test
     public void emitByFrame_when_eventsIncrease_then_wmIncreases() {
-        wmEmissionPolicy = emitByFrame(tumblingWindowDef(2));
+        wmEmissionPolicy = emitByFrame(tumblingWinPolicy(2));
         doTest(
                 asList(
                         item(10),
@@ -193,7 +193,7 @@ public class InsertWatermarksPTest {
 
     @Test
     public void emitByFrame_when_eventsIncreaseAndStartAtVergeOfFrame_then_wmIncreases() {
-        wmEmissionPolicy = emitByFrame(tumblingWindowDef(2));
+        wmEmissionPolicy = emitByFrame(tumblingWinPolicy(2));
         doTest(
                 asList(
                         item(11),
@@ -215,7 +215,7 @@ public class InsertWatermarksPTest {
 
     @Test
     public void emitByFrame_when_gapBetweenEvents_then_gapInWms() {
-        wmEmissionPolicy = emitByFrame(tumblingWindowDef(2));
+        wmEmissionPolicy = emitByFrame(tumblingWinPolicy(2));
         doTest(
                 asList(
                         item(11),

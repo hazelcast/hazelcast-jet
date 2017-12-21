@@ -20,7 +20,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.core.WindowDefinition;
+import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
@@ -47,7 +47,7 @@ import java.util.Map.Entry;
 import java.util.stream.LongStream;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.core.WindowDefinition.slidingWindowDef;
+import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.core.test.TestSupport.verifyProcessor;
@@ -88,7 +88,7 @@ public class SlidingWindowPTest {
 
     @Before
     public void before() {
-        WindowDefinition windowDef = slidingWindowDef(4, 1);
+        SlidingWindowPolicy windowDef = slidingWinPolicy(4, 1);
 
         AggregateOperation1<Entry<?, Long>, LongAccumulator, Long> operation = AggregateOperation
                 .withCreate(LongAccumulator::new)

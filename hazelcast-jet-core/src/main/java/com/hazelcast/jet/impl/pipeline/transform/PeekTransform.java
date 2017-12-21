@@ -14,37 +14,42 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.transform;
+package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 
 import javax.annotation.Nonnull;
 
-public class PeekTransform<E> implements UnaryTransform<E, E> {
-    @Nonnull private final DistributedPredicate<? super E> shouldLogFn;
-    @Nonnull private final DistributedFunction<? super E, String> toStringFn;
+public class PeekTransform<T> implements UnaryTransform<T, T> {
+    @Nonnull private final DistributedPredicate<? super T> shouldLogFn;
+    @Nonnull private final DistributedFunction<? super T, ? extends CharSequence> toStringFn;
 
     public PeekTransform(
-            @Nonnull DistributedPredicate<? super E> shouldLogFn,
-            @Nonnull DistributedFunction<? super E, String> toStringFn
+            @Nonnull DistributedPredicate<? super T> shouldLogFn,
+            @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn
     ) {
         this.shouldLogFn = shouldLogFn;
         this.toStringFn = toStringFn;
     }
 
     @Nonnull
-    public DistributedPredicate<? super E> shouldLogFn() {
+    public DistributedPredicate<? super T> shouldLogFn() {
         return shouldLogFn;
     }
 
     @Nonnull
-    public DistributedFunction<? super E, String> toStringFn() {
+    public DistributedFunction<? super T, ? extends CharSequence> toStringFn() {
         return toStringFn;
     }
 
     @Override
     public String name() {
         return "peek";
+    }
+
+    @Override
+    public String toString() {
+        return name();
     }
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl;
+package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.ComputeStage;
@@ -23,10 +23,11 @@ import com.hazelcast.jet.Sink;
 import com.hazelcast.jet.SinkStage;
 import com.hazelcast.jet.Source;
 import com.hazelcast.jet.Stage;
-import com.hazelcast.jet.impl.transform.MultiTransform;
-import com.hazelcast.jet.impl.transform.UnaryTransform;
+import com.hazelcast.jet.impl.pipeline.transform.MultaryTransform;
+import com.hazelcast.jet.impl.pipeline.transform.UnaryTransform;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -37,7 +38,7 @@ public class PipelineImpl implements Pipeline {
     private final Map<Stage, List<Stage>> adjacencyMap = new HashMap<>();
 
     @Nonnull @Override
-    public <E> ComputeStage<E> drawFrom(@Nonnull Source<E> source) {
+    public <T> ComputeStage<T> drawFrom(@Nonnull Source<? extends T> source) {
         return new ComputeStageImpl<>(source, this);
     }
 
@@ -46,21 +47,22 @@ public class PipelineImpl implements Pipeline {
         return new Planner(this).createDag();
     }
 
-    public ComputeStage attach(List<ComputeStage> upstream, MultiTransform transform) {
-        ComputeStageImpl attached = new ComputeStageImpl(upstream, transform, this);
+    public <R> ComputeStage<R> attach(MultaryTransform<? extends R> transform, List<ComputeStage> upstream) {
+        ComputeStageImpl<R> attached = new ComputeStageImpl<>(upstream, transform, this);
         upstream.forEach(u -> connect(u, attached));
         return attached;
     }
 
-    <IN, OUT> ComputeStage<OUT> attach(
-            ComputeStage<IN> upstream, UnaryTransform<? super IN, OUT> unaryTransform
+    <T, R> ComputeStage<R> attach(
+            @Nonnull UnaryTransform<? super T, ? extends R> unaryTransform,
+            @Nullable ComputeStage<T> upstream
     ) {
-        ComputeStageImpl<OUT> attached = new ComputeStageImpl<>(upstream, unaryTransform, this);
+        ComputeStageImpl<R> attached = new ComputeStageImpl<>(upstream, unaryTransform, this);
         connect(upstream, attached);
         return attached;
     }
 
-    <E> SinkStage drainTo(ComputeStage<E> upstream, Sink sink) {
+    <T> SinkStage drainTo(ComputeStage<? extends T> upstream, Sink<T> sink) {
         SinkStageImpl output = new SinkStageImpl(upstream, sink, this);
         connect(upstream, output);
         return output;

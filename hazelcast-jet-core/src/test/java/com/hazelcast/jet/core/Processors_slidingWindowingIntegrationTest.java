@@ -46,7 +46,7 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLagAndLull;
-import static com.hazelcast.jet.core.WindowDefinition.slidingWindowDef;
+import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
@@ -97,7 +97,7 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
             throws Exception {
         JetInstance instance = createJetMember();
 
-        WindowDefinition wDef = slidingWindowDef(2000, 1000);
+        SlidingWindowPolicy wDef = slidingWinPolicy(2000, 1000);
         AggregateOperation1<Object, ?, Long> counting = counting();
 
         DAG dag = new DAG();

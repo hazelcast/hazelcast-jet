@@ -72,6 +72,17 @@ public final class Util {
     }
 
     /**
+     * Returns a projection that extracts the new value from a {@link
+     * EventJournalMapEvent}.
+     *
+     * @see Sources#mapJournal
+     * @see Sources#remoteMapJournal
+     */
+    public static <K, V> DistributedFunction<EventJournalMapEvent<K, V>, V> mapEventNewValue() {
+        return EventJournalMapEvent::getNewValue;
+    }
+
+    /**
      * Returns a projection that converts the {@link EventJournalCacheEvent} to a
      * {@link java.util.Map.Entry} using the event's new value as a value.
      *

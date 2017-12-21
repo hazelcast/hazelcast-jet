@@ -43,19 +43,19 @@ import java.util.Map.Entry;
  *  method {@link #joinMapEntries(DistributedFunction)}.
  *
  * @param <K> the type of the join key
- * @param <E0> the type of the left-hand stream item
- * @param <E1> the type of the right-hand stream item
- * @param <E1_OUT> the result type of the right-hand projection function
+ * @param <T0> the type of the left-hand stream item
+ * @param <T1> the type of the right-hand stream item
+ * @param <T1_OUT> the result type of the right-hand projection function
  */
-public final class JoinClause<K, E0, E1, E1_OUT> implements Serializable {
-    private final DistributedFunction<E0, K> leftKeyFn;
-    private final DistributedFunction<E1, K> rightKeyFn;
-    private final DistributedFunction<E1, E1_OUT> rightProjectFn;
+public final class JoinClause<K, T0, T1, T1_OUT> implements Serializable {
+    private final DistributedFunction<? super T0, ? extends K> leftKeyFn;
+    private final DistributedFunction<? super T1, ? extends K> rightKeyFn;
+    private final DistributedFunction<? super T1, ? extends T1_OUT> rightProjectFn;
 
     private JoinClause(
-            DistributedFunction<E0, K> leftKeyFn,
-            DistributedFunction<E1, K> rightKeyFn,
-            DistributedFunction<E1, E1_OUT> rightProjectFn
+            DistributedFunction<? super T0, ? extends K> leftKeyFn,
+            DistributedFunction<? super T1, ? extends K> rightKeyFn,
+            DistributedFunction<? super T1, ? extends T1_OUT> rightProjectFn
     ) {
         this.leftKeyFn = leftKeyFn;
         this.rightKeyFn = rightKeyFn;
@@ -67,9 +67,9 @@ public final class JoinClause<K, E0, E1, E1_OUT> implements Serializable {
      * right-hand key extractor functions, and with an identity right-hand
      * projection function.
      */
-    public static <K, E0, E1> JoinClause<K, E0, E1, E1> onKeys(
-            DistributedFunction<E0, K> leftKeyFn,
-            DistributedFunction<E1, K> rightKeyFn
+    public static <K, T0, T1> JoinClause<K, T0, T1, T1> onKeys(
+            DistributedFunction<? super T0, ? extends K> leftKeyFn,
+            DistributedFunction<? super T1, ? extends K> rightKeyFn
     ) {
         return new JoinClause<>(leftKeyFn, rightKeyFn, DistributedFunction.identity());
     }
@@ -81,12 +81,12 @@ public final class JoinClause<K, E0, E1, E1_OUT> implements Serializable {
      *
      * @param leftKeyFn the function to extract the key from the primary stream
      * @param <K> the type of the key
-     * @param <E0> the type of the primary stream
-     * @param <E1> the type of the enriching stream's entry value
-     * @param <E1_IN> the type of the enriching stream ({@code Map.Entry<K, E1>})
+     * @param <T0> the type of the primary stream
+     * @param <T1> the type of the enriching stream's entry value
+     * @param <T1_IN> the type of the enriching stream ({@code Map.Entry<K, T1>})
      */
-    public static <K, E0, E1_IN extends Entry<K, E1>, E1> JoinClause<K, E0, E1_IN, E1> joinMapEntries(
-            DistributedFunction<E0, K> leftKeyFn
+    public static <K, T0, T1_IN extends Entry<K, T1>, T1> JoinClause<K, T0, T1_IN, T1> joinMapEntries(
+            DistributedFunction<? super T0, ? extends K> leftKeyFn
     ) {
         return new JoinClause<>(leftKeyFn, Entry::getKey, Entry::getValue);
     }
@@ -95,8 +95,8 @@ public final class JoinClause<K, E0, E1, E1_OUT> implements Serializable {
      * Returns a copy of this join clause, but with the right-hand projection
      * function replaced with the supplied one.
      */
-    public <E1_NEW_OUT> JoinClause<K, E0, E1, E1_NEW_OUT> projecting(
-            DistributedFunction<E1, E1_NEW_OUT> rightProjectFn
+    public <T1_NEW_OUT> JoinClause<K, T0, T1, T1_NEW_OUT> projecting(
+            DistributedFunction<? super T1, ? extends T1_NEW_OUT> rightProjectFn
     ) {
         return new JoinClause<>(this.leftKeyFn, this.rightKeyFn, rightProjectFn);
     }
@@ -104,21 +104,21 @@ public final class JoinClause<K, E0, E1, E1_OUT> implements Serializable {
     /**
      * Returns the left-hand key extractor function.
      */
-    public DistributedFunction<E0, K> leftKeyFn() {
+    public DistributedFunction<? super T0, ? extends K> leftKeyFn() {
         return leftKeyFn;
     }
 
     /**
      * Returns the right-hand key extractor function.
      */
-    public DistributedFunction<E1, K> rightKeyFn() {
+    public DistributedFunction<? super T1, ? extends K> rightKeyFn() {
         return rightKeyFn;
     }
 
     /**
      * Returns the right-hand projection function.
      */
-    public DistributedFunction<E1, E1_OUT> rightProjectFn() {
+    public DistributedFunction<? super T1, ? extends T1_OUT> rightProjectFn() {
         return rightProjectFn;
     }
 }

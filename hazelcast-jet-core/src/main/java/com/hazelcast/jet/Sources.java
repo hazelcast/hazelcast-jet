@@ -21,7 +21,7 @@ import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
-import com.hazelcast.jet.impl.SourceImpl;
+import com.hazelcast.jet.impl.pipeline.SourceImpl;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.query.Predicate;
@@ -129,7 +129,7 @@ public final class Sources {
      * cluster topology change (triggering data migration), the source may
      * miss and/or duplicate some entries.
      */
-    public static <K, V, T> Source<T> map(
+    public static <T, K, V> Source<T> map(
             @Nonnull String mapName,
             @Nonnull Predicate<K, V> predicate,
             @Nonnull Projection<Entry<K, V>, T> projection
@@ -141,7 +141,7 @@ public final class Sources {
      * Convenience for {@link #map(String, Predicate, Projection)}
      * which uses a {@link DistributedFunction} as the projection function.
      */
-    public static <K, V, T> Source<T> map(
+    public static <T, K, V> Source<T> map(
             @Nonnull String mapName,
             @Nonnull Predicate<K, V> predicate,
             @Nonnull DistributedFunction<Map.Entry<K, V>, T> projectionFn
@@ -180,7 +180,7 @@ public final class Sources {
      * @param <T> type of emitted item
      */
     @Nonnull
-    public static <K, V, T> Source<T> mapJournal(
+    public static <T, K, V> Source<T> mapJournal(
             @Nonnull String mapName,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
@@ -252,7 +252,7 @@ public final class Sources {
      * cluster topology change (triggering data migration), the source may
      * miss and/or duplicate some entries.
      */
-    public static <K, V, T> Source<T> remoteMap(
+    public static <T, K, V> Source<T> remoteMap(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull Predicate<K, V> predicate,
@@ -266,7 +266,7 @@ public final class Sources {
      * Convenience for {@link #remoteMap(String, ClientConfig, Predicate, Projection)}
      * which use a {@link DistributedFunction} as the projection function.
      */
-    public static <K, V, T> Source<T> remoteMap(
+    public static <T, K, V> Source<T> remoteMap(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull Predicate<K, V> predicate,
@@ -306,7 +306,7 @@ public final class Sources {
      * @param <T> type of emitted item
      */
     @Nonnull
-    public static <K, V, T> Source<T> remoteMapJournal(
+    public static <T, K, V> Source<T> remoteMapJournal(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
@@ -383,7 +383,7 @@ public final class Sources {
      * @param <T> type of emitted item
      */
     @Nonnull
-    public static <K, V, T> Source<T> cacheJournal(
+    public static <T, K, V> Source<T> cacheJournal(
             @Nonnull String cacheName,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
@@ -458,7 +458,7 @@ public final class Sources {
      * @param <T> type of emitted item
      */
     @Nonnull
-    public static <K, V, T> Source<T> remoteCacheJournal(
+    public static <T, K, V> Source<T> remoteCacheJournal(
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
@@ -494,7 +494,7 @@ public final class Sources {
      * it will re-emit all entries.
      */
     @Nonnull
-    public static <E> Source<E> list(@Nonnull String listName) {
+    public static <T> Source<T> list(@Nonnull String listName) {
         return fromProcessor("listSource(" + listName + ')', readListP(listName));
     }
 
@@ -507,7 +507,7 @@ public final class Sources {
      * it will re-emit all entries.
      */
     @Nonnull
-    public static <E> Source<E> remoteList(@Nonnull String listName, @Nonnull ClientConfig clientConfig) {
+    public static <T> Source<T> remoteList(@Nonnull String listName, @Nonnull ClientConfig clientConfig) {
         return fromProcessor("remoteListSource(" + listName + ')', readRemoteListP(listName, clientConfig));
     }
 

@@ -14,34 +14,31 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl;
+package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.Pipeline;
-import com.hazelcast.jet.Stage;
-import com.hazelcast.jet.Transform;
+import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.function.DistributedSupplier;
 
-import java.util.List;
+/**
+ * A unary transform constructed directly from a provided Core API
+ * processor supplier.
+ */
+public class ProcessorTransform<E, R> implements UnaryTransform<E, R> {
+    public final DistributedSupplier<Processor> procSupplier;
+    private final String name;
 
-public abstract class AbstractStage implements Stage {
-
-    final PipelineImpl pipelineImpl;
-    final List<Stage> upstream;
-    final Transform transform;
-
-    AbstractStage(List<Stage> upstream, List<Stage> downstream, Transform transform, PipelineImpl pipelineImpl) {
-        this.upstream = upstream;
-        this.transform = transform;
-        this.pipelineImpl = pipelineImpl;
-        pipelineImpl.register(this, downstream);
+    public ProcessorTransform(String name, DistributedSupplier<Processor> procSupplier) {
+        this.name = name;
+        this.procSupplier = procSupplier;
     }
 
     @Override
-    public Pipeline getPipeline() {
-        return pipelineImpl;
+    public String name() {
+        return name;
     }
 
     @Override
     public String toString() {
-        return transform.toString();
+        return name();
     }
 }

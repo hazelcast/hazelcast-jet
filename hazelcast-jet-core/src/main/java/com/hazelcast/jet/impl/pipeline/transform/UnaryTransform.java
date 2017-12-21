@@ -14,24 +14,16 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.transform;
+package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.Transform;
 
-public class MapTransform<T, R> implements UnaryTransform<T, R> {
-    public final DistributedFunction<? super T, ? extends R> mapFn;
-
-    public MapTransform(DistributedFunction<? super T, ? extends R> mapFn) {
-        this.mapFn = mapFn;
-    }
-
-    @Override
-    public String toString() {
-        return "Map";
-    }
-
-    @Override
-    public String name() {
-        return "map";
-    }
+/**
+ * Represents a unary transform, one that takes a single input stream
+ * and produces a single output stream.
+ *
+ * @param <T> type of the input item
+ * @param <R> type of the result item
+ */
+public interface UnaryTransform<T, R> extends Transform<R> {
 }

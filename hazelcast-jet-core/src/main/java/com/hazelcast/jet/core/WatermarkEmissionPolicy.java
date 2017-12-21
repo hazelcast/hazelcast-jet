@@ -71,18 +71,18 @@ public interface WatermarkEmissionPolicy extends Serializable {
      * ({@link com.hazelcast.jet.core.processor.Processors#accumulateByFrameP(
      *      com.hazelcast.jet.function.DistributedFunction,
      *      com.hazelcast.jet.function.DistributedToLongFunction,
-     *      TimestampKind, WindowDefinition,
+     *      TimestampKind, SlidingWindowPolicy,
      *      com.hazelcast.jet.aggregate.AggregateOperation1)
      * accumulateByFrame()} or
      * {@link com.hazelcast.jet.core.processor.Processors#aggregateToSlidingWindowP(
      *      com.hazelcast.jet.function.DistributedFunction,
      *      com.hazelcast.jet.function.DistributedToLongFunction,
-     *      TimestampKind, WindowDefinition,
+     *      TimestampKind, SlidingWindowPolicy,
      *      com.hazelcast.jet.aggregate.AggregateOperation1)
      * aggregateToSlidingWindow()}).
      */
     @Nonnull
-    static WatermarkEmissionPolicy emitByFrame(WindowDefinition wDef) {
+    static WatermarkEmissionPolicy emitByFrame(SlidingWindowPolicy wDef) {
         return (currentWm, lastEmittedWm) -> wDef.floorFrameTs(currentWm) > lastEmittedWm;
     }
 }

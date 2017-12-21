@@ -21,16 +21,16 @@
  * pipeline's sources to its sinks. Pipes can bifurcate and merge, but
  * there can't be any closed loops (cycles).
  * <p>
- * The basic element is a pipeline <em>stage</em> which can be attached to
+ * The basic element is a pipeline <em>pipeline</em> which can be attached to
  * one or more other stages, both in the upstream and the downstream
- * direction. A stage accepts the data coming from its upstream stages,
+ * direction. A pipeline accepts the data coming from its upstream stages,
  * transforms it, and directs the resulting data to its downstream stages.
  *
  * <h2>Kinds of transformation performed by pipeline stages</h2>
  *
  * <h3>Basic</h3>
  *
- * Basic transformations have a single upstream stage and statelessly
+ * Basic transformations have a single upstream pipeline and statelessly
  * transform individual items in it. Examples are {@code map}, {@code
  * filter}, and {@code flatMap}.
  *
@@ -49,10 +49,10 @@
  *
  * Hash-join is a special kind of joining transform, specifically tailored
  * to the use case of data enrichment. It is an asymmetrical join that
- * distinguishes the <em>primary</em> upstream stage from the <em>enriching
- * </em> stages. The source for an enriching stage is most typically a
+ * distinguishes the <em>primary</em> upstream pipeline from the <em>enriching
+ * </em> stages. The source for an enriching pipeline is most typically a
  * key-value store (such as a Hazelcast {@code IMap}). Its data stream must
- * be finite and each item must have a distinct join key. The primary stage,
+ * be finite and each item must have a distinct join key. The primary pipeline,
  * on the other hand, may be infinite and contain duplicate keys.
  * <p>
  * For each of the enriching stages there is a separate pair of functions
