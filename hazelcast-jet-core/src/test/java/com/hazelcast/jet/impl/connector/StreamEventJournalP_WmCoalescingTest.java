@@ -21,7 +21,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.WatermarkEmissionPolicy;
+import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
@@ -29,12 +29,13 @@ import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.map.impl.proxy.MapProxyImpl;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.test.HazelcastParallelClassRunner;
+import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
@@ -45,26 +46,30 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
 import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.core.test.TestSupport.COMPARE_AS_SET;
 import static com.hazelcast.jet.core.test.TestSupport.drainOutbox;
 import static com.hazelcast.spi.properties.GroupProperty.PARTITION_COUNT;
-import static java.util.stream.Collectors.toList;
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+@Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
-public class StreamEventJournalPTest extends JetTestSupport {
+public class StreamEventJournalP_WmCoalescingTest extends JetTestSupport {
 
-    private static final int NUM_PARTITIONS = 2;
     private static final int JOURNAL_CAPACITY = 10;
 
     private MapProxyImpl<Integer, Integer> map;
-    private Supplier<Processor> supplier;
+    private Supplier<Processor> supplierBothPartitions;
+    private Supplier<Processor> supplierPartition1;
+    private int[] partitionKeys;
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
         JetConfig config = new JetConfig();
 
         EventJournalConfig journalConfig = new EventJournalConfig()
@@ -72,34 +77,48 @@ public class StreamEventJournalPTest extends JetTestSupport {
                 .setCapacity(JOURNAL_CAPACITY)
                 .setEnabled(true);
 
-        config.getHazelcastConfig().setProperty(PARTITION_COUNT.getName(), String.valueOf(NUM_PARTITIONS));
+        config.getHazelcastConfig().setProperty(PARTITION_COUNT.getName(), "2");
         config.getHazelcastConfig().addEventJournalConfig(journalConfig);
         JetInstance instance = this.createJetMember(config);
 
         map = (MapProxyImpl<Integer, Integer>) instance.getHazelcastInstance().<Integer, Integer>getMap("test");
-        List<Integer> allPartitions = IntStream.range(0, NUM_PARTITIONS).boxed().collect(toList());
 
-        supplier = () -> new StreamEventJournalP<>(map, allPartitions, e -> true,
+        supplierBothPartitions = () -> new StreamEventJournalP<>(map, asList(0, 1), e -> true,
                 EventJournalMapEvent::getNewValue, START_FROM_OLDEST, false, Integer::intValue,
-                withFixedLag(0), suppressAll(), 2000);
-    }
+                withFixedLag(0), suppressDuplicates(), 2000);
+        supplierPartition1 = () -> new StreamEventJournalP<>(map, singletonList(1), e -> true,
+                EventJournalMapEvent::getNewValue, START_FROM_OLDEST, false, Integer::intValue,
+                withFixedLag(0), suppressDuplicates(), 2000);
 
-
-    private WatermarkEmissionPolicy suppressAll() {
-        return (wm1, wm2) -> false;
+        partitionKeys = new int[2];
+        for (int i = 1; IntStream.of(partitionKeys).anyMatch(val -> val == 0); i++) {
+            int partitionId = instance.getHazelcastInstance().getPartitionService().getPartition(i).getPartitionId();
+            partitionKeys[partitionId] = i;
+        }
     }
 
     @Test
-    public void smokeTest() {
+    public void when_entryInEachPartition_then_wmForwarded() {
+        map.put(partitionKeys[0], 10);
+        map.put(partitionKeys[1], 10);
+
+        TestSupport.verifyProcessor(supplierBothPartitions)
+                   .disableProgressAssertion()
+                   .disableRunUntilCompleted(1000)
+                   .expectOutput(asList(10, 10, wm(10)));
+    }
+
+    @Test
+    public void smokeTest() throws Exception {
         for (int i = 0; i < 4; i++) {
             map.put(i, i);
         }
 
-        TestSupport.verifyProcessor(supplier)
+        TestSupport.verifyProcessor(supplierBothPartitions)
                    .disableProgressAssertion() // no progress assertion because of async calls
                    .disableRunUntilCompleted(1000) // processor would never complete otherwise
                    .outputChecker(COMPARE_AS_SET) // ordering is only per partition
-                   .expectOutput(Arrays.asList(0, 1, 2, 3));
+                   .expectOutput(asList(0, 1, 2, 3));
     }
 
     @Test
@@ -107,14 +126,14 @@ public class StreamEventJournalPTest extends JetTestSupport {
         TestOutbox outbox = new TestOutbox(new int[]{16}, 16);
         Queue<Object> queue = outbox.queueWithOrdinal(0);
         List<Object> actual = new ArrayList<>();
-        Processor p = supplier.get();
+        Processor p = supplierBothPartitions.get();
 
         p.init(outbox, new TestProcessorContext());
 
         // putting JOURNAL_CAPACITY can overflow as capacity is per map and partitions
         // can be unbalanced.
         int batchSize = JOURNAL_CAPACITY / 2 + 1;
-        int i;
+        int i = 0;
         for (i = 0; i < batchSize; i++) {
             map.put(i, i);
         }
@@ -140,10 +159,10 @@ public class StreamEventJournalPTest extends JetTestSupport {
     }
 
     @Test
-    public void when_staleSequence() {
+    public void when_staleSequence() throws Exception {
         TestOutbox outbox = new TestOutbox(new int[]{16}, 16);
         Queue<Object> queue = outbox.queueWithOrdinal(0);
-        Processor p = supplier.get();
+        Processor p = supplierBothPartitions.get();
         p.init(outbox, new TestProcessorContext());
 
         // overflow journal
@@ -165,9 +184,9 @@ public class StreamEventJournalPTest extends JetTestSupport {
     }
 
     @Test
-    public void when_staleSequence_afterRestore() {
+    public void when_staleSequence_afterRestore() throws Exception {
         TestOutbox outbox = new TestOutbox(new int[]{16}, 16);
-        final Processor p = supplier.get();
+        final Processor p = supplierBothPartitions.get();
         p.init(outbox, new TestProcessorContext());
         List<Object> output = new ArrayList<>();
 
@@ -197,7 +216,7 @@ public class StreamEventJournalPTest extends JetTestSupport {
     }
 
     private void assertRestore(List<Entry> snapshotItems) {
-        Processor p = supplier.get();
+        Processor p = supplierBothPartitions.get();
         TestOutbox newOutbox = new TestOutbox(new int[]{16}, 16);
         List<Object> output = new ArrayList<>();
         p.init(newOutbox, new TestProcessorContext());
@@ -212,5 +231,9 @@ public class StreamEventJournalPTest extends JetTestSupport {
             drainOutbox(newOutbox.queueWithOrdinal(0), output, true);
             assertEquals("consumed different number of items than expected", JOURNAL_CAPACITY, output.size());
         });
+    }
+
+    private Watermark wm(long timestamp) {
+        return new Watermark(timestamp);
     }
 }

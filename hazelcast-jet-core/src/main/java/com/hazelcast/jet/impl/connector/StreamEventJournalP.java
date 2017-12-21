@@ -30,6 +30,7 @@ import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.WatermarkEmissionPolicy;
 import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.core.WatermarkSourceUtil;
@@ -125,21 +126,22 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                         boolean isRemoteReader,
                         @Nonnull DistributedToLongFunction<T> getTimestampF,
                         @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-                        @Nonnull WatermarkEmissionPolicy wmEmitPolicy) {
+                        @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+                        long idleTimeoutMillis) {
         this.eventJournalReader = eventJournalReader;
         this.predicate = (Serializable & Predicate<E>) predicateFn::test;
         this.projection = toProjection(projectionFn);
         this.initialPos = initialPos;
         this.isRemoteReader = isRemoteReader;
 
-        this.assignedPartitions = new int[assignedPartitions.stream().mapToInt(Integer::intValue).max().orElse(0)];
+        this.assignedPartitions = new int[assignedPartitions.stream().mapToInt(Integer::intValue).max().orElse(0) + 1];
         Arrays.fill(this.assignedPartitions, -1);
         for (int i = 0; i < assignedPartitions.size(); i++) {
             this.assignedPartitions[assignedPartitions.get(i)] = i;
         }
 
         // TODO configure timeout
-        watermarkSourceUtil = new WatermarkSourceUtil<>(assignedPartitions.size(), 16000, getTimestampF,
+        watermarkSourceUtil = new WatermarkSourceUtil<>(assignedPartitions.size(), idleTimeoutMillis, getTimestampF,
                 newWmPolicyF, wmEmitPolicy);
     }
 
@@ -219,13 +221,14 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     private Traverser<Object> nextTraverser() {
         ReadResultSet<T> resultSet = nextResultSet();
         if (resultSet == null) {
-            return null;
+            Watermark wm = watermarkSourceUtil.handleNoEvent();
+            return wm != null ? Traverser.over(wm) : null;
         }
 
         Traverser<T> traverser = traverseIterable(resultSet);
 
         return peekIndex(traverser, i -> pendingItemOffset = resultSet.getSequence(i))
-                .flatMap(event -> watermarkSourceUtil.flatMapEvent(event, -1));
+                .flatMap(event -> watermarkSourceUtil.flatMapEvent(event, assignedPartitions[pendingItemPartition]));
     }
 
     private ReadResultSet<T> nextResultSet() {
@@ -320,6 +323,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         private final DistributedToLongFunction<T> getTimestampF;
         private final DistributedSupplier<WatermarkPolicy> newWmPolicyF;
         private final WatermarkEmissionPolicy wmEmitPolicy;
+        private final long idleTimeoutMillis;
 
         private transient int remotePartitionCount;
         private transient Map<Address, List<Integer>> addrToPartitions;
@@ -332,8 +336,8 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 JournalInitialPosition initialPos,
                 DistributedToLongFunction<T> getTimestampF,
                 DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-                WatermarkEmissionPolicy wmEmitPolicy
-        ) {
+                WatermarkEmissionPolicy wmEmitPolicy,
+                long idleTimeoutMillis) {
             this.serializableConfig = clientConfig == null ? null : new SerializableClientConfig(clientConfig);
             this.eventJournalReaderSupplier = eventJournalReaderSupplier;
             this.predicate = predicate;
@@ -342,6 +346,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             this.getTimestampF = getTimestampF;
             this.newWmPolicyF = newWmPolicyF;
             this.wmEmitPolicy = wmEmitPolicy;
+            this.idleTimeoutMillis = idleTimeoutMillis;
         }
 
         @Override
@@ -385,7 +390,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
             return address -> new ClusterProcessorSupplier<>(addrToPartitions.get(address),
                     serializableConfig, eventJournalReaderSupplier, predicate, projection, initialPos,
-                    getTimestampF, newWmPolicyF, wmEmitPolicy);
+                    getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
         }
 
     }
@@ -403,6 +408,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         private final DistributedToLongFunction<T> getTimestampF;
         private final DistributedSupplier<WatermarkPolicy> newWmPolicyF;
         private final WatermarkEmissionPolicy wmEmitPolicy;
+        private final long idleTimeoutMillis;
 
         private transient HazelcastInstance client;
         private transient EventJournalReader<E> eventJournalReader;
@@ -416,7 +422,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 JournalInitialPosition initialPos,
                 DistributedToLongFunction<T> getTimestampF,
                 DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-                WatermarkEmissionPolicy wmEmitPolicy) {
+                WatermarkEmissionPolicy wmEmitPolicy, long idleTimeoutMillis) {
             this.ownedPartitions = ownedPartitions;
             this.serializableClientConfig = serializableClientConfig;
             this.eventJournalReaderSupplier = eventJournalReaderSupplier;
@@ -426,6 +432,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             this.getTimestampF = getTimestampF;
             this.newWmPolicyF = newWmPolicyF;
             this.wmEmitPolicy = wmEmitPolicy;
+            this.idleTimeoutMillis = idleTimeoutMillis;
         }
 
         @Override
@@ -457,7 +464,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             return partitions.isEmpty()
                     ? Processors.noopP().get()
                     : new StreamEventJournalP<>(eventJournalReader, partitions, predicate, projection,
-                    initialPos, client != null, getTimestampF, newWmPolicyF, wmEmitPolicy);
+                    initialPos, client != null, getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
         }
     }
 
@@ -469,11 +476,11 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull DistributedToLongFunction<T> getTimestampF,
             @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-            @Nonnull WatermarkEmissionPolicy wmEmitPolicy
-    ) {
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis) {
         return new ClusterMetaSupplier<>(null,
                 instance -> (EventJournalReader<EventJournalMapEvent<K, V>>) instance.getMap(mapName),
-                predicate, projection, initialPos, getTimestampF, newWmPolicyF, wmEmitPolicy);
+                predicate, projection, initialPos, getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
     }
 
     @SuppressWarnings("unchecked")
@@ -485,11 +492,11 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull DistributedToLongFunction<T> getTimestampF,
             @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-            @Nonnull WatermarkEmissionPolicy wmEmitPolicy
-    ) {
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis) {
         return new ClusterMetaSupplier<>(clientConfig,
                 instance -> (EventJournalReader<EventJournalMapEvent<K, V>>) instance.getMap(mapName),
-                predicate, projection, initialPos, getTimestampF, newWmPolicyF, wmEmitPolicy);
+                predicate, projection, initialPos, getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
     }
 
     @SuppressWarnings("unchecked")
@@ -500,11 +507,11 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull DistributedToLongFunction<T> getTimestampF,
             @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-            @Nonnull WatermarkEmissionPolicy wmEmitPolicy
-    ) {
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis) {
         return new ClusterMetaSupplier<>(null,
                 inst -> (EventJournalReader<EventJournalCacheEvent<K, V>>) inst.getCacheManager().getCache(cacheName),
-                predicate, projection, initialPos, getTimestampF, newWmPolicyF, wmEmitPolicy);
+                predicate, projection, initialPos, getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
     }
 
     @SuppressWarnings("unchecked")
@@ -516,10 +523,10 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull DistributedToLongFunction<T> getTimestampF,
             @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-            @Nonnull WatermarkEmissionPolicy wmEmitPolicy
-    ) {
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis) {
         return new ClusterMetaSupplier<>(clientConfig,
                 inst -> (EventJournalReader<EventJournalCacheEvent<K, V>>) inst.getCacheManager().getCache(cacheName),
-                predicate, projection, initialPos, getTimestampF, newWmPolicyF, wmEmitPolicy);
+                predicate, projection, initialPos, getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
     }
 }

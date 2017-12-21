@@ -111,7 +111,7 @@ public final class SourceProcessors {
             @Nonnull JournalInitialPosition initialPos
     ) {
         // TODO
-        return StreamEventJournalP.streamMapP(mapName, predicateFn, projectionFn, initialPos, null, null, null);
+        return StreamEventJournalP.streamMapP(mapName, predicateFn, projectionFn, initialPos, null, null, null, -1);
     }
 
     /**
@@ -182,7 +182,7 @@ public final class SourceProcessors {
     ) {
         // TODO
         return StreamEventJournalP.streamRemoteMapP(
-                mapName, clientConfig, predicateFn, projectionFn, initialPos, null, null, null);
+                mapName, clientConfig, predicateFn, projectionFn, initialPos, null, null, null, -1);
     }
 
     /**
@@ -217,7 +217,7 @@ public final class SourceProcessors {
             @Nonnull JournalInitialPosition initialPos
     ) {
         // TODO
-        return StreamEventJournalP.streamCacheP(cacheName, predicateFn, projectionFn, initialPos, null, null, null);
+        return StreamEventJournalP.streamCacheP(cacheName, predicateFn, projectionFn, initialPos, null, null, null, -1);
     }
 
     /**
@@ -258,7 +258,7 @@ public final class SourceProcessors {
     ) {
         // TODO
         return StreamEventJournalP.streamRemoteCacheP(
-                cacheName, clientConfig, predicateFn, projectionFn, initialPos, null, null, null);
+                cacheName, clientConfig, predicateFn, projectionFn, initialPos, null, null, null, -1);
     }
 
     /**

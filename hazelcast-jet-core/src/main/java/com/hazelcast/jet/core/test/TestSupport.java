@@ -38,6 +38,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Queue;
@@ -49,10 +50,12 @@ import java.util.stream.Collectors;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.test.JetAssert.assertEquals;
 import static com.hazelcast.jet.core.test.JetAssert.assertTrue;
+import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.stream.Collectors.toMap;
 
 /**
  * A utility to test processors. It will initialize the processor instance,
@@ -147,6 +150,24 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * }</pre>
  */
 public final class TestSupport {
+
+    /**
+     * An output checker that will claim actual and expected object lists as
+     * equal if they both contain the same items, in any order. If some item is
+     * expected multiple times, it must also be present the same number of
+     * times in the actual output.
+     * <p>
+     * Use as an argument for {@link #outputChecker(BiPredicate)}.
+     */
+    public static final BiPredicate<List<?>, List<?>> COMPARE_AS_SET =
+            (expected, actual) -> {
+                if (expected.size() != actual.size()) { // shortcut
+                    return false;
+                }
+                Map<Object, Integer> expectedMap = expected.stream().collect(toMap(identity(), e -> 1, Integer::sum));
+                Map<Object, Integer> actualMap = actual.stream().collect(toMap(identity(), e -> 1, Integer::sum));
+                return expectedMap.equals(actualMap);
+            };
 
     private static final Address LOCAL_ADDRESS;
 
@@ -259,11 +280,17 @@ public final class TestSupport {
     }
 
     /**
+     * Normally, the {@code complete()} method is run repeatedly until it
+     * returns {@code true}. But in infinite source processors the method never
+     * returns {@code true}. To be able test such processors, this method
+     * allows you to disable the "run until completed" behavior and instead run
+     * the {@code complete()} for a specified time.
+     * <p>
      * If the timeout > 0, the {@code complete()} method is called repeatedly
-     * until the timeout elapses. After that, the output is compared using
+     * until the timeout elapses. After that, the output is compared using the
      * {@link #outputChecker(BiPredicate) output checker}. The {@code
      * complete()} method is also not allowed to return {@code true} in this
-     * case. This setting is useful for testing of streaming sources.
+     * case.
      * <p>
      * If the timeout is <= 0 (the default), {@code complete()} method is
      * called until it returns {@code true}, after which the output is checked.
@@ -329,9 +356,13 @@ public final class TestSupport {
     }
 
     /**
-     * Predicate to compare expected and actual output.
+     * Predicate to compare expected and actual output. Parameters to the
+     * {@code BiPredicate} are the list of expected items and the list of actual
+     * processor output.
      * <p>
-     * Defaults to {@code Objects::equals}
+     * Defaults to {@code Objects::equals}, which will pass, if both lists
+     * contain equal objects in the same order. If the ordering doesn't matter,
+     * you can use {@link #COMPARE_AS_SET}.
      *
      * @return {@code this} instance for fluent API.
      */
@@ -426,8 +457,8 @@ public final class TestSupport {
 
         // assert the outbox
         if (!outputChecker.test(expectedOutput, actualOutput)) {
-            assertEquals("processor output with doSnapshots=" + doSnapshots + " doesn't match",
-                    listToString(expectedOutput), listToString(actualOutput));
+            assertEquals("processor output with doSnapshots=" + doSnapshots + ", doRestore=" + doRestore
+                            + " doesn't match", listToString(expectedOutput), listToString(actualOutput));
         }
     }
 
@@ -533,7 +564,7 @@ public final class TestSupport {
         } else {
             if (elapsed > MILLISECONDS.toNanos(BLOCKING_TIME_LIMIT_MS_WARN)) {
                 System.out.println(String.format("Warning: call to %s() took %.2fms in non-cooperative processor. Is " +
-                                "this to be expected?", methodName, toMillis(elapsed)));
+                                "this expected?", methodName, toMillis(elapsed)));
             }
         }
     }

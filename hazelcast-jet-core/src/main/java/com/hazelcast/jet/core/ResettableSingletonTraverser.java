@@ -28,7 +28,7 @@ import java.util.function.Consumer;
  * if this traverser already has an item, it is illegal to set another one
  * before consuming it.
  * <p>
- * See {@link AppendableRingBufferTraverser} if you have more items to
+ * See {@link AppendableTraverser} if you have more items to
  * traverse.
  *
  * @param <T> item type

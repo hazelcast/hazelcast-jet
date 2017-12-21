@@ -44,7 +44,7 @@ public class WatermarkSourceUtil<T> {
     private long lastEmittedWm = Long.MIN_VALUE;
     private boolean allAreIdle;
 
-    private AppendableRingBufferTraverser<Object> flatMapTraverser = new AppendableRingBufferTraverser<>(2);
+    private AppendableTraverser<Object> flatMapTraverser = new AppendableTraverser<>(2);
 
     public WatermarkSourceUtil(int initialPartitionCount, long idleTimeoutMillis,
                                @Nonnull DistributedToLongFunction<T> getTimestampF,
@@ -88,7 +88,7 @@ public class WatermarkSourceUtil<T> {
     }
 
     /**
-     * Called when there is no observed event. Checks, if a watermark should be
+     * Call when there are no observed events. Checks, if a watermark should be
      * emitted based on the passage of time, which could cause some partitions
      * to become idle.
      *
@@ -102,7 +102,7 @@ public class WatermarkSourceUtil<T> {
     Watermark handleNoEvent(long now) {
         long min = Long.MAX_VALUE;
         for (int i = 0; i < watermarks.length; i++) {
-            if (markIdleAt[i] <= now) {
+            if (idleTimeoutNanos > 0 && markIdleAt[i] <= now) {
                 continue;
             }
             watermarks[i] = wmPolicies[i].getCurrentWatermark();
@@ -161,10 +161,11 @@ public class WatermarkSourceUtil<T> {
     // package-visible for tests
     Traverser<Object> flatMapEvent(long now, T event, int partitionIndex) {
         assert flatMapTraverser.isEmpty() : "Traverser wasn't empty";
-        flatMapTraverser.push(event);
+
+        flatMapTraverser.append(event);
         Watermark wm = observeEvent(now, event, partitionIndex);
         if (wm != null) {
-            flatMapTraverser.push(wm);
+            flatMapTraverser.append(wm);
         }
         return flatMapTraverser;
     }
