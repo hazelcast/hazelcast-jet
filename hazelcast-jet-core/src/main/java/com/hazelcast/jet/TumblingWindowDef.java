@@ -18,6 +18,8 @@ package com.hazelcast.jet;
 
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 
+import javax.annotation.Nonnull;
+
 import static com.hazelcast.jet.WindowDefinition.WindowKind.TUMBLING;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.tumblingWinPolicy;
 
@@ -30,12 +32,12 @@ public class TumblingWindowDef extends SlidingWindowDef {
         super(windowSize, 1);
     }
 
-    @Override
+    @Nonnull @Override
     public WindowKind kind() {
         return TUMBLING;
     }
 
-    @Override
+    @Nonnull @Override
     @SuppressWarnings("unchecked")
     public TumblingWindowDef downcast() {
         return this;

@@ -18,6 +18,8 @@ package com.hazelcast.jet;
 
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 
+import javax.annotation.Nonnull;
+
 import static com.hazelcast.jet.WindowDefinition.WindowKind.SLIDING;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.util.Preconditions.checkPositive;
@@ -36,12 +38,12 @@ public class SlidingWindowDef implements WindowDefinition {
         this.windowSize = frameSize * framesPerWindow;
     }
 
-    @Override
+    @Nonnull @Override
     public WindowKind kind() {
         return SLIDING;
     }
 
-    @Override
+    @Nonnull @Override
     @SuppressWarnings("unchecked")
     public SlidingWindowDef downcast() {
         return this;

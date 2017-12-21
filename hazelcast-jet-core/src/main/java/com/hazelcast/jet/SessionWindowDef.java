@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet;
 
+import javax.annotation.Nonnull;
+
 import static com.hazelcast.jet.WindowDefinition.WindowKind.SESSION;
 
 /**
@@ -28,12 +30,12 @@ public class SessionWindowDef<T> implements WindowDefinition {
         this.sessionTimeout = sessionTimeout;
     }
 
-    @Override
+    @Nonnull @Override
     public WindowKind kind() {
         return SESSION;
     }
 
-    @Override
+    @Nonnull @Override
     @SuppressWarnings("unchecked")
     public SessionWindowDef<T> downcast() {
         return this;

@@ -23,7 +23,6 @@ import com.hazelcast.jet.SlidingWindowDef;
 import com.hazelcast.jet.Stage;
 import com.hazelcast.jet.Transform;
 import com.hazelcast.jet.WindowDefinition;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.Processor;
@@ -60,6 +59,7 @@ import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.processor.DiagnosticProcessors.peekOutputP;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
+import static com.hazelcast.jet.core.processor.Processors.aggregateToSessionWindowP;
 import static com.hazelcast.jet.core.processor.Processors.coAccumulateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.filterP;
@@ -68,6 +68,7 @@ import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
 @SuppressWarnings("unchecked")
@@ -160,16 +161,16 @@ class Planner {
     //                           |
     //                      partitioned
     //                           v
-    //                       ---------
-    //                      | stage1  |
-    //                       ---------
+    //                  -------------------
+    //                 | accumulatebyKeyP  |
+    //                  -------------------
     //                           |
     //                      distributed
     //                      partitioned
     //                           v
-    //                       ---------
-    //                      | stage2  |
-    //                       ---------
+    //                   ----------------
+    //                  | combineByKeyP  |
+    //                   ----------------
     private void handleGroup(AbstractStage stage, GroupTransform<Object, Object, Object, Object, Object> xform) {
         if (xform.windowDefinition() != null) {
             handleWindowedGroup(stage, xform);
@@ -186,7 +187,7 @@ class Planner {
     private void handleWindowedGroup(
             AbstractStage stage, GroupTransform<Object, Object, Object, Object, Object> xform
     ) {
-        WindowDefinition wDef = xform.windowDefinition();
+        WindowDefinition wDef = requireNonNull(xform.windowDefinition());
         switch (wDef.kind()) {
             case TUMBLING:
             case SLIDING:
@@ -199,6 +200,22 @@ class Planner {
         throw new IllegalArgumentException("Unknown window definition " + wDef.kind());
     }
 
+    //                       --------
+    //                      | source |
+    //                       --------
+    //                           |
+    //                      partitioned
+    //                           v
+    //                 --------------------
+    //                | accumulatebyFrameP |
+    //                 --------------------
+    //                           |
+    //                      distributed
+    //                      partitioned
+    //                           v
+    //                   -----------------
+    //                  | combineByFrameP |
+    //                   -----------------
     private void handleSlidingWindow(
             AbstractStage stage,
             GroupTransform<Object, Object, Object, Object, Object> xform,
@@ -207,7 +224,7 @@ class Planner {
         String namePrefix = vertexName(xform.name(), "-stage");
         Vertex v1 = dag.newVertex(namePrefix + '1', accumulateByFrameP(
                 xform.keyFn(),
-                xform.timestampFn(),
+                requireNonNull(xform.timestampFn()),
                 TimestampKind.EVENT,
                 wDef.toSlidingWindowPolicy(),
                 xform.aggregateOperation().withFinishFn(identity())));
@@ -221,7 +238,13 @@ class Planner {
             GroupTransform<Object, Object, Object, Object, Object> xform,
             SessionWindowDef wDef
     ) {
-
+        PlannerVertex pv = addVertex(stage, vertexName(xform.name(), ""), aggregateToSessionWindowP(
+                wDef.sessionTimeout(),
+                requireNonNull(xform.timestampFn()),
+                xform.keyFn(),
+                xform.aggregateOperation()
+        ));
+        addEdges(stage, pv.v, e -> e.partitioned(xform.keyFn()));
     }
 
     //           ----------       ----------         ----------
@@ -230,25 +253,59 @@ class Planner {
     //               |                 |                  |
     //          partitioned       partitioned        partitioned
     //               \------------v    v    v------------/
-    //                             ---------
-    //                            |    v1   |
-    //                             ---------
+    //                       --------------------
+    //                      | coAccumulateByKeyP |
+    //                       --------------------
     //                                 |
     //                            distributed
     //                            partitioned
     //                                 v
-    //                             ---------
-    //                            |    v2   |
-    //                             ---------
-    private void handleCoGroup(AbstractStage stage, CoGroupTransform<Object, Object, Object, Object> coGroup) {
-        List<DistributedFunction<?, ?>> groupKeyFns = coGroup.groupKeyFns();
-        String namePrefix = vertexName(coGroup.name(), "-stage");
+    //                          ---------------
+    //                         | combineByKeyP |
+    //                          ---------------
+    private void handleCoGroup(AbstractStage stage, CoGroupTransform<Object, Object, Object, Object> xform) {
+        if (xform.windowDefinition() != null) {
+            handleWindowedCoGroup(stage, xform);
+            return;
+        }
+        List<DistributedFunction<?, ?>> groupKeyFns = xform.groupKeyFns();
+        String namePrefix = vertexName(xform.name(), "-stage");
         Vertex v1 = dag.newVertex(namePrefix + '1',
-                coAccumulateByKeyP(groupKeyFns, coGroup.aggregateOperation().withFinishFn(identity())));
+                coAccumulateByKeyP(groupKeyFns, xform.aggregateOperation().withFinishFn(identity())));
         PlannerVertex pv2 = addVertex(stage, namePrefix + '2',
-                combineByKeyP(coGroup.aggregateOperation()));
+                combineByKeyP(xform.aggregateOperation()));
         addEdges(stage, v1, (e, ord) -> e.partitioned(groupKeyFns.get(ord), HASH_CODE));
         dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
+    }
+
+    private void handleWindowedCoGroup(AbstractStage stage, CoGroupTransform<Object, Object, Object, Object> xform) {
+        WindowDefinition wDef = requireNonNull(xform.windowDefinition());
+        switch (wDef.kind()) {
+            case TUMBLING:
+            case SLIDING:
+                handleSlidingCoWindow(stage, xform, wDef.downcast());
+                return;
+            case SESSION:
+                handleSessionCoWindow(stage, xform, wDef.downcast());
+                return;
+        }
+        throw new IllegalArgumentException("Unknown window definition " + wDef.kind());
+    }
+
+    private void handleSlidingCoWindow(
+            AbstractStage stage,
+            CoGroupTransform<Object, Object, Object, Object> xform,
+            SlidingWindowDef wDef
+    ) {
+        throw new UnsupportedOperationException("Windowed co-grouping not yet implemented");
+    }
+
+    private void handleSessionCoWindow(
+            AbstractStage stage,
+            CoGroupTransform<Object, Object, Object, Object> xform,
+            SessionWindowDef downcast
+    ) {
+        throw new UnsupportedOperationException("Windowed co-grouping not yet implemented");
     }
 
     //         ---------           ----------           ----------

@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet;
 
+import javax.annotation.Nonnull;
+
 /**
  * Javadoc pending.
  */
@@ -24,18 +26,23 @@ public interface WindowDefinition {
         TUMBLING, SLIDING, SESSION
     }
 
+    @Nonnull
     WindowKind kind();
 
+    @Nonnull
     <W extends WindowDefinition> W downcast();
 
+    @Nonnull
     static SlidingWindowDef sliding(long frameSize, long framesPerWindow) {
         return new SlidingWindowDef(frameSize, framesPerWindow);
     }
 
+    @Nonnull
     static TumblingWindowDef tumbling(long windowSize) {
         return new TumblingWindowDef(windowSize);
     }
 
+    @Nonnull
     static SessionWindowDef session(long sessionTimeout) {
         return new SessionWindowDef(sessionTimeout);
     }
