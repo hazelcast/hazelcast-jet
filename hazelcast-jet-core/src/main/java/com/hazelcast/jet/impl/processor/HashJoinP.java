@@ -37,9 +37,9 @@ import static java.util.Collections.singletonList;
  * Implements the {@link com.hazelcast.jet.impl.transform.HashJoinTransform
  * hash-join transform}.
  */
-public class HashJoinP<E0> extends AbstractProcessor {
+public class HashJoinP<T0> extends AbstractProcessor {
 
-    private final List<Function<E0, Object>> keyFs;
+    private final List<Function<T0, Object>> keyFns;
     private final List<Map<Object, Object>> lookupTables;
     private final List<Tag> tags;
     private boolean ordinal0consumed;
@@ -62,11 +62,11 @@ public class HashJoinP<E0> extends AbstractProcessor {
      * element prepended to remove the mismatch between list index and ordinal.
      */
     public HashJoinP(
-            @Nonnull List<Function<E0, Object>> keyFs,
+            @Nonnull List<Function<T0, Object>> keyFns,
             @Nonnull List<Tag> tags
     ) {
-        this.keyFs = prependNull(keyFs);
-        this.lookupTables = prependNull(Collections.nCopies(keyFs.size(), null));
+        this.keyFns = prependNull(keyFns);
+        this.lookupTables = prependNull(Collections.nCopies(keyFns.size(), null));
         this.tags = tags.isEmpty() ? emptyList() : prependNull(tags);
     }
 
@@ -81,23 +81,23 @@ public class HashJoinP<E0> extends AbstractProcessor {
     @Override
     @SuppressWarnings("unchecked")
     protected boolean tryProcess0(@Nonnull Object item) {
-        E0 e0 = (E0) item;
+        T0 t0 = (T0) item;
         ordinal0consumed = true;
         if (tags.isEmpty()) {
-            return tryEmit(keyFs.size() == 2
-                    ? tuple2(e0, lookupJoined(1, e0))
-                    : tuple3(e0, lookupJoined(1, e0), lookupJoined(2, e0)));
+            return tryEmit(keyFns.size() == 2
+                    ? tuple2(t0, lookupJoined(1, t0))
+                    : tuple3(t0, lookupJoined(1, t0), lookupJoined(2, t0)));
         }
-        ItemsByTag map = new ItemsByTag();
-        for (int i = 1; i < keyFs.size(); i++) {
-            map.put(tags.get(i), lookupJoined(i, e0));
+        ItemsByTag ibt = new ItemsByTag();
+        for (int i = 1; i < keyFns.size(); i++) {
+            ibt.put(tags.get(i), lookupJoined(i, t0));
         }
-        return tryEmit(tuple2(e0, map));
+        return tryEmit(tuple2(t0, ibt));
     }
 
     @Nullable
-    private Object lookupJoined(int ordinal, E0 item) {
-        return lookupTables.get(ordinal).get(keyFs.get(ordinal).apply(item));
+    private Object lookupJoined(int ordinal, T0 item) {
+        return lookupTables.get(ordinal).get(keyFns.get(ordinal).apply(item));
     }
 
     private static <E> List<E> prependNull(List<E> in) {

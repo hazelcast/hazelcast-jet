@@ -16,26 +16,24 @@
 
 package com.hazelcast.jet.impl.processor;
 
-import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
-import com.hazelcast.jet.function.DistributedBiConsumer;
-import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.core.AbstractProcessor;
 
 import javax.annotation.Nonnull;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 /**
  * Batch processor that computes the supplied aggregate operation
  * on all received items.
  */
 public class AggregateP<T, A, R> extends AbstractProcessor {
-    private final DistributedBiConsumer<? super A, ? super T> accumulateFn;
-    private final DistributedFunction<? super A, R> finishFn;
+    private final BiConsumer<? super A, ? super T> accumulateFn;
+    private final Function<? super A, R> finishFn;
     private final A acc;
     private R result;
 
-    public AggregateP(
-            @Nonnull AggregateOperation1<? super T, A, R> aggregateOperation
-    ) {
+    public AggregateP(@Nonnull AggregateOperation1<? super T, A, R> aggregateOperation) {
         this.accumulateFn = aggregateOperation.accumulateFn();
         this.finishFn = aggregateOperation.finishFn();
         this.acc = aggregateOperation.createFn().get();

@@ -204,7 +204,6 @@ public final class PeekWrappedP<T> implements Processor {
         private final boolean logSnapshot;
         private final BitSet broadcastTracker;
 
-
         private LoggingOutbox(Outbox wrappedOutbox, boolean logOutput, boolean logSnapshot) {
             this.wrappedOutbox = wrappedOutbox;
             this.broadcastTracker = new BitSet(wrappedOutbox.bucketCount());

@@ -16,11 +16,10 @@
 
 package com.hazelcast.jet.impl.processor;
 
-import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
-import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.core.AbstractProcessor;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -39,14 +38,14 @@ import static java.util.Collections.singletonList;
  * accumulation functions as there are inbound edges.
  */
 public class CoGroupP<K, A, R> extends AbstractProcessor {
-    private final List<DistributedFunction<?, ? extends K>> groupKeyFs;
+    private final List<? extends Function<?, ? extends K>> groupKeyFs;
     private final AggregateOperation<A, R> aggrOp;
 
     private final Map<K, A> keyToAcc = new HashMap<>();
     private final Traverser<Map.Entry<K, R>> resultTraverser;
 
     public CoGroupP(
-            @Nonnull List<DistributedFunction<?, ? extends K>> groupKeyFs,
+            @Nonnull List<? extends Function<?, ? extends K>> groupKeyFs,
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
         this.groupKeyFs = groupKeyFs;
@@ -57,7 +56,7 @@ public class CoGroupP<K, A, R> extends AbstractProcessor {
     }
 
     public <T> CoGroupP(
-            @Nonnull DistributedFunction<? super T, ? extends K> groupKeyFn,
+            @Nonnull Function<? super T, ? extends K> groupKeyFn,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
         this(singletonList(groupKeyFn), aggrOp);

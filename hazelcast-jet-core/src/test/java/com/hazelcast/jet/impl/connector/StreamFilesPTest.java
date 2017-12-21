@@ -18,9 +18,10 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Outbox;
-import com.hazelcast.jet.core.Processor.Context;
+import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Log4jFactory;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.IOUtil;
@@ -33,12 +34,15 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 
+import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
+import java.util.Collection;
 
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamFilesP;
 import static java.lang.Thread.interrupted;
@@ -84,16 +88,28 @@ public class StreamFilesPTest extends JetTestSupport {
 
     @Test
     public void when_metaSupplier_then_returnsCorrectProcessors() {
-        ProcessorMetaSupplier metaSupplier = streamFilesP(workDir.getAbsolutePath(), UTF_8, "*");
+        // Given
+        ProcessorSupplier.Context context = mock(ProcessorSupplier.Context.class);
+        Mockito.when(context.logger()).thenReturn(mock(ILogger.class));
         Address a = new Address();
+
+        // When
+        ProcessorMetaSupplier metaSupplier = streamFilesP(workDir.getAbsolutePath(), UTF_8, "*");
         ProcessorSupplier supplier = metaSupplier.get(singletonList(a)).apply(a);
-        assertEquals(1, supplier.get(1).size());
+        supplier.init(context);
+
+        // Then
+        Collection<? extends Processor> processors = supplier.get(1);
+        assertEquals(1, processors.size());
+
+        // Cleanup
+        processors.forEach(this::initProcessor);
         supplier.complete(null);
     }
 
     @Test
     public void when_writeOneFile_then_seeAllLines() throws Exception {
-        initializeProcessor(null);
+        createProcessor("*");
         driverThread.start();
         try (PrintWriter w = new PrintWriter(new FileWriter(new File(workDir, "a.txt")))) {
             for (int i = 0; i < LINE_COUNT; i++) {
@@ -107,7 +123,7 @@ public class StreamFilesPTest extends JetTestSupport {
     @Test
     public void when_writeTwoFiles_then_seeAllLines() throws Exception {
         // Given
-        initializeProcessor(null);
+        createProcessor("*");
         driverThread.start();
         try (PrintWriter w1 = new PrintWriter(new FileWriter(new File(workDir, "a.txt")));
              PrintWriter w2 = new PrintWriter(new FileWriter(new File(workDir, "b.txt")))
@@ -128,7 +144,7 @@ public class StreamFilesPTest extends JetTestSupport {
     @Test
     public void when_glob_then_onlyMatchingProcessed() throws Exception {
         // Given
-        initializeProcessor("a.*");
+        createProcessor("a.*");
         driverThread.start();
         try (PrintWriter w1 = new PrintWriter(new FileWriter(new File(workDir, "a.txt")));
                 PrintWriter w2 = new PrintWriter(new FileWriter(new File(workDir, "b.txt")))
@@ -159,7 +175,7 @@ public class StreamFilesPTest extends JetTestSupport {
             }
             w.write("incomplete line");
             w.flush();
-            initializeProcessor(null);
+            createProcessor("*");
             // Directory watch service is apparently initialized asynchronously so we
             // have to give it some time. This is a hacky, non-repeatable test.
             Thread.sleep(1000);
@@ -187,7 +203,7 @@ public class StreamFilesPTest extends JetTestSupport {
                 w.println(i);
             }
         }
-        initializeProcessor(null);
+        createProcessor("*");
         // Directory watch service is apparently initialized asynchronously so we
         // have to give it some time. This is a hacky, non-repeatable test.
         Thread.sleep(1000);
@@ -208,7 +224,7 @@ public class StreamFilesPTest extends JetTestSupport {
                 w.println(i);
             }
         }
-        initializeProcessor(null);
+        createProcessor("*");
         updateFileOffsetsSize();
         assertEquals(1, fileOffsetsSize);
         driverThread.start();
@@ -223,7 +239,7 @@ public class StreamFilesPTest extends JetTestSupport {
     @Test
     public void when_watchedDirDeleted_then_complete() throws Exception {
         // Given
-        initializeProcessor(null);
+        createProcessor("*");
         driverThread.start();
 
         // When
@@ -245,17 +261,18 @@ public class StreamFilesPTest extends JetTestSupport {
         fileOffsetsSize = processor.fileOffsets.size();
     }
 
-    private void initializeProcessor(String glob) {
-        if (glob == null) {
-            glob = "*";
-        }
+    private void createProcessor(@Nonnull String glob) {
         processor = new StreamFilesP(workDir.getAbsolutePath(), UTF_8, glob, 1, 0);
+        initProcessor(processor);
+    }
+
+    private void initProcessor(Processor processor) {
         Outbox outbox = mock(Outbox.class);
         when(outbox.offer(any())).thenAnswer(item -> {
             emittedCount++;
             return true;
         });
-        Context ctx = mock(Context.class);
+        Processor.Context ctx = mock(Processor.Context.class);
         when(ctx.logger()).thenReturn(new Log4jFactory().getLogger("testing"));
         processor.init(outbox, ctx);
     }

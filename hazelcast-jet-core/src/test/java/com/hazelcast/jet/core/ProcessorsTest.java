@@ -23,12 +23,14 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.logging.ILogger;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -61,6 +63,7 @@ public class ProcessorsTest {
         inbox = new TestInbox();
         outbox = new TestOutbox(1);
         context = mock(Context.class);
+        Mockito.when(context.logger()).thenReturn(mock(ILogger.class));
         bucket = outbox.queueWithOrdinal(0);
     }
 

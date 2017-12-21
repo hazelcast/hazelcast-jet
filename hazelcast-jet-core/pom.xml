@@ -102,7 +102,6 @@
             <artifactId>hazelcast-client</artifactId>
             <version>${hazelcast.version}</version>
         </dependency>
-
         <dependency>
             <groupId>javax.cache</groupId>
             <artifactId>cache-api</artifactId>

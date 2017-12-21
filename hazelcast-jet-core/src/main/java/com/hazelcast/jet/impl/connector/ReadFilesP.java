@@ -71,10 +71,10 @@ public final class ReadFilesP extends AbstractProcessor implements Closeable {
     }
 
     @Override
-    protected void init(@Nonnull Context context) throws Exception {
+    protected void init(@Nonnull Context context) throws IOException {
         directoryStream = Files.newDirectoryStream(directory, glob);
         outputTraverser = Traversers.traverseIterator(directoryStream.iterator())
-                                    .filter(this::shouldProcessEvent)
+                                    .filter(this::shouldProcess)
                                     .flatMap(this::processFile)
                                     .onFirstNull(() -> {
                                         uncheckRun(this::close);
@@ -87,21 +87,21 @@ public final class ReadFilesP extends AbstractProcessor implements Closeable {
         return emitFromTraverser(outputTraverser);
     }
 
-    private boolean shouldProcessEvent(Path file) {
-        if (Files.isDirectory(file)) {
+    private boolean shouldProcess(Path path) {
+        if (Files.isDirectory(path)) {
             return false;
         }
-        int hashCode = file.hashCode();
+        int hashCode = path.hashCode();
         return ((hashCode & Integer.MAX_VALUE) % parallelism) == id;
     }
 
-    private Traverser<String> processFile(Path file) {
+    private Traverser<String> processFile(Path path) {
         if (getLogger().isFinestEnabled()) {
-            getLogger().finest("Processing file " + file);
+            getLogger().finest("Processing file " + path);
         }
         try {
             assert currentFileLines == null : "currentFileLines != null";
-            currentFileLines = Files.lines(file, charset);
+            currentFileLines = Files.lines(path, charset);
             return traverseStream(currentFileLines)
                     .onFirstNull(() -> {
                         currentFileLines.close();

@@ -60,7 +60,7 @@ public class CloseableProcessorSupplier<E extends Processor & Closeable> impleme
      * @param supplier Supplier to create processor instances.
      *                 Parameter is the number of processors that should be in the collection.
      */
-    public CloseableProcessorSupplier(DistributedIntFunction<Collection<E>>  supplier) {
+    public CloseableProcessorSupplier(DistributedIntFunction<Collection<E>> supplier) {
         this.supplier = supplier;
     }
 

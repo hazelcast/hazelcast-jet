@@ -176,10 +176,10 @@ public class StreamFilesP extends AbstractProcessor implements Closeable {
         }
         for (WatchEvent<?> event : key.pollEvents()) {
             final WatchEvent.Kind<?> kind = event.kind();
-            final Path fileName = ((WatchEvent<Path>) event).context();
+            @SuppressWarnings("unchecked") final Path fileName = ((WatchEvent<Path>) event).context();
             final Path filePath = watchedDirectory.resolve(fileName);
             if (kind == ENTRY_CREATE || kind == ENTRY_MODIFY) {
-                if (glob.matches(fileName) && belongsToThisProcessor(fileName) && !Files.isDirectory(filePath)) {
+                if (glob.matches(fileName) && belongsToThisProcessor(fileName) && Files.isRegularFile(filePath)) {
                     logFine(logger, "Will open file to read new content: %s", filePath);
                     eventQueue.add(filePath);
                 }
@@ -237,7 +237,8 @@ public class StreamFilesP extends AbstractProcessor implements Closeable {
             // so as not to miss a preceding newline.
             fis.getChannel().position(offset >= 0 ? offset : -offset - 1);
             BufferedReader r = new BufferedReader(new InputStreamReader(fis, charset));
-            if (offset < 0 && !findNextLine(r, offset)) {
+            if (offset < 0 && !findNextLine(r)) {
+                fileOffsets.put(currentFile, offset);
                 closeCurrentFile();
                 return false;
             }
@@ -252,12 +253,11 @@ public class StreamFilesP extends AbstractProcessor implements Closeable {
         }
     }
 
-    private boolean findNextLine(Reader in, long offset) throws IOException {
+    private static boolean findNextLine(Reader in) throws IOException {
         while (true) {
             int ch = in.read();
             if (ch < 0) {
                 // we've hit EOF before finding the end of current line
-                fileOffsets.put(currentFile, offset);
                 return false;
             }
             if (ch == '\n' || ch == '\r') {
@@ -278,9 +278,6 @@ public class StreamFilesP extends AbstractProcessor implements Closeable {
     String readCompleteLine(Reader reader) throws IOException {
         int ch;
         while ((ch = reader.read()) >= 0) {
-            if (ch < 0) {
-                break;
-            }
             if (ch == '\r' || ch == '\n') {
                 maybeSkipLF(reader, ch);
                 try {

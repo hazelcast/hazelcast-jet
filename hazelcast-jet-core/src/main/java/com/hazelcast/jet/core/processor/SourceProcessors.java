@@ -20,6 +20,8 @@ import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.jet.JournalInitialPosition;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.kotlin.ReadFilesPK;
+import com.hazelcast.jet.core.kotlin.StreamFilesPK;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.impl.connector.ReadFilesP;
@@ -40,6 +42,7 @@ import static com.hazelcast.jet.Util.cacheEventToEntry;
 import static com.hazelcast.jet.Util.cachePutEvents;
 import static com.hazelcast.jet.Util.mapEventToEntry;
 import static com.hazelcast.jet.Util.mapPutEvents;
+import static com.hazelcast.jet.core.processor.Processors.USE_KOTLIN;
 
 /**
  * Static utility class with factories of source processors (the DAG
@@ -294,7 +297,9 @@ public final class SourceProcessors {
     public static ProcessorMetaSupplier readFilesP(
             @Nonnull String directory, @Nonnull Charset charset, @Nonnull String glob
     ) {
-        return ReadFilesP.metaSupplier(directory, charset.name(), glob);
+        return USE_KOTLIN
+                ? ReadFilesPK.metaSupplier(directory, charset.name(), glob)
+                : ReadFilesP.metaSupplier(directory, charset.name(), glob);
     }
 
     /**
@@ -304,7 +309,9 @@ public final class SourceProcessors {
     public static ProcessorMetaSupplier streamFilesP(
             @Nonnull String watchedDirectory, @Nonnull Charset charset, @Nonnull String glob
     ) {
-        return StreamFilesP.metaSupplier(watchedDirectory, charset.name(), glob);
+        return USE_KOTLIN
+                ? StreamFilesPK.metaSupplier(watchedDirectory, charset.name(), glob)
+                : StreamFilesP.metaSupplier(watchedDirectory, charset.name(), glob);
     }
 
     private static <I, O> Projection<I, O> toProjection(DistributedFunction<I, O> projectionFn) {

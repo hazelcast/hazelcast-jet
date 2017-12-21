@@ -16,6 +16,9 @@
 
 package com.hazelcast.jet.core.processor;
 
+import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.aggregate.AggregateOperation;
+import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Processor;
@@ -23,13 +26,10 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.TimestampKind;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
-import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.WatermarkEmissionPolicy;
 import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.core.WindowDefinition;
-import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -48,8 +48,13 @@ import java.util.List;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.core.TimestampKind.EVENT;
+import static com.hazelcast.jet.core.kotlin.AggregatePKKt.aggregatePK;
+import static com.hazelcast.jet.core.kotlin.CoGroupPKKt.coGroupPK;
+import static com.hazelcast.jet.core.kotlin.InsertWatermarksPKKt.insertWatermarksPK;
+import static com.hazelcast.jet.core.kotlin.TransformPKKt.transformPK;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
+import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 
 /**
  * Static utility class with factory methods for Jet processors. These
@@ -191,7 +196,14 @@ import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
  * grouping key, specify {@link com.hazelcast.jet.function.DistributedFunctions#constantKey()
  * constantKey()} as the key-extracting function.
  */
+@SuppressWarnings("ConstantConditions")
 public final class Processors {
+
+    /**
+     *  When {@code true}, some of the factories will return processors
+     *  implemented in Kotlin.
+     */
+    public static final boolean USE_KOTLIN = true;
 
     private Processors() {
     }
@@ -219,7 +231,9 @@ public final class Processors {
             @Nonnull DistributedFunction<? super T, K> getKeyFn,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        return () -> new CoGroupP<>(getKeyFn, aggrOp);
+        return USE_KOTLIN
+                ? () -> coGroupPK(getKeyFn, aggrOp)
+                : () -> new CoGroupP<>(getKeyFn, aggrOp);
     }
 
     /**
@@ -244,7 +258,9 @@ public final class Processors {
             @Nonnull DistributedFunction<? super T, K> getKeyFn,
             @Nonnull AggregateOperation1<? super T, A, ?> aggrOp
     ) {
-        return () -> new CoGroupP<>(getKeyFn, aggrOp.withFinishFn(identity()));
+        return USE_KOTLIN
+                ? () -> coGroupPK(getKeyFn, aggrOp.withFinishFn(identity()))
+                : () -> new CoGroupP<>(getKeyFn, aggrOp.withFinishFn(identity()));
     }
 
     /**
@@ -261,7 +277,7 @@ public final class Processors {
      * This processor has state, but does not save it to snapshot. On job
      * restart, the state will be lost.
      *
-     * @param getKeyFs functions that compute the grouping key
+     * @param getKeyFns functions that compute the grouping key
      * @param aggrOp the aggregate operation
      * @param <K> type of key
      * @param <A> type of accumulator returned from {@code aggrOp.createAccumulatorFn()}
@@ -269,10 +285,12 @@ public final class Processors {
      */
     @Nonnull
     public static <K, A, R> DistributedSupplier<Processor> coAggregateByKeyP(
-            @Nonnull List<DistributedFunction<?, ? extends K>> getKeyFs,
+            @Nonnull List<DistributedFunction<?, ? extends K>> getKeyFns,
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
-        return () -> new CoGroupP<>(getKeyFs, aggrOp);
+        return USE_KOTLIN
+                ? () -> coGroupPK(getKeyFns, aggrOp)
+                : () -> new CoGroupP<>(getKeyFns, aggrOp);
     }
 
     /**
@@ -291,17 +309,19 @@ public final class Processors {
      * This processor has state, but does not save it to snapshot. On job
      * restart, the state will be lost.
      *
-     * @param getKeyFs functions that compute the grouping key
+     * @param getKeyFns functions that compute the grouping key
      * @param aggrOp the aggregate operation to perform
      * @param <K> type of key
      * @param <A> type of accumulator returned from {@code aggrOp.createAccumulatorFn()}
      */
     @Nonnull
     public static <K, A> DistributedSupplier<Processor> coAccumulateByKeyP(
-            @Nonnull List<DistributedFunction<?, ? extends K>> getKeyFs,
+            @Nonnull List<DistributedFunction<?, ? extends K>> getKeyFns,
             @Nonnull AggregateOperation<A, ?> aggrOp
     ) {
-        return () -> new CoGroupP<>(getKeyFs, aggrOp.withFinishFn(identity()));
+        return USE_KOTLIN
+                ? () -> coGroupPK(getKeyFns, aggrOp.withFinishFn(identity()))
+                : () -> new CoGroupP<>(getKeyFns, aggrOp.withFinishFn(identity()));
     }
 
     /**
@@ -328,7 +348,9 @@ public final class Processors {
     public static <A, R> DistributedSupplier<Processor> combineByKeyP(
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
-        return () -> new CoGroupP<>(Entry::getKey, aggrOp.withCombiningAccumulateFn(Entry<Object, A>::getValue));
+        return USE_KOTLIN
+            ? () -> coGroupPK(Entry::getKey, aggrOp.withCombiningAccumulateFn(Entry<Object, A>::getValue))
+            : () -> new CoGroupP<>(Entry::getKey, aggrOp.withCombiningAccumulateFn(Entry<Object, A>::getValue));
     }
 
     /**
@@ -354,7 +376,9 @@ public final class Processors {
     public static <T, A, R> DistributedSupplier<Processor> aggregateP(
             @Nonnull AggregateOperation1<T, A, R> aggrOp
     ) {
-        return () -> new AggregateP<>(aggrOp);
+        return USE_KOTLIN
+                ? () -> aggregatePK(aggrOp)
+                : () -> new AggregateP<>(aggrOp);
     }
 
     /**
@@ -380,7 +404,9 @@ public final class Processors {
     public static <T, A, R> DistributedSupplier<Processor> accumulateP(
             @Nonnull AggregateOperation1<T, A, R> aggrOp
     ) {
-        return () -> new AggregateP<>(aggrOp.withFinishFn(identity()));
+        return USE_KOTLIN
+                ? () -> aggregatePK(aggrOp.withFinishFn(identity()))
+                : () -> new AggregateP<>(aggrOp.withFinishFn(identity()));
     }
 
     /**
@@ -406,7 +432,9 @@ public final class Processors {
     public static <T, A, R> DistributedSupplier<Processor> combineP(
             @Nonnull AggregateOperation1<T, A, R> aggrOp
     ) {
-        return () -> new AggregateP<>(aggrOp.withCombiningAccumulateFn(identity()));
+        return USE_KOTLIN
+                ? () -> aggregatePK(aggrOp.withCombiningAccumulateFn(identity()))
+                : () -> new AggregateP<>(aggrOp.withCombiningAccumulateFn(identity()));
     }
 
     /**
@@ -650,7 +678,9 @@ public final class Processors {
             @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
             @Nonnull WatermarkEmissionPolicy wmEmitPolicy
     ) {
-        return () -> new InsertWatermarksP<>(getTimestampF, newWmPolicyF.get(), wmEmitPolicy);
+        return USE_KOTLIN
+                ? () -> insertWatermarksPK(getTimestampF, newWmPolicyF.get(), wmEmitPolicy)
+                : () -> new InsertWatermarksP<>(getTimestampF, newWmPolicyF.get(), wmEmitPolicy);
     }
 
     /**
@@ -671,10 +701,13 @@ public final class Processors {
     ) {
         return () -> {
             final ResettableSingletonTraverser<R> trav = new ResettableSingletonTraverser<>();
-            return new TransformP<T, R>(item -> {
+            DistributedFunction<T, Traverser<? extends R>> mapFn = item -> {
                 trav.accept(mapper.apply(item));
                 return trav;
-            });
+            };
+            return USE_KOTLIN
+                    ? transformPK(mapFn)
+                    : new TransformP<>(mapFn);
         };
     }
 
@@ -691,10 +724,13 @@ public final class Processors {
     public static <T> DistributedSupplier<Processor> filterP(@Nonnull DistributedPredicate<T> predicate) {
         return () -> {
             final ResettableSingletonTraverser<T> trav = new ResettableSingletonTraverser<>();
-            return new TransformP<T, T>(item -> {
+            DistributedFunction<T, Traverser<? extends T>> mapFn = item -> {
                 trav.accept(predicate.test(item) ? item : null);
                 return trav;
-            });
+            };
+            return USE_KOTLIN
+                    ? transformPK(mapFn)
+                    : new TransformP<>(mapFn);
         };
     }
 
@@ -711,9 +747,11 @@ public final class Processors {
      */
     @Nonnull
     public static <T, R> DistributedSupplier<Processor> flatMapP(
-            @Nonnull DistributedFunction<T, ? extends Traverser<? extends R>> mapper
+            @Nonnull DistributedFunction<T, ? extends Traverser<R>> mapper
     ) {
-        return () -> new TransformP<T, R>(mapper);
+        return USE_KOTLIN
+                ? () -> transformPK(mapper)
+                : () -> new TransformP<>(mapper);
     }
 
     /**
@@ -732,10 +770,10 @@ public final class Processors {
      */
     @Nonnull
     public static ProcessorMetaSupplier nonCooperativeP(@Nonnull ProcessorMetaSupplier wrapped) {
-        return new WrappingProcessorMetaSupplier(wrapped, p -> {
-            ((AbstractProcessor) p).setCooperative(false);
+        return new WrappingProcessorMetaSupplier(wrapped, p -> uncheckCall(() -> {
+            p.getClass().getMethod("setCooperative", boolean.class).invoke(p, false);
             return p;
-        });
+        }));
     }
 
     /**
@@ -745,10 +783,10 @@ public final class Processors {
      */
     @Nonnull
     public static ProcessorSupplier nonCooperativeP(@Nonnull ProcessorSupplier wrapped) {
-        return new WrappingProcessorSupplier(wrapped, p -> {
-            ((AbstractProcessor) p).setCooperative(false);
+        return new WrappingProcessorSupplier(wrapped, p -> uncheckCall(() -> {
+            p.getClass().getMethod("setCooperative", boolean.class).invoke(p, false);
             return p;
-        });
+        }));
     }
 
     /**
@@ -758,11 +796,11 @@ public final class Processors {
      */
     @Nonnull
     public static DistributedSupplier<Processor> nonCooperativeP(@Nonnull DistributedSupplier<Processor> wrapped) {
-        return () -> {
+        return () -> uncheckCall(() -> {
             final Processor p = wrapped.get();
-            ((AbstractProcessor) p).setCooperative(false);
+            p.getClass().getMethod("setCooperative", boolean.class).invoke(p, false);
             return p;
-        };
+        });
     }
 
     /** A no-operation processor. See {@link #noopP()} */

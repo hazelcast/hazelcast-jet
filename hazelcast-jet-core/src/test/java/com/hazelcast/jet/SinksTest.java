@@ -27,6 +27,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static com.hazelcast.jet.Util.entry;
@@ -352,6 +353,7 @@ public class SinksTest extends PipelineTestSupport {
     }
 
     @Test
+    @Ignore
     public void mapWithEntryProcessor_when_entryIsLocked_then_entryIsNotUpdated() {
         // Given
         srcMap.put("key", 1);
