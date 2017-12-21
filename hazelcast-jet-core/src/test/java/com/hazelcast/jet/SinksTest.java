@@ -22,13 +22,13 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.map.AbstractEntryProcessor;
 import com.hazelcast.nio.Address;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
@@ -353,7 +353,6 @@ public class SinksTest extends PipelineTestSupport {
     }
 
     @Test
-    @Ignore
     public void mapWithEntryProcessor_when_entryIsLocked_then_entryIsNotUpdated() {
         // Given
         srcMap.put("key", 1);
