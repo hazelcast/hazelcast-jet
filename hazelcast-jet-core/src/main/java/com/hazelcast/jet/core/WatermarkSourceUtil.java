@@ -22,7 +22,13 @@ import com.hazelcast.jet.function.DistributedToLongFunction;
 
 import javax.annotation.Nonnull;
 import java.util.Arrays;
+import java.util.Map.Entry;
+import java.util.function.IntFunction;
+import java.util.stream.IntStream;
 
+import static com.hazelcast.jet.Traversers.traverseStream;
+import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -168,5 +174,15 @@ public class WatermarkSourceUtil<T> {
             flatMapTraverser.append(wm);
         }
         return flatMapTraverser;
+    }
+
+    public <K> Traverser<Entry<BroadcastKey<K>, Object>> saveToSnapshot(IntFunction<K> partitionKeyMapper) {
+        return traverseStream(
+                IntStream.range(0, watermarks.length)
+                         .mapToObj(i -> entry(broadcastKey(partitionKeyMapper.apply(i)), watermarks[i])));
+    }
+
+    public void restoreFromSnapshot(int partitionIndex, Object value) {
+        watermarks[partitionIndex] = (long) value;
     }
 }

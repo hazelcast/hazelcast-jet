@@ -23,6 +23,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.Partition;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JournalInitialPosition;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -93,7 +94,8 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
      * Index is the real HZ partition number, value is the 0-based partition index or -1,
      * if that partition is not assigned to us.
      */
-    private final int[] assignedPartitions;
+    private final int[] assignedPartitionsIndexes;
+    private final List<Integer> assignedPartitions;
     private final Predicate<E> predicate;
     private final Projection<E, T> projection;
     private final JournalInitialPosition initialPos;
@@ -108,7 +110,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     private final Map<Integer, ICompletableFuture<ReadResultSet<T>>> readFutures = new HashMap<>();
 
     private Traverser<Object> outputTraverser;
-    private Traverser<Entry<BroadcastKey<Integer>, Long>> snapshotTraverser;
+    private Traverser<Entry<BroadcastKey<Object>, Object>> snapshotTraverser;
 
     // keep track of pendingItem's offset and partition
     private long pendingItemOffset;
@@ -134,10 +136,11 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         this.initialPos = initialPos;
         this.isRemoteReader = isRemoteReader;
 
-        this.assignedPartitions = new int[assignedPartitions.stream().mapToInt(Integer::intValue).max().orElse(0) + 1];
-        Arrays.fill(this.assignedPartitions, -1);
+        this.assignedPartitions = assignedPartitions;
+        this.assignedPartitionsIndexes = new int[assignedPartitions.stream().mapToInt(Integer::intValue).max().orElse(0) + 1];
+        Arrays.fill(this.assignedPartitionsIndexes, -1);
         for (int i = 0; i < assignedPartitions.size(); i++) {
-            this.assignedPartitions[assignedPartitions.get(i)] = i;
+            this.assignedPartitionsIndexes[assignedPartitions.get(i)] = i;
         }
 
         // TODO configure timeout
@@ -147,7 +150,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) {
-        Map<Integer, ICompletableFuture<EventJournalInitialSubscriberState>> futures = IntStream.of(assignedPartitions)
+        Map<Integer, ICompletableFuture<EventJournalInitialSubscriberState>> futures = IntStream.of(assignedPartitionsIndexes)
             .filter(i -> i >= 0)
             .mapToObj(partition -> entry(partition, eventJournalReader.subscribeToEventJournal(partition)))
             .collect(toMap(Entry::getKey, Entry::getValue));
@@ -176,8 +179,15 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     @Override
     public boolean saveToSnapshot() {
         if (snapshotTraverser == null) {
-            snapshotTraverser = traverseIterable(emitOffsets.entrySet())
-                    .map(e -> entry(broadcastKey(e.getKey()), e.getValue()))
+            Traverser<Entry<BroadcastKey<Object>, Object>> ourTraverser =
+                    traverseIterable(emitOffsets.entrySet())
+                            .map(e -> entry(broadcastKey(e.getKey()), e.getValue()));
+
+            Traverser<Entry<BroadcastKey<Object>, Object>> wsuTraverser =
+                    watermarkSourceUtil.saveToSnapshot(i -> "wm" + assignedPartitions.get(i));
+
+            snapshotTraverser = Traverser.over(ourTraverser, wsuTraverser)
+                    .flatMap(Function.identity())
                     .onFirstNull(() -> snapshotTraverser = null);
         }
         boolean done = emitFromTraverserToSnapshot(snapshotTraverser);
@@ -189,11 +199,21 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
     @Override
     protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
-        int partition = ((BroadcastKey<Integer>) key).key();
-        long offset = (Long) value;
-        if (assignedPartitions[partition] >= 0) {
-            readOffsets.put(partition, offset);
-            emitOffsets.put(partition, offset);
+        Object unwrappedKey = ((BroadcastKey<Object>) key).key();
+        // Integer key is our emit offset, String key is whatever watermarkSourceUtil saved
+        if (unwrappedKey instanceof Integer) {
+            int partition = (int) unwrappedKey;
+            long offset = (Long) value;
+            if (assignedPartitionsIndexes[partition] >= 0) {
+                readOffsets.put(partition, offset);
+                emitOffsets.put(partition, offset);
+            }
+        } else if (unwrappedKey instanceof String) {
+            assert ((String) unwrappedKey).startsWith("wm") : "unexpected key: " + unwrappedKey;
+            int partition = Integer.parseInt(((String) unwrappedKey).substring(2));
+            watermarkSourceUtil.restoreFromSnapshot(assignedPartitionsIndexes[partition], value);
+        } else {
+            throw new JetException("Unexpected snapshot key: " + key);
         }
     }
 
@@ -228,7 +248,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         Traverser<T> traverser = traverseIterable(resultSet);
 
         return peekIndex(traverser, i -> pendingItemOffset = resultSet.getSequence(i))
-                .flatMap(event -> watermarkSourceUtil.flatMapEvent(event, assignedPartitions[pendingItemPartition]));
+                .flatMap(event -> watermarkSourceUtil.flatMapEvent(event, assignedPartitionsIndexes[pendingItemPartition]));
     }
 
     private ReadResultSet<T> nextResultSet() {
