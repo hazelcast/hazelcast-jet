@@ -38,7 +38,7 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.core.test.TestSupport.COMPARE_AS_SET;
+import static com.hazelcast.jet.core.test.TestSupport.SAME_ITEMS_ANY_ORDER;
 import static com.hazelcast.jet.core.test.TestSupport.verifyProcessor;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static java.util.Arrays.asList;
@@ -133,7 +133,7 @@ public class SessionWindowPTest {
 
         try {
             verifyProcessor(supplier)
-                    .outputChecker(COMPARE_AS_SET)
+                    .outputChecker(SAME_ITEMS_ANY_ORDER)
                     .input(events)
                     .expectOutput(expectedOutput);
         } catch (AssertionError e) {

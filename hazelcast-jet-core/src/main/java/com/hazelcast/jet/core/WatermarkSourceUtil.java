@@ -16,19 +16,12 @@
 
 package com.hazelcast.jet.core;
 
-import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 
 import javax.annotation.Nonnull;
 import java.util.Arrays;
-import java.util.Map.Entry;
-import java.util.function.IntFunction;
-import java.util.stream.IntStream;
 
-import static com.hazelcast.jet.Traversers.traverseStream;
-import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -82,17 +75,17 @@ public class WatermarkSourceUtil<T> {
      * Called after the event was emitted to decide if a watermark should be
      * sent after it.
      *
-     * @param event the event
      * @param partitionIndex index of the partition the event occurred in
      *
+     * @param event the event
      * @return watermark to emit or {@code null}
      */
-    public Watermark observeEvent(T event, int partitionIndex) {
-        return observeEvent(System.nanoTime(), event, partitionIndex);
+    public Watermark observeEvent(int partitionIndex, T event) {
+        return observeEvent(System.nanoTime(), partitionIndex, event);
     }
 
     // package-visible for tests
-    Watermark observeEvent(long now, T event, int partitionIndex) {
+    Watermark observeEvent(long now, int partitionIndex, T event) {
         long eventTime = getTimestampF.applyAsLong(event);
         watermarks[partitionIndex] = wmPolicies[partitionIndex].reportEvent(eventTime);
         markIdleAt[partitionIndex] = now + idleTimeoutNanos;
@@ -168,22 +161,22 @@ public class WatermarkSourceUtil<T> {
 
     /**
      * TODO
-     * @param partitionKeyMapper
-     * @param <K>
+     * To be used in saveToSnapshot
+     * @param partitionIndex
      * @return
      */
-    public <K> Traverser<Entry<BroadcastKey<K>, Object>> saveToSnapshot(IntFunction<K> partitionKeyMapper) {
-        return traverseStream(
-                IntStream.range(0, watermarks.length)
-                         .mapToObj(i -> entry(broadcastKey(partitionKeyMapper.apply(i)), watermarks[i])));
+    public long getWatermark(int partitionIndex) {
+        return watermarks[partitionIndex];
     }
 
     /**
      * TODO
+     * To be used in restoreFromSnapshot
      * @param partitionIndex
-     * @param value
+     * @param wm
+     * @return
      */
-    public void restoreFromSnapshot(int partitionIndex, Object value) {
-        watermarks[partitionIndex] = (long) value;
+    public void restoreWatermark(int partitionIndex, long wm) {
+        watermarks[partitionIndex] = wm;
     }
 }

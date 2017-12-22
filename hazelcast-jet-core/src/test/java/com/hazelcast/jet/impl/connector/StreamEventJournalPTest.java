@@ -46,7 +46,7 @@ import java.util.stream.IntStream;
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
-import static com.hazelcast.jet.core.test.TestSupport.COMPARE_AS_SET;
+import static com.hazelcast.jet.core.test.TestSupport.SAME_ITEMS_ANY_ORDER;
 import static com.hazelcast.jet.core.test.TestSupport.drainOutbox;
 import static com.hazelcast.spi.properties.GroupProperty.PARTITION_COUNT;
 import static java.util.stream.Collectors.toList;
@@ -81,7 +81,7 @@ public class StreamEventJournalPTest extends JetTestSupport {
 
         supplier = () -> new StreamEventJournalP<>(map, allPartitions, e -> true,
                 EventJournalMapEvent::getNewValue, START_FROM_OLDEST, false, Integer::intValue,
-                withFixedLag(0), suppressAll(), 2000);
+                withFixedLag(0), suppressAll(), -1);
     }
 
 
@@ -98,7 +98,7 @@ public class StreamEventJournalPTest extends JetTestSupport {
         TestSupport.verifyProcessor(supplier)
                    .disableProgressAssertion() // no progress assertion because of async calls
                    .disableRunUntilCompleted(1000) // processor would never complete otherwise
-                   .outputChecker(COMPARE_AS_SET) // ordering is only per partition
+                   .outputChecker(SAME_ITEMS_ANY_ORDER) // ordering is only per partition
                    .expectOutput(Arrays.asList(0, 1, 2, 3));
     }
 
@@ -124,7 +124,7 @@ public class StreamEventJournalPTest extends JetTestSupport {
             drainOutbox(queue, actual, true);
             assertEquals("consumed more items than expected", batchSize, actual.size());
             assertEquals(IntStream.range(0, batchSize).boxed().collect(Collectors.toSet()), new HashSet<>(actual));
-        });
+        }, 3);
 
         for (; i < batchSize * 2; i++) {
             map.put(i, i);
@@ -136,7 +136,7 @@ public class StreamEventJournalPTest extends JetTestSupport {
             drainOutbox(queue, actual, true);
             assertEquals("consumed more items than expected", JOURNAL_CAPACITY + 2, actual.size());
             assertEquals(IntStream.range(0, batchSize * 2).boxed().collect(Collectors.toSet()), new HashSet<>(actual));
-        });
+        }, 3);
     }
 
     @Test
@@ -157,7 +157,7 @@ public class StreamEventJournalPTest extends JetTestSupport {
             assertFalse("Processor should never complete", p.complete());
             drainOutbox(queue, actual, true);
             assertTrue("consumed less items than expected", actual.size() >= JOURNAL_CAPACITY);
-        });
+        }, 3);
 
         for (int i = 0; i < JOURNAL_CAPACITY; i++) {
             map.put(i, i);
@@ -175,11 +175,11 @@ public class StreamEventJournalPTest extends JetTestSupport {
             assertFalse("Processor should never complete", p.complete());
             drainOutbox(outbox.queueWithOrdinal(0), output, true);
             assertTrue("consumed more items than expected", output.size() == 0);
-        });
+        }, 3);
 
         assertTrueEventually(() -> {
             assertTrue("Processor did not finish snapshot", p.saveToSnapshot());
-        });
+        }, 3);
 
         // overflow journal
         for (int i = 0; i < JOURNAL_CAPACITY * 2; i++) {
@@ -193,7 +193,6 @@ public class StreamEventJournalPTest extends JetTestSupport {
         System.out.println("Restoring journal");
         // restore from snapshot
         assertRestore(snapshotItems);
-
     }
 
     private void assertRestore(List<Entry> snapshotItems) {
@@ -211,6 +210,6 @@ public class StreamEventJournalPTest extends JetTestSupport {
             assertFalse("Processor should never complete", p.complete());
             drainOutbox(newOutbox.queueWithOrdinal(0), output, true);
             assertEquals("consumed different number of items than expected", JOURNAL_CAPACITY, output.size());
-        });
+        }, 3);
     }
 }

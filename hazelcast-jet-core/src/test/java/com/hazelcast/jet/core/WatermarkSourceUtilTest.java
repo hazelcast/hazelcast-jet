@@ -41,10 +41,10 @@ public class WatermarkSourceUtilTest {
         // still all partitions are idle, but IDLE_MESSAGE should not be emitted for the second time
         assertNull(wsu.handleNoEvent(ns(5)));
         // now we observe event on partition0, watermark should be immediately forwarded because the other queue is idle
-        assertEquals(wm(100 - lag), wsu.observeEvent(ns(5), 100L, 0));
+        assertEquals(wm(100 - lag), wsu.observeEvent(ns(5), 0, 100L));
         // now we'll have a event on the other partition. No WM is emitted because it's older than already emitted one
-        assertNull(wsu.observeEvent(ns(5), 90L, 0));
-        assertEquals(wm(101 - lag), wsu.observeEvent(ns(5), 101L, 0));
+        assertNull(wsu.observeEvent(ns(5), 0, 90L));
+        assertEquals(wm(101 - lag), wsu.observeEvent(ns(5), 0, 101L));
     }
 
     @Test
@@ -56,15 +56,15 @@ public class WatermarkSourceUtilTest {
         // all partitions are active initially
         assertNull(wsu.handleNoEvent());
         // let's have events only in partition0. No WM is output because we wait for the other partition indefinitely
-        assertNull(wsu.observeEvent(10L, 0));
-        assertNull(wsu.observeEvent(11L, 0));
+        assertNull(wsu.observeEvent(0, 10L));
+        assertNull(wsu.observeEvent(0, 11L));
         // now have some events in the other partition, wms will be output
-        assertEquals(wm(10 - lag), wsu.observeEvent(10L, 1));
-        assertEquals(wm(11 - lag), wsu.observeEvent(11L, 1));
+        assertEquals(wm(10 - lag), wsu.observeEvent(1, 10L));
+        assertEquals(wm(11 - lag), wsu.observeEvent(1, 11L));
         // now partition1 will get ahead of partition0 -> no WM
-        assertNull(wsu.observeEvent(12L, 1));
+        assertNull(wsu.observeEvent(1, 12L));
         // another event in partition0, we'll get the wm
-        assertEquals(wm(12 - lag), wsu.observeEvent(13L, 0));
+        assertEquals(wm(12 - lag), wsu.observeEvent(0, 13L));
     }
 
     @Test
@@ -80,7 +80,7 @@ public class WatermarkSourceUtilTest {
         // after adding a partition and observing an event, WM should be emitted
         wsu.increasePartitionCount(1);
         assertNull(wsu.handleNoEvent()); // can't send WM here, we don't know what its value would be
-        assertEquals(wm(10 - lag), wsu.observeEvent(10L, 0));
+        assertEquals(wm(10 - lag), wsu.observeEvent(0, 10L));
     }
 
     private long ns(long ms) {

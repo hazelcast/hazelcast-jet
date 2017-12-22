@@ -20,7 +20,7 @@ import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static com.hazelcast.jet.core.test.TestSupport.COMPARE_AS_SET;
+import static com.hazelcast.jet.core.test.TestSupport.SAME_ITEMS_ANY_ORDER;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -30,8 +30,8 @@ public class TestSupportTest {
 
     @Test
     public void test_compareAsSet() {
-        assertTrue(COMPARE_AS_SET.test(asList("a", "b", "a"), asList("a", "a", "b")));
-        assertFalse(COMPARE_AS_SET.test(asList("a", "b", "a"), asList("a", "b", "b")));
+        assertTrue(SAME_ITEMS_ANY_ORDER.test(asList("a", "b", "a"), asList("a", "a", "b")));
+        assertFalse(SAME_ITEMS_ANY_ORDER.test(asList("a", "b", "a"), asList("a", "b", "b")));
     }
 
 }

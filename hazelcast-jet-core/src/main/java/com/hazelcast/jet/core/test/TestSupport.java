@@ -159,7 +159,7 @@ public final class TestSupport {
      * <p>
      * Use as an argument for {@link #outputChecker(BiPredicate)}.
      */
-    public static final BiPredicate<List<?>, List<?>> COMPARE_AS_SET =
+    public static final BiPredicate<List<?>, List<?>> SAME_ITEMS_ANY_ORDER =
             (expected, actual) -> {
                 if (expected.size() != actual.size()) { // shortcut
                     return false;
@@ -362,7 +362,7 @@ public final class TestSupport {
      * <p>
      * Defaults to {@code Objects::equals}, which will pass, if both lists
      * contain equal objects in the same order. If the ordering doesn't matter,
-     * you can use {@link #COMPARE_AS_SET}.
+     * you can use {@link #SAME_ITEMS_ANY_ORDER}.
      *
      * @return {@code this} instance for fluent API.
      */
