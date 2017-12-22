@@ -31,6 +31,7 @@ import com.hazelcast.jet.impl.connector.StreamSocketP;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.query.Predicate;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.nio.charset.Charset;
@@ -104,6 +105,7 @@ public final class SourceProcessors {
      * DistributedFunction, JournalInitialPosition)}.
      */
     @Nonnull
+    @SuppressFBWarnings(value = "NP_NONNULL_PARAM_VIOLATION", justification = "TODO") // TODO remove this
     public static <K, V, T> ProcessorMetaSupplier streamMapP(
             @Nonnull String mapName,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
@@ -173,6 +175,7 @@ public final class SourceProcessors {
      * )}.
      */
     @Nonnull
+    @SuppressFBWarnings(value = "NP_NONNULL_PARAM_VIOLATION", justification = "TODO") // TODO remove this
     public static <K, V, T> ProcessorMetaSupplier streamRemoteMapP(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
@@ -210,6 +213,7 @@ public final class SourceProcessors {
      * DistributedFunction, JournalInitialPosition)}.
      */
     @Nonnull
+    @SuppressFBWarnings(value = "NP_NONNULL_PARAM_VIOLATION", justification = "TODO") // TODO remove this
     public static <K, V, T> ProcessorMetaSupplier streamCacheP(
             @Nonnull String cacheName,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
@@ -249,6 +253,7 @@ public final class SourceProcessors {
      * )}.
      */
     @Nonnull
+    @SuppressFBWarnings(value = "NP_NONNULL_PARAM_VIOLATION", justification = "TODO") // TODO remove this
     public static <K, V, T> ProcessorMetaSupplier streamRemoteCacheP(
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig,

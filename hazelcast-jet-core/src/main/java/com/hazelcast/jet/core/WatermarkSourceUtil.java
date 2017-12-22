@@ -50,8 +50,14 @@ public class WatermarkSourceUtil<T> {
     private long lastEmittedWm = Long.MIN_VALUE;
     private boolean allAreIdle;
 
-    private AppendableTraverser<Object> flatMapTraverser = new AppendableTraverser<>(2);
-
+    /**
+     * TODO
+     * @param initialPartitionCount
+     * @param idleTimeoutMillis
+     * @param getTimestampF
+     * @param newWmPolicyF
+     * @param wmEmitPolicy
+     */
     public WatermarkSourceUtil(int initialPartitionCount, long idleTimeoutMillis,
                                @Nonnull DistributedToLongFunction<T> getTimestampF,
                                @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
@@ -160,28 +166,23 @@ public class WatermarkSourceUtil<T> {
         }
     }
 
-    public Traverser<Object> flatMapEvent(T event, int partitionIndex) {
-        return flatMapEvent(System.nanoTime(), event, partitionIndex);
-    }
-
-    // package-visible for tests
-    Traverser<Object> flatMapEvent(long now, T event, int partitionIndex) {
-        assert flatMapTraverser.isEmpty() : "Traverser wasn't empty";
-
-        flatMapTraverser.append(event);
-        Watermark wm = observeEvent(now, event, partitionIndex);
-        if (wm != null) {
-            flatMapTraverser.append(wm);
-        }
-        return flatMapTraverser;
-    }
-
+    /**
+     * TODO
+     * @param partitionKeyMapper
+     * @param <K>
+     * @return
+     */
     public <K> Traverser<Entry<BroadcastKey<K>, Object>> saveToSnapshot(IntFunction<K> partitionKeyMapper) {
         return traverseStream(
                 IntStream.range(0, watermarks.length)
                          .mapToObj(i -> entry(broadcastKey(partitionKeyMapper.apply(i)), watermarks[i])));
     }
 
+    /**
+     * TODO
+     * @param partitionIndex
+     * @param value
+     */
     public void restoreFromSnapshot(int partitionIndex, Object value) {
         watermarks[partitionIndex] = (long) value;
     }

@@ -497,7 +497,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 predicate, projection, initialPos, getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "checkstyle:parameternumber"})
     public static <K, V, T> ProcessorMetaSupplier streamRemoteMapP(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
@@ -528,7 +528,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 predicate, projection, initialPos, getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "checkstyle:parameternumber"})
     public static <K, V, T> ProcessorMetaSupplier streamRemoteCacheP(
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig,
