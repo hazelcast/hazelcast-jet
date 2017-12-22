@@ -52,7 +52,6 @@ import com.hazelcast.util.function.Predicate;
 
 import javax.annotation.Nonnull;
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -60,9 +59,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.IntConsumer;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.client.HazelcastClient.newHazelcastClient;
@@ -90,12 +87,21 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     private static final int MAX_FETCH_SIZE = 128;
 
     private final EventJournalReader<E> eventJournalReader;
+
     /**
-     * Index is the real HZ partition number, value is the 0-based partition index or -1,
-     * if that partition is not assigned to us.
+     * List of assigned HZ partitions. Length is equal to number of assigned partitions.
+     */
+    private final int[] assignedPartitions;
+
+    /**
+     * If assignedPartitions is [1, 3], assignedPartitionsIndexes will be [-1, 0, -1, 1].
+     *
+     * That is, assignedPartitionsIndexes[partition] will tell us what's the
+     * 0-based index of that partition or -1, if that partition is not assigned
+     * to us.
      */
     private final int[] assignedPartitionsIndexes;
-    private final List<Integer> assignedPartitions;
+
     private final Predicate<E> predicate;
     private final Projection<E, T> projection;
     private final JournalInitialPosition initialPos;
@@ -108,17 +114,12 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     private final Map<Integer, Long> readOffsets = new HashMap<>();
 
     private final Map<Integer, ICompletableFuture<ReadResultSet<T>>> readFutures = new HashMap<>();
-
-    private Traverser<Object> outputTraverser;
     private Traverser<Entry<BroadcastKey<Object>, Object>> snapshotTraverser;
-
-    // keep track of pendingItem's offset and partition
-    private long pendingItemOffset;
-    private int pendingItemPartition;
-
-    // callback which will update the currently pending offset only after the item is emitted
-    private Consumer<Object> updateOffsetFn = eventOrWm -> emitOffsets.put(pendingItemPartition, pendingItemOffset + 1);
+    private int currentPartition;
     private Iterator<Entry<Integer, ICompletableFuture<ReadResultSet<T>>>> iterator;
+    private ReadResultSet<T> resultSet;
+    private int resultSetPosition;
+    private Watermark pendingWatermark;
 
     StreamEventJournalP(@Nonnull EventJournalReader<E> eventJournalReader,
                         @Nonnull List<Integer> assignedPartitions,
@@ -136,22 +137,19 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         this.initialPos = initialPos;
         this.isRemoteReader = isRemoteReader;
 
-        this.assignedPartitions = assignedPartitions;
-        this.assignedPartitionsIndexes = new int[assignedPartitions.stream().mapToInt(Integer::intValue).max().orElse(0) + 1];
-        Arrays.fill(this.assignedPartitionsIndexes, -1);
-        for (int i = 0; i < assignedPartitions.size(); i++) {
-            this.assignedPartitionsIndexes[assignedPartitions.get(i)] = i;
+        this.assignedPartitions = assignedPartitions.stream().mapToInt(Integer::intValue).toArray();
+        this.assignedPartitionsIndexes = new int[IntStream.of(this.assignedPartitions).max().orElse(-1) + 1];
+        for (int i = 0, j = 0; i < this.assignedPartitionsIndexes.length; i++) {
+            this.assignedPartitionsIndexes[i] = this.assignedPartitions[j] == i ? j++ : -1;
         }
 
-        // TODO configure timeout
         watermarkSourceUtil = new WatermarkSourceUtil<>(assignedPartitions.size(), idleTimeoutMillis, getTimestampF,
                 newWmPolicyF, wmEmitPolicy);
     }
 
     @Override
     protected void init(@Nonnull Context context) {
-        Map<Integer, ICompletableFuture<EventJournalInitialSubscriberState>> futures = IntStream.of(assignedPartitionsIndexes)
-            .filter(i -> i >= 0)
+        Map<Integer, ICompletableFuture<EventJournalInitialSubscriberState>> futures = IntStream.of(assignedPartitions)
             .mapToObj(partition -> entry(partition, eventJournalReader.subscribeToEventJournal(partition)))
             .collect(toMap(Entry::getKey, Entry::getValue));
         futures.forEach((partition, future) -> uncheckRun(() -> readOffsets.put(partition, getSequence(future.get()))));
@@ -163,17 +161,42 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         if (readFutures.isEmpty()) {
             initialRead();
         }
-        if (outputTraverser == null) {
-            Traverser<Object> t = nextTraverser();
-            if (t != null) {
-                outputTraverser = t.onFirstNull(() -> outputTraverser = null);
+        if (pendingWatermark != null) {
+            if (!tryEmit(pendingWatermark)) {
+                return false;
+            }
+            pendingWatermark = null;
+        }
+        do {
+            tryGetNextResultSet();
+            if (resultSet == null) {
+                break;
+            }
+            emitResultSet();
+        } while (resultSet != null);
+        return false;
+    }
+
+    private void emitResultSet() {
+        assert resultSet != null : "null resultSet";
+        while (resultSetPosition < resultSet.size()) {
+            T event = resultSet.get(resultSetPosition);
+            if (!tryEmit(event)) {
+                return;
+            }
+            resultSetPosition++;
+            emitOffsets.put(currentPartition, resultSet.getSequence(resultSetPosition) + 1);
+            pendingWatermark = watermarkSourceUtil.observeEvent(event, assignedPartitionsIndexes[currentPartition]);
+            if (pendingWatermark != null) {
+                if (!tryEmit(pendingWatermark)) {
+                    return;
+                }
+                pendingWatermark = null;
             }
         }
-
-        if (outputTraverser != null) {
-            emitFromTraverser(outputTraverser, updateOffsetFn);
-        }
-        return false;
+        // we're done with current resultSet
+        resultSetPosition = 0;
+        resultSet = null;
     }
 
     @Override
@@ -184,7 +207,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                             .map(e -> entry(broadcastKey(e.getKey()), e.getValue()));
 
             Traverser<Entry<BroadcastKey<Object>, Object>> wsuTraverser =
-                    watermarkSourceUtil.saveToSnapshot(i -> "wm" + assignedPartitions.get(i));
+                    watermarkSourceUtil.saveToSnapshot(i -> "wm" + assignedPartitions[i]);
 
             snapshotTraverser = Traverser.over(ourTraverser, wsuTraverser)
                     .flatMap(Function.identity())
@@ -238,40 +261,27 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         return initialPos == START_FROM_CURRENT ? state.getNewestSequence() + 1 : state.getOldestSequence();
     }
 
-    private Traverser<Object> nextTraverser() {
-        ReadResultSet<T> resultSet = nextResultSet();
-        if (resultSet == null) {
-            Watermark wm = watermarkSourceUtil.handleNoEvent();
-            return wm != null ? Traverser.over(wm) : null;
-        }
-
-        Traverser<T> traverser = traverseIterable(resultSet);
-
-        return peekIndex(traverser, i -> pendingItemOffset = resultSet.getSequence(i))
-                .flatMap(event -> watermarkSourceUtil.flatMapEvent(event, assignedPartitionsIndexes[pendingItemPartition]));
-    }
-
-    private ReadResultSet<T> nextResultSet() {
-        while (iterator.hasNext()) {
+    private void tryGetNextResultSet() {
+        while (resultSet == null && iterator.hasNext()) {
             Entry<Integer, ICompletableFuture<ReadResultSet<T>>> entry = iterator.next();
-            int partition = entry.getKey();
             if (!entry.getValue().isDone()) {
                 continue;
             }
-            ReadResultSet<T> resultSet = toResultSet(partition, entry.getValue());
-            if (resultSet == null || resultSet.size() == 0) {
-                // we got stale sequence or empty response, make another read
-                entry.setValue(readFromJournal(partition, readOffsets.get(partition)));
-                continue;
+            int partition = entry.getKey();
+            resultSet = toResultSet(partition, entry.getValue());
+            if (resultSet != null) {
+                assert resultSet.size() > 0 : "empty resultSet";
+                currentPartition = partition;
+                readOffsets.merge(partition, (long) resultSet.readCount(), Long::sum);
             }
-            pendingItemPartition = partition;
-            long newOffset = readOffsets.merge(partition, (long) resultSet.readCount(), Long::sum);
             // make another read on the same partition
-            entry.setValue(readFromJournal(partition, newOffset));
-            return resultSet;
+            entry.setValue(readFromJournal(partition, readOffsets.get(partition)));
         }
-        iterator = readFutures.entrySet().iterator();
-        return null;
+
+        if (!iterator.hasNext()) {
+            iterator = readFutures.entrySet().iterator();
+            pendingWatermark = watermarkSourceUtil.handleNoEvent();
+        }
     }
 
     private ReadResultSet<T> toResultSet(int partition, ICompletableFuture<ReadResultSet<T>> future) {
@@ -304,22 +314,6 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         logFine(getLogger(), "Reading from partition %s and offset %s", partition, offset);
         return eventJournalReader.readFromEventJournal(offset,
                 1, MAX_FETCH_SIZE, partition, predicate, projection);
-    }
-
-    /**
-     * Returns a new traverser, that will return same items as supplied {@code
-     * traverser} and before each item is returned a zero-based index is sent
-     * to the {@code action}.
-     */
-    private static <T> Traverser<T> peekIndex(Traverser<T> traverser, IntConsumer action) {
-        int[] count = {0};
-        return () -> {
-            T t = traverser.next();
-            if (t != null) {
-                action.accept(count[0]++);
-            }
-            return t;
-        };
     }
 
     private static <E, T> Projection<E, T> toProjection(Function<E, T> projectionFn) {
