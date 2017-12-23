@@ -19,12 +19,10 @@ package com.hazelcast.jet.impl.pipeline;
 import com.hazelcast.jet.ComputeStage;
 import com.hazelcast.jet.GroupAggregateBuilder;
 import com.hazelcast.jet.StageWithGrouping;
-import com.hazelcast.jet.StageWithGroupingAndTimestamp;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.impl.pipeline.transform.CoGroupTransform;
 import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
 
@@ -42,11 +40,6 @@ public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull DistributedFunction<? super T, ? extends K> keyFn
     ) {
         super(computeStage, keyFn, null, null);
-    }
-
-    @Nonnull @Override
-    public StageWithGroupingAndTimestamp<T, K> timestamp(@Nonnull DistributedToLongFunction<? super T> timestampFn) {
-        return new StageWithGroupingAndTimestampImpl<>(computeStage(), keyFn(), timestampFn);
     }
 
     @Nonnull

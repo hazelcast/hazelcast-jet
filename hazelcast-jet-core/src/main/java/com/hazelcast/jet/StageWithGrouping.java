@@ -34,9 +34,6 @@ public interface StageWithGrouping<T, K> {
     DistributedFunction<? super T, ? extends K> keyFn();
 
     @Nonnull
-    StageWithGroupingAndTimestamp<T, K> timestamp(@Nonnull DistributedToLongFunction<? super T> timestampFn);
-
-    @Nonnull
     <A, R> ComputeStage<Entry<K, R>> aggregate(
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp);
 

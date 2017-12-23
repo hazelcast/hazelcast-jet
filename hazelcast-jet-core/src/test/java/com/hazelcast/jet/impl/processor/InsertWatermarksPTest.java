@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByMinStep;
-import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
+import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.tumblingWinPolicy;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.WatermarkPolicyUtil.limitingTimestampAndWallClockLag;
@@ -65,7 +65,7 @@ public class InsertWatermarksPTest {
     private TestOutbox outbox;
     private List<Object> resultToCheck = new ArrayList<>();
     private Context context;
-    private WatermarkPolicy wmPolicy = withFixedLag(LAG).get();
+    private WatermarkPolicy wmPolicy = limitingLag(LAG).get();
     private WatermarkEmissionPolicy wmEmissionPolicy = (WatermarkEmissionPolicy) (currentWm, lastEmittedWm) ->
             currentWm > lastEmittedWm;
 
@@ -156,7 +156,7 @@ public class InsertWatermarksPTest {
 
     @Test
     public void when_zeroLag() {
-        wmPolicy = withFixedLag(0).get();
+        wmPolicy = limitingLag(0).get();
         doTest(
                 asList(
                         item(10),

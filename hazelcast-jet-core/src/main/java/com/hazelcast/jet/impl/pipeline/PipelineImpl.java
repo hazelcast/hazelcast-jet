@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.jet.ComputeStageWM;
+import com.hazelcast.jet.SourceWithWatermark;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.ComputeStage;
 import com.hazelcast.jet.Pipeline;
@@ -40,6 +42,11 @@ public class PipelineImpl implements Pipeline {
     @Nonnull @Override
     public <T> ComputeStage<T> drawFrom(@Nonnull Source<? extends T> source) {
         return new ComputeStageImpl<>(source, this);
+    }
+
+    @Nonnull @Override
+    public <T> ComputeStageWM<T> drawFrom(@Nonnull SourceWithWatermark<? extends T> source) {
+        return new ComputeStageWMImpl<>(source, this);
     }
 
     @Nonnull @Override

@@ -26,10 +26,15 @@ import java.util.List;
 public abstract class AbstractStage implements Stage {
 
     final PipelineImpl pipelineImpl;
-    final List<ComputeStage> upstream;
+    final List<? extends ComputeStage> upstream;
     final Transform transform;
 
-    AbstractStage(List<ComputeStage> upstream, List<Stage> downstream, Transform transform, PipelineImpl pipelineImpl) {
+    AbstractStage(
+            List<? extends ComputeStage> upstream,
+            List<Stage> downstream,
+            Transform transform,
+            PipelineImpl pipelineImpl
+    ) {
         this.upstream = upstream;
         this.transform = transform;
         this.pipelineImpl = pipelineImpl;

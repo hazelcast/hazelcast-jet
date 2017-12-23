@@ -22,7 +22,6 @@ import com.hazelcast.jet.Sink;
 import com.hazelcast.jet.SinkStage;
 import com.hazelcast.jet.Source;
 import com.hazelcast.jet.StageWithGrouping;
-import com.hazelcast.jet.StageWithTimestamp;
 import com.hazelcast.jet.Transform;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
@@ -34,7 +33,6 @@ import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.CoAggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.FilterTransform;
@@ -47,7 +45,6 @@ import com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform;
 import com.hazelcast.jet.impl.pipeline.transform.UnaryTransform;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -65,7 +62,7 @@ public class ComputeStageImpl<T> extends AbstractStage implements ComputeStage<T
     }
 
     ComputeStageImpl(
-            @Nullable ComputeStage upstream,
+            @Nonnull ComputeStage upstream,
             @Nonnull Transform<? extends T> transform,
             @Nonnull PipelineImpl pipeline
     ) {
@@ -73,7 +70,7 @@ public class ComputeStageImpl<T> extends AbstractStage implements ComputeStage<T
     }
 
     ComputeStageImpl(
-            @Nonnull List<ComputeStage> upstream,
+            @Nonnull List<? extends ComputeStage> upstream,
             @Nonnull Transform<? extends T> transform,
             @Nonnull PipelineImpl pipeline
     ) {
@@ -100,11 +97,6 @@ public class ComputeStageImpl<T> extends AbstractStage implements ComputeStage<T
     @Nonnull @Override
     public <K> StageWithGrouping<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn) {
         return new StageWithGroupingImpl<>(this, keyFn);
-    }
-
-    @Nonnull @Override
-    public StageWithTimestamp<T> timestamp(@Nonnull DistributedToLongFunction<? super T> timestampFn) {
-        return new StageWithTimestampImpl<>(this, timestampFn);
     }
 
     @Nonnull @Override

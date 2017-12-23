@@ -52,6 +52,9 @@ public interface Pipeline {
     @Nonnull
     <T> ComputeStage<T> drawFrom(@Nonnull Source<? extends T> source);
 
+    @Nonnull
+    <T> ComputeStageWM<T> drawFrom(@Nonnull SourceWithWatermark<? extends T> source);
+
     /**
      * Transforms the pipeline into a Jet DAG, which can be submitted for
      * execution to a Jet instance.

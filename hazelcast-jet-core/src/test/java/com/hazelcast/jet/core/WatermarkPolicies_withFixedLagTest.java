@@ -22,7 +22,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
+import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static org.junit.Assert.assertEquals;
 
 @Category(QuickTest.class)
@@ -30,7 +30,7 @@ import static org.junit.Assert.assertEquals;
 public class WatermarkPolicies_withFixedLagTest {
 
     private static final long LAG = 10;
-    private WatermarkPolicy p = withFixedLag(LAG).get();
+    private WatermarkPolicy p = limitingLag(LAG).get();
 
     @Test
     public void when_outOfOrderEvents_then_monotonicWm() {

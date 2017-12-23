@@ -18,20 +18,13 @@ package com.hazelcast.jet;
 
 import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.function.DistributedToLongFunction;
-
-import javax.annotation.Nonnull;
 
 /**
- * A transform that takes no input streams and produces an output stream.
- * <p>
- * See {@link Sources} for possible choices.
- *
- * @param <T> the stream item type
+ * Javadoc pending.
  */
-public interface Source<T> extends Transform<T> {
-    SourceWithWatermark<T> withWatermark(
-            @Nonnull DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy
-    );
+public interface SourceWithWatermark<T> extends Transform<T> {
+
+    Source<T> source();
+
+    DistributedSupplier<WatermarkPolicy> watermarkPolicy();
 }

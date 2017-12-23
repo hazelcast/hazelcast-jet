@@ -153,9 +153,6 @@ public interface ComputeStage<T> extends Stage {
     @Nonnull
     <K> StageWithGrouping<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);
 
-    @Nonnull
-    StageWithTimestamp<T> timestamp(@Nonnull DistributedToLongFunction<? super T> timestampFn);
-
     /**
      * Adds a peeking layer to this compute pipeline which logs its output. For
      * each item the pipeline emits, it:

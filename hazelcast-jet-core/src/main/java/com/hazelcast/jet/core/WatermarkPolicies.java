@@ -44,7 +44,7 @@ public final class WatermarkPolicies {
      *            and the watermark
      */
     @Nonnull
-    public static DistributedSupplier<WatermarkPolicy> withFixedLag(long lag) {
+    public static DistributedSupplier<WatermarkPolicy> limitingLag(long lag) {
         checkNotNegative(lag, "lag must not be negative");
 
         return () -> new WatermarkPolicyBase() {

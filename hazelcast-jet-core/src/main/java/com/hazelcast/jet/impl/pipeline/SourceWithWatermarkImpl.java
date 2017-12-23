@@ -16,43 +16,36 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.SourceWithWatermark;
-import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.Source;
+import com.hazelcast.jet.SourceWithWatermark;
 import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.function.DistributedToLongFunction;
 
-import javax.annotation.Nonnull;
+/**
+ * Javadoc pending.
+ */
+public class SourceWithWatermarkImpl<T> implements SourceWithWatermark<T> {
 
-public class SourceImpl<T> implements Source<T> {
-    private final String name;
-    private final ProcessorMetaSupplier metaSupplier;
+    private final SourceImpl<T> source;
+    private final DistributedSupplier<WatermarkPolicy> wmPolicy;
 
-    public SourceImpl(String name, ProcessorMetaSupplier metaSupplier) {
-        this.metaSupplier = metaSupplier;
-        this.name = name;
+    SourceWithWatermarkImpl(SourceImpl<T> source, DistributedSupplier<WatermarkPolicy> wmPolicy) {
+        this.source = source;
+        this.wmPolicy = wmPolicy;
     }
 
     @Override
     public String name() {
-        return name;
-    }
-
-    public ProcessorMetaSupplier metaSupplier() {
-        return metaSupplier;
+        return null;
     }
 
     @Override
-    public String toString() {
-        return name;
+    public Source<T> source() {
+        return source;
     }
 
     @Override
-    public SourceWithWatermark<T> withWatermark(
-            @Nonnull DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy
-    ) {
-        return new SourceWithWatermarkImpl<>(this, wmPolicy);
+    public DistributedSupplier<WatermarkPolicy> watermarkPolicy() {
+        return wmPolicy;
     }
 }
