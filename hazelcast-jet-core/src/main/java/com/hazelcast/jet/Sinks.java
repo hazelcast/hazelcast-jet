@@ -120,6 +120,13 @@ public final class Sinks {
      * no matter if they are locked or not.
      * Use {@link #mapWithEntryProcessor} if you need locking.
      *
+     * The ability of this sink to provide the exactly-once guarantee depends
+     * on the properties of the supplied merge function.
+     * In order to provide the exactly-once guarantee,
+     * the merge function must provide <i>idempotent updates</i>,
+     * which must satisfy the rule {@code mergeFn.apply(v, e) = v } for any {@code e}
+     * it was already applied to.
+
      * @param mapName   name of the map
      * @param toKeyFn   function that extracts the key from the input item
      * @param toValueFn function that extracts the value from the input item
@@ -201,6 +208,13 @@ public final class Sinks {
      * <b>Note:</b> This operation is <em>NOT</em> lock-aware, it will process the entries
      * no matter if they are locked or not.
      * Use {@link #mapWithEntryProcessor} if you need locking.
+     *
+     * The ability of this sink to provide the exactly-once guarantee depends
+     * on the properties of the supplied update function.
+     * In order to provide the exactly-once guarantee,
+     * the update function must provide <i>idempotent updates</i>,
+     * which must satisfy the rule {@code updateFn.apply(v, e) = v } for any {@code e}
+     * it was already applied to.
      *
      * @param mapName   name of the map
      * @param toKeyFn   function that extracts the key from the input item
