@@ -31,8 +31,10 @@ import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestOutbox.MockData;
 import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.core.test.TestSupport;
+import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
+import com.hazelcast.jet.impl.execution.WatermarkCoalescer;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
@@ -47,6 +49,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
+import javax.annotation.Nonnull;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.Collection;
@@ -60,10 +63,10 @@ import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
+import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.core.processor.KafkaProcessors.streamKafkaP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
-import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.IntStream.range;
@@ -112,7 +115,8 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         DAG dag = new DAG();
 
         Vertex source = dag.newVertex("source",
-                streamKafkaP(properties, topic1Name, topic2Name)).localParallelism(4);
+                streamKafkaP(properties, Entry<Integer, String>::getKey, withFixedLag(1000), suppressDuplicates(), 10_000,
+                        topic1Name, topic2Name)).localParallelism(4);
 
         Vertex sink = dag.newVertex("sink", writeListP("sink"))
                          .localParallelism(1);
@@ -191,7 +195,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
 
     @Test
     public void when_snapshotSaved_then_offsetsRestored() throws Exception {
-        StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name), Util::entry, 1, 60000);
+        StreamKafkaP processor = createProcessor(1, Util::entry);
         TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
         processor.init(outbox, new TestProcessorContext().setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE));
 
@@ -207,7 +211,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         assertEquals(entry(1, "1"), consumeEventually(processor, outbox));
 
         // create new processor and restore snapshot
-        processor = new StreamKafkaP(properties, asList(topic1Name, topic2Name), Util::entry, 1, 60000);
+        processor = createProcessor(1, Util::entry);
         outbox = new TestOutbox(new int[]{10}, 10);
         processor.init(outbox, new TestProcessorContext().setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE));
 
@@ -224,12 +228,18 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         assertNoMoreItems(processor, outbox);
     }
 
+    private <T> StreamKafkaP<Integer, String, T> createProcessor(int globalParallelism,
+            @Nonnull DistributedBiFunction<Integer, String, T> projectionFn) {
+        return new StreamKafkaP<>(properties, Arrays.asList(topic1Name, topic2Name), projectionFn, globalParallelism,
+                100, item -> System.currentTimeMillis(), withFixedLag(1000), suppressDuplicates(), 10_000);
+    }
+
     @Test
     public void when_partitionAdded_then_consumedFromBeginning() throws Exception {
         properties.setProperty("metadata.max.age.ms", "100");
-        StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name), Util::entry, 1, 100);
+        StreamKafkaP processor = createProcessor(1, Util::entry);
         TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
-        processor.init(outbox, new TestProcessorContext().setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE));
+        processor.init(outbox, new TestProcessorContext());
 
         produce(topic1Name, 0, "0");
         assertEquals(entry(0, "0"), consumeEventually(processor, outbox));
@@ -258,23 +268,23 @@ public class StreamKafkaPTest extends KafkaTestSupport {
     }
 
     @Test
-    public void when_notEnoughPartitions_thenFail() throws Exception {
+    public void when_notEnoughPartitions_thenEmitIdleMsg() throws Exception {
         // Set global parallelism to higher number than number of partitions
-        StreamKafkaP processor = new StreamKafkaP<>(properties, Arrays.asList(topic1Name, topic2Name), Util::entry,
-                INITIAL_PARTITION_COUNT * 2 + 1, 500);
+        StreamKafkaP processor = createProcessor(INITIAL_PARTITION_COUNT * 2 + 1, Util::entry);
         TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
         TestProcessorContext context = new TestProcessorContext()
-                .setGlobalProcessorIndex(1)
-                .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
+                .setGlobalProcessorIndex(INITIAL_PARTITION_COUNT * 2);
 
-        expectedException.expectMessage("global parallelism");
         processor.init(outbox, context);
+        processor.complete();
+
+        assertEquals(WatermarkCoalescer.IDLE_MESSAGE, outbox.queueWithOrdinal(0).poll());
     }
 
     @Test
     public void when_customProjection_then_used() {
         // When
-        StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name), (k, v) -> k + "=" + v, 1, 500);
+        StreamKafkaP processor = createProcessor(1, (k, v) -> k + "=" + v);
         TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
         processor.init(outbox, new TestProcessorContext());
         produce(topic1Name, 0, "0");
