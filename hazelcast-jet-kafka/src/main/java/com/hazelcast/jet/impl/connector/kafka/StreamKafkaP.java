@@ -83,7 +83,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
     /**
      * Key: topicName<br>
      * Value: partition offsets, at index I is offset for partition I.<br>
-     * Offsets are -1 initially and remain -1 for unassigned partitions.
+     * Offsets are -1 initially and remain -1 for partitions not assigned to this instance.
      */
     private final Map<String, long[]> offsets = new HashMap<>();
     private Traverser<Entry<BroadcastKey<TopicPartition>, Long>> snapshotTraverser;

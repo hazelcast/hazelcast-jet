@@ -26,6 +26,7 @@ import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestOutbox.MockData;
@@ -73,12 +74,14 @@ import static java.util.stream.IntStream.range;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastSerialClassRunner.class)
 public class StreamKafkaPTest extends KafkaTestSupport {
 
     private static final int INITIAL_PARTITION_COUNT = 4;
+    private static final long LAG = 3;
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
@@ -194,8 +197,40 @@ public class StreamKafkaPTest extends KafkaTestSupport {
     }
 
     @Test
+    public void when_eventsInAllPartitions_then_watermarks() {
+        fail("todo");
+    }
+
+    @Test
+    public void when_noAssignedPartitionAndAddedLater_then_resumesFromIdle() {
+        fail("todo");
+    }
+
+    @Test
+    public void test_watermarks_eventsInSinglePartition() {
+//        StreamKafkaP processor = createProcessor(1, Util::entry, 5000);
+//        TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
+//        processor.init(outbox, new TestProcessorContext());
+//
+//        produce(topic1Name, 10, "foo");
+//        System.out.println(new Date() + ": xxx");
+//        assertEquals(entry(10, "foo"), consumeEventually(processor, outbox));
+//        assertEquals(new Watermark(10 - LAG), consumeEventually(processor, outbox));
+
+        // When
+        StreamKafkaP processor = createProcessor(1, Util::entry, 10_000);
+        TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
+        processor.init(outbox, new TestProcessorContext());
+        produce(topic1Name, 10, "foo");
+
+        // Then
+        assertEquals(entry(10, "foo"), consumeEventually(processor, outbox));
+        assertEquals(new Watermark(10 - LAG), consumeEventually(processor, outbox));
+    }
+
+    @Test
     public void when_snapshotSaved_then_offsetsRestored() throws Exception {
-        StreamKafkaP processor = createProcessor(1, Util::entry);
+        StreamKafkaP processor = createProcessor(1, Util::entry, 10_000);
         TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
         processor.init(outbox, new TestProcessorContext().setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE));
 
@@ -211,7 +246,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         assertEquals(entry(1, "1"), consumeEventually(processor, outbox));
 
         // create new processor and restore snapshot
-        processor = createProcessor(1, Util::entry);
+        processor = createProcessor(1, Util::entry, 10_000);
         outbox = new TestOutbox(new int[]{10}, 10);
         processor.init(outbox, new TestProcessorContext().setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE));
 
@@ -228,16 +263,20 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         assertNoMoreItems(processor, outbox);
     }
 
-    private <T> StreamKafkaP<Integer, String, T> createProcessor(int globalParallelism,
-            @Nonnull DistributedBiFunction<Integer, String, T> projectionFn) {
+    private <T> StreamKafkaP<Integer, String, T> createProcessor(
+            int globalParallelism,
+            @Nonnull DistributedBiFunction<Integer, String, T> projectionFn,
+            long idleTimeoutMillis
+    ) {
         return new StreamKafkaP<>(properties, Arrays.asList(topic1Name, topic2Name), projectionFn, globalParallelism,
-                100, item -> System.currentTimeMillis(), withFixedLag(1000), suppressDuplicates(), 10_000);
+                100, e -> e instanceof Entry ? (int) ((Entry) e).getKey() : System.currentTimeMillis(),
+                withFixedLag(LAG), suppressDuplicates(), idleTimeoutMillis);
     }
 
     @Test
     public void when_partitionAdded_then_consumedFromBeginning() throws Exception {
         properties.setProperty("metadata.max.age.ms", "100");
-        StreamKafkaP processor = createProcessor(1, Util::entry);
+        StreamKafkaP processor = createProcessor(1, Util::entry, 10_000);
         TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
         processor.init(outbox, new TestProcessorContext());
 
@@ -268,9 +307,9 @@ public class StreamKafkaPTest extends KafkaTestSupport {
     }
 
     @Test
-    public void when_notEnoughPartitions_thenEmitIdleMsg() throws Exception {
+    public void when_noAssignedPartitions_thenEmitIdleMsgImmediately() throws Exception {
         // Set global parallelism to higher number than number of partitions
-        StreamKafkaP processor = createProcessor(INITIAL_PARTITION_COUNT * 2 + 1, Util::entry);
+        StreamKafkaP processor = createProcessor(INITIAL_PARTITION_COUNT * 2 + 1, Util::entry, 100_000);
         TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
         TestProcessorContext context = new TestProcessorContext()
                 .setGlobalProcessorIndex(INITIAL_PARTITION_COUNT * 2);
@@ -284,25 +323,21 @@ public class StreamKafkaPTest extends KafkaTestSupport {
     @Test
     public void when_customProjection_then_used() {
         // When
-        StreamKafkaP processor = createProcessor(1, (k, v) -> k + "=" + v);
+        StreamKafkaP processor = createProcessor(1, (k, v) -> k + "=" + v, 10_000);
         TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
         processor.init(outbox, new TestProcessorContext());
         produce(topic1Name, 0, "0");
 
         // Then
-        assertTrueEventually(() -> {
-            assertFalse(processor.complete());
-            assertFalse("no item in outbox", outbox.queueWithOrdinal(0).isEmpty());
-        }, 3);
-        assertEquals("0=0", outbox.queueWithOrdinal(0).poll());
+        assertEquals("0=0", consumeEventually(processor, outbox));
     }
 
-    private Entry<Integer, String> consumeEventually(Processor processor, TestOutbox outbox) {
+    private <T> T consumeEventually(Processor processor, TestOutbox outbox) {
         assertTrueEventually(() -> {
             assertFalse(processor.complete());
             assertFalse("no item in outbox", outbox.queueWithOrdinal(0).isEmpty());
-        }, 3);
-        return (Entry<Integer, String>) outbox.queueWithOrdinal(0).poll();
+        }, 12);
+        return (T) outbox.queueWithOrdinal(0).poll();
     }
 
     private void assertNoMoreItems(StreamKafkaP processor, TestOutbox outbox) throws InterruptedException {
