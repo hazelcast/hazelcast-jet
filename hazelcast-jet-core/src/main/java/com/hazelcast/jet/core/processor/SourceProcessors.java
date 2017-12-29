@@ -20,8 +20,12 @@ import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.jet.JournalInitialPosition;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.WatermarkEmissionPolicy;
+import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
+import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.impl.connector.ReadFilesP;
 import com.hazelcast.jet.impl.connector.ReadIListP;
 import com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP;
@@ -31,7 +35,6 @@ import com.hazelcast.jet.impl.connector.StreamSocketP;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.query.Predicate;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.nio.charset.Charset;
@@ -90,30 +93,43 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#mapJournal(String, JournalInitialPosition)}.
+     * {@link com.hazelcast.jet.Sources#mapJournal(String,
+     * JournalInitialPosition, DistributedToLongFunction, DistributedSupplier,
+     * WatermarkEmissionPolicy, long)}.
      */
     @Nonnull
-    public static ProcessorMetaSupplier streamMapP(
-            @Nonnull String mapName, @Nonnull JournalInitialPosition initialPos
+    public static <K, V> ProcessorMetaSupplier streamMapP(
+            @Nonnull String mapName,
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<Entry<K, V>> getTimestampF,
+            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis
     ) {
-        return streamMapP(mapName, mapPutEvents(), mapEventToEntry(), initialPos);
+        return streamMapP(mapName, mapPutEvents(), mapEventToEntry(), initialPos, getTimestampF,
+                newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
     }
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#mapJournal(String, DistributedPredicate,
-     * DistributedFunction, JournalInitialPosition)}.
+     * {@link com.hazelcast.jet.Sources#mapJournal(String,
+     * DistributedPredicate, DistributedFunction, JournalInitialPosition,
+     * DistributedToLongFunction, DistributedSupplier,
+     * WatermarkEmissionPolicy, long)}.
      */
     @Nonnull
-    @SuppressFBWarnings(value = "NP_NONNULL_PARAM_VIOLATION", justification = "TODO") // TODO remove this
     public static <K, V, T> ProcessorMetaSupplier streamMapP(
             @Nonnull String mapName,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<T> getTimestampF,
+            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis
     ) {
-        // TODO
-        return StreamEventJournalP.streamMapP(mapName, predicateFn, projectionFn, initialPos, null, null, null, -1);
+        return StreamEventJournalP.streamMapP(mapName, predicateFn, projectionFn, initialPos,
+                getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
     }
 
     /**
@@ -157,35 +173,47 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#remoteMapJournal(String, ClientConfig, JournalInitialPosition)}.
+     * {@link com.hazelcast.jet.Sources#remoteMapJournal(String, ClientConfig,
+     * JournalInitialPosition, DistributedToLongFunction, DistributedSupplier,
+     * WatermarkEmissionPolicy, long)}.
      */
     @Nonnull
-    public static ProcessorMetaSupplier streamRemoteMapP(
+    public static <K, V> ProcessorMetaSupplier streamRemoteMapP(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<Entry<K, V>> getTimestampF,
+            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis
     ) {
-        return streamRemoteMapP(mapName, clientConfig, mapPutEvents(), mapEventToEntry(), initialPos);
+        return streamRemoteMapP(mapName, clientConfig, mapPutEvents(), mapEventToEntry(), initialPos,
+                getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
     }
 
     /**
      * Returns a supplier of processors for {@link
-     * com.hazelcast.jet.Sources#remoteMapJournal(
-     * String, ClientConfig, DistributedPredicate, DistributedFunction, JournalInitialPosition
-     * )}.
+     * com.hazelcast.jet.Sources#remoteMapJournal(String, ClientConfig,
+     * DistributedPredicate, DistributedFunction, JournalInitialPosition,
+     * DistributedToLongFunction, DistributedSupplier, WatermarkEmissionPolicy,
+     * long)}.
      */
     @Nonnull
-    @SuppressFBWarnings(value = "NP_NONNULL_PARAM_VIOLATION", justification = "TODO") // TODO remove this
+    @SuppressWarnings("checkstyle:parameternumber")
     public static <K, V, T> ProcessorMetaSupplier streamRemoteMapP(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<T> getTimestampF,
+            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis
     ) {
-        // TODO
         return StreamEventJournalP.streamRemoteMapP(
-                mapName, clientConfig, predicateFn, projectionFn, initialPos, null, null, null, -1);
+                mapName, clientConfig, predicateFn, projectionFn, initialPos, getTimestampF, newWmPolicyF,
+                wmEmitPolicy, idleTimeoutMillis);
     }
 
     /**
@@ -199,29 +227,42 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#cacheJournal(String, JournalInitialPosition)}.
+     * {@link com.hazelcast.jet.Sources#cacheJournal(String, JournalInitialPosition,
+     * DistributedToLongFunction, DistributedSupplier, WatermarkEmissionPolicy, long)}.
      */
     @Nonnull
-    public static ProcessorMetaSupplier streamCacheP(@Nonnull String cacheName,
-                                                     @Nonnull JournalInitialPosition initialPos) {
-        return streamCacheP(cacheName, cachePutEvents(), cacheEventToEntry(), initialPos);
+    public static <K, V> ProcessorMetaSupplier streamCacheP(
+            @Nonnull String cacheName,
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<Entry<K, V>> getTimestampF,
+            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis
+    ) {
+        return streamCacheP(cacheName, cachePutEvents(), cacheEventToEntry(), initialPos,
+                getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
     }
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#cacheJournal(String, DistributedPredicate,
-     * DistributedFunction, JournalInitialPosition)}.
+     * {@link com.hazelcast.jet.Sources#cacheJournal(String,
+     * DistributedPredicate, DistributedFunction, JournalInitialPosition,
+     * DistributedToLongFunction, DistributedSupplier, WatermarkEmissionPolicy,
+     * long)}.
      */
     @Nonnull
-    @SuppressFBWarnings(value = "NP_NONNULL_PARAM_VIOLATION", justification = "TODO") // TODO remove this
     public static <K, V, T> ProcessorMetaSupplier streamCacheP(
             @Nonnull String cacheName,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<T> getTimestampF,
+            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis
     ) {
-        // TODO
-        return StreamEventJournalP.streamCacheP(cacheName, predicateFn, projectionFn, initialPos, null, null, null, -1);
+        return StreamEventJournalP.streamCacheP(cacheName, predicateFn, projectionFn, initialPos,
+                getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
     }
 
     /**
@@ -237,33 +278,46 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#remoteCacheJournal(String, ClientConfig, JournalInitialPosition)}.
+     * {@link com.hazelcast.jet.Sources#remoteCacheJournal(String, ClientConfig,
+     * JournalInitialPosition, DistributedToLongFunction, DistributedSupplier,
+     * WatermarkEmissionPolicy, long)}.
      */
     @Nonnull
-    public static ProcessorMetaSupplier streamRemoteCacheP(
-            @Nonnull String cacheName, @Nonnull ClientConfig clientConfig, @Nonnull JournalInitialPosition initialPos
+    public static <K, V> ProcessorMetaSupplier streamRemoteCacheP(
+            @Nonnull String cacheName,
+            @Nonnull ClientConfig clientConfig,
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<Entry<K, V>> getTimestampF,
+            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis
     ) {
-        return streamRemoteCacheP(cacheName, clientConfig, cachePutEvents(), cacheEventToEntry(), initialPos);
+        return streamRemoteCacheP(cacheName, clientConfig, cachePutEvents(), cacheEventToEntry(), initialPos,
+                getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
     }
 
     /**
      * Returns a supplier of processors for {@link
-     * com.hazelcast.jet.Sources#remoteCacheJournal(
-     * String, ClientConfig, DistributedPredicate, DistributedFunction, JournalInitialPosition
-     * )}.
+     * com.hazelcast.jet.Sources#remoteCacheJournal(String, ClientConfig,
+     * DistributedPredicate, DistributedFunction, JournalInitialPosition,
+     * DistributedToLongFunction, DistributedSupplier, WatermarkEmissionPolicy,
+     * long)}.
      */
     @Nonnull
-    @SuppressFBWarnings(value = "NP_NONNULL_PARAM_VIOLATION", justification = "TODO") // TODO remove this
+    @SuppressWarnings("checkstyle:parameternumber")
     public static <K, V, T> ProcessorMetaSupplier streamRemoteCacheP(
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<T> getTimestampF,
+            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis
     ) {
-        // TODO
-        return StreamEventJournalP.streamRemoteCacheP(
-                cacheName, clientConfig, predicateFn, projectionFn, initialPos, null, null, null, -1);
+        return StreamEventJournalP.streamRemoteCacheP(cacheName, clientConfig, predicateFn, projectionFn, initialPos,
+                getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
     }
 
     /**

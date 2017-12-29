@@ -19,8 +19,12 @@ package com.hazelcast.jet;
 import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.WatermarkEmissionPolicy;
+import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
+import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.impl.SourceImpl;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.projection.Projection;
@@ -184,15 +188,21 @@ public final class Sources {
             @Nonnull String mapName,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<T> getTimestampF,
+            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis
     ) {
         return fromProcessor("mapJournalSource(" + mapName + ')',
-                streamMapP(mapName, predicateFn, projectionFn, initialPos));
+                streamMapP(mapName, predicateFn, projectionFn, initialPos, getTimestampF, newWmPolicyF, wmEmitPolicy,
+                        idleTimeoutMillis));
     }
 
     /**
      * Convenience for {@link #mapJournal(String, DistributedPredicate,
-     * DistributedFunction, JournalInitialPosition)} which will pass only
+     * DistributedFunction, JournalInitialPosition, DistributedToLongFunction,
+     * DistributedSupplier, WatermarkEmissionPolicy, long)} which will pass only
      * {@link com.hazelcast.core.EntryEventType#ADDED ADDED} and {@link
      * com.hazelcast.core.EntryEventType#UPDATED UPDATED} events and will
      * project the event's key and new value into a {@code Map.Entry}.
@@ -200,9 +210,14 @@ public final class Sources {
     @Nonnull
     public static <K, V> Source<Entry<K, V>> mapJournal(
             @Nonnull String mapName,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<Entry<K, V>> getTimestampF,
+            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis
     ) {
-        return mapJournal(mapName, mapPutEvents(), mapEventToEntry(), initialPos);
+        return mapJournal(mapName, mapPutEvents(), mapEventToEntry(), initialPos, getTimestampF, newWmPolicyF,
+                wmEmitPolicy, idleTimeoutMillis);
     }
 
     /**
@@ -306,31 +321,44 @@ public final class Sources {
      * @param <T> type of emitted item
      */
     @Nonnull
+    @SuppressWarnings("checkstyle:parameternumber")
     public static <K, V, T> Source<T> remoteMapJournal(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<T> getTimestampF,
+            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis
     ) {
         return fromProcessor("remoteMapJournalSource(" + mapName + ')',
-                streamRemoteMapP(mapName, clientConfig, predicateFn, projectionFn, initialPos));
+                streamRemoteMapP(mapName, clientConfig, predicateFn, projectionFn, initialPos, getTimestampF,
+                        newWmPolicyF, wmEmitPolicy, idleTimeoutMillis));
     }
 
     /**
-     * Convenience for {@link #remoteMapJournal(String, ClientConfig, DistributedPredicate,
-     * DistributedFunction, JournalInitialPosition)} which will pass only
-     * {@link com.hazelcast.core.EntryEventType#ADDED ADDED} and {@link
-     * com.hazelcast.core.EntryEventType#UPDATED UPDATED} events and will
-     * project the event's key and new value into a {@code Map.Entry}.
+     * Convenience for {@link #remoteMapJournal(String, ClientConfig,
+     * DistributedPredicate, DistributedFunction, JournalInitialPosition,
+     * DistributedToLongFunction, DistributedSupplier, WatermarkEmissionPolicy,
+     * long)} which will pass only {@link com.hazelcast.core.EntryEventType#ADDED
+     * ADDED} and {@link com.hazelcast.core.EntryEventType#UPDATED UPDATED}
+     * events and will project the event's key and new value into a {@code
+     * Map.Entry}.
      */
     @Nonnull
     public static <K, V> Source<Entry<K, V>> remoteMapJournal(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<Entry<K, V>> getTimestampF,
+            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis
     ) {
-        return remoteMapJournal(mapName, clientConfig, mapPutEvents(), mapEventToEntry(), initialPos);
+        return remoteMapJournal(mapName, clientConfig, mapPutEvents(), mapEventToEntry(), initialPos, getTimestampF,
+                newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
     }
 
     /**
@@ -387,16 +415,22 @@ public final class Sources {
             @Nonnull String cacheName,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<T> getTimestampF,
+            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis
     ) {
         return fromProcessor("cacheJournalSource(" + cacheName + ')',
-                streamCacheP(cacheName, predicateFn, projectionFn, initialPos)
+                streamCacheP(cacheName, predicateFn, projectionFn, initialPos, getTimestampF, newWmPolicyF, wmEmitPolicy,
+                        idleTimeoutMillis)
         );
     }
 
     /**
      * Convenience for {@link #cacheJournal(String, DistributedPredicate,
-     * DistributedFunction, JournalInitialPosition)} which will pass only
+     * DistributedFunction, JournalInitialPosition, DistributedToLongFunction,
+     * DistributedSupplier, WatermarkEmissionPolicy, long)} which will pass only
      * {@link com.hazelcast.cache.CacheEventType#CREATED CREATED} and {@link
      * com.hazelcast.cache.CacheEventType#UPDATED UPDATED} events and will
      * project the event's key and new value into a {@code Map.Entry}.
@@ -404,9 +438,14 @@ public final class Sources {
     @Nonnull
     public static <K, V> Source<Entry<K, V>> cacheJournal(
             @Nonnull String cacheName,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<Entry<K, V>> getTimestampF,
+            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis
     ) {
-        return cacheJournal(cacheName, cachePutEvents(), cacheEventToEntry(), initialPos);
+        return cacheJournal(cacheName, cachePutEvents(), cacheEventToEntry(), initialPos, getTimestampF, newWmPolicyF,
+                wmEmitPolicy, idleTimeoutMillis);
     }
 
     /**
@@ -458,31 +497,44 @@ public final class Sources {
      * @param <T> type of emitted item
      */
     @Nonnull
+    @SuppressWarnings("checkstyle:parameternumber")
     public static <K, V, T> Source<T> remoteCacheJournal(
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<T> getTimestampF,
+            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis
     ) {
         return fromProcessor("remoteCacheJournalSource(" + cacheName + ')',
-                streamRemoteCacheP(cacheName, clientConfig, predicateFn, projectionFn, initialPos));
+                streamRemoteCacheP(cacheName, clientConfig, predicateFn, projectionFn, initialPos, getTimestampF,
+                        newWmPolicyF, wmEmitPolicy, idleTimeoutMillis));
     }
 
     /**
-     * Convenience for {@link #remoteCacheJournal(String, ClientConfig, DistributedPredicate,
-     * DistributedFunction, JournalInitialPosition)} which will pass only
-     * {@link com.hazelcast.cache.CacheEventType#CREATED CREATED} and {@link
-     * com.hazelcast.cache.CacheEventType#UPDATED UPDATED} events and will
-     * project the event's key and new value into a {@code Map.Entry}.
+     * Convenience for {@link #remoteCacheJournal(String, ClientConfig,
+     * DistributedPredicate, DistributedFunction, JournalInitialPosition,
+     * DistributedToLongFunction, DistributedSupplier, WatermarkEmissionPolicy,
+     * long)} which will pass only {@link com.hazelcast.cache.CacheEventType#CREATED
+     * CREATED} and {@link com.hazelcast.cache.CacheEventType#UPDATED UPDATED}
+     * events and will project the event's key and new value into a {@code
+     * Map.Entry}.
      */
     @Nonnull
     public static <K, V> Source<Entry<K, V>> remoteCacheJournal(
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            @Nonnull DistributedToLongFunction<Entry<K, V>> getTimestampF,
+            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis
     ) {
-        return remoteCacheJournal(cacheName, clientConfig, cachePutEvents(), cacheEventToEntry(), initialPos);
+        return remoteCacheJournal(cacheName, clientConfig, cachePutEvents(), cacheEventToEntry(), initialPos,
+                getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
     }
 
     /**

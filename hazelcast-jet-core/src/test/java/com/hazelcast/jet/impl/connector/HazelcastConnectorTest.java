@@ -26,6 +26,7 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.stream.IStreamCache;
 import com.hazelcast.jet.stream.IStreamList;
 import com.hazelcast.jet.stream.IStreamMap;
@@ -44,6 +45,8 @@ import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
+import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeCacheP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeMapP;
@@ -157,7 +160,8 @@ public class HazelcastConnectorTest extends JetTestSupport {
     @Test
     public void when_streamMap() {
         DAG dag = new DAG();
-        Vertex source = dag.newVertex("source", streamMapP(streamSourceName, START_FROM_OLDEST));
+        Vertex source = dag.newVertex("source", streamMapP(streamSourceName, START_FROM_OLDEST,
+                Entry<Integer, Integer>::getValue, withFixedLag(0), suppressDuplicates(), 10_000));
         Vertex sink = dag.newVertex("sink", writeListP(streamSinkName));
 
         dag.edge(between(source, sink));
@@ -174,8 +178,9 @@ public class HazelcastConnectorTest extends JetTestSupport {
     @Test
     public void when_streamMap_withFilterAndProjection() {
         DAG dag = new DAG();
-        Vertex source = dag.newVertex("source", streamMapP(streamSourceName,
-                event -> !event.getKey().equals(0), EventJournalMapEvent::getKey, START_FROM_OLDEST));
+        Vertex source = dag.newVertex("source", SourceProcessors.<Integer, Integer, Integer>streamMapP(streamSourceName,
+                event -> event.getKey() != 0, EventJournalMapEvent::getKey, START_FROM_OLDEST,
+                i -> i, withFixedLag(0), suppressDuplicates(), 10_000));
         Vertex sink = dag.newVertex("sink", writeListP(streamSinkName));
 
         dag.edge(between(source, sink));
@@ -210,7 +215,8 @@ public class HazelcastConnectorTest extends JetTestSupport {
     @Test
     public void when_streamCache() {
         DAG dag = new DAG();
-        Vertex source = dag.newVertex("source", streamCacheP(streamSourceName, START_FROM_OLDEST));
+        Vertex source = dag.newVertex("source", streamCacheP(streamSourceName, START_FROM_OLDEST,
+                Entry<Integer, Integer>::getValue, withFixedLag(0), suppressDuplicates(), 10_000));
         Vertex sink = dag.newVertex("sink", writeListP(streamSinkName));
 
         dag.edge(between(source, sink));
@@ -227,8 +233,9 @@ public class HazelcastConnectorTest extends JetTestSupport {
     @Test
     public void when_streamCache_withFilterAndProjection() {
         DAG dag = new DAG();
-        Vertex source = dag.newVertex("source", streamCacheP(streamSourceName,
-                event -> !event.getKey().equals(0), EventJournalCacheEvent::getKey, START_FROM_OLDEST));
+        Vertex source = dag.newVertex("source", SourceProcessors.<Integer, Integer, Integer>streamCacheP(streamSourceName,
+                event -> !event.getKey().equals(0), EventJournalCacheEvent::getKey, START_FROM_OLDEST,
+                i -> i, withFixedLag(0), suppressDuplicates(), 10_000));
         Vertex sink = dag.newVertex("sink", writeListP(streamSinkName));
 
         dag.edge(between(source, sink));
@@ -263,7 +270,8 @@ public class HazelcastConnectorTest extends JetTestSupport {
     @Test
     public void test_defaultFilter_mapJournal() {
         DAG dag = new DAG();
-        Vertex source = dag.newVertex("source", streamMapP(streamSourceName, START_FROM_OLDEST));
+        Vertex source = dag.newVertex("source", streamMapP(streamSourceName, START_FROM_OLDEST,
+                Entry<Integer, Integer>::getValue, withFixedLag(0), suppressDuplicates(), 10_000));
         Vertex sink = dag.newVertex("sink", writeListP(streamSinkName));
 
         dag.edge(between(source, sink));
@@ -294,7 +302,8 @@ public class HazelcastConnectorTest extends JetTestSupport {
     @Test
     public void test_defaultFilter_cacheJournal() {
         DAG dag = new DAG();
-        Vertex source = dag.newVertex("source", streamCacheP(streamSourceName, START_FROM_OLDEST));
+        Vertex source = dag.newVertex("source", streamCacheP(streamSourceName, START_FROM_OLDEST,
+                Entry<Integer, Integer>::getValue, withFixedLag(0), suppressDuplicates(), 10_000));
         Vertex sink = dag.newVertex("sink", writeListP(streamSinkName));
 
         dag.edge(between(source, sink));

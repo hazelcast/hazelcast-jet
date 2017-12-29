@@ -77,7 +77,7 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
 /**
- * @see SourceProcessors#streamMapP(String, DistributedPredicate, DistributedFunction, JournalInitialPosition)
+ * @see SourceProcessors#streamMapP
  */
 public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
