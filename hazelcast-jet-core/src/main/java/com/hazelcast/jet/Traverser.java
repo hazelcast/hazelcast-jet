@@ -19,6 +19,7 @@ package com.hazelcast.jet;
 import com.hazelcast.jet.impl.util.FlatMappingTraverser;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -44,6 +45,7 @@ public interface Traverser<T> {
      * sequence, {@code null} only means "there is currently no next item", but
      * trying again later may produce one.
      */
+    @Nullable
     T next();
 
     /**
