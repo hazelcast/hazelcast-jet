@@ -624,33 +624,31 @@ public final class Processors {
 
     /**
      * Returns a supplier of processors for a vertex that inserts {@link
-     * com.hazelcast.jet.core.Watermark watermark items} into the stream. The
-     * value of the watermark is determined by the supplied {@link
-     * WatermarkPolicy} instance.
+     * com.hazelcast.jet.core.Watermark watermark items} into the stream. It
+     * determines the value of the watermark using a {@link WatermarkPolicy}
+     * instance obtained from {@code createWmPolicyF}.
      * <p>
-     * This processor also drops late items. It never allows an event, which is
-     * late with regard to already emitted watermark to pass.
+     * This processor drops late events. An event is late iff its timestamp is
+     * less than the already emitted watermark value.
      * <p>
-     * The processor saves value of the last emitted watermark to snapshot.
-     * Different instances of this processor can be at different watermark at
-     * snapshot time. After restart all instances will start at watermark of
-     * the most-behind instance before the restart.
-     * <p>
-     * This might sound as it could break the monotonicity requirement, but
-     * thanks to watermark coalescing, watermarks are only delivered for
-     * downstream processing after they have been received from <i>all</i>
-     * upstream processors. Another side effect of this is, that a late event,
-     * which was dropped before restart, is not considered late after restart.
+     * The processor saves the value of the last emitted watermark to the
+     * snapshot. Different instances of this processor can have different
+     * watermark values at snapshot time, but after restart all instances will
+     * be initialized to the watermark of the most-behind instance before the
+     * restart. This doesn't cause any downstream processor to observe a
+     * watermark that is lower than before the restart (due to watermark
+     * coalescing). Another effect of this is that some events that were
+     * considered late before the restart, won't be late after the restart.
      *
      * @param <T> the type of the stream item
      */
     @Nonnull
     public static <T> DistributedSupplier<Processor> insertWatermarksP(
             @Nonnull DistributedToLongFunction<T> getTimestampF,
-            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull DistributedSupplier<WatermarkPolicy> createWmPolicyF,
             @Nonnull WatermarkEmissionPolicy wmEmitPolicy
     ) {
-        return () -> new InsertWatermarksP<>(getTimestampF, newWmPolicyF.get(), wmEmitPolicy);
+        return () -> new InsertWatermarksP<>(getTimestampF, createWmPolicyF.get(), wmEmitPolicy);
     }
 
     /**

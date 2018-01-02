@@ -23,7 +23,6 @@ import com.hazelcast.jet.function.DistributedToLongFunction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Map.Entry;
 
 public class GroupTransform<T, K, A, R, OUT> implements UnaryTransform<T, OUT> {
     @Nonnull

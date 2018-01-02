@@ -18,6 +18,7 @@ package com.hazelcast.jet;
 
 import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 
 /**
  * Javadoc pending.
@@ -26,5 +27,7 @@ public interface SourceWithWatermark<T> extends Transform<T> {
 
     Source<T> source();
 
-    DistributedSupplier<WatermarkPolicy> watermarkPolicy();
+    DistributedToLongFunction<? super T> timestampFn();
+
+    DistributedSupplier<WatermarkPolicy> createWatermarkPolicyFn();
 }

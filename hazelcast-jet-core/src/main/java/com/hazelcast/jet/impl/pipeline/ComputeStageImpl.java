@@ -21,6 +21,7 @@ import com.hazelcast.jet.JoinClause;
 import com.hazelcast.jet.Sink;
 import com.hazelcast.jet.SinkStage;
 import com.hazelcast.jet.Source;
+import com.hazelcast.jet.SourceWithWatermark;
 import com.hazelcast.jet.StageWithGrouping;
 import com.hazelcast.jet.Transform;
 import com.hazelcast.jet.Traverser;
@@ -58,6 +59,10 @@ import static java.util.stream.Collectors.toList;
 public class ComputeStageImpl<T> extends AbstractStage implements ComputeStage<T> {
 
     ComputeStageImpl(@Nonnull Source<? extends T> source, @Nonnull PipelineImpl pipeline) {
+        this(emptyList(), source, pipeline);
+    }
+
+    ComputeStageImpl(@Nonnull SourceWithWatermark<? extends T> source, @Nonnull PipelineImpl pipeline) {
         this(emptyList(), source, pipeline);
     }
 

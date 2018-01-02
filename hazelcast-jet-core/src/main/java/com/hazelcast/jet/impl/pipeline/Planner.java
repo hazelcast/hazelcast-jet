@@ -27,8 +27,10 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.WatermarkEmissionPolicy;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.pipeline.transform.CoGroupTransform;
@@ -62,8 +64,10 @@ import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSessionWindowP;
 import static com.hazelcast.jet.core.processor.Processors.coAccumulateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
+import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.filterP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapP;
+import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
@@ -93,6 +97,8 @@ class Planner {
             Transform transform = stage.transform;
             if (transform instanceof SourceImpl) {
                 handleSource(stage, (SourceImpl) transform);
+            } else if (transform instanceof SourceWithWatermarkImpl) {
+                handleSourceWithWatermark(stage, (SourceWithWatermarkImpl) transform);
             } else if (transform instanceof ProcessorTransform) {
                 handleProcessorStage(stage, (ProcessorTransform) transform);
             } else if (transform instanceof FilterTransform) {
@@ -133,6 +139,17 @@ class Planner {
 
     private void handleSource(AbstractStage stage, SourceImpl source) {
         addVertex(stage, vertexName(source.name(), ""), source.metaSupplier());
+    }
+
+    private void handleSourceWithWatermark(AbstractStage stage, SourceWithWatermarkImpl wmSource) {
+        SourceImpl source = wmSource.source();
+        Vertex srcVertex = dag.newVertex(vertexName(source.name(), ""), source.metaSupplier());
+        PlannerVertex watermarkPv = addVertex(stage, vertexName(source.name(), "-wm"), insertWatermarksP(
+                wmSource.timestampFn(),
+                wmSource.createWatermarkPolicyFn(),
+                WatermarkEmissionPolicy.suppressDuplicates()
+        ));
+        dag.edge(between(srcVertex, watermarkPv.v));
     }
 
     private void handleProcessorStage(AbstractStage stage, ProcessorTransform procTransform) {
@@ -221,14 +238,16 @@ class Planner {
             GroupTransform<Object, Object, Object, Object, Object> xform,
             SlidingWindowDef wDef
     ) {
-        String namePrefix = vertexName(xform.name(), "-stage");
+        String namePrefix = vertexName("sliding-window", "-stage");
+        SlidingWindowPolicy winPolicy = wDef.toSlidingWindowPolicy();
         Vertex v1 = dag.newVertex(namePrefix + '1', accumulateByFrameP(
                 xform.keyFn(),
                 requireNonNull(xform.timestampFn()),
                 TimestampKind.EVENT,
-                wDef.toSlidingWindowPolicy(),
+                winPolicy,
                 xform.aggregateOperation().withFinishFn(identity())));
-        PlannerVertex pv2 = addVertex(stage, namePrefix + '2', combineByKeyP(xform.aggregateOperation()));
+        PlannerVertex pv2 = addVertex(stage, namePrefix + '2',
+                combineToSlidingWindowP(winPolicy, xform.aggregateOperation()));
         addEdges(stage, v1, e -> e.partitioned(xform.keyFn(), HASH_CODE));
         dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }
@@ -238,7 +257,7 @@ class Planner {
             GroupTransform<Object, Object, Object, Object, Object> xform,
             SessionWindowDef wDef
     ) {
-        PlannerVertex pv = addVertex(stage, vertexName(xform.name(), ""), aggregateToSessionWindowP(
+        PlannerVertex pv = addVertex(stage, vertexName("session-window", ""), aggregateToSessionWindowP(
                 wDef.sessionTimeout(),
                 requireNonNull(xform.timestampFn()),
                 xform.keyFn(),

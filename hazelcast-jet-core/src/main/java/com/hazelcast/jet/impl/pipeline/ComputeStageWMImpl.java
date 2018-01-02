@@ -37,7 +37,7 @@ public class ComputeStageWMImpl<T>
             @Nonnull SourceWithWatermark<? extends T> wmSource,
             @Nonnull PipelineImpl pipeline
     ) {
-        super(wmSource.source(), pipeline);
+        super(wmSource, pipeline);
     }
 
     ComputeStageWMImpl(

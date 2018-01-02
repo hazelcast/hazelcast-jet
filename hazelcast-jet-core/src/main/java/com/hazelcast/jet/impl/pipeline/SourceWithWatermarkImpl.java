@@ -16,10 +16,10 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.Source;
 import com.hazelcast.jet.SourceWithWatermark;
 import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 
 /**
  * Javadoc pending.
@@ -27,10 +27,16 @@ import com.hazelcast.jet.function.DistributedSupplier;
 public class SourceWithWatermarkImpl<T> implements SourceWithWatermark<T> {
 
     private final SourceImpl<T> source;
+    private final DistributedToLongFunction<? super T> timestampFn;
     private final DistributedSupplier<WatermarkPolicy> wmPolicy;
 
-    SourceWithWatermarkImpl(SourceImpl<T> source, DistributedSupplier<WatermarkPolicy> wmPolicy) {
+    SourceWithWatermarkImpl(
+            SourceImpl<T> source,
+            DistributedToLongFunction<? super T> timestampFn,
+            DistributedSupplier<WatermarkPolicy> wmPolicy
+    ) {
         this.source = source;
+        this.timestampFn = timestampFn;
         this.wmPolicy = wmPolicy;
     }
 
@@ -40,12 +46,17 @@ public class SourceWithWatermarkImpl<T> implements SourceWithWatermark<T> {
     }
 
     @Override
-    public Source<T> source() {
+    public SourceImpl<T> source() {
         return source;
     }
 
     @Override
-    public DistributedSupplier<WatermarkPolicy> watermarkPolicy() {
+    public DistributedToLongFunction<? super T> timestampFn() {
+        return timestampFn;
+    }
+
+    @Override
+    public DistributedSupplier<WatermarkPolicy> createWatermarkPolicyFn() {
         return wmPolicy;
     }
 }

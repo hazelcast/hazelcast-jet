@@ -53,6 +53,6 @@ public class SourceImpl<T> implements Source<T> {
             @Nonnull DistributedToLongFunction<? super T> timestampFn,
             @Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy
     ) {
-        return new SourceWithWatermarkImpl<>(this, wmPolicy);
+        return new SourceWithWatermarkImpl<>(this, timestampFn, wmPolicy);
     }
 }
