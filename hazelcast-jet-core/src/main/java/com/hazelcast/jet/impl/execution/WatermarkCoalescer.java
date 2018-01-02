@@ -34,7 +34,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * </ul>
  *
  * The class also handles idle messages from inputs (coming in the form of a
- * watermark equal to {@link #IDLE_MESSAGE}. When such message is received,
+ * watermark equal to {@link #IDLE_MESSAGE}. When such a message is received,
  * that input is switched to <em>idle</em> and excluded from coalescing. Any
  * event or watermark from such input will turn the input back to
  * <em>active</em> state.
@@ -65,7 +65,7 @@ public abstract class WatermarkCoalescer {
      * Called after receiving a new watermark.
      *
      * @param queueIndex index of the queue on which the WM was received.
-     * @param wmValue    the watermark value, it can be {@link #IDLE_QUEUE_WATERMARK_VALUE}
+     * @param wmValue    the watermark value, it can be {@link #IDLE_MESSAGE}
      * @return the watermark value to emit or {@code Long.MIN_VALUE} if no watermark
      * should be forwarded
      */
@@ -81,7 +81,7 @@ public abstract class WatermarkCoalescer {
      * system time or if all input queues are idle and we should forward the
      * idle marker.
      *
-     * @return the watermark value to emit, {@link #IDLE_QUEUE_WATERMARK_VALUE}
+     * @return the watermark value to emit, {@link #IDLE_MESSAGE}
      * or {@code Long.MIN_VALUE} if no watermark should be forwarded
      */
     public long checkWmHistory() {

@@ -26,7 +26,7 @@ import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
- * A utility to help emitting {@link Watermark} from source.
+ * A utility to help emitting {@link Watermark} from a source.
  *
  * @param <T> event type
  */
@@ -44,48 +44,43 @@ public class WatermarkSourceUtil<T> {
     private boolean allAreIdle;
 
     /**
-     * TODO
-     * @param initialPartitionCount
-     * @param idleTimeoutMillis
-     * @param getTimestampF
-     * @param newWmPolicyF
-     * @param wmEmitPolicy
+     * A constructor.
+     * <p>
+     * The partition count is initially set to 0, call {@link
+     * #increasePartitionCount} to set it.
+     *
+     * @param idleTimeoutMillis A timeout after which the {@link
+     *      com.hazelcast.jet.impl.execution.WatermarkCoalescer#IDLE_MESSAGE}
+     *      will be sent.
+     * @param getTimestampF A function to extract timestamps from observed
+     *      events.
+     * @param newWmPolicyF Watermark policy factory
+     * @param wmEmitPolicy Watermark emission policy
      */
-    public WatermarkSourceUtil(int initialPartitionCount, long idleTimeoutMillis,
+    public WatermarkSourceUtil(long idleTimeoutMillis,
                                @Nonnull DistributedToLongFunction<T> getTimestampF,
                                @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
                                @Nonnull WatermarkEmissionPolicy wmEmitPolicy) {
-        this(System.nanoTime(), initialPartitionCount, idleTimeoutMillis, getTimestampF, newWmPolicyF, wmEmitPolicy);
-    }
-
-    // package-visible for tests
-    WatermarkSourceUtil(long systemTime, int initialPartitionCount, long idleTimeoutMillis,
-                        @Nonnull DistributedToLongFunction<T> getTimestampF,
-                        @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-                        @Nonnull WatermarkEmissionPolicy wmEmitPolicy) {
         this.idleTimeoutNanos = MILLISECONDS.toNanos(idleTimeoutMillis);
         this.getTimestampF = getTimestampF;
         this.newWmPolicyF = newWmPolicyF;
         this.wmEmitPolicy = wmEmitPolicy;
-
-        increasePartitionCount(systemTime, initialPartitionCount);
     }
 
     /**
-     * Called after the event was emitted to decide if a watermark should be
-     * sent after it.
+     * Call this method after the event was emitted to decide if a watermark
+     * should be sent after it.
      *
-     * @param partitionIndex index of the partition the event occurred in
-     *
+     * @param partitionIndex index of the source partition the event occurred in
      * @param event the event
      * @return watermark to emit or {@code null}
      */
-    public Watermark observeEvent(int partitionIndex, T event) {
-        return observeEvent(System.nanoTime(), partitionIndex, event);
+    public Watermark handleEvent(int partitionIndex, T event) {
+        return handleEvent(System.nanoTime(), partitionIndex, event);
     }
 
     // package-visible for tests
-    Watermark observeEvent(long now, int partitionIndex, T event) {
+    Watermark handleEvent(long now, int partitionIndex, T event) {
         long eventTime = getTimestampF.applyAsLong(event);
         watermarks[partitionIndex] = wmPolicies[partitionIndex].reportEvent(eventTime);
         markIdleAt[partitionIndex] = now + idleTimeoutNanos;
@@ -93,9 +88,9 @@ public class WatermarkSourceUtil<T> {
     }
 
     /**
-     * Call when there are no observed events. Checks, if a watermark should be
-     * emitted based on the passage of time, which could cause some partitions
-     * to become idle.
+     * Call this method when there are no observed events. Checks, if a
+     * watermark should be emitted based on the passage of system time, which
+     * could cause some partitions to become idle.
      *
      * @return watermark to emit or {@code null}
      */
@@ -131,7 +126,8 @@ public class WatermarkSourceUtil<T> {
     }
 
     /**
-     * Changes the partition count. New partitions will be marked as ACTIVE.
+     * Changes the partition count. New partitions will be marked as ACTIVE
+     * initially.
      *
      * @param newPartitionCount partition count, must be higher than the
      *                          current count
@@ -160,21 +156,30 @@ public class WatermarkSourceUtil<T> {
     }
 
     /**
-     * TODO
-     * To be used in saveToSnapshot
-     * @param partitionIndex
-     * @return
+     * Watermark value to be saved to state snapshot for the given source
+     * partition index. The returned value should be {@link
+     * #restoreWatermark(int, long) restored} to a processor handling the same
+     * partition after restart.
+     * <p>
+     * Method is meant to be used from {@link Processor#saveToSnapshot()}.
+     *
+     * @param partitionIndex 0-based source partition index.
+     * @return A value to save to state snapshot
      */
     public long getWatermark(int partitionIndex) {
         return watermarks[partitionIndex];
     }
 
     /**
-     * TODO
-     * To be used in restoreFromSnapshot
-     * @param partitionIndex
-     * @param wm
-     * @return
+     * Restore watermark value from state snapshot.
+     * <p>
+     * Method is meant to be used from {@link
+     * Processor#restoreFromSnapshot(Inbox)}.
+     * <p>
+     * See {@link #getWatermark(int)}.
+     *
+     * @param partitionIndex 0-based source partition index.
+     * @param wm Watermark value to restore
      */
     public void restoreWatermark(int partitionIndex, long wm) {
         watermarks[partitionIndex] = wm;

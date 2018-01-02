@@ -127,8 +127,8 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         emitOffsets = new long[partitionIds.length];
         readOffsets = new long[partitionIds.length];
 
-        watermarkSourceUtil = new WatermarkSourceUtil<>(assignedPartitions.size(), idleTimeoutMillis, getTimestampF,
-                newWmPolicyF, wmEmitPolicy);
+        watermarkSourceUtil = new WatermarkSourceUtil<>(idleTimeoutMillis, getTimestampF, newWmPolicyF, wmEmitPolicy);
+        watermarkSourceUtil.increasePartitionCount(assignedPartitions.size());
     }
 
     @Override
@@ -170,7 +170,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             }
             emitOffsets[currentPartitionIndex] = resultSet.getSequence(resultSetPosition) + 1;
             resultSetPosition++;
-            pendingWatermark = watermarkSourceUtil.observeEvent(currentPartitionIndex, event);
+            pendingWatermark = watermarkSourceUtil.handleEvent(currentPartitionIndex, event);
             if (pendingWatermark != null) {
                 if (!tryEmit(pendingWatermark)) {
                     return;

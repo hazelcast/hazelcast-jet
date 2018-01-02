@@ -28,9 +28,7 @@ import java.util.function.Consumer;
  * if this traverser already has an item, it is illegal to set another one
  * before consuming it.
  * <p>
- * traverse.
- *
- * See {@link AppendableTraverser} if you have more items to
+ * See {@link AppendableTraverser} if you have more items to traverse.
  * @param <T> item type
  */
 public class ResettableSingletonTraverser<T> implements Traverser<T>, Consumer<T> {
