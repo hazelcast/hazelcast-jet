@@ -69,6 +69,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
     private static final long KAFKA_DEFAULT_REFRESH_INTERVAL = 300_000;
     private static final int POLL_TIMEOUT_MS = 50;
 
+    Map<TopicPartition, Integer> currentAssignment = new HashMap<>();
     private final Properties properties;
     private final List<String> topics;
     private final DistributedBiFunction<K, V, T> projectionFn;
@@ -87,7 +88,6 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
      */
     private final Map<String, long[]> offsets = new HashMap<>();
     private Traverser<Entry<BroadcastKey<TopicPartition>, Long>> snapshotTraverser;
-    private Map<TopicPartition, Integer> currentAssignment = new HashMap<>();
     private long metadataRefreshInterval;
     private int processorIndex;
     private Traverser<Object> traverser;
