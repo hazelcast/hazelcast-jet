@@ -122,7 +122,8 @@ public class ProcessorTasklet implements Tasklet {
 
     @Override
     public void init() {
-        context.getSerializationService().getManagedContext().initialize(processor);
+        Object processor2 = context.getSerializationService().getManagedContext().initialize(processor);
+        assert processor2 == processor : "different object returned";
         processor.init(outbox, context);
     }
 
@@ -303,6 +304,8 @@ public class ProcessorTasklet implements Tasklet {
             } else if (lastItem instanceof SnapshotBarrier) {
                 SnapshotBarrier barrier = (SnapshotBarrier) inbox.removeLast();
                 observeSnapshot(currInstream.ordinal(), barrier.snapshotId());
+            } else if (!(lastItem instanceof BroadcastItem)) {
+                watermarkCoalescer.observeEvent(currInstream.ordinal());
             }
 
             // pop current priority group
