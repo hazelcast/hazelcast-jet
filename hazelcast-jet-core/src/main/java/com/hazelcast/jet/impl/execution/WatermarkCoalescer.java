@@ -66,30 +66,22 @@ public abstract class WatermarkCoalescer {
      *
      * @param queueIndex index of the queue on which the WM was received.
      * @param wmValue    the watermark value, it can be {@link #IDLE_MESSAGE}
+     * @param systemTime the value obtained from {@link #getTime()}
      * @return the watermark value to emit or {@code Long.MIN_VALUE} if no watermark
      * should be forwarded
      */
-    public long observeWm(int queueIndex, long wmValue) {
-        return observeWm(System.nanoTime(), queueIndex, wmValue);
-    }
-
-    // package-visible for testing
-    abstract long observeWm(long systemTime, int queueIndex, long wmValue);
+    public abstract long observeWm(long systemTime, int queueIndex, long wmValue);
 
     /**
      * Checks if there is a watermark to emit now based on the passage of
      * system time or if all input queues are idle and we should forward the
      * idle marker.
      *
+     * @param systemTime the value obtained from {@link #getTime()}
      * @return the watermark value to emit, {@link #IDLE_MESSAGE}
      * or {@code Long.MIN_VALUE} if no watermark should be forwarded
      */
-    public long checkWmHistory() {
-        return checkWmHistory(System.nanoTime());
-    }
-
-    // package-visible for testing
-    abstract long checkWmHistory(long systemTime);
+    public abstract long checkWmHistory(long systemTime);
 
     /**
      * Returns {@code System.nanoTime()} or a dummy value, if it is not needed,
@@ -204,6 +196,12 @@ public abstract class WatermarkCoalescer {
                 if (numActiveQueues == 0) {
                     // all inputs are idle now, let's forward the message
                     return IDLE_MESSAGE.timestamp();
+                }
+                // bottom observed WM might change after this input became idle
+                long wmToEmit = bottomObservedWm();
+                if (wmToEmit > lastEmittedWm) {
+                    lastEmittedWm = wmToEmit;
+                    return wmToEmit;
                 }
             } else {
                 if (isIdle[queueIndex]) {

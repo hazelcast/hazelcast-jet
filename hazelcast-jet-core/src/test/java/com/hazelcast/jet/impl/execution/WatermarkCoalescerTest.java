@@ -25,6 +25,7 @@ public class WatermarkCoalescerTest {
 
     @Test
     public void test() {
+        // TODO split to simpler tests
         WatermarkCoalescer wc = WatermarkCoalescer.create(20, 2);
         assertEquals(Long.MIN_VALUE, wc.checkWmHistory(0));
 
@@ -35,5 +36,19 @@ public class WatermarkCoalescerTest {
         assertEquals(Long.MIN_VALUE, wc.observeWm(1, 1, 11));
         assertEquals(Long.MIN_VALUE, wc.observeWm(1, 1, 12));
         assertEquals(12, wc.observeWm(1, 0, 12));
+    }
+
+    @Test
+    public void when_i1Idle_i2HasWm_then_forwardedImmediately() {
+        WatermarkCoalescer wc = WatermarkCoalescer.create(20, 2);
+        assertEquals(Long.MIN_VALUE, wc.observeWm(0, 0, IDLE_MESSAGE.timestamp()));
+        assertEquals(100, wc.observeWm(0, 1, 100));
+    }
+
+    @Test
+    public void when_i1HasWm_i2Idle_then_forwardedImmediately() {
+        WatermarkCoalescer wc = WatermarkCoalescer.create(20, 2);
+        assertEquals(Long.MIN_VALUE, wc.observeWm(0, 0, 100));
+        assertEquals(100, wc.observeWm(0, 1, IDLE_MESSAGE.timestamp()));
     }
 }

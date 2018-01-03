@@ -304,7 +304,7 @@ public class ProcessorTasklet implements Tasklet {
             } else if (lastItem instanceof SnapshotBarrier) {
                 SnapshotBarrier barrier = (SnapshotBarrier) inbox.removeLast();
                 observeSnapshot(currInstream.ordinal(), barrier.snapshotId());
-            } else if (!(lastItem instanceof BroadcastItem)) {
+            } else if (lastItem != null && !(lastItem instanceof BroadcastItem)) {
                 watermarkCoalescer.observeEvent(currInstream.ordinal());
             }
 
