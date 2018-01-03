@@ -146,10 +146,9 @@ public abstract class WatermarkCoalescer {
         private final boolean[] isIdle;
         private long lastEmittedWm = Long.MIN_VALUE;
         private long topObservedWm = Long.MIN_VALUE;
-        private int numActiveQueues;
+        private boolean allInputsAreIdle;
 
         StandardImpl(int maxWatermarkRetainMillis, int queueCount) {
-            numActiveQueues = queueCount;
             isIdle = new boolean[queueCount];
             queueWms = new long[queueCount];
             Arrays.fill(queueWms, Long.MIN_VALUE);
@@ -161,22 +160,16 @@ public abstract class WatermarkCoalescer {
 
         @Override
         public long queueDone(int queueIndex) {
+            assert queueWms[queueIndex] < Long.MAX_VALUE : "Duplicate DONE call";
             queueWms[queueIndex] = Long.MAX_VALUE;
-
-            long bottomVm = bottomObservedWm();
-            if (bottomVm > lastEmittedWm && bottomVm != Long.MAX_VALUE) {
-                lastEmittedWm = bottomVm;
-                return bottomVm;
-            }
-
-            return Long.MIN_VALUE;
+            return checkObservedWms();
         }
 
         @Override
         public void observeEvent(int queueIndex) {
             if (isIdle[queueIndex]) {
                 isIdle[queueIndex] = false;
-                numActiveQueues++;
+                allInputsAreIdle = false;
             }
         }
 
@@ -192,37 +185,44 @@ public abstract class WatermarkCoalescer {
                     throw new JetException("Duplicate IDLE message");
                 }
                 isIdle[queueIndex] = true;
-                numActiveQueues--;
-                if (numActiveQueues == 0) {
-                    // all inputs are idle now, let's forward the message
-                    return IDLE_MESSAGE.timestamp();
-                }
-                // bottom observed WM might change after this input became idle
-                long wmToEmit = bottomObservedWm();
-                if (wmToEmit > lastEmittedWm) {
-                    lastEmittedWm = wmToEmit;
-                    return wmToEmit;
-                }
+                return checkObservedWms();
             } else {
-                if (isIdle[queueIndex]) {
-                    isIdle[queueIndex] = false;
-                    numActiveQueues++;
-                }
+                isIdle[queueIndex] = false;
+                allInputsAreIdle = false;
                 queueWms[queueIndex] = wmValue;
-                long wmToEmit = Long.MIN_VALUE;
-
                 if (watermarkHistory != null && wmValue > topObservedWm) {
                     topObservedWm = wmValue;
-                    wmToEmit = watermarkHistory.sample(systemTime, topObservedWm);
+                    watermarkHistory.sample(systemTime, topObservedWm);
                 }
+                return checkObservedWms();
+            }
+        }
 
-                wmToEmit = Math.max(wmToEmit, bottomObservedWm());
-                if (wmToEmit > lastEmittedWm) {
-                    lastEmittedWm = wmToEmit;
-                    return wmToEmit;
+        private long checkObservedWms() {
+            if (allInputsAreIdle) {
+                // we've already returned IDLE_MESSAGE, let's do nothing now
+                return Long.MIN_VALUE;
+            }
+
+            // find lowest observed wm
+            long min = Long.MAX_VALUE;
+            for (int i = 0; i < queueWms.length; i++) {
+                if (!isIdle[i] && queueWms[i] < min) {
+                    min = queueWms[i];
                 }
             }
 
+            // if the lowest observed wm is MAX_VALUE that means that all inputs are idle
+            if (min == Long.MAX_VALUE) {
+                allInputsAreIdle = true;
+                return Long.MAX_VALUE;
+            }
+
+            // if the new lowest observed wm is larger than already emitted, emit it
+            if (min > lastEmittedWm) {
+                lastEmittedWm = min;
+                return min;
+            }
             return Long.MIN_VALUE;
         }
 
@@ -244,15 +244,5 @@ public abstract class WatermarkCoalescer {
             return watermarkHistory != null ? System.nanoTime() : -1;
         }
 
-        private long bottomObservedWm() {
-            assert numActiveQueues > 0;
-            long min = Long.MAX_VALUE;
-            for (int i = 0; i < queueWms.length; i++) {
-                if (!isIdle[i] && queueWms[i] < min) {
-                    min = queueWms[i];
-                }
-            }
-            return min;
-        }
     }
 }
