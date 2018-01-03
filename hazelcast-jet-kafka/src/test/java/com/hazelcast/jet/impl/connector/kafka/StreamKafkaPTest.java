@@ -203,18 +203,14 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
         processor.init(outbox, new TestProcessorContext());
 
-        // produce events until we have at least one event in each partition
-        long[] wms = new long[INITIAL_PARTITION_COUNT];
-        for (int i = 100; Arrays.stream(wms).min().getAsLong() == 0; i++) {
-            Entry<Integer, String> event = entry(i, Integer.toString(i));
+        for (int i = 0; i < INITIAL_PARTITION_COUNT; i++) {
+            Entry<Integer, String> event = entry(i + 100, Integer.toString(i));
             System.out.println("produced event " + event);
-            Future<RecordMetadata> future = produce(topic1Name, event.getKey(), event.getValue());
-            RecordMetadata recordMetadata = future.get();
-            wms[recordMetadata.partition()] = i - LAG;
+            produce(topic1Name, i, event.getKey(), event.getValue());
             assertEquals(event, consumeEventually(processor, outbox));
         }
 
-        assertEquals(new Watermark(Arrays.stream(wms).min().getAsLong()), consumeEventually(processor, outbox));
+        assertEquals(new Watermark(100 - LAG), consumeEventually(processor, outbox));
     }
 
     @Test

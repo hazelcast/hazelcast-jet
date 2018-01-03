@@ -181,9 +181,6 @@ public abstract class WatermarkCoalescer {
             }
 
             if (wmValue == IDLE_MESSAGE.timestamp()) {
-                if (isIdle[queueIndex]) {
-                    return Long.MIN_VALUE;
-                }
                 isIdle[queueIndex] = true;
                 return checkObservedWms();
             } else {
@@ -206,7 +203,11 @@ public abstract class WatermarkCoalescer {
 
             // find lowest observed wm
             long min = Long.MAX_VALUE;
+            int notDoneInputCount = 0;
             for (int i = 0; i < queueWms.length; i++) {
+                if (queueWms[i] < Long.MAX_VALUE) {
+                    notDoneInputCount++;
+                }
                 if (!isIdle[i] && queueWms[i] < min) {
                     min = queueWms[i];
                 }
@@ -215,7 +216,7 @@ public abstract class WatermarkCoalescer {
             // if the lowest observed wm is MAX_VALUE that means that all inputs are idle
             if (min == Long.MAX_VALUE) {
                 allInputsAreIdle = true;
-                return Long.MAX_VALUE;
+                return notDoneInputCount == 0 ? Long.MIN_VALUE : Long.MAX_VALUE;
             }
 
             // if the new lowest observed wm is larger than already emitted, emit it

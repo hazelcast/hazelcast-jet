@@ -177,6 +177,23 @@ public class WatermarkCoalescerTest {
     }
 
     @Test
+    public void when_allIdleAndDuplicateIdleMessage_then_processed() {
+        // Duplicate idle messages are possible in this scenario:
+        // A source instance emits IDLE_MESSAGE, then an event (not causing a WM) and then another
+        // IDLE_MESSAGE again. The IDLE_MESSAGE is broadcast, but the event is not. So a downstream
+        // instance can receive two IDLE_MESSAGE-s in a row.
+        assertEquals(Long.MIN_VALUE, wc.observeWm(0, 0, IDLE_MESSAGE.timestamp()));
+        assertEquals(IDLE_MESSAGE.timestamp(), wc.observeWm(0, 1, IDLE_MESSAGE.timestamp()));
+        assertEquals(Long.MIN_VALUE, wc.observeWm(0, 0, IDLE_MESSAGE.timestamp()));
+    }
+
+    @Test
+    public void when_allDone_then_noMaxValueEmitted() {
+        assertEquals(Long.MIN_VALUE, wc.queueDone(0));
+        assertEquals(Long.MIN_VALUE, wc.queueDone(1));
+    }
+
+    @Test
     public void when_twoInputsIdle_then_singleIdleMessage() {
         wc = WatermarkCoalescer.create(20, 3);
         assertEquals(Long.MIN_VALUE, wc.observeWm(0, 0, IDLE_MESSAGE.timestamp()));

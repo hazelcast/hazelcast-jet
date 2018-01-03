@@ -110,7 +110,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
         this.globalParallelism = globalParallelism;
         this.metadataRefreshInterval = metadataRefreshInterval;
 
-        watermarkSourceUtil = new WatermarkSourceUtil<>(0, idleTimeoutMillis, getTimestampF,
+        watermarkSourceUtil = new WatermarkSourceUtil<>(idleTimeoutMillis, getTimestampF,
                 newWmPolicyF, wmEmitPolicy);
     }
 
