@@ -84,6 +84,7 @@ public class WatermarkSourceUtil<T> {
         long eventTime = getTimestampF.applyAsLong(event);
         watermarks[partitionIndex] = wmPolicies[partitionIndex].reportEvent(eventTime);
         markIdleAt[partitionIndex] = now + idleTimeoutNanos;
+        allAreIdle = false;
         return handleNoEvent(now);
     }
 

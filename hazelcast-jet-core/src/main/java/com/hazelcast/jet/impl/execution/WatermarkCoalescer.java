@@ -182,7 +182,7 @@ public abstract class WatermarkCoalescer {
 
             if (wmValue == IDLE_MESSAGE.timestamp()) {
                 if (isIdle[queueIndex]) {
-                    throw new JetException("Duplicate IDLE message");
+                    return Long.MIN_VALUE;
                 }
                 isIdle[queueIndex] = true;
                 return checkObservedWms();
