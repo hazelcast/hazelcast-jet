@@ -203,14 +203,14 @@ public class WatermarkCoalescer_IntegrationTest extends JetTestSupport {
     }
 
     @Test
-    public void when_i1_activeNoWm_i2_idle_then_wmForwardedAfterADelay() {
-        dag = createDag(mode, singletonList(wm(100)), asList(wm(150), IDLE_MESSAGE));
+    public void when_i1_activeNoWm_i2_aheadAndIdle_then_wmForwardedAfterADelay() {
+        dag = createDag(mode, singletonList(entry(1, 1)), asList(wm(150), IDLE_MESSAGE));
 
         JobConfig config = new JobConfig().setMaxWatermarkRetainMillis(5000);
         instance.newJob(dag, config);
 
         assertTrueEventually(() -> assertEquals(1, sinkList.size()), 3);
-        assertEquals("wm(100)", sinkList.get(0));
+        assertEquals(entry(1, 1), sinkList.get(0));
         long time = System.nanoTime();
 
         assertTrueEventually(() -> assertEquals(2, sinkList.size()), 6);
@@ -220,14 +220,14 @@ public class WatermarkCoalescer_IntegrationTest extends JetTestSupport {
     }
 
     @Test
-    public void when_i1_idle_i2_activeNoWm_then_wmForwardedAfterADelay() {
-        dag = createDag(mode, asList(wm(150), IDLE_MESSAGE), singletonList(wm(100)));
+    public void when_i1_aheadAndIdle_i2_activeNoWm_then_wmForwardedAfterADelay() {
+        dag = createDag(mode, asList(wm(150), IDLE_MESSAGE), singletonList(entry(1, 1)));
 
         JobConfig config = new JobConfig().setMaxWatermarkRetainMillis(5000);
         instance.newJob(dag, config);
 
         assertTrueEventually(() -> assertEquals(1, sinkList.size()), 3);
-        assertEquals("wm(100)", sinkList.get(0));
+        assertEquals(entry(1, 1), sinkList.get(0));
         long time = System.nanoTime();
 
         assertTrueEventually(() -> assertEquals(2, sinkList.size()), 6);

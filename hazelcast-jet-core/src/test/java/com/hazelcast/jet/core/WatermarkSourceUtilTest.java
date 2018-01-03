@@ -29,7 +29,6 @@ public class WatermarkSourceUtilTest {
 
     @Test
     public void smokeTest() {
-        // TODO break this test into simpler tests
         final int lag = 3;
         WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(5, Long::longValue,
                 withFixedLag(lag), suppressDuplicates());
