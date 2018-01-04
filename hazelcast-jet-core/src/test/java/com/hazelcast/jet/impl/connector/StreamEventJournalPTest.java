@@ -45,6 +45,7 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.core.test.TestSupport.SAME_ITEMS_ANY_ORDER;
 import static com.hazelcast.jet.core.test.TestSupport.drainOutbox;
@@ -80,8 +81,8 @@ public class StreamEventJournalPTest extends JetTestSupport {
         List<Integer> allPartitions = IntStream.range(0, NUM_PARTITIONS).boxed().collect(toList());
 
         supplier = () -> new StreamEventJournalP<>(map, allPartitions, e -> true,
-                EventJournalMapEvent::getNewValue, START_FROM_OLDEST, false, Integer::intValue,
-                withFixedLag(0), suppressAll(), -1);
+                EventJournalMapEvent::getNewValue, START_FROM_OLDEST, false,
+                wmGenParams(Integer::intValue, withFixedLag(0), suppressAll(), -1));
     }
 
 

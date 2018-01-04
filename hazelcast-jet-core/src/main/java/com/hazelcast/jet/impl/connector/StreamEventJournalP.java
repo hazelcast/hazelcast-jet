@@ -31,15 +31,12 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.core.WatermarkEmissionPolicy;
-import com.hazelcast.jet.core.WatermarkPolicy;
+import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.WatermarkSourceUtil;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
-import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.journal.EventJournalInitialSubscriberState;
 import com.hazelcast.journal.EventJournalReader;
 import com.hazelcast.map.journal.EventJournalMapEvent;
@@ -113,10 +110,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                         @Nonnull DistributedFunction<E, T> projectionFn,
                         @Nonnull JournalInitialPosition initialPos,
                         boolean isRemoteReader,
-                        @Nonnull DistributedToLongFunction<T> getTimestampF,
-                        @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-                        @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
-                        long idleTimeoutMillis) {
+                        WatermarkGenerationParams<T> wmGenParams) {
         this.eventJournalReader = eventJournalReader;
         this.predicate = (Serializable & Predicate<E>) predicateFn::test;
         this.projection = toProjection(projectionFn);
@@ -127,7 +121,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         emitOffsets = new long[partitionIds.length];
         readOffsets = new long[partitionIds.length];
 
-        watermarkSourceUtil = new WatermarkSourceUtil<>(idleTimeoutMillis, getTimestampF, newWmPolicyF, wmEmitPolicy);
+        watermarkSourceUtil = new WatermarkSourceUtil<>(wmGenParams);
         watermarkSourceUtil.increasePartitionCount(assignedPartitions.size());
     }
 
@@ -305,10 +299,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         private final DistributedPredicate<E> predicate;
         private final DistributedFunction<E, T> projection;
         private final JournalInitialPosition initialPos;
-        private final DistributedToLongFunction<T> getTimestampF;
-        private final DistributedSupplier<WatermarkPolicy> newWmPolicyF;
-        private final WatermarkEmissionPolicy wmEmitPolicy;
-        private final long idleTimeoutMillis;
+        private final WatermarkGenerationParams<T> wmGenParams;
 
         private transient int remotePartitionCount;
         private transient Map<Address, List<Integer>> addrToPartitions;
@@ -319,19 +310,13 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 DistributedPredicate<E> predicate,
                 DistributedFunction<E, T> projection,
                 JournalInitialPosition initialPos,
-                DistributedToLongFunction<T> getTimestampF,
-                DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-                WatermarkEmissionPolicy wmEmitPolicy,
-                long idleTimeoutMillis) {
+                WatermarkGenerationParams<T> wmGenParams) {
             this.serializableConfig = clientConfig == null ? null : new SerializableClientConfig(clientConfig);
             this.eventJournalReaderSupplier = eventJournalReaderSupplier;
             this.predicate = predicate;
             this.projection = projection;
             this.initialPos = initialPos;
-            this.getTimestampF = getTimestampF;
-            this.newWmPolicyF = newWmPolicyF;
-            this.wmEmitPolicy = wmEmitPolicy;
-            this.idleTimeoutMillis = idleTimeoutMillis;
+            this.wmGenParams = wmGenParams;
         }
 
         @Override
@@ -375,7 +360,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
             return address -> new ClusterProcessorSupplier<>(addrToPartitions.get(address),
                     serializableConfig, eventJournalReaderSupplier, predicate, projection, initialPos,
-                    getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
+                    wmGenParams);
         }
 
     }
@@ -390,10 +375,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         private final DistributedPredicate<E> predicate;
         private final DistributedFunction<E, T> projection;
         private final JournalInitialPosition initialPos;
-        private final DistributedToLongFunction<T> getTimestampF;
-        private final DistributedSupplier<WatermarkPolicy> newWmPolicyF;
-        private final WatermarkEmissionPolicy wmEmitPolicy;
-        private final long idleTimeoutMillis;
+        private final WatermarkGenerationParams<T> wmGenParams;
 
         private transient HazelcastInstance client;
         private transient EventJournalReader<E> eventJournalReader;
@@ -405,19 +387,14 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 DistributedPredicate<E> predicate,
                 DistributedFunction<E, T> projection,
                 JournalInitialPosition initialPos,
-                DistributedToLongFunction<T> getTimestampF,
-                DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-                WatermarkEmissionPolicy wmEmitPolicy, long idleTimeoutMillis) {
+                WatermarkGenerationParams<T> wmGenParams) {
             this.ownedPartitions = ownedPartitions;
             this.serializableClientConfig = serializableClientConfig;
             this.eventJournalReaderSupplier = eventJournalReaderSupplier;
             this.predicate = predicate;
             this.projection = projection;
             this.initialPos = initialPos;
-            this.getTimestampF = getTimestampF;
-            this.newWmPolicyF = newWmPolicyF;
-            this.wmEmitPolicy = wmEmitPolicy;
-            this.idleTimeoutMillis = idleTimeoutMillis;
+            this.wmGenParams = wmGenParams;
         }
 
         @Override
@@ -449,7 +426,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             return partitions.isEmpty()
                     ? Processors.noopP().get()
                     : new StreamEventJournalP<>(eventJournalReader, partitions, predicate, projection,
-                    initialPos, client != null, getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
+                    initialPos, client != null, wmGenParams);
         }
     }
 
@@ -459,29 +436,23 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projection,
             @Nonnull JournalInitialPosition initialPos,
-            @Nonnull DistributedToLongFunction<T> getTimestampF,
-            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
-            long idleTimeoutMillis) {
+            WatermarkGenerationParams<T> wmGenParams) {
         return new ClusterMetaSupplier<>(null,
                 instance -> (EventJournalReader<EventJournalMapEvent<K, V>>) instance.getMap(mapName),
-                predicate, projection, initialPos, getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
+                predicate, projection, initialPos, wmGenParams);
     }
 
-    @SuppressWarnings({"unchecked", "checkstyle:parameternumber"})
+    @SuppressWarnings("unchecked")
     public static <K, V, T> ProcessorMetaSupplier streamRemoteMapP(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projection,
             @Nonnull JournalInitialPosition initialPos,
-            @Nonnull DistributedToLongFunction<T> getTimestampF,
-            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
-            long idleTimeoutMillis) {
+            WatermarkGenerationParams<T> wmGenParams) {
         return new ClusterMetaSupplier<>(clientConfig,
                 instance -> (EventJournalReader<EventJournalMapEvent<K, V>>) instance.getMap(mapName),
-                predicate, projection, initialPos, getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
+                predicate, projection, initialPos, wmGenParams);
     }
 
     @SuppressWarnings("unchecked")
@@ -490,28 +461,22 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projection,
             @Nonnull JournalInitialPosition initialPos,
-            @Nonnull DistributedToLongFunction<T> getTimestampF,
-            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
-            long idleTimeoutMillis) {
+            WatermarkGenerationParams<T> wmGenParams) {
         return new ClusterMetaSupplier<>(null,
                 inst -> (EventJournalReader<EventJournalCacheEvent<K, V>>) inst.getCacheManager().getCache(cacheName),
-                predicate, projection, initialPos, getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
+                predicate, projection, initialPos, wmGenParams);
     }
 
-    @SuppressWarnings({"unchecked", "checkstyle:parameternumber"})
+    @SuppressWarnings("unchecked")
     public static <K, V, T> ProcessorMetaSupplier streamRemoteCacheP(
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projection,
             @Nonnull JournalInitialPosition initialPos,
-            @Nonnull DistributedToLongFunction<T> getTimestampF,
-            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
-            long idleTimeoutMillis) {
+            WatermarkGenerationParams<T> wmGenParams) {
         return new ClusterMetaSupplier<>(clientConfig,
                 inst -> (EventJournalReader<EventJournalCacheEvent<K, V>>) inst.getCacheManager().getCache(cacheName),
-                predicate, projection, initialPos, getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
+                predicate, projection, initialPos, wmGenParams);
     }
 }

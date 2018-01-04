@@ -20,11 +20,8 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.AppendableTraverser;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.core.WatermarkEmissionPolicy;
-import com.hazelcast.jet.core.WatermarkPolicy;
+import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.WatermarkSourceUtil;
-import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.function.DistributedToLongFunction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -46,13 +43,8 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
     // value to be used temporarily during snapshot restore
     private long minRestoredWm = Long.MAX_VALUE;
 
-    public InsertWatermarksP(
-            @Nonnull DistributedToLongFunction<T> getTimestampF,
-            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
-            long idleTimeoutMillis
-    ) {
-        wsu = new WatermarkSourceUtil<>(idleTimeoutMillis, getTimestampF, newWmPolicyF, wmEmitPolicy);
+    public InsertWatermarksP(WatermarkGenerationParams<T> wmGenParams) {
+        wsu = new WatermarkSourceUtil<>(wmGenParams);
         wsu.increasePartitionCount(1);
     }
 

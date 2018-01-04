@@ -24,12 +24,9 @@ import com.hazelcast.jet.core.CloseableProcessorSupplier;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.core.WatermarkEmissionPolicy;
-import com.hazelcast.jet.core.WatermarkPolicy;
+import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.WatermarkSourceUtil;
 import com.hazelcast.jet.function.DistributedBiFunction;
-import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.nio.Address;
 import com.hazelcast.util.Preconditions;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -99,10 +96,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
             @Nonnull DistributedBiFunction<K, V, T> projectionFn,
             int globalParallelism,
             long metadataRefreshInterval,
-            @Nonnull DistributedToLongFunction<T> getTimestampF,
-            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
-            long idleTimeoutMillis
+            @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
         this.properties = properties;
         this.topics = topics;
@@ -110,8 +104,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
         this.globalParallelism = globalParallelism;
         this.metadataRefreshInterval = metadataRefreshInterval;
 
-        watermarkSourceUtil = new WatermarkSourceUtil<>(idleTimeoutMillis, getTimestampF,
-                newWmPolicyF, wmEmitPolicy);
+        watermarkSourceUtil = new WatermarkSourceUtil<>(wmGenParams);
     }
 
     @Override
@@ -279,28 +272,19 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
         private final List<String> topics;
         private final DistributedBiFunction<K, V, T> projectionFn;
         private final long metadataRefreshInterval;
-        private final DistributedToLongFunction<T> getTimestampF;
-        private final DistributedSupplier<WatermarkPolicy> newWmPolicyF;
-        private final WatermarkEmissionPolicy wmEmitPolicy;
-        private final long idleTimeoutMillis;
+        private final WatermarkGenerationParams<T> wmGenParams;
         private int totalParallelism;
 
         public MetaSupplier(
                 Properties properties,
                 List<String> topics,
                 DistributedBiFunction<K, V, T> projectionFn,
-                DistributedToLongFunction<T> getTimestampF,
-                DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-                WatermarkEmissionPolicy wmEmitPolicy,
-                long idleTimeoutMillis) {
+                @Nonnull WatermarkGenerationParams<T> wmGenParams) {
             this.properties = new Properties();
             this.properties.putAll(properties);
             this.topics = topics;
             this.projectionFn = projectionFn;
-            this.getTimestampF = getTimestampF;
-            this.newWmPolicyF = newWmPolicyF;
-            this.wmEmitPolicy = wmEmitPolicy;
-            this.idleTimeoutMillis = idleTimeoutMillis;
+            this.wmGenParams = wmGenParams;
 
             // Save the value of metadata.max.age.ms to a variable and zero it in the properties.
             // We'll do metadata refresh on our own.
@@ -329,7 +313,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
             return address -> new CloseableProcessorSupplier<>(
                     () -> new StreamKafkaP(properties, topics, projectionFn, totalParallelism, metadataRefreshInterval,
-                            getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis));
+                            wmGenParams));
         }
     }
 

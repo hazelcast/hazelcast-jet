@@ -16,12 +16,9 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.jet.core.WatermarkEmissionPolicy;
-import com.hazelcast.jet.core.WatermarkPolicy;
+import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.processor.KafkaProcessors;
 import com.hazelcast.jet.function.DistributedBiFunction;
-import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.function.DistributedToLongFunction;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
@@ -37,18 +34,15 @@ public final class KafkaSources {
 
     /**
      * Convenience for {@link #kafka(Properties, DistributedBiFunction,
-     * String...)} wrapping the output in {@code Map.Entry}.
+     * WatermarkGenerationParams, String...)} wrapping the output in {@code
+     * Map.Entry}.
      */
     public static <K, V> Source<Entry<K, V>> kafka(
             @Nonnull Properties properties,
-            @Nonnull DistributedToLongFunction<Entry<K, V>> getTimestampF,
-            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
-            long idleTimeoutMillis,
+            @Nonnull WatermarkGenerationParams<Entry<K, V>> wmGenParams,
             @Nonnull String... topics
     ) {
-        return Sources.fromProcessor("streamKafka", KafkaProcessors.streamKafkaP(properties, getTimestampF, newWmPolicyF,
-                wmEmitPolicy, idleTimeoutMillis, topics));
+        return Sources.fromProcessor("streamKafka", KafkaProcessors.streamKafkaP(properties, wmGenParams, topics));
     }
 
     /**
@@ -88,13 +82,10 @@ public final class KafkaSources {
     public static <K, V, T> Source<T> kafka(
             @Nonnull Properties properties,
             @Nonnull DistributedBiFunction<K, V, T> projectionFn,
-            @Nonnull DistributedToLongFunction<T> getTimestampF,
-            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
-            long idleTimeoutMillis,
+            @Nonnull WatermarkGenerationParams<T> wmGenParams,
             @Nonnull String... topics
     ) {
-        return Sources.fromProcessor("streamKafka", KafkaProcessors.streamKafkaP(properties, projectionFn, getTimestampF,
-                newWmPolicyF, wmEmitPolicy, idleTimeoutMillis, topics));
+        return Sources.fromProcessor("streamKafka", KafkaProcessors.streamKafkaP(properties, projectionFn, wmGenParams,
+                topics));
     }
 }

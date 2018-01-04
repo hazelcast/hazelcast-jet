@@ -64,6 +64,8 @@ import java.util.concurrent.Future;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.noWatermarks;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.core.processor.KafkaProcessors.streamKafkaP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
@@ -119,8 +121,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         DAG dag = new DAG();
 
         Vertex source = dag.newVertex("source",
-                streamKafkaP(properties, Entry<Integer, String>::getKey, withFixedLag(1000), suppressDuplicates(), 10_000,
-                        topic1Name, topic2Name)).localParallelism(4);
+                streamKafkaP(properties, noWatermarks(), topic1Name, topic2Name)).localParallelism(4);
 
         Vertex sink = dag.newVertex("sink", writeListP("sink"))
                          .localParallelism(1);
@@ -198,7 +199,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
     }
 
     @Test
-    public void when_eventsInAllPartitions_then_watermarkOutputImmediately() throws Exception {
+    public void when_eventsInAllPartitions_then_watermarkOutputImmediately() {
         StreamKafkaP processor = createProcessor(1, 1, Util::entry, 10_000);
         TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
         processor.init(outbox, new TestProcessorContext());
@@ -305,8 +306,8 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         return new StreamKafkaP<>(properties,
                 numTopics == 1 ? singletonList(topic1Name) : Arrays.asList(topic1Name, topic2Name),
                 projectionFn, globalParallelism,
-                100, e -> e instanceof Entry ? (int) ((Entry) e).getKey() : System.currentTimeMillis(),
-                withFixedLag(LAG), suppressDuplicates(), idleTimeoutMillis);
+                100, wmGenParams(e -> e instanceof Entry ? (int) ((Entry) e).getKey() : System.currentTimeMillis(),
+                withFixedLag(LAG), suppressDuplicates(), idleTimeoutMillis));
     }
 
     @Test

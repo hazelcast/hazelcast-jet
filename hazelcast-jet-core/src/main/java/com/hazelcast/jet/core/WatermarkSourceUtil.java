@@ -19,7 +19,6 @@ package com.hazelcast.jet.core;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 
-import javax.annotation.Nonnull;
 import java.util.Arrays;
 
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
@@ -27,6 +26,8 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
  * A utility to help emitting {@link Watermark} from a source.
+ *
+ * TODO [viliam] enhance javadoc
  *
  * @param <T> event type
  */
@@ -48,23 +49,12 @@ public class WatermarkSourceUtil<T> {
      * <p>
      * The partition count is initially set to 0, call {@link
      * #increasePartitionCount} to set it.
-     *
-     * @param idleTimeoutMillis A timeout after which the {@link
-     *      com.hazelcast.jet.impl.execution.WatermarkCoalescer#IDLE_MESSAGE}
-     *      will be sent.
-     * @param getTimestampF A function to extract timestamps from observed
-     *      events.
-     * @param newWmPolicyF Watermark policy factory
-     * @param wmEmitPolicy Watermark emission policy
-     */
-    public WatermarkSourceUtil(long idleTimeoutMillis,
-                               @Nonnull DistributedToLongFunction<T> getTimestampF,
-                               @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-                               @Nonnull WatermarkEmissionPolicy wmEmitPolicy) {
-        this.idleTimeoutNanos = MILLISECONDS.toNanos(idleTimeoutMillis);
-        this.getTimestampF = getTimestampF;
-        this.newWmPolicyF = newWmPolicyF;
-        this.wmEmitPolicy = wmEmitPolicy;
+     **/
+    public WatermarkSourceUtil(WatermarkGenerationParams<T> params) {
+        this.idleTimeoutNanos = MILLISECONDS.toNanos(params.idleTimeoutMillis());
+        this.getTimestampF = params.getTimestampF();
+        this.newWmPolicyF = params.newWmPolicyF();
+        this.wmEmitPolicy = params.wmEmitPolicy();
     }
 
     /**

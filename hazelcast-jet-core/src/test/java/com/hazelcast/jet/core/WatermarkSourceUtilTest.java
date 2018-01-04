@@ -19,6 +19,7 @@ package com.hazelcast.jet.core;
 import org.junit.Test;
 
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -31,8 +32,8 @@ public class WatermarkSourceUtilTest {
 
     @Test
     public void smokeTest() {
-        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(5, Long::longValue,
-                withFixedLag(LAG), suppressDuplicates());
+        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
+                wmGenParams(Long::longValue, withFixedLag(LAG), suppressDuplicates(), 5));
         wsu.increasePartitionCount(0L, 2);
 
         // all partitions are active initially
@@ -50,8 +51,8 @@ public class WatermarkSourceUtilTest {
 
     @Test
     public void smokeTest_disabledTimeout() {
-        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(-1, Long::longValue, withFixedLag(LAG),
-                suppressDuplicates());
+        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(wmGenParams(Long::longValue, withFixedLag(LAG),
+                suppressDuplicates(), -1));
         wsu.increasePartitionCount(2);
 
         // all partitions are active initially
@@ -70,8 +71,8 @@ public class WatermarkSourceUtilTest {
 
     @Test
     public void test_zeroPartitions() {
-        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(-1, Long::longValue,
-                withFixedLag(LAG), suppressDuplicates());
+        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(wmGenParams(Long::longValue,
+                withFixedLag(LAG), suppressDuplicates(), -1));
 
         // it should immediately emit the idle message, even though the idle timeout is -1
         assertEquals(IDLE_MESSAGE, wsu.handleNoEvent());
@@ -85,8 +86,8 @@ public class WatermarkSourceUtilTest {
 
     @Test
     public void when_idle_event_idle_then_twoIdleMessagesSent() {
-        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(10, Long::longValue, withFixedLag(LAG),
-                suppressDuplicates());
+        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(wmGenParams(Long::longValue, withFixedLag(LAG),
+                suppressDuplicates(), 10));
         wsu.increasePartitionCount(1);
         assertEquals(wm(10 - LAG), wsu.handleEvent(ns(0), 0, 10L));
 

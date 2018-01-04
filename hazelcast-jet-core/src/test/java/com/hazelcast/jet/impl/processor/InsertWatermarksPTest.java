@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByMinStep;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.core.WindowDefinition.tumblingWindowDef;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
@@ -294,7 +295,7 @@ public class InsertWatermarksPTest {
             assertTrue(p.tryProcess());
             elapsedMs = NANOSECONDS.toMillis(System.nanoTime() - start);
             drainOutbox();
-            if (elapsedMs < 100) {
+            if (elapsedMs < 99) {
                 assertTrue("outbox should be empty", resultToCheck.isEmpty());
             } else if (!resultToCheck.isEmpty()) {
                 System.out.println("WM emitted after " + elapsedMs + "ms (shortly after 100 was expected)");
@@ -306,7 +307,7 @@ public class InsertWatermarksPTest {
     }
 
     private void createProcessor(long idleTimeoutMillis) {
-        p = new InsertWatermarksP<>(Item::getTimestamp, wmPolicy, wmEmissionPolicy, idleTimeoutMillis);
+        p = new InsertWatermarksP<>(wmGenParams(Item::getTimestamp, wmPolicy, wmEmissionPolicy, idleTimeoutMillis));
         p.init(outbox, context);
     }
 
