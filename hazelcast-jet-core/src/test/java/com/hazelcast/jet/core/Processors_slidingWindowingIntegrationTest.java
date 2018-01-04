@@ -103,7 +103,7 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
         boolean isBatchLocal = isBatch; // to prevent serialization of whole class
         Vertex source = dag.newVertex("source", () -> new EmitListP(sourceEvents, isBatchLocal)).localParallelism(1);
         Vertex insertPP = dag.newVertex("insertWmP", insertWatermarksP(MyEvent::getTimestamp,
-                limitingLagAndLull(500, 1000), emitByFrame(wDef))).localParallelism(1);
+                limitingLagAndLull(500, 1000), emitByFrame(wDef), -1)).localParallelism(1);
         Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP("sink"));
 
         dag.edge(between(source, insertPP).isolated());

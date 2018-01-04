@@ -55,6 +55,10 @@ public class AppendableTraverser<T> implements Traverser<T> {
         queue = new ArrayDeque<>(initialCapacity);
     }
 
+    /**
+     * {@inheritDoc}
+     * @return {@code this} instance
+     */
     @Nonnull
     @Override
     public Traverser<T> append(@Nonnull T item) {

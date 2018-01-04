@@ -648,9 +648,10 @@ public final class Processors {
     public static <T> DistributedSupplier<Processor> insertWatermarksP(
             @Nonnull DistributedToLongFunction<T> getTimestampF,
             @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-            @Nonnull WatermarkEmissionPolicy wmEmitPolicy
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis
     ) {
-        return () -> new InsertWatermarksP<>(getTimestampF, newWmPolicyF.get(), wmEmitPolicy);
+        return () -> new InsertWatermarksP<>(getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
     }
 
     /**
