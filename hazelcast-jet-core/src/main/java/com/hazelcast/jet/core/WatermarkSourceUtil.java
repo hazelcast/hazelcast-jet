@@ -63,7 +63,7 @@ public class WatermarkSourceUtil<T> {
      *
      * @param partitionIndex index of the source partition the event occurred in
      * @param event the event
-     * @return watermark to emit or {@code null}
+     * @return watermark to emit before the event or {@code null}
      */
     public Watermark handleEvent(int partitionIndex, T event) {
         return handleEvent(System.nanoTime(), partitionIndex, event);

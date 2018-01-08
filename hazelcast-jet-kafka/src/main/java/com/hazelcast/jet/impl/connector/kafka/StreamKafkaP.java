@@ -184,7 +184,6 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
                         .flatMap(r -> {
                             lastEmittedItem = r;
                             T projectedRecord = projectionFn.apply((K) r.key(), (V) r.value());
-                            appendableTraverser.append(projectedRecord);
                             TopicPartition topicPartition = new TopicPartition(lastEmittedItem.topic(),
                                     lastEmittedItem.partition());
                             Watermark wm = watermarkSourceUtil.handleEvent(currentAssignment.get(topicPartition),
@@ -192,6 +191,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
                             if (wm != null) {
                                 appendableTraverser.append(wm);
                             }
+                            appendableTraverser.append(projectedRecord);
                             return appendableTraverser;
                         });
             }

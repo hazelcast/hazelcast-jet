@@ -208,10 +208,11 @@ public class StreamKafkaPTest extends KafkaTestSupport {
             Entry<Integer, String> event = entry(i + 100, Integer.toString(i));
             System.out.println("produced event " + event);
             produce(topic1Name, i, event.getKey(), event.getValue());
+            if (i == INITIAL_PARTITION_COUNT - 1) {
+                assertEquals(new Watermark(100 - LAG), consumeEventually(processor, outbox));
+            }
             assertEquals(event, consumeEventually(processor, outbox));
         }
-
-        assertEquals(new Watermark(100 - LAG), consumeEventually(processor, outbox));
     }
 
     @Test
@@ -240,8 +241,8 @@ public class StreamKafkaPTest extends KafkaTestSupport {
             }
         }
 
-        assertEquals(event, consumeEventually(processor, outbox));
         assertEquals(new Watermark(event.getKey() - LAG), consumeEventually(processor, outbox));
+        assertEquals(event, consumeEventually(processor, outbox));
     }
 
     @Test

@@ -90,7 +90,7 @@ public class StreamEventJournalP_WmCoalescingTest extends JetTestSupport {
                    .disableProgressAssertion()
                    .disableRunUntilCompleted(1000)
                    .disableSnapshots()
-                   .expectOutput(asList(10, 10, wm(10)));
+                   .expectOutput(asList(10, wm(10), 10));
     }
 
     @Test
@@ -161,7 +161,7 @@ public class StreamEventJournalP_WmCoalescingTest extends JetTestSupport {
                    .disableProgressAssertion()
                    .disableRunUntilCompleted(4000)
                    .disableSnapshots()
-                   .expectOutput(asList(10, wm(10), IDLE_MESSAGE));
+                   .expectOutput(asList(wm(10), 10, IDLE_MESSAGE));
     }
 
     public Supplier<Processor> createSupplier(List<Integer> assignedPartitions, long idleTimeout) {
