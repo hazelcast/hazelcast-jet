@@ -33,6 +33,7 @@ import com.hazelcast.util.concurrent.IdleStrategy;
 
 import javax.annotation.Nonnull;
 import java.net.UnknownHostException;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -406,7 +407,7 @@ public final class TestSupport {
             if (inbox.isEmpty() && wmToProcess[0] == null && inputIterator.hasNext()) {
                 inbox.add(inputIterator.next());
                 if (logInputOutput) {
-                    System.out.println("Input: " + inbox.peek());
+                    System.out.println(LocalTime.now() + " Input: " + inbox.peek());
                 }
             }
             String methodName;
@@ -591,7 +592,7 @@ public final class TestSupport {
         for (T o; (o = outboxBucket.poll()) != null; ) {
             target.add(o);
             if (logItems) {
-                System.out.println("Output: " + o);
+                System.out.println(LocalTime.now() + " Output: " + o);
             }
         }
     }

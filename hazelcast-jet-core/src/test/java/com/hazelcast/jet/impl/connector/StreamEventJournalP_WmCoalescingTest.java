@@ -43,6 +43,7 @@ import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
+import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static com.hazelcast.spi.properties.GroupProperty.PARTITION_COUNT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -58,7 +59,7 @@ public class StreamEventJournalP_WmCoalescingTest extends JetTestSupport {
     private int[] partitionKeys;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         JetConfig config = new JetConfig();
 
         EventJournalConfig journalConfig = new EventJournalConfig()
@@ -70,6 +71,7 @@ public class StreamEventJournalP_WmCoalescingTest extends JetTestSupport {
         config.getHazelcastConfig().addEventJournalConfig(journalConfig);
         JetInstance instance = this.createJetMember(config);
 
+        assert map == null;
         map = (MapProxyImpl<Integer, Integer>) instance.getHazelcastInstance().<Integer, Integer>getMap("test");
 
         partitionKeys = new int[2];
@@ -124,15 +126,17 @@ public class StreamEventJournalP_WmCoalescingTest extends JetTestSupport {
     }
 
     @Test
-    public void when_allPartitionsIdleAndThenRecover_then_wmOutput() {
-        // insert to map in parallel to verifyProcessor after a delay so that it will recover from idle state
-        new Thread(() -> {
-            LockSupport.parkNanos(MILLISECONDS.toNanos(2000));
-            for (int i = 0; i < 8; i++) {
+    public void when_allPartitionsIdleAndThenRecover_then_wmOutput() throws Exception {
+        // Insert to map in parallel to verifyProcessor.
+        Thread updatingThread = new Thread(() -> uncheckRun(() -> {
+            // We will start after a delay so that the source will first become idle and then recover.
+            Thread.sleep(2000);
+            for (int i = 0; i < 16; i++) {
                 map.put(partitionKeys[0], 10);
-                LockSupport.parkNanos(MILLISECONDS.toNanos(250));
+                Thread.sleep(250);
             }
-        }).start();
+        }));
+        updatingThread.start();
 
         TestSupport.verifyProcessor(createSupplier(asList(0, 1), 1000))
                    .disableProgressAssertion()
@@ -143,6 +147,9 @@ public class StreamEventJournalP_WmCoalescingTest extends JetTestSupport {
                        return a.equals(e);
                    })
                    .expectOutput(asList(IDLE_MESSAGE, wm(10)));
+
+        updatingThread.interrupt();
+        updatingThread.join();
     }
 
     @Test
