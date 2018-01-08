@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.core.IList;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.DAG;
@@ -43,15 +42,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.dontParallelize;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
+import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
@@ -247,28 +247,83 @@ public class WatermarkCoalescer_IntegrationTest extends JetTestSupport {
         assertEquals("wm(" + IDLE_MESSAGE.timestamp() + ")", sinkList.get(0));
     }
 
+    @Test
+    public void when_waitingForWmOnI2ButI2BecomesDone_then_wmFromI1Forwarded() {
+        dag = createDag(mode, singletonList(wm(100)), asList(delay(500), DONE_ITEM));
+
+        JobConfig config = new JobConfig().setMaxWatermarkRetainMillis(5000);
+        instance.newJob(dag, config);
+
+        assertTrueEventually(() -> assertEquals(1, sinkList.size()), 3);
+        assertEquals("wm(100)", sinkList.get(0));
+    }
+
+    @Test
+    public void when_multipleWm_then_allForwarded() {
+        dag = createDag(mode, asList(wm(100), delay(500), wm(101)), asList(wm(100), delay(500), wm(101)));
+
+        JobConfig config = new JobConfig().setMaxWatermarkRetainMillis(5000);
+        instance.newJob(dag, config);
+
+        assertTrueEventually(() -> assertEquals(2, sinkList.size()), 3);
+        assertEquals("wm(100)", sinkList.get(0));
+        assertEquals("wm(101)", sinkList.get(1));
+    }
+
     private Watermark wm(long ts) {
         return new Watermark(ts);
     }
 
+    private ListSource.Delay delay(long ms) {
+        return new ListSource.Delay(ms);
+    }
+
     /**
-     * A processor that emits the given list of items and <em>never</em> completes.
+     * A processor that emits the given list of items.
+     * The list can contain special items:<ul>
+     *     <li>{@link SerializableWm} - will be emitted as a normal Watermark
+     *     <li>{@link DoneItem#DONE_ITEM} - will cause the source to complete and ignore
+     *          the rest of items. If this item is not present, it will never complete.
+     *     <li>{@link Delay} - will cause the next item to be emitted after the delay
+     * </ul>
      */
     public static class ListSource extends AbstractProcessor {
-        private final Traverser<?> trav;
+        private final List<?> list;
+        private int pos;
+        private long nextItemAt = Long.MIN_VALUE;
 
         public ListSource(List<?> list) {
-            this(list.toArray());
-        }
-
-        public ListSource(Object ... list) {
-            trav = traverseArray(list)
-                    .map(o -> o instanceof SerializableWm ? ((SerializableWm) o).toRealWm() : o);
+            this.list = list;
         }
 
         @Override
         public boolean complete() {
-            emitFromTraverser(trav);
+            if (nextItemAt != Long.MIN_VALUE && System.nanoTime() < nextItemAt) {
+                return false;
+            }
+            nextItemAt = Long.MIN_VALUE;
+
+            while (pos < list.size()) {
+                Object item = list.get(pos);
+                if (item instanceof SerializableWm) {
+                    item = new Watermark(((SerializableWm) item).timestamp);
+                } else if (item instanceof Delay) {
+                    getLogger().info("will wait " + MILLISECONDS.toNanos(((Delay) item).millis) + " ms");
+                    nextItemAt = System.nanoTime() + MILLISECONDS.toNanos(((Delay) item).millis);
+                    pos++;
+                    return false;
+                } else if (item == DONE_ITEM) {
+                    getLogger().info("returning true");
+                    return true;
+                }
+
+                if (tryEmit(item)) {
+                    getLogger().info("emitted " + item);
+                    pos++;
+                } else {
+                    break;
+                }
+            }
             return false;
         }
 
@@ -311,6 +366,14 @@ public class WatermarkCoalescer_IntegrationTest extends JetTestSupport {
 
             Watermark toRealWm() {
                 return new Watermark(timestamp);
+            }
+        }
+
+        private static final class Delay implements Serializable {
+            final long millis;
+
+            private Delay(long millis) {
+                this.millis = millis;
             }
         }
     }

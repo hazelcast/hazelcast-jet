@@ -41,6 +41,8 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  */
 public abstract class WatermarkCoalescer {
 
+    public static final long NO_NEW_WM = Long.MIN_VALUE;
+
     public static final Watermark IDLE_MESSAGE = new Watermark(Long.MAX_VALUE);
 
     private WatermarkCoalescer() { }
@@ -48,8 +50,8 @@ public abstract class WatermarkCoalescer {
     /**
      * Called when the queue with the given index is exhausted.
      *
-     * @return the watermark value to emit or {@code Long.MIN_VALUE} if no watermark
-     * should be forwarded
+     * @return the watermark value to emit or {@link #NO_NEW_WM} if no
+     * watermark should be forwarded
      */
     public abstract long queueDone(int queueIndex);
 
@@ -67,8 +69,8 @@ public abstract class WatermarkCoalescer {
      * @param queueIndex index of the queue on which the WM was received.
      * @param wmValue    the watermark value, it can be {@link #IDLE_MESSAGE}
      * @param systemTime the value obtained from {@link #getTime()}
-     * @return the watermark value to emit or {@code Long.MIN_VALUE} if no watermark
-     * should be forwarded
+     * @return the watermark value to emit or {@link #NO_NEW_WM} if no
+     *      watermark should be forwarded
      */
     public abstract long observeWm(long systemTime, int queueIndex, long wmValue);
 
@@ -78,8 +80,8 @@ public abstract class WatermarkCoalescer {
      * idle marker.
      *
      * @param systemTime the value obtained from {@link #getTime()}
-     * @return the watermark value to emit, {@link #IDLE_MESSAGE}
-     * or {@code Long.MIN_VALUE} if no watermark should be forwarded
+     * @return the watermark value to emit, {@link #IDLE_MESSAGE} or
+     *      {@link #NO_NEW_WM} if no watermark should be forwarded
      */
     public abstract long checkWmHistory(long systemTime);
 
@@ -127,7 +129,7 @@ public abstract class WatermarkCoalescer {
 
         @Override
         public long checkWmHistory(long systemTime) {
-            return Long.MIN_VALUE;
+            return NO_NEW_WM;
         }
 
         @Override
@@ -198,7 +200,7 @@ public abstract class WatermarkCoalescer {
         private long checkObservedWms() {
             if (allInputsAreIdle) {
                 // we've already returned IDLE_MESSAGE, let's do nothing now
-                return Long.MIN_VALUE;
+                return NO_NEW_WM;
             }
 
             // find lowest observed wm
@@ -216,7 +218,9 @@ public abstract class WatermarkCoalescer {
             // if the lowest observed wm is MAX_VALUE that means that all inputs are idle
             if (min == Long.MAX_VALUE) {
                 allInputsAreIdle = true;
-                return notDoneInputCount == 0 ? Long.MIN_VALUE : Long.MAX_VALUE;
+                return notDoneInputCount != 0
+                        ? IDLE_MESSAGE.timestamp()
+                        : NO_NEW_WM;
             }
 
             // if the new lowest observed wm is larger than already emitted, emit it
@@ -224,20 +228,21 @@ public abstract class WatermarkCoalescer {
                 lastEmittedWm = min;
                 return min;
             }
-            return Long.MIN_VALUE;
+
+            return NO_NEW_WM;
         }
 
         @Override
         public long checkWmHistory(long systemTime) {
             if (watermarkHistory == null) {
-                return Long.MIN_VALUE;
+                return NO_NEW_WM;
             }
             long historicWm = watermarkHistory.sample(systemTime, topObservedWm);
             if (historicWm > lastEmittedWm) {
                 lastEmittedWm = historicWm;
                 return historicWm;
             }
-            return Long.MIN_VALUE;
+            return NO_NEW_WM;
         }
 
         @Override

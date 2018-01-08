@@ -29,6 +29,7 @@ import java.util.BitSet;
 import java.util.function.Consumer;
 
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
+import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.NO_NEW_WM;
 import static com.hazelcast.jet.impl.util.ProgressState.MADE_PROGRESS;
 
 /**
@@ -146,7 +147,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     }
 
     private boolean maybeEmitWm(long timestamp, Consumer<Object> dest) {
-        if (timestamp != Long.MIN_VALUE) {
+        if (timestamp != NO_NEW_WM) {
             dest.accept(new Watermark(timestamp));
             return true;
         }
