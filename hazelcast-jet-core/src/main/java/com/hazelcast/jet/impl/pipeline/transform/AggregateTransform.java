@@ -21,22 +21,15 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 
 public class AggregateTransform<T, A, R, OUT> implements UnaryTransform<T, OUT> {
-    private final DistributedToLongFunction<? super T> timestampFn;
     private final WindowDefinition wDef;
     private final AggregateOperation1<? super T, A, ? extends R> aggrOp;
 
     public AggregateTransform(
-            DistributedToLongFunction<? super T> timestampFn,
             WindowDefinition wDef,
             AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
         this.wDef = wDef;
-        this.timestampFn = timestampFn;
         this.aggrOp = aggrOp;
-    }
-
-    public DistributedToLongFunction<? super T> timestampFn() {
-        return timestampFn;
     }
 
     public WindowDefinition windowDefinition() {

@@ -17,8 +17,8 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.ComputeStage;
-import com.hazelcast.jet.StageWithGroupingAndTimestamp;
 import com.hazelcast.jet.StageWithGroupingAndWindow;
+import com.hazelcast.jet.StageWithGroupingWM;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.WindowGroupAggregateBuilder;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
@@ -26,7 +26,6 @@ import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.impl.pipeline.transform.CoGroupTransform;
 import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
 
@@ -41,12 +40,11 @@ public class StageWithGroupingAndWindowImpl<T, K>
         implements StageWithGroupingAndWindow<T, K> {
 
     StageWithGroupingAndWindowImpl(
-            @Nonnull ComputeStageImpl<T> computeStage,
+            @Nonnull ComputeStageWMImpl<T> computeStage,
             @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
-            @Nullable DistributedToLongFunction<? super T> timestampFn,
             @Nullable WindowDefinition wDef
     ) {
-        super(computeStage, keyFn, timestampFn, wDef);
+        super(computeStage, keyFn, wDef);
     }
 
     @Nonnull
@@ -55,43 +53,36 @@ public class StageWithGroupingAndWindowImpl<T, K>
     ) {
         return computeStage.attach(
                 new GroupTransform<T, K, A, R, TimestampedEntry<K, R>>(
-                        keyFn(), aggrOp, timestampFn(), windowDefinition()));
+                        keyFn(), aggrOp, windowDefinition()));
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public <T1, A, R> ComputeStage<TimestampedEntry<K, R>> aggregate2(
-            @Nonnull StageWithGroupingAndTimestamp<T1, ? extends K> stage1,
+            @Nonnull StageWithGroupingWM<T1, ? extends K> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp
     ) {
         return computeStage.attach(
                 new CoGroupTransform<K, A, R, TimestampedEntry<K, R>>(
-                        asList(keyFn(), stage1.keyFn()),
-                        aggrOp, asList(timestampFn(), stage1.timestampFn()),
-                        windowDefinition()
+                        asList(keyFn(), stage1.keyFn()), aggrOp, windowDefinition()
                 ),
-                singletonList(((StageWithGroupingAndTimestampImpl) stage1).computeStage));
+                singletonList(((StageWithGroupingWMImpl) stage1).computeStage));
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public <T1, T2, A, R> ComputeStage<TimestampedEntry<K, R>> aggregate3(
-            @Nonnull StageWithGroupingAndTimestamp<T1, ? extends K> stage1,
-            @Nonnull StageWithGroupingAndTimestamp<T2, ? extends K> stage2,
+            @Nonnull StageWithGroupingWM<T1, ? extends K> stage1,
+            @Nonnull StageWithGroupingWM<T2, ? extends K> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp
     ) {
         return computeStage.attach(
                 new CoGroupTransform<K, A, R, TimestampedEntry<K, R>>(
-                        asList(keyFn(), stage1.keyFn(), stage2.keyFn()),
-                        aggrOp, asList(timestampFn(), stage1.timestampFn(), stage2.timestampFn()),
-                        windowDefinition()
+                        asList(keyFn(), stage1.keyFn(), stage2.keyFn()), aggrOp, windowDefinition()
                 ),
-                asList(((StageWithGroupingAndTimestampImpl) stage1).computeStage,
-                        ((StageWithGroupingAndTimestampImpl) stage2).computeStage));
+                asList(((StageWithGroupingWMImpl) stage1).computeStage,
+                        ((StageWithGroupingWMImpl) stage2).computeStage));
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public WindowGroupAggregateBuilder<T, K> aggregateBuilder() {
         return new WindowGroupAggregateBuilder<>(this);
     }

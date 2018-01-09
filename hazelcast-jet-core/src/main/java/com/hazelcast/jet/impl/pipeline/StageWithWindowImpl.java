@@ -17,8 +17,8 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.ComputeStage;
+import com.hazelcast.jet.ComputeStageWM;
 import com.hazelcast.jet.StageWithGroupingAndWindow;
-import com.hazelcast.jet.StageWithTimestamp;
 import com.hazelcast.jet.StageWithWindow;
 import com.hazelcast.jet.WindowAggregateBuilder;
 import com.hazelcast.jet.WindowDefinition;
@@ -27,7 +27,6 @@ import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.CoAggregateTransform;
 
@@ -39,17 +38,14 @@ import static java.util.Collections.singletonList;
  */
 public class StageWithWindowImpl<T> implements StageWithWindow<T> {
 
-    private final ComputeStageImpl<T> computeStage;
-    private final DistributedToLongFunction<? super T> timestampFn;
+    private final ComputeStageWMImpl<T> computeStage;
     private final WindowDefinition wDef;
 
     StageWithWindowImpl(
-            ComputeStageImpl<T> computeStage,
-            DistributedToLongFunction<? super T> timestampFn,
+            ComputeStageWMImpl<T> computeStage,
             WindowDefinition wDef
     ) {
         this.computeStage = computeStage;
-        this.timestampFn = timestampFn;
         this.wDef = wDef;
     }
 
@@ -59,13 +55,8 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
     }
 
     @Override
-    public DistributedToLongFunction<? super T> timestampFn() {
-        return timestampFn;
-    }
-
-    @Override
     public <K> StageWithGroupingAndWindow<T, K> groupingKey(DistributedFunction<? super T, ? extends K> keyFn) {
-        return new StageWithGroupingAndWindowImpl<>(computeStage, keyFn, timestampFn, wDef);
+        return new StageWithGroupingAndWindowImpl<>(computeStage, keyFn, wDef);
     }
 
     @Override
@@ -73,33 +64,32 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
     public <A, R> ComputeStage<TimestampedEntry<Void, R>> aggregate(
             AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
-        return computeStage.attach(
-                new AggregateTransform<T, A, R, TimestampedEntry<Void, R>>(timestampFn, wDef, aggrOp));
+        return computeStage.attach(new AggregateTransform<T, A, R, TimestampedEntry<Void, R>>(wDef, aggrOp));
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T1, A, R> ComputeStage<TimestampedEntry<Void, R>> aggregate2(
-            StageWithTimestamp<T1> stage1,
+            ComputeStageWM<T1> stage1,
             AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp
     ) {
         return computeStage.attach(new CoAggregateTransform<>(aggrOp),
-                singletonList(((StageWithTimestampImpl) stage1).computeStage));
+                singletonList((ComputeStageImplBase) stage1));
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T1, T2, A, R> ComputeStage<TimestampedEntry<Void, R>> aggregate3(
-            StageWithTimestamp<T1> stage1,
-            StageWithTimestamp<T2> stage2,
+            ComputeStageWM<T1> stage1,
+            ComputeStageWM<T2> stage2,
             AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp
     ) {
         return computeStage.attach(new CoAggregateTransform<>(aggrOp),
-                asList(((StageWithTimestampImpl) stage1).computeStage, ((StageWithTimestampImpl) stage2).computeStage));
+                asList((ComputeStageImplBase) stage1, (ComputeStageImplBase) stage2));
     }
 
     @Override
     public WindowAggregateBuilder<T> aggregateBuilder() {
-        return new WindowAggregateBuilder<>(computeStage, timestampFn, wDef);
+        return new WindowAggregateBuilder<>(computeStage, wDef);
     }
 }

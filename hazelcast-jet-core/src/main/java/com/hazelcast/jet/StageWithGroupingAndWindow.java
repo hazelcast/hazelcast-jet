@@ -34,9 +34,6 @@ public interface StageWithGroupingAndWindow<T, K> {
     DistributedFunction<? super T, ? extends K> keyFn();
 
     @Nonnull
-    DistributedToLongFunction<? super T> timestampFn();
-
-    @Nonnull
     WindowDefinition windowDefinition();
 
     @Nonnull
@@ -45,13 +42,13 @@ public interface StageWithGroupingAndWindow<T, K> {
 
     @Nonnull
     <T1, A, R> ComputeStage<TimestampedEntry<K, R>> aggregate2(
-            @Nonnull StageWithGroupingAndTimestamp<T1, ? extends K> stage1,
+            @Nonnull StageWithGroupingWM<T1, ? extends K> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp);
 
     @Nonnull
     <T1, T2, A, R> ComputeStage<TimestampedEntry<K, R>> aggregate3(
-            @Nonnull StageWithGroupingAndTimestamp<T1, ? extends K> stage1,
-            @Nonnull StageWithGroupingAndTimestamp<T2, ? extends K> stage2,
+            @Nonnull StageWithGroupingWM<T1, ? extends K> stage1,
+            @Nonnull StageWithGroupingWM<T2, ? extends K> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp);
 
     @Nonnull

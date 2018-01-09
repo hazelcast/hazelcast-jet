@@ -18,36 +18,28 @@ package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.ComputeStage;
 import com.hazelcast.jet.WindowDefinition;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedToLongFunction;
-import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Map.Entry;
 
 @SuppressWarnings("unchecked")
 class StageWithGroupingBase<T, K> {
 
     @Nonnull
-    final ComputeStageImpl<T> computeStage;
+    final ComputeStageImplBase<T> computeStage;
     @Nonnull
     private final DistributedFunction<? super T, ? extends K> keyFn;
-    @Nullable
-    private final DistributedToLongFunction<? super T> timestampFn;
     @Nullable
     private final WindowDefinition wDef;
 
     StageWithGroupingBase(
-            @Nonnull ComputeStageImpl<T> computeStage,
+            @Nonnull ComputeStageImplBase<T> computeStage,
             @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
-            @Nullable DistributedToLongFunction<? super T> timestampFn,
             @Nullable WindowDefinition wDef
     ) {
         this.computeStage = computeStage;
         this.keyFn = keyFn;
-        this.timestampFn = timestampFn;
         this.wDef = wDef;
     }
 
@@ -56,18 +48,12 @@ class StageWithGroupingBase<T, K> {
         return keyFn;
     }
 
-    @Nonnull
-    public DistributedToLongFunction<? super T> timestampFn() {
-        return timestampFn;
-    }
-
-    @Nonnull
     public WindowDefinition windowDefinition() {
         return wDef;
     }
 
     @Nonnull
-    ComputeStageImpl<T> computeStage() {
+    ComputeStageImplBase<T> computeStage() {
         return computeStage;
     }
 }

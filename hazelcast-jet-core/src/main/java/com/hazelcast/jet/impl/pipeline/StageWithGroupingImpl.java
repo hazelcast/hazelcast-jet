@@ -36,10 +36,10 @@ import static java.util.Collections.singletonList;
 public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> implements StageWithGrouping<T, K> {
 
     StageWithGroupingImpl(
-            @Nonnull ComputeStageImpl<T> computeStage,
+            @Nonnull ComputeStageImplBase<T> computeStage,
             @Nonnull DistributedFunction<? super T, ? extends K> keyFn
     ) {
-        super(computeStage, keyFn, null, null);
+        super(computeStage, keyFn, null);
     }
 
     @Nonnull

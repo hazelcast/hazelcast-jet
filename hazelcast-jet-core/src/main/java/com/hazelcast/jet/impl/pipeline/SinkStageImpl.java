@@ -16,16 +16,14 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.ComputeStage;
 import com.hazelcast.jet.Sink;
 import com.hazelcast.jet.SinkStage;
 
-import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
 class SinkStageImpl extends AbstractStage implements SinkStage {
 
-    SinkStageImpl(ComputeStage upstream, Sink transform, PipelineImpl pipeline) {
-        super(singletonList(upstream), emptyList(), transform, pipeline);
+    SinkStageImpl(ComputeStageImplBase upstream, Sink transform, PipelineImpl pipeline) {
+        super(singletonList(upstream), transform, false, pipeline);
     }
 }

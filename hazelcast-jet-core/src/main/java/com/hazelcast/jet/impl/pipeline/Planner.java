@@ -31,6 +31,7 @@ import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.WatermarkEmissionPolicy;
+import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.pipeline.transform.CoGroupTransform;
@@ -242,7 +243,7 @@ class Planner {
         SlidingWindowPolicy winPolicy = wDef.toSlidingWindowPolicy();
         Vertex v1 = dag.newVertex(namePrefix + '1', accumulateByFrameP(
                 xform.keyFn(),
-                requireNonNull(xform.timestampFn()),
+                (TimestampedEntry<Object, Object> e) -> e.getTimestamp(),
                 TimestampKind.EVENT,
                 winPolicy,
                 xform.aggregateOperation().withFinishFn(identity())));
@@ -259,7 +260,7 @@ class Planner {
     ) {
         PlannerVertex pv = addVertex(stage, vertexName("session-window", ""), aggregateToSessionWindowP(
                 wDef.sessionTimeout(),
-                requireNonNull(xform.timestampFn()),
+                (TimestampedEntry<Object, Object> e) -> e.getTimestamp(),
                 xform.keyFn(),
                 xform.aggregateOperation()
         ));
@@ -348,7 +349,7 @@ class Planner {
     //                              --------
     //                             | joiner |
     //                              --------
-    private void handleHashJoin(AbstractStage stage, HashJoinTransform<?> hashJoin) {
+    private void handleHashJoin(AbstractStage stage, HashJoinTransform<?, ?> hashJoin) {
         String namePrefix = vertexName(hashJoin.name(), "");
         PlannerVertex primary = stage2vertex.get(stage.upstream.get(0));
         List<Function<Object, Object>> keyFns = (List<Function<Object, Object>>) (List)

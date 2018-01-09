@@ -19,6 +19,8 @@ package com.hazelcast.jet;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.impl.pipeline.ComputeStageImpl;
+import com.hazelcast.jet.impl.pipeline.ComputeStageImplBase;
 import com.hazelcast.jet.impl.pipeline.PipelineImpl;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
 
@@ -80,34 +82,38 @@ public class HashJoinBuilder<T0> {
         List<Entry<Tag<?>, StageAndClause>> orderedClauses = clauses.entrySet().stream()
                                                                     .sorted(comparing(Entry::getKey))
                                                                     .collect(toList());
-        List<ComputeStage> upstream = orderedClauses.stream()
-                                                     .map(e -> e.getValue().stage())
-                                                     .collect(toList());
+        List<ComputeStageImplBase> upstream = orderedClauses.stream()
+                                                            .map(e -> e.getValue().stage())
+                                                            .collect(toList());
         // A probable javac bug forced us to extract this variable
         Stream<JoinClause<?, T0, ?, ?>> joinClauses = orderedClauses
                 .stream()
                 .skip(1)
                 .map(e -> e.getValue().clause());
-        HashJoinTransform<T0> hashJoinTransform = new HashJoinTransform<>(
+        HashJoinTransform<T0, Tuple2<T0, ItemsByTag>> hashJoinTransform = new HashJoinTransform<>(
                 joinClauses.collect(toList()),
                 orderedClauses.stream()
                               .skip(1)
                               .map(Entry::getKey)
                               .collect(toList()));
         PipelineImpl pipeline = (PipelineImpl) clauses.get(tag0()).stage().getPipeline();
-        return pipeline.attach(hashJoinTransform, upstream);
+        ComputeStageImpl<Tuple2<T0, ItemsByTag>> attached = new ComputeStageImpl<>(
+                upstream, hashJoinTransform, pipeline);
+        pipeline.connect(upstream, attached);
+        return attached;
     }
 
     private static class StageAndClause<K, E0, T1, T1_OUT> {
-        private final ComputeStage<T1> stage;
+        private final ComputeStageImplBase<T1> stage;
         private final JoinClause<K, E0, T1, T1_OUT> joinClause;
 
+        @SuppressWarnings("unchecked")
         StageAndClause(ComputeStage<T1> stage, JoinClause<K, E0, T1, T1_OUT> joinClause) {
-            this.stage = stage;
+            this.stage = (ComputeStageImplBase<T1>) stage;
             this.joinClause = joinClause;
         }
 
-        ComputeStage<T1> stage() {
+        ComputeStageImplBase<T1> stage() {
             return stage;
         }
 

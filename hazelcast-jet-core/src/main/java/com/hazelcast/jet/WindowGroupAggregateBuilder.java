@@ -33,7 +33,7 @@ public class WindowGroupAggregateBuilder<T0, K> {
     }
 
     @SuppressWarnings("unchecked")
-    public <E> Tag<E> add(StageWithGroupingAndTimestamp<E, K> stage) {
+    public <E> Tag<E> add(StageWithGroupingWM<E, K> stage) {
         return graggBuilder.add(stage);
     }
 

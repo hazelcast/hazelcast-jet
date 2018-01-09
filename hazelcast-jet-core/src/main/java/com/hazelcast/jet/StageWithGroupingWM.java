@@ -16,16 +16,10 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.jet.function.DistributedToLongFunction;
-
-import javax.annotation.Nonnull;
-
 /**
  * Javadoc pending.
  */
 public interface StageWithGroupingWM<T, K> extends StageWithGrouping<T, K> {
 
-    @Nonnull
-    StageWithGroupingAndTimestamp<T, K> timestamp(@Nonnull DistributedToLongFunction<? super T> timestampFn);
-
+    StageWithGroupingAndWindow<T, K> window(WindowDefinition wDef);
 }

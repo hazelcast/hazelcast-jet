@@ -18,12 +18,11 @@ package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.ComputeStage;
 import com.hazelcast.jet.StageWithGrouping;
-import com.hazelcast.jet.StageWithGroupingAndTimestamp;
 import com.hazelcast.jet.StageWithGroupingAndWindow;
+import com.hazelcast.jet.StageWithGroupingWM;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.impl.pipeline.transform.CoGroupTransform;
 
 import java.util.ArrayList;
@@ -43,12 +42,10 @@ import static java.util.stream.Collectors.toList;
 public class GrAggBuilder<K> {
     private final WindowDefinition wDef;
     private final List<StageWithGroupingBase<?, K>> stages = new ArrayList<>();
-    private final List<DistributedToLongFunction<?>> timestampFns;
 
     @SuppressWarnings("unchecked")
     public GrAggBuilder(StageWithGrouping<?, K> s) {
         wDef = null;
-        timestampFns = null;
         stages.add((StageWithGroupingBase<?, K>) s);
     }
 
@@ -56,14 +53,11 @@ public class GrAggBuilder<K> {
     public GrAggBuilder(StageWithGroupingAndWindow<?, K> s) {
         wDef = s.windowDefinition();
         stages.add((StageWithGroupingBase<?, K>) s);
-        timestampFns = new ArrayList<>();
-        timestampFns.add(s.timestampFn());
     }
 
     @SuppressWarnings("unchecked")
-    public <E> Tag<E> add(StageWithGroupingAndTimestamp<E, K> stage) {
+    public <E> Tag<E> add(StageWithGroupingWM<E, K> stage) {
         stages.add((StageWithGroupingBase<E, K>) stage);
-        timestampFns.add(stage.timestampFn());
         return (Tag<E>) tag(stages.size() - 1);
     }
 
@@ -76,14 +70,14 @@ public class GrAggBuilder<K> {
     public <A, R, OUT> ComputeStage<OUT> build(AggregateOperation<A, R> aggrOp) {
         CoGroupTransform<K, A, R, OUT> transform = new CoGroupTransform<>(
                 stages.stream().map(StageWithGroupingBase::keyFn).collect(toList()),
-                aggrOp, timestampFns,
-                wDef
+                aggrOp, wDef
         );
         PipelineImpl pipeline = (PipelineImpl) stages.get(0).computeStage().getPipeline();
-        return pipeline.attach(
-                transform, stages.stream()
-                                 .map(StageWithGroupingBase::computeStage)
-                                 .collect(toList())
-        );
+        List<ComputeStageImplBase> upstream = stages.stream()
+                         .map(StageWithGroupingBase::computeStage)
+                         .collect(toList());
+        ComputeStageImpl<OUT> attached = new ComputeStageImpl<>(upstream, transform, pipeline);
+        pipeline.connect(upstream, attached);
+        return attached;
     }
 }

@@ -16,49 +16,157 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.jet.ComputeStage;
 import com.hazelcast.jet.ComputeStageWM;
+import com.hazelcast.jet.JoinClause;
 import com.hazelcast.jet.SourceWithWatermark;
-import com.hazelcast.jet.StageWithTimestamp;
+import com.hazelcast.jet.StageWithGroupingWM;
+import com.hazelcast.jet.StageWithWindow;
 import com.hazelcast.jet.Transform;
-import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.WindowDefinition;
+import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.aggregate.AggregateOperation2;
+import com.hazelcast.jet.aggregate.AggregateOperation3;
+import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.datamodel.Tuple3;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedPredicate;
+import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.impl.pipeline.transform.MultaryTransform;
+import com.hazelcast.jet.impl.pipeline.transform.UnaryTransform;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.List;
+import java.util.stream.Stream;
+
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toList;
 
 /**
  * Javadoc pending.
  */
-public class ComputeStageWMImpl<T>
-        extends ComputeStageImpl<T>
-        implements ComputeStageWM<T> {
+public class ComputeStageWMImpl<T> extends ComputeStageImplBase<T> implements ComputeStageWM<T> {
 
     ComputeStageWMImpl(
             @Nonnull SourceWithWatermark<? extends T> wmSource,
             @Nonnull PipelineImpl pipeline
     ) {
-        super(wmSource, pipeline);
+        this(emptyList(), wmSource, pipeline);
     }
 
-    ComputeStageWMImpl(
-            @Nonnull ComputeStageWM upstream,
+    private ComputeStageWMImpl(
+            @Nonnull ComputeStageImplBase upstream,
             @Nonnull Transform<? extends T> transform,
             @Nonnull PipelineImpl pipeline
     ) {
-        super(upstream, transform, pipeline);
+        super(singletonList(upstream), transform, true, pipeline);
     }
 
-    ComputeStageWMImpl(
-            @Nonnull List<ComputeStageWM> upstream,
+    private ComputeStageWMImpl(
+            @Nonnull List<ComputeStageImplBase> upstream,
             @Nonnull Transform<? extends T> transform,
             @Nonnull PipelineImpl pipeline
     ) {
-        super(upstream, transform, pipeline);
+        super(upstream, transform, true, pipeline);
     }
 
     @Nonnull @Override
-    public StageWithTimestamp<T> timestamp(@Nonnull DistributedToLongFunction<? super T> timestampFn) {
-        return new StageWithTimestampImpl<>(this, timestampFn);
+    public <K> StageWithGroupingWM<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn) {
+        return new StageWithGroupingWMImpl<>(this, keyFn);
     }
 
+    @Override
+    public StageWithWindow<T> window(WindowDefinition wDef) {
+        return new StageWithWindowImpl<>(this, wDef);
+    }
+
+    @Nonnull @Override
+    public <R> ComputeStageWM<R> map(@Nonnull DistributedFunction<? super T, ? extends R> mapFn) {
+        return attachMap(mapFn);
+    }
+
+    @Nonnull @Override
+    public ComputeStageWM<T> filter(@Nonnull DistributedPredicate<T> filterFn) {
+        return attachFilter(filterFn);
+    }
+
+    @Nonnull @Override
+    public <R> ComputeStageWM<R> flatMap(
+            @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
+    ) {
+        return attachFlatMap(flatMapFn);
+    }
+
+    @Nonnull @Override
+    public <K, T1_IN, T1> ComputeStageWM<Tuple2<T, T1>> hashJoin(
+            @Nonnull ComputeStage<T1_IN> stage1,
+            @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1
+    ) {
+        return attachHashJoin(stage1, joinClause1);
+    }
+
+    @Nonnull @Override
+    public <K1, T1_IN, T1, K2, T2_IN, T2> ComputeStageWM<Tuple3<T, T1, T2>> hashJoin(
+            @Nonnull ComputeStage<T1_IN> stage1,
+            @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
+            @Nonnull ComputeStage<T2_IN> stage2,
+            @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2
+    ) {
+        return attachHashJoin(stage1, joinClause1, stage2, joinClause2);
+    }
+
+    @Nonnull @Override
+    public <A, R> ComputeStage<R> aggregate(@Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp) {
+        return attachAggregate(aggrOp);
+    }
+
+    @Nonnull @Override
+    public <T1, A, R> ComputeStage<R> aggregate2(
+            @Nonnull ComputeStage<T1> stage1,
+            @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp
+    ) {
+        return attachAggregate2(stage1, aggrOp);
+    }
+
+    @Nonnull @Override
+    public <T1, T2, A, R> ComputeStage<R> aggregate3(
+            @Nonnull ComputeStage<T1> stage1,
+            @Nonnull ComputeStage<T2> stage2,
+            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp
+    ) {
+        return attachAggregate3(stage1, stage2, aggrOp);
+    }
+
+    @Nonnull @Override
+    public ComputeStageWM<T> peek(@Nonnull DistributedPredicate<? super T> shouldLogFn, @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn) {
+        return attachPeek(shouldLogFn, toStringFn);
+    }
+
+    @Nonnull @Override
+    public <R> ComputeStageWM<R> customTransform(@Nonnull String stageName, @Nonnull DistributedSupplier<Processor> procSupplier) {
+        return attachCustomTransform(stageName, procSupplier);
+    }
+
+    @Nonnull @Override
+    @SuppressWarnings("unchecked")
+    <R, RET> RET attach(@Nonnull UnaryTransform<? super T, ? extends R> unaryTransform) {
+        ComputeStageWMImpl<R> attached = new ComputeStageWMImpl<>(this, unaryTransform, pipelineImpl);
+        pipelineImpl.connect(this, attached);
+        return (RET) attached;
+    }
+
+    @Nonnull @Override
+    @SuppressWarnings("unchecked")
+    <R, RET> RET attach(
+            @Nonnull MultaryTransform<R> multaryTransform,
+            @Nonnull List<ComputeStageImplBase> otherInputs
+    ) {
+        List<ComputeStageImplBase> upstream = Stream.concat(Stream.of(this), otherInputs.stream()).collect(toList());
+        ComputeStageWMImpl<R> attached = new ComputeStageWMImpl<>(upstream, multaryTransform, pipelineImpl);
+        pipelineImpl.connect(upstream, attached);
+        return (RET) attached;
+    }
 }

@@ -16,20 +16,17 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.ComputeStageWM;
-import com.hazelcast.jet.SourceWithWatermark;
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.ComputeStage;
+import com.hazelcast.jet.ComputeStageWM;
 import com.hazelcast.jet.Pipeline;
 import com.hazelcast.jet.Sink;
 import com.hazelcast.jet.SinkStage;
 import com.hazelcast.jet.Source;
+import com.hazelcast.jet.SourceWithWatermark;
 import com.hazelcast.jet.Stage;
-import com.hazelcast.jet.impl.pipeline.transform.MultaryTransform;
-import com.hazelcast.jet.impl.pipeline.transform.UnaryTransform;
+import com.hazelcast.jet.core.DAG;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -54,22 +51,15 @@ public class PipelineImpl implements Pipeline {
         return new Planner(this).createDag();
     }
 
-    public <R> ComputeStage<R> attach(MultaryTransform<? extends R> transform, List<ComputeStage> upstream) {
-        ComputeStageImpl<R> attached = new ComputeStageImpl<>(upstream, transform, this);
-        upstream.forEach(u -> connect(u, attached));
-        return attached;
+    public void connect(ComputeStageImplBase upstream, Stage downstream) {
+        adjacencyMap.get(upstream).add(downstream);
     }
 
-    <T, R> ComputeStage<R> attach(
-            @Nonnull UnaryTransform<? super T, ? extends R> unaryTransform,
-            @Nullable ComputeStage<T> upstream
-    ) {
-        ComputeStageImpl<R> attached = new ComputeStageImpl<>(upstream, unaryTransform, this);
-        connect(upstream, attached);
-        return attached;
+    public void connect(List<ComputeStageImplBase> upstream, Stage downstream) {
+        upstream.forEach(u -> connect(u, downstream));
     }
 
-    <T> SinkStage drainTo(ComputeStage<? extends T> upstream, Sink<T> sink) {
+    <T> SinkStage drainTo(ComputeStageImplBase<? extends T> upstream, Sink<T> sink) {
         SinkStageImpl output = new SinkStageImpl(upstream, sink, this);
         connect(upstream, output);
         return output;
@@ -84,9 +74,5 @@ public class PipelineImpl implements Pipeline {
     void register(Stage stage, List<Stage> downstream) {
         List<Stage> prev = adjacencyMap.put(stage, downstream);
         assert prev == null : "Double registering of a Stage with this Pipeline: " + stage;
-    }
-
-    private void connect(ComputeStage upstream, Stage downstream) {
-        adjacencyMap.get(upstream).add(downstream);
     }
 }

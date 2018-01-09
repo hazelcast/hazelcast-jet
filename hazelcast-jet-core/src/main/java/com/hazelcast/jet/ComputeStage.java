@@ -80,7 +80,7 @@ public interface ComputeStage<T> extends Stage {
      * package Javadoc} for a detailed description of the hash-join transform.
      *
      * @param stage1     the pipeline to hash-join with this one
-     * @param joinClause specifies how to join the two streams
+     * @param joinClause1 specifies how to join the two streams
      * @param <K>        the type of the join key
      * @param <T1_IN>    the type of {@code stage1} items
      * @param <T1>       the result type of projection on {@code stage1} items
@@ -88,7 +88,7 @@ public interface ComputeStage<T> extends Stage {
     @Nonnull
     <K, T1_IN, T1> ComputeStage<Tuple2<T, T1>> hashJoin(
             @Nonnull ComputeStage<T1_IN> stage1,
-            @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause
+            @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1
     );
 
     /**

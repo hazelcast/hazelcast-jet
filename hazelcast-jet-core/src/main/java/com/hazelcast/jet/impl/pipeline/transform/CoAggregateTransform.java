@@ -18,26 +18,20 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.function.DistributedToLongFunction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.List;
 
 public class CoAggregateTransform<A, R, OUT> implements MultaryTransform<OUT> {
     @Nonnull
     private final AggregateOperation<A, ? extends R> aggrOp;
     @Nullable
-    private final List<DistributedToLongFunction<?>> timestampFns;
-    @Nullable
     private final WindowDefinition wDef;
 
     public CoAggregateTransform(
             @Nonnull AggregateOperation<A, ? extends R> aggrOp,
-            @Nullable List<DistributedToLongFunction<?>> timestampFns,
             @Nullable WindowDefinition wDef
     ) {
-        this.timestampFns = timestampFns;
         this.wDef = wDef;
         this.aggrOp = aggrOp;
     }
@@ -45,12 +39,7 @@ public class CoAggregateTransform<A, R, OUT> implements MultaryTransform<OUT> {
     public CoAggregateTransform(
             @Nonnull AggregateOperation<A, ? extends R> aggrOp
     ) {
-        this(aggrOp, null, null);
-    }
-
-    @Nullable
-    public List<DistributedToLongFunction<?>> timestampFns() {
-        return timestampFns;
+        this(aggrOp, null);
     }
 
     @Nullable

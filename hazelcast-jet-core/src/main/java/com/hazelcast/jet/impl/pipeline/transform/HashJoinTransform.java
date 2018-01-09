@@ -22,7 +22,7 @@ import com.hazelcast.jet.datamodel.Tag;
 import javax.annotation.Nonnull;
 import java.util.List;
 
-public class HashJoinTransform<T0> implements MultaryTransform {
+public class HashJoinTransform<T0, R> implements MultaryTransform<R> {
     private final List<JoinClause<?, ? super T0, ?, ?>> clauses;
     private final List<Tag> tags;
 

@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.pipeline.transform;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedToLongFunction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -30,17 +29,13 @@ public class GroupTransform<T, K, A, R, OUT> implements UnaryTransform<T, OUT> {
     @Nonnull
     private final AggregateOperation1<? super T, A, ? extends R> aggrOp;
     @Nullable
-    private final DistributedToLongFunction<? super T> timestampFn;
-    @Nullable
     private final WindowDefinition wDef;
 
     public GroupTransform(
             @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
             @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp,
-            @Nullable DistributedToLongFunction<? super T> timestampFn,
             @Nullable WindowDefinition wDef
     ) {
-        this.timestampFn = timestampFn;
         this.wDef = wDef;
         this.keyFn = keyFn;
         this.aggrOp = aggrOp;
@@ -50,7 +45,7 @@ public class GroupTransform<T, K, A, R, OUT> implements UnaryTransform<T, OUT> {
             @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
             @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
-        this(keyFn, aggrOp, null, null);
+        this(keyFn, aggrOp, null);
     }
 
     @Nonnull
@@ -61,11 +56,6 @@ public class GroupTransform<T, K, A, R, OUT> implements UnaryTransform<T, OUT> {
     @Nonnull
     public AggregateOperation1<? super T, A, ? extends R> aggregateOperation() {
         return aggrOp;
-    }
-
-    @Nullable
-    public DistributedToLongFunction<? super T> timestampFn() {
-        return timestampFn;
     }
 
     @Nullable

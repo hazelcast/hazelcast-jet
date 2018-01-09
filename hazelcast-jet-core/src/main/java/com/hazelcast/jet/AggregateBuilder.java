@@ -19,19 +19,12 @@ package com.hazelcast.jet;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.impl.pipeline.AggBuilder;
-import com.hazelcast.jet.impl.pipeline.PipelineImpl;
-import com.hazelcast.jet.impl.pipeline.transform.CoAggregateTransform;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import static com.hazelcast.jet.datamodel.Tag.tag;
 
 public class AggregateBuilder<T0> {
     private final AggBuilder<T0> aggBuilder;
 
     AggregateBuilder(ComputeStage<T0> s) {
-        this.aggBuilder = new AggBuilder<>(s, null, null);
+        this.aggBuilder = new AggBuilder<>(s, null);
     }
 
     public Tag<T0> tag0() {

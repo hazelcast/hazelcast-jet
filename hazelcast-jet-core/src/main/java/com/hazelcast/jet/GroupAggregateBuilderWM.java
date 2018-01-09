@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,28 +18,28 @@ package com.hazelcast.jet;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
-import com.hazelcast.jet.impl.pipeline.AggBuilder;
+import com.hazelcast.jet.impl.pipeline.GrAggBuilder;
 
-public class WindowAggregateBuilder<T0> {
-    private final AggBuilder<T0> aggBuilder;
+import java.util.Map.Entry;
 
-    public WindowAggregateBuilder(
-            ComputeStage<T0> s,
-            WindowDefinition wDef
-    ) {
-        this.aggBuilder = new AggBuilder<>(s, wDef);
+public class GroupAggregateBuilderWM<T0, K> {
+    private final GrAggBuilder<K> graggBuilder;
+
+    public GroupAggregateBuilderWM(StageWithGrouping<T0, K> s) {
+        graggBuilder = new GrAggBuilder<>(s);
     }
 
     public Tag<T0> tag0() {
         return Tag.tag0();
     }
 
-    public <E> Tag<E> add(ComputeStageWM<E> stage) {
-        return aggBuilder.add(stage);
+    @SuppressWarnings("unchecked")
+    public <T> Tag<T> add(StageWithGroupingWM<T, K> stage) {
+        return graggBuilder.add(stage);
     }
 
-    public <A, R> ComputeStage<TimestampedEntry<Void, R>> build(AggregateOperation<A, R> aggrOp) {
-        return aggBuilder.build(aggrOp);
+    public <A, R> ComputeStageWM<Entry<K, R>> build(AggregateOperation<A, R> aggrOp) {
+        ComputeStage<Entry<K, R>> result = graggBuilder.build(aggrOp);
+        return (ComputeStageWM<Entry<K, R>>) result;
     }
 }
