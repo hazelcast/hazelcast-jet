@@ -307,7 +307,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         return new StreamKafkaP<>(properties,
                 numTopics == 1 ? singletonList(topic1Name) : Arrays.asList(topic1Name, topic2Name),
                 projectionFn, globalParallelism,
-                100, wmGenParams(e -> e instanceof Entry ? (int) ((Entry) e).getKey() : System.currentTimeMillis(),
+                wmGenParams(e -> e instanceof Entry ? (int) ((Entry) e).getKey() : System.currentTimeMillis(),
                 withFixedLag(LAG), suppressDuplicates(), idleTimeoutMillis));
     }
 

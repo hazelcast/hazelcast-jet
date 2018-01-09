@@ -55,15 +55,14 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static java.lang.System.arraycopy;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.stream.Collectors.toList;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * See {@link com.hazelcast.jet.core.processor.KafkaProcessors#streamKafkaP}.
  */
 public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Closeable {
 
-    private static final long KAFKA_DEFAULT_REFRESH_INTERVAL = 300_000;
+    private static final long METADATA_CHECK_INTERVAL_NANOS = SECONDS.toNanos(5);
     private static final int POLL_TIMEOUT_MS = 50;
 
     Map<TopicPartition, Integer> currentAssignment = new HashMap<>();
@@ -76,7 +75,8 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
     private KafkaConsumer<Object, Object> consumer;
     private final AppendableTraverser<Object> appendableTraverser = new AppendableTraverser<>(2);
 
-    private long nextPartitionCheck = Long.MIN_VALUE;
+    private final int[] partitionCounts;
+    private long nextMetadataCheck = Long.MIN_VALUE;
 
     /**
      * Key: topicName<br>
@@ -85,7 +85,6 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
      */
     private final Map<String, long[]> offsets = new HashMap<>();
     private Traverser<Entry<BroadcastKey<TopicPartition>, Long>> snapshotTraverser;
-    private long metadataRefreshInterval;
     private int processorIndex;
     private Traverser<Object> traverser;
     private ConsumerRecord<Object, Object> lastEmittedItem;
@@ -95,16 +94,15 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
             @Nonnull List<String> topics,
             @Nonnull DistributedBiFunction<K, V, T> projectionFn,
             int globalParallelism,
-            long metadataRefreshInterval,
             @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
         this.properties = properties;
         this.topics = topics;
         this.projectionFn = projectionFn;
         this.globalParallelism = globalParallelism;
-        this.metadataRefreshInterval = metadataRefreshInterval;
 
         watermarkSourceUtil = new WatermarkSourceUtil<>(wmGenParams);
+        partitionCounts = new int[topics.size()];
     }
 
     @Override
@@ -116,7 +114,19 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
     }
 
     private void assignPartitions(boolean seekToBeginning) {
-        List<Integer> partitionCounts = topics.stream().map(t -> consumer.partitionsFor(t).size()).collect(toList());
+        if (System.nanoTime() < nextMetadataCheck) {
+            return;
+        }
+        boolean allEqual = true;
+        for (int i = 0; i < topics.size(); i++) {
+            int newCount = consumer.partitionsFor(topics.get(i)).size();
+            allEqual &= partitionCounts[i] == newCount;
+            partitionCounts[i] = newCount;
+        }
+        if (allEqual) {
+            return;
+        }
+
         KafkaPartitionAssigner assigner = new KafkaPartitionAssigner(topics, partitionCounts, globalParallelism);
         Set<TopicPartition> newAssignments = assigner.topicPartitionsFor(processorIndex);
         logFinest(getLogger(), "Currently assigned partitions: %s", newAssignments);
@@ -135,13 +145,13 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
             }
         }
 
-        createOrExtendOffsetsArrays(partitionCounts);
-        nextPartitionCheck = System.nanoTime() + MILLISECONDS.toNanos(metadataRefreshInterval);
+        createOrExtendOffsetsArrays();
+        nextMetadataCheck = System.nanoTime() + METADATA_CHECK_INTERVAL_NANOS;
     }
 
-    private void createOrExtendOffsetsArrays(List<Integer> partitionCounts) {
-        for (int topicIdx = 0; topicIdx < partitionCounts.size(); topicIdx++) {
-            int newPartitionCount = partitionCounts.get(topicIdx);
+    private void createOrExtendOffsetsArrays() {
+        for (int topicIdx = 0; topicIdx < partitionCounts.length; topicIdx++) {
+            int newPartitionCount = partitionCounts[topicIdx];
             String topicName = topics.get(topicIdx);
             long[] oldOffsets = offsets.get(topicName);
             if (oldOffsets != null && oldOffsets.length == newPartitionCount) {
@@ -158,9 +168,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
 
     @Override
     public boolean complete() {
-        if (System.nanoTime() >= nextPartitionCheck) {
-            assignPartitions(true);
-        }
+        assignPartitions(true);
 
         if (traverser == null) {
             ConsumerRecords<Object, Object> records = null;
@@ -271,7 +279,6 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
         private final Properties properties;
         private final List<String> topics;
         private final DistributedBiFunction<K, V, T> projectionFn;
-        private final long metadataRefreshInterval;
         private final WatermarkGenerationParams<T> wmGenParams;
         private int totalParallelism;
 
@@ -285,17 +292,6 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
             this.topics = topics;
             this.projectionFn = projectionFn;
             this.wmGenParams = wmGenParams;
-
-            // Save the value of metadata.max.age.ms to a variable and zero it in the properties.
-            // We'll do metadata refresh on our own.
-            if (properties.containsKey("metadata.max.age.ms")) {
-                metadataRefreshInterval = Long.parseLong(properties.getProperty("metadata.max.age.ms"));
-            } else {
-                metadataRefreshInterval = KAFKA_DEFAULT_REFRESH_INTERVAL;
-            }
-            // Set metadata caching to 1 second: we read the metadata for multiple partitions one by one. If we
-            // set this to 0, consumer.partitionsFor(topic) would probably fetch metadata for each topic anew.
-            this.properties.setProperty("metadata.max.age.ms", "1000");
         }
 
         @Override
@@ -312,8 +308,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
         @Override
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
             return address -> new CloseableProcessorSupplier<>(
-                    () -> new StreamKafkaP(properties, topics, projectionFn, totalParallelism, metadataRefreshInterval,
-                            wmGenParams));
+                    () -> new StreamKafkaP(properties, topics, projectionFn, totalParallelism, wmGenParams));
         }
     }
 
@@ -323,11 +318,11 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
     static class KafkaPartitionAssigner {
 
         private final List<String> topics;
-        private final List<Integer> partitionCounts;
+        private final int[] partitionCounts;
         private final int globalParallelism;
 
-        KafkaPartitionAssigner(List<String> topics, List<Integer> partitionCounts, int globalParallelism) {
-            Preconditions.checkTrue(topics.size() == partitionCounts.size(),
+        KafkaPartitionAssigner(List<String> topics, int[] partitionCounts, int globalParallelism) {
+            Preconditions.checkTrue(topics.size() == partitionCounts.length,
                     "Different length between topics and partition counts");
             this.topics = topics;
             this.partitionCounts = partitionCounts;
@@ -337,7 +332,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
         Set<TopicPartition> topicPartitionsFor(int processorIndex) {
             Set<TopicPartition> assignments = new LinkedHashSet<>();
             for (int topicIndex = 0; topicIndex < topics.size(); topicIndex++) {
-                for (int partition = 0; partition < partitionCounts.get(topicIndex); partition++) {
+                for (int partition = 0; partition < partitionCounts[topicIndex]; partition++) {
                     if (processorIndexFor(topicIndex, partition) == processorIndex) {
                         assignments.add(new TopicPartition(topics.get(topicIndex), partition));
                     }
