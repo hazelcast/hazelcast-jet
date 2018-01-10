@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.ComputeStage;
 import com.hazelcast.jet.ComputeStageWM;
+import com.hazelcast.jet.GeneralComputeStage;
 import com.hazelcast.jet.JoinClause;
 import com.hazelcast.jet.SourceWithWatermark;
 import com.hazelcast.jet.StageWithGroupingWM;
@@ -25,9 +26,6 @@ import com.hazelcast.jet.StageWithWindow;
 import com.hazelcast.jet.Transform;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.WindowDefinition;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
-import com.hazelcast.jet.aggregate.AggregateOperation2;
-import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
@@ -50,6 +48,14 @@ import static java.util.stream.Collectors.toList;
  */
 public class ComputeStageWMImpl<T> extends ComputeStageImplBase<T> implements ComputeStageWM<T> {
 
+    public ComputeStageWMImpl(
+            @Nonnull List<GeneralComputeStage> upstream,
+            @Nonnull Transform<? extends T> transform,
+            @Nonnull PipelineImpl pipeline
+    ) {
+        super(upstream, transform, true, pipeline);
+    }
+
     ComputeStageWMImpl(
             @Nonnull SourceWithWatermark<? extends T> wmSource,
             @Nonnull PipelineImpl pipeline
@@ -58,19 +64,11 @@ public class ComputeStageWMImpl<T> extends ComputeStageImplBase<T> implements Co
     }
 
     private ComputeStageWMImpl(
-            @Nonnull ComputeStageImplBase upstream,
+            @Nonnull GeneralComputeStage upstream,
             @Nonnull Transform<? extends T> transform,
             @Nonnull PipelineImpl pipeline
     ) {
         super(singletonList(upstream), transform, true, pipeline);
-    }
-
-    private ComputeStageWMImpl(
-            @Nonnull List<ComputeStageImplBase> upstream,
-            @Nonnull Transform<? extends T> transform,
-            @Nonnull PipelineImpl pipeline
-    ) {
-        super(upstream, transform, true, pipeline);
     }
 
     @Nonnull @Override
@@ -78,6 +76,7 @@ public class ComputeStageWMImpl<T> extends ComputeStageImplBase<T> implements Co
         return new StageWithGroupingWMImpl<>(this, keyFn);
     }
 
+    @Nonnull
     @Override
     public StageWithWindow<T> window(WindowDefinition wDef) {
         return new StageWithWindowImpl<>(this, wDef);
@@ -119,34 +118,18 @@ public class ComputeStageWMImpl<T> extends ComputeStageImplBase<T> implements Co
     }
 
     @Nonnull @Override
-    public <A, R> ComputeStage<R> aggregate(@Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp) {
-        return attachAggregate(aggrOp);
-    }
-
-    @Nonnull @Override
-    public <T1, A, R> ComputeStage<R> aggregate2(
-            @Nonnull ComputeStage<T1> stage1,
-            @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp
+    public ComputeStageWM<T> peek(
+            @Nonnull DistributedPredicate<? super T> shouldLogFn,
+            @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn
     ) {
-        return attachAggregate2(stage1, aggrOp);
-    }
-
-    @Nonnull @Override
-    public <T1, T2, A, R> ComputeStage<R> aggregate3(
-            @Nonnull ComputeStage<T1> stage1,
-            @Nonnull ComputeStage<T2> stage2,
-            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp
-    ) {
-        return attachAggregate3(stage1, stage2, aggrOp);
-    }
-
-    @Nonnull @Override
-    public ComputeStageWM<T> peek(@Nonnull DistributedPredicate<? super T> shouldLogFn, @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn) {
         return attachPeek(shouldLogFn, toStringFn);
     }
 
     @Nonnull @Override
-    public <R> ComputeStageWM<R> customTransform(@Nonnull String stageName, @Nonnull DistributedSupplier<Processor> procSupplier) {
+    public <R> ComputeStageWM<R> customTransform(
+            @Nonnull String stageName,
+            @Nonnull DistributedSupplier<Processor> procSupplier
+    ) {
         return attachCustomTransform(stageName, procSupplier);
     }
 
@@ -162,9 +145,9 @@ public class ComputeStageWMImpl<T> extends ComputeStageImplBase<T> implements Co
     @SuppressWarnings("unchecked")
     <R, RET> RET attach(
             @Nonnull MultaryTransform<R> multaryTransform,
-            @Nonnull List<ComputeStageImplBase> otherInputs
+            @Nonnull List<GeneralComputeStage> otherInputs
     ) {
-        List<ComputeStageImplBase> upstream = Stream.concat(Stream.of(this), otherInputs.stream()).collect(toList());
+        List<GeneralComputeStage> upstream = Stream.concat(Stream.of(this), otherInputs.stream()).collect(toList());
         ComputeStageWMImpl<R> attached = new ComputeStageWMImpl<>(upstream, multaryTransform, pipelineImpl);
         pipelineImpl.connect(upstream, attached);
         return (RET) attached;

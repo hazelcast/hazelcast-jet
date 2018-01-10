@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.ComputeStage;
+import com.hazelcast.jet.GeneralComputeStage;
 import com.hazelcast.jet.JoinClause;
 import com.hazelcast.jet.Source;
 import com.hazelcast.jet.StageWithGrouping;
@@ -45,7 +46,7 @@ import static java.util.stream.Collectors.toList;
 public class ComputeStageImpl<T> extends ComputeStageImplBase<T> implements ComputeStage<T> {
 
     public ComputeStageImpl(
-            @Nonnull List<? extends ComputeStageImplBase> upstream,
+            @Nonnull List<? extends GeneralComputeStage> upstream,
             @Nonnull Transform<? extends T> transform,
             @Nonnull PipelineImpl pipeline
     ) {
@@ -57,7 +58,7 @@ public class ComputeStageImpl<T> extends ComputeStageImplBase<T> implements Comp
     }
 
     private ComputeStageImpl(
-            @Nonnull ComputeStageImplBase upstream,
+            @Nonnull GeneralComputeStage upstream,
             @Nonnull Transform<? extends T> transform,
             @Nonnull PipelineImpl pipeline
     ) {
@@ -154,9 +155,9 @@ public class ComputeStageImpl<T> extends ComputeStageImplBase<T> implements Comp
     @SuppressWarnings("unchecked")
     <R, RET> RET attach(
             @Nonnull MultaryTransform<R> multaryTransform,
-            @Nonnull List<ComputeStageImplBase> otherInputs
+            @Nonnull List<GeneralComputeStage> otherInputs
     ) {
-        List<ComputeStageImplBase> upstream =
+        List<GeneralComputeStage> upstream =
                 Stream.concat(Stream.of(this), otherInputs.stream()).collect(toList());
         ComputeStageImpl<R> attached = new ComputeStageImpl<>(upstream, multaryTransform, pipelineImpl);
         pipelineImpl.connect(upstream, attached);

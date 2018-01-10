@@ -28,7 +28,13 @@ import javax.annotation.Nonnull;
 /**
  * Javadoc pending.
  */
-public interface ComputeStageWM<T> extends ComputeStage<T> {
+public interface ComputeStageWM<T> extends GeneralComputeStage<T> {
+
+    @Nonnull
+    StageWithWindow<T> window(WindowDefinition wDef);
+
+    @Nonnull @Override
+    <K> StageWithGroupingWM<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);
 
     @Nonnull @Override
     <R> ComputeStageWM<R> map(@Nonnull DistributedFunction<? super T, ? extends R> mapFn);
@@ -52,27 +58,19 @@ public interface ComputeStageWM<T> extends ComputeStage<T> {
             @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2);
 
     @Nonnull @Override
-    default HashJoinBuilder<T> hashJoinBuilder() {
-        return null;
+    default HashJoinBuilderWM<T> hashJoinBuilder() {
+        return new HashJoinBuilderWM<>(this);
     }
-
-    @Nonnull @Override
-    <K> StageWithGroupingWM<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);
-
-    StageWithWindow<T> window(WindowDefinition wDef);
 
     @Nonnull @Override
     ComputeStageWM<T> peek(
             @Nonnull DistributedPredicate<? super T> shouldLogFn,
             @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn);
 
-    @Override
-    default ComputeStageWM<T> peek(@Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn) {
-        return (ComputeStageWM<T>) ComputeStage.super.peek(toStringFn);
-    }
-
     @Nonnull @Override
-    SinkStage drainTo(@Nonnull Sink<? super T> sink);
+    default ComputeStageWM<T> peek(@Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn) {
+        return (ComputeStageWM<T>) GeneralComputeStage.super.peek(toStringFn);
+    }
 
     @Nonnull @Override
     <R> ComputeStageWM<R> customTransform(

@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.ComputeStage;
+import com.hazelcast.jet.GeneralComputeStage;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
@@ -31,14 +31,11 @@ import static com.hazelcast.jet.datamodel.Tag.tag;
 
 public class AggBuilder<T0> {
     @Nonnull
-    private final List<ComputeStageImplBase> stages = new ArrayList<>();
+    private final List<GeneralComputeStage> stages = new ArrayList<>();
     @Nullable
     private final WindowDefinition wDef;
 
-    public AggBuilder(
-            @Nonnull ComputeStage<T0> s,
-            @Nullable WindowDefinition wDef
-    ) {
+    public AggBuilder(@Nonnull GeneralComputeStage<T0> s, @Nullable WindowDefinition wDef) {
         this.wDef = wDef;
         add(s);
     }
@@ -50,14 +47,14 @@ public class AggBuilder<T0> {
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    public <E> Tag<E> add(@Nonnull ComputeStage<E> stage) {
-        stages.add((ComputeStageImplBase) stage);
+    public <E> Tag<E> add(@Nonnull GeneralComputeStage<E> stage) {
+        stages.add(stage);
         return (Tag<E>) tag(stages.size() - 1);
     }
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    public <A, R, OUT> ComputeStage<OUT> build(@Nonnull AggregateOperation<A, R> aggrOp) {
+    public <A, R, OUT> GeneralComputeStage<OUT> build(@Nonnull AggregateOperation<A, R> aggrOp) {
         CoAggregateTransform<A, R, OUT> transform = new CoAggregateTransform<>(aggrOp, wDef);
         PipelineImpl pipeline = (PipelineImpl) stages.get(0).getPipeline();
         ComputeStageImpl<OUT> attached = new ComputeStageImpl<>(stages, transform, pipeline);

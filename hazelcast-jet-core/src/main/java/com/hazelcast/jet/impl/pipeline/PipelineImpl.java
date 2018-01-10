@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.ComputeStage;
 import com.hazelcast.jet.ComputeStageWM;
+import com.hazelcast.jet.GeneralComputeStage;
 import com.hazelcast.jet.Pipeline;
 import com.hazelcast.jet.Sink;
 import com.hazelcast.jet.SinkStage;
@@ -51,15 +52,15 @@ public class PipelineImpl implements Pipeline {
         return new Planner(this).createDag();
     }
 
-    public void connect(ComputeStageImplBase upstream, Stage downstream) {
+    public void connect(GeneralComputeStage upstream, Stage downstream) {
         adjacencyMap.get(upstream).add(downstream);
     }
 
-    public void connect(List<ComputeStageImplBase> upstream, Stage downstream) {
+    public void connect(List<GeneralComputeStage> upstream, Stage downstream) {
         upstream.forEach(u -> connect(u, downstream));
     }
 
-    <T> SinkStage drainTo(ComputeStageImplBase<? extends T> upstream, Sink<T> sink) {
+    <T> SinkStage drainTo(GeneralComputeStage<? extends T> upstream, Sink<T> sink) {
         SinkStageImpl output = new SinkStageImpl(upstream, sink, this);
         connect(upstream, output);
         return output;

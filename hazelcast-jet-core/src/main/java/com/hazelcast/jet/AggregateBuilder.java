@@ -38,6 +38,7 @@ public class AggregateBuilder<T0> {
 
     @SuppressWarnings("unchecked")
     public <A, R> ComputeStage<R> build(AggregateOperation<A, R> aggrOp) {
-        return aggBuilder.build(aggrOp);
+        GeneralComputeStage<R> result = aggBuilder.build(aggrOp);
+        return (ComputeStage<R>) result;
     }
 }

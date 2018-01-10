@@ -65,7 +65,7 @@ public class StageWithGroupingAndWindowImpl<T, K>
                 new CoGroupTransform<K, A, R, TimestampedEntry<K, R>>(
                         asList(keyFn(), stage1.keyFn()), aggrOp, windowDefinition()
                 ),
-                singletonList(((StageWithGroupingWMImpl) stage1).computeStage));
+                singletonList(((StageWithGroupingBase) stage1).computeStage()));
     }
 
     @Nonnull @Override
@@ -78,8 +78,8 @@ public class StageWithGroupingAndWindowImpl<T, K>
                 new CoGroupTransform<K, A, R, TimestampedEntry<K, R>>(
                         asList(keyFn(), stage1.keyFn(), stage2.keyFn()), aggrOp, windowDefinition()
                 ),
-                asList(((StageWithGroupingWMImpl) stage1).computeStage,
-                        ((StageWithGroupingWMImpl) stage2).computeStage));
+                asList(((StageWithGroupingBase) stage1).computeStage(),
+                        ((StageWithGroupingBase) stage2).computeStage()));
     }
 
     @Nonnull @Override

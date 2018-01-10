@@ -73,8 +73,7 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
             ComputeStageWM<T1> stage1,
             AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp
     ) {
-        return computeStage.attach(new CoAggregateTransform<>(aggrOp),
-                singletonList((ComputeStageImplBase) stage1));
+        return computeStage.attach(new CoAggregateTransform<>(aggrOp), singletonList(stage1));
     }
 
     @Override
@@ -84,8 +83,7 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
             ComputeStageWM<T2> stage2,
             AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp
     ) {
-        return computeStage.attach(new CoAggregateTransform<>(aggrOp),
-                asList((ComputeStageImplBase) stage1, (ComputeStageImplBase) stage2));
+        return computeStage.attach(new CoAggregateTransform<>(aggrOp), asList(stage1, stage2));
     }
 
     @Override

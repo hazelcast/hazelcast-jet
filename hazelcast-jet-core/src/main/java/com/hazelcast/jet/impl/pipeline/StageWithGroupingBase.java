@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.ComputeStage;
+import com.hazelcast.jet.GeneralComputeStage;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.function.DistributedFunction;
 
@@ -53,7 +54,7 @@ class StageWithGroupingBase<T, K> {
     }
 
     @Nonnull
-    ComputeStageImplBase<T> computeStage() {
-        return computeStage;
+    GeneralComputeStage<T> computeStage() {
+        return (GeneralComputeStage<T>) computeStage;
     }
 }

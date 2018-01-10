@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.ComputeStage;
+import com.hazelcast.jet.GeneralComputeStage;
 import com.hazelcast.jet.JoinClause;
 import com.hazelcast.jet.Sink;
 import com.hazelcast.jet.SinkStage;
@@ -52,7 +53,7 @@ import static java.util.Collections.singletonList;
  */
 public abstract class ComputeStageImplBase<T> extends AbstractStage {
     ComputeStageImplBase(
-            List<? extends ComputeStageImplBase> upstream,
+            List<? extends GeneralComputeStage> upstream,
             Transform transform, boolean acceptsDownstream,
             PipelineImpl pipelineImpl
     ) {
@@ -83,8 +84,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause
     ) {
         return attach(
-                new HashJoinTransform<>(singletonList(joinClause), emptyList()),
-                singletonList((ComputeStageImplBase) stage1));
+                new HashJoinTransform<>(singletonList(joinClause), emptyList()), singletonList(stage1));
     }
 
     @Nonnull
@@ -96,8 +96,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2
     ) {
         List<JoinClause<?, ? super T, ?, ?>> clauses = (List) asList(joinClause1, joinClause2);
-        return attach(new HashJoinTransform<>(clauses, emptyList()),
-                asList((ComputeStageImplBase) stage1, (ComputeStageImplBase) stage2));
+        return attach(new HashJoinTransform<>(clauses, emptyList()), asList(stage1, stage2));
     }
 
     @Nonnull
@@ -112,7 +111,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull ComputeStage<T1> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp
     ) {
-        return attach(new CoAggregateTransform<A, R, R>(aggrOp, null), singletonList((ComputeStageImplBase) stage1));
+        return attach(new CoAggregateTransform<A, R, R>(aggrOp, null), singletonList(stage1));
     }
 
     @Nonnull
@@ -121,8 +120,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull ComputeStage<T2> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp
     ) {
-        return attach(new CoAggregateTransform<>(aggrOp, null),
-                asList((ComputeStageImplBase) stage1, (ComputeStageImplBase) stage2));
+        return attach(new CoAggregateTransform<>(aggrOp, null), asList(stage1, stage2));
     }
 
     @Nonnull
@@ -142,8 +140,9 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
+    @SuppressWarnings("unchecked")
     public SinkStage drainTo(@Nonnull Sink<? super T> sink) {
-        return pipelineImpl.drainTo(this, sink);
+        return pipelineImpl.drainTo((GeneralComputeStage<T>) this, sink);
     }
 
     @Nonnull
@@ -152,6 +151,6 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @Nonnull
     abstract <R, RET> RET attach(
             @Nonnull MultaryTransform<R> multaryTransform,
-            @Nonnull List<ComputeStageImplBase> otherInputs
+            @Nonnull List<GeneralComputeStage> otherInputs
     );
 }

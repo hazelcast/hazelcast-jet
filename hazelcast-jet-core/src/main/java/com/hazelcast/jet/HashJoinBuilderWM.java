@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,16 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.pipeline;
+package com.hazelcast.jet;
 
-import com.hazelcast.jet.GeneralComputeStage;
-import com.hazelcast.jet.Sink;
-import com.hazelcast.jet.SinkStage;
+import com.hazelcast.jet.datamodel.ItemsByTag;
+import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.impl.pipeline.ComputeStageWMImpl;
 
-import static java.util.Collections.singletonList;
+public class HashJoinBuilderWM<T0>
+        extends GeneralHashJoinBuilder<T0, ComputeStageWM<Tuple2<T0, ItemsByTag>>> {
 
-class SinkStageImpl extends AbstractStage implements SinkStage {
-
-    SinkStageImpl(GeneralComputeStage upstream, Sink transform, PipelineImpl pipeline) {
-        super(singletonList(upstream), transform, false, pipeline);
+    HashJoinBuilderWM(ComputeStageWM<T0> stage0) {
+        super(stage0, ComputeStageWMImpl::new);
     }
 }

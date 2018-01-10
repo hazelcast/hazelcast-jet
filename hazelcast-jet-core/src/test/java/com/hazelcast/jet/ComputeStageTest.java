@@ -209,10 +209,11 @@ public class ComputeStageTest extends PipelineTestSupport {
         input.forEach(i -> enriching2.put(i, i + "B"));
 
         // When
-        HashJoinBuilder<Integer> b = srcStage.hashJoinBuilder();
+        GeneralHashJoinBuilder<Integer, ComputeStage<Tuple2<Integer, ItemsByTag>>> b =
+                srcStage.hashJoinBuilder();
         Tag<String> tagA = b.add(enrichingStage1, joinMapEntries(wholeItem()));
         Tag<String> tagB = b.add(enrichingStage2, joinMapEntries(wholeItem()));
-        ComputeStage<Tuple2<Integer, ItemsByTag>> joined = b.build();
+        GeneralComputeStage<Tuple2<Integer, ItemsByTag>> joined = b.build();
         joined.drainTo(sink);
         execute();
 

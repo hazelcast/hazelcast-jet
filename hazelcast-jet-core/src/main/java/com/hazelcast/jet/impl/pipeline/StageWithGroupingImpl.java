@@ -58,7 +58,7 @@ public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> imp
                 new CoGroupTransform<K, A, R, Entry<K, R>>(
                         asList(keyFn(), stage1.keyFn()),
                         aggrOp),
-                singletonList(((StageWithGroupingBase) stage1).computeStage));
+                singletonList(((StageWithGroupingBase) stage1).computeStage()));
     }
 
     @Nonnull
@@ -71,7 +71,8 @@ public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> imp
                 new CoGroupTransform<K, A, R, Entry<K, R>>(
                         asList(keyFn(), stage1.keyFn(), stage2.keyFn()),
                         aggrOp),
-                asList(((StageWithGroupingBase) stage1).computeStage, ((StageWithGroupingBase) stage2).computeStage));
+                asList(((StageWithGroupingBase) stage1).computeStage(),
+                        ((StageWithGroupingBase) stage2).computeStage()));
     }
 
     @Nonnull @Override

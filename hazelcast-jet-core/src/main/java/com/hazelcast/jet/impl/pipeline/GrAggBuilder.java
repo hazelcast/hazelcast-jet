@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.ComputeStage;
+import com.hazelcast.jet.GeneralComputeStage;
 import com.hazelcast.jet.StageWithGrouping;
 import com.hazelcast.jet.StageWithGroupingAndWindow;
 import com.hazelcast.jet.StageWithGroupingWM;
@@ -73,9 +74,9 @@ public class GrAggBuilder<K> {
                 aggrOp, wDef
         );
         PipelineImpl pipeline = (PipelineImpl) stages.get(0).computeStage().getPipeline();
-        List<ComputeStageImplBase> upstream = stages.stream()
-                         .map(StageWithGroupingBase::computeStage)
-                         .collect(toList());
+        List<GeneralComputeStage> upstream = stages.stream()
+                                                   .map(StageWithGroupingBase::computeStage)
+                                                   .collect(toList());
         ComputeStageImpl<OUT> attached = new ComputeStageImpl<>(upstream, transform, pipeline);
         pipeline.connect(upstream, attached);
         return attached;

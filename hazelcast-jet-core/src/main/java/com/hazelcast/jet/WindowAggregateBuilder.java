@@ -24,10 +24,7 @@ import com.hazelcast.jet.impl.pipeline.AggBuilder;
 public class WindowAggregateBuilder<T0> {
     private final AggBuilder<T0> aggBuilder;
 
-    public WindowAggregateBuilder(
-            ComputeStage<T0> s,
-            WindowDefinition wDef
-    ) {
+    public WindowAggregateBuilder(ComputeStageWM<T0> s, WindowDefinition wDef) {
         this.aggBuilder = new AggBuilder<>(s, wDef);
     }
 
@@ -39,7 +36,8 @@ public class WindowAggregateBuilder<T0> {
         return aggBuilder.add(stage);
     }
 
-    public <A, R> ComputeStage<TimestampedEntry<Void, R>> build(AggregateOperation<A, R> aggrOp) {
-        return aggBuilder.build(aggrOp);
+    public <A, R> ComputeStageWM<TimestampedEntry<Void, R>> build(AggregateOperation<A, R> aggrOp) {
+        GeneralComputeStage<TimestampedEntry<Void, R>> result = aggBuilder.build(aggrOp);
+        return (ComputeStageWM<TimestampedEntry<Void, R>>) result;
     }
 }
