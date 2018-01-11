@@ -49,7 +49,7 @@ import static java.util.stream.Collectors.toList;
 public class ComputeStageWMImpl<T> extends ComputeStageImplBase<T> implements ComputeStageWM<T> {
 
     public ComputeStageWMImpl(
-            @Nonnull List<GeneralComputeStage> upstream,
+            @Nonnull List<? extends GeneralComputeStage> upstream,
             @Nonnull Transform<? extends T> transform,
             @Nonnull PipelineImpl pipeline
     ) {

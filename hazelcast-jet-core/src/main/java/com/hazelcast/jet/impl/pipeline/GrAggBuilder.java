@@ -24,8 +24,10 @@ import com.hazelcast.jet.StageWithGroupingWM;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
+import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
 import com.hazelcast.jet.impl.pipeline.transform.CoGroupTransform;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -68,7 +70,10 @@ public class GrAggBuilder<K> {
         return (Tag<E>) tag(stages.size() - 1);
     }
 
-    public <A, R, OUT> ComputeStage<OUT> build(AggregateOperation<A, R> aggrOp) {
+    public <A, R, OUT, OUT_STAGE extends GeneralComputeStage<OUT>> OUT_STAGE build(
+            @Nonnull AggregateOperation<A, R> aggrOp,
+            @Nonnull CreateOutStageFn<OUT, OUT_STAGE> createOutStageFn
+    ) {
         CoGroupTransform<K, A, R, OUT> transform = new CoGroupTransform<>(
                 stages.stream().map(StageWithGroupingBase::keyFn).collect(toList()),
                 aggrOp, wDef
@@ -77,7 +82,7 @@ public class GrAggBuilder<K> {
         List<GeneralComputeStage> upstream = stages.stream()
                                                    .map(StageWithGroupingBase::computeStage)
                                                    .collect(toList());
-        ComputeStageImpl<OUT> attached = new ComputeStageImpl<>(upstream, transform, pipeline);
+        OUT_STAGE attached = createOutStageFn.get(upstream, transform, pipeline);
         pipeline.connect(upstream, attached);
         return attached;
     }

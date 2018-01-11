@@ -20,6 +20,8 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.impl.pipeline.AggBuilder;
+import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
+import com.hazelcast.jet.impl.pipeline.ComputeStageWMImpl;
 
 public class WindowAggregateBuilder<T0> {
     private final AggBuilder<T0> aggBuilder;
@@ -37,7 +39,8 @@ public class WindowAggregateBuilder<T0> {
     }
 
     public <A, R> ComputeStageWM<TimestampedEntry<Void, R>> build(AggregateOperation<A, R> aggrOp) {
-        GeneralComputeStage<TimestampedEntry<Void, R>> result = aggBuilder.build(aggrOp);
-        return (ComputeStageWM<TimestampedEntry<Void, R>>) result;
+        CreateOutStageFn<TimestampedEntry<Void, R>, ComputeStageWM<TimestampedEntry<Void, R>>> createOutStageFn
+                = ComputeStageWMImpl<TimestampedEntry<Void, R>>::new;
+        return aggBuilder.build(aggrOp, createOutStageFn);
     }
 }

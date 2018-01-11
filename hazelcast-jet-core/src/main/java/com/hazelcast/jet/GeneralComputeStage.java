@@ -68,7 +68,9 @@ public interface GeneralComputeStage<T> extends Stage {
      * @param <R> the type of items in the result's traversers
      */
     @Nonnull
-    <R> GeneralComputeStage<R> flatMap(@Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn);
+    <R> GeneralComputeStage<R> flatMap(
+            @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
+    );
 
     /**
      * Attaches to both this and the supplied pipeline a hash-joining pipeline and
@@ -125,7 +127,7 @@ public interface GeneralComputeStage<T> extends Stage {
     GeneralHashJoinBuilder<T, ? extends GeneralComputeStage<Tuple2<T, ItemsByTag>>> hashJoinBuilder();
 
     @Nonnull
-    <K> StageWithGrouping<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);
+    <K> GeneralStageWithGrouping<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);
 
     /**
      * Adds a peeking layer to this compute pipeline which logs its output. For

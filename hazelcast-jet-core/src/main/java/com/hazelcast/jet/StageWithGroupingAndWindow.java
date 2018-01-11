@@ -37,16 +37,16 @@ public interface StageWithGroupingAndWindow<T, K> {
     WindowDefinition windowDefinition();
 
     @Nonnull
-    <A, R> ComputeStage<TimestampedEntry<K, R>> aggregate(
+    <A, R> ComputeStageWM<TimestampedEntry<K, R>> aggregate(
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp);
 
     @Nonnull
-    <T1, A, R> ComputeStage<TimestampedEntry<K, R>> aggregate2(
+    <T1, A, R> ComputeStageWM<TimestampedEntry<K, R>> aggregate2(
             @Nonnull StageWithGroupingWM<T1, ? extends K> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp);
 
     @Nonnull
-    <T1, T2, A, R> ComputeStage<TimestampedEntry<K, R>> aggregate3(
+    <T1, T2, A, R> ComputeStageWM<TimestampedEntry<K, R>> aggregate3(
             @Nonnull StageWithGroupingWM<T1, ? extends K> stage1,
             @Nonnull StageWithGroupingWM<T2, ? extends K> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp);

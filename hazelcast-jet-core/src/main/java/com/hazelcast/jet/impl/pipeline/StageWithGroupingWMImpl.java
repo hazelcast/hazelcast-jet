@@ -25,7 +25,7 @@ import javax.annotation.Nonnull;
 /**
  * Javadoc pending.
  */
-public class StageWithGroupingWMImpl<T, K> extends StageWithGroupingImpl<T, K> implements StageWithGroupingWM<T, K> {
+public class StageWithGroupingWMImpl<T, K> extends StageWithGroupingBase<T, K> implements StageWithGroupingWM<T, K> {
     StageWithGroupingWMImpl(
             @Nonnull ComputeStageWMImpl<T> computeStage,
             @Nonnull DistributedFunction<? super T, ? extends K> keyFn
@@ -33,8 +33,8 @@ public class StageWithGroupingWMImpl<T, K> extends StageWithGroupingImpl<T, K> i
         super(computeStage, keyFn);
     }
 
-    @Override
-    public StageWithGroupingAndWindowImpl<T, K> window(WindowDefinition wDef) {
+    @Nonnull @Override
+    public StageWithGroupingAndWindowImpl<T, K> window(@Nonnull WindowDefinition wDef) {
         return new StageWithGroupingAndWindowImpl<>((ComputeStageWMImpl<T>) computeStage, keyFn(), wDef);
     }
 }

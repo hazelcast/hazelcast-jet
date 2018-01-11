@@ -39,7 +39,7 @@ public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull ComputeStageImplBase<T> computeStage,
             @Nonnull DistributedFunction<? super T, ? extends K> keyFn
     ) {
-        super(computeStage, keyFn, null);
+        super(computeStage, keyFn);
     }
 
     @Nonnull

@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.ComputeStage;
 import com.hazelcast.jet.GeneralComputeStage;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -31,26 +30,18 @@ class StageWithGroupingBase<T, K> {
     final ComputeStageImplBase<T> computeStage;
     @Nonnull
     private final DistributedFunction<? super T, ? extends K> keyFn;
-    @Nullable
-    private final WindowDefinition wDef;
 
     StageWithGroupingBase(
             @Nonnull ComputeStageImplBase<T> computeStage,
-            @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
-            @Nullable WindowDefinition wDef
+            @Nonnull DistributedFunction<? super T, ? extends K> keyFn
     ) {
         this.computeStage = computeStage;
         this.keyFn = keyFn;
-        this.wDef = wDef;
     }
 
     @Nonnull
     public DistributedFunction<? super T, ? extends K> keyFn() {
         return keyFn;
-    }
-
-    public WindowDefinition windowDefinition() {
-        return wDef;
     }
 
     @Nonnull

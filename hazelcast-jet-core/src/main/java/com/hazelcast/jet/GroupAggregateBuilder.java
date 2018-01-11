@@ -18,6 +18,8 @@ package com.hazelcast.jet;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
+import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
+import com.hazelcast.jet.impl.pipeline.ComputeStageImpl;
 import com.hazelcast.jet.impl.pipeline.GrAggBuilder;
 
 import java.util.Map.Entry;
@@ -39,6 +41,7 @@ public class GroupAggregateBuilder<T0, K> {
     }
 
     public <A, R> ComputeStage<Entry<K, R>> build(AggregateOperation<A, R> aggrOp) {
-        return graggBuilder.build(aggrOp);
+        CreateOutStageFn<Entry<K, R>, ComputeStage<Entry<K, R>>> createOutStageFn = ComputeStageImpl<Entry<K, R>>::new;
+        return graggBuilder.build(aggrOp, createOutStageFn);
     }
 }

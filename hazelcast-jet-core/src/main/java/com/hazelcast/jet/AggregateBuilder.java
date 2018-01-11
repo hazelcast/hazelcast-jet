@@ -19,6 +19,8 @@ package com.hazelcast.jet;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.impl.pipeline.AggBuilder;
+import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
+import com.hazelcast.jet.impl.pipeline.ComputeStageImpl;
 
 public class AggregateBuilder<T0> {
     private final AggBuilder<T0> aggBuilder;
@@ -38,7 +40,7 @@ public class AggregateBuilder<T0> {
 
     @SuppressWarnings("unchecked")
     public <A, R> ComputeStage<R> build(AggregateOperation<A, R> aggrOp) {
-        GeneralComputeStage<R> result = aggBuilder.build(aggrOp);
-        return (ComputeStage<R>) result;
+        CreateOutStageFn<R, ComputeStage<R>> createOutStageFn = ComputeStageImpl<R>::new;
+        return aggBuilder.build(aggrOp, createOutStageFn);
     }
 }

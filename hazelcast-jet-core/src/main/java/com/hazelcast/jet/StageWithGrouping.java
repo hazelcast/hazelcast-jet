@@ -28,10 +28,7 @@ import java.util.Map.Entry;
 /**
  * Javadoc pending.
  */
-public interface StageWithGrouping<T, K> {
-
-    @Nonnull
-    DistributedFunction<? super T, ? extends K> keyFn();
+public interface StageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> {
 
     @Nonnull
     <A, R> ComputeStage<Entry<K, R>> aggregate(
