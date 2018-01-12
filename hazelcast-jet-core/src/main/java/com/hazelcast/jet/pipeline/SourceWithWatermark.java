@@ -29,5 +29,5 @@ public interface SourceWithWatermark<T> extends Transform<T> {
 
     DistributedToLongFunction<? super T> timestampFn();
 
-    DistributedSupplier<WatermarkPolicy> createWatermarkPolicyFn();
+    WatermarkPolicy watermarkPolicy();
 }

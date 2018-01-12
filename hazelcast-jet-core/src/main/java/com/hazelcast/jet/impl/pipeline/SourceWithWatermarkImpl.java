@@ -56,7 +56,7 @@ public class SourceWithWatermarkImpl<T> implements SourceWithWatermark<T> {
     }
 
     @Override
-    public DistributedSupplier<WatermarkPolicy> createWatermarkPolicyFn() {
+    public DistributedSupplier<WatermarkPolicy> watermarkPolicy() {
         return wmPolicy;
     }
 }

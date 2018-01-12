@@ -147,7 +147,7 @@ class Planner {
         Vertex srcVertex = dag.newVertex(vertexName(source.name(), ""), source.metaSupplier());
         PlannerVertex watermarkPv = addVertex(stage, vertexName(source.name(), "-wm"), insertWatermarksP(
                 wmSource.timestampFn(),
-                wmSource.createWatermarkPolicyFn(),
+                wmSource.watermarkPolicy(),
                 WatermarkEmissionPolicy.suppressDuplicates()
         ));
         dag.edge(between(srcVertex, watermarkPv.v));
