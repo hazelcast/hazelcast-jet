@@ -17,6 +17,7 @@
 package com.hazelcast.jet.core.kotlin
 
 import com.hazelcast.jet.aggregate.AggregateOperation1
+import com.hazelcast.jet.core.Inbox
 import java.util.function.Function as JavaFunction
 
 fun <T, A, R> aggregatePK(aggrOp: AggregateOperation1<T, A, R>) =
@@ -29,9 +30,11 @@ class AggregatePK< T, A, R>(aggrOp: AggregateOperation1<T, A, R>) : AbstractProc
     private val finishFn = aggrOp.finishFn()
     private val acc = aggrOp.createFn().get()
 
-    override suspend fun process(ordinal: Int, item: Any) {
-        @Suppress("UNCHECKED_CAST")
-        accumulateFn.accept(acc, item as T)
+    override suspend fun process(ordinal: Int, inbox: Inbox) {
+        inbox.drain {
+            @Suppress("UNCHECKED_CAST")
+            accumulateFn.accept(acc, it as T)
+        }
     }
 
     override suspend fun complete() {

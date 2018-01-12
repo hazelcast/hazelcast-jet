@@ -19,6 +19,7 @@ package com.hazelcast.jet.core.kotlin
 import com.hazelcast.jet.Util.entry
 import com.hazelcast.jet.aggregate.AggregateOperation
 import com.hazelcast.jet.aggregate.AggregateOperation1
+import com.hazelcast.jet.core.Inbox
 import java.util.Collections.singletonList
 import java.util.function.Function as JavaFunction
 
@@ -36,11 +37,13 @@ class CoGroupPK<K, A, R>(
 
     private val keyToAcc = HashMap<K, A>()
 
-    suspend override fun process(ordinal: Int, item: Any) {
-        @Suppress("UNCHECKED_CAST")
-        val keyFn = keyFns[ordinal] as JavaFunction<Any, K>
-        val acc = keyToAcc.computeIfAbsent(keyFn.apply(item), { aggrOp.createFn().get() })
-        aggrOp.accumulateFn<Any>(ordinal).accept(acc, item)
+    suspend override fun process(ordinal: Int, inbox: Inbox) {
+        inbox.drain {
+            @Suppress("UNCHECKED_CAST")
+            val keyFn = keyFns[ordinal] as JavaFunction<Any, K>
+            val acc = keyToAcc.computeIfAbsent(keyFn.apply(it), { aggrOp.createFn().get() })
+            aggrOp.accumulateFn<Any>(ordinal).accept(acc, it)
+        }
     }
 
     override suspend fun complete() {

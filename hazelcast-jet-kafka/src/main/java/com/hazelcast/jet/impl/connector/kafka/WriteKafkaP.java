@@ -71,7 +71,7 @@ public final class WriteKafkaP<T, K, V> implements Processor {
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
         checkError();
-        inbox.drain((Object item) -> {
+        inbox.drainJ((Object item) -> {
             // Note: send() method can block even though it is declared to not. This is true for Kafka 1.0 and probably
             // will stay so, unless they change API.
             producer.send(toRecordFn.apply((T) item), callback);

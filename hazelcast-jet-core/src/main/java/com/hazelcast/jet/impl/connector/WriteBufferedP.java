@@ -73,7 +73,7 @@ public final class WriteBufferedP<B, T> implements Processor, Closeable {
 
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
-        inbox.drain(item -> {
+        inbox.drainJ(item -> {
             addToBufferFn.accept(buffer, (T) item);
         });
         flushBufferFn.accept(buffer);

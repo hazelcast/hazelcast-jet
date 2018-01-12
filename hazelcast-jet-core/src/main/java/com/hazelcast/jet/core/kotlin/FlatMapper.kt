@@ -17,6 +17,7 @@
 package com.hazelcast.jet.core.kotlin
 
 import com.hazelcast.jet.Traverser
+import com.hazelcast.jet.core.Inbox
 import java.util.function.Function
 
 class FlatMapper<in T, out R>(
@@ -24,6 +25,6 @@ class FlatMapper<in T, out R>(
 ) : AbstractProcessorK() {
     override var isCooperative = true
 
-    suspend override fun process(ordinal: Int, item: Any) {
+    suspend override fun process(ordinal: Int, inbox: Inbox) {
     }
 }

@@ -70,7 +70,7 @@ public interface Inbox {
      *
      * @return the number of elements drained
      */
-    default <E> int drain(Consumer<E> consumer) {
+    default <E> int drainJ(Consumer<E> consumer) {
         int consumed = 0;
         for (E o; (o = (E) poll()) != null; consumed++) {
             consumer.accept(o);

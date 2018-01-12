@@ -75,7 +75,7 @@ public class ArrayDequeInboxTest {
     @Test
     public void when_drainToConsumer_then_allDrained() {
         ArrayList<Object> sink = new ArrayList<>();
-        inbox.drain(sink::add);
+        inbox.drainJ(sink::add);
         assertEquals(singletonList(ITEM), sink);
     }
 }

@@ -203,7 +203,7 @@ public final class Processors {
      *  When {@code true}, some of the factories will return processors
      *  implemented in Kotlin.
      */
-    public static final boolean USE_KOTLIN = true;
+    public static final boolean USE_KOTLIN = false;
 
     private Processors() {
     }
@@ -807,7 +807,7 @@ public final class Processors {
     private static class NoopP implements Processor {
         @Override
         public void process(int ordinal, @Nonnull Inbox inbox) {
-            inbox.drain(noopConsumer());
+            inbox.drainJ(noopConsumer());
         }
     }
 }

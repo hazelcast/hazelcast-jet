@@ -16,11 +16,8 @@
 
 package com.hazelcast.jet.core.kotlin
 
-import com.hazelcast.jet.core.BroadcastKey
+import com.hazelcast.jet.core.*
 import com.hazelcast.jet.core.BroadcastKey.broadcastKey
-import com.hazelcast.jet.core.Watermark
-import com.hazelcast.jet.core.WatermarkEmissionPolicy
-import com.hazelcast.jet.core.WatermarkPolicy
 import com.hazelcast.jet.impl.util.LoggingUtil.logFine
 import java.util.function.ToLongFunction
 
@@ -48,15 +45,17 @@ class InsertWatermarksPK<T>(
         emitWmIfIndicated()
     }
 
-    override suspend fun process(ordinal: Int, item: Any) {
-        @Suppress("UNCHECKED_CAST")
-        val timestamp = getTimestampFn.applyAsLong(item as T)
-        currWm = wmPolicy.reportEvent(timestamp)
-        emitWmIfIndicated()
-        if (timestamp >= currWm) {
-            emit(item)
-        } else {
-            logger.takeIf { it.isInfoEnabled }?.apply { info("Dropped late event: $item") }
+    override suspend fun process(ordinal: Int, inbox: Inbox) {
+        inbox.drain {
+            @Suppress("UNCHECKED_CAST")
+            val timestamp = getTimestampFn.applyAsLong(it as T)
+            currWm = wmPolicy.reportEvent(timestamp)
+            emitWmIfIndicated()
+            if (timestamp >= currWm) {
+                emit(it)
+            } else {
+                logger.takeIf { it.isInfoEnabled }?.apply { info("Dropped late event: $it") }
+            }
         }
     }
 
@@ -75,7 +74,7 @@ class InsertWatermarksPK<T>(
         logFine(logger, "restored lastEmittedWm=%s", lastEmittedWm)
     }
 
-    private suspend fun emitWmIfIndicated() {
+    private inline suspend fun emitWmIfIndicated() {
         if (wmEmitPolicy.shouldEmit(currWm, lastEmittedWm)) {
             emit(Watermark(currWm))
             lastEmittedWm = currWm
