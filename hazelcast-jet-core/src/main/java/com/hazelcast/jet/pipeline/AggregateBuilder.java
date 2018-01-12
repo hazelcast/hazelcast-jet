@@ -20,12 +20,12 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.impl.pipeline.AggBuilder;
 import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
-import com.hazelcast.jet.impl.pipeline.ComputeStageImpl;
+import com.hazelcast.jet.impl.pipeline.BatchStageImpl;
 
 public class AggregateBuilder<T0> {
     private final AggBuilder<T0> aggBuilder;
 
-    AggregateBuilder(ComputeStage<T0> s) {
+    AggregateBuilder(BatchStage<T0> s) {
         this.aggBuilder = new AggBuilder<>(s, null);
     }
 
@@ -34,13 +34,13 @@ public class AggregateBuilder<T0> {
     }
 
     @SuppressWarnings("unchecked")
-    public <E> Tag<E> add(ComputeStage<E> stage) {
+    public <E> Tag<E> add(BatchStage<E> stage) {
         return aggBuilder.add(stage);
     }
 
     @SuppressWarnings("unchecked")
-    public <A, R> ComputeStage<R> build(AggregateOperation<A, R> aggrOp) {
-        CreateOutStageFn<R, ComputeStage<R>> createOutStageFn = ComputeStageImpl<R>::new;
+    public <A, R> BatchStage<R> build(AggregateOperation<A, R> aggrOp) {
+        CreateOutStageFn<R, BatchStage<R>> createOutStageFn = BatchStageImpl<R>::new;
         return aggBuilder.build(aggrOp, createOutStageFn);
     }
 }

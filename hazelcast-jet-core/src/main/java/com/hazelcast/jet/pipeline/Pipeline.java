@@ -50,10 +50,10 @@ public interface Pipeline {
      * @param <T> the type of source data items
      */
     @Nonnull
-    <T> ComputeStage<T> drawFrom(@Nonnull Source<? extends T> source);
+    <T> BatchStage<T> drawFrom(@Nonnull Source<? extends T> source);
 
     @Nonnull
-    <T> ComputeStageWM<T> drawFrom(@Nonnull SourceWithWatermark<? extends T> source);
+    <T> StreamStage<T> drawFrom(@Nonnull SourceWithWatermark<? extends T> source);
 
     /**
      * Transforms the pipeline into a Jet DAG, which can be submitted for

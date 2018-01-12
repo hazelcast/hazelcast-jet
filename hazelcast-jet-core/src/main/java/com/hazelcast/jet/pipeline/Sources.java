@@ -56,7 +56,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 /**
  * Contains factory methods for various types of pipeline sources. To start
  * building a pipeline, pass a source to {@link Pipeline#drawFrom(Source)}
- * and you will obtain the initial {@link ComputeStage}. You can then
+ * and you will obtain the initial {@link BatchStage}. You can then
  * attach further stages to it.
  * <p>
  * The same pipeline may contain more than one source, each starting its

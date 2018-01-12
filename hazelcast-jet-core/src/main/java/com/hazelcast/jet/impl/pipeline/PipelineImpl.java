@@ -16,9 +16,9 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.pipeline.ComputeStage;
-import com.hazelcast.jet.pipeline.ComputeStageWM;
-import com.hazelcast.jet.pipeline.GeneralComputeStage;
+import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.StreamStage;
+import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkStage;
@@ -38,13 +38,13 @@ public class PipelineImpl implements Pipeline {
     private final Map<Stage, List<Stage>> adjacencyMap = new HashMap<>();
 
     @Nonnull @Override
-    public <T> ComputeStage<T> drawFrom(@Nonnull Source<? extends T> source) {
-        return new ComputeStageImpl<>(source, this);
+    public <T> BatchStage<T> drawFrom(@Nonnull Source<? extends T> source) {
+        return new BatchStageImpl<>(source, this);
     }
 
     @Nonnull @Override
-    public <T> ComputeStageWM<T> drawFrom(@Nonnull SourceWithWatermark<? extends T> source) {
-        return new ComputeStageWMImpl<>(source, this);
+    public <T> StreamStage<T> drawFrom(@Nonnull SourceWithWatermark<? extends T> source) {
+        return new StreamStageImpl<>(source, this);
     }
 
     @Nonnull @Override
@@ -52,15 +52,15 @@ public class PipelineImpl implements Pipeline {
         return new Planner(this).createDag();
     }
 
-    public void connect(GeneralComputeStage upstream, Stage downstream) {
+    public void connect(GeneralStage upstream, Stage downstream) {
         adjacencyMap.get(upstream).add(downstream);
     }
 
-    public void connect(List<GeneralComputeStage> upstream, Stage downstream) {
+    public void connect(List<GeneralStage> upstream, Stage downstream) {
         upstream.forEach(u -> connect(u, downstream));
     }
 
-    <T> SinkStage drainTo(GeneralComputeStage<? extends T> upstream, Sink<T> sink) {
+    <T> SinkStage drainTo(GeneralStage<? extends T> upstream, Sink<T> sink) {
         SinkStageImpl output = new SinkStageImpl(upstream, sink, this);
         connect(upstream, output);
         return output;

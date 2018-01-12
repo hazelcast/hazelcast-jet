@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.pipeline.GeneralComputeStage;
+import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.Transform;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation;
@@ -32,12 +32,12 @@ import static com.hazelcast.jet.datamodel.Tag.tag;
 
 public class AggBuilder<T0> {
     @Nonnull
-    private final List<GeneralComputeStage> stages = new ArrayList<>();
+    private final List<GeneralStage> stages = new ArrayList<>();
     @Nullable
     private final WindowDefinition wDef;
 
     public AggBuilder(
-            @Nonnull GeneralComputeStage<T0> s,
+            @Nonnull GeneralStage<T0> s,
             @Nullable WindowDefinition wDef
     ) {
         this.wDef = wDef;
@@ -51,14 +51,14 @@ public class AggBuilder<T0> {
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    public <E> Tag<E> add(@Nonnull GeneralComputeStage<E> stage) {
+    public <E> Tag<E> add(@Nonnull GeneralStage<E> stage) {
         stages.add(stage);
         return (Tag<E>) tag(stages.size() - 1);
     }
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    public <A, R, OUT, OUT_STAGE extends GeneralComputeStage<OUT>> OUT_STAGE build(
+    public <A, R, OUT, OUT_STAGE extends GeneralStage<OUT>> OUT_STAGE build(
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull CreateOutStageFn<OUT, OUT_STAGE> createOutStageFn
     ) {
@@ -70,9 +70,9 @@ public class AggBuilder<T0> {
     }
 
     @FunctionalInterface
-    public interface CreateOutStageFn<OUT, OUT_STAGE extends GeneralComputeStage<OUT>> {
+    public interface CreateOutStageFn<OUT, OUT_STAGE extends GeneralStage<OUT>> {
         OUT_STAGE get(
-                List<GeneralComputeStage> upstream,
+                List<GeneralStage> upstream,
                 Transform<? extends OUT> transform,
                 PipelineImpl pipeline);
     }

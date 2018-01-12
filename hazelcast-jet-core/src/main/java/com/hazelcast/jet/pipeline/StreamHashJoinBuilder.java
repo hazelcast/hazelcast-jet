@@ -16,13 +16,14 @@
 
 package com.hazelcast.jet.pipeline;
 
-import javax.annotation.Nonnull;
+import com.hazelcast.jet.datamodel.ItemsByTag;
+import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.impl.pipeline.StreamStageImpl;
 
-/**
- * Javadoc pending.
- */
-public interface StageWithGroupingWM<T, K> extends GeneralStageWithGrouping<T, K> {
+public class StreamHashJoinBuilder<T0>
+        extends GeneralHashJoinBuilder<T0, StreamStage<Tuple2<T0, ItemsByTag>>> {
 
-    @Nonnull
-    StageWithGroupingAndWindow<T, K> window(@Nonnull WindowDefinition wDef);
+    StreamHashJoinBuilder(StreamStage<T0> stage0) {
+        super(stage0, StreamStageImpl::new);
+    }
 }

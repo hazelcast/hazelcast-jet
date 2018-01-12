@@ -16,9 +16,9 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.pipeline.ComputeStageWM;
+import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
-import com.hazelcast.jet.pipeline.StageWithGroupingWM;
+import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
@@ -42,7 +42,7 @@ public class StageWithGroupingAndWindowImpl<T, K>
     private final WindowDefinition wDef;
 
     StageWithGroupingAndWindowImpl(
-            @Nonnull ComputeStageWMImpl<T> computeStage,
+            @Nonnull StreamStageImpl<T> computeStage,
             @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
             @Nonnull WindowDefinition wDef
     ) {
@@ -56,7 +56,7 @@ public class StageWithGroupingAndWindowImpl<T, K>
     }
 
     @Nonnull
-    public <A, R> ComputeStageWM<TimestampedEntry<K, R>> aggregate(
+    public <A, R> StreamStage<TimestampedEntry<K, R>> aggregate(
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
         return computeStage.attach(
@@ -65,8 +65,8 @@ public class StageWithGroupingAndWindowImpl<T, K>
     }
 
     @Nonnull @Override
-    public <T1, A, R> ComputeStageWM<TimestampedEntry<K, R>> aggregate2(
-            @Nonnull StageWithGroupingWM<T1, ? extends K> stage1,
+    public <T1, A, R> StreamStage<TimestampedEntry<K, R>> aggregate2(
+            @Nonnull StreamStageWithGrouping<T1, ? extends K> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp
     ) {
         return computeStage.attach(
@@ -77,9 +77,9 @@ public class StageWithGroupingAndWindowImpl<T, K>
     }
 
     @Nonnull @Override
-    public <T1, T2, A, R> ComputeStageWM<TimestampedEntry<K, R>> aggregate3(
-            @Nonnull StageWithGroupingWM<T1, ? extends K> stage1,
-            @Nonnull StageWithGroupingWM<T2, ? extends K> stage2,
+    public <T1, T2, A, R> StreamStage<TimestampedEntry<K, R>> aggregate3(
+            @Nonnull StreamStageWithGrouping<T1, ? extends K> stage1,
+            @Nonnull StreamStageWithGrouping<T2, ? extends K> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp
     ) {
         return computeStage.attach(

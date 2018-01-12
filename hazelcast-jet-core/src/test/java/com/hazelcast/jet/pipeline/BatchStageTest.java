@@ -47,7 +47,7 @@ import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class ComputeStageTest extends PipelineTestSupport {
+public class BatchStageTest extends PipelineTestSupport {
 
     @Before
     public void before() {
@@ -77,7 +77,7 @@ public class ComputeStageTest extends PipelineTestSupport {
         putToSrcMap(input);
 
         // When
-        ComputeStage<String> mapped = srcStage.map(Object::toString);
+        BatchStage<String> mapped = srcStage.map(Object::toString);
         mapped.drainTo(sink);
         execute();
 
@@ -95,7 +95,7 @@ public class ComputeStageTest extends PipelineTestSupport {
         putToSrcMap(input);
 
         // When
-        ComputeStage<Integer> filtered = srcStage.filter(i -> i % 2 == 1);
+        BatchStage<Integer> filtered = srcStage.filter(i -> i % 2 == 1);
         filtered.drainTo(sink);
         execute();
 
@@ -113,7 +113,7 @@ public class ComputeStageTest extends PipelineTestSupport {
         putToSrcMap(input);
 
         // When
-        ComputeStage<String> flatMapped = srcStage.flatMap(o -> traverseIterable(asList(o + "A", o + "B")));
+        BatchStage<String> flatMapped = srcStage.flatMap(o -> traverseIterable(asList(o + "A", o + "B")));
         flatMapped.drainTo(sink);
         execute();
 
@@ -133,7 +133,7 @@ public class ComputeStageTest extends PipelineTestSupport {
         putToSrcMap(input);
 
         // When
-        ComputeStage<Entry<Integer, Long>> grouped = srcStage.groupingKey(wholeItem()).aggregate(counting());
+        BatchStage<Entry<Integer, Long>> grouped = srcStage.groupingKey(wholeItem()).aggregate(counting());
         grouped.drainTo(sink);
         execute();
 
@@ -152,10 +152,10 @@ public class ComputeStageTest extends PipelineTestSupport {
         String enrichingName = HazelcastTestSupport.randomName();
         IMap<Integer, String> enriching = jet().getMap(enrichingName);
         input.forEach(i -> enriching.put(i, i + "A"));
-        ComputeStage<Entry<Integer, String>> enrichingStage = pipeline.drawFrom(Sources.map(enrichingName));
+        BatchStage<Entry<Integer, String>> enrichingStage = pipeline.drawFrom(Sources.map(enrichingName));
 
         // When
-        ComputeStage<Tuple2<Integer, String>> joined = srcStage.hashJoin(enrichingStage, joinMapEntries(wholeItem()));
+        BatchStage<Tuple2<Integer, String>> joined = srcStage.hashJoin(enrichingStage, joinMapEntries(wholeItem()));
         joined.drainTo(sink);
         execute();
 
@@ -173,15 +173,15 @@ public class ComputeStageTest extends PipelineTestSupport {
         putToSrcMap(input);
         String enriching1Name = HazelcastTestSupport.randomName();
         String enriching2Name = HazelcastTestSupport.randomName();
-        ComputeStage<Entry<Integer, String>> enrichingStage1 = pipeline.drawFrom(Sources.map(enriching1Name));
-        ComputeStage<Entry<Integer, String>> enrichingStage2 = pipeline.drawFrom(Sources.map(enriching2Name));
+        BatchStage<Entry<Integer, String>> enrichingStage1 = pipeline.drawFrom(Sources.map(enriching1Name));
+        BatchStage<Entry<Integer, String>> enrichingStage2 = pipeline.drawFrom(Sources.map(enriching2Name));
         IMap<Integer, String> enriching1 = jet().getMap(enriching1Name);
         IMap<Integer, String> enriching2 = jet().getMap(enriching2Name);
         input.forEach(i -> enriching1.put(i, i + "A"));
         input.forEach(i -> enriching2.put(i, i + "B"));
 
         // When
-        ComputeStage<Tuple3<Integer, String, String>> joined = srcStage.hashJoin(
+        BatchStage<Tuple3<Integer, String, String>> joined = srcStage.hashJoin(
                 enrichingStage1, joinMapEntries(wholeItem()),
                 enrichingStage2, joinMapEntries(wholeItem())
         );
@@ -202,19 +202,19 @@ public class ComputeStageTest extends PipelineTestSupport {
         putToSrcMap(input);
         String enriching1Name = HazelcastTestSupport.randomName();
         String enriching2Name = HazelcastTestSupport.randomName();
-        ComputeStage<Entry<Integer, String>> enrichingStage1 = pipeline.drawFrom(Sources.map(enriching1Name));
-        ComputeStage<Entry<Integer, String>> enrichingStage2 = pipeline.drawFrom(Sources.map(enriching2Name));
+        BatchStage<Entry<Integer, String>> enrichingStage1 = pipeline.drawFrom(Sources.map(enriching1Name));
+        BatchStage<Entry<Integer, String>> enrichingStage2 = pipeline.drawFrom(Sources.map(enriching2Name));
         IMap<Integer, String> enriching1 = jet().getMap(enriching1Name);
         IMap<Integer, String> enriching2 = jet().getMap(enriching2Name);
         input.forEach(i -> enriching1.put(i, i + "A"));
         input.forEach(i -> enriching2.put(i, i + "B"));
 
         // When
-        GeneralHashJoinBuilder<Integer, ComputeStage<Tuple2<Integer, ItemsByTag>>> b =
+        GeneralHashJoinBuilder<Integer, BatchStage<Tuple2<Integer, ItemsByTag>>> b =
                 srcStage.hashJoinBuilder();
         Tag<String> tagA = b.add(enrichingStage1, joinMapEntries(wholeItem()));
         Tag<String> tagB = b.add(enrichingStage2, joinMapEntries(wholeItem()));
-        GeneralComputeStage<Tuple2<Integer, ItemsByTag>> joined = b.build();
+        GeneralStage<Tuple2<Integer, ItemsByTag>> joined = b.build();
         joined.drainTo(sink);
         execute();
 
@@ -230,7 +230,7 @@ public class ComputeStageTest extends PipelineTestSupport {
     public void coGroupTwo() {
         //Given
         String src1Name = HazelcastTestSupport.randomName();
-        ComputeStage<Integer> srcStage1 = pipeline.drawFrom(mapValuesSource(src1Name));
+        BatchStage<Integer> srcStage1 = pipeline.drawFrom(mapValuesSource(src1Name));
         List<Integer> input = IntStream.range(1, 100).boxed()
                                        .flatMap(i -> Collections.nCopies(i, i).stream())
                                        .collect(toList());
@@ -240,7 +240,7 @@ public class ComputeStageTest extends PipelineTestSupport {
         // When
         StageWithGrouping<Integer, Integer> stage0 = srcStage.groupingKey(wholeItem());
         StageWithGrouping<Integer, Integer> stage1 = srcStage1.groupingKey(wholeItem());
-        ComputeStage<Entry<Integer, Long>> coGrouped = stage0.aggregate2(stage1,
+        BatchStage<Entry<Integer, Long>> coGrouped = stage0.aggregate2(stage1,
                 AggregateOperation
                         .withCreate(LongAccumulator::new)
                         .andAccumulate0((count, item) -> count.add(1))
@@ -266,8 +266,8 @@ public class ComputeStageTest extends PipelineTestSupport {
         putToSrcMap(input);
         String src1Name = HazelcastTestSupport.randomName();
         String src2Name = HazelcastTestSupport.randomName();
-        ComputeStage<Integer> src1 = pipeline.drawFrom(mapValuesSource(src1Name));
-        ComputeStage<Integer> src2 = pipeline.drawFrom(mapValuesSource(src2Name));
+        BatchStage<Integer> src1 = pipeline.drawFrom(mapValuesSource(src1Name));
+        BatchStage<Integer> src2 = pipeline.drawFrom(mapValuesSource(src2Name));
         putToMap(jet().getMap(src1Name), input);
         putToMap(jet().getMap(src2Name), input);
 
@@ -275,7 +275,7 @@ public class ComputeStageTest extends PipelineTestSupport {
         StageWithGrouping<Integer, Integer> stage0 = srcStage.groupingKey(wholeItem());
         StageWithGrouping<Integer, Integer> stage1 = src1.groupingKey(wholeItem());
         StageWithGrouping<Integer, Integer> stage2 = src2.groupingKey(wholeItem());
-        ComputeStage<Entry<Integer, Long>> coGrouped = stage0.aggregate3(stage1, stage2,
+        BatchStage<Entry<Integer, Long>> coGrouped = stage0.aggregate3(stage1, stage2,
                 AggregateOperation
                         .withCreate(LongAccumulator::new)
                         .andAccumulate0((count, item) -> count.add(1))
@@ -302,8 +302,8 @@ public class ComputeStageTest extends PipelineTestSupport {
         putToSrcMap(input);
         String src1Name = HazelcastTestSupport.randomName();
         String src2Name = HazelcastTestSupport.randomName();
-        ComputeStage<Integer> src1 = pipeline.drawFrom(mapValuesSource(src1Name));
-        ComputeStage<Integer> src2 = pipeline.drawFrom(mapValuesSource(src2Name));
+        BatchStage<Integer> src1 = pipeline.drawFrom(mapValuesSource(src1Name));
+        BatchStage<Integer> src2 = pipeline.drawFrom(mapValuesSource(src2Name));
         putToMap(jet().getMap(src1Name), input);
         putToMap(jet().getMap(src2Name), input);
 
@@ -315,7 +315,7 @@ public class ComputeStageTest extends PipelineTestSupport {
         Tag<Integer> tag0 = b.tag0();
         Tag<Integer> tag1 = b.add(stage1);
         Tag<Integer> tag2 = b.add(stage2);
-        ComputeStage<Entry<Integer, Long>> coGrouped = b.build(AggregateOperation
+        BatchStage<Entry<Integer, Long>> coGrouped = b.build(AggregateOperation
                 .withCreate(LongAccumulator::new)
                 .andAccumulate(tag0, (count, item) -> count.add(1))
                 .andAccumulate(tag1, (count, item) -> count.add(10))
@@ -353,7 +353,7 @@ public class ComputeStageTest extends PipelineTestSupport {
         putToSrcMap(input);
 
         // When
-        ComputeStage<Object> custom = srcStage.customTransform("map", Processors.mapP(Object::toString));
+        BatchStage<Object> custom = srcStage.customTransform("map", Processors.mapP(Object::toString));
         custom.drainTo(sink);
         execute();
 

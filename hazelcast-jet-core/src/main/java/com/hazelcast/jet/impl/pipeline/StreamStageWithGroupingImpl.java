@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.pipeline.StageWithGroupingWM;
+import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.function.DistributedFunction;
 
@@ -25,9 +25,9 @@ import javax.annotation.Nonnull;
 /**
  * Javadoc pending.
  */
-public class StageWithGroupingWMImpl<T, K> extends StageWithGroupingBase<T, K> implements StageWithGroupingWM<T, K> {
-    StageWithGroupingWMImpl(
-            @Nonnull ComputeStageWMImpl<T> computeStage,
+public class StreamStageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> implements StreamStageWithGrouping<T, K> {
+    StreamStageWithGroupingImpl(
+            @Nonnull StreamStageImpl<T> computeStage,
             @Nonnull DistributedFunction<? super T, ? extends K> keyFn
     ) {
         super(computeStage, keyFn);
@@ -35,6 +35,6 @@ public class StageWithGroupingWMImpl<T, K> extends StageWithGroupingBase<T, K> i
 
     @Nonnull @Override
     public StageWithGroupingAndWindowImpl<T, K> window(@Nonnull WindowDefinition wDef) {
-        return new StageWithGroupingAndWindowImpl<>((ComputeStageWMImpl<T>) computeStage, keyFn(), wDef);
+        return new StageWithGroupingAndWindowImpl<>((StreamStageImpl<T>) computeStage, keyFn(), wDef);
     }
 }

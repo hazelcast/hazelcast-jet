@@ -20,7 +20,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
-import com.hazelcast.jet.impl.pipeline.ComputeStageWMImpl;
+import com.hazelcast.jet.impl.pipeline.StreamStageImpl;
 import com.hazelcast.jet.impl.pipeline.GrAggBuilder;
 
 public class WindowGroupAggregateBuilder<T0, K> {
@@ -35,13 +35,13 @@ public class WindowGroupAggregateBuilder<T0, K> {
     }
 
     @SuppressWarnings("unchecked")
-    public <E> Tag<E> add(StageWithGroupingWM<E, K> stage) {
+    public <E> Tag<E> add(StreamStageWithGrouping<E, K> stage) {
         return graggBuilder.add(stage);
     }
 
-    public <A, R> ComputeStageWM<TimestampedEntry<K, R>> build(AggregateOperation<A, R> aggrOp) {
-        CreateOutStageFn<TimestampedEntry<K, R>, ComputeStageWM<TimestampedEntry<K, R>>> createOutStageFn
-                = ComputeStageWMImpl<TimestampedEntry<K, R>>::new;
+    public <A, R> StreamStage<TimestampedEntry<K, R>> build(AggregateOperation<A, R> aggrOp) {
+        CreateOutStageFn<TimestampedEntry<K, R>, StreamStage<TimestampedEntry<K, R>>> createOutStageFn
+                = StreamStageImpl<TimestampedEntry<K, R>>::new;
         return graggBuilder.build(aggrOp, createOutStageFn);
     }
 }

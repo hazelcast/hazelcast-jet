@@ -40,7 +40,7 @@ public abstract class PipelineTestSupport extends TestInClusterSupport {
     final String sinkName = randomName();
 
     Pipeline pipeline;
-    ComputeStage<Integer> srcStage;
+    BatchStage<Integer> srcStage;
     Sink<Object> sink;
 
     IMap<String, Integer> srcMap;

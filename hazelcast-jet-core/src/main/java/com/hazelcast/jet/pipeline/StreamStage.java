@@ -29,52 +29,52 @@ import javax.annotation.Nonnull;
 /**
  * Javadoc pending.
  */
-public interface ComputeStageWM<T> extends GeneralComputeStage<T> {
+public interface StreamStage<T> extends GeneralStage<T> {
 
     @Nonnull
     StageWithWindow<T> window(WindowDefinition wDef);
 
     @Nonnull @Override
-    <K> StageWithGroupingWM<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);
+    <K> StreamStageWithGrouping<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);
 
     @Nonnull @Override
-    <R> ComputeStageWM<R> map(@Nonnull DistributedFunction<? super T, ? extends R> mapFn);
+    <R> StreamStage<R> map(@Nonnull DistributedFunction<? super T, ? extends R> mapFn);
 
     @Nonnull @Override
-    ComputeStageWM<T> filter(@Nonnull DistributedPredicate<T> filterFn);
+    StreamStage<T> filter(@Nonnull DistributedPredicate<T> filterFn);
 
     @Nonnull @Override
-    <R> ComputeStageWM<R> flatMap(@Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn);
+    <R> StreamStage<R> flatMap(@Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn);
 
     @Nonnull @Override
-    <K, T1_IN, T1> ComputeStageWM<Tuple2<T, T1>> hashJoin(
-            @Nonnull ComputeStage<T1_IN> stage1,
+    <K, T1_IN, T1> StreamStage<Tuple2<T, T1>> hashJoin(
+            @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1);
 
     @Nonnull @Override
-    <K1, T1_IN, T1, K2, T2_IN, T2> ComputeStageWM<Tuple3<T, T1, T2>> hashJoin(
-            @Nonnull ComputeStage<T1_IN> stage1,
+    <K1, T1_IN, T1, K2, T2_IN, T2> StreamStage<Tuple3<T, T1, T2>> hashJoin(
+            @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
-            @Nonnull ComputeStage<T2_IN> stage2,
+            @Nonnull BatchStage<T2_IN> stage2,
             @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2);
 
     @Nonnull @Override
-    default HashJoinBuilderWM<T> hashJoinBuilder() {
-        return new HashJoinBuilderWM<>(this);
+    default StreamHashJoinBuilder<T> hashJoinBuilder() {
+        return new StreamHashJoinBuilder<>(this);
     }
 
     @Nonnull @Override
-    ComputeStageWM<T> peek(
+    StreamStage<T> peek(
             @Nonnull DistributedPredicate<? super T> shouldLogFn,
             @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn);
 
     @Nonnull @Override
-    default ComputeStageWM<T> peek(@Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn) {
-        return (ComputeStageWM<T>) GeneralComputeStage.super.peek(toStringFn);
+    default StreamStage<T> peek(@Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn) {
+        return (StreamStage<T>) GeneralStage.super.peek(toStringFn);
     }
 
     @Nonnull @Override
-    <R> ComputeStageWM<R> customTransform(
+    <R> StreamStage<R> customTransform(
             @Nonnull String stageName,
             @Nonnull DistributedSupplier<Processor> procSupplier);
 }

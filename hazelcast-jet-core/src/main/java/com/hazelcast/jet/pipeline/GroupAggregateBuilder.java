@@ -19,7 +19,7 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
-import com.hazelcast.jet.impl.pipeline.ComputeStageImpl;
+import com.hazelcast.jet.impl.pipeline.BatchStageImpl;
 import com.hazelcast.jet.impl.pipeline.GrAggBuilder;
 
 import java.util.Map.Entry;
@@ -40,8 +40,8 @@ public class GroupAggregateBuilder<T0, K> {
         return graggBuilder.add(stage);
     }
 
-    public <A, R> ComputeStage<Entry<K, R>> build(AggregateOperation<A, R> aggrOp) {
-        CreateOutStageFn<Entry<K, R>, ComputeStage<Entry<K, R>>> createOutStageFn = ComputeStageImpl<Entry<K, R>>::new;
+    public <A, R> BatchStage<Entry<K, R>> build(AggregateOperation<A, R> aggrOp) {
+        CreateOutStageFn<Entry<K, R>, BatchStage<Entry<K, R>>> createOutStageFn = BatchStageImpl<Entry<K, R>>::new;
         return graggBuilder.build(aggrOp, createOutStageFn);
     }
 }

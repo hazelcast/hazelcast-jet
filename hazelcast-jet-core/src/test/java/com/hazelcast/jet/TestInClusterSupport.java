@@ -38,7 +38,7 @@ import java.util.function.Supplier;
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 public abstract class TestInClusterSupport extends JetTestSupport {
 
-    static final String JOURNALED_MAP_PREFIX = "journaledMap.";
+    protected static final String JOURNALED_MAP_PREFIX = "journaledMap.";
 
     private static final int MEMBER_COUNT = 2;
 

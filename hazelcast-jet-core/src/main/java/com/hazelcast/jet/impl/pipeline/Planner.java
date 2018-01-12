@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.pipeline.ComputeStage;
+import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.SessionWindowDef;
 import com.hazelcast.jet.pipeline.SlidingWindowDef;
@@ -126,12 +126,12 @@ class Planner {
     }
 
     private static void validateNoLeakage(Map<Stage, List<Stage>> adjacencyMap) {
-        List<ComputeStage> leakages = adjacencyMap
+        List<BatchStage> leakages = adjacencyMap
                 .entrySet().stream()
                 .filter(e -> e.getValue().isEmpty())
                 .map(Entry::getKey)
-                .filter(stage -> stage instanceof ComputeStage)
-                .map(stage -> (ComputeStage) stage)
+                .filter(stage -> stage instanceof BatchStage)
+                .map(stage -> (BatchStage) stage)
                 .collect(toList());
         if (!leakages.isEmpty()) {
             throw new IllegalArgumentException("These ComputeStages have nothing attached to them: " + leakages);

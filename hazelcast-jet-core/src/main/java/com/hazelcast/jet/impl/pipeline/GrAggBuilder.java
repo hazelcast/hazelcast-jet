@@ -16,10 +16,10 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.pipeline.GeneralComputeStage;
+import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.StageWithGrouping;
 import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
-import com.hazelcast.jet.pipeline.StageWithGroupingWM;
+import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
@@ -60,7 +60,7 @@ public class GrAggBuilder<K> {
     }
 
     @SuppressWarnings("unchecked")
-    public <E> Tag<E> add(StageWithGroupingWM<E, K> stage) {
+    public <E> Tag<E> add(StreamStageWithGrouping<E, K> stage) {
         stages.add((StageWithGroupingBase<E, K>) stage);
         return (Tag<E>) tag(stages.size() - 1);
     }
@@ -71,7 +71,7 @@ public class GrAggBuilder<K> {
         return (Tag<E>) tag(stages.size() - 1);
     }
 
-    public <A, R, OUT, OUT_STAGE extends GeneralComputeStage<OUT>> OUT_STAGE build(
+    public <A, R, OUT, OUT_STAGE extends GeneralStage<OUT>> OUT_STAGE build(
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull CreateOutStageFn<OUT, OUT_STAGE> createOutStageFn
     ) {
@@ -80,9 +80,9 @@ public class GrAggBuilder<K> {
                 aggrOp, wDef
         );
         PipelineImpl pipeline = (PipelineImpl) stages.get(0).computeStage().getPipeline();
-        List<GeneralComputeStage> upstream = stages.stream()
-                                                   .map(StageWithGroupingBase::computeStage)
-                                                   .collect(toList());
+        List<GeneralStage> upstream = stages.stream()
+                                            .map(StageWithGroupingBase::computeStage)
+                                            .collect(toList());
         OUT_STAGE attached = createOutStageFn.get(upstream, transform, pipeline);
         pipeline.connect(upstream, attached);
         return attached;

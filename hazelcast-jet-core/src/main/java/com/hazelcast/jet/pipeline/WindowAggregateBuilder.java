@@ -21,12 +21,12 @@ import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.impl.pipeline.AggBuilder;
 import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
-import com.hazelcast.jet.impl.pipeline.ComputeStageWMImpl;
+import com.hazelcast.jet.impl.pipeline.StreamStageImpl;
 
 public class WindowAggregateBuilder<T0> {
     private final AggBuilder<T0> aggBuilder;
 
-    public WindowAggregateBuilder(ComputeStageWM<T0> s, WindowDefinition wDef) {
+    public WindowAggregateBuilder(StreamStage<T0> s, WindowDefinition wDef) {
         this.aggBuilder = new AggBuilder<>(s, wDef);
     }
 
@@ -34,13 +34,13 @@ public class WindowAggregateBuilder<T0> {
         return Tag.tag0();
     }
 
-    public <E> Tag<E> add(ComputeStageWM<E> stage) {
+    public <E> Tag<E> add(StreamStage<E> stage) {
         return aggBuilder.add(stage);
     }
 
-    public <A, R> ComputeStageWM<TimestampedEntry<Void, R>> build(AggregateOperation<A, R> aggrOp) {
-        CreateOutStageFn<TimestampedEntry<Void, R>, ComputeStageWM<TimestampedEntry<Void, R>>> createOutStageFn
-                = ComputeStageWMImpl<TimestampedEntry<Void, R>>::new;
+    public <A, R> StreamStage<TimestampedEntry<Void, R>> build(AggregateOperation<A, R> aggrOp) {
+        CreateOutStageFn<TimestampedEntry<Void, R>, StreamStage<TimestampedEntry<Void, R>>> createOutStageFn
+                = StreamStageImpl<TimestampedEntry<Void, R>>::new;
         return aggBuilder.build(aggrOp, createOutStageFn);
     }
 }

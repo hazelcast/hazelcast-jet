@@ -29,16 +29,16 @@ import java.util.Map.Entry;
 public interface StageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> {
 
     @Nonnull
-    <A, R> ComputeStage<Entry<K, R>> aggregate(
+    <A, R> BatchStage<Entry<K, R>> aggregate(
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp);
 
     @Nonnull
-    <T1, A, R> ComputeStage<Entry<K, R>> aggregate2(
+    <T1, A, R> BatchStage<Entry<K, R>> aggregate2(
             @Nonnull StageWithGrouping<T1, ? extends K> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp);
 
     @Nonnull
-    <T1, T2, A, R> ComputeStage<Entry<K, R>> aggregate3(
+    <T1, T2, A, R> BatchStage<Entry<K, R>> aggregate3(
             @Nonnull StageWithGrouping<T1, ? extends K> stage1,
             @Nonnull StageWithGrouping<T2, ? extends K> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp);

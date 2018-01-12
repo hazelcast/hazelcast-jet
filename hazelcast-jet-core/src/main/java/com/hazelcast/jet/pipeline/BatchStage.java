@@ -36,31 +36,31 @@ import javax.annotation.Nonnull;
  *
  * @param <T> the type of items coming out of this pipeline
  */
-public interface ComputeStage<T> extends GeneralComputeStage<T> {
+public interface BatchStage<T> extends GeneralStage<T> {
 
     @Nonnull
     <K> StageWithGrouping<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);
 
     @Nonnull @Override
-    <R> ComputeStage<R> map(@Nonnull DistributedFunction<? super T, ? extends R> mapFn);
+    <R> BatchStage<R> map(@Nonnull DistributedFunction<? super T, ? extends R> mapFn);
 
     @Nonnull @Override
-    ComputeStage<T> filter(@Nonnull DistributedPredicate<T> filterFn);
+    BatchStage<T> filter(@Nonnull DistributedPredicate<T> filterFn);
 
     @Nonnull @Override
-    <R> ComputeStage<R> flatMap(@Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn);
+    <R> BatchStage<R> flatMap(@Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn);
 
     @Nonnull @Override
-    <K, T1_IN, T1> ComputeStage<Tuple2<T, T1>> hashJoin(
-            @Nonnull ComputeStage<T1_IN> stage1,
+    <K, T1_IN, T1> BatchStage<Tuple2<T, T1>> hashJoin(
+            @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1
     );
 
     @Nonnull @Override
-    <K1, T1_IN, T1, K2, T2_IN, T2> ComputeStage<Tuple3<T, T1, T2>> hashJoin(
-            @Nonnull ComputeStage<T1_IN> stage1,
+    <K1, T1_IN, T1, K2, T2_IN, T2> BatchStage<Tuple3<T, T1, T2>> hashJoin(
+            @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
-            @Nonnull ComputeStage<T2_IN> stage2,
+            @Nonnull BatchStage<T2_IN> stage2,
             @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2
     );
 
@@ -70,34 +70,34 @@ public interface ComputeStage<T> extends GeneralComputeStage<T> {
     }
 
     @Nonnull @Override
-    ComputeStage<T> peek(
+    BatchStage<T> peek(
             @Nonnull DistributedPredicate<? super T> shouldLogFn,
             @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn
     );
 
     @Nonnull @Override
-    default ComputeStage<T> peek(@Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn) {
-        return (ComputeStage<T>) GeneralComputeStage.super.peek(toStringFn);
+    default BatchStage<T> peek(@Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn) {
+        return (BatchStage<T>) GeneralStage.super.peek(toStringFn);
     }
 
     @Nonnull @Override
-    <R> ComputeStage<R> customTransform(
+    <R> BatchStage<R> customTransform(
             @Nonnull String stageName, @Nonnull DistributedSupplier<Processor> procSupplier);
 
     @Nonnull
-    <A, R> ComputeStage<R> aggregate(
+    <A, R> BatchStage<R> aggregate(
             @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
     );
 
     @Nonnull
-    <T1, A, R> ComputeStage<R> aggregate2(
-            @Nonnull ComputeStage<T1> stage1,
+    <T1, A, R> BatchStage<R> aggregate2(
+            @Nonnull BatchStage<T1> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp);
 
     @Nonnull
-    <T1, T2, A, R> ComputeStage<R> aggregate3(
-            @Nonnull ComputeStage<T1> stage1,
-            @Nonnull ComputeStage<T2> stage2,
+    <T1, T2, A, R> BatchStage<R> aggregate3(
+            @Nonnull BatchStage<T1> stage1,
+            @Nonnull BatchStage<T2> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp);
 
     @Nonnull

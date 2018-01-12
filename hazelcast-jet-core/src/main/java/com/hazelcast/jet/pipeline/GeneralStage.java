@@ -36,7 +36,7 @@ import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
  *
  * @param <T> the type of items coming out of this pipeline
  */
-public interface GeneralComputeStage<T> extends Stage {
+public interface GeneralStage<T> extends Stage {
 
     /**
      * Attaches to this pipeline a mapping pipeline, one which applies the supplied
@@ -47,7 +47,7 @@ public interface GeneralComputeStage<T> extends Stage {
      * @param <R> the result type of the mapping function
      */
     @Nonnull
-    <R> GeneralComputeStage<R> map(@Nonnull DistributedFunction<? super T, ? extends R> mapFn);
+    <R> GeneralStage<R> map(@Nonnull DistributedFunction<? super T, ? extends R> mapFn);
 
     /**
      * Attaches to this pipeline a filtering pipeline, one which applies the provided
@@ -57,7 +57,7 @@ public interface GeneralComputeStage<T> extends Stage {
      * @param filterFn the filter predicate function
      */
     @Nonnull
-    GeneralComputeStage<T> filter(@Nonnull DistributedPredicate<T> filterFn);
+    GeneralStage<T> filter(@Nonnull DistributedPredicate<T> filterFn);
 
     /**
      * Attaches to this pipeline a flat-mapping pipeline, one which applies the
@@ -69,7 +69,7 @@ public interface GeneralComputeStage<T> extends Stage {
      * @param <R> the type of items in the result's traversers
      */
     @Nonnull
-    <R> GeneralComputeStage<R> flatMap(
+    <R> GeneralStage<R> flatMap(
             @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
     );
 
@@ -86,8 +86,8 @@ public interface GeneralComputeStage<T> extends Stage {
      * @param <T1>       the result type of projection on {@code stage1} items
      */
     @Nonnull
-    <K, T1_IN, T1> GeneralComputeStage<Tuple2<T, T1>> hashJoin(
-            @Nonnull ComputeStage<T1_IN> stage1,
+    <K, T1_IN, T1> GeneralStage<Tuple2<T, T1>> hashJoin(
+            @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1
     );
 
@@ -109,10 +109,10 @@ public interface GeneralComputeStage<T> extends Stage {
      * @param <T2>        the result type of projection of {@code stage2} items
      */
     @Nonnull
-    <K1, T1_IN, T1, K2, T2_IN, T2> GeneralComputeStage<Tuple3<T, T1, T2>> hashJoin(
-            @Nonnull ComputeStage<T1_IN> stage1,
+    <K1, T1_IN, T1, K2, T2_IN, T2> GeneralStage<Tuple3<T, T1, T2>> hashJoin(
+            @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
-            @Nonnull ComputeStage<T2_IN> stage2,
+            @Nonnull BatchStage<T2_IN> stage2,
             @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2
     );
 
@@ -125,7 +125,7 @@ public interface GeneralComputeStage<T> extends Stage {
      * more static type safety.
      */
     @Nonnull
-    GeneralHashJoinBuilder<T, ? extends GeneralComputeStage<Tuple2<T, ItemsByTag>>> hashJoinBuilder();
+    GeneralHashJoinBuilder<T, ? extends GeneralStage<Tuple2<T, ItemsByTag>>> hashJoinBuilder();
 
     @Nonnull
     <K> GeneralStageWithGrouping<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);
@@ -155,7 +155,7 @@ public interface GeneralComputeStage<T> extends Stage {
      * @see #peek()
      */
     @Nonnull
-    GeneralComputeStage<T> peek(
+    GeneralStage<T> peek(
             @Nonnull DistributedPredicate<? super T> shouldLogFn,
             @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn
     );
@@ -178,7 +178,7 @@ public interface GeneralComputeStage<T> extends Stage {
      * @see #peek()
      */
     @Nonnull
-    default GeneralComputeStage<T> peek(@Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn) {
+    default GeneralStage<T> peek(@Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn) {
         return peek(alwaysTrue(), toStringFn);
     }
 
@@ -195,7 +195,7 @@ public interface GeneralComputeStage<T> extends Stage {
      * @see #peek(DistributedFunction)
      */
     @Nonnull
-    default GeneralComputeStage<T> peek() {
+    default GeneralStage<T> peek() {
         return peek(alwaysTrue(), Object::toString);
     }
 
@@ -223,6 +223,6 @@ public interface GeneralComputeStage<T> extends Stage {
      * @param <R> the type of the output items
      */
     @Nonnull
-    <R> GeneralComputeStage<R> customTransform(
+    <R> GeneralStage<R> customTransform(
             @Nonnull String stageName, @Nonnull DistributedSupplier<Processor> procSupplier);
 }

@@ -36,7 +36,7 @@ import static java.util.stream.Stream.concat;
 
 /**
  * Offers a step-by-step fluent API to build a hash-join pipeline pipeline.
- * To obtain it, call {@link GeneralComputeStage#hashJoinBuilder()} on the primary
+ * To obtain it, call {@link GeneralStage#hashJoinBuilder()} on the primary
  * pipeline, whose data will be enriched from all other stages.
  * <p>
  * This object is mainly intended to build a hash-join of the primary pipeline
@@ -46,12 +46,12 @@ import static java.util.stream.Stream.concat;
  *
  * @param <T0> the type of the stream-0 item
  */
-public abstract class GeneralHashJoinBuilder<T0, OUT_STAGE extends GeneralComputeStage<Tuple2<T0, ItemsByTag>>> {
-    private final GeneralComputeStage<T0> stage0;
+public abstract class GeneralHashJoinBuilder<T0, OUT_STAGE extends GeneralStage<Tuple2<T0, ItemsByTag>>> {
+    private final GeneralStage<T0> stage0;
     private final CreateOutStageFn<T0, OUT_STAGE> createOutStageFn;
     private final Map<Tag<?>, StageAndClause> clauses = new HashMap<>();
 
-    GeneralHashJoinBuilder(GeneralComputeStage<T0> stage0, CreateOutStageFn<T0, OUT_STAGE> createOutStageFn) {
+    GeneralHashJoinBuilder(GeneralStage<T0> stage0, CreateOutStageFn<T0, OUT_STAGE> createOutStageFn) {
         this.stage0 = stage0;
         this.createOutStageFn = createOutStageFn;
     }
@@ -67,7 +67,7 @@ public abstract class GeneralHashJoinBuilder<T0, OUT_STAGE extends GeneralComput
      *             to the contributing pipeline's data
      * @return the tag that refers to the contributing pipeline
      */
-    public <K, T1_IN, T1> Tag<T1> add(ComputeStage<T1_IN> stage, JoinClause<K, T0, T1_IN, T1> joinClause) {
+    public <K, T1_IN, T1> Tag<T1> add(BatchStage<T1_IN> stage, JoinClause<K, T0, T1_IN, T1> joinClause) {
         Tag<T1> tag = tag(clauses.size());
         clauses.put(tag, new StageAndClause<>(stage, joinClause));
         return tag;
@@ -84,7 +84,7 @@ public abstract class GeneralHashJoinBuilder<T0, OUT_STAGE extends GeneralComput
         List<Entry<Tag<?>, StageAndClause>> orderedClauses = clauses.entrySet().stream()
                                                                     .sorted(comparing(Entry::getKey))
                                                                     .collect(toList());
-        List<GeneralComputeStage> upstream =
+        List<GeneralStage> upstream =
                 concat(
                         Stream.of(stage0),
                         orderedClauses.stream().map(e -> e.getValue().stage())
@@ -108,22 +108,22 @@ public abstract class GeneralHashJoinBuilder<T0, OUT_STAGE extends GeneralComput
     @FunctionalInterface
     public interface CreateOutStageFn<T0, OUT_STAGE> {
         OUT_STAGE get(
-                List<GeneralComputeStage> upstream,
+                List<GeneralStage> upstream,
                 HashJoinTransform<T0, Tuple2<T0, ItemsByTag>> hashJoinTransform,
                 PipelineImpl pipeline);
     }
 
     private static class StageAndClause<K, E0, T1, T1_OUT> {
-        private final GeneralComputeStage<T1> stage;
+        private final GeneralStage<T1> stage;
         private final JoinClause<K, E0, T1, T1_OUT> joinClause;
 
         @SuppressWarnings("unchecked")
-        StageAndClause(GeneralComputeStage<T1> stage, JoinClause<K, E0, T1, T1_OUT> joinClause) {
+        StageAndClause(GeneralStage<T1> stage, JoinClause<K, E0, T1, T1_OUT> joinClause) {
             this.stage = stage;
             this.joinClause = joinClause;
         }
 
-        GeneralComputeStage<T1> stage() {
+        GeneralStage<T1> stage() {
             return stage;
         }
 

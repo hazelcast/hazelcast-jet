@@ -18,14 +18,14 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tuple2;
-import com.hazelcast.jet.impl.pipeline.ComputeStageImpl;
+import com.hazelcast.jet.impl.pipeline.BatchStageImpl;
 
 import static java.util.Comparator.comparing;
 
 public class HashJoinBuilder<T0>
-        extends GeneralHashJoinBuilder<T0, ComputeStage<Tuple2<T0, ItemsByTag>>> {
+        extends GeneralHashJoinBuilder<T0, BatchStage<Tuple2<T0, ItemsByTag>>> {
 
-    HashJoinBuilder(ComputeStage<T0> stage0) {
-        super(stage0, ComputeStageImpl::new);
+    HashJoinBuilder(BatchStage<T0> stage0) {
+        super(stage0, BatchStageImpl::new);
     }
 }

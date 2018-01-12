@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.pipeline.GeneralComputeStage;
+import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.function.DistributedFunction;
 
 import javax.annotation.Nonnull;
@@ -43,7 +43,7 @@ class StageWithGroupingBase<T, K> {
     }
 
     @Nonnull
-    GeneralComputeStage<T> computeStage() {
-        return (GeneralComputeStage<T>) computeStage;
+    GeneralStage<T> computeStage() {
+        return (GeneralStage<T>) computeStage;
     }
 }

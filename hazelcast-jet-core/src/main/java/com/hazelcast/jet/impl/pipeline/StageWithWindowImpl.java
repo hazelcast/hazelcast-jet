@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.pipeline.ComputeStage;
-import com.hazelcast.jet.pipeline.ComputeStageWM;
+import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
 import com.hazelcast.jet.pipeline.StageWithWindow;
 import com.hazelcast.jet.pipeline.WindowAggregateBuilder;
@@ -38,11 +38,11 @@ import static java.util.Collections.singletonList;
  */
 public class StageWithWindowImpl<T> implements StageWithWindow<T> {
 
-    private final ComputeStageWMImpl<T> computeStage;
+    private final StreamStageImpl<T> computeStage;
     private final WindowDefinition wDef;
 
     StageWithWindowImpl(
-            ComputeStageWMImpl<T> computeStage,
+            StreamStageImpl<T> computeStage,
             WindowDefinition wDef
     ) {
         this.computeStage = computeStage;
@@ -61,7 +61,7 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <A, R> ComputeStage<TimestampedEntry<Void, R>> aggregate(
+    public <A, R> BatchStage<TimestampedEntry<Void, R>> aggregate(
             AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
         return computeStage.attach(new AggregateTransform<T, A, R, TimestampedEntry<Void, R>>(wDef, aggrOp));
@@ -69,8 +69,8 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T1, A, R> ComputeStage<TimestampedEntry<Void, R>> aggregate2(
-            ComputeStageWM<T1> stage1,
+    public <T1, A, R> BatchStage<TimestampedEntry<Void, R>> aggregate2(
+            StreamStage<T1> stage1,
             AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp
     ) {
         return computeStage.attach(new CoAggregateTransform<>(aggrOp), singletonList(stage1));
@@ -78,9 +78,9 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T1, T2, A, R> ComputeStage<TimestampedEntry<Void, R>> aggregate3(
-            ComputeStageWM<T1> stage1,
-            ComputeStageWM<T2> stage2,
+    public <T1, T2, A, R> BatchStage<TimestampedEntry<Void, R>> aggregate3(
+            StreamStage<T1> stage1,
+            StreamStage<T2> stage2,
             AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp
     ) {
         return computeStage.attach(new CoAggregateTransform<>(aggrOp), asList(stage1, stage2));
