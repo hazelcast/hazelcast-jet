@@ -22,6 +22,7 @@ import com.hazelcast.config.CacheSimpleConfig;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetTestSupport;
@@ -41,7 +42,6 @@ import org.junit.runner.RunWith;
 
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.core.Edge.between;
@@ -167,13 +167,13 @@ public class HazelcastConnectorTest extends JetTestSupport {
 
         dag.edge(between(source, sink));
 
-        Future<Void> future = jetInstance.newJob(dag).getFuture();
+        Job job = jetInstance.newJob(dag);
 
         IStreamMap<Integer, Integer> sourceMap = jetInstance.getMap(streamSourceName);
         range(0, ENTRY_COUNT).forEach(i -> sourceMap.put(i, i));
 
         assertSizeEventually(ENTRY_COUNT, jetInstance.getList(streamSinkName));
-        future.cancel(true);
+        job.cancel();
     }
 
     @Test
@@ -186,7 +186,7 @@ public class HazelcastConnectorTest extends JetTestSupport {
 
         dag.edge(between(source, sink));
 
-        Future<Void> future = jetInstance.newJob(dag).getFuture();
+        Job job = jetInstance.newJob(dag);
 
         IStreamMap<Integer, Integer> sourceMap = jetInstance.getMap(streamSourceName);
         range(0, ENTRY_COUNT).forEach(i -> sourceMap.put(i, i));
@@ -194,7 +194,7 @@ public class HazelcastConnectorTest extends JetTestSupport {
         assertSizeEventually(ENTRY_COUNT - 1, jetInstance.getList(streamSinkName));
         assertFalse(jetInstance.getList(streamSinkName).contains(0));
         assertTrue(jetInstance.getList(streamSinkName).contains(1));
-        future.cancel(true);
+        job.cancel();
     }
 
     @Test
@@ -222,13 +222,13 @@ public class HazelcastConnectorTest extends JetTestSupport {
 
         dag.edge(between(source, sink));
 
-        Future<Void> future = jetInstance.newJob(dag).getFuture();
+        Job job = jetInstance.newJob(dag);
 
         IStreamCache<Integer, Integer> sourceCache = jetInstance.getCacheManager().getCache(streamSourceName);
         range(0, ENTRY_COUNT).forEach(i -> sourceCache.put(i, i));
 
         assertSizeEventually(ENTRY_COUNT, jetInstance.getList(streamSinkName));
-        future.cancel(true);
+        job.cancel();
     }
 
     @Test
@@ -241,7 +241,7 @@ public class HazelcastConnectorTest extends JetTestSupport {
 
         dag.edge(between(source, sink));
 
-        Future<Void> future = jetInstance.newJob(dag).getFuture();
+        Job job = jetInstance.newJob(dag);
 
         IStreamCache<Integer, Integer> sourceCache = jetInstance.getCacheManager().getCache(streamSourceName);
         range(0, ENTRY_COUNT).forEach(i -> sourceCache.put(i, i));
@@ -249,7 +249,7 @@ public class HazelcastConnectorTest extends JetTestSupport {
         assertSizeEventually(ENTRY_COUNT - 1, jetInstance.getList(streamSinkName));
         assertFalse(jetInstance.getList(streamSinkName).contains(0));
         assertTrue(jetInstance.getList(streamSinkName).contains(1));
-        future.cancel(true);
+        job.cancel();
     }
 
     @Test
@@ -277,7 +277,7 @@ public class HazelcastConnectorTest extends JetTestSupport {
 
         dag.edge(between(source, sink));
 
-        Future<Void> future = jetInstance.newJob(dag).getFuture();
+        Job job = jetInstance.newJob(dag);
 
         IStreamMap<Integer, Integer> sourceMap = jetInstance.getMap(streamSourceName);
         sourceMap.put(1, 1); // ADDED
@@ -297,7 +297,7 @@ public class HazelcastConnectorTest extends JetTestSupport {
             assertEquals(Integer.valueOf(2), e.getValue());
         }, 3);
 
-        future.cancel(true);
+        job.cancel();
     }
 
     @Test
@@ -309,7 +309,7 @@ public class HazelcastConnectorTest extends JetTestSupport {
 
         dag.edge(between(source, sink));
 
-        Future<Void> future = jetInstance.newJob(dag).getFuture();
+        Job job = jetInstance.newJob(dag);
 
         IStreamCache<Object, Object> sourceCache = jetInstance.getCacheManager().getCache(streamSourceName);
         sourceCache.put(1, 1); // ADDED
@@ -329,6 +329,6 @@ public class HazelcastConnectorTest extends JetTestSupport {
             assertEquals(Integer.valueOf(2), e.getValue());
         }, 3);
 
-        future.cancel(true);
+        job.cancel();
     }
 }

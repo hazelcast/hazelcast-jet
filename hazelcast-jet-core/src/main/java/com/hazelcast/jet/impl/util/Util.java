@@ -49,6 +49,7 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -301,8 +302,12 @@ public final class Util {
         return "job " + idToString(jobId) + ", execution " + idToString(executionId);
     }
 
-    public static LocalDateTime toLocalDateTime(long startTime) {
-        return Instant.ofEpochMilli(startTime).atZone(ZoneId.systemDefault()).toLocalDateTime();
+    public static ZonedDateTime toZonedDateTime(long timestamp) {
+        return Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault());
+    }
+
+    public static LocalDateTime toLocalDateTime(long timestamp) {
+        return toZonedDateTime(timestamp).toLocalDateTime();
     }
 
     @SuppressWarnings("checkstyle:magicnumber")
@@ -355,6 +360,15 @@ public final class Util {
     @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
     public static CompletableFuture<Void> completedVoidFuture() {
         return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * Returns a void future which is already completed with the supplied exception
+     */
+    public static CompletableFuture<Void> completedVoidFuture(@Nonnull Throwable exception) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        future.completeExceptionally(exception);
+        return future;
     }
 
     /**
