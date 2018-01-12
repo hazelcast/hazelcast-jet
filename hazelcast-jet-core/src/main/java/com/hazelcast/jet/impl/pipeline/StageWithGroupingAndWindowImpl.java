@@ -16,11 +16,11 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.ComputeStageWM;
-import com.hazelcast.jet.StageWithGroupingAndWindow;
-import com.hazelcast.jet.StageWithGroupingWM;
-import com.hazelcast.jet.WindowDefinition;
-import com.hazelcast.jet.WindowGroupAggregateBuilder;
+import com.hazelcast.jet.pipeline.ComputeStageWM;
+import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
+import com.hazelcast.jet.pipeline.StageWithGroupingWM;
+import com.hazelcast.jet.pipeline.WindowDefinition;
+import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;

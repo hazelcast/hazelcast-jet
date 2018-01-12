@@ -16,15 +16,15 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.ComputeStage;
-import com.hazelcast.jet.ComputeStageWM;
-import com.hazelcast.jet.GeneralComputeStage;
-import com.hazelcast.jet.Pipeline;
-import com.hazelcast.jet.Sink;
-import com.hazelcast.jet.SinkStage;
-import com.hazelcast.jet.Source;
-import com.hazelcast.jet.SourceWithWatermark;
-import com.hazelcast.jet.Stage;
+import com.hazelcast.jet.pipeline.ComputeStage;
+import com.hazelcast.jet.pipeline.ComputeStageWM;
+import com.hazelcast.jet.pipeline.GeneralComputeStage;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sink;
+import com.hazelcast.jet.pipeline.SinkStage;
+import com.hazelcast.jet.pipeline.Source;
+import com.hazelcast.jet.pipeline.SourceWithWatermark;
+import com.hazelcast.jet.pipeline.Stage;
 import com.hazelcast.jet.core.DAG;
 
 import javax.annotation.Nonnull;

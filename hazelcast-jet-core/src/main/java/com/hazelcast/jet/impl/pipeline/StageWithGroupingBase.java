@@ -16,12 +16,10 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.GeneralComputeStage;
-import com.hazelcast.jet.WindowDefinition;
+import com.hazelcast.jet.pipeline.GeneralComputeStage;
 import com.hazelcast.jet.function.DistributedFunction;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 @SuppressWarnings("unchecked")
 class StageWithGroupingBase<T, K> {

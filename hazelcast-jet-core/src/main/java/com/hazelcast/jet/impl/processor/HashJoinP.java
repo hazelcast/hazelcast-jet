@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.processor;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
+import com.hazelcast.jet.pipeline.ComputeStage;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -56,7 +57,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
      * The {@code tags} is used to populate the output items. It can be {@code
      * null}, in which case {@code keyFs} must have either one or two elements,
      * corresponding to the two supported special cases in
-     * {@link com.hazelcast.jet.ComputeStage}.
+     * {@link ComputeStage}.
      * <p>
      * Note that internally the processor stores the lists with a {@code null}
      * element prepended to remove the mismatch between list index and ordinal.

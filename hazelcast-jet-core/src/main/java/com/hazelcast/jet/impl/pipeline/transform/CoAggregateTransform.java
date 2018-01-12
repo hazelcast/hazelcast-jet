@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.WindowDefinition;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 
 import javax.annotation.Nonnull;

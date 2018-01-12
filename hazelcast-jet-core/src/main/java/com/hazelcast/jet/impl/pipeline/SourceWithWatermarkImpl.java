@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.SourceWithWatermark;
+import com.hazelcast.jet.pipeline.SourceWithWatermark;
 import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;

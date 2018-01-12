@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.WindowDefinition;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedFunction;
 

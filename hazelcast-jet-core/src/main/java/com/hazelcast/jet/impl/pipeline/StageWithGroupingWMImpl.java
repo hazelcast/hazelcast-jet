@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.StageWithGroupingWM;
-import com.hazelcast.jet.WindowDefinition;
+import com.hazelcast.jet.pipeline.StageWithGroupingWM;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.function.DistributedFunction;
 
 import javax.annotation.Nonnull;

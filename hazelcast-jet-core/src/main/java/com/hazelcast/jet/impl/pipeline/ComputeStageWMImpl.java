@@ -16,16 +16,16 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.ComputeStage;
-import com.hazelcast.jet.ComputeStageWM;
-import com.hazelcast.jet.GeneralComputeStage;
-import com.hazelcast.jet.JoinClause;
-import com.hazelcast.jet.SourceWithWatermark;
-import com.hazelcast.jet.StageWithGroupingWM;
-import com.hazelcast.jet.StageWithWindow;
-import com.hazelcast.jet.Transform;
+import com.hazelcast.jet.pipeline.ComputeStage;
+import com.hazelcast.jet.pipeline.ComputeStageWM;
+import com.hazelcast.jet.pipeline.GeneralComputeStage;
+import com.hazelcast.jet.pipeline.JoinClause;
+import com.hazelcast.jet.pipeline.SourceWithWatermark;
+import com.hazelcast.jet.pipeline.StageWithGroupingWM;
+import com.hazelcast.jet.pipeline.StageWithWindow;
+import com.hazelcast.jet.pipeline.Transform;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.WindowDefinition;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;

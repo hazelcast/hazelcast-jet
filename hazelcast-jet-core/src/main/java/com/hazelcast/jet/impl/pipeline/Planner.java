@@ -16,13 +16,13 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.ComputeStage;
-import com.hazelcast.jet.JoinClause;
-import com.hazelcast.jet.SessionWindowDef;
-import com.hazelcast.jet.SlidingWindowDef;
-import com.hazelcast.jet.Stage;
-import com.hazelcast.jet.Transform;
-import com.hazelcast.jet.WindowDefinition;
+import com.hazelcast.jet.pipeline.ComputeStage;
+import com.hazelcast.jet.pipeline.JoinClause;
+import com.hazelcast.jet.pipeline.SessionWindowDef;
+import com.hazelcast.jet.pipeline.SlidingWindowDef;
+import com.hazelcast.jet.pipeline.Stage;
+import com.hazelcast.jet.pipeline.Transform;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.Processor;

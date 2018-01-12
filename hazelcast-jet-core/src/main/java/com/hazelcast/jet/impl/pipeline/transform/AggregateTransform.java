@@ -16,9 +16,8 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.WindowDefinition;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
-import com.hazelcast.jet.function.DistributedToLongFunction;
 
 public class AggregateTransform<T, A, R, OUT> implements UnaryTransform<T, OUT> {
     private final WindowDefinition wDef;

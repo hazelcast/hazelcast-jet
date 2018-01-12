@@ -18,6 +18,8 @@ package com.hazelcast.jet;
 
 import com.hazelcast.jet.core.processor.KafkaProcessors;
 import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.pipeline.Source;
+import com.hazelcast.jet.pipeline.Sources;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;

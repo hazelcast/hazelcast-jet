@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.JoinClause;
+import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.datamodel.Tag;
 
 import javax.annotation.Nonnull;

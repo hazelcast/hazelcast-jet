@@ -16,9 +16,9 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.ComputeStage;
-import com.hazelcast.jet.GroupAggregateBuilder;
-import com.hazelcast.jet.StageWithGrouping;
+import com.hazelcast.jet.pipeline.ComputeStage;
+import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
+import com.hazelcast.jet.pipeline.StageWithGrouping;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;

@@ -16,10 +16,10 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.GeneralComputeStage;
-import com.hazelcast.jet.Pipeline;
-import com.hazelcast.jet.Stage;
-import com.hazelcast.jet.Transform;
+import com.hazelcast.jet.pipeline.GeneralComputeStage;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Stage;
+import com.hazelcast.jet.pipeline.Transform;
 
 import java.util.ArrayList;
 import java.util.List;

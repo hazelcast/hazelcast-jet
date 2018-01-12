@@ -16,16 +16,17 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.ComputeStage;
-import com.hazelcast.jet.GeneralComputeStage;
-import com.hazelcast.jet.StageWithGrouping;
-import com.hazelcast.jet.StageWithGroupingAndWindow;
-import com.hazelcast.jet.StageWithGroupingWM;
-import com.hazelcast.jet.WindowDefinition;
+import com.hazelcast.jet.pipeline.GeneralComputeStage;
+import com.hazelcast.jet.pipeline.StageWithGrouping;
+import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
+import com.hazelcast.jet.pipeline.StageWithGroupingWM;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
 import com.hazelcast.jet.impl.pipeline.transform.CoGroupTransform;
+import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
+import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -35,8 +36,8 @@ import static com.hazelcast.jet.datamodel.Tag.tag;
 import static java.util.stream.Collectors.toList;
 
 /**
- * Support class for {@link com.hazelcast.jet.GroupAggregateBuilder}
- * and {@link com.hazelcast.jet.WindowGroupAggregateBuilder}. The
+ * Support class for {@link GroupAggregateBuilder}
+ * and {@link WindowGroupAggregateBuilder}. The
  * motivation is to have the ability to specify different output
  * types ({@code Entry<K, R>} vs. {@code TimestampedEntry<K, R>}).
  *

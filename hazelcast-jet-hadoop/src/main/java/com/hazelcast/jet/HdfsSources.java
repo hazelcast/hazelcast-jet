@@ -18,6 +18,8 @@ package com.hazelcast.jet;
 
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.impl.connector.hadoop.ReadHdfsP.MetaSupplier;
+import com.hazelcast.jet.pipeline.Source;
+import com.hazelcast.jet.pipeline.Sources;
 import org.apache.hadoop.mapred.JobConf;
 
 import javax.annotation.Nonnull;

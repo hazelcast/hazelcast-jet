@@ -21,6 +21,7 @@ import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.core.EntryEventType;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
+import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 
 import java.util.AbstractMap.SimpleImmutableEntry;

@@ -16,12 +16,12 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.ComputeStage;
-import com.hazelcast.jet.GeneralComputeStage;
-import com.hazelcast.jet.JoinClause;
-import com.hazelcast.jet.Source;
-import com.hazelcast.jet.StageWithGrouping;
-import com.hazelcast.jet.Transform;
+import com.hazelcast.jet.pipeline.ComputeStage;
+import com.hazelcast.jet.pipeline.GeneralComputeStage;
+import com.hazelcast.jet.pipeline.JoinClause;
+import com.hazelcast.jet.pipeline.Source;
+import com.hazelcast.jet.pipeline.StageWithGrouping;
+import com.hazelcast.jet.pipeline.Transform;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;

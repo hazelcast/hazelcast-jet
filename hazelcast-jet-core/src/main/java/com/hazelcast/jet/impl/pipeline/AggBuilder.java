@@ -16,9 +16,9 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.GeneralComputeStage;
-import com.hazelcast.jet.Transform;
-import com.hazelcast.jet.WindowDefinition;
+import com.hazelcast.jet.pipeline.GeneralComputeStage;
+import com.hazelcast.jet.pipeline.Transform;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.impl.pipeline.transform.CoAggregateTransform;

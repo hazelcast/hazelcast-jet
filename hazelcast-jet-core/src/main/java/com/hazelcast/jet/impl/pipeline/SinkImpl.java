@@ -20,7 +20,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.Sink;
+import com.hazelcast.jet.pipeline.Sink;
 
 public class SinkImpl<E> implements Sink<E> {
     private final String name;

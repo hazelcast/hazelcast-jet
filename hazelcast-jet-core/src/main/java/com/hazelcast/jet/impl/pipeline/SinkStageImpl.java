@@ -16,9 +16,9 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.GeneralComputeStage;
-import com.hazelcast.jet.Sink;
-import com.hazelcast.jet.SinkStage;
+import com.hazelcast.jet.pipeline.GeneralComputeStage;
+import com.hazelcast.jet.pipeline.Sink;
+import com.hazelcast.jet.pipeline.SinkStage;
 
 import static java.util.Collections.singletonList;
 
