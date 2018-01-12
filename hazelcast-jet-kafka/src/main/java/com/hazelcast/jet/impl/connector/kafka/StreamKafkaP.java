@@ -84,7 +84,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
      * Offsets are -1 initially and remain -1 for partitions not assigned to this instance.
      */
     private final Map<String, long[]> offsets = new HashMap<>();
-    private Traverser<Entry<BroadcastKey<TopicPartition>, Long>> snapshotTraverser;
+    private Traverser<Entry<BroadcastKey<TopicPartition>, long[]>> snapshotTraverser;
     private int processorIndex;
     private Traverser<Object> traverser;
     private ConsumerRecord<Object, Object> lastEmittedItem;
@@ -239,13 +239,16 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
     @Override
     public boolean saveToSnapshot() {
         if (snapshotTraverser == null) {
-            Stream<Entry<BroadcastKey<TopicPartition>, Long>> snapshotStream =
+            Stream<Entry<BroadcastKey<TopicPartition>, long[]>> snapshotStream =
                     offsets.entrySet().stream()
                            .flatMap(entry -> IntStream.range(0, entry.getValue().length)
                                   .filter(partition -> entry.getValue()[partition] >= 0)
-                                  .mapToObj(partition -> entry(
-                                          broadcastKey(new TopicPartition(entry.getKey(), partition)),
-                                          entry.getValue()[partition])));
+                                  .mapToObj(partition -> {
+                                      TopicPartition key = new TopicPartition(entry.getKey(), partition);
+                                      long offset = entry.getValue()[partition];
+                                      long watermark = watermarkSourceUtil.getWatermark(currentAssignment.get(key));
+                                      return entry(broadcastKey(key), new long[]{offset, watermark});
+                                  }));
             snapshotTraverser = traverseStream(snapshotStream)
                     .onFirstNull(() -> snapshotTraverser = null);
         }
@@ -255,7 +258,9 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
     @Override
     public void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
         TopicPartition topicPartition = ((BroadcastKey<TopicPartition>) key).key();
-        long offset = (long) value;
+        long[] value1 = (long[]) value;
+        long offset = value1[0];
+        long watermark = value1[1];
         long[] topicOffsets = offsets.get(topicPartition.topic());
         if (topicOffsets == null) {
             getLogger().severe("Offset for topic '" + topicPartition.topic()
@@ -266,11 +271,13 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
             getLogger().severe("Offset for partition '" + topicPartition + "' is present in snapshot," +
                     " but that topic currently has only " + topicOffsets.length + " partitions");
         }
-        if (currentAssignment.containsKey(topicPartition)) {
+        Integer partitionIndex = currentAssignment.get(topicPartition);
+        if (partitionIndex != null) {
             assert topicOffsets[topicPartition.partition()] < 0 : "duplicate offset for topicPartition '" + topicPartition
                     + "' restored, offset1=" + topicOffsets[topicPartition.partition()] + ", offset2=" + offset;
             topicOffsets[topicPartition.partition()] = offset;
             consumer.seek(topicPartition, offset + 1);
+            watermarkSourceUtil.restoreWatermark(partitionIndex, watermark);
         }
     }
 

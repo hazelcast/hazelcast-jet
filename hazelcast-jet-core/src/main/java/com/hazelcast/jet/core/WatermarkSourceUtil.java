@@ -25,9 +25,39 @@ import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
- * A utility to help emitting {@link Watermark} from a source.
+ * A utility to help emitting {@link Watermark} from a source. It is useful if
+ * the source reads events from multiple partitions.
  *
- * TODO [viliam] enhance javadoc
+ * <h3>The problem</h3>
+ * On restart it can happen that partition1 has one very recent event and
+ * partition2 has one old event. If partition1 is checked first and the event
+ * emitted, it will advance the watermark. Then, partition2 is checked and its
+ * event might be dropped as late.
+ *
+ * This utility helps you track watermarks per partition and decide when to
+ * emit it.
+ *
+ * <h3>Usage</h3>
+ * <ul>
+ *     <li>Call {@link #increasePartitionCount} to set your partition count.
+ *
+ *     <li>For each event you receive call {@link #handleEvent} method. If it
+ *     returns a watermark, emit it <em>before</em> the event itself.
+ *
+ *     <li>If you didn't emit an event for some time (~100-1000ms), call {@link
+ *     #handleNoEvent}. If it returns a watermark, emit it.
+ *
+ *     <li>If you support state snapshots, save the value returned by {@link
+ *     #getWatermark} for all partitions to the snapshot. When restoring the
+ *     state, call {@link #restoreWatermark}.<br>
+ *
+ *     You should save the value under your external partition key so that the
+ *     watermark value can be restored to correct processor instance. The key
+ *     should also be wrapped using {@link BroadcastKey#broadcastKey
+ *     broadcastKey()}, because the external partitions don't match Hazelcast
+ *     partitions. This way, all processor instances will see all keys and they
+ *     can restore partition they handle and ignore others.
+ * </ul>
  *
  * @param <T> event type
  */
@@ -61,7 +91,7 @@ public class WatermarkSourceUtil<T> {
      * Call this method after the event was emitted to decide if a watermark
      * should be sent after it.
      *
-     * @param partitionIndex index of the source partition the event occurred in
+     * @param partitionIndex 0-based index of the source partition the event occurred in
      * @param event the event
      * @return watermark to emit before the event or {@code null}
      */
@@ -117,8 +147,11 @@ public class WatermarkSourceUtil<T> {
     }
 
     /**
-     * Changes the partition count. New partitions will be marked as ACTIVE
-     * initially.
+     * Changes the partition count. The new partition count must be higher or
+     * equal to the current count.
+     * <p>
+     * You can call this method at any moment. Added partitions will be
+     * considered <em>active</em> initially.
      *
      * @param newPartitionCount partition count, must be higher than the
      *                          current count
