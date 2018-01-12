@@ -29,8 +29,6 @@ interface ProcessorK {
     var isCooperative: Boolean
     var suspendAction: (Continuation<Any>) -> Unit
 
-    suspend fun yield() = suspendCoroutine(suspendAction)
-
     fun init(outbox: Outbox, context: Processor.Context) = Unit
     suspend fun process(ordinal: Int, inbox: Inbox) = Unit
     suspend fun process() = Unit
@@ -40,3 +38,5 @@ interface ProcessorK {
     suspend fun restoreFromSnapshot(inbox: Inbox) = Unit
     suspend fun finishSnapshotRestore() = Unit
 }
+
+inline suspend fun ProcessorK.yield() = suspendCoroutine(suspendAction)

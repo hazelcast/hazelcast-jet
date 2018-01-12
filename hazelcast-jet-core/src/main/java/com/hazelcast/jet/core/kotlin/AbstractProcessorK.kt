@@ -54,13 +54,13 @@ abstract class AbstractProcessorK : ProcessorK {
 
     protected open fun init(context: Processor.Context) = Unit
 
-    protected suspend fun emit(item: Any) {
+    protected inline suspend fun emit(item: Any) {
         while (!outbox.offer(item)) {
             yield()
         }
     }
 
-    protected suspend fun emitToSnapshot(key: Any, value: Any) {
+    protected inline suspend fun emitToSnapshot(key: Any, value: Any) {
         while (!outbox.offerToSnapshot(key, value)) {
             yield()
         }
