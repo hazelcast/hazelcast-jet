@@ -45,17 +45,15 @@ class InsertWatermarksPK<T>(
         emitWmIfIndicated()
     }
 
-    override suspend fun process(ordinal: Int, inbox: Inbox) {
-        inbox.drain {
-            @Suppress("UNCHECKED_CAST")
-            val timestamp = getTimestampFn.applyAsLong(it as T)
-            currWm = wmPolicy.reportEvent(timestamp)
-            emitWmIfIndicated()
-            if (timestamp >= currWm) {
-                emit(it)
-            } else {
-                logger.takeIf { it.isInfoEnabled }?.apply { info("Dropped late event: $it") }
-            }
+    override suspend fun process(ordinal: Int, inbox: Inbox) = inbox.drain {
+        @Suppress("UNCHECKED_CAST")
+        val timestamp = getTimestampFn.applyAsLong(it as T)
+        currWm = wmPolicy.reportEvent(timestamp)
+        emitWmIfIndicated()
+        if (timestamp >= currWm) {
+            emit(it)
+        } else {
+            logger.takeIf { it.isInfoEnabled }?.apply { info("Dropped late event: $it") }
         }
     }
 

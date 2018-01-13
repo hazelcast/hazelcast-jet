@@ -88,12 +88,10 @@ class StreamFilesPK(
         logger.info("Started to watch directory: " + watchedDirectory)
     }
 
-    override suspend fun complete() {
-        this.use { _ ->
-            while (receiveWatcherEvents()) {
-                eventQueue.poll()?.emitLines()
-                yield()
-            }
+    override suspend fun complete() = this.use { _ ->
+        while (receiveWatcherEvents()) {
+            eventQueue.poll()?.emitLines()
+            yield()
         }
     }
 

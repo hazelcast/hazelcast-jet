@@ -33,16 +33,14 @@ class HashJoinCollectPK<T, K, V>(
 
     private val map = HashMap<K, V>()
 
-    override suspend fun process(ordinal: Int, inbox: Inbox) {
-        inbox.drain {
-            @Suppress("UNCHECKED_CAST")
-            val t = it as T
-            val key = keyFn.apply(t)
-            val value = projectFn.apply(t)
-            val previous = map.put(key, value)
-            if (previous != null) {
-                throw IllegalStateException("Duplicate values for key $key: $previous and $value")
-            }
+    override suspend fun process(ordinal: Int, inbox: Inbox) = inbox.drain {
+        @Suppress("UNCHECKED_CAST")
+        val t = it as T
+        val key = keyFn.apply(t)
+        val value = projectFn.apply(t)
+        val previous = map.put(key, value)
+        if (previous != null) {
+            throw IllegalStateException("Duplicate values for key $key: $previous and $value")
         }
     }
 

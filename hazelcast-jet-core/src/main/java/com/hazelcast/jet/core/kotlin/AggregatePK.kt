@@ -30,11 +30,9 @@ class AggregatePK< T, A, R>(aggrOp: AggregateOperation1<T, A, R>) : AbstractProc
     private val finishFn = aggrOp.finishFn()
     private val acc = aggrOp.createFn().get()
 
-    override suspend fun process(ordinal: Int, inbox: Inbox) {
-        inbox.drain {
-            @Suppress("UNCHECKED_CAST")
-            accumulateFn.accept(acc, it as T)
-        }
+    override suspend fun process(ordinal: Int, inbox: Inbox) = inbox.drain {
+        @Suppress("UNCHECKED_CAST")
+        accumulateFn.accept(acc, it as T)
     }
 
     override suspend fun complete() {

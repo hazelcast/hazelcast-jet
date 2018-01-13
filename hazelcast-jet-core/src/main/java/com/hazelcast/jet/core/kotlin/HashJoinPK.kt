@@ -38,29 +38,26 @@ class HashJoinPK<T0>(
     private val lookupTables: Array<Map<Any, Any>?> = arrayOfNulls(keyFns.size + 1)
     private var ordinal0consumed = false
 
-    suspend override fun process(ordinal: Int, inbox: Inbox) {
-        if (ordinal == 0) {
-            inbox.drain {
-                @Suppress("UNCHECKED_CAST")
-                val t0 = it as T0
-                ordinal0consumed = true
-                if (tags.isEmpty()) {
-                    emit(if (keyFns.size == 2)
-                        tuple2<T0, Any>(t0, lookupJoined(1, t0)) else
-                        tuple3<T0, Any, Any>(t0, lookupJoined(1, t0), lookupJoined(2, t0)))
-                }
-                val ibt = ItemsByTag()
-                for (i in 1 until keyFns.size) {
-                    ibt.put(tags[i], lookupJoined(i, t0))
-                }
-                emit(tuple2<T0, ItemsByTag>(t0, ibt))
+    suspend override fun process(ordinal: Int, inbox: Inbox) = when (ordinal) {
+        0 -> inbox.drain {
+            @Suppress("UNCHECKED_CAST")
+            val t0 = it as T0
+            ordinal0consumed = true
+            if (tags.isEmpty()) {
+                emit(if (keyFns.size == 2)
+                    tuple2<T0, Any>(t0, lookupJoined(1, t0)) else
+                    tuple3<T0, Any, Any>(t0, lookupJoined(1, t0), lookupJoined(2, t0)))
             }
-        } else {
-            inbox.drain {
-                assert(!ordinal0consumed) { "Edge 0 must have a lower priority than all other edges" }
-                @Suppress("UNCHECKED_CAST")
-                lookupTables[ordinal] = it as Map<Any, Any>
+            val ibt = ItemsByTag()
+            for (i in 1 until keyFns.size) {
+                ibt.put(tags[i], lookupJoined(i, t0))
             }
+            emit(tuple2<T0, ItemsByTag>(t0, ibt))
+        }
+        else -> inbox.drain {
+            assert(!ordinal0consumed) { "Edge 0 must have a lower priority than all other edges" }
+            @Suppress("UNCHECKED_CAST")
+            lookupTables[ordinal] = it as Map<Any, Any>
         }
     }
 

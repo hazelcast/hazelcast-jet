@@ -29,13 +29,11 @@ class TransformPK<T, out R>(
 ) : AbstractProcessorK() {
     override var isCooperative = true
 
-    override suspend fun process(ordinal: Int, inbox: Inbox) {
-        inbox.drain {
-            @Suppress("UNCHECKED_CAST")
-            val outTrav = mapFn.apply(it as T)
-            while (true) {
-                emit(outTrav.next() ?: break)
-            }
+    override suspend fun process(ordinal: Int, inbox: Inbox) = inbox.drain {
+        @Suppress("UNCHECKED_CAST")
+        val outTrav = mapFn.apply(it as T)
+        while (true) {
+            emit(outTrav.next() ?: break)
         }
     }
 }

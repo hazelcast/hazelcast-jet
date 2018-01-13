@@ -48,24 +48,22 @@ class ReadFilesPK(
         directoryStream = Files.newDirectoryStream(directory, glob)
     }
 
-    override suspend fun complete() {
-        try {
-            directoryStream!!
-                .filter({ path ->
-                    Files.isRegularFile(path) &&
-                            (path.hashCode() and Integer.MAX_VALUE) % parallelism == id })
-                .forEach {
-                    logFinest(logger, "Processing file ", it)
-                    val reader = Files.newBufferedReader(it, charset)
-                    currentFileReader = reader
-                    reader.useLines { lines ->
-                        lines.forEach { emit(it) }
-                    }
+    override suspend fun complete() = try {
+        directoryStream!!
+            .filter({ path ->
+                Files.isRegularFile(path) &&
+                        (path.hashCode() and Integer.MAX_VALUE) % parallelism == id })
+            .forEach {
+                logFinest(logger, "Processing file ", it)
+                val reader = Files.newBufferedReader(it, charset)
+                currentFileReader = reader
+                reader.useLines { lines ->
+                    lines.forEach { emit(it) }
                 }
-        } finally {
-            close()
-            directoryStream = null
-        }
+            }
+    } finally {
+        close()
+        directoryStream = null
     }
 
     @Throws(IOException::class)
