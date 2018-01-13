@@ -23,12 +23,18 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import kotlinx.coroutines.experimental.Unconfined
 import kotlinx.coroutines.experimental.launch
 import kotlin.coroutines.experimental.Continuation
+import kotlin.coroutines.experimental.intrinsics.COROUTINE_SUSPENDED
+
+
 open class KotlinWrapperP(
         private val wrapped: ProcessorK
 ) : Processor {
     private var continuation: Continuation<Unit>? = null
     init {
-        wrapped.suspendAction = { this.continuation = it }
+        wrapped.suspendAction = {
+            this.continuation = it
+            COROUTINE_SUSPENDED
+        }
     }
 
     @SuppressFBWarnings("SE_BAD_FIELD")

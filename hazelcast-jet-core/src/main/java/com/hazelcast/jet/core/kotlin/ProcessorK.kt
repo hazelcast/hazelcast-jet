@@ -20,7 +20,7 @@ import com.hazelcast.jet.core.Inbox
 import com.hazelcast.jet.core.Outbox
 import com.hazelcast.jet.core.Processor
 import kotlin.coroutines.experimental.Continuation
-import kotlin.coroutines.experimental.suspendCoroutine
+import kotlin.coroutines.experimental.intrinsics.suspendCoroutineOrReturn
 
 /**
  * Javadoc pending.
@@ -30,6 +30,7 @@ interface ProcessorK {
     var suspendAction: (Continuation<Any>) -> Unit
 
     fun init(outbox: Outbox, context: Processor.Context) = Unit
+
     suspend fun process(ordinal: Int, inbox: Inbox) = Unit
     suspend fun process() = Unit
     suspend fun completeEdge() = Unit
@@ -39,4 +40,4 @@ interface ProcessorK {
     suspend fun finishSnapshotRestore() = Unit
 }
 
-inline suspend fun ProcessorK.yield() = suspendCoroutine(suspendAction)
+inline suspend fun ProcessorK.yield() = suspendCoroutineOrReturn(suspendAction)
