@@ -39,10 +39,10 @@ open class KotlinWrapperP(
 
     @SuppressFBWarnings("SE_BAD_FIELD")
     private fun resumeOrLaunch(block : suspend () -> Unit) {
-        val currentContinuation = continuation
-        if (currentContinuation != null) {
+        val toResume = continuation
+        if (toResume != null) {
             continuation = null
-            currentContinuation.resume(Unit)
+            toResume.resume(Unit)
         } else {
             launch(Unconfined) {
                 block()

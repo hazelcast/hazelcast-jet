@@ -25,6 +25,7 @@ class FlatMapper<in T, out R>(
 ) : AbstractProcessorK() {
     override var isCooperative = true
 
-    suspend override fun process(ordinal: Int, inbox: Inbox) {
+    suspend override fun process(ordinal: Int, inbox: Inbox) = inbox.drain { item ->
+
     }
 }

@@ -61,8 +61,8 @@ class InsertWatermarksPK<T>(
         emitToSnapshot(broadcastKey(Keys.LAST_EMITTED_WM), lastEmittedWm)
     }
 
-    override suspend fun restoreFromSnapshot(key: Any, value: Any) {
-        assert((key as BroadcastKey<*>).key() == Keys.LAST_EMITTED_WM) { "Unexpected key: " + key }
+    override suspend fun restoreFromSnapshot(inbox: Inbox) = inbox.drainSnapshot { key, value ->
+        assert((key as? BroadcastKey<*>)?.key() == Keys.LAST_EMITTED_WM) { "Unexpected key: " + key }
         // we restart at the oldest WM any instance was at at the time of snapshot
         minRestoredWm = Math.min(minRestoredWm, value as Long)
     }

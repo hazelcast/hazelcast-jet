@@ -34,13 +34,6 @@ abstract class AbstractProcessorK : ProcessorK {
         init(context)
     }
 
-    override final suspend fun restoreFromSnapshot(inbox: Inbox) {
-        while (true) {
-            val (key, value) = inbox.poll() as Entry<*, *>? ?: return
-            restoreFromSnapshot(key!!, value!!)
-        }
-    }
-
     protected open fun init(context: Processor.Context) = Unit
 
     protected inline suspend fun emit(item: Any) {
@@ -54,14 +47,20 @@ abstract class AbstractProcessorK : ProcessorK {
             yield()
         }
     }
-
-    protected open suspend fun restoreFromSnapshot(key: Any, value: Any) = Unit
 }
 
 inline fun Inbox.drain(action: (Any) -> Unit) {
     while (true) {
         val item = peek() ?: return
         action(item)
+        remove()
+    }
+}
+
+inline fun Inbox.drainSnapshot(action: (key: Any, value: Any) -> Unit) {
+    while (true) {
+        val (key, value) = peek() as? Entry<*, *> ?: return
+        action(key!!, value!!)
         remove()
     }
 }
