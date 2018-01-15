@@ -16,20 +16,19 @@
 
 package com.hazelcast.jet.core.processor;
 
+import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.aggregate.AggregateOperation;
+import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
-import com.hazelcast.jet.core.TimestampKind;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
-import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.core.WatermarkEmissionPolicy;
-import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
-import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.core.TimestampKind;
+import com.hazelcast.jet.core.WatermarkGenerationParams;
+import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -624,31 +623,29 @@ public final class Processors {
 
     /**
      * Returns a supplier of processors for a vertex that inserts {@link
-     * com.hazelcast.jet.core.Watermark watermark items} into the stream. It
-     * determines the value of the watermark using a {@link WatermarkPolicy}
-     * instance obtained from {@code createWmPolicyF}.
+     * com.hazelcast.jet.core.Watermark watermark items} into the stream. The
+     * value of the watermark is determined by the supplied {@link
+     * com.hazelcast.jet.core.WatermarkPolicy} instance.
      * <p>
-     * This processor drops late events. An event is late iff its timestamp is
-     * less than the already emitted watermark value.
+     * This processor also drops late items. It never allows an event which is
+     * late with regard to already emitted watermark to pass.
      * <p>
-     * The processor saves the value of the last emitted watermark to the
-     * snapshot. Different instances of this processor can have different
-     * watermark values at snapshot time, but after restart all instances will
-     * be initialized to the watermark of the most-behind instance before the
-     * restart. This doesn't cause any downstream processor to observe a
-     * watermark that is lower than before the restart (due to watermark
-     * coalescing). Another effect of this is that some events that were
-     * considered late before the restart, won't be late after the restart.
+     * The processor saves value of the last emitted watermark to snapshot.
+     * Different instances of this processor can be at different watermark at
+     * snapshot time. After restart all instances will start at watermark of
+     * the most-behind instance before the restart.
+     * <p>
+     * This might sound as it could break the monotonicity requirement, but
+     * thanks to watermark coalescing, watermarks are only delivered for
+     * downstream processing after they have been received from <i>all</i>
+     * upstream processors. Another side effect of this is, that a late event,
+     * which was dropped before restart, is not considered late after restart.
      *
      * @param <T> the type of the stream item
      */
     @Nonnull
-    public static <T> DistributedSupplier<Processor> insertWatermarksP(
-            @Nonnull DistributedToLongFunction<T> getTimestampF,
-            @Nonnull DistributedSupplier<WatermarkPolicy> createWmPolicyF,
-            @Nonnull WatermarkEmissionPolicy wmEmitPolicy
-    ) {
-        return () -> new InsertWatermarksP<>(getTimestampF, createWmPolicyF.get(), wmEmitPolicy);
+    public static <T> DistributedSupplier<Processor> insertWatermarksP(@Nonnull WatermarkGenerationParams<T> wmGenParams) {
+        return () -> new InsertWatermarksP<>(wmGenParams);
     }
 
     /**
@@ -701,17 +698,21 @@ public final class Processors {
      * item-to-traverser mapping function to each received item and emits all
      * the items from the resulting traverser.
      * <p>
+     * The traverser returned from the {@code flatMapFn} must be finite. That
+     * is, this operation will not attempt to emit any items after the first
+     * {@code null} item.
+     * <p>
      * This processor is stateless.
      *
-     * @param mapper function that maps the received item to a traverser over output items
+     * @param flatMapFn function that maps the received item to a traverser over output items
      * @param <T> received item type
      * @param <R> emitted item type
      */
     @Nonnull
     public static <T, R> DistributedSupplier<Processor> flatMapP(
-            @Nonnull DistributedFunction<T, ? extends Traverser<? extends R>> mapper
+            @Nonnull DistributedFunction<T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return () -> new TransformP<T, R>(mapper);
+        return () -> new TransformP<>(flatMapFn);
     }
 
     /**
