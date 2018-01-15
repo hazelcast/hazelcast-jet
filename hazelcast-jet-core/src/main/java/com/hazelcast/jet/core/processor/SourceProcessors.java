@@ -63,7 +63,7 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#map(String, Predicate, Projection)}}.
+     * {@link com.hazelcast.jet.Sources#map(String, Predicate, Projection)}.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier readMapP(
@@ -76,7 +76,7 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#map(String, Predicate, DistributedFunction)}}.
+     * {@link com.hazelcast.jet.Sources#map(String, Predicate, DistributedFunction)}.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier readMapP(

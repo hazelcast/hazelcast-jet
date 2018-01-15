@@ -199,7 +199,9 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
                             if (wm != null) {
                                 appendableTraverser.append(wm);
                             }
-                            appendableTraverser.append(projectedRecord);
+                            if (projectedRecord != null) {
+                                appendableTraverser.append(projectedRecord);
+                            }
                             return appendableTraverser;
                         });
             }

@@ -159,15 +159,17 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         assert resultSet != null : "null resultSet";
         while (resultSetPosition < resultSet.size()) {
             T event = resultSet.get(resultSetPosition);
-            pendingWatermark = watermarkSourceUtil.handleEvent(currentPartitionIndex, event);
-            if (pendingWatermark != null) {
-                if (!tryEmit(pendingWatermark)) {
+            if (event != null) {
+                pendingWatermark = watermarkSourceUtil.handleEvent(currentPartitionIndex, event);
+                if (pendingWatermark != null) {
+                    if (!tryEmit(pendingWatermark)) {
+                        return;
+                    }
+                    pendingWatermark = null;
+                }
+                if (!tryEmit(event)) {
                     return;
                 }
-                pendingWatermark = null;
-            }
-            if (!tryEmit(event)) {
-                return;
             }
             emitOffsets[currentPartitionIndex] = resultSet.getSequence(resultSetPosition) + 1;
                 resultSetPosition++;

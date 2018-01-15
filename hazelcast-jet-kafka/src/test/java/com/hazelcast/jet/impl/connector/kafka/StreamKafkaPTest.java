@@ -77,6 +77,7 @@ import static java.util.stream.Collectors.toSet;
 import static java.util.stream.IntStream.range;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 @Category(QuickTest.class)
@@ -368,6 +369,25 @@ public class StreamKafkaPTest extends KafkaTestSupport {
 
         // Then
         assertEquals("0=0", consumeEventually(processor, outbox));
+    }
+
+    @Test
+    public void when_customProjectionToNull_then_filteredOut() {
+        // When
+        StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name),
+                (k, v) -> "0".equals(v) ? null : v, 1, noWatermarks());
+        TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
+        processor.init(outbox, new TestProcessorContext());
+        produce(topic1Name, 0, "0");
+        produce(topic1Name, 0, "1");
+
+        // Then
+        assertTrueEventually(() -> {
+            assertFalse(processor.complete());
+            assertFalse("no item in outbox", outbox.queueWithOrdinal(0).isEmpty());
+        }, 3);
+        assertEquals("1", outbox.queueWithOrdinal(0).poll());
+        assertNull(outbox.queueWithOrdinal(0).poll());
     }
 
     private <T> T consumeEventually(Processor processor, TestOutbox outbox) {
