@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.core.WatermarkPolicy;
+import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 
 /**
@@ -24,13 +24,19 @@ import com.hazelcast.jet.function.DistributedToLongFunction;
  */
 public class TimestampTransform<T> implements UnaryTransform<T, T> {
     private final DistributedToLongFunction<? super T> timestampFn;
+    private final WatermarkGenerationParams wmGenParams;
 
-    public TimestampTransform(DistributedToLongFunction<? super T> timestampFn, WatermarkPolicy wmPolicy) {
+    public TimestampTransform(DistributedToLongFunction<? super T> timestampFn, WatermarkGenerationParams wmGenParams) {
         this.timestampFn = timestampFn;
+        this.wmGenParams = wmGenParams;
     }
 
     public DistributedToLongFunction<? super T> timestampFn() {
         return timestampFn;
+    }
+
+    public WatermarkGenerationParams wmGenParams() {
+        return wmGenParams;
     }
 
     @Override

@@ -24,6 +24,7 @@ import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.WatermarkEmissionPolicy;
+import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -61,6 +62,7 @@ import java.util.function.Function;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.processor.DiagnosticProcessors.peekOutputP;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
@@ -147,10 +149,12 @@ class Planner {
     private void handleSourceWithWatermark(AbstractStage stage, SourceWithWatermarkImpl wmSource) {
         SourceImpl source = wmSource.source();
         Vertex srcVertex = dag.newVertex(vertexName(source.name(), ""), source.metaSupplier());
+        WatermarkPolicy wmPolicy = wmSource.watermarkPolicy();
         PlannerVertex watermarkPv = addVertex(stage, vertexName(source.name(), "-wm"), insertWatermarksP(
-                wmSource.timestampFn(),
-                wmSource.watermarkPolicy(),
-                WatermarkEmissionPolicy.suppressDuplicates()
+                wmGenParams(wmSource.timestampFn(),
+                        () -> wmPolicy,
+                        WatermarkEmissionPolicy.suppressDuplicates(),
+                        0L)
         ));
         dag.edge(between(srcVertex, watermarkPv.v));
     }
@@ -262,7 +266,7 @@ class Planner {
     ) {
         PlannerVertex pv = addVertex(stage, vertexName("session-window", ""), aggregateToSessionWindowP(
                 wDef.sessionTimeout(),
-                (TimestampedEntry<Object, Object> e) -> e.getTimestamp(),
+                x -> 0L,
                 xform.keyFn(),
                 xform.aggregateOperation()
         ));

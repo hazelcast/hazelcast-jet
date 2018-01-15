@@ -18,6 +18,7 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
@@ -132,7 +133,10 @@ public interface GeneralStage<T> extends Stage {
     <K> GeneralStageWithGrouping<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);
 
     @Nonnull
-    StreamStage<T> timestamp(@Nonnull DistributedToLongFunction<? super T> timestampFn);
+    StreamStage<T> timestamp(
+            @Nonnull DistributedToLongFunction<? super T> timestampFn,
+            @Nonnull WatermarkGenerationParams wmGenParams
+    );
 
     /**
      * Attaches to this pipeline a sink pipeline, one that accepts data but doesn't

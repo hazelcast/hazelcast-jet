@@ -16,23 +16,16 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.core.WatermarkPolicy;
-import com.hazelcast.jet.function.DistributedToLongFunction;
-import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
-import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.pipeline.GeneralStage;
-import com.hazelcast.jet.pipeline.JoinClause;
-import com.hazelcast.jet.pipeline.Sink;
-import com.hazelcast.jet.pipeline.SinkStage;
-import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.CoAggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.FilterTransform;
@@ -42,7 +35,14 @@ import com.hazelcast.jet.impl.pipeline.transform.MapTransform;
 import com.hazelcast.jet.impl.pipeline.transform.MultaryTransform;
 import com.hazelcast.jet.impl.pipeline.transform.PeekTransform;
 import com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform;
+import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
+import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.pipeline.transform.UnaryTransform;
+import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.GeneralStage;
+import com.hazelcast.jet.pipeline.JoinClause;
+import com.hazelcast.jet.pipeline.Sink;
+import com.hazelcast.jet.pipeline.SinkStage;
 import com.hazelcast.jet.pipeline.StreamStage;
 
 import javax.annotation.Nonnull;
@@ -68,10 +68,10 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @SuppressWarnings("unchecked")
     public StreamStage<T> timestamp(
             @Nonnull DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull WatermarkPolicy wmPolicy
+            @Nonnull WatermarkGenerationParams wmGenParams
     ) {
         return new StreamStageImpl<>((GeneralStage<T>) this,
-                new TimestampTransform<>(timestampFn, wmPolicy),
+                new TimestampTransform<>(timestampFn, wmGenParams),
                 pipelineImpl);
     }
 

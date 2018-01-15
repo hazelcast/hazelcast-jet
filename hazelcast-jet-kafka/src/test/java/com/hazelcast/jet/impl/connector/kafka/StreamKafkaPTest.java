@@ -66,7 +66,7 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.noWatermarks;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
-import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
+import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.processor.KafkaProcessors.streamKafkaP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
@@ -309,7 +309,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
                 numTopics == 1 ? singletonList(topic1Name) : Arrays.asList(topic1Name, topic2Name),
                 projectionFn, globalParallelism,
                 wmGenParams(e -> e instanceof Entry ? (int) ((Entry) e).getKey() : System.currentTimeMillis(),
-                withFixedLag(LAG), suppressDuplicates(), idleTimeoutMillis));
+                limitingLag(LAG), suppressDuplicates(), idleTimeoutMillis));
     }
 
     @Test

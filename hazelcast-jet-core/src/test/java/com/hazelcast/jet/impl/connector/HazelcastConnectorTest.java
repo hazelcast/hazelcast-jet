@@ -51,7 +51,7 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.noWatermarks;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
-import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
+import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeCacheP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeMapP;
@@ -197,7 +197,7 @@ public class HazelcastConnectorTest extends JetTestSupport {
     public void when_streamMap() {
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", streamMapP(streamSourceName, START_FROM_OLDEST,
-                wmGenParams(Entry<Integer, Integer>::getValue, withFixedLag(0), suppressDuplicates(), 10_000)));
+                wmGenParams(Entry<Integer, Integer>::getValue, limitingLag(0), suppressDuplicates(), 10_000)));
         Vertex sink = dag.newVertex("sink", writeListP(streamSinkName));
 
         dag.edge(between(source, sink));
@@ -236,7 +236,7 @@ public class HazelcastConnectorTest extends JetTestSupport {
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", SourceProcessors.<Integer, Integer, Integer>streamMapP(streamSourceName,
                 event -> event.getKey() != 0, EventJournalMapEvent::getKey, START_FROM_OLDEST,
-                wmGenParams(i -> i, withFixedLag(0), suppressDuplicates(), 10_000)));
+                wmGenParams(i -> i, limitingLag(0), suppressDuplicates(), 10_000)));
         Vertex sink = dag.newVertex("sink", writeListP(streamSinkName));
 
         dag.edge(between(source, sink));
@@ -272,7 +272,7 @@ public class HazelcastConnectorTest extends JetTestSupport {
     public void when_streamCache() {
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", streamCacheP(streamSourceName, START_FROM_OLDEST,
-                wmGenParams(Entry<Integer, Integer>::getValue, withFixedLag(0), suppressDuplicates(), 10_000)));
+                wmGenParams(Entry<Integer, Integer>::getValue, limitingLag(0), suppressDuplicates(), 10_000)));
         Vertex sink = dag.newVertex("sink", writeListP(streamSinkName));
 
         dag.edge(between(source, sink));
@@ -291,7 +291,7 @@ public class HazelcastConnectorTest extends JetTestSupport {
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", SourceProcessors.<Integer, Integer, Integer>streamCacheP(streamSourceName,
                 event -> !event.getKey().equals(0), EventJournalCacheEvent::getKey, START_FROM_OLDEST,
-                wmGenParams(i -> i, withFixedLag(0), suppressDuplicates(), 10_000)));
+                wmGenParams(i -> i, limitingLag(0), suppressDuplicates(), 10_000)));
         Vertex sink = dag.newVertex("sink", writeListP(streamSinkName));
 
         dag.edge(between(source, sink));
@@ -327,7 +327,7 @@ public class HazelcastConnectorTest extends JetTestSupport {
     public void test_defaultFilter_mapJournal() {
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", streamMapP(streamSourceName, START_FROM_OLDEST,
-                wmGenParams(Entry<Integer, Integer>::getValue, withFixedLag(0), suppressDuplicates(), 10_000)));
+                wmGenParams(Entry<Integer, Integer>::getValue, limitingLag(0), suppressDuplicates(), 10_000)));
         Vertex sink = dag.newVertex("sink", writeListP(streamSinkName));
 
         dag.edge(between(source, sink));
@@ -359,7 +359,7 @@ public class HazelcastConnectorTest extends JetTestSupport {
     public void test_defaultFilter_cacheJournal() {
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", streamCacheP(streamSourceName, START_FROM_OLDEST,
-                wmGenParams(Entry<Integer, Integer>::getValue, withFixedLag(0), suppressDuplicates(), 10_000)));
+                wmGenParams(Entry<Integer, Integer>::getValue, limitingLag(0), suppressDuplicates(), 10_000)));
         Vertex sink = dag.newVertex("sink", writeListP(streamSinkName));
 
         dag.edge(between(source, sink));

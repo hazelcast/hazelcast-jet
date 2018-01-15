@@ -28,7 +28,7 @@ import java.util.stream.Stream;
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
-import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
+import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
@@ -46,7 +46,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
 
         // When we start the job...
         pipeline.drawFrom(Sources.<String, Integer>mapJournal(mapName, START_FROM_OLDEST,
-                wmGenParams(Entry::getValue, withFixedLag(0), suppressDuplicates(), 10_000)))
+                wmGenParams(Entry::getValue, limitingLag(0), suppressDuplicates(), 10_000)))
                 .map(entryValue())
                 .drainTo(sink);
         jet().newJob(pipeline);
@@ -86,7 +86,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
         // When we start the job...
         DistributedPredicate<EventJournalMapEvent<String, Integer>> p = e -> e.getNewValue() % 2 == 0;
         pipeline.drawFrom(Sources.mapJournal(mapName, p, EventJournalMapEvent::getNewValue, START_FROM_OLDEST,
-                wmGenParams(v -> v, withFixedLag(0), suppressDuplicates(), 10_000)))
+                wmGenParams(v -> v, limitingLag(0), suppressDuplicates(), 10_000)))
                 .drainTo(sink);
         jet().newJob(pipeline);
 
