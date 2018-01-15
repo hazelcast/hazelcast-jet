@@ -16,6 +16,9 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.jet.impl.pipeline.transform.SinkImpl;
+import com.hazelcast.jet.impl.pipeline.transform.SourceImpl;
+import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.GeneralStage;
@@ -38,13 +41,15 @@ public class PipelineImpl implements Pipeline {
     private final Map<Stage, List<Stage>> adjacencyMap = new HashMap<>();
 
     @Nonnull @Override
+    @SuppressWarnings("unchecked")
     public <T> BatchStage<T> drawFrom(@Nonnull Source<? extends T> source) {
-        return new BatchStageImpl<>(source, this);
+        return new BatchStageImpl<>((SourceImpl<? extends T>) source, this);
     }
 
     @Nonnull @Override
+    @SuppressWarnings("unchecked")
     public <T> StreamStage<T> drawFrom(@Nonnull SourceWithWatermark<? extends T> source) {
-        return new StreamStageImpl<>(source, this);
+        return new StreamStageImpl<>((SourceWithWatermarkImpl<? extends T>) source, this);
     }
 
     @Nonnull @Override
@@ -61,7 +66,7 @@ public class PipelineImpl implements Pipeline {
     }
 
     <T> SinkStage drainTo(GeneralStage<? extends T> upstream, Sink<T> sink) {
-        SinkStageImpl output = new SinkStageImpl(upstream, sink, this);
+        SinkStageImpl output = new SinkStageImpl(upstream, (SinkImpl) sink, this);
         connect(upstream, output);
         return output;
     }

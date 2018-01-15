@@ -19,7 +19,7 @@ package com.hazelcast.jet.impl.pipeline;
 import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Stage;
-import com.hazelcast.jet.pipeline.Transform;
+import com.hazelcast.jet.impl.pipeline.transform.Transform;
 
 import java.util.ArrayList;
 import java.util.List;

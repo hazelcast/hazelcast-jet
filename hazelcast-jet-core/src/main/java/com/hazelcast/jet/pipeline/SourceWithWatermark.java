@@ -19,11 +19,12 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.impl.pipeline.transform.Transform;
 
 /**
  * Javadoc pending.
  */
-public interface SourceWithWatermark<T> extends Transform<T> {
+public interface SourceWithWatermark<T> {
 
     Source<T> source();
 

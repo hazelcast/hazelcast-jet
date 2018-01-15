@@ -16,13 +16,6 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.pipeline.JoinClause;
-import com.hazelcast.jet.pipeline.SessionWindowDef;
-import com.hazelcast.jet.pipeline.SlidingWindowDef;
-import com.hazelcast.jet.pipeline.Stage;
-import com.hazelcast.jet.pipeline.Transform;
-import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.Processor;
@@ -42,8 +35,17 @@ import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
 import com.hazelcast.jet.impl.pipeline.transform.MapTransform;
 import com.hazelcast.jet.impl.pipeline.transform.PeekTransform;
 import com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform;
+import com.hazelcast.jet.impl.pipeline.transform.SinkImpl;
+import com.hazelcast.jet.impl.pipeline.transform.SourceImpl;
+import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.processor.HashJoinCollectP;
 import com.hazelcast.jet.impl.processor.HashJoinP;
+import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.JoinClause;
+import com.hazelcast.jet.pipeline.SessionWindowDef;
+import com.hazelcast.jet.pipeline.SlidingWindowDef;
+import com.hazelcast.jet.pipeline.Stage;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;

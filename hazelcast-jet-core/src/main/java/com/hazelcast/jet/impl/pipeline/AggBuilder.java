@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.pipeline.GeneralStage;
-import com.hazelcast.jet.pipeline.Transform;
+import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
@@ -73,7 +73,7 @@ public class AggBuilder<T0> {
     public interface CreateOutStageFn<OUT, OUT_STAGE extends GeneralStage<OUT>> {
         OUT_STAGE get(
                 List<GeneralStage> upstream,
-                Transform<? extends OUT> transform,
+                Transform transform,
                 PipelineImpl pipeline);
     }
 }

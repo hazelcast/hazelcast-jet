@@ -14,26 +14,32 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.core.WatermarkPolicy;
-import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 
-import javax.annotation.Nonnull;
-
 /**
- * The source of data in a pipeline.
- * <p>
- * See {@link Sources} for possible choices.
- *
- * @param <T> the stream item type
+ * Javadoc pending.
  */
-public interface Source<T> {
-    String name();
+public class TimestampTransform<T> implements UnaryTransform<T, T> {
+    private final DistributedToLongFunction<? super T> timestampFn;
 
-    SourceWithWatermark<T> withWatermark(
-            @Nonnull DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull WatermarkPolicy wmPolicy
-    );
+    public TimestampTransform(DistributedToLongFunction<? super T> timestampFn, WatermarkPolicy wmPolicy) {
+        this.timestampFn = timestampFn;
+    }
+
+    public DistributedToLongFunction<? super T> timestampFn() {
+        return timestampFn;
+    }
+
+    @Override
+    public String name() {
+        return "identity";
+    }
+
+    @Override
+    public String toString() {
+        return name();
+    }
 }

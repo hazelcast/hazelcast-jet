@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,31 +14,29 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.pipeline;
+package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.impl.pipeline.SourceWithWatermarkImpl;
+import com.hazelcast.jet.impl.pipeline.transform.Transform;
+import com.hazelcast.jet.pipeline.SourceWithWatermark;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.pipeline.Source;
+import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.pipeline.Sink;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 
-public class SinkImpl<E> implements Sink<E> {
+import javax.annotation.Nonnull;
+
+public class SourceImpl<T> implements Source<T>, Transform {
     private final String name;
     private final ProcessorMetaSupplier metaSupplier;
 
-    public SinkImpl(String name, ProcessorMetaSupplier metaSupplier) {
+    public SourceImpl(String name, ProcessorMetaSupplier metaSupplier) {
         this.metaSupplier = metaSupplier;
         this.name = name;
     }
 
-    public SinkImpl(String name, ProcessorSupplier supplier) {
-        this(name, ProcessorMetaSupplier.of(supplier));
-    }
-
-    public SinkImpl(String name, DistributedSupplier<Processor> supplier) {
-        this(name, ProcessorMetaSupplier.of(supplier));
-    }
-
+    @Override
     public String name() {
         return name;
     }
@@ -50,5 +48,13 @@ public class SinkImpl<E> implements Sink<E> {
     @Override
     public String toString() {
         return name;
+    }
+
+    @Override
+    public SourceWithWatermark<T> withWatermark(
+            @Nonnull DistributedToLongFunction<? super T> timestampFn,
+            @Nonnull WatermarkPolicy wmPolicy
+    ) {
+        return new SourceWithWatermarkImpl<>(this, timestampFn, wmPolicy);
     }
 }

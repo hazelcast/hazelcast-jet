@@ -16,12 +16,15 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.jet.core.WatermarkPolicy;
+import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkStage;
-import com.hazelcast.jet.pipeline.Transform;
+import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
@@ -40,6 +43,7 @@ import com.hazelcast.jet.impl.pipeline.transform.MultaryTransform;
 import com.hazelcast.jet.impl.pipeline.transform.PeekTransform;
 import com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform;
 import com.hazelcast.jet.impl.pipeline.transform.UnaryTransform;
+import com.hazelcast.jet.pipeline.StreamStage;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -58,6 +62,17 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             PipelineImpl pipelineImpl
     ) {
         super(upstream, transform, acceptsDownstream, pipelineImpl);
+    }
+
+    @Nonnull
+    @SuppressWarnings("unchecked")
+    public StreamStage<T> timestamp(
+            @Nonnull DistributedToLongFunction<? super T> timestampFn,
+            @Nonnull WatermarkPolicy wmPolicy
+    ) {
+        return new StreamStageImpl<>((GeneralStage<T>) this,
+                new TimestampTransform<>(timestampFn, wmPolicy),
+                pipelineImpl);
     }
 
     @Nonnull

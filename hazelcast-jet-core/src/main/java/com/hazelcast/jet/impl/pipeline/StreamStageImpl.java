@@ -16,16 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.pipeline.StreamStage;
-import com.hazelcast.jet.pipeline.GeneralStage;
-import com.hazelcast.jet.pipeline.JoinClause;
-import com.hazelcast.jet.pipeline.SourceWithWatermark;
-import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
-import com.hazelcast.jet.pipeline.StageWithWindow;
-import com.hazelcast.jet.pipeline.Transform;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
@@ -33,7 +24,15 @@ import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.pipeline.transform.MultaryTransform;
+import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.pipeline.transform.UnaryTransform;
+import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.GeneralStage;
+import com.hazelcast.jet.pipeline.JoinClause;
+import com.hazelcast.jet.pipeline.StageWithWindow;
+import com.hazelcast.jet.pipeline.StreamStage;
+import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -50,22 +49,22 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
 
     public StreamStageImpl(
             @Nonnull List<? extends GeneralStage> upstream,
-            @Nonnull Transform<? extends T> transform,
+            @Nonnull Transform transform,
             @Nonnull PipelineImpl pipeline
     ) {
         super(upstream, transform, true, pipeline);
     }
 
     StreamStageImpl(
-            @Nonnull SourceWithWatermark<? extends T> wmSource,
+            @Nonnull SourceWithWatermarkImpl<? extends T> wmSource,
             @Nonnull PipelineImpl pipeline
     ) {
         this(emptyList(), wmSource, pipeline);
     }
 
-    private StreamStageImpl(
-            @Nonnull GeneralStage upstream,
-            @Nonnull Transform<? extends T> transform,
+    <T_UPSTREAM> StreamStageImpl(
+            @Nonnull GeneralStage<T_UPSTREAM> upstream,
+            @Nonnull UnaryTransform<? super T_UPSTREAM, ? extends T> transform,
             @Nonnull PipelineImpl pipeline
     ) {
         super(singletonList(upstream), transform, true, pipeline);

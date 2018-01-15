@@ -24,6 +24,7 @@ import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 
 import javax.annotation.Nonnull;
 
@@ -130,6 +131,17 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     <K> GeneralStageWithGrouping<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);
 
+    @Nonnull
+    StreamStage<T> timestamp(@Nonnull DistributedToLongFunction<? super T> timestampFn);
+
+    /**
+     * Attaches to this pipeline a sink pipeline, one that accepts data but doesn't
+     * emit any. The supplied argument specifies what to do with the received
+     * data (typically push it to some outside resource).
+     */
+    @Nonnull
+    SinkStage drainTo(@Nonnull Sink<? super T> sink);
+
     /**
      * Adds a peeking layer to this compute pipeline which logs its output. For
      * each item the pipeline emits, it:
@@ -198,14 +210,6 @@ public interface GeneralStage<T> extends Stage {
     default GeneralStage<T> peek() {
         return peek(alwaysTrue(), Object::toString);
     }
-
-    /**
-     * Attaches to this pipeline a sink pipeline, one that accepts data but doesn't
-     * emit any. The supplied argument specifies what to do with the received
-     * data (typically push it to some outside resource).
-     */
-    @Nonnull
-    SinkStage drainTo(@Nonnull Sink<? super T> sink);
 
     /**
      * Attaches to this pipeline a pipeline with a custom transform based on the

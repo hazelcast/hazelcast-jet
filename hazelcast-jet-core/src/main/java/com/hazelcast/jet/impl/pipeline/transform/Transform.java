@@ -14,25 +14,17 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.impl.pipeline.transform;
 
 import java.io.Serializable;
 
 /**
- * Represents the data transformation performed by a pipeline {@link
- * Stage}. {@link Sink} is a special case of a transform that doesn't
- * produce any output.
- * <p>
  * This is a pure data object and holds no implementation code for the
  * transformation it represents. {@link com.hazelcast.jet.impl.Planner
  * Planner} is the implementation class that creates a Core API DAG for a
- * pipeline. It contains code that recognizes a closed set of {@code
- * Transform} types, which means you cannot add your own transformation to
- * Jet by implementing this type.
- *
- * @param <R> result type
+ * pipeline.
  */
-public interface Transform<R> extends Serializable {
+public interface Transform extends Serializable {
     /**
      * Returns the name of this transformation.
      */

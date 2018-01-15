@@ -17,12 +17,12 @@
 package com.hazelcast.jet.pipeline;
 
 /**
- * A transform which accepts an input stream and produces no output
- * streams.
+ * The sink of the data in a pipeline.
  * <p>
  * See {@link Sinks} for possible choices.
  *
  * @param <T> the type of items the sink will receive
  */
-public interface Sink<T> extends Transform {
+public interface Sink<T> {
+    String name();
 }

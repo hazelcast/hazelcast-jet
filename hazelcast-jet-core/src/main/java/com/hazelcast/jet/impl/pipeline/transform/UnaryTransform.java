@@ -16,8 +16,6 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.pipeline.Transform;
-
 /**
  * Represents a unary transform, one that takes a single input stream
  * and produces a single output stream.
@@ -25,5 +23,5 @@ import com.hazelcast.jet.pipeline.Transform;
  * @param <T> type of the input item
  * @param <R> type of the result item
  */
-public interface UnaryTransform<T, R> extends Transform<R> {
+public interface UnaryTransform<T, R> extends Transform {
 }

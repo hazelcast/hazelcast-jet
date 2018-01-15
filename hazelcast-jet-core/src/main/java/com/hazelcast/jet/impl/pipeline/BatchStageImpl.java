@@ -16,12 +16,13 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.jet.impl.pipeline.transform.SourceImpl;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.Source;
 import com.hazelcast.jet.pipeline.StageWithGrouping;
-import com.hazelcast.jet.pipeline.Transform;
+import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
@@ -47,19 +48,19 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
 
     public BatchStageImpl(
             @Nonnull List<? extends GeneralStage> upstream,
-            @Nonnull Transform<? extends T> transform,
+            @Nonnull Transform transform,
             @Nonnull PipelineImpl pipeline
     ) {
         super(upstream, transform, true, pipeline);
     }
 
-    BatchStageImpl(@Nonnull Source<? extends T> source, @Nonnull PipelineImpl pipeline) {
+    BatchStageImpl(@Nonnull SourceImpl<? extends T> source, @Nonnull PipelineImpl pipeline) {
         this(emptyList(), source, pipeline);
     }
 
     private BatchStageImpl(
             @Nonnull GeneralStage upstream,
-            @Nonnull Transform<? extends T> transform,
+            @Nonnull Transform transform,
             @Nonnull PipelineImpl pipeline
     ) {
         this(singletonList(upstream), transform, pipeline);
