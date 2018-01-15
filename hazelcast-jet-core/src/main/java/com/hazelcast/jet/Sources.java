@@ -178,6 +178,8 @@ public final class Sources {
      * @param projectionFn the projection to map the events, you may use
      *     {@link Util#mapEventToEntry()} to project new value from the event
      * @param initialPos describes which event to start receiving from
+     * @param wmGenParams parameters for watermark generation, see {@link
+     *      WatermarkGenerationParams#wmGenParams}
      * @param <T> type of emitted item
      */
     @Nonnull
@@ -305,6 +307,8 @@ public final class Sources {
      * @param projectionFn the projection to map the events, you may use
      *     {@link Util#mapEventToEntry()} to project new value from the event
      * @param initialPos describes which event to start receiving from
+     * @param wmGenParams parameters for watermark generation, see {@link
+     *      WatermarkGenerationParams#wmGenParams}
      * @param <K> type of key
      * @param <V> type of value
      * @param <T> type of emitted item
@@ -387,6 +391,8 @@ public final class Sources {
      * @param projectionFn the projection to map the events, you may use
      *     {@link Util#cacheEventToEntry()} to project new value from the event
      * @param initialPos describes which event to start receiving from
+     * @param wmGenParams parameters for watermark generation, see {@link
+     *      WatermarkGenerationParams#wmGenParams}
      * @param <T> type of emitted item
      */
     @Nonnull
@@ -465,6 +471,8 @@ public final class Sources {
      * @param projectionFn the projection to map the events, you may use
      *     {@link Util#cacheEventToEntry()} to project new value from the event
      * @param initialPos describes which event to start receiving from
+     * @param wmGenParams parameters for watermark generation, see {@link
+     *      WatermarkGenerationParams#wmGenParams}
      * @param <T> type of emitted item
      */
     @Nonnull

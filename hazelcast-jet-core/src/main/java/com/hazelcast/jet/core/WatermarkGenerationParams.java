@@ -31,6 +31,9 @@ import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
  */
 public final class WatermarkGenerationParams<T> implements Serializable {
 
+    /**
+     * A watermark policy that will never emit any watermark.
+     */
     private static final DistributedSupplier<WatermarkPolicy> NO_WATERMARK_POLICY = () -> new WatermarkPolicy() {
         @Override
         public long reportEvent(long timestamp) {
@@ -61,13 +64,14 @@ public final class WatermarkGenerationParams<T> implements Serializable {
     }
 
     /**
-     * Creates new watermark generation parameters.
+     * Creates new watermark generation parameters. See {@link #noWatermarks()}
+     * if you don't need any watermarks.
      *
-     * @param getTimestampF A function to extract timestamps from observed
+     * @param getTimestampF a function to extract timestamps from observed
      *      events.
-     * @param newWmPolicyF Watermark policy factory
-     * @param wmEmitPolicy Watermark emission policy
-     * @param idleTimeoutMillis A timeout after which the {@link
+     * @param newWmPolicyF watermark policy factory
+     * @param wmEmitPolicy watermark emission policy
+     * @param idleTimeoutMillis a timeout after which the {@link
      *      com.hazelcast.jet.impl.execution.WatermarkCoalescer#IDLE_MESSAGE}
      *      will be sent.
      */

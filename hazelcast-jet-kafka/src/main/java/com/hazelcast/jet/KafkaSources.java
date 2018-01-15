@@ -63,7 +63,10 @@ public final class KafkaSources {
      * commitSync()}. Note however that offsets can be committed before or
      * after the event is fully processed.
      * <p>
-     * TODO: late events from added partition
+     * If you add Kafka partitions at run-time, consumption from them will
+     * start after a delay, based on the {@code metadata.max.age.ms} Kafka
+     * property. Note, however, that events from them can be dropped as late if
+     * the allowed lag is not enough.
      * <p>
      * The processor completes only in the case of an error or if the job is
      * cancelled. IO failures are generally handled by Kafka producer and
