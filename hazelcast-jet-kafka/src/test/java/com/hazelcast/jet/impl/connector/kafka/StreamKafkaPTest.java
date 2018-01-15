@@ -384,12 +384,12 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         assertTrue("unexpected items in outbox: " + outbox.queueWithOrdinal(0), outbox.queueWithOrdinal(0).isEmpty());
     }
 
-    private Set unwrapBroadcastKey(Collection c) {
+    private Set<Entry<TopicPartition, String>> unwrapBroadcastKey(Collection c) {
         // BroadcastKey("x") != BroadcastKey("x") ==> we need to extract the key
-        Set res = new HashSet();
+        Set<Entry<TopicPartition, String>> res = new HashSet<>();
         for (Object o : c) {
-            Entry<BroadcastKey<TopicPartition>, Long> entry = (Entry<BroadcastKey<TopicPartition>, Long>) o;
-            res.add(entry(entry.getKey().key(), entry.getValue()));
+            Entry<BroadcastKey<TopicPartition>, long[]> entry = (Entry<BroadcastKey<TopicPartition>, long[]>) o;
+            res.add(entry(entry.getKey().key(), Arrays.toString(entry.getValue())));
         }
         return res;
     }
