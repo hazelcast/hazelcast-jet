@@ -136,7 +136,7 @@ public final class Sources {
      *      if you want to use projection only
      * @param projection the projection to map the events, you may use
      *     {@link Projections#identity()} if you want just the predicate.
-     *     If the projection returns a {@code null} for some items, that items
+     *     If the projection returns a {@code null} for an item, that item
      *     will be filtered out.
      * @param <T> type of emitted item
      */
@@ -187,7 +187,7 @@ public final class Sources {
      *      ADDED} and {@link com.hazelcast.core.EntryEventType#UPDATED UPDATED} events
      * @param projectionFn the projection to map the events, you may use
      *     {@link Util#mapEventToEntry()} to project new value from the event
-     *     If the projection returns a {@code null} for some items, that items
+     *     If the projection returns a {@code null} for an item, that item
      *     will be filtered out.
      * @param initialPos describes which event to start receiving from
      * @param <T> type of emitted item
@@ -271,7 +271,7 @@ public final class Sources {
      *      if you want to use projection only
      * @param projection the projection to map the events, you may use
      *     {@link Projections#identity()} if you want just the predicate.
-     *     If the projection returns a {@code null} for some items, that items
+     *     If the projection returns a {@code null} for an item, that item
      *     will be filtered out.
      * @param <T> type of emitted item
      */
@@ -323,7 +323,7 @@ public final class Sources {
      *      ADDED} and {@link com.hazelcast.core.EntryEventType#UPDATED UPDATED} events
      * @param projectionFn the projection to map the events, you may use
      *     {@link Util#mapEventToEntry()} to project new value from the event.
-     *     If the projection returns a {@code null} for some items, that items
+     *     If the projection returns a {@code null} for an item, that item
      *     will be filtered out.
      * @param initialPos describes which event to start receiving from
      * @param <K> type of key
@@ -404,7 +404,7 @@ public final class Sources {
      *      CREATED} and {@link com.hazelcast.cache.CacheEventType#UPDATED UPDATED} events
      * @param projectionFn the projection to map the events, you may use
      *     {@link Util#cacheEventToEntry()} to project new value from the event.
-     *     If the projection returns a {@code null} for some items, that items
+     *     If the projection returns a {@code null} for an item, that item
      *     will be filtered out.
      * @param initialPos describes which event to start receiving from
      * @param <T> type of emitted item
@@ -481,7 +481,7 @@ public final class Sources {
      *      CREATED} and {@link com.hazelcast.cache.CacheEventType#UPDATED UPDATED} events
      * @param projectionFn the projection to map the events, you may use
      *     {@link Util#cacheEventToEntry()} to project new value from the event.
-     *     If the projection returns a {@code null} for some items, that items
+     *     If the projection returns a {@code null} for an item, that item
      *     will be filtered out.
      * @param initialPos describes which event to start receiving from
      * @param <T> type of emitted item

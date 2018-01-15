@@ -53,7 +53,7 @@ public final class HdfsSources {
 
      * @param jobConf JobConf for reading files with the appropriate input format and path
      * @param projectionFn function to create output objects from key and value.
-     *                     If the projection returns a {@code null} for some items, that items
+     *                     If the projection returns a {@code null} for an item, that item
      *                     will be filtered out
      */
     @Nonnull
