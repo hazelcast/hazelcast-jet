@@ -285,10 +285,7 @@ public class InsertWatermarksPTest {
 
         // when no more activity occurs, IDLE_MESSAGE should be emitted again
         resultToCheck.clear();
-        waitForIdleMessage();
-    }
 
-    private void waitForIdleMessage() {
         long start = System.nanoTime();
         long elapsedMs;
         do {
@@ -296,7 +293,7 @@ public class InsertWatermarksPTest {
             elapsedMs = NANOSECONDS.toMillis(System.nanoTime() - start);
             drainOutbox();
             if (elapsedMs < 99) {
-                assertTrue("outbox should be empty", resultToCheck.isEmpty());
+                assertTrue("outbox should be empty, elapsedMs=" + elapsedMs, resultToCheck.isEmpty());
             } else if (!resultToCheck.isEmpty()) {
                 System.out.println("WM emitted after " + elapsedMs + "ms (shortly after 100 was expected)");
                 assertEquals(singletonList(IDLE_MESSAGE), resultToCheck);
