@@ -22,7 +22,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBinaryOperator;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.impl.pipeline.transform.SinkImpl;
+import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.map.EntryProcessor;
 
 import javax.annotation.Nonnull;
@@ -65,7 +65,7 @@ public final class Sinks {
      * @param metaSupplier the processor meta-supplier
      */
     public static <T> Sink<T> fromProcessor(String sinkName, ProcessorMetaSupplier metaSupplier) {
-        return new SinkImpl<>(sinkName, metaSupplier);
+        return new SinkTransform<>(sinkName, metaSupplier);
     }
 
     /**

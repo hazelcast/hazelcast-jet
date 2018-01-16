@@ -21,7 +21,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.WatermarkGenerationParams;
+import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -48,6 +48,8 @@ import com.hazelcast.jet.pipeline.StreamStage;
 import javax.annotation.Nonnull;
 import java.util.List;
 
+import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -68,10 +70,11 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @SuppressWarnings("unchecked")
     public StreamStage<T> timestamp(
             @Nonnull DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull WatermarkGenerationParams wmGenParams
+            @Nonnull WatermarkPolicy wmPolicy
     ) {
         return new StreamStageImpl<>((GeneralStage<T>) this,
-                new TimestampTransform<>(timestampFn, wmGenParams),
+                new TimestampTransform<>(timestampFn,
+                        wmGenParams(timestampFn, () -> wmPolicy, suppressDuplicates(), 0L)),
                 pipelineImpl);
     }
 

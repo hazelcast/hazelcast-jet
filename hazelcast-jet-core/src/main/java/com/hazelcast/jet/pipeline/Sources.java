@@ -24,7 +24,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
-import com.hazelcast.jet.impl.pipeline.transform.SourceImpl;
+import com.hazelcast.jet.impl.pipeline.transform.SourceTransform;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.projection.Projections;
@@ -83,7 +83,7 @@ public final class Sources {
             @Nonnull String sourceName,
             @Nonnull ProcessorMetaSupplier metaSupplier
     ) {
-        return new SourceImpl<>(sourceName, metaSupplier);
+        return new SourceTransform<>(sourceName, metaSupplier);
     }
 
     /**

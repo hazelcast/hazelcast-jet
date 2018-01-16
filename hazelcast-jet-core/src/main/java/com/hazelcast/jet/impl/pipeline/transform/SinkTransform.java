@@ -16,29 +16,27 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.impl.pipeline.SourceWithWatermarkImpl;
-import com.hazelcast.jet.impl.pipeline.transform.Transform;
-import com.hazelcast.jet.pipeline.SourceWithWatermark;
+import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.pipeline.Source;
-import com.hazelcast.jet.core.WatermarkPolicy;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.pipeline.Sink;
 
-import javax.annotation.Nonnull;
-
-public class SourceImpl<T> implements Source<T>, Transform {
+public class SinkTransform<T> implements Sink<T>, Transform {
     private final String name;
     private final ProcessorMetaSupplier metaSupplier;
 
-    public SourceImpl(String name, ProcessorMetaSupplier metaSupplier) {
+    public SinkTransform(String name, ProcessorMetaSupplier metaSupplier) {
         this.metaSupplier = metaSupplier;
         this.name = name;
     }
 
-    @Override
-    public String name() {
-        return name;
+    public SinkTransform(String name, ProcessorSupplier supplier) {
+        this(name, ProcessorMetaSupplier.of(supplier));
+    }
+
+    public SinkTransform(String name, DistributedSupplier<Processor> supplier) {
+        this(name, ProcessorMetaSupplier.of(supplier));
     }
 
     public ProcessorMetaSupplier metaSupplier() {
@@ -46,15 +44,12 @@ public class SourceImpl<T> implements Source<T>, Transform {
     }
 
     @Override
-    public String toString() {
+    public String name() {
         return name;
     }
 
     @Override
-    public SourceWithWatermark<T> withWatermark(
-            @Nonnull DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull WatermarkPolicy wmPolicy
-    ) {
-        return new SourceWithWatermarkImpl<>(this, timestampFn, wmPolicy);
+    public String toString() {
+        return name;
     }
 }

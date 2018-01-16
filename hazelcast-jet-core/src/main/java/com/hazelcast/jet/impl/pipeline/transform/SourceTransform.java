@@ -16,32 +16,25 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.impl.pipeline.transform.Transform;
-import com.hazelcast.jet.pipeline.Sink;
+import com.hazelcast.jet.core.WatermarkPolicy;
+import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.impl.pipeline.SourceWithTimestampImpl;
+import com.hazelcast.jet.pipeline.Source;
+import com.hazelcast.jet.pipeline.SourceWithTimestamp;
 
-public class SinkImpl<T> implements Sink<T>, Transform {
+import javax.annotation.Nonnull;
+
+import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
+
+public class SourceTransform<T> implements Source<T>, Transform {
     private final String name;
     private final ProcessorMetaSupplier metaSupplier;
 
-    public SinkImpl(String name, ProcessorMetaSupplier metaSupplier) {
+    public SourceTransform(String name, ProcessorMetaSupplier metaSupplier) {
         this.metaSupplier = metaSupplier;
         this.name = name;
-    }
-
-    public SinkImpl(String name, ProcessorSupplier supplier) {
-        this(name, ProcessorMetaSupplier.of(supplier));
-    }
-
-    public SinkImpl(String name, DistributedSupplier<Processor> supplier) {
-        this(name, ProcessorMetaSupplier.of(supplier));
-    }
-
-    public ProcessorMetaSupplier metaSupplier() {
-        return metaSupplier;
     }
 
     @Override
@@ -49,8 +42,20 @@ public class SinkImpl<T> implements Sink<T>, Transform {
         return name;
     }
 
+    public ProcessorMetaSupplier metaSupplier() {
+        return metaSupplier;
+    }
+
     @Override
     public String toString() {
         return name;
+    }
+
+    @Override
+    public SourceWithTimestamp<T> withTimestamp(
+            @Nonnull DistributedToLongFunction<? super T> timestampFn,
+            @Nonnull WatermarkPolicy wmPolicy
+    ) {
+        return new SourceWithTimestampImpl<>(this, wmGenParams(timestampFn, () -> wmPolicy, suppressDuplicates(), 0L));
     }
 }

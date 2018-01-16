@@ -56,7 +56,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     }
 
     StreamStageImpl(
-            @Nonnull SourceWithWatermarkImpl<? extends T> wmSource,
+            @Nonnull SourceWithTimestampImpl<? extends T> wmSource,
             @Nonnull PipelineImpl pipeline
     ) {
         this(emptyList(), wmSource, pipeline);

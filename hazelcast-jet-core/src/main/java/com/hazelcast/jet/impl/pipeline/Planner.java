@@ -23,8 +23,6 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.WatermarkEmissionPolicy;
-import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -36,8 +34,8 @@ import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
 import com.hazelcast.jet.impl.pipeline.transform.MapTransform;
 import com.hazelcast.jet.impl.pipeline.transform.PeekTransform;
 import com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform;
-import com.hazelcast.jet.impl.pipeline.transform.SinkImpl;
-import com.hazelcast.jet.impl.pipeline.transform.SourceImpl;
+import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
+import com.hazelcast.jet.impl.pipeline.transform.SourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.processor.HashJoinCollectP;
 import com.hazelcast.jet.impl.processor.HashJoinP;
@@ -62,7 +60,6 @@ import java.util.function.Function;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.processor.DiagnosticProcessors.peekOutputP;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
@@ -100,10 +97,10 @@ class Planner {
                 topologicalSort(adjacencyMap, Object::toString);
         for (AbstractStage stage : sorted) {
             Transform transform = stage.transform;
-            if (transform instanceof SourceImpl) {
-                handleSource(stage, (SourceImpl) transform);
-            } else if (transform instanceof SourceWithWatermarkImpl) {
-                handleSourceWithWatermark(stage, (SourceWithWatermarkImpl) transform);
+            if (transform instanceof SourceTransform) {
+                handleSource(stage, (SourceTransform) transform);
+            } else if (transform instanceof SourceWithTimestampImpl) {
+                handleSourceWithTimestamp(stage, (SourceWithTimestampImpl) transform);
             } else if (transform instanceof ProcessorTransform) {
                 handleProcessorStage(stage, (ProcessorTransform) transform);
             } else if (transform instanceof FilterTransform) {
@@ -120,8 +117,8 @@ class Planner {
                 handleHashJoin(stage, (HashJoinTransform) transform);
             } else if (transform instanceof PeekTransform) {
                 handlePeek(stage, (PeekTransform) transform);
-            } else if (transform instanceof SinkImpl) {
-                handleSink(stage, (SinkImpl) transform);
+            } else if (transform instanceof SinkTransform) {
+                handleSink(stage, (SinkTransform) transform);
             } else {
                 throw new IllegalArgumentException("Unknown transform " + transform);
             }
@@ -142,20 +139,15 @@ class Planner {
         }
     }
 
-    private void handleSource(AbstractStage stage, SourceImpl source) {
+    private void handleSource(AbstractStage stage, SourceTransform source) {
         addVertex(stage, vertexName(source.name(), ""), source.metaSupplier());
     }
 
-    private void handleSourceWithWatermark(AbstractStage stage, SourceWithWatermarkImpl wmSource) {
-        SourceImpl source = wmSource.source();
+    private void handleSourceWithTimestamp(AbstractStage stage, SourceWithTimestampImpl timestampedSource) {
+        SourceTransform source = timestampedSource.source();
         Vertex srcVertex = dag.newVertex(vertexName(source.name(), ""), source.metaSupplier());
-        WatermarkPolicy wmPolicy = wmSource.watermarkPolicy();
-        PlannerVertex watermarkPv = addVertex(stage, vertexName(source.name(), "-wm"), insertWatermarksP(
-                wmGenParams(wmSource.timestampFn(),
-                        () -> wmPolicy,
-                        WatermarkEmissionPolicy.suppressDuplicates(),
-                        0L)
-        ));
+        PlannerVertex watermarkPv = addVertex(stage, vertexName(source.name(), "-timestamped"),
+                insertWatermarksP(timestampedSource.wmGenParams()));
         dag.edge(between(srcVertex, watermarkPv.v));
     }
 
@@ -397,7 +389,7 @@ class Planner {
                 peekOutputP(peekTransform.toStringFn(), peekTransform.shouldLogFn(), sup));
     }
 
-    private void handleSink(AbstractStage stage, SinkImpl sink) {
+    private void handleSink(AbstractStage stage, SinkTransform sink) {
         PlannerVertex pv = addVertex(stage, vertexName(sink.name(), ""), sink.metaSupplier());
         addEdges(stage, pv.v);
     }

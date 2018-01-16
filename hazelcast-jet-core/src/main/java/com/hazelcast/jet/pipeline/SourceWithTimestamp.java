@@ -16,23 +16,18 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.WatermarkPolicy;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
-
-import javax.annotation.Nonnull;
+import com.hazelcast.jet.impl.pipeline.transform.Transform;
 
 /**
- * The source of data in a pipeline.
- * <p>
- * See {@link Sources} for possible choices.
- *
- * @param <T> the stream item type
+ * Javadoc pending.
  */
-public interface Source<T> {
-    String name();
+public interface SourceWithTimestamp<T> {
 
-    SourceWithTimestamp<T> withTimestamp(
-            @Nonnull DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull WatermarkPolicy wmPolicy
-    );
+    Source<T> source();
+
+    WatermarkGenerationParams wmGenParams();
 }

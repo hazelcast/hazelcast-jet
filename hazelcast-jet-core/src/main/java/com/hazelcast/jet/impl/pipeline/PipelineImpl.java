@@ -16,9 +16,8 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.impl.pipeline.transform.SinkImpl;
-import com.hazelcast.jet.impl.pipeline.transform.SourceImpl;
-import com.hazelcast.jet.impl.pipeline.transform.Transform;
+import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
+import com.hazelcast.jet.impl.pipeline.transform.SourceTransform;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.GeneralStage;
@@ -26,7 +25,7 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkStage;
 import com.hazelcast.jet.pipeline.Source;
-import com.hazelcast.jet.pipeline.SourceWithWatermark;
+import com.hazelcast.jet.pipeline.SourceWithTimestamp;
 import com.hazelcast.jet.pipeline.Stage;
 import com.hazelcast.jet.core.DAG;
 
@@ -43,13 +42,13 @@ public class PipelineImpl implements Pipeline {
     @Nonnull @Override
     @SuppressWarnings("unchecked")
     public <T> BatchStage<T> drawFrom(@Nonnull Source<? extends T> source) {
-        return new BatchStageImpl<>((SourceImpl<? extends T>) source, this);
+        return new BatchStageImpl<>((SourceTransform<? extends T>) source, this);
     }
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    public <T> StreamStage<T> drawFrom(@Nonnull SourceWithWatermark<? extends T> source) {
-        return new StreamStageImpl<>((SourceWithWatermarkImpl<? extends T>) source, this);
+    public <T> StreamStage<T> drawFrom(@Nonnull SourceWithTimestamp<? extends T> source) {
+        return new StreamStageImpl<>((SourceWithTimestampImpl<? extends T>) source, this);
     }
 
     @Nonnull @Override
@@ -66,7 +65,7 @@ public class PipelineImpl implements Pipeline {
     }
 
     <T> SinkStage drainTo(GeneralStage<? extends T> upstream, Sink<T> sink) {
-        SinkStageImpl output = new SinkStageImpl(upstream, (SinkImpl) sink, this);
+        SinkStageImpl output = new SinkStageImpl(upstream, (SinkTransform) sink, this);
         connect(upstream, output);
         return output;
     }
