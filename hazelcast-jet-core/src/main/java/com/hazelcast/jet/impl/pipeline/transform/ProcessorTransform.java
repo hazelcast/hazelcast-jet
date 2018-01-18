@@ -25,7 +25,7 @@ import javax.annotation.Nonnull;
  * A unary transform constructed directly from a provided Core API
  * processor supplier.
  */
-public class ProcessorTransform<E, R> extends AbstractTransform implements UnaryTransform<E, R> {
+public class ProcessorTransform<E, R> extends AbstractTransform implements Transform {
     @Nonnull
     public final DistributedSupplier<Processor> procSupplier;
     @Nonnull

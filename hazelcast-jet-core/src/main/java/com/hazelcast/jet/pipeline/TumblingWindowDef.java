@@ -20,8 +20,8 @@ import com.hazelcast.jet.core.SlidingWindowPolicy;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.pipeline.WindowDefinition.WindowKind.TUMBLING;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.tumblingWinPolicy;
+import static com.hazelcast.jet.pipeline.WindowDefinition.WindowKind.TUMBLING;
 
 /**
  * Javadoc pending.
@@ -56,8 +56,8 @@ public class TumblingWindowDef extends SlidingWindowDef {
      * A tumbling window advances in steps equal to its size, therefore this
      * method always returns 1.
      */
-    public long frameSize() {
-        return super.frameSize();
+    public long slideBy() {
+        return super.slideBy();
     }
 
     @Override

@@ -18,7 +18,7 @@ package com.hazelcast.jet.pipeline;
 
 /**
  * The basic element of a Jet {@link Pipeline pipeline}.
- * To build a pipeline, start with {@link Pipeline#drawFrom(Source)} to
+ * To build a pipeline, start with {@link Pipeline#drawFrom(BatchSource)} to
  * get the initial {@link BatchStage} and then use its methods to attach
  * further downstream stages. Terminate the pipeline by calling {@link
  * BatchStage#drainTo(Sink)}, which will attach a {@link SinkStage}.

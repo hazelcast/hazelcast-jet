@@ -16,13 +16,13 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class AggregateTransform<T, A, R, OUT> extends AbstractTransform implements UnaryTransform<T, OUT> {
+public class AggregateTransform<T, A, R, OUT> extends AbstractTransform implements Transform {
     @Nonnull
     public final AggregateOperation1<? super T, A, ? extends R> aggrOp;
     @Nullable

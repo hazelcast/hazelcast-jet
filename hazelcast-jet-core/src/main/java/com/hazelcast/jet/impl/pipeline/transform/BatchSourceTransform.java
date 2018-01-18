@@ -17,41 +17,21 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.pipeline.Source;
+import com.hazelcast.jet.pipeline.BatchSource;
 
 import javax.annotation.Nonnull;
 
-import java.util.List;
-
-import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static java.util.Collections.emptyList;
 
-public class SourceTransform<T> implements Source<T>, Transform {
+public class BatchSourceTransform<T> extends AbstractTransform implements BatchSource<T> {
     @Nonnull
     public final ProcessorMetaSupplier metaSupplier;
-    @Nonnull
-    private final String name;
 
-    public SourceTransform(
+    public BatchSourceTransform(
             @Nonnull String name,
             @Nonnull ProcessorMetaSupplier metaSupplier
     ) {
+        super(name, false, emptyList());
         this.metaSupplier = metaSupplier;
-        this.name = name;
-    }
-
-    @Override
-    public String name() {
-        return name;
-    }
-
-    @Override
-    public List<? extends Transform> upstream() {
-        return emptyList();
-    }
-
-    @Override
-    public String toString() {
-        return name;
     }
 }

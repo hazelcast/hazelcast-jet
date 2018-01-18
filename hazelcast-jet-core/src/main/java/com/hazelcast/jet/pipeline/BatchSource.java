@@ -14,35 +14,15 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.pipeline;
+package com.hazelcast.jet.pipeline;
 
 /**
- * Javadoc pending.
+ * The source of data in a pipeline.
+ * <p>
+ * See {@link Sources} for possible choices.
+ *
+ * @param <T> the stream item type
  */
-public class StreamEvent {
-    private final long timestamp;
-    private Object payload;
-
-    public StreamEvent(long timestamp, Object payload) {
-        this.timestamp = timestamp;
-        this.payload = payload;
-    }
-
-    public long timestamp() {
-        return timestamp;
-    }
-
-    public Object payload() {
-        return payload;
-    }
-
-    public StreamEvent replacePayload(Object payload) {
-        this.payload = payload;
-        return this;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("%,d %s", timestamp, payload);
-    }
+public interface BatchSource<T> {
+    String name();
 }

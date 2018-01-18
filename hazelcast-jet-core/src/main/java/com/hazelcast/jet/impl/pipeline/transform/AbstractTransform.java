@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
+import javax.annotation.Nonnull;
 import java.util.List;
 
 import static java.util.Collections.singletonList;
@@ -24,18 +25,45 @@ import static java.util.Collections.singletonList;
  * Javadoc pending.
  */
 public abstract class AbstractTransform implements Transform {
+    @Nonnull
+    private final String name;
+    @Nonnull
     private final List<Transform> upstream;
+    private boolean emitsJetEvents;
 
-    protected AbstractTransform(List<Transform> upstream) {
+    protected AbstractTransform(@Nonnull String name, boolean emitsJetEvents, @Nonnull List<Transform> upstream) {
+        this.name = name;
+        this.emitsJetEvents = emitsJetEvents;
         this.upstream = upstream;
     }
 
-    protected AbstractTransform(Transform upstream) {
-        this.upstream = singletonList(upstream);
+    protected AbstractTransform(String name, boolean emitsJetEvents, @Nonnull Transform upstream) {
+        this(name, emitsJetEvents, singletonList(upstream));
+    }
+
+    @Override
+    public boolean emitsJetEvents() {
+        return emitsJetEvents;
+    }
+
+    @Nonnull @Override
+    public Transform setEmitsJetEvents(boolean value) {
+        emitsJetEvents = value;
+        return this;
     }
 
     @Override
     public List<Transform> upstream() {
         return upstream;
+    }
+
+    @Override
+    public String name() {
+        return name;
+    }
+
+    @Override
+    public String toString() {
+        return name;
     }
 }

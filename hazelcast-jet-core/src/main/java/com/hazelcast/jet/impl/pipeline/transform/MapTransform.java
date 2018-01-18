@@ -20,7 +20,7 @@ import com.hazelcast.jet.function.DistributedFunction;
 
 import javax.annotation.Nonnull;
 
-public class MapTransform<T, R> extends AbstractTransform implements UnaryTransform<T, R> {
+public class MapTransform<T, R> extends AbstractTransform implements Transform {
     @Nonnull
     public final DistributedFunction<? super T, ? extends R> mapFn;
 

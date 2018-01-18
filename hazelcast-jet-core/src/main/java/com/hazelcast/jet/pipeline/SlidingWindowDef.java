@@ -20,22 +20,22 @@ import com.hazelcast.jet.core.SlidingWindowPolicy;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.pipeline.WindowDefinition.WindowKind.SLIDING;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
+import static com.hazelcast.jet.pipeline.WindowDefinition.WindowKind.SLIDING;
 import static com.hazelcast.util.Preconditions.checkPositive;
 
 /**
  * Javadoc pending.
  */
 public class SlidingWindowDef implements WindowDefinition {
-    private final long frameSize;
     private final long windowSize;
+    private final long slideBy;
 
-    SlidingWindowDef(long frameSize, long framesPerWindow) {
-        checkPositive(frameSize, "frameLength must be positive");
-        checkPositive(framesPerWindow, "framesPerWindow must be positive");
-        this.frameSize = frameSize;
-        this.windowSize = frameSize * framesPerWindow;
+    SlidingWindowDef(long windowSize, long slideBy) {
+        checkPositive(windowSize, "windowSize must be positive");
+        checkPositive(slideBy, "slideBy must be positive");
+        this.windowSize = windowSize;
+        this.slideBy = slideBy;
     }
 
     @Nonnull @Override
@@ -51,7 +51,7 @@ public class SlidingWindowDef implements WindowDefinition {
 
     /**
      * Returns the length of the window (the size of the timestamp range it
-     * covers). It is an integer multiple of {@link #frameSize()}.
+     * covers). It is an integer multiple of {@link #slideBy()}.
      */
     public long windowSize() {
         return windowSize;
@@ -60,11 +60,11 @@ public class SlidingWindowDef implements WindowDefinition {
     /**
      * Returns the length of the frame (equal to the sliding step).
      */
-    public long frameSize() {
-        return frameSize;
+    public long slideBy() {
+        return slideBy;
     }
 
     public SlidingWindowPolicy toSlidingWindowPolicy() {
-        return slidingWinPolicy(windowSize, frameSize);
+        return slidingWinPolicy(windowSize, slideBy);
     }
 }

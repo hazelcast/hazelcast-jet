@@ -16,15 +16,15 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class CoGroupTransform<K, A, R, OUT> extends AbstractTransform implements MultaryTransform<OUT> {
+public class CoGroupTransform<K, A, R, OUT> extends AbstractTransform implements Transform {
     @Nonnull
     public final List<DistributedFunction<?, ? extends K>> groupKeyFns;
     @Nonnull

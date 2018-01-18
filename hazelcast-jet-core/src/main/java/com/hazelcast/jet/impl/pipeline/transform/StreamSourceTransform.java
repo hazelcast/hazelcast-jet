@@ -20,40 +20,23 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.StreamSource;
 
 import javax.annotation.Nonnull;
-import java.util.List;
 
 import static java.util.Collections.emptyList;
 
 /**
  * Javadoc pending.
  */
-public class StreamSourceTransform<T> implements StreamSource<T>, Transform {
+public class StreamSourceTransform<T> extends AbstractTransform implements StreamSource<T> {
 
     @Nonnull
     public final ProcessorMetaSupplier metaSupplier;
-    @Nonnull
-    private final String name;
 
     public StreamSourceTransform(
             @Nonnull String name,
+            boolean emitsJetEvents,
             @Nonnull ProcessorMetaSupplier metaSupplier
     ) {
+        super(name, emitsJetEvents, emptyList());
         this.metaSupplier = metaSupplier;
-        this.name = name;
-    }
-
-    @Override
-    public String name() {
-        return name;
-    }
-
-    @Override
-    public List<? extends Transform> upstream() {
-        return emptyList();
-    }
-
-    @Override
-    public String toString() {
-        return name;
     }
 }

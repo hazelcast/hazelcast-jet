@@ -38,7 +38,7 @@ public class SourcesTest extends PipelineTestSupport {
         putToSrcMap(input);
 
         // When
-        pipeline.<Integer>drawFrom(Sources.fromProcessor("test",
+        pipeline.<Integer>drawFrom(Sources.batchFromProcessor("test",
                 readMapP(srcName, truePredicate(),
                         (DistributedFunction<Entry<String, Integer>, Integer>) Entry::getValue)))
                 .drainTo(sink);

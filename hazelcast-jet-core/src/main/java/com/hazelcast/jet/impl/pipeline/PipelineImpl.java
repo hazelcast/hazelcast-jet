@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
-import com.hazelcast.jet.impl.pipeline.transform.SourceTransform;
+import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
@@ -25,7 +25,7 @@ import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkStage;
-import com.hazelcast.jet.pipeline.Source;
+import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.core.DAG;
 
@@ -41,8 +41,8 @@ public class PipelineImpl implements Pipeline {
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    public <T> BatchStage<T> drawFrom(@Nonnull Source<? extends T> source) {
-        return new BatchStageImpl<>((SourceTransform<? extends T>) source, this);
+    public <T> BatchStage<T> drawFrom(@Nonnull BatchSource<? extends T> batchSource) {
+        return new BatchStageImpl<>((BatchSourceTransform<? extends T>) batchSource, this);
     }
 
     @Nonnull @Override

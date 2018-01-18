@@ -20,7 +20,7 @@ import com.hazelcast.jet.function.DistributedPredicate;
 
 import javax.annotation.Nonnull;
 
-public class FilterTransform<T> extends AbstractTransform implements UnaryTransform<T, T> {
+public class FilterTransform<T> extends AbstractTransform implements Transform {
     @Nonnull
     public final DistributedPredicate<? super T> filterFn;
 

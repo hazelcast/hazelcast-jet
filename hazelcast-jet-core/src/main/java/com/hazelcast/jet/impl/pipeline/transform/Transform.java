@@ -16,12 +16,13 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
+import javax.annotation.Nonnull;
 import java.io.Serializable;
 import java.util.List;
 
 /**
  * This is a pure data object and holds no implementation code for the
- * transformation it represents. {@link com.hazelcast.jet.impl.Planner
+ * transformation it represents. {@link com.hazelcast.jet.impl.pipeline.Planner
  * Planner} is the implementation class that creates a Core API DAG for a
  * pipeline.
  */
@@ -30,6 +31,11 @@ public interface Transform extends Serializable {
      * Returns the name of this transformation.
      */
     String name();
+
+    boolean emitsJetEvents();
+
+    @Nonnull
+    Transform setEmitsJetEvents(boolean value);
 
     List<? extends Transform> upstream();
 }

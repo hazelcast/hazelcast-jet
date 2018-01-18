@@ -16,13 +16,13 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.datamodel.Tag;
+import com.hazelcast.jet.pipeline.JoinClause;
 
 import javax.annotation.Nonnull;
 import java.util.List;
 
-public class HashJoinTransform<T0, R> extends AbstractTransform implements MultaryTransform<R> {
+public class HashJoinTransform<T0, R> extends AbstractTransform implements Transform {
     @Nonnull
     public final List<JoinClause<?, ? super T0, ?, ?>> clauses;
     @Nonnull

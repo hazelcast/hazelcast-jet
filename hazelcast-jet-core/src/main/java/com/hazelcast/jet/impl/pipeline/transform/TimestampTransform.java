@@ -17,14 +17,13 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.core.WatermarkGenerationParams;
-import com.hazelcast.jet.function.DistributedToLongFunction;
 
 import javax.annotation.Nonnull;
 
 /**
  * Javadoc pending.
  */
-public class TimestampTransform<T> extends AbstractTransform implements UnaryTransform<T, T> {
+public class TimestampTransform<T> extends AbstractTransform implements Transform {
     @Nonnull
     public final WatermarkGenerationParams wmGenParams;
 
@@ -32,16 +31,7 @@ public class TimestampTransform<T> extends AbstractTransform implements UnaryTra
             @Nonnull Transform upstream,
             @Nonnull WatermarkGenerationParams wmGenParams
     ) {
-        super(upstream);
+        super("timestamp", true, upstream);
         this.wmGenParams = wmGenParams;
-    }
-    @Override
-    public String name() {
-        return "identity";
-    }
-
-    @Override
-    public String toString() {
-        return name();
     }
 }

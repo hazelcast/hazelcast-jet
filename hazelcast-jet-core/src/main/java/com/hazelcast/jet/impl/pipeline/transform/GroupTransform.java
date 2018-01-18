@@ -23,7 +23,7 @@ import com.hazelcast.jet.pipeline.WindowDefinition;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class GroupTransform<T, K, A, R, OUT> extends AbstractTransform implements UnaryTransform<T, OUT> {
+public class GroupTransform<T, K, A, R, OUT> extends AbstractTransform implements Transform {
     @Nonnull
     public final DistributedFunction<? super T, ? extends K> keyFn;
     @Nonnull

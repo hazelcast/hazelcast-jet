@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.pipeline.transform;
+package com.hazelcast.jet.impl.pipeline;
 
 /**
- * Represents a unary transform, one that takes a single input stream
- * and produces a single output stream.
- *
- * @param <T> type of the input item
- * @param <R> type of the result item
+ * Javadoc pending.
  */
-public interface UnaryTransform<T, R> extends Transform {
+public interface JetEvent<T> {
+    long timestamp();
+
+    T payload();
+
+    JetEvent<T> replacePayload(T payload);
 }

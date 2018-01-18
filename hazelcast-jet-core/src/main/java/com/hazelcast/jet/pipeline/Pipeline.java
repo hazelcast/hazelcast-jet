@@ -30,7 +30,7 @@ import javax.annotation.Nonnull;
  * <p>
  * The {@code Pipeline} object is a container of all the stages defined on
  * a pipeline: the source stages obtained directly from it by calling {@link
- * #drawFrom(Source)} as well as all the stages attached (directly or
+ * #drawFrom(BatchSource)} as well as all the stages attached (directly or
  * indirectly) to them.
  * <p>
  * Note that there is no simple one-to-one correspondence between pipeline
@@ -46,11 +46,11 @@ public interface Pipeline {
      * Returns a new pipeline pipeline that has no upstream stages and produces
      * some output for its downstream stages.
      *
-     * @param source the definition of the source from which the pipeline draws data
+     * @param batchSource the definition of the source from which the pipeline draws data
      * @param <T> the type of source data items
      */
     @Nonnull
-    <T> BatchStage<T> drawFrom(@Nonnull Source<? extends T> source);
+    <T> BatchStage<T> drawFrom(@Nonnull BatchSource<? extends T> batchSource);
 
     @Nonnull
     <T> StreamStage<T> drawFrom(@Nonnull StreamSource<? extends T> source);

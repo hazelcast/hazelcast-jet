@@ -16,14 +16,14 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class CoAggregateTransform<A, R, OUT> extends AbstractTransform implements MultaryTransform<OUT> {
+public class CoAggregateTransform<A, R, OUT> extends AbstractTransform implements Transform {
     @Nonnull
     public final AggregateOperation<A, ? extends R> aggrOp;
     @Nullable

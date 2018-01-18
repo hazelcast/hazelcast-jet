@@ -5,6 +5,10 @@
         "http://www.puppycrawl.com/dtds/suppressions_1_1.dtd">
 <suppressions>
 
+    <!-- Suppress some checks on prototype code -->
+    <suppress checks="Javadoc" files="com[\\/]hazelcast[\\/]jet[\\/]pipeline"/>
+    <suppress checks="Javadoc" files="com[\\/]hazelcast[\\/]jet[\\/]impl[\\/]pipeline"/>
+
     <!-- Connector modules declare classes in a package that already exists in Jet core -->
     <suppress checks="JavadocPackage" files="hazelcast-jet-(kafka|hadoop)"/>
 

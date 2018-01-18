@@ -20,9 +20,8 @@ import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 
 import javax.annotation.Nonnull;
-import java.util.List;
 
-public class PeekTransform<T> extends AbstractTransform implements UnaryTransform<T, T> {
+public class PeekTransform<T> extends AbstractTransform implements Transform {
     @Nonnull
     public final DistributedPredicate<? super T> shouldLogFn;
     @Nonnull

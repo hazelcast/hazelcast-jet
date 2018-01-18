@@ -21,7 +21,7 @@ import com.hazelcast.jet.function.DistributedFunction;
 
 import javax.annotation.Nonnull;
 
-public class FlatMapTransform<T, R> extends AbstractTransform implements UnaryTransform<T, R> {
+public class FlatMapTransform<T, R> extends AbstractTransform implements Transform {
     @Nonnull
     public final DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn;
 

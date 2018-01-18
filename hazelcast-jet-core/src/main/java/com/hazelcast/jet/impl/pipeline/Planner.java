@@ -35,7 +35,7 @@ import com.hazelcast.jet.impl.pipeline.transform.MapTransform;
 import com.hazelcast.jet.impl.pipeline.transform.PeekTransform;
 import com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
-import com.hazelcast.jet.impl.pipeline.transform.SourceTransform;
+import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.processor.HashJoinCollectP;
@@ -68,7 +68,6 @@ import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.filterP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapP;
-import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
@@ -94,8 +93,11 @@ class Planner {
         validateNoLeakage(adjacencyMap);
         Iterable<Transform> sorted = topologicalSort(adjacencyMap, Object::toString);
         for (Transform transform : sorted) {
-            if (transform instanceof SourceTransform) {
-                handleSource((SourceTransform) transform);
+            if (transform.emitsJetEvents()) {
+                propagateEmitsJetEvents(transform, adjacencyMap);
+            }
+            if (transform instanceof BatchSourceTransform) {
+                handleSource((BatchSourceTransform) transform);
             } else if (transform instanceof StreamSourceTransform) {
                 handleStreamSource((StreamSourceTransform) transform);
             } else if (transform instanceof ProcessorTransform) {
@@ -134,7 +136,15 @@ class Planner {
         }
     }
 
-    private void handleSource(SourceTransform source) {
+    private static void propagateEmitsJetEvents(Transform t, Map<Transform, List<Transform>> adjacencyMap) {
+        List<Transform> downstream = adjacencyMap.get(t);
+        for (Transform d : downstream) {
+            d.setEmitsJetEvents(true);
+            propagateEmitsJetEvents(d, adjacencyMap);
+        }
+    }
+
+    private void handleSource(BatchSourceTransform source) {
         addVertex(source, vertexName(source.name(), ""), source.metaSupplier);
     }
 

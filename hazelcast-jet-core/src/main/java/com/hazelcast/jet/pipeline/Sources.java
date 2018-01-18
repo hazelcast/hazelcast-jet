@@ -24,7 +24,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
-import com.hazelcast.jet.impl.pipeline.transform.SourceTransform;
+import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.projection.Projection;
@@ -58,7 +58,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Contains factory methods for various types of pipeline sources. To start
- * building a pipeline, pass a source to {@link Pipeline#drawFrom(Source)}
+ * building a pipeline, pass a source to {@link Pipeline#drawFrom(BatchSource)}
  * and you will obtain the initial {@link BatchStage}. You can then
  * attach further stages to it.
  * <p>
@@ -80,18 +80,19 @@ public final class Sources {
      * @param sourceName user-friendly source name
      * @param metaSupplier the processor meta-supplier
      */
-    public static <T> Source<T> fromProcessor(
+    public static <T> BatchSource<T> batchFromProcessor(
             @Nonnull String sourceName,
             @Nonnull ProcessorMetaSupplier metaSupplier
     ) {
-        return new SourceTransform<>(sourceName, metaSupplier);
+        return new BatchSourceTransform<>(sourceName, metaSupplier);
     }
 
     public static <T> StreamSource<T> streamFromProcessor(
             @Nonnull String sourceName,
+            boolean emitsEvents,
             @Nonnull ProcessorMetaSupplier metaSupplier
     ) {
-        return new StreamSourceTransform<>(sourceName, metaSupplier);
+        return new StreamSourceTransform<>(sourceName, emitsEvents, metaSupplier);
     }
 
     /**
@@ -107,8 +108,8 @@ public final class Sources {
      * cluster topology change (triggering data migration), the source may
      * miss and/or duplicate some entries.
      */
-    public static <K, V> Source<Map.Entry<K, V>> map(@Nonnull String mapName) {
-        return fromProcessor("mapSource(" + mapName + ')', readMapP(mapName));
+    public static <K, V> BatchSource<Entry<K, V>> map(@Nonnull String mapName) {
+        return batchFromProcessor("mapSource(" + mapName + ')', readMapP(mapName));
     }
 
     /**
@@ -151,24 +152,24 @@ public final class Sources {
      *     will be filtered out.
      * @param <T> type of emitted item
      */
-    public static <T, K, V> Source<T> map(
+    public static <T, K, V> BatchSource<T> map(
             @Nonnull String mapName,
             @Nonnull Predicate<K, V> predicate,
             @Nonnull Projection<Entry<K, V>, T> projection
     ) {
-        return fromProcessor("mapSource(" + mapName + ')', readMapP(mapName, predicate, projection));
+        return batchFromProcessor("mapSource(" + mapName + ')', readMapP(mapName, predicate, projection));
     }
 
     /**
      * Convenience for {@link #map(String, Predicate, Projection)}
      * which uses a {@link DistributedFunction} as the projection function.
      */
-    public static <T, K, V> Source<T> map(
+    public static <T, K, V> BatchSource<T> map(
             @Nonnull String mapName,
             @Nonnull Predicate<K, V> predicate,
             @Nonnull DistributedFunction<Map.Entry<K, V>, T> projectionFn
     ) {
-        return fromProcessor("mapSource(" + mapName + ')', readMapP(mapName, predicate, projectionFn));
+        return batchFromProcessor("mapSource(" + mapName + ')', readMapP(mapName, predicate, projectionFn));
     }
 
     /**
@@ -213,7 +214,7 @@ public final class Sources {
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
-        return streamFromProcessor("mapJournalSource(" + mapName + ')',
+        return streamFromProcessor("mapJournalSource(" + mapName + ')', true,
                 streamMapP(mapName, predicateFn, projectionFn, initialPos, wmGenParams));
     }
 
@@ -247,11 +248,11 @@ public final class Sources {
      * miss and/or duplicate some entries.
      */
     @Nonnull
-    public static <K, V> Source<Map.Entry<K, V>> remoteMap(
+    public static <K, V> BatchSource<Entry<K, V>> remoteMap(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig
     ) {
-        return fromProcessor("remoteMapSource(" + mapName + ')', readRemoteMapP(mapName, clientConfig));
+        return batchFromProcessor("remoteMapSource(" + mapName + ')', readRemoteMapP(mapName, clientConfig));
     }
 
     /**
@@ -291,13 +292,13 @@ public final class Sources {
      *     will be filtered out.
      * @param <T> type of emitted item
      */
-    public static <T, K, V> Source<T> remoteMap(
+    public static <T, K, V> BatchSource<T> remoteMap(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull Predicate<K, V> predicate,
             @Nonnull Projection<Entry<K, V>, T> projection
     ) {
-        return fromProcessor("remoteMapSource(" + mapName + ')',
+        return batchFromProcessor("remoteMapSource(" + mapName + ')',
                 readRemoteMapP(mapName, clientConfig, predicate, projection));
     }
 
@@ -305,13 +306,13 @@ public final class Sources {
      * Convenience for {@link #remoteMap(String, ClientConfig, Predicate, Projection)}
      * which use a {@link DistributedFunction} as the projection function.
      */
-    public static <T, K, V> Source<T> remoteMap(
+    public static <T, K, V> BatchSource<T> remoteMap(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull Predicate<K, V> predicate,
             @Nonnull DistributedFunction<Entry<K, V>, T> projectionFn
     ) {
-        return fromProcessor("remoteMapSource(" + mapName + ')',
+        return batchFromProcessor("remoteMapSource(" + mapName + ')',
                 readRemoteMapP(mapName, clientConfig, predicate, projectionFn));
     }
 
@@ -357,7 +358,7 @@ public final class Sources {
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
-        return streamFromProcessor("remoteMapJournalSource(" + mapName + ')',
+        return streamFromProcessor("remoteMapJournalSource(" + mapName + ')', true,
                 streamRemoteMapP(mapName, clientConfig, predicateFn, projectionFn, initialPos, wmGenParams));
     }
 
@@ -394,8 +395,8 @@ public final class Sources {
      * miss and/or duplicate some entries.
      */
     @Nonnull
-    public static <K, V> Source<Map.Entry<K, V>> cache(@Nonnull String cacheName) {
-        return fromProcessor("cacheSource(" + cacheName + ')', readCacheP(cacheName));
+    public static <K, V> BatchSource<Entry<K, V>> cache(@Nonnull String cacheName) {
+        return batchFromProcessor("cacheSource(" + cacheName + ')', readCacheP(cacheName));
     }
 
     /**
@@ -440,7 +441,7 @@ public final class Sources {
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
-        return streamFromProcessor("cacheJournalSource(" + cacheName + ')',
+        return streamFromProcessor("cacheJournalSource(" + cacheName + ')', true,
                 streamCacheP(cacheName, predicateFn, projectionFn, initialPos, wmGenParams)
         );
     }
@@ -475,11 +476,11 @@ public final class Sources {
      * miss and/or duplicate some entries.
      */
     @Nonnull
-    public static <K, V> Source<Map.Entry<K, V>> remoteCache(
+    public static <K, V> BatchSource<Entry<K, V>> remoteCache(
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig
     ) {
-        return fromProcessor("remoteCacheSource(" + cacheName + ')', readRemoteCacheP(cacheName, clientConfig)
+        return batchFromProcessor("remoteCacheSource(" + cacheName + ')', readRemoteCacheP(cacheName, clientConfig)
         );
     }
 
@@ -523,7 +524,7 @@ public final class Sources {
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
-        return streamFromProcessor("remoteCacheJournalSource(" + cacheName + ')',
+        return streamFromProcessor("remoteCacheJournalSource(" + cacheName + ')', true,
                 streamRemoteCacheP(cacheName, clientConfig, predicateFn, projectionFn, initialPos, wmGenParams));
     }
 
@@ -554,8 +555,8 @@ public final class Sources {
      * it will re-emit all entries.
      */
     @Nonnull
-    public static <T> Source<T> list(@Nonnull String listName) {
-        return fromProcessor("listSource(" + listName + ')', readListP(listName));
+    public static <T> BatchSource<T> list(@Nonnull String listName) {
+        return batchFromProcessor("listSource(" + listName + ')', readListP(listName));
     }
 
     /**
@@ -567,8 +568,8 @@ public final class Sources {
      * it will re-emit all entries.
      */
     @Nonnull
-    public static <T> Source<T> remoteList(@Nonnull String listName, @Nonnull ClientConfig clientConfig) {
-        return fromProcessor("remoteListSource(" + listName + ')', readRemoteListP(listName, clientConfig));
+    public static <T> BatchSource<T> remoteList(@Nonnull String listName, @Nonnull ClientConfig clientConfig) {
+        return batchFromProcessor("remoteListSource(" + listName + ')', readRemoteListP(listName, clientConfig));
     }
 
     /**
@@ -587,10 +588,11 @@ public final class Sources {
      * non-blocking API, the processor is cooperative.
      */
     @Nonnull
-    public static Source<String> socket(
+    public static StreamSource<String> socket(
             @Nonnull String host, int port, @Nonnull Charset charset
     ) {
-        return fromProcessor("socketSourceSource(" + host + ':' + port + ')', streamSocketP(host, port, charset));
+        return streamFromProcessor(
+                "socketSource(" + host + ':' + port + ')', false, streamSocketP(host, port, charset));
     }
 
     /**
@@ -614,16 +616,16 @@ public final class Sources {
      *             Use {@code "*"} for all files.
      */
     @Nonnull
-    public static Source<String> files(
+    public static BatchSource<String> files(
             @Nonnull String directory, @Nonnull Charset charset, @Nonnull String glob
     ) {
-        return fromProcessor("filesSource(" + new File(directory, glob) + ')', readFilesP(directory, charset, glob));
+        return batchFromProcessor("filesSource(" + new File(directory, glob) + ')', readFilesP(directory, charset, glob));
     }
 
     /**
      * Convenience for {@link #files(String, Charset, String) readFiles(directory, UTF_8, "*")}.
      */
-    public static Source<String> files(@Nonnull String directory) {
+    public static BatchSource<String> files(@Nonnull String directory) {
         return files(directory, UTF_8, GLOB_WILDCARD);
     }
 
@@ -673,10 +675,10 @@ public final class Sources {
      *             java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()}.
      *             Use {@code "*"} for all files.
      */
-    public static Source<String> fileWatcher(
+    public static StreamSource<String> fileWatcher(
             @Nonnull String watchedDirectory, @Nonnull Charset charset, @Nonnull String glob
     ) {
-        return fromProcessor("fileWatcherSource(" + watchedDirectory + '/' + glob + ')',
+        return streamFromProcessor("fileWatcherSource(" + watchedDirectory + '/' + glob + ')', false,
                 streamFilesP(watchedDirectory, charset, glob)
         );
     }
@@ -685,7 +687,7 @@ public final class Sources {
      * Convenience for {@link #fileWatcher(String, Charset, String)
      * streamFiles(watchedDirectory, UTF_8, "*")}.
      */
-    public static Source<String> fileWatcher(@Nonnull String watchedDirectory) {
+    public static StreamSource<String> fileWatcher(@Nonnull String watchedDirectory) {
         return fileWatcher(watchedDirectory, UTF_8, GLOB_WILDCARD);
     }
 }

@@ -14,36 +14,38 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
-
-import javax.annotation.Nonnull;
+package com.hazelcast.jet.impl.pipeline;
 
 /**
  * Javadoc pending.
  */
-public interface WindowDefinition {
-    enum WindowKind {
-        TUMBLING, SLIDING, SESSION
+public class JetEventImpl<T> implements JetEvent<T> {
+    private final long timestamp;
+    private T payload;
+
+    public JetEventImpl(long timestamp, T payload) {
+        this.timestamp = timestamp;
+        this.payload = payload;
     }
 
-    @Nonnull
-    WindowKind kind();
-
-    @Nonnull
-    <W extends WindowDefinition> W downcast();
-
-    @Nonnull
-    static SlidingWindowDef sliding(long windowSize, long slideBy) {
-        return new SlidingWindowDef(windowSize, slideBy);
+    @Override
+    public long timestamp() {
+        return timestamp;
     }
 
-    @Nonnull
-    static TumblingWindowDef tumbling(long windowSize) {
-        return new TumblingWindowDef(windowSize);
+    @Override
+    public T payload() {
+        return payload;
     }
 
-    @Nonnull
-    static SessionWindowDef session(long sessionTimeout) {
-        return new SessionWindowDef(sessionTimeout);
+    @Override
+    public JetEventImpl replacePayload(T payload) {
+        this.payload = payload;
+        return this;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%,d %s", timestamp, payload);
     }
 }

@@ -75,7 +75,7 @@ public abstract class PipelineTestSupport extends TestInClusterSupport {
         return toBag(this.sinkList);
     }
 
-    static Source<Integer> mapValuesSource(String srcName) {
+    static BatchSource<Integer> mapValuesSource(String srcName) {
         return Sources.map(srcName, truePredicate(),
                 (DistributedFunction<Entry<String, Integer>, Integer>) Entry::getValue);
     }

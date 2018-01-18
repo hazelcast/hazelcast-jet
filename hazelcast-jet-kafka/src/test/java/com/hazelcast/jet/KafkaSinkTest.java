@@ -108,7 +108,7 @@ public class KafkaSinkTest extends KafkaTestSupport {
 
         // Given
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Entry<String, String>>fromProcessor("source",
+        p.drawFrom(Sources.<Entry<String, String>>batchFromProcessor("source",
                 ProcessorMetaSupplier.of(ProcessorWithEntryAndLatch::new)))
          .drainTo(KafkaSinks.kafka(properties, topic));
 
@@ -133,7 +133,7 @@ public class KafkaSinkTest extends KafkaTestSupport {
 
         // Given
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Entry<String, String>>fromProcessor("source",
+        p.drawFrom(Sources.<Entry<String, String>>batchFromProcessor("source",
                 ProcessorMetaSupplier.of(ProcessorWithEntryAndLatch::new)))
          .drainTo(KafkaSinks.kafka(properties, topic));
 
