@@ -644,7 +644,9 @@ public final class Processors {
      * @param <T> the type of the stream item
      */
     @Nonnull
-    public static <T> DistributedSupplier<Processor> insertWatermarksP(@Nonnull WatermarkGenerationParams<T> wmGenParams) {
+    public static <T> DistributedSupplier<Processor> insertWatermarksP(
+            @Nonnull WatermarkGenerationParams<T> wmGenParams
+    ) {
         return () -> new InsertWatermarksP<>(wmGenParams);
     }
 

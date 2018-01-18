@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.StageWithGrouping;
 import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
@@ -44,17 +45,20 @@ import static java.util.stream.Collectors.toList;
  * @param <K> type of the grouping key
  */
 public class GrAggBuilder<K> {
+    private final PipelineImpl pipelineImpl;
     private final WindowDefinition wDef;
     private final List<StageWithGroupingBase<?, K>> stages = new ArrayList<>();
 
     @SuppressWarnings("unchecked")
     public GrAggBuilder(StageWithGrouping<?, K> s) {
+        pipelineImpl = (PipelineImpl) ((StageWithGroupingBase) s).computeStage.getPipeline();
         wDef = null;
         stages.add((StageWithGroupingBase<?, K>) s);
     }
 
     @SuppressWarnings("unchecked")
     public GrAggBuilder(StageWithGroupingAndWindow<?, K> s) {
+        pipelineImpl = (PipelineImpl) ((StageWithGroupingBase) s).computeStage.getPipeline();
         wDef = s.windowDefinition();
         stages.add((StageWithGroupingBase<?, K>) s);
     }
@@ -75,16 +79,17 @@ public class GrAggBuilder<K> {
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull CreateOutStageFn<OUT, OUT_STAGE> createOutStageFn
     ) {
+        List<Transform> upstream = stages.stream()
+                                         .map(StageWithGroupingBase::computeStage)
+                                         .map(generalStage -> (ComputeStageImplBase) generalStage)
+                                         .map(csib -> csib.transform)
+                                         .collect(toList());
         CoGroupTransform<K, A, R, OUT> transform = new CoGroupTransform<>(
+                upstream,
                 stages.stream().map(StageWithGroupingBase::keyFn).collect(toList()),
                 aggrOp, wDef
         );
-        PipelineImpl pipeline = (PipelineImpl) stages.get(0).computeStage().getPipeline();
-        List<GeneralStage> upstream = stages.stream()
-                                            .map(StageWithGroupingBase::computeStage)
-                                            .collect(toList());
-        OUT_STAGE attached = createOutStageFn.get(upstream, transform, pipeline);
-        pipeline.connect(upstream, attached);
-        return attached;
+        pipelineImpl.connect(upstream, transform);
+        return createOutStageFn.get(transform, pipelineImpl);
     }
 }

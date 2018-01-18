@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,11 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.pipeline;
+package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
-import com.hazelcast.jet.impl.pipeline.transform.Transform;
-import com.hazelcast.jet.pipeline.GeneralStage;
-import com.hazelcast.jet.pipeline.SinkStage;
-
-import static java.util.Collections.singletonList;
-
-class SinkStageImpl extends AbstractStage implements SinkStage {
-
-    SinkStageImpl(SinkTransform sink, PipelineImpl pipeline) {
-        super(sink, false, pipeline);
-    }
+/**
+ * Javadoc pending.
+ */
+public interface StreamSource<T> {
+    String name();
 }

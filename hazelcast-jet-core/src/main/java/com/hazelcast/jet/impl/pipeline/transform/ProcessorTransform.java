@@ -19,15 +19,24 @@ package com.hazelcast.jet.impl.pipeline.transform;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.DistributedSupplier;
 
+import javax.annotation.Nonnull;
+
 /**
  * A unary transform constructed directly from a provided Core API
  * processor supplier.
  */
-public class ProcessorTransform<E, R> implements UnaryTransform<E, R> {
+public class ProcessorTransform<E, R> extends AbstractTransform implements UnaryTransform<E, R> {
+    @Nonnull
     public final DistributedSupplier<Processor> procSupplier;
+    @Nonnull
     private final String name;
 
-    public ProcessorTransform(String name, DistributedSupplier<Processor> procSupplier) {
+    public ProcessorTransform(
+            @Nonnull Transform upstream,
+            @Nonnull String name,
+            @Nonnull DistributedSupplier<Processor> procSupplier
+    ) {
+        super(upstream);
         this.name = name;
         this.procSupplier = procSupplier;
     }

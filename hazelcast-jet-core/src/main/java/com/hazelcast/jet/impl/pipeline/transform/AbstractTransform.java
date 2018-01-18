@@ -14,20 +14,28 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.core.WatermarkGenerationParams;
-import com.hazelcast.jet.core.WatermarkPolicy;
-import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.function.DistributedToLongFunction;
-import com.hazelcast.jet.impl.pipeline.transform.Transform;
+import java.util.List;
+
+import static java.util.Collections.singletonList;
 
 /**
  * Javadoc pending.
  */
-public interface SourceWithTimestamp<T> {
+public abstract class AbstractTransform implements Transform {
+    private final List<Transform> upstream;
 
-    Source<T> source();
+    protected AbstractTransform(List<Transform> upstream) {
+        this.upstream = upstream;
+    }
 
-    WatermarkGenerationParams wmGenParams();
+    protected AbstractTransform(Transform upstream) {
+        this.upstream = singletonList(upstream);
+    }
+
+    @Override
+    public List<Transform> upstream() {
+        return upstream;
+    }
 }

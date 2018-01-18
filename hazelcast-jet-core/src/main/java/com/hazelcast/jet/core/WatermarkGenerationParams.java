@@ -67,7 +67,7 @@ public final class WatermarkGenerationParams<T> implements Serializable {
      * Creates new watermark generation parameters. See {@link #noWatermarks()}
      * if you don't need any watermarks.
      *
-     * @param getTimestampF a function to extract timestamps from observed
+     * @param timestampFn a function to extract timestamps from observed
      *      events.
      * @param newWmPolicyF watermark policy factory
      * @param wmEmitPolicy watermark emission policy
@@ -76,12 +76,19 @@ public final class WatermarkGenerationParams<T> implements Serializable {
      *      will be sent.
      */
     public static <T> WatermarkGenerationParams<T> wmGenParams(
-            @Nonnull DistributedToLongFunction<T> getTimestampF,
-            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull DistributedToLongFunction<T> timestampFn,
+            @Nonnull WatermarkPolicy wmPolicy,
             @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
             long idleTimeoutMillis
     ) {
-        return new WatermarkGenerationParams<>(getTimestampF, newWmPolicyF, wmEmitPolicy, idleTimeoutMillis);
+        return new WatermarkGenerationParams<>(timestampFn, () -> wmPolicy, wmEmitPolicy, idleTimeoutMillis);
+    }
+
+    public static <T> WatermarkGenerationParams<T> wmGenParams(
+            @Nonnull DistributedToLongFunction<T> timestampFn,
+            @Nonnull WatermarkPolicy wmPolicy
+    ) {
+        return wmGenParams(timestampFn, wmPolicy, suppressDuplicates(), 0L);
     }
 
     /**

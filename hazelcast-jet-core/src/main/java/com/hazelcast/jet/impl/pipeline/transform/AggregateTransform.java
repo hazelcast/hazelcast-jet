@@ -19,24 +19,30 @@ package com.hazelcast.jet.impl.pipeline.transform;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 
-public class AggregateTransform<T, A, R, OUT> implements UnaryTransform<T, OUT> {
-    private final WindowDefinition wDef;
-    private final AggregateOperation1<? super T, A, ? extends R> aggrOp;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+public class AggregateTransform<T, A, R, OUT> extends AbstractTransform implements UnaryTransform<T, OUT> {
+    @Nonnull
+    public final AggregateOperation1<? super T, A, ? extends R> aggrOp;
+    @Nullable
+    public final WindowDefinition wDef;
 
     public AggregateTransform(
-            WindowDefinition wDef,
-            AggregateOperation1<? super T, A, ? extends R> aggrOp
+            @Nonnull Transform upstream,
+            @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp,
+            @Nullable WindowDefinition wDef
     ) {
+        super(upstream);
         this.wDef = wDef;
         this.aggrOp = aggrOp;
     }
 
-    public WindowDefinition windowDefinition() {
-        return wDef;
-    }
-
-    public AggregateOperation1<? super T, A, ? extends R> aggregateOperation() {
-        return aggrOp;
+    public AggregateTransform(
+            @Nonnull Transform upstream,
+            @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
+    ) {
+        this(upstream, aggrOp, null);
     }
 
     @Override

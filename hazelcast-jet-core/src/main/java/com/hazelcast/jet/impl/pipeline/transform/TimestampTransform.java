@@ -19,26 +19,22 @@ package com.hazelcast.jet.impl.pipeline.transform;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 
+import javax.annotation.Nonnull;
+
 /**
  * Javadoc pending.
  */
-public class TimestampTransform<T> implements UnaryTransform<T, T> {
-    private final DistributedToLongFunction<? super T> timestampFn;
-    private final WatermarkGenerationParams wmGenParams;
+public class TimestampTransform<T> extends AbstractTransform implements UnaryTransform<T, T> {
+    @Nonnull
+    public final WatermarkGenerationParams wmGenParams;
 
-    public TimestampTransform(DistributedToLongFunction<? super T> timestampFn, WatermarkGenerationParams wmGenParams) {
-        this.timestampFn = timestampFn;
+    public TimestampTransform(
+            @Nonnull Transform upstream,
+            @Nonnull WatermarkGenerationParams wmGenParams
+    ) {
+        super(upstream);
         this.wmGenParams = wmGenParams;
     }
-
-    public DistributedToLongFunction<? super T> timestampFn() {
-        return timestampFn;
-    }
-
-    public WatermarkGenerationParams wmGenParams() {
-        return wmGenParams;
-    }
-
     @Override
     public String name() {
         return "identity";

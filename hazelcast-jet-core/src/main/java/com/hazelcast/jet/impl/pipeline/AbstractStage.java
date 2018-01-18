@@ -16,10 +16,10 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Stage;
-import com.hazelcast.jet.impl.pipeline.transform.Transform;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,19 +29,16 @@ import static java.util.Collections.emptyList;
 public abstract class AbstractStage implements Stage {
 
     final PipelineImpl pipelineImpl;
-    final List<? extends GeneralStage> upstream;
     final Transform transform;
 
     AbstractStage(
-            List<? extends GeneralStage> upstream,
             Transform transform,
             boolean acceptsDownstream,
             PipelineImpl pipelineImpl
     ) {
-        this.upstream = upstream;
         this.transform = transform;
         this.pipelineImpl = pipelineImpl;
-        pipelineImpl.register(this, acceptsDownstream ? new ArrayList<>() : emptyList());
+        pipelineImpl.register(transform, acceptsDownstream ? new ArrayList<>() : emptyList());
     }
 
     @Override
@@ -51,6 +48,11 @@ public abstract class AbstractStage implements Stage {
 
     @Override
     public String toString() {
-        return transform.toString();
+        return String.valueOf(transform);
     }
+
+    public static Transform transformOf(Stage stage) {
+        return ((AbstractStage) stage).transform;
+    }
+
 }

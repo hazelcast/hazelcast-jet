@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.core;
 
-import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.util.WatermarkPolicyUtil;
 import com.hazelcast.jet.impl.util.WatermarkPolicyUtil.WatermarkPolicyBase;
 
@@ -44,10 +43,10 @@ public final class WatermarkPolicies {
      *            and the watermark
      */
     @Nonnull
-    public static DistributedSupplier<WatermarkPolicy> limitingLag(long lag) {
+    public static WatermarkPolicy limitingLag(long lag) {
         checkNotNegative(lag, "lag must not be negative");
 
-        return () -> new WatermarkPolicyBase() {
+        return new WatermarkPolicyBase() {
             @Override
             public long reportEvent(long timestamp) {
                 // avoid overflow
@@ -81,8 +80,8 @@ public final class WatermarkPolicies {
      *                   watermark to reach any observed event's timestamp
      */
     @Nonnull
-    public static DistributedSupplier<WatermarkPolicy> limitingLagAndDelay(long lag, long maxDelayMs) {
-        return () -> WatermarkPolicyUtil.limitingLagAndDelay(
+    public static WatermarkPolicy limitingLagAndDelay(long lag, long maxDelayMs) {
+        return WatermarkPolicyUtil.limitingLagAndDelay(
                 lag, MILLISECONDS.toNanos(maxDelayMs), DEFAULT_NUM_STORED_SAMPLES, System::nanoTime);
     }
 
@@ -105,7 +104,7 @@ public final class WatermarkPolicies {
      *                     {@code System.currentTimeMillis} and the watermark
      */
     @Nonnull
-    public static DistributedSupplier<WatermarkPolicy> limitingTimestampAndWallClockLag(
+    public static WatermarkPolicy limitingTimestampAndWallClockLag(
             long timestampLag, long wallClockLag
     ) {
         return WatermarkPolicyUtil.limitingTimestampAndWallClockLag(timestampLag, wallClockLag,
@@ -137,7 +136,7 @@ public final class WatermarkPolicies {
      *                  advance watermark with system time
      */
     @Nonnull
-    public static DistributedSupplier<WatermarkPolicy> limitingLagAndLull(long lag, long maxLullMs) {
+    public static WatermarkPolicy limitingLagAndLull(long lag, long maxLullMs) {
         return WatermarkPolicyUtil.limitingLagAndLull(lag, maxLullMs, System::nanoTime);
     }
 }

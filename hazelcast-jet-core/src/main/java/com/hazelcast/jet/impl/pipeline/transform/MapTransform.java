@@ -18,10 +18,17 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.function.DistributedFunction;
 
-public class MapTransform<T, R> implements UnaryTransform<T, R> {
+import javax.annotation.Nonnull;
+
+public class MapTransform<T, R> extends AbstractTransform implements UnaryTransform<T, R> {
+    @Nonnull
     public final DistributedFunction<? super T, ? extends R> mapFn;
 
-    public MapTransform(DistributedFunction<? super T, ? extends R> mapFn) {
+    public MapTransform(
+            @Nonnull Transform upstream,
+            @Nonnull DistributedFunction<? super T, ? extends R> mapFn
+    ) {
+        super(upstream);
         this.mapFn = mapFn;
     }
 

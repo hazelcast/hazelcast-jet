@@ -19,10 +19,17 @@ package com.hazelcast.jet.impl.pipeline.transform;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.DistributedFunction;
 
-public class FlatMapTransform<T, R> implements UnaryTransform<T, R> {
-    private final DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn;
+import javax.annotation.Nonnull;
 
-    public FlatMapTransform(DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn) {
+public class FlatMapTransform<T, R> extends AbstractTransform implements UnaryTransform<T, R> {
+    @Nonnull
+    public final DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn;
+
+    public FlatMapTransform(
+            @Nonnull Transform upstream,
+            @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
+    ) {
+        super(upstream);
         this.flatMapFn = flatMapFn;
     }
 

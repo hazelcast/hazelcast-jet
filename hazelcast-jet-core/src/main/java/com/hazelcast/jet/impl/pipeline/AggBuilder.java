@@ -29,18 +29,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.hazelcast.jet.datamodel.Tag.tag;
+import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
 
 public class AggBuilder<T0> {
     @Nonnull
-    private final List<GeneralStage> stages = new ArrayList<>();
+    private final List<Transform> upstream = new ArrayList<>();
     @Nullable
     private final WindowDefinition wDef;
+    private final PipelineImpl pipelineImpl;
 
     public AggBuilder(
             @Nonnull GeneralStage<T0> s,
             @Nullable WindowDefinition wDef
     ) {
         this.wDef = wDef;
+        this.pipelineImpl = ((AbstractStage) s).pipelineImpl;
         add(s);
     }
 
@@ -52,8 +55,8 @@ public class AggBuilder<T0> {
     @Nonnull
     @SuppressWarnings("unchecked")
     public <E> Tag<E> add(@Nonnull GeneralStage<E> stage) {
-        stages.add(stage);
-        return (Tag<E>) tag(stages.size() - 1);
+        upstream.add(transformOf(stage));
+        return (Tag<E>) tag(upstream.size() - 1);
     }
 
     @Nonnull
@@ -62,18 +65,14 @@ public class AggBuilder<T0> {
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull CreateOutStageFn<OUT, OUT_STAGE> createOutStageFn
     ) {
-        CoAggregateTransform<A, R, OUT> transform = new CoAggregateTransform<>(aggrOp, wDef);
-        PipelineImpl pipeline = (PipelineImpl) stages.get(0).getPipeline();
-        OUT_STAGE attached = createOutStageFn.get(stages, transform, pipeline);
-        pipeline.connect(stages, attached);
+        CoAggregateTransform<A, R, OUT> transform = new CoAggregateTransform<>(upstream, aggrOp, wDef);
+        OUT_STAGE attached = createOutStageFn.get(transform, pipelineImpl);
+        pipelineImpl.connect(upstream, transform);
         return attached;
     }
 
     @FunctionalInterface
     public interface CreateOutStageFn<OUT, OUT_STAGE extends GeneralStage<OUT>> {
-        OUT_STAGE get(
-                List<GeneralStage> upstream,
-                Transform transform,
-                PipelineImpl pipeline);
+        OUT_STAGE get(Transform transform, PipelineImpl pipeline);
     }
 }

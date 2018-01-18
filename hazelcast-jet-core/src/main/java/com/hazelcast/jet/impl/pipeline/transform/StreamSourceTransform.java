@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,35 +16,44 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.pipeline.JoinClause;
-import com.hazelcast.jet.datamodel.Tag;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.pipeline.StreamSource;
 
 import javax.annotation.Nonnull;
 import java.util.List;
 
-public class HashJoinTransform<T0, R> extends AbstractTransform implements MultaryTransform<R> {
-    @Nonnull
-    public final List<JoinClause<?, ? super T0, ?, ?>> clauses;
-    @Nonnull
-    public final List<Tag> tags;
+import static java.util.Collections.emptyList;
 
-    public HashJoinTransform(
-            @Nonnull List<Transform> upstream,
-            @Nonnull List<JoinClause<?, ? super T0, ?, ?>> clauses,
-            @Nonnull List<Tag> tags
+/**
+ * Javadoc pending.
+ */
+public class StreamSourceTransform<T> implements StreamSource<T>, Transform {
+
+    @Nonnull
+    public final ProcessorMetaSupplier metaSupplier;
+    @Nonnull
+    private final String name;
+
+    public StreamSourceTransform(
+            @Nonnull String name,
+            @Nonnull ProcessorMetaSupplier metaSupplier
     ) {
-        super(upstream);
-        this.clauses = clauses;
-        this.tags = tags;
+        this.metaSupplier = metaSupplier;
+        this.name = name;
     }
 
     @Override
     public String name() {
-        return tags.size() + "-way hash-join";
+        return name;
+    }
+
+    @Override
+    public List<? extends Transform> upstream() {
+        return emptyList();
     }
 
     @Override
     public String toString() {
-        return name();
+        return name;
     }
 }

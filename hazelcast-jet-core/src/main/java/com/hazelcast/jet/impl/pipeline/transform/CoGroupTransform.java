@@ -24,44 +24,32 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class CoGroupTransform<K, A, R, OUT> implements MultaryTransform<OUT> {
+public class CoGroupTransform<K, A, R, OUT> extends AbstractTransform implements MultaryTransform<OUT> {
     @Nonnull
-    private final List<DistributedFunction<?, ? extends K>> groupKeyFns;
+    public final List<DistributedFunction<?, ? extends K>> groupKeyFns;
     @Nonnull
-    private final AggregateOperation<A, R> aggrOp;
+    public final AggregateOperation<A, R> aggrOp;
     @Nullable
-    private final WindowDefinition wDef;
+    public final WindowDefinition wDef;
 
     public CoGroupTransform(
+            @Nonnull List<Transform> upstream,
             @Nonnull List<DistributedFunction<?, ? extends K>> groupKeyFns,
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nullable WindowDefinition wDef
     ) {
+        super(upstream);
         this.wDef = wDef;
         this.groupKeyFns = groupKeyFns;
         this.aggrOp = aggrOp;
     }
 
     public CoGroupTransform(
+            @Nonnull List<Transform> upstream,
             @Nonnull List<DistributedFunction<?, ? extends K>> groupKeyFns,
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
-        this(groupKeyFns, aggrOp, null);
-    }
-
-    @Nonnull
-    public List<DistributedFunction<?, ? extends K>> groupKeyFns() {
-        return groupKeyFns;
-    }
-
-    @Nonnull
-    public AggregateOperation<A, R> aggregateOperation() {
-        return aggrOp;
-    }
-
-    @Nullable
-    public WindowDefinition windowDefinition() {
-        return wDef;
+        this(upstream, groupKeyFns, aggrOp, null);
     }
 
     @Override

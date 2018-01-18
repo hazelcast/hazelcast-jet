@@ -22,25 +22,41 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.pipeline.Sink;
 
-public class SinkTransform<T> implements Sink<T>, Transform {
-    private final String name;
-    private final ProcessorMetaSupplier metaSupplier;
+import javax.annotation.Nonnull;
+import java.util.ArrayList;
 
-    public SinkTransform(String name, ProcessorMetaSupplier metaSupplier) {
+public class SinkTransform<T> extends AbstractTransform implements Sink<T> {
+    @Nonnull
+    public final ProcessorMetaSupplier metaSupplier;
+    @Nonnull
+    private final String name;
+
+    public SinkTransform(
+            @Nonnull String name,
+            @Nonnull ProcessorMetaSupplier metaSupplier
+    ) {
+        super(new ArrayList<>());
         this.metaSupplier = metaSupplier;
         this.name = name;
     }
 
-    public SinkTransform(String name, ProcessorSupplier supplier) {
+    public SinkTransform(
+            @Nonnull String name,
+            @Nonnull ProcessorSupplier supplier
+    ) {
         this(name, ProcessorMetaSupplier.of(supplier));
     }
 
-    public SinkTransform(String name, DistributedSupplier<Processor> supplier) {
+    public SinkTransform(
+            @Nonnull String name,
+            @Nonnull DistributedSupplier<Processor> supplier
+    ) {
         this(name, ProcessorMetaSupplier.of(supplier));
     }
 
-    public ProcessorMetaSupplier metaSupplier() {
-        return metaSupplier;
+    public SinkTransform<T> setUpstream(Transform upstream) {
+        upstream().add(upstream);
+        return this;
     }
 
     @Override

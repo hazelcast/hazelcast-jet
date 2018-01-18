@@ -25,7 +25,9 @@ import javax.annotation.Nonnull;
 /**
  * Javadoc pending.
  */
-public class StreamStageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> implements StreamStageWithGrouping<T, K> {
+public class StreamStageWithGroupingImpl<T, K>
+        extends StageWithGroupingBase<T, K>
+        implements StreamStageWithGrouping<T, K> {
     StreamStageWithGroupingImpl(
             @Nonnull StreamStageImpl<T> computeStage,
             @Nonnull DistributedFunction<? super T, ? extends K> keyFn

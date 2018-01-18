@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * This is a pure data object and holds no implementation code for the
@@ -29,4 +30,6 @@ public interface Transform extends Serializable {
      * Returns the name of this transformation.
      */
     String name();
+
+    List<? extends Transform> upstream();
 }

@@ -30,9 +30,4 @@ import javax.annotation.Nonnull;
  */
 public interface Source<T> {
     String name();
-
-    SourceWithTimestamp<T> withTimestamp(
-            @Nonnull DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull WatermarkPolicy wmPolicy
-    );
 }

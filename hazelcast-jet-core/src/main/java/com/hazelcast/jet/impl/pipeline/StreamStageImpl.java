@@ -23,6 +23,7 @@ import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.MultaryTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.pipeline.transform.UnaryTransform;
@@ -48,26 +49,10 @@ import static java.util.stream.Collectors.toList;
 public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements StreamStage<T> {
 
     public StreamStageImpl(
-            @Nonnull List<? extends GeneralStage> upstream,
             @Nonnull Transform transform,
             @Nonnull PipelineImpl pipeline
     ) {
-        super(upstream, transform, true, pipeline);
-    }
-
-    StreamStageImpl(
-            @Nonnull SourceWithTimestampImpl<? extends T> wmSource,
-            @Nonnull PipelineImpl pipeline
-    ) {
-        this(emptyList(), wmSource, pipeline);
-    }
-
-    <T_UPSTREAM> StreamStageImpl(
-            @Nonnull GeneralStage<T_UPSTREAM> upstream,
-            @Nonnull UnaryTransform<? super T_UPSTREAM, ? extends T> transform,
-            @Nonnull PipelineImpl pipeline
-    ) {
-        super(singletonList(upstream), transform, true, pipeline);
+        super(transform, pipeline, true);
     }
 
     @Nonnull @Override
@@ -134,21 +119,8 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    <R, RET> RET attach(@Nonnull UnaryTransform<? super T, ? extends R> unaryTransform) {
-        StreamStageImpl<R> attached = new StreamStageImpl<>(this, unaryTransform, pipelineImpl);
-        pipelineImpl.connect(this, attached);
-        return (RET) attached;
-    }
-
-    @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    <R, RET> RET attach(
-            @Nonnull MultaryTransform<R> multaryTransform,
-            @Nonnull List<GeneralStage> otherInputs
-    ) {
-        List<GeneralStage> upstream = Stream.concat(Stream.of(this), otherInputs.stream()).collect(toList());
-        StreamStageImpl<R> attached = new StreamStageImpl<>(upstream, multaryTransform, pipelineImpl);
-        pipelineImpl.connect(upstream, attached);
-        return (RET) attached;
+    <RET> RET attach(@Nonnull AbstractTransform transform) {
+        pipelineImpl.connect(transform.upstream(), transform);
+        return (RET) new StreamStageImpl<>(transform, pipelineImpl);
     }
 }

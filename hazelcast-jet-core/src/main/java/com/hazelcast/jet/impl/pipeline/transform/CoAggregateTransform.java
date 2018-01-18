@@ -21,35 +21,29 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.List;
 
-public class CoAggregateTransform<A, R, OUT> implements MultaryTransform<OUT> {
+public class CoAggregateTransform<A, R, OUT> extends AbstractTransform implements MultaryTransform<OUT> {
     @Nonnull
-    private final AggregateOperation<A, ? extends R> aggrOp;
+    public final AggregateOperation<A, ? extends R> aggrOp;
     @Nullable
-    private final WindowDefinition wDef;
+    public final WindowDefinition wDef;
 
     public CoAggregateTransform(
+            @Nonnull List<Transform> upstream,
             @Nonnull AggregateOperation<A, ? extends R> aggrOp,
             @Nullable WindowDefinition wDef
     ) {
+        super(upstream);
         this.wDef = wDef;
         this.aggrOp = aggrOp;
     }
 
     public CoAggregateTransform(
+            @Nonnull List<Transform> upstream,
             @Nonnull AggregateOperation<A, ? extends R> aggrOp
     ) {
-        this(aggrOp, null);
-    }
-
-    @Nullable
-    public WindowDefinition windowDefinition() {
-        return wDef;
-    }
-
-    @Nonnull
-    public AggregateOperation<A, ? extends R> aggregateOperation() {
-        return aggrOp;
+        this(upstream, aggrOp, null);
     }
 
     @Override

@@ -30,6 +30,7 @@ import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.CoAggregateTransform;
 
+import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
@@ -64,7 +65,8 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
     public <A, R> BatchStage<TimestampedEntry<Void, R>> aggregate(
             AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
-        return computeStage.attach(new AggregateTransform<T, A, R, TimestampedEntry<Void, R>>(wDef, aggrOp));
+        return computeStage.attach(new AggregateTransform<T, A, R, TimestampedEntry<Void, R>>(
+                computeStage.transform, aggrOp, wDef));
     }
 
     @Override
@@ -73,7 +75,9 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
             StreamStage<T1> stage1,
             AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp
     ) {
-        return computeStage.attach(new CoAggregateTransform<>(aggrOp), singletonList(stage1));
+        return computeStage.attach(new CoAggregateTransform<>(
+                asList(computeStage.transform, transformOf(stage1)),
+                aggrOp));
     }
 
     @Override
@@ -83,7 +87,9 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
             StreamStage<T2> stage2,
             AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp
     ) {
-        return computeStage.attach(new CoAggregateTransform<>(aggrOp), asList(stage1, stage2));
+        return computeStage.attach(new CoAggregateTransform<>(
+                asList(computeStage.transform, transformOf(stage1), transformOf(stage2)),
+                aggrOp));
     }
 
     @Override

@@ -47,6 +47,7 @@ import com.hazelcast.ringbuffer.StaleSequenceException;
 import com.hazelcast.util.function.Predicate;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
@@ -80,23 +81,32 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
     private static final int MAX_FETCH_SIZE = 128;
 
+    @Nonnull
     private final EventJournalReader<E> eventJournalReader;
+    @Nonnull
     private final Predicate<E> predicate;
+    @Nonnull
     private final Projection<E, T> projection;
+    @Nonnull
     private final JournalInitialPosition initialPos;
-    private final boolean isRemoteReader;
-
+    @Nonnull
     private final int[] partitionIds;
+    @Nonnull
     private final WatermarkSourceUtil<T> watermarkSourceUtil;
+
+    private final boolean isRemoteReader;
 
     // keep track of next offset to emit and read separately, as even when the
     // outbox is full we can still poll for new items.
+    @Nonnull
     private final long[] emitOffsets;
+    @Nonnull
     private final long[] readOffsets;
 
     private ICompletableFuture<ReadResultSet<T>>[] readFutures;
 
     // currently processed resultSet, it's partitionId and iterating position
+    @Nullable
     private ReadResultSet<T> resultSet;
     private int currentPartitionIndex = -1;
     private int resultSetPosition;
@@ -110,7 +120,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                         @Nonnull DistributedFunction<E, T> projectionFn,
                         @Nonnull JournalInitialPosition initialPos,
                         boolean isRemoteReader,
-                        WatermarkGenerationParams<T> wmGenParams) {
+                        @Nonnull WatermarkGenerationParams<T> wmGenParams) {
         this.eventJournalReader = eventJournalReader;
         this.predicate = (Serializable & Predicate<E>) predicateFn::test;
         this.projection = toProjection(projectionFn);
@@ -307,12 +317,12 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         private transient Map<Address, List<Integer>> addrToPartitions;
 
         ClusterMetaSupplier(
-                ClientConfig clientConfig,
-                DistributedFunction<HazelcastInstance, EventJournalReader<E>> eventJournalReaderSupplier,
-                DistributedPredicate<E> predicate,
-                DistributedFunction<E, T> projection,
-                JournalInitialPosition initialPos,
-                WatermarkGenerationParams<T> wmGenParams) {
+                @Nullable ClientConfig clientConfig,
+                @Nonnull DistributedFunction<HazelcastInstance, EventJournalReader<E>> eventJournalReaderSupplier,
+                @Nonnull DistributedPredicate<E> predicate,
+                @Nonnull DistributedFunction<E, T> projection,
+                @Nonnull JournalInitialPosition initialPos,
+                @Nonnull WatermarkGenerationParams<T> wmGenParams) {
             this.serializableConfig = clientConfig == null ? null : new SerializableClientConfig(clientConfig);
             this.eventJournalReaderSupplier = eventJournalReaderSupplier;
             this.predicate = predicate;
@@ -371,25 +381,32 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
         static final long serialVersionUID = 1L;
 
+        @Nonnull
         private final List<Integer> ownedPartitions;
+        @Nullable
         private final SerializableClientConfig serializableClientConfig;
+        @Nonnull
         private final DistributedFunction<HazelcastInstance, EventJournalReader<E>> eventJournalReaderSupplier;
+        @Nonnull
         private final DistributedPredicate<E> predicate;
+        @Nonnull
         private final DistributedFunction<E, T> projection;
+        @Nonnull
         private final JournalInitialPosition initialPos;
+        @Nonnull
         private final WatermarkGenerationParams<T> wmGenParams;
 
         private transient HazelcastInstance client;
         private transient EventJournalReader<E> eventJournalReader;
 
         ClusterProcessorSupplier(
-                List<Integer> ownedPartitions,
-                SerializableClientConfig serializableClientConfig,
-                DistributedFunction<HazelcastInstance, EventJournalReader<E>> eventJournalReaderSupplier,
-                DistributedPredicate<E> predicate,
-                DistributedFunction<E, T> projection,
-                JournalInitialPosition initialPos,
-                WatermarkGenerationParams<T> wmGenParams) {
+                @Nonnull List<Integer> ownedPartitions,
+                @Nullable SerializableClientConfig serializableClientConfig,
+                @Nonnull DistributedFunction<HazelcastInstance, EventJournalReader<E>> eventJournalReaderSupplier,
+                @Nonnull DistributedPredicate<E> predicate,
+                @Nonnull DistributedFunction<E, T> projection,
+                @Nonnull JournalInitialPosition initialPos,
+                @Nonnull WatermarkGenerationParams<T> wmGenParams) {
             this.ownedPartitions = ownedPartitions;
             this.serializableClientConfig = serializableClientConfig;
             this.eventJournalReaderSupplier = eventJournalReaderSupplier;
@@ -451,7 +468,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projection,
             @Nonnull JournalInitialPosition initialPos,
-            WatermarkGenerationParams<T> wmGenParams) {
+            @Nonnull WatermarkGenerationParams<T> wmGenParams) {
         return new ClusterMetaSupplier<>(clientConfig,
                 instance -> (EventJournalReader<EventJournalMapEvent<K, V>>) instance.getMap(mapName),
                 predicate, projection, initialPos, wmGenParams);
@@ -463,7 +480,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projection,
             @Nonnull JournalInitialPosition initialPos,
-            WatermarkGenerationParams<T> wmGenParams) {
+            @Nonnull WatermarkGenerationParams<T> wmGenParams) {
         return new ClusterMetaSupplier<>(null,
                 inst -> (EventJournalReader<EventJournalCacheEvent<K, V>>) inst.getCacheManager().getCache(cacheName),
                 predicate, projection, initialPos, wmGenParams);
@@ -476,7 +493,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projection,
             @Nonnull JournalInitialPosition initialPos,
-            WatermarkGenerationParams<T> wmGenParams) {
+            @Nonnull WatermarkGenerationParams<T> wmGenParams) {
         return new ClusterMetaSupplier<>(clientConfig,
                 inst -> (EventJournalReader<EventJournalCacheEvent<K, V>>) inst.getCacheManager().getCache(cacheName),
                 predicate, projection, initialPos, wmGenParams);

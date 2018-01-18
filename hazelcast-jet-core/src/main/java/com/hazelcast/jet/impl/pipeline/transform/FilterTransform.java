@@ -18,10 +18,17 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.function.DistributedPredicate;
 
-public class FilterTransform<T> implements UnaryTransform<T, T> {
+import javax.annotation.Nonnull;
+
+public class FilterTransform<T> extends AbstractTransform implements UnaryTransform<T, T> {
+    @Nonnull
     public final DistributedPredicate<? super T> filterFn;
 
-    public FilterTransform(DistributedPredicate<? super T> filterFn) {
+    public FilterTransform(
+            @Nonnull Transform upstream,
+            @Nonnull DistributedPredicate<? super T> filterFn
+    ) {
+        super(upstream);
         this.filterFn = filterFn;
     }
 

@@ -18,15 +18,15 @@ package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.impl.pipeline.transform.SourceTransform;
+import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
+import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.StreamStage;
-import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkStage;
 import com.hazelcast.jet.pipeline.Source;
-import com.hazelcast.jet.pipeline.SourceWithTimestamp;
-import com.hazelcast.jet.pipeline.Stage;
+import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.core.DAG;
 
 import javax.annotation.Nonnull;
@@ -37,7 +37,7 @@ import java.util.Map;
 
 public class PipelineImpl implements Pipeline {
 
-    private final Map<Stage, List<Stage>> adjacencyMap = new HashMap<>();
+    private final Map<Transform, List<Transform>> adjacencyMap = new HashMap<>();
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
@@ -47,8 +47,8 @@ public class PipelineImpl implements Pipeline {
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    public <T> StreamStage<T> drawFrom(@Nonnull SourceWithTimestamp<? extends T> source) {
-        return new StreamStageImpl<>((SourceWithTimestampImpl<? extends T>) source, this);
+    public <T> StreamStage<T> drawFrom(@Nonnull StreamSource<? extends T> source) {
+        return new StreamStageImpl<>((StreamSourceTransform<? extends T>) source, this);
     }
 
     @Nonnull @Override
@@ -56,28 +56,28 @@ public class PipelineImpl implements Pipeline {
         return new Planner(this).createDag();
     }
 
-    public void connect(GeneralStage upstream, Stage downstream) {
+    public void connect(Transform upstream, Transform downstream) {
         adjacencyMap.get(upstream).add(downstream);
     }
 
-    public void connect(List<GeneralStage> upstream, Stage downstream) {
+    public void connect(List<Transform> upstream, Transform downstream) {
         upstream.forEach(u -> connect(u, downstream));
     }
 
-    <T> SinkStage drainTo(GeneralStage<? extends T> upstream, Sink<T> sink) {
-        SinkStageImpl output = new SinkStageImpl(upstream, (SinkTransform) sink, this);
-        connect(upstream, output);
+    <T> SinkStage drain(Transform upstream, Sink<T> sink) {
+        SinkStageImpl output = new SinkStageImpl((SinkTransform) sink, this);
+        connect(upstream, (SinkTransform) sink);
         return output;
     }
 
-    Map<Stage, List<Stage>> adjacencyMap() {
-        Map<Stage, List<Stage>> safeCopy = new HashMap<>();
+    Map<Transform, List<Transform>> adjacencyMap() {
+        Map<Transform, List<Transform>> safeCopy = new HashMap<>();
         adjacencyMap.forEach((k, v) -> safeCopy.put(k, new ArrayList<>(v)));
         return safeCopy;
     }
 
-    void register(Stage stage, List<Stage> downstream) {
-        List<Stage> prev = adjacencyMap.put(stage, downstream);
+    void register(Transform stage, List<Transform> downstream) {
+        List<Transform> prev = adjacencyMap.put(stage, downstream);
         assert prev == null : "Double registering of a Stage with this Pipeline: " + stage;
     }
 }

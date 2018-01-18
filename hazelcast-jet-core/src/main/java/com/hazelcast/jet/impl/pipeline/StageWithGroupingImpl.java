@@ -29,6 +29,7 @@ import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 
+import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
@@ -46,7 +47,8 @@ public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> imp
     public <A, R> BatchStage<Entry<K, R>> aggregate(
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        return computeStage.attach(new GroupTransform<T, K, A, R, Entry<K, R>>(keyFn(), aggrOp));
+        return computeStage.attach(new GroupTransform<T, K, A, R, Entry<K, R>>(
+                computeStage.transform, keyFn(), aggrOp));
     }
 
     @Nonnull
@@ -56,9 +58,9 @@ public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> imp
     ) {
         return computeStage.attach(
                 new CoGroupTransform<K, A, R, Entry<K, R>>(
+                        asList(computeStage.transform, transformOf(stage1)),
                         asList(keyFn(), stage1.keyFn()),
-                        aggrOp),
-                singletonList(((StageWithGroupingBase) stage1).computeStage()));
+                        aggrOp));
     }
 
     @Nonnull
@@ -69,10 +71,9 @@ public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> imp
     ) {
         return computeStage.attach(
                 new CoGroupTransform<K, A, R, Entry<K, R>>(
+                        asList(computeStage.transform, transformOf(stage1), transformOf(stage2)),
                         asList(keyFn(), stage1.keyFn(), stage2.keyFn()),
-                        aggrOp),
-                asList(((StageWithGroupingBase) stage1).computeStage(),
-                        ((StageWithGroupingBase) stage2).computeStage()));
+                        aggrOp));
     }
 
     @Nonnull @Override

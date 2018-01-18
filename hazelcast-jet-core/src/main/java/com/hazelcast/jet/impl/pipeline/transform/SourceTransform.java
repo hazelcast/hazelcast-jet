@@ -17,22 +17,25 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.WatermarkPolicy;
-import com.hazelcast.jet.function.DistributedToLongFunction;
-import com.hazelcast.jet.impl.pipeline.SourceWithTimestampImpl;
 import com.hazelcast.jet.pipeline.Source;
-import com.hazelcast.jet.pipeline.SourceWithTimestamp;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
+import java.util.List;
+
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
+import static java.util.Collections.emptyList;
 
 public class SourceTransform<T> implements Source<T>, Transform {
+    @Nonnull
+    public final ProcessorMetaSupplier metaSupplier;
+    @Nonnull
     private final String name;
-    private final ProcessorMetaSupplier metaSupplier;
 
-    public SourceTransform(String name, ProcessorMetaSupplier metaSupplier) {
+    public SourceTransform(
+            @Nonnull String name,
+            @Nonnull ProcessorMetaSupplier metaSupplier
+    ) {
         this.metaSupplier = metaSupplier;
         this.name = name;
     }
@@ -42,20 +45,13 @@ public class SourceTransform<T> implements Source<T>, Transform {
         return name;
     }
 
-    public ProcessorMetaSupplier metaSupplier() {
-        return metaSupplier;
+    @Override
+    public List<? extends Transform> upstream() {
+        return emptyList();
     }
 
     @Override
     public String toString() {
         return name;
-    }
-
-    @Override
-    public SourceWithTimestamp<T> withTimestamp(
-            @Nonnull DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull WatermarkPolicy wmPolicy
-    ) {
-        return new SourceWithTimestampImpl<>(this, wmGenParams(timestampFn, () -> wmPolicy, suppressDuplicates(), 0L));
     }
 }

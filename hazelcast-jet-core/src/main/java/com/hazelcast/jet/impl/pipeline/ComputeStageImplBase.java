@@ -26,20 +26,18 @@ import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.CoAggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.FilterTransform;
 import com.hazelcast.jet.impl.pipeline.transform.FlatMapTransform;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
 import com.hazelcast.jet.impl.pipeline.transform.MapTransform;
-import com.hazelcast.jet.impl.pipeline.transform.MultaryTransform;
 import com.hazelcast.jet.impl.pipeline.transform.PeekTransform;
 import com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform;
 import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
-import com.hazelcast.jet.impl.pipeline.transform.UnaryTransform;
 import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkStage;
@@ -58,12 +56,13 @@ import static java.util.Collections.singletonList;
  * Javadoc pending.
  */
 public abstract class ComputeStageImplBase<T> extends AbstractStage {
+
     ComputeStageImplBase(
-            List<? extends GeneralStage> upstream,
-            Transform transform, boolean acceptsDownstream,
-            PipelineImpl pipelineImpl
+            @Nonnull Transform transform,
+            @Nonnull PipelineImpl pipelineImpl,
+            boolean acceptsDownstream
     ) {
-        super(upstream, transform, acceptsDownstream, pipelineImpl);
+        super(transform, acceptsDownstream, pipelineImpl);
     }
 
     @Nonnull
@@ -72,27 +71,27 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull DistributedToLongFunction<? super T> timestampFn,
             @Nonnull WatermarkPolicy wmPolicy
     ) {
-        return new StreamStageImpl<>((GeneralStage<T>) this,
-                new TimestampTransform<>(timestampFn,
-                        wmGenParams(timestampFn, () -> wmPolicy, suppressDuplicates(), 0L)),
+        return new StreamStageImpl<>(
+                new TimestampTransform<>(transform,
+                        wmGenParams(timestampFn, wmPolicy, suppressDuplicates(), 0L)),
                 pipelineImpl);
     }
 
     @Nonnull
     <R, RET> RET attachMap(@Nonnull DistributedFunction<? super T, ? extends R> mapFn) {
-        return attach(new MapTransform<>(mapFn));
+        return attach(new MapTransform<>(transform, mapFn));
     }
 
     @Nonnull
     <RET> RET attachFilter(@Nonnull DistributedPredicate<T> filterFn) {
-        return attach(new FilterTransform<>(filterFn));
+        return attach(new FilterTransform<>(transform, filterFn));
     }
 
     @Nonnull
     <R, RET> RET attachFlatMap(
             @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return attach(new FlatMapTransform<>(flatMapFn));
+        return attach(new FlatMapTransform<>(transform, flatMapFn));
     }
 
     @Nonnull
@@ -101,8 +100,11 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause
     ) {
-        return attach(
-                new HashJoinTransform<>(singletonList(joinClause), emptyList()), singletonList(stage1));
+        return attach(new HashJoinTransform<>(
+                asList(transform, transformOf(stage1)),
+                singletonList(joinClause),
+                emptyList())
+        );
     }
 
     @Nonnull
@@ -114,14 +116,16 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2
     ) {
         List<JoinClause<?, ? super T, ?, ?>> clauses = (List) asList(joinClause1, joinClause2);
-        return attach(new HashJoinTransform<>(clauses, emptyList()), asList(stage1, stage2));
+        return attach(new HashJoinTransform<>(
+                asList(transform, transformOf(stage1), transformOf(stage2)),
+                clauses, emptyList()));
     }
 
     @Nonnull
     <A, R, RET> RET attachAggregate(
             @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
-        return attach(new AggregateTransform<T, A, R, R>(null, aggrOp));
+        return attach(new AggregateTransform<T, A, R, R>(transform, aggrOp));
     }
 
     @Nonnull
@@ -129,7 +133,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull BatchStage<T1> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp
     ) {
-        return attach(new CoAggregateTransform<A, R, R>(aggrOp, null), singletonList(stage1));
+        return attach(new CoAggregateTransform<A, R, R>(asList(transform, transformOf(stage1)), aggrOp));
     }
 
     @Nonnull
@@ -138,7 +142,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull BatchStage<T2> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp
     ) {
-        return attach(new CoAggregateTransform<>(aggrOp, null), asList(stage1, stage2));
+        return attach(new CoAggregateTransform<>(
+                asList(transform, transformOf(stage1), transformOf(stage2)), aggrOp));
     }
 
     @Nonnull
@@ -146,7 +151,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull DistributedPredicate<? super T> shouldLogFn,
             @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn
     ) {
-        return attach(new PeekTransform<>(shouldLogFn, toStringFn));
+        return attach(new PeekTransform<>(transform, shouldLogFn, toStringFn));
     }
 
     @Nonnull
@@ -154,21 +159,15 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull String stageName,
             @Nonnull DistributedSupplier<Processor> procSupplier
     ) {
-        return attach(new ProcessorTransform<T, R>(stageName, procSupplier));
+        return attach(new ProcessorTransform<T, R>(transform, stageName, procSupplier));
     }
 
     @Nonnull
     @SuppressWarnings("unchecked")
     public SinkStage drainTo(@Nonnull Sink<? super T> sink) {
-        return pipelineImpl.drainTo((GeneralStage<T>) this, sink);
+        return pipelineImpl.drain(this.transform, sink);
     }
 
     @Nonnull
-    abstract <R, RET> RET attach(@Nonnull UnaryTransform<? super T, ? extends R> unaryTransform);
-
-    @Nonnull
-    abstract <R, RET> RET attach(
-            @Nonnull MultaryTransform<R> multaryTransform,
-            @Nonnull List<GeneralStage> otherInputs
-    );
+    abstract <RET> RET attach(@Nonnull AbstractTransform transform);
 }

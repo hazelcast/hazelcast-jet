@@ -69,7 +69,7 @@ public class InsertWatermarksPTest {
     private TestOutbox outbox;
     private List<Object> resultToCheck = new ArrayList<>();
     private Context context;
-    private DistributedSupplier<WatermarkPolicy> wmPolicy = limitingLag(LAG);
+    private WatermarkPolicy wmPolicy = limitingLag(LAG);
     private WatermarkEmissionPolicy wmEmissionPolicy = (WatermarkEmissionPolicy) (currentWm, lastEmittedWm) ->
             currentWm > lastEmittedWm;
 

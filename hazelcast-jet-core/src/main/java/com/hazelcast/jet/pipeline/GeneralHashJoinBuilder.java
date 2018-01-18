@@ -21,6 +21,7 @@ import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.impl.pipeline.PipelineImpl;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
+import com.hazelcast.jet.impl.pipeline.transform.Transform;
 
 import java.util.HashMap;
 import java.util.List;
@@ -29,7 +30,7 @@ import java.util.Map.Entry;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.datamodel.Tag.tag;
-import static com.hazelcast.jet.datamodel.Tag.tag0;
+import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
@@ -47,12 +48,14 @@ import static java.util.stream.Stream.concat;
  * @param <T0> the type of the stream-0 item
  */
 public abstract class GeneralHashJoinBuilder<T0, OUT_STAGE extends GeneralStage<Tuple2<T0, ItemsByTag>>> {
-    private final GeneralStage<T0> stage0;
+    private final Transform transform0;
+    private final PipelineImpl pipelineImpl;
     private final CreateOutStageFn<T0, OUT_STAGE> createOutStageFn;
-    private final Map<Tag<?>, StageAndClause> clauses = new HashMap<>();
+    private final Map<Tag<?>, TransformAndClause> clauses = new HashMap<>();
 
     GeneralHashJoinBuilder(GeneralStage<T0> stage0, CreateOutStageFn<T0, OUT_STAGE> createOutStageFn) {
-        this.stage0 = stage0;
+        this.transform0 = transformOf(stage0);
+        this.pipelineImpl = (PipelineImpl) stage0.getPipeline();
         this.createOutStageFn = createOutStageFn;
     }
 
@@ -69,7 +72,7 @@ public abstract class GeneralHashJoinBuilder<T0, OUT_STAGE extends GeneralStage<
      */
     public <K, T1_IN, T1> Tag<T1> add(BatchStage<T1_IN> stage, JoinClause<K, T0, T1_IN, T1> joinClause) {
         Tag<T1> tag = tag(clauses.size());
-        clauses.put(tag, new StageAndClause<>(stage, joinClause));
+        clauses.put(tag, new TransformAndClause<>(stage, joinClause));
         return tag;
     }
 
@@ -81,13 +84,13 @@ public abstract class GeneralHashJoinBuilder<T0, OUT_STAGE extends GeneralStage<
      */
     @SuppressWarnings("unchecked")
     public OUT_STAGE build() {
-        List<Entry<Tag<?>, StageAndClause>> orderedClauses = clauses.entrySet().stream()
-                                                                    .sorted(comparing(Entry::getKey))
-                                                                    .collect(toList());
-        List<GeneralStage> upstream =
+        List<Entry<Tag<?>, TransformAndClause>> orderedClauses = clauses.entrySet().stream()
+                                                                        .sorted(comparing(Entry::getKey))
+                                                                        .collect(toList());
+        List<Transform> upstream =
                 concat(
-                        Stream.of(stage0),
-                        orderedClauses.stream().map(e -> e.getValue().stage())
+                        Stream.of(transform0),
+                        orderedClauses.stream().map(e -> e.getValue().transform())
                 ).collect(toList());
         // A probable javac bug forced us to extract this variable
         Stream<JoinClause<?, T0, ?, ?>> joinClauses = orderedClauses
@@ -95,36 +98,34 @@ public abstract class GeneralHashJoinBuilder<T0, OUT_STAGE extends GeneralStage<
                 .skip(1)
                 .map(e -> e.getValue().clause());
         HashJoinTransform<T0, Tuple2<T0, ItemsByTag>> hashJoinTransform = new HashJoinTransform<>(
+                upstream,
                 joinClauses.collect(toList()),
                 orderedClauses.stream()
                               .map(Entry::getKey)
                               .collect(toList()));
-        PipelineImpl pipeline = (PipelineImpl) clauses.get(tag0()).stage().getPipeline();
-        OUT_STAGE attached = createOutStageFn.get(upstream, hashJoinTransform, pipeline);
-        pipeline.connect(upstream, attached);
-        return attached;
+        pipelineImpl.connect(upstream, hashJoinTransform);
+        return createOutStageFn.get(hashJoinTransform, pipelineImpl);
     }
 
     @FunctionalInterface
     public interface CreateOutStageFn<T0, OUT_STAGE> {
         OUT_STAGE get(
-                List<GeneralStage> upstream,
                 HashJoinTransform<T0, Tuple2<T0, ItemsByTag>> hashJoinTransform,
                 PipelineImpl pipeline);
     }
 
-    private static class StageAndClause<K, E0, T1, T1_OUT> {
-        private final GeneralStage<T1> stage;
+    private static class TransformAndClause<K, E0, T1, T1_OUT> {
+        private final Transform transform;
         private final JoinClause<K, E0, T1, T1_OUT> joinClause;
 
         @SuppressWarnings("unchecked")
-        StageAndClause(GeneralStage<T1> stage, JoinClause<K, E0, T1, T1_OUT> joinClause) {
-            this.stage = stage;
+        TransformAndClause(GeneralStage<T1> stage, JoinClause<K, E0, T1, T1_OUT> joinClause) {
+            this.transform = transformOf(stage);
             this.joinClause = joinClause;
         }
 
-        GeneralStage<T1> stage() {
-            return stage;
+        Transform transform() {
+            return transform;
         }
 
         JoinClause<K, E0, T1, T1_OUT> clause() {

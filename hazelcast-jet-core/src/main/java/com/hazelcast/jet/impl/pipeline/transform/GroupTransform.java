@@ -16,51 +16,39 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class GroupTransform<T, K, A, R, OUT> implements UnaryTransform<T, OUT> {
+public class GroupTransform<T, K, A, R, OUT> extends AbstractTransform implements UnaryTransform<T, OUT> {
     @Nonnull
-    private final DistributedFunction<? super T, ? extends K> keyFn;
+    public final DistributedFunction<? super T, ? extends K> keyFn;
     @Nonnull
-    private final AggregateOperation1<? super T, A, ? extends R> aggrOp;
+    public final AggregateOperation1<? super T, A, ? extends R> aggrOp;
     @Nullable
-    private final WindowDefinition wDef;
+    public final WindowDefinition wDef;
 
     public GroupTransform(
+            @Nonnull Transform upstream,
             @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
             @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp,
             @Nullable WindowDefinition wDef
     ) {
+        super(upstream);
         this.wDef = wDef;
         this.keyFn = keyFn;
         this.aggrOp = aggrOp;
     }
 
     public GroupTransform(
+            @Nonnull Transform upstream,
             @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
             @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
-        this(keyFn, aggrOp, null);
-    }
-
-    @Nonnull
-    public DistributedFunction<? super T, ? extends K> keyFn() {
-        return keyFn;
-    }
-
-    @Nonnull
-    public AggregateOperation1<? super T, A, ? extends R> aggregateOperation() {
-        return aggrOp;
-    }
-
-    @Nullable
-    public WindowDefinition windowDefinition() {
-        return wDef;
+        this(upstream, keyFn, aggrOp, null);
     }
 
     @Override

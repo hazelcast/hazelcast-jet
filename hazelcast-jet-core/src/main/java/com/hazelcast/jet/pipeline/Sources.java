@@ -25,6 +25,7 @@ import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.impl.pipeline.transform.SourceTransform;
+import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.projection.Projections;
@@ -84,6 +85,13 @@ public final class Sources {
             @Nonnull ProcessorMetaSupplier metaSupplier
     ) {
         return new SourceTransform<>(sourceName, metaSupplier);
+    }
+
+    public static <T> StreamSource<T> streamFromProcessor(
+            @Nonnull String sourceName,
+            @Nonnull ProcessorMetaSupplier metaSupplier
+    ) {
+        return new StreamSourceTransform<>(sourceName, metaSupplier);
     }
 
     /**
@@ -198,14 +206,14 @@ public final class Sources {
      * @param <T> type of emitted item
      */
     @Nonnull
-    public static <T, K, V> Source<T> mapJournal(
+    public static <T, K, V> StreamSource<T> mapJournal(
             @Nonnull String mapName,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
             @Nonnull JournalInitialPosition initialPos,
-            WatermarkGenerationParams<T> wmGenParams
+            @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
-        return fromProcessor("mapJournalSource(" + mapName + ')',
+        return streamFromProcessor("mapJournalSource(" + mapName + ')',
                 streamMapP(mapName, predicateFn, projectionFn, initialPos, wmGenParams));
     }
 
@@ -218,10 +226,10 @@ public final class Sources {
      * Map.Entry}.
      */
     @Nonnull
-    public static <K, V> Source<Entry<K, V>> mapJournal(
+    public static <K, V> StreamSource<Entry<K, V>> mapJournal(
             @Nonnull String mapName,
             @Nonnull JournalInitialPosition initialPos,
-            WatermarkGenerationParams<Entry<K, V>> wmGenParams
+            @Nonnull WatermarkGenerationParams<Entry<K, V>> wmGenParams
     ) {
         return mapJournal(mapName, mapPutEvents(), mapEventToEntry(), initialPos, wmGenParams);
     }
@@ -341,15 +349,15 @@ public final class Sources {
      * @param <T> type of emitted item
      */
     @Nonnull
-    public static <T, K, V> Source<T> remoteMapJournal(
+    public static <T, K, V> StreamSource<T> remoteMapJournal(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
             @Nonnull JournalInitialPosition initialPos,
-            WatermarkGenerationParams<T> wmGenParams
+            @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
-        return fromProcessor("remoteMapJournalSource(" + mapName + ')',
+        return streamFromProcessor("remoteMapJournalSource(" + mapName + ')',
                 streamRemoteMapP(mapName, clientConfig, predicateFn, projectionFn, initialPos, wmGenParams));
     }
 
@@ -362,11 +370,11 @@ public final class Sources {
      * project the event's key and new value into a {@code Map.Entry}.
      */
     @Nonnull
-    public static <K, V> Source<Entry<K, V>> remoteMapJournal(
+    public static <K, V> StreamSource<Entry<K, V>> remoteMapJournal(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull JournalInitialPosition initialPos,
-            WatermarkGenerationParams<Entry<K, V>> wmGenParams
+            @Nonnull WatermarkGenerationParams<Entry<K, V>> wmGenParams
     ) {
         return remoteMapJournal(mapName, clientConfig, mapPutEvents(), mapEventToEntry(), initialPos, wmGenParams);
     }
@@ -425,14 +433,14 @@ public final class Sources {
      * @param <T> type of emitted item
      */
     @Nonnull
-    public static <T, K, V> Source<T> cacheJournal(
+    public static <T, K, V> StreamSource<T> cacheJournal(
             @Nonnull String cacheName,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
             @Nonnull JournalInitialPosition initialPos,
-            WatermarkGenerationParams<T> wmGenParams
+            @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
-        return fromProcessor("cacheJournalSource(" + cacheName + ')',
+        return streamFromProcessor("cacheJournalSource(" + cacheName + ')',
                 streamCacheP(cacheName, predicateFn, projectionFn, initialPos, wmGenParams)
         );
     }
@@ -446,10 +454,10 @@ public final class Sources {
      * Map.Entry}.
      */
     @Nonnull
-    public static <K, V> Source<Entry<K, V>> cacheJournal(
+    public static <K, V> StreamSource<Entry<K, V>> cacheJournal(
             @Nonnull String cacheName,
             @Nonnull JournalInitialPosition initialPos,
-            WatermarkGenerationParams<Entry<K, V>> wmGenParams
+            @Nonnull WatermarkGenerationParams<Entry<K, V>> wmGenParams
     ) {
         return cacheJournal(cacheName, cachePutEvents(), cacheEventToEntry(), initialPos, wmGenParams);
     }
@@ -507,15 +515,15 @@ public final class Sources {
      * @param <T> type of emitted item
      */
     @Nonnull
-    public static <T, K, V> Source<T> remoteCacheJournal(
+    public static <T, K, V> StreamSource<T> remoteCacheJournal(
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
             @Nonnull JournalInitialPosition initialPos,
-            WatermarkGenerationParams<T> wmGenParams
+            @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
-        return fromProcessor("remoteCacheJournalSource(" + cacheName + ')',
+        return streamFromProcessor("remoteCacheJournalSource(" + cacheName + ')',
                 streamRemoteCacheP(cacheName, clientConfig, predicateFn, projectionFn, initialPos, wmGenParams));
     }
 
@@ -528,11 +536,11 @@ public final class Sources {
      * project the event's key and new value into a {@code Map.Entry}.
      */
     @Nonnull
-    public static <K, V> Source<Entry<K, V>> remoteCacheJournal(
+    public static <K, V> StreamSource<Entry<K, V>> remoteCacheJournal(
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull JournalInitialPosition initialPos,
-            WatermarkGenerationParams<Entry<K, V>> wmGenParams
+            @Nonnull WatermarkGenerationParams<Entry<K, V>> wmGenParams
     ) {
         return remoteCacheJournal(cacheName, clientConfig, cachePutEvents(), cacheEventToEntry(), initialPos, wmGenParams);
     }

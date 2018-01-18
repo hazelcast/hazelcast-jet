@@ -16,9 +16,8 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.impl.pipeline.transform.SourceTransform;
+import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.StageWithGrouping;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
@@ -32,37 +31,13 @@ import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.impl.pipeline.transform.MultaryTransform;
-import com.hazelcast.jet.impl.pipeline.transform.UnaryTransform;
 
 import javax.annotation.Nonnull;
-import java.util.List;
-import java.util.stream.Stream;
-
-import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
-import static java.util.stream.Collectors.toList;
 
 public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchStage<T> {
 
-    public BatchStageImpl(
-            @Nonnull List<? extends GeneralStage> upstream,
-            @Nonnull Transform transform,
-            @Nonnull PipelineImpl pipeline
-    ) {
-        super(upstream, transform, true, pipeline);
-    }
-
-    BatchStageImpl(@Nonnull SourceTransform<? extends T> source, @Nonnull PipelineImpl pipeline) {
-        this(emptyList(), source, pipeline);
-    }
-
-    private BatchStageImpl(
-            @Nonnull GeneralStage upstream,
-            @Nonnull Transform transform,
-            @Nonnull PipelineImpl pipeline
-    ) {
-        this(singletonList(upstream), transform, pipeline);
+    public BatchStageImpl(@Nonnull Transform transform, @Nonnull PipelineImpl pipeline) {
+        super(transform, pipeline, true);
     }
 
     @Nonnull
@@ -145,22 +120,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    <R, RET> RET attach(@Nonnull UnaryTransform<? super T, ? extends R> unaryTransform) {
-        BatchStageImpl<R> attached = new BatchStageImpl<>(this, unaryTransform, pipelineImpl);
-        pipelineImpl.connect(this, attached);
-        return (RET) attached;
-    }
-
-    @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    <R, RET> RET attach(
-            @Nonnull MultaryTransform<R> multaryTransform,
-            @Nonnull List<GeneralStage> otherInputs
-    ) {
-        List<GeneralStage> upstream =
-                Stream.concat(Stream.of(this), otherInputs.stream()).collect(toList());
-        BatchStageImpl<R> attached = new BatchStageImpl<>(upstream, multaryTransform, pipelineImpl);
-        pipelineImpl.connect(upstream, attached);
-        return (RET) attached;
+    <RET> RET attach(@Nonnull AbstractTransform transform) {
+        pipelineImpl.connect(transform.upstream(), transform);
+        return (RET) new BatchStageImpl<>(transform, pipelineImpl);
     }
 }

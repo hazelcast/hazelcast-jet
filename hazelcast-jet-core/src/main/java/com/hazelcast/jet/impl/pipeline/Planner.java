@@ -36,14 +36,13 @@ import com.hazelcast.jet.impl.pipeline.transform.PeekTransform;
 import com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.impl.pipeline.transform.SourceTransform;
+import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.processor.HashJoinCollectP;
 import com.hazelcast.jet.impl.processor.HashJoinP;
-import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.SessionWindowDef;
 import com.hazelcast.jet.pipeline.SlidingWindowDef;
-import com.hazelcast.jet.pipeline.Stage;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
@@ -82,7 +81,7 @@ class Planner {
 
     private final PipelineImpl pipeline;
     private final DAG dag = new DAG();
-    private final Map<Stage, PlannerVertex> stage2vertex = new HashMap<>();
+    private final Map<Transform, PlannerVertex> xform2vertex = new HashMap<>();
 
     private final Set<String> vertexNames = new HashSet<>();
 
@@ -91,34 +90,32 @@ class Planner {
     }
 
     DAG createDag() {
-        Map<Stage, List<Stage>> adjacencyMap = pipeline.adjacencyMap();
+        Map<Transform, List<Transform>> adjacencyMap = pipeline.adjacencyMap();
         validateNoLeakage(adjacencyMap);
-        Iterable<AbstractStage> sorted = (Iterable<AbstractStage>) (Iterable<? extends Stage>)
-                topologicalSort(adjacencyMap, Object::toString);
-        for (AbstractStage stage : sorted) {
-            Transform transform = stage.transform;
+        Iterable<Transform> sorted = topologicalSort(adjacencyMap, Object::toString);
+        for (Transform transform : sorted) {
             if (transform instanceof SourceTransform) {
-                handleSource(stage, (SourceTransform) transform);
-            } else if (transform instanceof SourceWithTimestampImpl) {
-                handleSourceWithTimestamp(stage, (SourceWithTimestampImpl) transform);
+                handleSource((SourceTransform) transform);
+            } else if (transform instanceof StreamSourceTransform) {
+                handleStreamSource((StreamSourceTransform) transform);
             } else if (transform instanceof ProcessorTransform) {
-                handleProcessorStage(stage, (ProcessorTransform) transform);
+                handleProcessorStage((ProcessorTransform) transform);
             } else if (transform instanceof FilterTransform) {
-                handleFilter(stage, (FilterTransform) transform);
+                handleFilter((FilterTransform) transform);
             } else if (transform instanceof MapTransform) {
-                handleMap(stage, (MapTransform) transform);
+                handleMap((MapTransform) transform);
             } else if (transform instanceof FlatMapTransform) {
-                handleFlatMap(stage, (FlatMapTransform) transform);
+                handleFlatMap((FlatMapTransform) transform);
             } else if (transform instanceof GroupTransform) {
-                handleGroup(stage, (GroupTransform) transform);
+                handleGroup((GroupTransform) transform);
             } else if (transform instanceof CoGroupTransform) {
-                handleCoGroup(stage, (CoGroupTransform) transform);
+                handleCoGroup((CoGroupTransform) transform);
             } else if (transform instanceof HashJoinTransform) {
-                handleHashJoin(stage, (HashJoinTransform) transform);
+                handleHashJoin((HashJoinTransform) transform);
             } else if (transform instanceof PeekTransform) {
-                handlePeek(stage, (PeekTransform) transform);
+                handlePeek((PeekTransform) transform);
             } else if (transform instanceof SinkTransform) {
-                handleSink(stage, (SinkTransform) transform);
+                handleSink((SinkTransform) transform);
             } else {
                 throw new IllegalArgumentException("Unknown transform " + transform);
             }
@@ -126,49 +123,43 @@ class Planner {
         return dag;
     }
 
-    private static void validateNoLeakage(Map<Stage, List<Stage>> adjacencyMap) {
-        List<BatchStage> leakages = adjacencyMap
+    private static void validateNoLeakage(Map<Transform, List<Transform>> adjacencyMap) {
+        List<Transform> leakages = adjacencyMap
                 .entrySet().stream()
                 .filter(e -> e.getValue().isEmpty())
                 .map(Entry::getKey)
-                .filter(stage -> stage instanceof BatchStage)
-                .map(stage -> (BatchStage) stage)
                 .collect(toList());
         if (!leakages.isEmpty()) {
-            throw new IllegalArgumentException("These ComputeStages have nothing attached to them: " + leakages);
+            throw new IllegalArgumentException("These transforms have nothing attached to them: " + leakages);
         }
     }
 
-    private void handleSource(AbstractStage stage, SourceTransform source) {
-        addVertex(stage, vertexName(source.name(), ""), source.metaSupplier());
+    private void handleSource(SourceTransform source) {
+        addVertex(source, vertexName(source.name(), ""), source.metaSupplier);
     }
 
-    private void handleSourceWithTimestamp(AbstractStage stage, SourceWithTimestampImpl timestampedSource) {
-        SourceTransform source = timestampedSource.source();
-        Vertex srcVertex = dag.newVertex(vertexName(source.name(), ""), source.metaSupplier());
-        PlannerVertex watermarkPv = addVertex(stage, vertexName(source.name(), "-timestamped"),
-                insertWatermarksP(timestampedSource.wmGenParams()));
-        dag.edge(between(srcVertex, watermarkPv.v));
+    private void handleStreamSource(StreamSourceTransform source) {
+        addVertex(source, vertexName(source.name(), ""), source.metaSupplier);
     }
 
-    private void handleProcessorStage(AbstractStage stage, ProcessorTransform procTransform) {
-        PlannerVertex pv = addVertex(stage, vertexName(procTransform.name(), ""), procTransform.procSupplier);
-        addEdges(stage, pv.v);
+    private void handleProcessorStage(ProcessorTransform procTransform) {
+        PlannerVertex pv = addVertex(procTransform, vertexName(procTransform.name(), ""), procTransform.procSupplier);
+        addEdges(procTransform, pv.v);
     }
 
-    private void handleMap(AbstractStage stage, MapTransform map) {
-        PlannerVertex pv = addVertex(stage, vertexName(map.name(), ""), mapP(map.mapFn));
-        addEdges(stage, pv.v);
+    private void handleMap(MapTransform map) {
+        PlannerVertex pv = addVertex(map, vertexName(map.name(), ""), mapP(map.mapFn));
+        addEdges(map, pv.v);
     }
 
-    private void handleFilter(AbstractStage stage, FilterTransform filter) {
-        PlannerVertex pv = addVertex(stage, vertexName(filter.name(), ""), filterP(filter.filterFn));
-        addEdges(stage, pv.v);
+    private void handleFilter(FilterTransform filter) {
+        PlannerVertex pv = addVertex(filter, vertexName(filter.name(), ""), filterP(filter.filterFn));
+        addEdges(filter, pv.v);
     }
 
-    private void handleFlatMap(AbstractStage stage, FlatMapTransform flatMap) {
-        PlannerVertex pv = addVertex(stage, vertexName(flatMap.name(), ""), flatMapP(flatMap.flatMapFn()));
-        addEdges(stage, pv.v);
+    private void handleFlatMap(FlatMapTransform flatMap) {
+        PlannerVertex pv = addVertex(flatMap, vertexName(flatMap.name(), ""), flatMapP(flatMap.flatMapFn()));
+        addEdges(flatMap, pv.v);
     }
 
     //                       --------
@@ -187,30 +178,30 @@ class Planner {
     //                   ----------------
     //                  | combineByKeyP  |
     //                   ----------------
-    private void handleGroup(AbstractStage stage, GroupTransform<Object, Object, Object, Object, Object> xform) {
-        if (xform.windowDefinition() != null) {
-            handleWindowedGroup(stage, xform);
+    private void handleGroup(GroupTransform<Object, Object, Object, Object, Object> xform) {
+        if (xform.wDef != null) {
+            handleWindowedGroup(xform);
             return;
         }
         String namePrefix = vertexName(xform.name(), "-stage");
         Vertex v1 = dag.newVertex(namePrefix + '1', accumulateByKeyP(
-                xform.keyFn(), xform.aggregateOperation().withFinishFn(identity())));
-        PlannerVertex pv2 = addVertex(stage, namePrefix + '2', combineByKeyP(xform.aggregateOperation()));
-        addEdges(stage, v1, e -> e.partitioned(xform.keyFn(), HASH_CODE));
+                xform.keyFn, xform.aggrOp.withFinishFn(identity())));
+        PlannerVertex pv2 = addVertex(xform, namePrefix + '2', combineByKeyP(xform.aggrOp));
+        addEdges(xform, v1, e -> e.partitioned(xform.keyFn, HASH_CODE));
         dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }
 
     private void handleWindowedGroup(
-            AbstractStage stage, GroupTransform<Object, Object, Object, Object, Object> xform
+            GroupTransform<Object, Object, Object, Object, Object> xform
     ) {
-        WindowDefinition wDef = requireNonNull(xform.windowDefinition());
+        WindowDefinition wDef = requireNonNull(xform.wDef);
         switch (wDef.kind()) {
             case TUMBLING:
             case SLIDING:
-                handleSlidingWindow(stage, xform, wDef.downcast());
+                handleSlidingWindow(xform, wDef.downcast());
                 return;
             case SESSION:
-                handleSessionWindow(stage, xform, wDef.downcast());
+                handleSessionWindow(xform, wDef.downcast());
                 return;
         }
         throw new IllegalArgumentException("Unknown window definition " + wDef.kind());
@@ -233,36 +224,34 @@ class Planner {
     //                  | combineByFrameP |
     //                   -----------------
     private void handleSlidingWindow(
-            AbstractStage stage,
             GroupTransform<Object, Object, Object, Object, Object> xform,
             SlidingWindowDef wDef
     ) {
         String namePrefix = vertexName("sliding-window", "-stage");
         SlidingWindowPolicy winPolicy = wDef.toSlidingWindowPolicy();
         Vertex v1 = dag.newVertex(namePrefix + '1', accumulateByFrameP(
-                xform.keyFn(),
+                xform.keyFn,
                 (TimestampedEntry<Object, Object> e) -> e.getTimestamp(),
                 TimestampKind.EVENT,
                 winPolicy,
-                xform.aggregateOperation().withFinishFn(identity())));
-        PlannerVertex pv2 = addVertex(stage, namePrefix + '2',
-                combineToSlidingWindowP(winPolicy, xform.aggregateOperation()));
-        addEdges(stage, v1, e -> e.partitioned(xform.keyFn(), HASH_CODE));
+                xform.aggrOp.withFinishFn(identity())));
+        PlannerVertex pv2 = addVertex(xform, namePrefix + '2',
+                combineToSlidingWindowP(winPolicy, xform.aggrOp));
+        addEdges(xform, v1, e -> e.partitioned(xform.keyFn, HASH_CODE));
         dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }
 
     private void handleSessionWindow(
-            AbstractStage stage,
             GroupTransform<Object, Object, Object, Object, Object> xform,
             SessionWindowDef wDef
     ) {
-        PlannerVertex pv = addVertex(stage, vertexName("session-window", ""), aggregateToSessionWindowP(
+        PlannerVertex pv = addVertex(xform, vertexName("session-window", ""), aggregateToSessionWindowP(
                 wDef.sessionTimeout(),
                 x -> 0L,
-                xform.keyFn(),
-                xform.aggregateOperation()
+                xform.keyFn,
+                xform.aggrOp
         ));
-        addEdges(stage, pv.v, e -> e.partitioned(xform.keyFn()));
+        addEdges(xform, pv.v, e -> e.partitioned(xform.keyFn));
     }
 
     //           ----------       ----------         ----------
@@ -281,37 +270,36 @@ class Planner {
     //                          ---------------
     //                         | combineByKeyP |
     //                          ---------------
-    private void handleCoGroup(AbstractStage stage, CoGroupTransform<Object, Object, Object, Object> xform) {
-        if (xform.windowDefinition() != null) {
-            handleWindowedCoGroup(stage, xform);
+    private void handleCoGroup(CoGroupTransform<Object, Object, Object, Object> xform) {
+        if (xform.wDef != null) {
+            handleWindowedCoGroup(xform);
             return;
         }
-        List<DistributedFunction<?, ?>> groupKeyFns = xform.groupKeyFns();
+        List<DistributedFunction<?, ?>> groupKeyFns = xform.groupKeyFns;
         String namePrefix = vertexName(xform.name(), "-stage");
         Vertex v1 = dag.newVertex(namePrefix + '1',
-                coAccumulateByKeyP(groupKeyFns, xform.aggregateOperation().withFinishFn(identity())));
-        PlannerVertex pv2 = addVertex(stage, namePrefix + '2',
-                combineByKeyP(xform.aggregateOperation()));
-        addEdges(stage, v1, (e, ord) -> e.partitioned(groupKeyFns.get(ord), HASH_CODE));
+                coAccumulateByKeyP(groupKeyFns, xform.aggrOp.withFinishFn(identity())));
+        PlannerVertex pv2 = addVertex(xform, namePrefix + '2',
+                combineByKeyP(xform.aggrOp));
+        addEdges(xform, v1, (e, ord) -> e.partitioned(groupKeyFns.get(ord), HASH_CODE));
         dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }
 
-    private void handleWindowedCoGroup(AbstractStage stage, CoGroupTransform<Object, Object, Object, Object> xform) {
-        WindowDefinition wDef = requireNonNull(xform.windowDefinition());
+    private void handleWindowedCoGroup(CoGroupTransform<Object, Object, Object, Object> xform) {
+        WindowDefinition wDef = requireNonNull(xform.wDef);
         switch (wDef.kind()) {
             case TUMBLING:
             case SLIDING:
-                handleSlidingCoWindow(stage, xform, wDef.downcast());
+                handleSlidingCoWindow(xform, wDef.downcast());
                 return;
             case SESSION:
-                handleSessionCoWindow(stage, xform, wDef.downcast());
+                handleSessionCoWindow(xform, wDef.downcast());
                 return;
         }
         throw new IllegalArgumentException("Unknown window definition " + wDef.kind());
     }
 
     private void handleSlidingCoWindow(
-            AbstractStage stage,
             CoGroupTransform<Object, Object, Object, Object> xform,
             SlidingWindowDef wDef
     ) {
@@ -319,7 +307,6 @@ class Planner {
     }
 
     private void handleSessionCoWindow(
-            AbstractStage stage,
             CoGroupTransform<Object, Object, Object, Object> xform,
             SessionWindowDef downcast
     ) {
@@ -347,22 +334,22 @@ class Planner {
     //                              --------
     //                             | joiner |
     //                              --------
-    private void handleHashJoin(AbstractStage stage, HashJoinTransform<?, ?> hashJoin) {
+    private void handleHashJoin(HashJoinTransform<?, ?> hashJoin) {
         String namePrefix = vertexName(hashJoin.name(), "");
-        PlannerVertex primary = stage2vertex.get(stage.upstream.get(0));
+        PlannerVertex primary = xform2vertex.get(hashJoin.upstream().get(0));
         List<Function<Object, Object>> keyFns = (List<Function<Object, Object>>) (List)
-                hashJoin.clauses().stream()
+                hashJoin.clauses.stream()
                         .map(JoinClause::leftKeyFn)
                         .collect(toList());
-        Vertex joiner = addVertex(stage, namePrefix + "joiner",
-                () -> new HashJoinP<>(keyFns, hashJoin.tags())).v;
+        Vertex joiner = addVertex(hashJoin, namePrefix + "joiner",
+                () -> new HashJoinP<>(keyFns, hashJoin.tags)).v;
         dag.edge(from(primary.v, primary.availableOrdinal++).to(joiner, 0));
 
         String collectorName = namePrefix + "collector-";
         int collectorOrdinal = 1;
-        for (Stage fromStage : tailList(stage.upstream)) {
-            PlannerVertex fromPv = stage2vertex.get(fromStage);
-            JoinClause<?, ?, ?, ?> clause = hashJoin.clauses().get(collectorOrdinal - 1);
+        for (Transform fromTransform : tailList(hashJoin.upstream())) {
+            PlannerVertex fromPv = xform2vertex.get(fromTransform);
+            JoinClause<?, ?, ?, ?> clause = hashJoin.clauses.get(collectorOrdinal - 1);
             DistributedFunction<Object, Object> getKeyFn =
                     (DistributedFunction<Object, Object>) clause.rightKeyFn();
             DistributedFunction<Object, Object> projectFn =
@@ -380,34 +367,34 @@ class Planner {
         }
     }
 
-    private void handlePeek(AbstractStage stage, PeekTransform peekTransform) {
-        PlannerVertex peekedPv = stage2vertex.get(stage.upstream.get(0));
+    private void handlePeek(PeekTransform peekTransform) {
+        PlannerVertex peekedPv = xform2vertex.get(peekTransform.upstream().get(0));
         // Peeking transform doesn't add a vertex, so point to the upstream pipeline's
         // vertex:
-        stage2vertex.put(stage, peekedPv);
+        xform2vertex.put(peekTransform, peekedPv);
         peekedPv.v.updateMetaSupplier(sup ->
-                peekOutputP(peekTransform.toStringFn(), peekTransform.shouldLogFn(), sup));
+                peekOutputP(peekTransform.toStringFn, peekTransform.shouldLogFn, sup));
     }
 
-    private void handleSink(AbstractStage stage, SinkTransform sink) {
-        PlannerVertex pv = addVertex(stage, vertexName(sink.name(), ""), sink.metaSupplier());
-        addEdges(stage, pv.v);
+    private void handleSink(SinkTransform sink) {
+        PlannerVertex pv = addVertex(sink, vertexName(sink.name(), ""), sink.metaSupplier);
+        addEdges(sink, pv.v);
     }
 
-    private PlannerVertex addVertex(Stage stage, String name, DistributedSupplier<Processor> procSupplier) {
-        return addVertex(stage, name, ProcessorMetaSupplier.of(procSupplier));
+    private PlannerVertex addVertex(Transform transform, String name, DistributedSupplier<Processor> procSupplier) {
+        return addVertex(transform, name, ProcessorMetaSupplier.of(procSupplier));
     }
 
-    private PlannerVertex addVertex(Stage stage, String name, ProcessorMetaSupplier metaSupplier) {
+    private PlannerVertex addVertex(Transform transform, String name, ProcessorMetaSupplier metaSupplier) {
         PlannerVertex pv = new PlannerVertex(dag.newVertex(name, metaSupplier));
-        stage2vertex.put(stage, pv);
+        xform2vertex.put(transform, pv);
         return pv;
     }
 
-    private void addEdges(AbstractStage stage, Vertex toVertex, BiConsumer<Edge, Integer> configureEdgeFn) {
+    private void addEdges(Transform transform, Vertex toVertex, BiConsumer<Edge, Integer> configureEdgeFn) {
         int destOrdinal = 0;
-        for (Stage fromStage : stage.upstream) {
-            PlannerVertex fromPv = stage2vertex.get(fromStage);
+        for (Transform fromTransform : transform.upstream()) {
+            PlannerVertex fromPv = xform2vertex.get(fromTransform);
             Edge edge = from(fromPv.v, fromPv.availableOrdinal++).to(toVertex, destOrdinal);
             dag.edge(edge);
             configureEdgeFn.accept(edge, destOrdinal);
@@ -415,12 +402,12 @@ class Planner {
         }
     }
 
-    private void addEdges(AbstractStage stage, Vertex toVertex, Consumer<Edge> configureEdgeFn) {
-        addEdges(stage, toVertex, (e, ord) -> configureEdgeFn.accept(e));
+    private void addEdges(Transform transform, Vertex toVertex, Consumer<Edge> configureEdgeFn) {
+        addEdges(transform, toVertex, (e, ord) -> configureEdgeFn.accept(e));
     }
 
-    private void addEdges(AbstractStage stage, Vertex toVertex) {
-        addEdges(stage, toVertex, e -> { });
+    private void addEdges(Transform transform, Vertex toVertex) {
+        addEdges(transform, toVertex, e -> { });
     }
 
     private String vertexName(@Nonnull String name, @Nonnull String suffix) {

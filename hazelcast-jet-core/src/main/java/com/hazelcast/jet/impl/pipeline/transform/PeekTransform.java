@@ -20,27 +20,22 @@ import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 
-public class PeekTransform<T> implements UnaryTransform<T, T> {
-    @Nonnull private final DistributedPredicate<? super T> shouldLogFn;
-    @Nonnull private final DistributedFunction<? super T, ? extends CharSequence> toStringFn;
+public class PeekTransform<T> extends AbstractTransform implements UnaryTransform<T, T> {
+    @Nonnull
+    public final DistributedPredicate<? super T> shouldLogFn;
+    @Nonnull
+    public final DistributedFunction<? super T, ? extends CharSequence> toStringFn;
 
     public PeekTransform(
+            @Nonnull Transform upstream,
             @Nonnull DistributedPredicate<? super T> shouldLogFn,
             @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn
     ) {
+        super(upstream);
         this.shouldLogFn = shouldLogFn;
         this.toStringFn = toStringFn;
-    }
-
-    @Nonnull
-    public DistributedPredicate<? super T> shouldLogFn() {
-        return shouldLogFn;
-    }
-
-    @Nonnull
-    public DistributedFunction<? super T, ? extends CharSequence> toStringFn() {
-        return toStringFn;
     }
 
     @Override

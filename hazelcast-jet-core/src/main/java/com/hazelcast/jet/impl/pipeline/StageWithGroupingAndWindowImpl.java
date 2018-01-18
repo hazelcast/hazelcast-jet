@@ -16,11 +16,6 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.pipeline.StreamStage;
-import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
-import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
-import com.hazelcast.jet.pipeline.WindowDefinition;
-import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
@@ -28,11 +23,15 @@ import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.pipeline.transform.CoGroupTransform;
 import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
+import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
+import com.hazelcast.jet.pipeline.StreamStage;
+import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
+import com.hazelcast.jet.pipeline.WindowDefinition;
+import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder;
 
 import javax.annotation.Nonnull;
 
 import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
 
 public class StageWithGroupingAndWindowImpl<T, K>
         extends StageWithGroupingBase<T, K>
@@ -61,7 +60,7 @@ public class StageWithGroupingAndWindowImpl<T, K>
     ) {
         return computeStage.attach(
                 new GroupTransform<T, K, A, R, TimestampedEntry<K, R>>(
-                        keyFn(), aggrOp, windowDefinition()));
+                        computeStage.transform, keyFn(), aggrOp, windowDefinition()));
     }
 
     @Nonnull @Override
@@ -71,9 +70,9 @@ public class StageWithGroupingAndWindowImpl<T, K>
     ) {
         return computeStage.attach(
                 new CoGroupTransform<K, A, R, TimestampedEntry<K, R>>(
+                        asList(computeStage.transform, transformOf(stage1)),
                         asList(keyFn(), stage1.keyFn()), aggrOp, windowDefinition()
-                ),
-                singletonList(((StageWithGroupingBase) stage1).computeStage()));
+                ));
     }
 
     @Nonnull @Override
@@ -84,10 +83,9 @@ public class StageWithGroupingAndWindowImpl<T, K>
     ) {
         return computeStage.attach(
                 new CoGroupTransform<K, A, R, TimestampedEntry<K, R>>(
+                        asList(computeStage.transform, transformOf(stage1), transformOf(stage2)),
                         asList(keyFn(), stage1.keyFn(), stage2.keyFn()), aggrOp, windowDefinition()
-                ),
-                asList(((StageWithGroupingBase) stage1).computeStage(),
-                        ((StageWithGroupingBase) stage2).computeStage()));
+                ));
     }
 
     @Nonnull @Override

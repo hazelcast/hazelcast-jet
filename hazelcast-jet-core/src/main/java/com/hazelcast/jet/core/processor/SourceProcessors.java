@@ -64,7 +64,7 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#map(String, Predicate, Projection)}.
+     * {@link com.hazelcast.jet.pipeline.Sources#map(String, Predicate, Projection)}.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier readMapP(
@@ -77,7 +77,7 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#map(String, Predicate, DistributedFunction)}.
+     * {@link com.hazelcast.jet.pipeline.Sources#map(String, Predicate, DistributedFunction)}.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier readMapP(
@@ -91,7 +91,7 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#mapJournal(String,
+     * {@link com.hazelcast.jet.pipeline.Sources#mapJournal(String,
      * JournalInitialPosition, WatermarkGenerationParams)}.
      */
     @Nonnull
@@ -105,7 +105,7 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#mapJournal(String,
+     * {@link com.hazelcast.jet.pipeline.Sources#mapJournal(String,
      * DistributedPredicate, DistributedFunction, JournalInitialPosition,
      * WatermarkGenerationParams)}.
      */
@@ -162,7 +162,7 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#remoteMapJournal(String, ClientConfig,
+     * {@link com.hazelcast.jet.pipeline.Sources#remoteMapJournal(String, ClientConfig,
      * JournalInitialPosition, WatermarkGenerationParams)}.
      */
     @Nonnull
@@ -178,7 +178,7 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for {@link
-     * com.hazelcast.jet.Sources#remoteMapJournal(String, ClientConfig,
+     * com.hazelcast.jet.pipeline.Sources#remoteMapJournal(String, ClientConfig,
      * DistributedPredicate, DistributedFunction, JournalInitialPosition,
      * WatermarkGenerationParams)}.
      */
@@ -189,7 +189,7 @@ public final class SourceProcessors {
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
             @Nonnull JournalInitialPosition initialPos,
-            WatermarkGenerationParams<T> wmGenParams
+            @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
         return StreamEventJournalP.streamRemoteMapP(
                 mapName, clientConfig, predicateFn, projectionFn, initialPos, wmGenParams);
@@ -206,21 +206,21 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#cacheJournal(String, JournalInitialPosition,
+     * {@link com.hazelcast.jet.pipeline.Sources#cacheJournal(String, JournalInitialPosition,
      * WatermarkGenerationParams)}.
      */
     @Nonnull
     public static <K, V> ProcessorMetaSupplier streamCacheP(
             @Nonnull String cacheName,
             @Nonnull JournalInitialPosition initialPos,
-            WatermarkGenerationParams<Entry<K, V>> wmGenParams
+            @Nonnull WatermarkGenerationParams<Entry<K, V>> wmGenParams
     ) {
         return streamCacheP(cacheName, cachePutEvents(), cacheEventToEntry(), initialPos, wmGenParams);
     }
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#cacheJournal(String,
+     * {@link com.hazelcast.jet.pipeline.Sources#cacheJournal(String,
      * DistributedPredicate, DistributedFunction, JournalInitialPosition,
      * WatermarkGenerationParams)}.
      */
@@ -230,7 +230,7 @@ public final class SourceProcessors {
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
             @Nonnull JournalInitialPosition initialPos,
-            WatermarkGenerationParams<T> wmGenParams
+            @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
         return StreamEventJournalP.streamCacheP(cacheName, predicateFn, projectionFn, initialPos,
                 wmGenParams);
@@ -249,7 +249,7 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#remoteCacheJournal(String, ClientConfig,
+     * {@link com.hazelcast.jet.pipeline.Sources#remoteCacheJournal(String, ClientConfig,
      * JournalInitialPosition, WatermarkGenerationParams)}.
      */
     @Nonnull
@@ -257,14 +257,14 @@ public final class SourceProcessors {
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull JournalInitialPosition initialPos,
-            WatermarkGenerationParams<Entry<K, V>> wmGenParams
+            @Nonnull WatermarkGenerationParams<Entry<K, V>> wmGenParams
     ) {
         return streamRemoteCacheP(cacheName, clientConfig, cachePutEvents(), cacheEventToEntry(), initialPos, wmGenParams);
     }
 
     /**
      * Returns a supplier of processors for {@link
-     * com.hazelcast.jet.Sources#remoteCacheJournal(String, ClientConfig,
+     * com.hazelcast.jet.pipeline.Sources#remoteCacheJournal(String, ClientConfig,
      * DistributedPredicate, DistributedFunction, JournalInitialPosition,
      * WatermarkGenerationParams)}.
      */
@@ -275,7 +275,7 @@ public final class SourceProcessors {
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
             @Nonnull JournalInitialPosition initialPos,
-            WatermarkGenerationParams<T> wmGenParams
+            @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
         return StreamEventJournalP.streamRemoteCacheP(cacheName, clientConfig, predicateFn, projectionFn, initialPos,
                 wmGenParams);
