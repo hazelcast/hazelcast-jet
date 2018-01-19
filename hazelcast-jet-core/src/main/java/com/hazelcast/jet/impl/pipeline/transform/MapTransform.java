@@ -28,17 +28,7 @@ public class MapTransform<T, R> extends AbstractTransform implements Transform {
             @Nonnull Transform upstream,
             @Nonnull DistributedFunction<? super T, ? extends R> mapFn
     ) {
-        super(upstream);
+        super("map", upstream);
         this.mapFn = mapFn;
-    }
-
-    @Override
-    public String name() {
-        return "map";
-    }
-
-    @Override
-    public String toString() {
-        return name();
     }
 }

@@ -31,7 +31,8 @@ public class TimestampTransform<T> extends AbstractTransform implements Transfor
             @Nonnull Transform upstream,
             @Nonnull WatermarkGenerationParams wmGenParams
     ) {
-        super("timestamp", true, upstream);
+        super("timestamp", upstream);
+        setEmitsJetEvents(true);
         this.wmGenParams = wmGenParams;
     }
 }

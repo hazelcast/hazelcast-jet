@@ -31,14 +31,13 @@ public abstract class AbstractTransform implements Transform {
     private final List<Transform> upstream;
     private boolean emitsJetEvents;
 
-    protected AbstractTransform(@Nonnull String name, boolean emitsJetEvents, @Nonnull List<Transform> upstream) {
+    protected AbstractTransform(@Nonnull String name, @Nonnull List<Transform> upstream) {
         this.name = name;
-        this.emitsJetEvents = emitsJetEvents;
         this.upstream = upstream;
     }
 
-    protected AbstractTransform(String name, boolean emitsJetEvents, @Nonnull Transform upstream) {
-        this(name, emitsJetEvents, singletonList(upstream));
+    protected AbstractTransform(String name, @Nonnull Transform upstream) {
+        this(name, singletonList(upstream));
     }
 
     @Override

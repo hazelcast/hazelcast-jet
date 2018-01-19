@@ -38,7 +38,7 @@ public class CoGroupTransform<K, A, R, OUT> extends AbstractTransform implements
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nullable WindowDefinition wDef
     ) {
-        super(upstream);
+        super(upstream.size() + "-way cogroup-and-aggregate", upstream);
         this.wDef = wDef;
         this.groupKeyFns = groupKeyFns;
         this.aggrOp = aggrOp;
@@ -50,15 +50,5 @@ public class CoGroupTransform<K, A, R, OUT> extends AbstractTransform implements
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
         this(upstream, groupKeyFns, aggrOp, null);
-    }
-
-    @Override
-    public String name() {
-        return groupKeyFns.size() + "-way co-group and aggregate";
-    }
-
-    @Override
-    public String toString() {
-        return name();
     }
 }

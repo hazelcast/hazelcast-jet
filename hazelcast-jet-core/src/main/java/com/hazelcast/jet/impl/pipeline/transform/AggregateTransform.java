@@ -22,7 +22,7 @@ import com.hazelcast.jet.pipeline.WindowDefinition;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class AggregateTransform<T, A, R, OUT> extends AbstractTransform implements Transform {
+public class AggregateTransform<T, A, R> extends AbstractTransform implements Transform {
     @Nonnull
     public final AggregateOperation1<? super T, A, ? extends R> aggrOp;
     @Nullable
@@ -33,7 +33,7 @@ public class AggregateTransform<T, A, R, OUT> extends AbstractTransform implemen
             @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp,
             @Nullable WindowDefinition wDef
     ) {
-        super(upstream);
+        super("aggregate", upstream);
         this.wDef = wDef;
         this.aggrOp = aggrOp;
     }
@@ -43,15 +43,5 @@ public class AggregateTransform<T, A, R, OUT> extends AbstractTransform implemen
             @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
         this(upstream, aggrOp, null);
-    }
-
-    @Override
-    public String name() {
-        return "aggregate";
-    }
-
-    @Override
-    public String toString() {
-        return name();
     }
 }

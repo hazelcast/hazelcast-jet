@@ -37,7 +37,7 @@ public class GroupTransform<T, K, A, R, OUT> extends AbstractTransform implement
             @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp,
             @Nullable WindowDefinition wDef
     ) {
-        super(upstream);
+        super("group-and-aggregate", upstream);
         this.wDef = wDef;
         this.keyFn = keyFn;
         this.aggrOp = aggrOp;
@@ -49,15 +49,5 @@ public class GroupTransform<T, K, A, R, OUT> extends AbstractTransform implement
             @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
         this(upstream, keyFn, aggrOp, null);
-    }
-
-    @Override
-    public String name() {
-        return "group-and-aggregate";
-    }
-
-    @Override
-    public String toString() {
-        return name();
     }
 }

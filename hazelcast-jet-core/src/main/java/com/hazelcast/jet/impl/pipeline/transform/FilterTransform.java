@@ -28,7 +28,7 @@ public class FilterTransform<T> extends AbstractTransform implements Transform {
             @Nonnull Transform upstream,
             @Nonnull DistributedPredicate<? super T> filterFn
     ) {
-        super(upstream);
+        super("filter", upstream);
         this.filterFn = filterFn;
     }
 

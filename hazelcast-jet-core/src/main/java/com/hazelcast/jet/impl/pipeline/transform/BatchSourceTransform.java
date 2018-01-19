@@ -31,7 +31,7 @@ public class BatchSourceTransform<T> extends AbstractTransform implements BatchS
             @Nonnull String name,
             @Nonnull ProcessorMetaSupplier metaSupplier
     ) {
-        super(name, false, emptyList());
+        super(name, emptyList());
         this.metaSupplier = metaSupplier;
     }
 }

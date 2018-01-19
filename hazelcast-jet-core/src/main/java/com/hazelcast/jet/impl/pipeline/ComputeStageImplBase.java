@@ -125,7 +125,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     <A, R, RET> RET attachAggregate(
             @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
-        return attach(new AggregateTransform<T, A, R, R>(transform, aggrOp));
+        return attach(new AggregateTransform<T, A, R>(transform, aggrOp));
     }
 
     @Nonnull
@@ -159,7 +159,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull String stageName,
             @Nonnull DistributedSupplier<Processor> procSupplier
     ) {
-        return attach(new ProcessorTransform<T, R>(transform, stageName, procSupplier));
+        return attach(new ProcessorTransform(transform, stageName, procSupplier));
     }
 
     @Nonnull

@@ -29,21 +29,11 @@ public class FlatMapTransform<T, R> extends AbstractTransform implements Transfo
             @Nonnull Transform upstream,
             @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        super(upstream);
+        super("flat-map", upstream);
         this.flatMapFn = flatMapFn;
     }
 
     public DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn() {
         return flatMapFn;
-    }
-
-    @Override
-    public String name() {
-        return "flat-map";
-    }
-
-    @Override
-    public String toString() {
-        return name();
     }
 }

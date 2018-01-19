@@ -28,16 +28,13 @@ import java.util.ArrayList;
 public class SinkTransform<T> extends AbstractTransform implements Sink<T> {
     @Nonnull
     public final ProcessorMetaSupplier metaSupplier;
-    @Nonnull
-    private final String name;
 
     public SinkTransform(
             @Nonnull String name,
             @Nonnull ProcessorMetaSupplier metaSupplier
     ) {
-        super(new ArrayList<>());
+        super(name, new ArrayList<>());
         this.metaSupplier = metaSupplier;
-        this.name = name;
     }
 
     public SinkTransform(
@@ -57,15 +54,5 @@ public class SinkTransform<T> extends AbstractTransform implements Sink<T> {
     public SinkTransform<T> setUpstream(Transform upstream) {
         upstream().add(upstream);
         return this;
-    }
-
-    @Override
-    public String name() {
-        return name;
-    }
-
-    @Override
-    public String toString() {
-        return name;
     }
 }

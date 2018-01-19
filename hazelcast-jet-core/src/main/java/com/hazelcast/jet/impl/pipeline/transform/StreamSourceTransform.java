@@ -36,7 +36,8 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
             boolean emitsJetEvents,
             @Nonnull ProcessorMetaSupplier metaSupplier
     ) {
-        super(name, emitsJetEvents, emptyList());
+        super(name, emptyList());
+        setEmitsJetEvents(emitsJetEvents);
         this.metaSupplier = metaSupplier;
     }
 }

@@ -64,7 +64,7 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
     public <A, R> BatchStage<TimestampedEntry<Void, R>> aggregate(
             AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
-        return computeStage.attach(new AggregateTransform<T, A, R, TimestampedEntry<Void, R>>(
+        return computeStage.attach(new AggregateTransform<T, A, R>(
                 computeStage.transform, aggrOp, wDef));
     }
 

@@ -32,18 +32,8 @@ public class PeekTransform<T> extends AbstractTransform implements Transform {
             @Nonnull DistributedPredicate<? super T> shouldLogFn,
             @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn
     ) {
-        super(upstream);
+        super("peek", upstream);
         this.shouldLogFn = shouldLogFn;
         this.toStringFn = toStringFn;
-    }
-
-    @Override
-    public String name() {
-        return "peek";
-    }
-
-    @Override
-    public String toString() {
-        return name();
     }
 }

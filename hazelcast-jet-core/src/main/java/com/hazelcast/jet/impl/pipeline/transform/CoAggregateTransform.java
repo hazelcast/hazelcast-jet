@@ -34,7 +34,7 @@ public class CoAggregateTransform<A, R, OUT> extends AbstractTransform implement
             @Nonnull AggregateOperation<A, ? extends R> aggrOp,
             @Nullable WindowDefinition wDef
     ) {
-        super(upstream);
+        super(upstream.size() + "-way co-aggregate", upstream);
         this.wDef = wDef;
         this.aggrOp = aggrOp;
     }
@@ -44,15 +44,5 @@ public class CoAggregateTransform<A, R, OUT> extends AbstractTransform implement
             @Nonnull AggregateOperation<A, ? extends R> aggrOp
     ) {
         this(upstream, aggrOp, null);
-    }
-
-    @Override
-    public String name() {
-        return "co-aggregate";
-    }
-
-    @Override
-    public String toString() {
-        return name();
     }
 }

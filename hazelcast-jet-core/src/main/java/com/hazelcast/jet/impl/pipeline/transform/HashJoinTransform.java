@@ -33,18 +33,8 @@ public class HashJoinTransform<T0, R> extends AbstractTransform implements Trans
             @Nonnull List<JoinClause<?, ? super T0, ?, ?>> clauses,
             @Nonnull List<Tag> tags
     ) {
-        super(upstream);
+        super(tags.size() + "-way hash-join", upstream);
         this.clauses = clauses;
         this.tags = tags;
-    }
-
-    @Override
-    public String name() {
-        return tags.size() + "-way hash-join";
-    }
-
-    @Override
-    public String toString() {
-        return name();
     }
 }
