@@ -93,9 +93,7 @@ class Planner {
         validateNoLeakage(adjacencyMap);
         Iterable<Transform> sorted = topologicalSort(adjacencyMap, Object::toString);
         for (Transform transform : sorted) {
-            if (transform.emitsJetEvents()) {
-                propagateEmitsJetEvents(transform, adjacencyMap);
-            }
+            propagateEmitsJetEvents(transform, adjacencyMap);
             if (transform instanceof BatchSourceTransform) {
                 handleSource((BatchSourceTransform) transform);
             } else if (transform instanceof StreamSourceTransform) {
@@ -137,8 +135,14 @@ class Planner {
     }
 
     private static void propagateEmitsJetEvents(Transform t, Map<Transform, List<Transform>> adjacencyMap) {
+        if (!t.emitsJetEvents()) {
+            return;
+        }
         List<Transform> downstream = adjacencyMap.get(t);
         for (Transform d : downstream) {
+            if (d.emitsJetEvents()) {
+                continue;
+            }
             d.setEmitsJetEvents(true);
             propagateEmitsJetEvents(d, adjacencyMap);
         }
