@@ -17,9 +17,7 @@
 package com.hazelcast.jet;
 
 import com.hazelcast.jet.core.WatermarkGenerationParams;
-import com.hazelcast.jet.core.processor.KafkaProcessors;
 import com.hazelcast.jet.function.DistributedBiFunction;
-import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSource;
 

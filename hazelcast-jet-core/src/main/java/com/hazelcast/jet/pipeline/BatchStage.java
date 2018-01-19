@@ -21,11 +21,11 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.datamodel.Tuple2;
-import com.hazelcast.jet.datamodel.Tuple3;
+import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.function.DistributedTriFunction;
 
 import javax.annotation.Nonnull;
 
@@ -51,21 +51,23 @@ public interface BatchStage<T> extends GeneralStage<T> {
     <R> BatchStage<R> flatMap(@Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn);
 
     @Nonnull @Override
-    <K, T1_IN, T1> BatchStage<Tuple2<T, T1>> hashJoin(
+    <K, T1_IN, T1, R> BatchStage<R> hashJoin(
             @Nonnull BatchStage<T1_IN> stage1,
-            @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1
+            @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1,
+            @Nonnull DistributedBiFunction<T, T1, R> mapToOutputFn
     );
 
     @Nonnull @Override
-    <K1, T1_IN, T1, K2, T2_IN, T2> BatchStage<Tuple3<T, T1, T2>> hashJoin(
+    <K1, T1_IN, T1, K2, T2_IN, T2, R> BatchStage<R> hashJoin(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
             @Nonnull BatchStage<T2_IN> stage2,
-            @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2
+            @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2,
+            @Nonnull DistributedTriFunction<T, T1, T2, R> mapToOutputFn
     );
 
     @Nonnull @Override
-    default HashJoinBuilder<T> hashJoinBuilder() {
+    default <R> HashJoinBuilder<T, R> hashJoinBuilder() {
         return new HashJoinBuilder<>(this);
     }
 

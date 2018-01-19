@@ -19,13 +19,12 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.WatermarkPolicy;
-import com.hazelcast.jet.datamodel.ItemsByTag;
-import com.hazelcast.jet.datamodel.Tuple2;
-import com.hazelcast.jet.datamodel.Tuple3;
+import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.function.DistributedTriFunction;
 
 import javax.annotation.Nonnull;
 
@@ -83,14 +82,17 @@ public interface GeneralStage<T> extends Stage {
      *
      * @param stage1     the pipeline to hash-join with this one
      * @param joinClause1 specifies how to join the two streams
+     * @param mapToOutputFn function to map the joined items to the output value
      * @param <K>        the type of the join key
      * @param <T1_IN>    the type of {@code stage1} items
      * @param <T1>       the result type of projection on {@code stage1} items
+     * @param <R>        the resulting output type
      */
     @Nonnull
-    <K, T1_IN, T1> GeneralStage<Tuple2<T, T1>> hashJoin(
+    <K, T1_IN, T1, R> GeneralStage<R> hashJoin(
             @Nonnull BatchStage<T1_IN> stage1,
-            @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1
+            @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1,
+            @Nonnull DistributedBiFunction<T, T1, R> mapToOutputFn
     );
 
     /**
@@ -103,19 +105,22 @@ public interface GeneralStage<T> extends Stage {
      * @param joinClause1 specifies how to join with {@code stage1}
      * @param stage2      the second pipeline to join
      * @param joinClause2 specifices how to join with {@code stage2}
+     * @param mapToOutputFn function to map the joined items to the output value
      * @param <K1>        the type of key for {@code stage1}
      * @param <T1_IN>     the type of {@code stage1} items
      * @param <T1>        the result type of projection of {@code stage1} items
      * @param <K2>        the type of key for {@code stage2}
      * @param <T2_IN>     the type of {@code stage2} items
      * @param <T2>        the result type of projection of {@code stage2} items
+     * @param <R>         the resulting output type
      */
     @Nonnull
-    <K1, T1_IN, T1, K2, T2_IN, T2> GeneralStage<Tuple3<T, T1, T2>> hashJoin(
+    <K1, T1_IN, T1, K2, T2_IN, T2, R> GeneralStage<R> hashJoin(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
             @Nonnull BatchStage<T2_IN> stage2,
-            @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2
+            @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2,
+            @Nonnull DistributedTriFunction<T, T1, T2, R> mapToOutputFn
     );
 
     /**
@@ -127,7 +132,7 @@ public interface GeneralStage<T> extends Stage {
      * more static type safety.
      */
     @Nonnull
-    GeneralHashJoinBuilder<T, ? extends GeneralStage<Tuple2<T, ItemsByTag>>> hashJoinBuilder();
+    <R> GeneralHashJoinBuilder<T, R, ? extends GeneralStage<R>> hashJoinBuilder();
 
     @Nonnull
     <K> GeneralStageWithGrouping<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);

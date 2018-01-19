@@ -155,7 +155,10 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<Entry<Integer, String>> enrichingStage = pipeline.drawFrom(Sources.map(enrichingName));
 
         // When
-        BatchStage<Tuple2<Integer, String>> joined = srcStage.hashJoin(enrichingStage, joinMapEntries(wholeItem()));
+        BatchStage<Tuple2<Integer, String>> joined = srcStage.hashJoin(
+                enrichingStage,
+                joinMapEntries(wholeItem()),
+                Tuple2::tuple2);
         joined.drainTo(sink);
         execute();
 
@@ -183,7 +186,8 @@ public class BatchStageTest extends PipelineTestSupport {
         // When
         BatchStage<Tuple3<Integer, String, String>> joined = srcStage.hashJoin(
                 enrichingStage1, joinMapEntries(wholeItem()),
-                enrichingStage2, joinMapEntries(wholeItem())
+                enrichingStage2, joinMapEntries(wholeItem()),
+                Tuple3::tuple3
         );
         joined.drainTo(sink);
         execute();
@@ -210,11 +214,11 @@ public class BatchStageTest extends PipelineTestSupport {
         input.forEach(i -> enriching2.put(i, i + "B"));
 
         // When
-        GeneralHashJoinBuilder<Integer, BatchStage<Tuple2<Integer, ItemsByTag>>> b =
+        HashJoinBuilder<Integer, Tuple2<Integer, ItemsByTag>> b =
                 srcStage.hashJoinBuilder();
         Tag<String> tagA = b.add(enrichingStage1, joinMapEntries(wholeItem()));
         Tag<String> tagB = b.add(enrichingStage2, joinMapEntries(wholeItem()));
-        GeneralStage<Tuple2<Integer, ItemsByTag>> joined = b.build();
+        GeneralStage<Tuple2<Integer, ItemsByTag>> joined = b.build(Tuple2::tuple2);
         joined.drainTo(sink);
         execute();
 

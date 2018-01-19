@@ -16,25 +16,31 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
+import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.pipeline.JoinClause;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.function.BiFunction;
 
 public class HashJoinTransform<T0, R> extends AbstractTransform implements Transform {
     @Nonnull
     public final List<JoinClause<?, ? super T0, ?, ?>> clauses;
     @Nonnull
     public final List<Tag> tags;
+    @Nonnull
+    public final BiFunction<T0, ItemsByTag, R> mapToOutputFn;
 
     public HashJoinTransform(
             @Nonnull List<Transform> upstream,
             @Nonnull List<JoinClause<?, ? super T0, ?, ?>> clauses,
-            @Nonnull List<Tag> tags
+            @Nonnull List<Tag> tags,
+            @Nonnull BiFunction<T0, ItemsByTag, R> mapToOutputFn
     ) {
         super(tags.size() + "-way hash-join", upstream);
         this.clauses = clauses;
         this.tags = tags;
+        this.mapToOutputFn = mapToOutputFn;
     }
 }

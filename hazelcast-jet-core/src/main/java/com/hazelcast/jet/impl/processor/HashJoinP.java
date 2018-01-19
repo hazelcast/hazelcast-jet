@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
@@ -38,11 +39,12 @@ import static java.util.Collections.singletonList;
  * Implements the {@link com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform
  * hash-join transform}.
  */
-public class HashJoinP<E0> extends AbstractProcessor {
+public class HashJoinP<E0, E_OUT> extends AbstractProcessor {
 
     private final List<Function<E0, Object>> keyFs;
     private final List<Map<Object, Object>> lookupTables;
     private final List<Tag> tags;
+    private final BiFunction<E0, ItemsByTag, E_OUT> mapToOutputFn;
     private boolean ordinal0consumed;
 
     /**
@@ -64,11 +66,13 @@ public class HashJoinP<E0> extends AbstractProcessor {
      */
     public HashJoinP(
             @Nonnull List<Function<E0, Object>> keyFs,
-            @Nonnull List<Tag> tags
+            @Nonnull List<Tag> tags,
+            @Nonnull BiFunction<E0, ItemsByTag, E_OUT> mapToOutputFn
     ) {
         this.keyFs = prependNull(keyFs);
         this.lookupTables = prependNull(Collections.nCopies(keyFs.size(), null));
         this.tags = tags.isEmpty() ? emptyList() : prependNull(tags);
+        this.mapToOutputFn = mapToOutputFn;
     }
 
     @Override
@@ -93,7 +97,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
         for (int i = 1; i < keyFs.size(); i++) {
             map.put(tags.get(i), lookupJoined(i, e0));
         }
-        return tryEmit(tuple2(e0, map));
+        return tryEmit(mapToOutputFn.apply(e0, map));
     }
 
     @Nullable

@@ -16,12 +16,10 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.datamodel.ItemsByTag;
-import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.impl.pipeline.BatchStageImpl;
 
-public class HashJoinBuilder<T0>
-        extends GeneralHashJoinBuilder<T0, BatchStage<Tuple2<T0, ItemsByTag>>> {
+public class HashJoinBuilder<T0, R>
+        extends GeneralHashJoinBuilder<T0, R, BatchStage<R>> {
 
     HashJoinBuilder(BatchStage<T0> stage0) {
         super(stage0, BatchStageImpl::new);

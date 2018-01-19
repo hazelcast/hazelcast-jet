@@ -358,7 +358,7 @@ class Planner {
                         .map(JoinClause::leftKeyFn)
                         .collect(toList());
         Vertex joiner = addVertex(hashJoin, namePrefix + "joiner",
-                () -> new HashJoinP<>(keyFns, hashJoin.tags)).v;
+                () -> new HashJoinP(keyFns, hashJoin.tags, hashJoin.mapToOutputFn)).v;
         dag.edge(from(primary.v, primary.availableOrdinal++).to(joiner, 0));
 
         String collectorName = namePrefix + "collector-";

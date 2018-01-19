@@ -22,10 +22,13 @@ import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.WatermarkPolicy;
+import com.hazelcast.jet.datamodel.ItemsByTag;
+import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.function.DistributedTriFunction;
 import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.CoAggregateTransform;
@@ -48,6 +51,8 @@ import java.util.List;
 
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
+import static com.hazelcast.jet.datamodel.Tag.tag1;
+import static com.hazelcast.jet.datamodel.Tag.tag2;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -95,30 +100,35 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
-    <K, T1_IN, T1, RET> RET attachHashJoin(
+    <K, T1_IN, T1, R, RET> RET attachHashJoin(
             @Nonnull BatchStage<T1_IN> stage1,
-            @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause
+            @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause,
+            @Nonnull DistributedBiFunction<T, T1, R> mapToOutputFn
     ) {
         return attach(new HashJoinTransform<>(
                 asList(transform, transformOf(stage1)),
                 singletonList(joinClause),
-                emptyList())
-        );
+                emptyList(),
+                (T t0, ItemsByTag t) -> mapToOutputFn.apply(t0, t.get(tag1()))
+        ));
     }
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    <K1, T1_IN, T1, K2, T2_IN, T2, RET> RET attachHashJoin(
+    <K1, T1_IN, T1, K2, T2_IN, T2, R, RET> RET attachHashJoin(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
             @Nonnull BatchStage<T2_IN> stage2,
-            @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2
+            @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2,
+            @Nonnull DistributedTriFunction<T, T1, T2, R> mapToOutputFn
     ) {
         List<JoinClause<?, ? super T, ?, ?>> clauses = (List) asList(joinClause1, joinClause2);
         return attach(new HashJoinTransform<>(
                 asList(transform, transformOf(stage1), transformOf(stage2)),
-                clauses, emptyList()));
+                clauses,
+                emptyList(),
+                (T t0, ItemsByTag t) -> mapToOutputFn.apply(t0, t.get(tag1()), t.get(tag2()))
+        ));
     }
 
     @Nonnull
