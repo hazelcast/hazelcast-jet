@@ -217,8 +217,9 @@ class Planner {
             case SESSION:
                 handleSessionWindow(xform, wDef.downcast());
                 return;
+            default:
+                throw new IllegalArgumentException("Unknown window definition " + wDef.kind());
         }
-        throw new IllegalArgumentException("Unknown window definition " + wDef.kind());
     }
 
     //                       --------
@@ -309,8 +310,9 @@ class Planner {
             case SESSION:
                 handleSessionCoWindow(xform, wDef.downcast());
                 return;
+            default:
+                throw new IllegalArgumentException("Unknown window definition " + wDef.kind());
         }
-        throw new IllegalArgumentException("Unknown window definition " + wDef.kind());
     }
 
     private void handleSlidingCoWindow(

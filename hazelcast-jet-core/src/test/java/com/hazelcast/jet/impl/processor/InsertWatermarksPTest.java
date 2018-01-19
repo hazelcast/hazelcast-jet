@@ -22,7 +22,6 @@ import com.hazelcast.jet.core.WatermarkEmissionPolicy;
 import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
-import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.Before;

@@ -22,7 +22,6 @@ import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
-import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Before;
@@ -38,6 +37,7 @@ import java.util.function.Supplier;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
@@ -156,15 +156,17 @@ public class ProcessorsTest {
         // Finally
         assertEquals(
                 new HashSet<>(asList(
-                    entry("1", "[1, 1]"),
-                    entry("2", "[2, 2]")
+                        entry("1", "[1, 1]"),
+                        entry("2", "[2, 2]")
                 )),
                 new HashSet<>(asList(result1, result2)));
     }
 
     @Test
     public void accumulateByKey() {
-        final Processor p = processorFrom(Processors.accumulateByKeyP(Object::toString, aggregateToListAndString().withFinishFn(identity())));
+        final Processor p = processorFrom(accumulateByKeyP(
+                Object::toString, aggregateToListAndString().withFinishFn(identity())
+        ));
         // Given
         inbox.add(1);
         inbox.add(1);

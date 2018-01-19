@@ -17,12 +17,10 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
-import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Stage;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import static java.util.Collections.emptyList;
 

@@ -20,8 +20,6 @@ import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.impl.pipeline.BatchStageImpl;
 
-import static java.util.Comparator.comparing;
-
 public class HashJoinBuilder<T0>
         extends GeneralHashJoinBuilder<T0, BatchStage<Tuple2<T0, ItemsByTag>>> {
 

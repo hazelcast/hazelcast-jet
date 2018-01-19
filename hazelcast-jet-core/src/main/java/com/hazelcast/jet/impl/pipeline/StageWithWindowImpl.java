@@ -16,12 +16,6 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.pipeline.StreamStage;
-import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
-import com.hazelcast.jet.pipeline.StageWithWindow;
-import com.hazelcast.jet.pipeline.WindowAggregateBuilder;
-import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
@@ -29,10 +23,15 @@ import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.CoAggregateTransform;
+import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
+import com.hazelcast.jet.pipeline.StageWithWindow;
+import com.hazelcast.jet.pipeline.StreamStage;
+import com.hazelcast.jet.pipeline.WindowAggregateBuilder;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
 import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
 
 /**
  * Javadoc pending.

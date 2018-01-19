@@ -16,11 +16,10 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.GeneralStage;
-import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.GeneralStageWithGrouping;
-import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
 
 import javax.annotation.Nonnull;
 

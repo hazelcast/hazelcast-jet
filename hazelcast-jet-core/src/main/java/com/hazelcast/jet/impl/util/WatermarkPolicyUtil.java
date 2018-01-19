@@ -16,10 +16,9 @@
 
 package com.hazelcast.jet.impl.util;
 
-import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.core.WatermarkPolicies;
+import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.function.DistributedLongSupplier;
-import com.hazelcast.jet.function.DistributedSupplier;
 
 import javax.annotation.Nonnull;
 

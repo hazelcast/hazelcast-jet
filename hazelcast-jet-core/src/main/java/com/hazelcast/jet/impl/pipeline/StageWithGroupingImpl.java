@@ -16,22 +16,20 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
-import com.hazelcast.jet.pipeline.StageWithGrouping;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.pipeline.transform.CoGroupTransform;
 import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
+import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
+import com.hazelcast.jet.pipeline.StageWithGrouping;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
 import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
 
 @SuppressWarnings("unchecked")
 public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> implements StageWithGrouping<T, K> {

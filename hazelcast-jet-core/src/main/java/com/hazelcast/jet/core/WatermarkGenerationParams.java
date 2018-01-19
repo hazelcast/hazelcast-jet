@@ -69,7 +69,6 @@ public final class WatermarkGenerationParams<T> implements Serializable {
      *
      * @param timestampFn a function to extract timestamps from observed
      *      events.
-     * @param newWmPolicyF watermark policy factory
      * @param wmEmitPolicy watermark emission policy
      * @param idleTimeoutMillis a timeout after which the {@link
      *      com.hazelcast.jet.impl.execution.WatermarkCoalescer#IDLE_MESSAGE}
@@ -84,6 +83,9 @@ public final class WatermarkGenerationParams<T> implements Serializable {
         return new WatermarkGenerationParams<>(timestampFn, () -> wmPolicy, wmEmitPolicy, idleTimeoutMillis);
     }
 
+    /**
+     * Javadoc pending
+     */
     public static <T> WatermarkGenerationParams<T> wmGenParams(
             @Nonnull DistributedToLongFunction<T> timestampFn,
             @Nonnull WatermarkPolicy wmPolicy
