@@ -93,6 +93,5 @@ open class KotlinWrapperP(
         resumeOrLaunch { wrapped.finishSnapshotRestore() }
         return continuation == null
     }
-
 }
 

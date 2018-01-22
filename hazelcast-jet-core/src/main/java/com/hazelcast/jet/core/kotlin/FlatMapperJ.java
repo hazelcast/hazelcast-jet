@@ -22,8 +22,11 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import javax.annotation.Nonnull;
 import java.util.function.Function;
 
+@SuppressWarnings("unchecked")
 public class FlatMapperJ<T, R> extends AbstractProcessor {
     private final Function<? super T, ? extends Traverser<? extends R>> mapper;
+    private R pendingItem;
+    private Traverser<? extends R> trav;
 
     FlatMapperJ(Function<? super T, ? extends Traverser<? extends R>> mapper) {
         this.mapper = mapper;
@@ -31,6 +34,18 @@ public class FlatMapperJ<T, R> extends AbstractProcessor {
 
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-        return true;
+        trav = trav != null ? trav : mapper.apply((T) item);
+        while (true) {
+            if (pendingItem == null) {
+                pendingItem = trav.next();
+            }
+            if (pendingItem == null) {
+                trav = null;
+                return true;
+            }
+            if (!tryEmit(pendingItem)) {
+                return false;
+            }
+        }
     }
 }

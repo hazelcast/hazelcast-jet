@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("NOTHING_TO_INLINE")
+
 package com.hazelcast.jet.core.kotlin
 
 import com.hazelcast.jet.core.Inbox
@@ -40,4 +42,4 @@ interface ProcessorK {
     suspend fun finishSnapshotRestore() = Unit
 }
 
-inline suspend fun ProcessorK.yield() = suspendCoroutineOrReturn(suspendAction)
+suspend inline fun ProcessorK.yield() = suspendCoroutineOrReturn(suspendAction)

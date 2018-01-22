@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.core.kotlin
 
+import com.hazelcast.jet.Traverser
 import com.hazelcast.jet.core.Inbox
 import com.hazelcast.jet.core.Outbox
 import com.hazelcast.jet.core.Processor
@@ -23,12 +24,13 @@ import com.hazelcast.logging.ILogger
 import kotlin.collections.Map.Entry
 import kotlin.coroutines.experimental.Continuation
 
+@Suppress("NOTHING_TO_INLINE")
 abstract class AbstractProcessorK : ProcessorK {
     override lateinit var suspendAction: (Continuation<Any>) -> Unit
     protected lateinit var logger: ILogger
     protected lateinit var outbox: Outbox
 
-    override final fun init(outbox: Outbox, context: Processor.Context) {
+    final override fun init(outbox: Outbox, context: Processor.Context) {
         this.outbox = outbox
         this.logger = context.logger()
         init(context)
@@ -36,31 +38,38 @@ abstract class AbstractProcessorK : ProcessorK {
 
     protected open fun init(context: Processor.Context) = Unit
 
-    protected inline suspend fun emit(item: Any) {
+    protected suspend inline fun emit(item: Any) {
         while (!outbox.offer(item)) {
             yield()
         }
     }
 
-    protected inline suspend fun emitToSnapshot(key: Any, value: Any) {
+    protected suspend inline fun emitToSnapshot(key: Any, value: Any) {
         while (!outbox.offerToSnapshot(key, value)) {
             yield()
         }
     }
 }
 
-inline fun Inbox.drain(action: (Any) -> Unit) {
+inline fun Inbox.drain(block: (Any) -> Unit) {
     while (true) {
         val item = peek() ?: return
-        action(item)
+        block(item)
         remove()
     }
 }
 
-inline fun Inbox.drainSnapshot(action: (key: Any, value: Any) -> Unit) {
+inline fun Inbox.drainSnapshot(block: (key: Any, value: Any) -> Unit) {
     while (true) {
         val (key, value) = peek() as? Entry<*, *> ?: return
-        action(key!!, value!!)
+        block(key!!, value!!)
         remove()
+    }
+}
+
+inline fun <T : Any> Traverser<T>.forEach(block: (T) -> Unit) {
+    while (true) {
+        val t = next() ?: return
+        block(t)
     }
 }
