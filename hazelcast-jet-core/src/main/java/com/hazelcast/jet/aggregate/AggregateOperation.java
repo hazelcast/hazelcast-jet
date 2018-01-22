@@ -25,6 +25,8 @@ import com.hazelcast.jet.impl.aggregate.AggregateOperation1Impl;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
+import java.util.List;
+import java.util.Objects;
 
 import static com.hazelcast.util.Preconditions.checkNotNull;
 
@@ -77,6 +79,12 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
  * @param <R> the type of the final result
  */
 public interface AggregateOperation<A, R> extends Serializable {
+
+    /**
+     * Returns the number of contributing streams this operation is set up to handle.
+     * The index passed to {@link #accumulateFn(int)} must be less than this number.
+     */
+    int arity();
 
     /**
      * A primitive that returns a new accumulator. If the {@code deduct}
@@ -181,8 +189,8 @@ public interface AggregateOperation<A, R> extends Serializable {
     default <T> AggregateOperation1<T, A, R> withCombiningAccumulateFn(
             @Nonnull DistributedFunction<T, A> getAccFn
     ) {
-        DistributedBiConsumer<? super A, ? super A> combineFn = combineFn();
-        checkNotNull(combineFn, "The 'combine' primitive is missing");
+        DistributedBiConsumer<? super A, ? super A> combineFn =
+                Objects.requireNonNull(combineFn(), "The 'combine' primitive is missing");
         return new AggregateOperation1Impl<>(
                 createFn(),
                 (A acc, T item) -> combineFn.accept(acc, getAccFn.apply(item)),

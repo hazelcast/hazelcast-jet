@@ -16,24 +16,27 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
+import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
+import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkStage;
-import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.StreamSource;
-import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.pipeline.StreamStage;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
+import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DONT_ADAPT;
 
 public class PipelineImpl implements Pipeline {
 
@@ -48,7 +51,8 @@ public class PipelineImpl implements Pipeline {
     @Nonnull @Override
     @SuppressWarnings("unchecked")
     public <T> StreamStage<T> drawFrom(@Nonnull StreamSource<? extends T> source) {
-        return new StreamStageImpl<>((StreamSourceTransform<? extends T>) source, this);
+        StreamSourceTransform<? extends T> xform = (StreamSourceTransform<? extends T>) source;
+        return new StreamStageImpl<>(xform, xform.emitsJetEvents ? ADAPT_TO_JET_EVENT : DONT_ADAPT, this);
     }
 
     @Nonnull @Override

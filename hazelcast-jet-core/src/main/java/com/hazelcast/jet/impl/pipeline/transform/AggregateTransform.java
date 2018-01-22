@@ -24,9 +24,9 @@ import javax.annotation.Nullable;
 
 public class AggregateTransform<T, A, R> extends AbstractTransform implements Transform {
     @Nonnull
-    public final AggregateOperation1<? super T, A, ? extends R> aggrOp;
+    private AggregateOperation1<? super T, A, ? extends R> aggrOp;
     @Nullable
-    public final WindowDefinition wDef;
+    private final WindowDefinition wDef;
 
     public AggregateTransform(
             @Nonnull Transform upstream,
@@ -43,5 +43,15 @@ public class AggregateTransform<T, A, R> extends AbstractTransform implements Tr
             @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
         this(upstream, aggrOp, null);
+    }
+
+    @Nonnull
+    public AggregateOperation1<? super T, A, ? extends R> aggrOp() {
+        return aggrOp;
+    }
+
+    @Nullable
+    public WindowDefinition wDef() {
+        return wDef;
     }
 }

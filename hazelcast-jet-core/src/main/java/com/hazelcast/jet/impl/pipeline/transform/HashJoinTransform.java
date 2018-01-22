@@ -16,11 +16,13 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
+import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.function.DistributedTriFunction;
 import com.hazelcast.jet.pipeline.JoinClause;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.function.BiFunction;
 
@@ -29,18 +31,34 @@ public class HashJoinTransform<T0, R> extends AbstractTransform implements Trans
     public final List<JoinClause<?, ? super T0, ?, ?>> clauses;
     @Nonnull
     public final List<Tag> tags;
-    @Nonnull
-    public final BiFunction<T0, ItemsByTag, R> mapToOutputFn;
+    @Nullable
+    public final BiFunction mapToOutputBiFn;
+    @Nullable
+    public final DistributedTriFunction mapToOutputTriFn;
 
     public HashJoinTransform(
             @Nonnull List<Transform> upstream,
             @Nonnull List<JoinClause<?, ? super T0, ?, ?>> clauses,
             @Nonnull List<Tag> tags,
-            @Nonnull BiFunction<T0, ItemsByTag, R> mapToOutputFn
+            @Nonnull DistributedBiFunction mapToOutpuBiFn
     ) {
         super(tags.size() + "-way hash-join", upstream);
         this.clauses = clauses;
         this.tags = tags;
-        this.mapToOutputFn = mapToOutputFn;
+        this.mapToOutputBiFn = mapToOutpuBiFn;
+        this.mapToOutputTriFn = null;
+    }
+
+    public <T1, T2> HashJoinTransform(
+            @Nonnull List<Transform> upstream,
+            @Nonnull List<JoinClause<?, ? super T0, ?, ?>> clauses,
+            @Nonnull List<Tag> tags,
+            @Nonnull DistributedTriFunction<T0, T1, T2, R> mapToOutputTriFn
+    ) {
+        super(tags.size() + "-way hash-join", upstream);
+        this.clauses = clauses;
+        this.tags = tags;
+        this.mapToOutputBiFn = null;
+        this.mapToOutputTriFn = mapToOutputTriFn;
     }
 }

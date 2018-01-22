@@ -36,8 +36,19 @@ import javax.annotation.Nonnull;
 
 public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchStage<T> {
 
-    public BatchStageImpl(@Nonnull Transform transform, @Nonnull PipelineImpl pipeline) {
-        super(transform, pipeline, true);
+    public BatchStageImpl(
+            @Nonnull Transform transform,
+            @Nonnull FunctionAdapters fnAdapters,
+            @Nonnull PipelineImpl pipeline
+    ) {
+        super(transform, fnAdapters, pipeline, true);
+    }
+
+    BatchStageImpl(
+            @Nonnull Transform transform,
+            @Nonnull PipelineImpl pipeline
+    ) {
+        super(transform, DONT_ADAPT, pipeline, true);
     }
 
     @Nonnull
@@ -122,7 +133,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    <RET> RET attach(@Nonnull AbstractTransform transform) {
+    <RET> RET attach(@Nonnull AbstractTransform transform, FunctionAdapters fnAdapters) {
         pipelineImpl.connect(transform.upstream(), transform);
         return (RET) new BatchStageImpl<>(transform, pipelineImpl);
     }

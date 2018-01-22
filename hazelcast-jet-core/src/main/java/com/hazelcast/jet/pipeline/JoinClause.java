@@ -23,8 +23,8 @@ import java.util.Map.Entry;
 
 /**
  * Specifies how to join an enriching stream to the primary stream in a
- * {@link BatchStage#hashJoin(BatchStage, JoinClause) hash-join}
- * operation. It holds three primitives:
+ * {@link BatchStage#hashJoin hash-join} operation. It holds three
+ * primitives:
  * <ol><li>
  *     <em>left-hand key extractor</em>: extracts the join key from the primary
  *     stream

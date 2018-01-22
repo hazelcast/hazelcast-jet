@@ -21,11 +21,15 @@ package com.hazelcast.jet.impl.pipeline;
  */
 public class JetEventImpl<T> implements JetEvent<T> {
     private final long timestamp;
-    private T payload;
+    private final T payload;
 
-    public JetEventImpl(long timestamp, T payload) {
+    private JetEventImpl(long timestamp, T payload) {
         this.timestamp = timestamp;
         this.payload = payload;
+    }
+
+    public static <T> JetEvent<T> jetEvent(long timestamp, T payload) {
+        return new JetEventImpl<>(timestamp, payload);
     }
 
     @Override
@@ -36,12 +40,6 @@ public class JetEventImpl<T> implements JetEvent<T> {
     @Override
     public T payload() {
         return payload;
-    }
-
-    @Override
-    public JetEventImpl replacePayload(T payload) {
-        this.payload = payload;
-        return this;
     }
 
     @Override

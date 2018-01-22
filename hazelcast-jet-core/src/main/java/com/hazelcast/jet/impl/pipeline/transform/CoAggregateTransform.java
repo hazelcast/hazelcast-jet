@@ -23,26 +23,36 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class CoAggregateTransform<A, R, OUT> extends AbstractTransform implements Transform {
+public class CoAggregateTransform<A, R> extends AbstractTransform implements Transform {
     @Nonnull
-    public final AggregateOperation<A, ? extends R> aggrOp;
+    private AggregateOperation<A, R> aggrOp;
     @Nullable
-    public final WindowDefinition wDef;
+    private final WindowDefinition wDef;
 
     public CoAggregateTransform(
             @Nonnull List<Transform> upstream,
-            @Nonnull AggregateOperation<A, ? extends R> aggrOp,
+            @Nonnull AggregateOperation<A, R> aggrOp,
             @Nullable WindowDefinition wDef
     ) {
         super(upstream.size() + "-way co-aggregate", upstream);
-        this.wDef = wDef;
         this.aggrOp = aggrOp;
+        this.wDef = wDef;
     }
 
     public CoAggregateTransform(
             @Nonnull List<Transform> upstream,
-            @Nonnull AggregateOperation<A, ? extends R> aggrOp
+            @Nonnull AggregateOperation<A, R> aggrOp
     ) {
         this(upstream, aggrOp, null);
+    }
+
+    @Nonnull
+    public AggregateOperation<A, R> aggrOp() {
+        return aggrOp;
+    }
+
+    @Nullable
+    public WindowDefinition wDef() {
+        return wDef;
     }
 }

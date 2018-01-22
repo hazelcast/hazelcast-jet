@@ -29,7 +29,6 @@ public abstract class AbstractTransform implements Transform {
     private final String name;
     @Nonnull
     private final List<Transform> upstream;
-    private boolean emitsJetEvents;
 
     protected AbstractTransform(@Nonnull String name, @Nonnull List<Transform> upstream) {
         this.name = name;
@@ -40,23 +39,12 @@ public abstract class AbstractTransform implements Transform {
         this(name, singletonList(upstream));
     }
 
-    @Override
-    public boolean emitsJetEvents() {
-        return emitsJetEvents;
-    }
-
     @Nonnull @Override
-    public Transform setEmitsJetEvents(boolean value) {
-        emitsJetEvents = value;
-        return this;
-    }
-
-    @Override
     public List<Transform> upstream() {
         return upstream;
     }
 
-    @Override
+    @Nonnull @Override
     public String name() {
         return name;
     }

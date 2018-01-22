@@ -19,7 +19,9 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.impl.pipeline.FunctionAdapters;
 import com.hazelcast.jet.impl.pipeline.PipelineImpl;
+import com.hazelcast.jet.impl.pipeline.StreamStageImpl;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 
@@ -31,6 +33,7 @@ import java.util.stream.Stream;
 
 import static com.hazelcast.jet.datamodel.Tag.tag;
 import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
+import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DONT_ADAPT;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
@@ -47,16 +50,20 @@ import static java.util.stream.Stream.concat;
  *
  * @param <T0> the type of the stream-0 item
  */
-public abstract class GeneralHashJoinBuilder<T0, R, OUT_STAGE extends GeneralStage<R>> {
+public abstract class GeneralHashJoinBuilder<T0> {
     private final Transform transform0;
     private final PipelineImpl pipelineImpl;
-    private final CreateOutStageFn<T0, OUT_STAGE> createOutStageFn;
+    private final FunctionAdapters fnAdapters;
+    private final CreateOutStageFn<T0> createOutStageFn;
     private final Map<Tag<?>, TransformAndClause> clauses = new HashMap<>();
 
-    GeneralHashJoinBuilder(GeneralStage<T0> stage0, CreateOutStageFn<T0, OUT_STAGE> createOutStageFn) {
+    GeneralHashJoinBuilder(GeneralStage<T0> stage0, CreateOutStageFn<T0> createOutStageFn) {
         this.transform0 = transformOf(stage0);
         this.pipelineImpl = (PipelineImpl) stage0.getPipeline();
         this.createOutStageFn = createOutStageFn;
+        this.fnAdapters = stage0 instanceof StreamStageImpl
+                ? ((StreamStageImpl) stage0).fnAdapters
+                : DONT_ADAPT;
     }
 
     /**
@@ -83,7 +90,7 @@ public abstract class GeneralHashJoinBuilder<T0, R, OUT_STAGE extends GeneralSta
      * @return the hash-join pipeline pipeline
      */
     @SuppressWarnings("unchecked")
-    public OUT_STAGE build(DistributedBiFunction<T0, ItemsByTag, R> mapToOutputFn) {
+    <R> GeneralStage<R> build0(DistributedBiFunction<T0, ItemsByTag, R> mapToOutputFn) {
         List<Entry<Tag<?>, TransformAndClause>> orderedClauses = clauses.entrySet().stream()
                                                                         .sorted(comparing(Entry::getKey))
                                                                         .collect(toList());
@@ -96,24 +103,23 @@ public abstract class GeneralHashJoinBuilder<T0, R, OUT_STAGE extends GeneralSta
         Stream<JoinClause<?, T0, ?, ?>> joinClauses = orderedClauses
                 .stream()
                 .skip(1)
-                .map(e -> e.getValue().clause());
+                .map(e -> e.getValue().clause())
+                .map(fnAdapters::adaptJoinClause);
         HashJoinTransform<T0, R> hashJoinTransform = new HashJoinTransform<>(
                 upstream,
                 joinClauses.collect(toList()),
                 orderedClauses.stream()
                               .map(Entry::getKey)
                               .collect(toList()),
-                mapToOutputFn);
+                fnAdapters.adaptMapToOutputFn(mapToOutputFn));
         pipelineImpl.connect(upstream, hashJoinTransform);
-        return createOutStageFn.get(hashJoinTransform, pipelineImpl);
+        return createOutStageFn.get(hashJoinTransform, fnAdapters, pipelineImpl);
     }
 
     @FunctionalInterface
-    public interface CreateOutStageFn<T0, OUT_STAGE> {
-        <R> OUT_STAGE get(
-                HashJoinTransform<T0, R> hashJoinTransform,
-                PipelineImpl pipeline
-        );
+    public interface CreateOutStageFn<T0> {
+        <R> GeneralStage<R> get(
+                HashJoinTransform<T0, R> hashJoinTransform, FunctionAdapters fnAdapters, PipelineImpl pipeline);
     }
 
     private static class TransformAndClause<K, E0, T1, T1_OUT> {

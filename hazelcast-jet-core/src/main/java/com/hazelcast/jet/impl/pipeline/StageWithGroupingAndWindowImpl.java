@@ -59,8 +59,9 @@ public class StageWithGroupingAndWindowImpl<T, K>
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
         return computeStage.attach(
-                new GroupTransform<T, K, A, R, TimestampedEntry<K, R>>(
-                        computeStage.transform, keyFn(), aggrOp, windowDefinition()));
+                new GroupTransform<T, K, A, R>(computeStage.transform, keyFn(),
+                        computeStage.fnAdapters.adaptAggregateOperation1(aggrOp), windowDefinition()),
+                computeStage.fnAdapters);
     }
 
     @Nonnull @Override
@@ -69,10 +70,10 @@ public class StageWithGroupingAndWindowImpl<T, K>
             @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp
     ) {
         return computeStage.attach(
-                new CoGroupTransform<K, A, R, TimestampedEntry<K, R>>(
+                new CoGroupTransform<K, A, R>(
                         asList(computeStage.transform, transformOf(stage1)),
                         asList(keyFn(), stage1.keyFn()), aggrOp, windowDefinition()
-                ));
+                ), computeStage.fnAdapters);
     }
 
     @Nonnull @Override
@@ -82,10 +83,10 @@ public class StageWithGroupingAndWindowImpl<T, K>
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp
     ) {
         return computeStage.attach(
-                new CoGroupTransform<K, A, R, TimestampedEntry<K, R>>(
+                new CoGroupTransform<K, A, R>(
                         asList(computeStage.transform, transformOf(stage1), transformOf(stage2)),
                         asList(keyFn(), stage1.keyFn(), stage2.keyFn()), aggrOp, windowDefinition()
-                ));
+                ), computeStage.fnAdapters);
     }
 
     @Nonnull @Override

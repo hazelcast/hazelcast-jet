@@ -23,13 +23,13 @@ import com.hazelcast.jet.pipeline.WindowDefinition;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class GroupTransform<T, K, A, R, OUT> extends AbstractTransform implements Transform {
+public class GroupTransform<T, K, A, R> extends AbstractTransform implements Transform {
     @Nonnull
-    public final DistributedFunction<? super T, ? extends K> keyFn;
+    private DistributedFunction<? super T, ? extends K> keyFn;
     @Nonnull
-    public final AggregateOperation1<? super T, A, ? extends R> aggrOp;
+    private AggregateOperation1<? super T, A, ? extends R> aggrOp;
     @Nullable
-    public final WindowDefinition wDef;
+    private final WindowDefinition wDef;
 
     public GroupTransform(
             @Nonnull Transform upstream,
@@ -49,5 +49,20 @@ public class GroupTransform<T, K, A, R, OUT> extends AbstractTransform implement
             @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
         this(upstream, keyFn, aggrOp, null);
+    }
+
+    @Nonnull
+    public DistributedFunction<? super T, ? extends K> keyFn() {
+        return keyFn;
+    }
+
+    @Nonnull
+    public AggregateOperation1<? super T, A, ? extends R> aggrOp() {
+        return aggrOp;
+    }
+
+    @Nullable
+    public WindowDefinition wDef() {
+        return wDef;
     }
 }

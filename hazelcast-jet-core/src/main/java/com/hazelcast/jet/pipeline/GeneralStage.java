@@ -132,7 +132,7 @@ public interface GeneralStage<T> extends Stage {
      * more static type safety.
      */
     @Nonnull
-    <R> GeneralHashJoinBuilder<T, R, ? extends GeneralStage<R>> hashJoinBuilder();
+    GeneralHashJoinBuilder<T> hashJoinBuilder();
 
     @Nonnull
     <K> GeneralStageWithGrouping<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);

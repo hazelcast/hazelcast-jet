@@ -28,6 +28,8 @@ import static java.util.Collections.emptyList;
  */
 public class StreamSourceTransform<T> extends AbstractTransform implements StreamSource<T> {
 
+    public final boolean emitsJetEvents;
+
     @Nonnull
     public final ProcessorMetaSupplier metaSupplier;
 
@@ -37,7 +39,7 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
             @Nonnull ProcessorMetaSupplier metaSupplier
     ) {
         super(name, emptyList());
-        setEmitsJetEvents(emitsJetEvents);
+        this.emitsJetEvents = emitsJetEvents;
         this.metaSupplier = metaSupplier;
     }
 }

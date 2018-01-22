@@ -324,7 +324,7 @@ public final class Processors {
      *            {@code aggrOp.finishAccumulationFn()}
      */
     @Nonnull
-    public static <A, R> DistributedSupplier<Processor> combineByKeyP(
+    public static <T, A, R> DistributedSupplier<Processor> combineByKeyP(
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
         return () -> new CoGroupP<>(Entry::getKey, aggrOp.withCombiningAccumulateFn(Entry<Object, A>::getValue));

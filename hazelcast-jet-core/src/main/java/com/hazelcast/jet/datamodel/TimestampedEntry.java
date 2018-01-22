@@ -16,8 +16,11 @@
 
 package com.hazelcast.jet.datamodel;
 
+import com.hazelcast.jet.impl.pipeline.JetEvent;
+
 import javax.annotation.Nonnull;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
 
@@ -28,7 +31,7 @@ import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
  * @param <K> type of grouping key
  * @param <V> type of the stream item
  */
-public final class TimestampedEntry<K, V> implements Map.Entry<K, V> {
+public final class TimestampedEntry<K, V> implements Map.Entry<K, V>, JetEvent<Entry<K, V>> {
     private final long timestamp;
     private final K key;
     private final V value;
@@ -85,10 +88,19 @@ public final class TimestampedEntry<K, V> implements Map.Entry<K, V> {
 
     @Override
     public String toString() {
-        return "TimestampedEntry{ts="
-                + timestamp
-                + ", formattedTs="
-                + toLocalDateTime(timestamp)
-                + ", key=" + key + ", value=" + value + '}';
+        return "TimestampedEntry{ts=" + timestamp
+                + ", formattedTs=" + toLocalDateTime(timestamp)
+                + ", key=" + key +
+                ", value=" + value + '}';
+    }
+
+    @Override
+    public long timestamp() {
+        return timestamp;
+    }
+
+    @Override
+    public Entry<K, V> payload() {
+        return this;
     }
 }

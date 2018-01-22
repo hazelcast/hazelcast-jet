@@ -16,12 +16,17 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.jet.datamodel.ItemsByTag;
+import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.impl.pipeline.StreamStageImpl;
 
-public class StreamHashJoinBuilder<T0, R>
-        extends GeneralHashJoinBuilder<T0, R, StreamStage<R>> {
+public class StreamHashJoinBuilder<T0> extends GeneralHashJoinBuilder<T0> {
 
     StreamHashJoinBuilder(StreamStage<T0> stage0) {
         super(stage0, StreamStageImpl::new);
+    }
+
+    public <R> StreamStage<R> build(DistributedBiFunction<T0, ItemsByTag, R> mapToOutputFn) {
+        return (StreamStage<R>) build0(mapToOutputFn);
     }
 }

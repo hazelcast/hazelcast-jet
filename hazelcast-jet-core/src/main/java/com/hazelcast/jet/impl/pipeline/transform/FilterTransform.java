@@ -22,7 +22,7 @@ import javax.annotation.Nonnull;
 
 public class FilterTransform<T> extends AbstractTransform implements Transform {
     @Nonnull
-    public final DistributedPredicate<? super T> filterFn;
+    private DistributedPredicate<? super T> filterFn;
 
     public FilterTransform(
             @Nonnull Transform upstream,
@@ -32,13 +32,7 @@ public class FilterTransform<T> extends AbstractTransform implements Transform {
         this.filterFn = filterFn;
     }
 
-    @Override
-    public String name() {
-        return "filter";
-    }
-
-    @Override
-    public String toString() {
-        return name();
+    public DistributedPredicate<? super T> filterFn() {
+        return filterFn;
     }
 }

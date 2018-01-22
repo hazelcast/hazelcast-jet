@@ -19,15 +19,20 @@ package com.hazelcast.jet.impl.pipeline.transform;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.pipeline.Sink;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 
+import static com.hazelcast.jet.function.DistributedUnaryOperator.identity;
+
 public class SinkTransform<T> extends AbstractTransform implements Sink<T> {
     @Nonnull
-    public final ProcessorMetaSupplier metaSupplier;
+    private final ProcessorMetaSupplier metaSupplier;
+    @Nonnull
+    private DistributedFunction<? super T, ?> mapFn;
 
     public SinkTransform(
             @Nonnull String name,
@@ -35,6 +40,7 @@ public class SinkTransform<T> extends AbstractTransform implements Sink<T> {
     ) {
         super(name, new ArrayList<>());
         this.metaSupplier = metaSupplier;
+        this.mapFn = identity();
     }
 
     public SinkTransform(
@@ -51,8 +57,8 @@ public class SinkTransform<T> extends AbstractTransform implements Sink<T> {
         this(name, ProcessorMetaSupplier.of(supplier));
     }
 
-    public SinkTransform<T> setUpstream(Transform upstream) {
-        upstream().add(upstream);
-        return this;
+    @Nonnull
+    public ProcessorMetaSupplier metaSupplier() {
+        return metaSupplier;
     }
 }

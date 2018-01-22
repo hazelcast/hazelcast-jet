@@ -31,15 +31,15 @@ public interface StageWithWindow<T> {
 
     <K> StageWithGroupingAndWindow<T, K> groupingKey(DistributedFunction<? super T, ? extends K> keyFn);
 
-    <A, R> BatchStage<TimestampedEntry<Void, R>> aggregate(
+    <A, R> StreamStage<TimestampedEntry<Void, R>> aggregate(
             AggregateOperation1<? super T, A, ? extends R> aggrOp
     );
 
-    <T1, A, R> BatchStage<TimestampedEntry<Void, R>> aggregate2(
+    <T1, A, R> StreamStage<TimestampedEntry<Void, R>> aggregate2(
             StreamStage<T1> stage1,
             AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp);
 
-    <T1, T2, A, R> BatchStage<TimestampedEntry<Void, R>> aggregate3(
+    <T1, T2, A, R> StreamStage<TimestampedEntry<Void, R>> aggregate3(
             StreamStage<T1> stage1,
             StreamStage<T2> stage2,
             AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp);

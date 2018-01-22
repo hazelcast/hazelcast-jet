@@ -14,25 +14,22 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.pipeline.transform;
-
-import javax.annotation.Nonnull;
-import java.io.Serializable;
-import java.util.List;
+package com.hazelcast.jet.function;
 
 /**
- * This is a pure data object and holds no implementation code for the
- * transformation it represents. {@link com.hazelcast.jet.impl.pipeline.Planner
- * Planner} is the implementation class that creates a Core API DAG for a
- * pipeline.
- */
-public interface Transform extends Serializable {
-    /**
-     * Returns the name of this transformation.
-     */
-    @Nonnull
-    String name();
+ * Represents a three-arity function that accepts three arguments
+ * and produces a result.
+ **/
+@FunctionalInterface
+public interface TriFunction<T, U, V, R> {
 
-    @Nonnull
-    List<? extends Transform> upstream();
+    /**
+     * Applies this function to the given arguments.
+     *
+     * @param t the first argument
+     * @param u the second argument
+     * @param v the third argument
+     * @return the function result
+     */
+    R apply(T t, U u, V v);
 }

@@ -36,7 +36,7 @@ public class AggregateOperation2Impl<T0, T1, A, R>
                                    @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorFn,
                                    @Nonnull DistributedFunction<? super A, R> finishAccumulationFn
     ) {
-        super(createAccumulatorFn, accumulateFs(accumulateItemF0, accumulateItemF1),
+        super(createAccumulatorFn, accumulateFns(accumulateItemF0, accumulateItemF1),
                 combineAccumulatorsFn, deductAccumulatorFn, finishAccumulationFn);
     }
 
@@ -52,13 +52,13 @@ public class AggregateOperation2Impl<T0, T1, A, R>
     @Nonnull @Override
     @SuppressWarnings("unchecked")
     public DistributedBiConsumer<? super A, ? super T0> accumulateFn0() {
-        return (DistributedBiConsumer<? super A, ? super T0>) accumulateFs[0];
+        return (DistributedBiConsumer<? super A, ? super T0>) accumulateFns[0];
     }
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
     public DistributedBiConsumer<? super A, ? super T1> accumulateFn1() {
-        return (DistributedBiConsumer<? super A, ? super T1>) accumulateFs[1];
+        return (DistributedBiConsumer<? super A, ? super T1>) accumulateFns[1];
     }
 
     @Nonnull @Override
@@ -68,13 +68,14 @@ public class AggregateOperation2Impl<T0, T1, A, R>
             throw new IllegalArgumentException(
                     "AggregateOperation2 only recognizes tags with index 0 and 1, but asked for " + tag.index());
         }
-        return (DistributedBiConsumer<? super A, T>) accumulateFs[tag.index()];
+        return (DistributedBiConsumer<? super A, T>) accumulateFns[tag.index()];
     }
 
+    @Nonnull
     @Override
     public <R1> AggregateOperation2<T0, T1, A, R1> withFinishFn(
             @Nonnull DistributedFunction<? super A, R1> finishFn
     ) {
-        return new AggregateOperation2Impl<>(createFn(), accumulateFs, combineFn(), deductFn(), finishFn);
+        return new AggregateOperation2Impl<>(createFn(), accumulateFns, combineFn(), deductFn(), finishFn);
     }
 }

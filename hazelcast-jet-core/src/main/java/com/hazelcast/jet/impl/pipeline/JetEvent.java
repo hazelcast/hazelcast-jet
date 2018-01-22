@@ -23,6 +23,4 @@ public interface JetEvent<T> {
     long timestamp();
 
     T payload();
-
-    JetEvent<T> replacePayload(T payload);
 }

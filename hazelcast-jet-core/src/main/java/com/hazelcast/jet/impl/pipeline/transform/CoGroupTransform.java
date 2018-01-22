@@ -24,13 +24,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class CoGroupTransform<K, A, R, OUT> extends AbstractTransform implements Transform {
+public class CoGroupTransform<K, A, R> extends AbstractTransform implements Transform {
     @Nonnull
-    public final List<DistributedFunction<?, ? extends K>> groupKeyFns;
+    private List<DistributedFunction<?, ? extends K>> groupKeyFns;
     @Nonnull
-    public final AggregateOperation<A, R> aggrOp;
+    private AggregateOperation<A, R> aggrOp;
     @Nullable
-    public final WindowDefinition wDef;
+    private WindowDefinition wDef;
 
     public CoGroupTransform(
             @Nonnull List<Transform> upstream,
@@ -50,5 +50,20 @@ public class CoGroupTransform<K, A, R, OUT> extends AbstractTransform implements
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
         this(upstream, groupKeyFns, aggrOp, null);
+    }
+
+    @Nonnull
+    public List<DistributedFunction<?, ? extends K>> groupKeyFns() {
+        return groupKeyFns;
+    }
+
+    @Nonnull
+    public AggregateOperation<A, R> aggrOp() {
+        return aggrOp;
+    }
+
+    @Nullable
+    public WindowDefinition wDef() {
+        return wDef;
     }
 }

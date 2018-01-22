@@ -23,7 +23,7 @@ import javax.annotation.Nonnull;
 
 public class FlatMapTransform<T, R> extends AbstractTransform implements Transform {
     @Nonnull
-    public final DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn;
+    private DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn;
 
     public FlatMapTransform(
             @Nonnull Transform upstream,
@@ -33,6 +33,7 @@ public class FlatMapTransform<T, R> extends AbstractTransform implements Transfo
         this.flatMapFn = flatMapFn;
     }
 
+    @Nonnull
     public DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn() {
         return flatMapFn;
     }

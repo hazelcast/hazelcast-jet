@@ -41,9 +41,10 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
 
     public StreamStageImpl(
             @Nonnull Transform transform,
+            @Nonnull FunctionAdapters fnAdapters,
             @Nonnull PipelineImpl pipeline
     ) {
-        super(transform, pipeline, true);
+        super(transform, fnAdapters, pipeline, true);
     }
 
     @Nonnull @Override
@@ -112,8 +113,8 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    <RET> RET attach(@Nonnull AbstractTransform transform) {
+    <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapters fnAdapters) {
         pipelineImpl.connect(transform.upstream(), transform);
-        return (RET) new StreamStageImpl<>(transform, pipelineImpl);
+        return (RET) new StreamStageImpl<>(transform, fnAdapters, pipelineImpl);
     }
 }

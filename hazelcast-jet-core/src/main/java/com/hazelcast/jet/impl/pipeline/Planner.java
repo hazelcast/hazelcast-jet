@@ -23,9 +23,9 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.CoGroupTransform;
 import com.hazelcast.jet.impl.pipeline.transform.FilterTransform;
 import com.hazelcast.jet.impl.pipeline.transform.FlatMapTransform;
@@ -35,7 +35,6 @@ import com.hazelcast.jet.impl.pipeline.transform.MapTransform;
 import com.hazelcast.jet.impl.pipeline.transform.PeekTransform;
 import com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
-import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.processor.HashJoinCollectP;
@@ -93,7 +92,6 @@ class Planner {
         validateNoLeakage(adjacencyMap);
         Iterable<Transform> sorted = topologicalSort(adjacencyMap, Object::toString);
         for (Transform transform : sorted) {
-            propagateEmitsJetEvents(transform, adjacencyMap);
             if (transform instanceof BatchSourceTransform) {
                 handleSource((BatchSourceTransform) transform);
             } else if (transform instanceof StreamSourceTransform) {
@@ -134,20 +132,6 @@ class Planner {
         }
     }
 
-    private static void propagateEmitsJetEvents(Transform t, Map<Transform, List<Transform>> adjacencyMap) {
-        if (!t.emitsJetEvents()) {
-            return;
-        }
-        List<Transform> downstream = adjacencyMap.get(t);
-        for (Transform d : downstream) {
-            if (d.emitsJetEvents()) {
-                continue;
-            }
-            d.setEmitsJetEvents(true);
-            propagateEmitsJetEvents(d, adjacencyMap);
-        }
-    }
-
     private void handleSource(BatchSourceTransform source) {
         addVertex(source, vertexName(source.name(), ""), source.metaSupplier);
     }
@@ -161,17 +145,17 @@ class Planner {
         addEdges(procTransform, pv.v);
     }
 
-    private void handleMap(MapTransform map) {
-        PlannerVertex pv = addVertex(map, vertexName(map.name(), ""), mapP(map.mapFn));
+    private <T, R> void handleMap(MapTransform<T, R> map) {
+        PlannerVertex pv = addVertex(map, vertexName(map.name(), ""), mapP(map.mapFn()));
         addEdges(map, pv.v);
     }
 
-    private void handleFilter(FilterTransform filter) {
-        PlannerVertex pv = addVertex(filter, vertexName(filter.name(), ""), filterP(filter.filterFn));
+    private <T> void handleFilter(FilterTransform<T> filter) {
+        PlannerVertex pv = addVertex(filter, vertexName(filter.name(), ""), filterP(filter.filterFn()));
         addEdges(filter, pv.v);
     }
 
-    private void handleFlatMap(FlatMapTransform flatMap) {
+    private <T, R> void handleFlatMap(FlatMapTransform<T, R> flatMap) {
         PlannerVertex pv = addVertex(flatMap, vertexName(flatMap.name(), ""), flatMapP(flatMap.flatMapFn()));
         addEdges(flatMap, pv.v);
     }
@@ -192,23 +176,25 @@ class Planner {
     //                   ----------------
     //                  | combineByKeyP  |
     //                   ----------------
-    private void handleGroup(GroupTransform<Object, Object, Object, Object, Object> xform) {
-        if (xform.wDef != null) {
+    private void handleGroup(GroupTransform<Object, Object, Object, Object> xform) {
+        if (xform.wDef() != null) {
             handleWindowedGroup(xform);
             return;
         }
         String namePrefix = vertexName(xform.name(), "-stage");
         Vertex v1 = dag.newVertex(namePrefix + '1', accumulateByKeyP(
-                xform.keyFn, xform.aggrOp.withFinishFn(identity())));
-        PlannerVertex pv2 = addVertex(xform, namePrefix + '2', combineByKeyP(xform.aggrOp));
-        addEdges(xform, v1, e -> e.partitioned(xform.keyFn, HASH_CODE));
+                xform.keyFn(),
+                xform.aggrOp().withFinishFn(identity())
+        ));
+        PlannerVertex pv2 = addVertex(xform, namePrefix + '2', combineByKeyP(xform.aggrOp()));
+        addEdges(xform, v1, e -> e.partitioned(xform.keyFn(), HASH_CODE));
         dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }
 
     private void handleWindowedGroup(
-            GroupTransform<Object, Object, Object, Object, Object> xform
+            GroupTransform<Object, Object, Object, Object> xform
     ) {
-        WindowDefinition wDef = requireNonNull(xform.wDef);
+        WindowDefinition wDef = requireNonNull(xform.wDef());
         switch (wDef.kind()) {
             case TUMBLING:
             case SLIDING:
@@ -239,34 +225,34 @@ class Planner {
     //                  | combineByFrameP |
     //                   -----------------
     private void handleSlidingWindow(
-            GroupTransform<Object, Object, Object, Object, Object> xform,
+            GroupTransform<Object, Object, Object, Object> xform,
             SlidingWindowDef wDef
     ) {
         String namePrefix = vertexName("sliding-window", "-stage");
         SlidingWindowPolicy winPolicy = wDef.toSlidingWindowPolicy();
         Vertex v1 = dag.newVertex(namePrefix + '1', accumulateByFrameP(
-                xform.keyFn,
-                (TimestampedEntry<Object, Object> e) -> e.getTimestamp(),
+                xform.keyFn(),
+                JetEvent<Object>::timestamp,
                 TimestampKind.EVENT,
                 winPolicy,
-                xform.aggrOp.withFinishFn(identity())));
+                xform.aggrOp().withFinishFn(identity())));
         PlannerVertex pv2 = addVertex(xform, namePrefix + '2',
-                combineToSlidingWindowP(winPolicy, xform.aggrOp));
-        addEdges(xform, v1, e -> e.partitioned(xform.keyFn, HASH_CODE));
+                combineToSlidingWindowP(winPolicy, xform.aggrOp()));
+        addEdges(xform, v1, e -> e.partitioned(xform.keyFn(), HASH_CODE));
         dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }
 
     private void handleSessionWindow(
-            GroupTransform<Object, Object, Object, Object, Object> xform,
+            GroupTransform<Object, Object, Object, Object> xform,
             SessionWindowDef wDef
     ) {
         PlannerVertex pv = addVertex(xform, vertexName("session-window", ""), aggregateToSessionWindowP(
                 wDef.sessionTimeout(),
                 x -> 0L,
-                xform.keyFn,
-                xform.aggrOp
+                xform.keyFn(),
+                xform.aggrOp()
         ));
-        addEdges(xform, pv.v, e -> e.partitioned(xform.keyFn));
+        addEdges(xform, pv.v, e -> e.partitioned(xform.keyFn()));
     }
 
     //           ----------       ----------         ----------
@@ -285,23 +271,23 @@ class Planner {
     //                          ---------------
     //                         | combineByKeyP |
     //                          ---------------
-    private void handleCoGroup(CoGroupTransform<Object, Object, Object, Object> xform) {
-        if (xform.wDef != null) {
+    private void handleCoGroup(CoGroupTransform<Object, Object, Object> xform) {
+        if (xform.wDef() != null) {
             handleWindowedCoGroup(xform);
             return;
         }
-        List<DistributedFunction<?, ?>> groupKeyFns = xform.groupKeyFns;
+        List<DistributedFunction<?, ?>> groupKeyFns = xform.groupKeyFns();
         String namePrefix = vertexName(xform.name(), "-stage");
         Vertex v1 = dag.newVertex(namePrefix + '1',
-                coAccumulateByKeyP(groupKeyFns, xform.aggrOp.withFinishFn(identity())));
+                coAccumulateByKeyP(groupKeyFns, xform.aggrOp().withFinishFn(identity())));
         PlannerVertex pv2 = addVertex(xform, namePrefix + '2',
-                combineByKeyP(xform.aggrOp));
+                combineByKeyP(xform.aggrOp()));
         addEdges(xform, v1, (e, ord) -> e.partitioned(groupKeyFns.get(ord), HASH_CODE));
         dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }
 
-    private void handleWindowedCoGroup(CoGroupTransform<Object, Object, Object, Object> xform) {
-        WindowDefinition wDef = requireNonNull(xform.wDef);
+    private void handleWindowedCoGroup(CoGroupTransform<Object, Object, Object> xform) {
+        WindowDefinition wDef = requireNonNull(xform.wDef());
         switch (wDef.kind()) {
             case TUMBLING:
             case SLIDING:
@@ -316,14 +302,14 @@ class Planner {
     }
 
     private void handleSlidingCoWindow(
-            CoGroupTransform<Object, Object, Object, Object> xform,
+            CoGroupTransform<Object, Object, Object> xform,
             SlidingWindowDef wDef
     ) {
         throw new UnsupportedOperationException("Windowed co-grouping not yet implemented");
     }
 
     private void handleSessionCoWindow(
-            CoGroupTransform<Object, Object, Object, Object> xform,
+            CoGroupTransform<Object, Object, Object> xform,
             SessionWindowDef downcast
     ) {
         throw new UnsupportedOperationException("Windowed co-grouping not yet implemented");
@@ -353,12 +339,11 @@ class Planner {
     private void handleHashJoin(HashJoinTransform<?, ?> hashJoin) {
         String namePrefix = vertexName(hashJoin.name(), "");
         PlannerVertex primary = xform2vertex.get(hashJoin.upstream().get(0));
-        List<Function<Object, Object>> keyFns = (List<Function<Object, Object>>) (List)
-                hashJoin.clauses.stream()
-                        .map(JoinClause::leftKeyFn)
-                        .collect(toList());
+        List keyFns = hashJoin.clauses.stream()
+                                      .map(JoinClause::leftKeyFn)
+                                      .collect(toList());
         Vertex joiner = addVertex(hashJoin, namePrefix + "joiner",
-                () -> new HashJoinP(keyFns, hashJoin.tags, hashJoin.mapToOutputFn)).v;
+                () -> new HashJoinP(keyFns, hashJoin.tags, hashJoin.mapToOutputBiFn, null)).v;
         dag.edge(from(primary.v, primary.availableOrdinal++).to(joiner, 0));
 
         String collectorName = namePrefix + "collector-";
@@ -393,7 +378,7 @@ class Planner {
     }
 
     private void handleSink(SinkTransform sink) {
-        PlannerVertex pv = addVertex(sink, vertexName(sink.name(), ""), sink.metaSupplier);
+        PlannerVertex pv = addVertex(sink, vertexName(sink.name(), ""), sink.metaSupplier());
         addEdges(sink, pv.v);
     }
 

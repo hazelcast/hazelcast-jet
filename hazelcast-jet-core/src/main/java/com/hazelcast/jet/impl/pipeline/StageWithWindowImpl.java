@@ -20,10 +20,11 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.impl.aggregate.AggregateOperationImpl;
 import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.CoAggregateTransform;
-import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
 import com.hazelcast.jet.pipeline.StageWithWindow;
 import com.hazelcast.jet.pipeline.StreamStage;
@@ -38,14 +39,13 @@ import static java.util.Arrays.asList;
  */
 public class StageWithWindowImpl<T> implements StageWithWindow<T> {
 
-    private final StreamStageImpl<T> computeStage;
+    private final StreamStageImpl<T> streamStage;
     private final WindowDefinition wDef;
+    private final FunctionAdapters fnAdapters;
 
-    StageWithWindowImpl(
-            StreamStageImpl<T> computeStage,
-            WindowDefinition wDef
-    ) {
-        this.computeStage = computeStage;
+    StageWithWindowImpl(StreamStageImpl<T> streamStage, WindowDefinition wDef) {
+        this.streamStage = streamStage;
+        this.fnAdapters = streamStage.fnAdapters;
         this.wDef = wDef;
     }
 
@@ -56,43 +56,47 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
 
     @Override
     public <K> StageWithGroupingAndWindow<T, K> groupingKey(DistributedFunction<? super T, ? extends K> keyFn) {
-        return new StageWithGroupingAndWindowImpl<>(computeStage, keyFn, wDef);
+        return new StageWithGroupingAndWindowImpl<>(streamStage, keyFn, wDef);
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public <A, R> BatchStage<TimestampedEntry<Void, R>> aggregate(
+    public <A, R> StreamStage<TimestampedEntry<Void, R>> aggregate(
             AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
-        return computeStage.attach(new AggregateTransform<T, A, R>(
-                computeStage.transform, aggrOp, wDef));
+        DistributedBiConsumer adaptedAccFn = fnAdapters.adaptAccumulateFn(aggrOp.accumulateFn());
+        return streamStage.<StreamStage>attach(new AggregateTransform<>(
+                streamStage.transform, aggrOp.withAccumulateFn(adaptedAccFn), wDef), fnAdapters);
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T1, A, R> BatchStage<TimestampedEntry<Void, R>> aggregate2(
+    public <T1, A, R> StreamStage<TimestampedEntry<Void, R>> aggregate2(
             StreamStage<T1> stage1,
             AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp
     ) {
-        return computeStage.attach(new CoAggregateTransform<>(
-                asList(computeStage.transform, transformOf(stage1)),
-                aggrOp));
+        DistributedBiConsumer adaptedAccFn0 = fnAdapters.adaptAccumulateFn(aggrOp.accumulateFn0());
+        DistributedBiConsumer adaptedAccFn1 = fnAdapters.adaptAccumulateFn(aggrOp.accumulateFn1());
+        return streamStage.attach(new CoAggregateTransform<>(
+                asList(streamStage.transform, transformOf(stage1)),
+                ((AggregateOperationImpl<A, ? extends R>) aggrOp).withAccumulateFns(adaptedAccFn0, adaptedAccFn1)),
+                fnAdapters);
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T1, T2, A, R> BatchStage<TimestampedEntry<Void, R>> aggregate3(
+    public <T1, T2, A, R> StreamStage<TimestampedEntry<Void, R>> aggregate3(
             StreamStage<T1> stage1,
             StreamStage<T2> stage2,
             AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp
     ) {
-        return computeStage.attach(new CoAggregateTransform<>(
-                asList(computeStage.transform, transformOf(stage1), transformOf(stage2)),
-                aggrOp));
+        return streamStage.attach(new CoAggregateTransform<>(
+                asList(streamStage.transform, transformOf(stage1), transformOf(stage2)),
+                aggrOp), fnAdapters);
     }
 
     @Override
     public WindowAggregateBuilder<T> aggregateBuilder() {
-        return new WindowAggregateBuilder<>(computeStage, wDef);
+        return new WindowAggregateBuilder<>(streamStage, wDef);
     }
 }

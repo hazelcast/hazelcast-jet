@@ -16,6 +16,9 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.jet.function.DistributedBiConsumer;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.impl.aggregate.AggregateOperationImpl;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.StageWithGrouping;
@@ -31,9 +34,11 @@ import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static com.hazelcast.jet.datamodel.Tag.tag;
+import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DONT_ADAPT;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -47,49 +52,56 @@ import static java.util.stream.Collectors.toList;
 public class GrAggBuilder<K> {
     private final PipelineImpl pipelineImpl;
     private final WindowDefinition wDef;
-    private final List<StageWithGroupingBase<?, K>> stages = new ArrayList<>();
+    private final List<ComputeStageImplBase> upstreamStages = new ArrayList<>();
+    private final List<DistributedFunction<?, ? extends K>> keyFns = new ArrayList<>();
 
     @SuppressWarnings("unchecked")
-    public GrAggBuilder(StageWithGrouping<?, K> s) {
-        pipelineImpl = (PipelineImpl) ((StageWithGroupingBase) s).computeStage.getPipeline();
+    public GrAggBuilder(StageWithGrouping<?, K> stage0) {
+        ComputeStageImplBase computeStage = ((StageWithGroupingBase) stage0).computeStage;
+        pipelineImpl = (PipelineImpl) computeStage.getPipeline();
         wDef = null;
-        stages.add((StageWithGroupingBase<?, K>) s);
+        upstreamStages.add(computeStage);
+        keyFns.add(stage0.keyFn());
     }
 
     @SuppressWarnings("unchecked")
-    public GrAggBuilder(StageWithGroupingAndWindow<?, K> s) {
-        pipelineImpl = (PipelineImpl) ((StageWithGroupingBase) s).computeStage.getPipeline();
-        wDef = s.windowDefinition();
-        stages.add((StageWithGroupingBase<?, K>) s);
+    public GrAggBuilder(StageWithGroupingAndWindow<?, K> stage) {
+        ComputeStageImplBase computeStage = ((StageWithGroupingBase) stage).computeStage;
+        pipelineImpl = (PipelineImpl) computeStage.getPipeline();
+        wDef = stage.windowDefinition();
+        upstreamStages.add(computeStage);
+        keyFns.add(stage.keyFn());
     }
 
     @SuppressWarnings("unchecked")
     public <E> Tag<E> add(StreamStageWithGrouping<E, K> stage) {
-        stages.add((StageWithGroupingBase<E, K>) stage);
-        return (Tag<E>) tag(stages.size() - 1);
+        upstreamStages.add(((StageWithGroupingBase) stage).computeStage);
+        keyFns.add(stage.keyFn());
+        return (Tag<E>) tag(upstreamStages.size() - 1);
     }
 
     @SuppressWarnings("unchecked")
     public <E> Tag<E> add(StageWithGrouping<E, K> stage) {
-        stages.add((StageWithGroupingBase<E, K>) stage);
-        return (Tag<E>) tag(stages.size() - 1);
+        upstreamStages.add(((StageWithGroupingBase) stage).computeStage);
+        keyFns.add(stage.keyFn());
+        return (Tag<E>) tag(upstreamStages.size() - 1);
     }
 
+    @SuppressWarnings("unchecked")
     public <A, R, OUT, OUT_STAGE extends GeneralStage<OUT>> OUT_STAGE build(
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull CreateOutStageFn<OUT, OUT_STAGE> createOutStageFn
     ) {
-        List<Transform> upstream = stages.stream()
-                                         .map(StageWithGroupingBase::computeStage)
-                                         .map(generalStage -> (ComputeStageImplBase) generalStage)
-                                         .map(csib -> csib.transform)
-                                         .collect(toList());
-        CoGroupTransform<K, A, R, OUT> transform = new CoGroupTransform<>(
-                upstream,
-                stages.stream().map(StageWithGroupingBase::keyFn).collect(toList()),
-                aggrOp, wDef
+        AggregateOperationImpl rawAggrOp = (AggregateOperationImpl) aggrOp;
+        DistributedBiConsumer[] adaptedAccumulateFns = new DistributedBiConsumer[rawAggrOp.arity()];
+        Arrays.setAll(adaptedAccumulateFns, i ->
+                upstreamStages.get(i).fnAdapters.adaptAccumulateFn(rawAggrOp.accumulateFn(i))
         );
-        pipelineImpl.connect(upstream, transform);
-        return createOutStageFn.get(transform, pipelineImpl);
+        AggregateOperation adaptedAggrOp = rawAggrOp.withAccumulateFns(adaptedAccumulateFns);
+
+        List<Transform> upstreamTransforms = upstreamStages.stream().map(s -> s.transform).collect(toList());
+        CoGroupTransform<K, A, R> transform = new CoGroupTransform<>(upstreamTransforms, keyFns, adaptedAggrOp, wDef);
+        pipelineImpl.connect(upstreamTransforms, transform);
+        return createOutStageFn.get(transform, DONT_ADAPT, pipelineImpl);
     }
 }

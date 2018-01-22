@@ -45,8 +45,8 @@ public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> imp
     public <A, R> BatchStage<Entry<K, R>> aggregate(
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        return computeStage.attach(new GroupTransform<T, K, A, R, Entry<K, R>>(
-                computeStage.transform, keyFn(), aggrOp));
+        return computeStage.attach(new GroupTransform<T, K, A, R>(
+                computeStage.transform, keyFn(), aggrOp), computeStage.fnAdapters);
     }
 
     @Nonnull
@@ -55,10 +55,10 @@ public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp
     ) {
         return computeStage.attach(
-                new CoGroupTransform<K, A, R, Entry<K, R>>(
+                new CoGroupTransform<K, A, R>(
                         asList(computeStage.transform, transformOf(stage1)),
                         asList(keyFn(), stage1.keyFn()),
-                        aggrOp));
+                        aggrOp), computeStage.fnAdapters);
     }
 
     @Nonnull
@@ -68,10 +68,10 @@ public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp
     ) {
         return computeStage.attach(
-                new CoGroupTransform<K, A, R, Entry<K, R>>(
+                new CoGroupTransform<K, A, R>(
                         asList(computeStage.transform, transformOf(stage1), transformOf(stage2)),
                         asList(keyFn(), stage1.keyFn(), stage2.keyFn()),
-                        aggrOp));
+                        aggrOp), computeStage.fnAdapters);
     }
 
     @Nonnull @Override

@@ -22,7 +22,7 @@ import javax.annotation.Nonnull;
 
 public class MapTransform<T, R> extends AbstractTransform implements Transform {
     @Nonnull
-    public final DistributedFunction<? super T, ? extends R> mapFn;
+    private DistributedFunction<? super T, ? extends R> mapFn;
 
     public MapTransform(
             @Nonnull Transform upstream,
@@ -30,5 +30,9 @@ public class MapTransform<T, R> extends AbstractTransform implements Transform {
     ) {
         super("map", upstream);
         this.mapFn = mapFn;
+    }
+
+    public DistributedFunction<? super T, ? extends R> mapFn() {
+        return mapFn;
     }
 }
