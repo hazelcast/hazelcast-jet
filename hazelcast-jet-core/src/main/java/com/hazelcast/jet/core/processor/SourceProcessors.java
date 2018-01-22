@@ -20,6 +20,7 @@ import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.jet.JournalInitialPosition;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.kotlin.ReadFilesPK;
 import com.hazelcast.jet.core.kotlin.StreamFilesPK;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -65,7 +66,7 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#map(String, Predicate, Projection)}}.
+     * {@link com.hazelcast.jet.Sources#map(String, Predicate, Projection)}.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier readMapP(
@@ -78,7 +79,7 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#map(String, Predicate, DistributedFunction)}}.
+     * {@link com.hazelcast.jet.Sources#map(String, Predicate, DistributedFunction)}.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier readMapP(
@@ -92,28 +93,34 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#mapJournal(String, JournalInitialPosition)}.
+     * {@link com.hazelcast.jet.Sources#mapJournal(String,
+     * JournalInitialPosition, WatermarkGenerationParams)}.
      */
     @Nonnull
-    public static ProcessorMetaSupplier streamMapP(
-            @Nonnull String mapName, @Nonnull JournalInitialPosition initialPos
+    public static <K, V> ProcessorMetaSupplier streamMapP(
+            @Nonnull String mapName,
+            @Nonnull JournalInitialPosition initialPos,
+            WatermarkGenerationParams<Entry<K, V>> wmGenParams
     ) {
-        return streamMapP(mapName, mapPutEvents(), mapEventToEntry(), initialPos);
+        return streamMapP(mapName, mapPutEvents(), mapEventToEntry(), initialPos, wmGenParams);
     }
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#mapJournal(String, DistributedPredicate,
-     * DistributedFunction, JournalInitialPosition)}.
+     * {@link com.hazelcast.jet.Sources#mapJournal(String,
+     * DistributedPredicate, DistributedFunction, JournalInitialPosition,
+     * WatermarkGenerationParams)}.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier streamMapP(
             @Nonnull String mapName,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            WatermarkGenerationParams<T> wmGenParams
     ) {
-        return StreamEventJournalP.streamMapP(mapName, predicateFn, projectionFn, initialPos);
+        return StreamEventJournalP.streamMapP(mapName, predicateFn, projectionFn, initialPos,
+                wmGenParams);
     }
 
     /**
@@ -157,22 +164,25 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#remoteMapJournal(String, ClientConfig, JournalInitialPosition)}.
+     * {@link com.hazelcast.jet.Sources#remoteMapJournal(String, ClientConfig,
+     * JournalInitialPosition, WatermarkGenerationParams)}.
      */
     @Nonnull
-    public static ProcessorMetaSupplier streamRemoteMapP(
+    public static <K, V> ProcessorMetaSupplier streamRemoteMapP(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            WatermarkGenerationParams<Entry<K, V>> wmGenParams
     ) {
-        return streamRemoteMapP(mapName, clientConfig, mapPutEvents(), mapEventToEntry(), initialPos);
+        return streamRemoteMapP(mapName, clientConfig, mapPutEvents(), mapEventToEntry(), initialPos,
+                wmGenParams);
     }
 
     /**
      * Returns a supplier of processors for {@link
-     * com.hazelcast.jet.Sources#remoteMapJournal(
-     * String, ClientConfig, DistributedPredicate, DistributedFunction, JournalInitialPosition
-     * )}.
+     * com.hazelcast.jet.Sources#remoteMapJournal(String, ClientConfig,
+     * DistributedPredicate, DistributedFunction, JournalInitialPosition,
+     * WatermarkGenerationParams)}.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier streamRemoteMapP(
@@ -180,10 +190,11 @@ public final class SourceProcessors {
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            WatermarkGenerationParams<T> wmGenParams
     ) {
         return StreamEventJournalP.streamRemoteMapP(
-                mapName, clientConfig, predicateFn, projectionFn, initialPos);
+                mapName, clientConfig, predicateFn, projectionFn, initialPos, wmGenParams);
     }
 
     /**
@@ -197,27 +208,34 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#cacheJournal(String, JournalInitialPosition)}.
+     * {@link com.hazelcast.jet.Sources#cacheJournal(String, JournalInitialPosition,
+     * WatermarkGenerationParams)}.
      */
     @Nonnull
-    public static ProcessorMetaSupplier streamCacheP(@Nonnull String cacheName,
-                                                     @Nonnull JournalInitialPosition initialPos) {
-        return streamCacheP(cacheName, cachePutEvents(), cacheEventToEntry(), initialPos);
+    public static <K, V> ProcessorMetaSupplier streamCacheP(
+            @Nonnull String cacheName,
+            @Nonnull JournalInitialPosition initialPos,
+            WatermarkGenerationParams<Entry<K, V>> wmGenParams
+    ) {
+        return streamCacheP(cacheName, cachePutEvents(), cacheEventToEntry(), initialPos, wmGenParams);
     }
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#cacheJournal(String, DistributedPredicate,
-     * DistributedFunction, JournalInitialPosition)}.
+     * {@link com.hazelcast.jet.Sources#cacheJournal(String,
+     * DistributedPredicate, DistributedFunction, JournalInitialPosition,
+     * WatermarkGenerationParams)}.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier streamCacheP(
             @Nonnull String cacheName,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            WatermarkGenerationParams<T> wmGenParams
     ) {
-        return StreamEventJournalP.streamCacheP(cacheName, predicateFn, projectionFn, initialPos);
+        return StreamEventJournalP.streamCacheP(cacheName, predicateFn, projectionFn, initialPos,
+                wmGenParams);
     }
 
     /**
@@ -233,20 +251,24 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.Sources#remoteCacheJournal(String, ClientConfig, JournalInitialPosition)}.
+     * {@link com.hazelcast.jet.Sources#remoteCacheJournal(String, ClientConfig,
+     * JournalInitialPosition, WatermarkGenerationParams)}.
      */
     @Nonnull
-    public static ProcessorMetaSupplier streamRemoteCacheP(
-            @Nonnull String cacheName, @Nonnull ClientConfig clientConfig, @Nonnull JournalInitialPosition initialPos
+    public static <K, V> ProcessorMetaSupplier streamRemoteCacheP(
+            @Nonnull String cacheName,
+            @Nonnull ClientConfig clientConfig,
+            @Nonnull JournalInitialPosition initialPos,
+            WatermarkGenerationParams<Entry<K, V>> wmGenParams
     ) {
-        return streamRemoteCacheP(cacheName, clientConfig, cachePutEvents(), cacheEventToEntry(), initialPos);
+        return streamRemoteCacheP(cacheName, clientConfig, cachePutEvents(), cacheEventToEntry(), initialPos, wmGenParams);
     }
 
     /**
      * Returns a supplier of processors for {@link
-     * com.hazelcast.jet.Sources#remoteCacheJournal(
-     * String, ClientConfig, DistributedPredicate, DistributedFunction, JournalInitialPosition
-     * )}.
+     * com.hazelcast.jet.Sources#remoteCacheJournal(String, ClientConfig,
+     * DistributedPredicate, DistributedFunction, JournalInitialPosition,
+     * WatermarkGenerationParams)}.
      */
     @Nonnull
     public static <K, V, T> ProcessorMetaSupplier streamRemoteCacheP(
@@ -254,10 +276,11 @@ public final class SourceProcessors {
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull JournalInitialPosition initialPos,
+            WatermarkGenerationParams<T> wmGenParams
     ) {
-        return StreamEventJournalP.streamRemoteCacheP(
-                cacheName, clientConfig, predicateFn, projectionFn, initialPos);
+        return StreamEventJournalP.streamRemoteCacheP(cacheName, clientConfig, predicateFn, projectionFn, initialPos,
+                wmGenParams);
     }
 
     /**

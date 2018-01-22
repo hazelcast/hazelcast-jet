@@ -26,8 +26,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.TimestampKind;
-import com.hazelcast.jet.core.WatermarkEmissionPolicy;
-import com.hazelcast.jet.core.WatermarkPolicy;
+import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.WindowDefinition;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -654,9 +653,9 @@ public final class Processors {
      * Returns a supplier of processors for a vertex that inserts {@link
      * com.hazelcast.jet.core.Watermark watermark items} into the stream. The
      * value of the watermark is determined by the supplied {@link
-     * WatermarkPolicy} instance.
+     * com.hazelcast.jet.core.WatermarkPolicy} instance.
      * <p>
-     * This processor also drops late items. It never allows an event, which is
+     * This processor also drops late items. It never allows an event which is
      * late with regard to already emitted watermark to pass.
      * <p>
      * The processor saves value of the last emitted watermark to snapshot.
@@ -674,13 +673,11 @@ public final class Processors {
      */
     @Nonnull
     public static <T> DistributedSupplier<Processor> insertWatermarksP(
-            @Nonnull DistributedToLongFunction<T> getTimestampF,
-            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
-            @Nonnull WatermarkEmissionPolicy wmEmitPolicy
+            @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
         return USE_KOTLIN
-                ? () -> insertWatermarksPK(getTimestampF, newWmPolicyF.get(), wmEmitPolicy)
-                : () -> new InsertWatermarksP<>(getTimestampF, newWmPolicyF.get(), wmEmitPolicy);
+                ? () -> insertWatermarksPK(wmGenParams)
+                : () -> new InsertWatermarksP<>(wmGenParams);
     }
 
     /**
@@ -739,19 +736,23 @@ public final class Processors {
      * item-to-traverser mapping function to each received item and emits all
      * the items from the resulting traverser.
      * <p>
+     * The traverser returned from the {@code flatMapFn} must be finite. That
+     * is, this operation will not attempt to emit any items after the first
+     * {@code null} item.
+     * <p>
      * This processor is stateless.
      *
-     * @param mapper function that maps the received item to a traverser over output items
+     * @param flatMapFn function that maps the received item to a traverser over output items
      * @param <T> received item type
      * @param <R> emitted item type
      */
     @Nonnull
     public static <T, R> DistributedSupplier<Processor> flatMapP(
-            @Nonnull DistributedFunction<T, ? extends Traverser<R>> mapper
+            @Nonnull DistributedFunction<T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         return USE_KOTLIN
-                ? () -> transformPK(mapper)
-                : () -> new TransformP<>(mapper);
+                ? () -> transformPK(flatMapFn)
+                : () -> new TransformP<>(flatMapFn);
     }
 
     /**

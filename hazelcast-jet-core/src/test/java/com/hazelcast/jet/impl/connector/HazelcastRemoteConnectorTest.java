@@ -26,31 +26,33 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.stream.IStreamList;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.nio.Address;
 import com.hazelcast.projection.Projections;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.Future;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
+import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteCacheP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteListP;
@@ -70,7 +72,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-@Category(QuickTest.class)
 @RunWith(HazelcastSerialClassRunner.class)
 public class HazelcastRemoteConnectorTest extends JetTestSupport {
 
@@ -225,70 +226,75 @@ public class HazelcastRemoteConnectorTest extends JetTestSupport {
     @Test
     public void when_streamRemoteMap() throws Exception {
         DAG dag = new DAG();
-        Vertex source = dag.newVertex(SOURCE_NAME, streamRemoteMapP(SOURCE_NAME, clientConfig, START_FROM_OLDEST));
+        Vertex source = dag.newVertex(SOURCE_NAME, streamRemoteMapP(SOURCE_NAME, clientConfig, START_FROM_OLDEST,
+                wmGenParams(Entry<Integer, Integer>::getValue, withFixedLag(0), suppressDuplicates(), 10_000)));
         Vertex sink = dag.newVertex(SINK_NAME, writeListP(SINK_NAME));
         dag.edge(between(source, sink));
 
-        Future<Void> future = jet.newJob(dag).getFuture();
+        Job job = jet.newJob(dag);
 
         populateMap(hz.getMap(SOURCE_NAME));
 
         assertSizeEventually(ITEM_COUNT, jet.getList(SINK_NAME));
-        future.cancel(true);
+        job.cancel();
     }
 
     @Test
     public void when_streamRemoteMap_withPredicateAndProjection() throws Exception {
         DAG dag = new DAG();
-        Vertex source = dag.newVertex(SOURCE_NAME, streamRemoteMapP(SOURCE_NAME, clientConfig,
-                event -> !event.getKey().equals(0), EventJournalMapEvent::getKey, START_FROM_OLDEST));
+        Vertex source = dag.newVertex(SOURCE_NAME, SourceProcessors.<Integer, Integer, Integer>streamRemoteMapP(
+                SOURCE_NAME, clientConfig, event -> event.getKey() != 0, EventJournalMapEvent::getKey, START_FROM_OLDEST,
+                wmGenParams(i -> i, withFixedLag(0), suppressDuplicates(), 10_000)));
         Vertex sink = dag.newVertex(SINK_NAME, writeListP(SINK_NAME));
         dag.edge(between(source, sink));
 
-        Future<Void> future = jet.newJob(dag).getFuture();
+        Job job = jet.newJob(dag);
 
         populateMap(hz.getMap(SOURCE_NAME));
 
         assertSizeEventually(ITEM_COUNT - 1, jet.getList(SINK_NAME));
         assertFalse(jet.getList(SINK_NAME).contains(0));
         assertTrue(jet.getList(SINK_NAME).contains(1));
-        future.cancel(true);
+        job.cancel();
     }
 
     @Test
     public void when_streamRemoteCache() throws Exception {
         DAG dag = new DAG();
         Vertex source = dag.newVertex(SOURCE_NAME,
-                streamRemoteCacheP(SOURCE_NAME, clientConfig, START_FROM_OLDEST)
+                streamRemoteCacheP(SOURCE_NAME, clientConfig, START_FROM_OLDEST,
+                        wmGenParams(Entry<Integer, Integer>::getValue, withFixedLag(0), suppressDuplicates(), 10_000))
         ).localParallelism(4);
         Vertex sink = dag.newVertex(SINK_NAME, writeListP(SINK_NAME)).localParallelism(1);
         dag.edge(between(source, sink));
 
-        Future<Void> future = jet.newJob(dag).getFuture();
+        Job job = jet.newJob(dag);
 
         populateCache(hz.getCacheManager().getCache(SOURCE_NAME));
 
         assertSizeEventually(ITEM_COUNT, jet.getList(SINK_NAME));
-        future.cancel(true);
+        job.cancel();
     }
 
     @Test
     public void when_streamRemoteCache_withPredicateAndProjection()
             throws Exception {
         DAG dag = new DAG();
-        Vertex source = dag.newVertex(SOURCE_NAME, streamRemoteCacheP(SOURCE_NAME, clientConfig,
-                event -> !event.getKey().equals(0), EventJournalCacheEvent::getKey, START_FROM_OLDEST));
+        Vertex source = dag.newVertex(SOURCE_NAME, SourceProcessors.<Integer, Integer, Integer>streamRemoteCacheP(
+                SOURCE_NAME, clientConfig, event -> !event.getKey().equals(0), EventJournalCacheEvent::getKey,
+                START_FROM_OLDEST,
+                wmGenParams(i -> i, withFixedLag(0), suppressDuplicates(), 10_000)));
         Vertex sink = dag.newVertex(SINK_NAME, writeListP(SINK_NAME));
         dag.edge(between(source, sink));
 
-        Future<Void> future = jet.newJob(dag).getFuture();
+        Job job = jet.newJob(dag);
 
         populateCache(hz.getCacheManager().getCache(SOURCE_NAME));
 
         assertSizeEventually(ITEM_COUNT - 1, jet.getList(SINK_NAME));
         assertFalse(jet.getList(SINK_NAME).contains(0));
         assertTrue(jet.getList(SINK_NAME).contains(1));
-        future.cancel(true);
+        job.cancel();
     }
 
     private void executeAndWait(DAG dag) {

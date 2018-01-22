@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.impl.JobCoordinationService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.Operation;
@@ -33,7 +34,8 @@ public class GetJobIdsOperation extends Operation implements IdentifiedDataSeria
     @Override
     public void run() throws Exception {
         JetService service = getService();
-        response = service.getAllJobIds();
+        JobCoordinationService coordinationService = service.getJobCoordinationService();
+        response = coordinationService.getAllJobIds();
     }
 
     @Override

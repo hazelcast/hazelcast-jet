@@ -19,13 +19,18 @@ package com.hazelcast.jet;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.IMap;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.map.AbstractEntryProcessor;
 import com.hazelcast.nio.Address;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.DataSerializable;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -255,6 +260,30 @@ public class SinksTest extends PipelineTestSupport {
     }
 
     @Test
+    public void mapWithUpdating_when_itemDataSerializable_then_exceptionShouldNotThrown() {
+        // Given
+        IStreamMap<Object, Object> sourceMap = jet().getMap(srcName);
+        List<Integer> input = sequence(ITEM_COUNT);
+        input.forEach(i -> sourceMap.put(String.valueOf(i), new DataSerializableObject(i)));
+
+        // When
+        pipeline.drawFrom(Sources.<String, DataSerializableObject>map(srcName))
+                .drainTo(Sinks.mapWithUpdating(srcName,
+                        (DataSerializableObject value, Entry<String, DataSerializableObject> item) ->
+                                new DataSerializableObject(value.value + item.getValue().value)));
+        execute();
+
+        // Then
+        List<Entry<String, DataSerializableObject>> expected = input
+                .stream()
+                .map(i -> entry(String.valueOf(i), new DataSerializableObject(i * 2)))
+                .collect(toList());
+        Set<Entry<Object, Object>> actual = jet().getMap(srcName).entrySet();
+        assertEquals(expected.size(), actual.size());
+        expected.forEach(entry -> assertTrue(actual.contains(entry)));
+    }
+
+    @Test
     public void mapWithUpdating_when_entryIsLocked_then_entryIsUpdatedRegardlessTheLock() {
         // Given
         srcMap.put("key", 1);
@@ -311,6 +340,31 @@ public class SinksTest extends PipelineTestSupport {
     }
 
     @Test
+    public void remoteMapWithUpdating_when_itemDataSerializable_then_exceptionShouldNotThrown() {
+        // Given
+        IMap<Object, Object> sourceMap = hz.getMap(srcName);
+        List<Integer> input = sequence(ITEM_COUNT);
+        input.forEach(i -> sourceMap.put(String.valueOf(i), new DataSerializableObject(i)));
+
+        // When
+        pipeline.drawFrom(Sources.<String, DataSerializableObject>remoteMap(srcName, clientConfig))
+                .drainTo(Sinks.remoteMapWithUpdating(srcName, clientConfig,
+                        (DataSerializableObject value, Entry<String, DataSerializableObject> item) ->
+                                new DataSerializableObject(value.value + item.getValue().value)));
+        execute();
+
+        // Then
+        List<Entry<String, DataSerializableObject>> expected = input
+                .stream()
+                .map(i -> entry(String.valueOf(i), new DataSerializableObject(i * 2)))
+                .collect(toList());
+        Set<Entry<Object, Object>> actual = hz.getMap(srcName).entrySet();
+        assertEquals(expected.size(), actual.size());
+        expected.forEach(entry -> assertTrue(actual.contains(entry)));
+    }
+
+
+    @Test
     public void mapWithEntryProcessor() {
         // Given
         List<Integer> input = sequence(ITEM_COUNT);
@@ -365,7 +419,7 @@ public class SinksTest extends PipelineTestSupport {
         Job job = jet().newJob(pipeline);
 
         // Then
-        assertTrueEventually(() -> assertEquals(RUNNING, job.getJobStatus()), 10);
+        assertTrueEventually(() -> assertEquals(RUNNING, job.getStatus()), 10);
         assertEquals(1, srcMap.size());
         assertEquals(1, srcMap.get("key").intValue());
         srcMap.unlock("key");
@@ -386,6 +440,46 @@ public class SinksTest extends PipelineTestSupport {
         public Object process(Entry<K, Integer> entry) {
             entry.setValue(entry.getValue() == null ? value : entry.getValue() + value);
             return null;
+        }
+    }
+
+    private static class DataSerializableObject implements DataSerializable {
+        int value;
+
+        DataSerializableObject() {
+        }
+
+        DataSerializableObject(int value) {
+            this.value = value;
+        }
+
+        @Override
+        public void writeData(ObjectDataOutput out) throws IOException {
+            out.writeInt(value);
+        }
+
+        @Override
+        public void readData(ObjectDataInput in) throws IOException {
+            value = in.readInt();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            DataSerializableObject that = (DataSerializableObject) o;
+
+            return value == that.value;
+        }
+
+        @Override
+        public int hashCode() {
+            return value;
         }
     }
 

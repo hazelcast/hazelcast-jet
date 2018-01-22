@@ -17,9 +17,7 @@
 package com.hazelcast.jet;
 
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
@@ -42,7 +40,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 
-@Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
 public class TraversersTest {
 
@@ -93,6 +90,14 @@ public class TraversersTest {
         Traverser<Integer> trav = traverseIterator(asList(1, null).iterator());
         trav.next();
         trav.next();
+    }
+
+    @Test
+    public void when_traverseIteratorIgnoringNulls_then_filteredOut() {
+        Traverser<Integer> trav = traverseIterator(asList(null, 1, null, 2, null).iterator(), true);
+        assertEquals(1, (int) trav.next());
+        assertEquals(2, (int) trav.next());
+        assertNull(trav.next());
     }
 
     @Test(expected = AssertionError.class)

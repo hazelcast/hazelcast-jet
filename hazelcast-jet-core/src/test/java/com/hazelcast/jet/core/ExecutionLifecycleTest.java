@@ -38,14 +38,11 @@ import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.impl.NodeEngineImpl;
-import com.hazelcast.spi.properties.GroupProperty;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
@@ -66,14 +63,11 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-@Category(QuickTest.class)
 @RunWith(HazelcastSerialClassRunner.class)
 public class ExecutionLifecycleTest extends JetTestSupport {
 
     private static final int NODE_COUNT = 2;
     private static final int LOCAL_PARALLELISM = 4;
-
-    private static final int TIMEOUT_MILLIS = 8000;
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
@@ -98,8 +92,6 @@ public class ExecutionLifecycleTest extends JetTestSupport {
         factory = new JetTestInstanceFactory();
 
         JetConfig config = new JetConfig();
-        config.getHazelcastConfig().getProperties().put(GroupProperty.OPERATION_CALL_TIMEOUT_MILLIS.getName(),
-                Integer.toString(TIMEOUT_MILLIS));
         config.getInstanceConfig().setCooperativeThreadCount(LOCAL_PARALLELISM);
         instance = factory.newMember(config);
         factory.newMember(config);
@@ -306,8 +298,10 @@ public class ExecutionLifecycleTest extends JetTestSupport {
         // Then
         job.cancel();
 
+        assertTrueEventually(() -> assertEquals(JobStatus.COMPLETING, job.getStatus()), 3);
+
         assertTrueFiveSeconds(() -> {
-            assertEquals(JobStatus.RUNNING, job.getJobStatus());
+            assertEquals(JobStatus.COMPLETING, job.getStatus());
             assertEquals("PS.complete called before execution finished", 0, MockPS.completeCount.get());
         });
 
@@ -358,13 +352,13 @@ public class ExecutionLifecycleTest extends JetTestSupport {
         assertFalse("jobResult.isSuccessful", jobResult.isSuccessful());
         assertExceptionInCauses(e, jobResult.getFailure());
         JobStatus expectedStatus = e instanceof CancellationException ? JobStatus.COMPLETED : JobStatus.FAILED;
-        assertEquals("jobStatus", expectedStatus, job.getJobStatus());
+        assertEquals("jobStatus", expectedStatus, job.getStatus());
     }
 
     private JobResult getJobResult(Job job) {
         JetService jetService = getJetService(instance);
-        assertNull(jetService.getJobRepository().getJob(job.getJobId()));
-        JobResult jobResult = jetService.getJobCoordinationService().getJobResult(job.getJobId());
+        assertNull(jetService.getJobRepository().getJobRecord(job.getId()));
+        JobResult jobResult = jetService.getJobRepository().getJobResult(job.getId());
         assertNotNull(jobResult);
         return jobResult;
     }

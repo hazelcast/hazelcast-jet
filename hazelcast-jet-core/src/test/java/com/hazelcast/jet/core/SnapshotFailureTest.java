@@ -32,12 +32,10 @@ import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
@@ -54,7 +52,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-@Category(QuickTest.class)
 @RunWith(HazelcastSerialClassRunner.class)
 public class SnapshotFailureTest extends JetTestSupport {
 
@@ -110,7 +107,7 @@ public class SnapshotFailureTest extends JetTestSupport {
 
         Job job = instance1.newJob(dag, config);
 
-        IMap<Object, Object> snapshotsMap = instance1.getMap(snapshotsMapName(job.getJobId()));
+        IMap<Object, Object> snapshotsMap = instance1.getMap(snapshotsMapName(job.getId()));
 
         SnapshotRecord[] failedRecord = new SnapshotRecord[1];
         while (failedRecord[0] == null && !job.getFuture().isDone()) {

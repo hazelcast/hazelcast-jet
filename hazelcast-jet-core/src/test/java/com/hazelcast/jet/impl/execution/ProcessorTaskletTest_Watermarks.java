@@ -25,10 +25,8 @@ import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 import javax.annotation.Nonnull;
@@ -36,6 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
+import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static com.hazelcast.jet.impl.util.ProgressState.MADE_PROGRESS;
 import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static java.util.Arrays.asList;
@@ -46,7 +45,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
-@Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
 public class ProcessorTaskletTest_Watermarks {
 
@@ -90,7 +88,7 @@ public class ProcessorTaskletTest_Watermarks {
         callUntil(400, tasklet, NO_PROGRESS);
 
         // Then
-        assertEquals(asList(0, 1, "wm(123)-0"), outstream1.getBuffer());
+        assertEquals(asList(0, 1, "wm(123)-0", wm(123)), outstream1.getBuffer());
     }
 
     @Test
@@ -123,7 +121,7 @@ public class ProcessorTaskletTest_Watermarks {
         // When watermark in the other queue
         instream2.push(wm(99));
         callUntil(500, tasklet, NO_PROGRESS);
-        assertEquals(singletonList("wm(99)-0"), outstream1.getBuffer());
+        assertEquals(asList("wm(99)-0", wm(99)), outstream1.getBuffer());
     }
 
     @Test
@@ -140,7 +138,7 @@ public class ProcessorTaskletTest_Watermarks {
         callUntil(400, tasklet, NO_PROGRESS);
 
         // Then
-        assertEquals(asList("wm(100)-3", "wm(100)-2", "wm(100)-1"), outstream1.getBuffer());
+        assertEquals(asList("wm(100)-3", "wm(100)-2", "wm(100)-1", wm(100)), outstream1.getBuffer());
     }
 
     @Test
@@ -156,7 +154,7 @@ public class ProcessorTaskletTest_Watermarks {
         callUntil(400, tasklet, NO_PROGRESS);
 
         // Then
-        assertEquals(asList("wm(100)-0", "wm(101)-0"), outstream1.getBuffer());
+        assertEquals(asList("wm(100)-0", wm(100), "wm(101)-0", wm(101)), outstream1.getBuffer());
     }
 
     @Test
@@ -174,7 +172,96 @@ public class ProcessorTaskletTest_Watermarks {
         callUntil(400, tasklet, NO_PROGRESS);
         callUntil(416, tasklet, NO_PROGRESS);
         // Then
-        assertEquals(singletonList("wm(100)-0"), outstream1.getBuffer());
+        assertEquals(asList("wm(100)-0", wm(100)), outstream1.getBuffer());
+    }
+
+
+    // #### IDLE_MESSAGE related tests ####
+
+    @Test
+    public void when_allEdgesIdle_then_idleForwarded() {
+        // Given
+        MockInboundStream instream1 = new MockInboundStream(0, singletonList(IDLE_MESSAGE), 1000);
+        MockInboundStream instream2 = new MockInboundStream(0, singletonList(IDLE_MESSAGE), 1000);
+        MockOutboundStream outstream1 = new MockOutboundStream(0, 128);
+        instreams.add(instream1);
+        instreams.add(instream2);
+        outstreams.add(outstream1);
+        ProcessorTasklet tasklet = createTasklet(16);
+
+        // When
+        callUntil(400, tasklet, NO_PROGRESS);
+        // Then
+        assertEquals(singletonList(IDLE_MESSAGE), outstream1.getBuffer());
+    }
+
+    @Test
+    public void when_allEdgesIdleAndThenRecover_then_usedInCoalescing() {
+        // When
+        MockInboundStream instream1 = new MockInboundStream(0, singletonList(IDLE_MESSAGE), 1000);
+        MockInboundStream instream2 = new MockInboundStream(0, singletonList(IDLE_MESSAGE), 1000);
+        MockOutboundStream outstream1 = new MockOutboundStream(0, 128);
+        instreams.add(instream1);
+        instreams.add(instream2);
+        outstreams.add(outstream1);
+        ProcessorTasklet tasklet = createTasklet(16);
+
+        callUntil(400, tasklet, NO_PROGRESS);
+
+        // Then
+        assertEquals(singletonList(IDLE_MESSAGE), outstream1.getBuffer());
+        outstream1.getBuffer().clear();
+
+        // When2
+        instream1.push(wm(100));
+        instream2.push(wm(101));
+        callUntil(400, tasklet, NO_PROGRESS);
+        // Then2
+        assertEquals(asList("wm(100)-0", wm(100)), outstream1.getBuffer());
+    }
+
+    @Test
+    public void when_oneEdgeIdle_then_excludedFromCoalescing() {
+        // Given
+        MockInboundStream instream1 = new MockInboundStream(0, singletonList(wm(100)), 1000);
+        MockInboundStream instream2 = new MockInboundStream(0, singletonList(IDLE_MESSAGE), 1000);
+        MockOutboundStream outstream1 = new MockOutboundStream(0, 128);
+        instreams.add(instream1);
+        instreams.add(instream2);
+        outstreams.add(outstream1);
+        ProcessorTasklet tasklet = createTasklet(16);
+
+        // When
+        callUntil(400, tasklet, NO_PROGRESS);
+        // Then
+        assertEquals(asList("wm(100)-0", wm(100)), outstream1.getBuffer());
+    }
+
+    @Test
+    public void when_oneEdgeIdleAndThenRecovers_then_usedInCoalescing() {
+        // When
+        MockInboundStream instream1 = new MockInboundStream(0, singletonList(wm(100)), 1000);
+        MockInboundStream instream2 = new MockInboundStream(0, singletonList(IDLE_MESSAGE), 1000);
+        MockOutboundStream outstream1 = new MockOutboundStream(0, 128);
+        instreams.add(instream1);
+        instreams.add(instream2);
+        outstreams.add(outstream1);
+        ProcessorTasklet tasklet = createTasklet(16);
+
+        callUntil(400, tasklet, NO_PROGRESS);
+
+        // Then
+        assertEquals(asList("wm(100)-0", wm(100)), outstream1.getBuffer());
+
+        outstream1.getBuffer().clear();
+
+        // When2
+        instream2.push(wm(101));
+        callUntil(400, tasklet, NO_PROGRESS);
+        instream1.push(wm(102));
+        callUntil(400, tasklet, NO_PROGRESS);
+        // Then2
+        assertEquals(asList("wm(101)-0", wm(101)), outstream1.getBuffer());
     }
 
     private ProcessorTasklet createTasklet(int maxWatermarkRetainMillis) {

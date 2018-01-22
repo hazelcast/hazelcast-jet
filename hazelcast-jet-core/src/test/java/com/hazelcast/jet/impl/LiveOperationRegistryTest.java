@@ -16,15 +16,13 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.jet.impl.operation.AsyncExecutionOperation;
+import com.hazelcast.jet.impl.operation.AsyncOperation;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.CallsPerMember;
 import com.hazelcast.spi.OperationAccessor;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
@@ -34,12 +32,9 @@ import java.util.Set;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 
-@Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
 public class LiveOperationRegistryTest {
 
@@ -62,8 +57,8 @@ public class LiveOperationRegistryTest {
 
     @Test
     public void test_registerAndDeregister() throws UnknownHostException {
-        AsyncExecutionOperation op1 = createOperation("1.2.3.4", 1234, 2222L);
-        AsyncExecutionOperation op2 = createOperation("1.2.3.4", 1234, 2223L);
+        AsyncOperation op1 = createOperation("1.2.3.4", 1234, 2222L);
+        AsyncOperation op2 = createOperation("1.2.3.4", 1234, 2223L);
 
         r.register(op1);
         r.register(op2);
@@ -73,7 +68,7 @@ public class LiveOperationRegistryTest {
 
     @Test
     public void when_deregisterNotExistingAddress_then_fail() throws UnknownHostException {
-        AsyncExecutionOperation op1 = createOperation("1.2.3.4", 1234, 2222L);
+        AsyncOperation op1 = createOperation("1.2.3.4", 1234, 2222L);
         exception.expect(IllegalStateException.class);
         r.deregister(op1);
     }
@@ -106,17 +101,8 @@ public class LiveOperationRegistryTest {
         //callIds.
     }
 
-    @Test
-    public void testCancel() throws UnknownHostException {
-        AsyncExecutionOperation op1 = createOperation("1.2.3.4", 1234, 2222L);
-        assertFalse(r.cancel(new Address("1.2.3.4", 1234), 2222L));
-        r.register(op1);
-        assertTrue(r.cancel(new Address("1.2.3.4", 1234), 2222L));
-        verify(op1).cancel();
-    }
-
-    private AsyncExecutionOperation createOperation(String host, int port, long callId) throws UnknownHostException {
-        AsyncExecutionOperation op = mock(AsyncExecutionOperation.class);
+    private AsyncOperation createOperation(String host, int port, long callId) throws UnknownHostException {
+        AsyncOperation op = mock(AsyncOperation.class);
         Address address = new Address(host, port);
 
         OperationAccessor.setCallerAddress(op, address);

@@ -22,8 +22,6 @@ import com.hazelcast.instance.Node;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.operation.SubmitJobOperation;
 import com.hazelcast.nio.Connection;
-import com.hazelcast.spi.InternalCompletableFuture;
-import com.hazelcast.spi.InvocationBuilder;
 import com.hazelcast.spi.Operation;
 
 public class JetSubmitJobMessageTask extends AbstractJetMessageTask<JetSubmitJobCodec.RequestParameters> {
@@ -39,19 +37,8 @@ public class JetSubmitJobMessageTask extends AbstractJetMessageTask<JetSubmitJob
     }
 
     @Override
-    protected void processMessage() {
-        Operation op = prepareOperation();
-        op.setCallerUuid(getEndpoint().getUuid());
-        InvocationBuilder builder = getInvocationBuilder(op).setResultDeserialized(false);
-
-        InternalCompletableFuture<Object> invocation = builder.invoke();
-        getJetService().getClientInvocationRegistry().register(parameters.jobId, invocation);
-        invocation.andThen(this);
-    }
-
-    @Override
     public String getMethodName() {
-        return "execute";
+        return "submitJob";
     }
 
     @Override
@@ -59,13 +46,4 @@ public class JetSubmitJobMessageTask extends AbstractJetMessageTask<JetSubmitJob
         return new Object[]{};
     }
 
-    @Override
-    public void onResponse(Object response) {
-        super.onResponse(response);
-    }
-
-    @Override
-    public void onFailure(Throwable t) {
-        super.onFailure(t);
-    }
 }

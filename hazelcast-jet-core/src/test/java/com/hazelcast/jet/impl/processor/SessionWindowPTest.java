@@ -23,16 +23,13 @@ import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.datamodel.Session;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import com.hazelcast.test.annotation.QuickTest;
 import com.hazelcast.test.annotation.Repeat;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Random;
@@ -41,6 +38,7 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.core.test.TestSupport.SAME_ITEMS_ANY_ORDER;
 import static com.hazelcast.jet.core.test.TestSupport.verifyProcessor;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static java.util.Arrays.asList;
@@ -49,7 +47,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertTrue;
 
-@Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
 public class SessionWindowPTest {
 
@@ -136,7 +133,7 @@ public class SessionWindowPTest {
 
         try {
             verifyProcessor(supplier)
-                    .outputChecker((e, a) -> new HashSet(e).equals(new HashSet(a)))
+                    .outputChecker(SAME_ITEMS_ANY_ORDER)
                     .input(events)
                     .expectOutput(expectedOutput);
         } catch (AssertionError e) {

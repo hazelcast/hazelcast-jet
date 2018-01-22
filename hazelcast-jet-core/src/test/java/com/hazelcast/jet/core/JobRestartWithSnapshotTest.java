@@ -38,13 +38,11 @@ import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.nio.Address;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
@@ -64,6 +62,7 @@ import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.TestUtil.throttle;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
@@ -86,7 +85,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-@Category(QuickTest.class)
 @RunWith(HazelcastSerialClassRunner.class)
 public class JobRestartWithSnapshotTest extends JetTestSupport {
 
@@ -161,8 +159,8 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         SequencesInPartitionsMetaSupplier sup = new SequencesInPartitionsMetaSupplier(3, 120);
         Vertex generator = dag.newVertex("generator", throttle(sup, 30))
                               .localParallelism(1);
-        Vertex insWm = dag.newVertex("insWm", insertWatermarksP(entry -> ((Entry<Integer, Integer>) entry).getValue(),
-                withFixedLag(0), emitByFrame(wDef)))
+        Vertex insWm = dag.newVertex("insWm", insertWatermarksP(wmGenParams(
+                entry -> ((Entry<Integer, Integer>) entry).getValue(), withFixedLag(0), emitByFrame(wDef), -1)))
                           .localParallelism(1);
         Vertex map = dag.newVertex("map",
                 mapP((TimestampedEntry e) -> entry(asList(e.getTimestamp(), (long) (int) e.getKey()), e.getValue())));
@@ -205,7 +203,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         int timeout = (int) (MILLISECONDS.toSeconds(config.getSnapshotIntervalMillis()) + 2);
 
         // wait until we have at least one snapshot
-        IStreamMap<Long, Object> snapshotsMap = snapshotRepository.getSnapshotMap(job.getJobId());
+        IStreamMap<Long, Object> snapshotsMap = snapshotRepository.getSnapshotMap(job.getId());
 
         assertTrueEventually(() -> assertTrue("No snapshot produced", snapshotsMap.entrySet().stream()
                 .anyMatch(en -> en.getValue() instanceof SnapshotRecord
@@ -300,6 +298,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         config.setSnapshotIntervalMillis(500);
         Job job = instance1.newJob(dag, config);
 
+        assertTrueEventually(() -> assertNotNull(getSnapshotContext(job)));
         SnapshotContext ssContext = getSnapshotContext(job);
         assertTrueEventually(() -> assertTrue("numRemainingTasklets was not negative, the tested scenario did not happen",
                 ssContext.getNumRemainingTasklets().get() < 0), 3);
@@ -309,8 +308,8 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
     public void when_snapshotStartedBeforeExecution_then_firstSnapshotIsSuccessful() throws Exception {
         // instance1 is always coordinator
         // delay ExecuteOperation so that snapshot is started before execution is started on the worker member
-        delayOperationsFrom(
-                hz(instance1), JetInitDataSerializerHook.FACTORY_ID, singletonList(JetInitDataSerializerHook.EXECUTE_OP)
+        delayOperationsFrom(hz(instance1), JetInitDataSerializerHook.FACTORY_ID,
+                singletonList(JetInitDataSerializerHook.START_EXECUTION_OP)
         );
 
         DAG dag = new DAG();
@@ -332,13 +331,13 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
 
     private IStreamMap<Long, SnapshotRecord> getSnapshotsMap(Job job) {
         SnapshotRepository snapshotRepository = new SnapshotRepository(instance1);
-        return snapshotRepository.getSnapshotMap(job.getJobId());
+        return snapshotRepository.getSnapshotMap(job.getId());
     }
 
     private SnapshotContext getSnapshotContext(Job job) {
         IStreamMap<Long, Long> randomIdsMap = instance1.getMap(JobRepository.RANDOM_IDS_MAP_NAME);
         long executionId = randomIdsMap.entrySet().stream()
-                                       .filter(e -> e.getValue().equals(job.getJobId())
+                                       .filter(e -> e.getValue().equals(job.getId())
                                                && !e.getValue().equals(e.getKey()))
                                        .mapToLong(Entry::getKey)
                                        .findAny()

@@ -22,21 +22,18 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.stream.IStreamList;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 
-@Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
 public class ManagedContextTest extends JetTestSupport {
 
-    public static final String INJECTED_VALUE = "injectedValue";
+    static final String INJECTED_VALUE = "injectedValue";
     private JetInstance jet;
 
     @Before
@@ -68,7 +65,7 @@ public class ManagedContextTest extends JetTestSupport {
         @Override
         public Object initialize(Object obj) {
             if (obj instanceof TestProcessor) {
-                return ((TestProcessor) obj).injectedValue = INJECTED_VALUE;
+                ((TestProcessor) obj).injectedValue = INJECTED_VALUE;
             }
             return obj;
         }

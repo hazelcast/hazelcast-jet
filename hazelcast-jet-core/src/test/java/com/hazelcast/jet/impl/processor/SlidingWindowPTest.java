@@ -16,18 +16,17 @@
 
 package com.hazelcast.jet.impl.processor;
 
-import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.TimestampKind;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
-import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.core.WindowDefinition;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.TimestampKind;
+import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.core.WindowDefinition;
+import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
-import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -58,7 +57,7 @@ import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
-@Category({QuickTest.class, ParallelTest.class})
+@Category(ParallelTest.class)
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 public class SlidingWindowPTest {
 
@@ -278,6 +277,29 @@ public class SlidingWindowPTest {
                         outboxFrame(2, 2),
                         outboxFrame(3, 2),
                         outboxFrame(4, 1)
+                ));
+    }
+
+    @Test
+    public void when_lateEvent_then_ignored() {
+        verifyProcessor(supplier)
+                .input(asList(
+                        wm(10),
+                        // this one is late
+                        event(7L, 1L),
+                        // following events are "partially late" - it's still should be dropped, even though we still have
+                        // frame8, where we could accumulate it
+                        event(8L, 1L),
+                        event(9L, 1L),
+                        event(10L, 1L),
+                        // this event is the first one not late
+                        event(11L, 123L)
+                )).expectOutput(asList(
+                        wm(10),
+                        outboxFrame(11L, 123L),
+                        outboxFrame(12L, 123L),
+                        outboxFrame(13L, 123L),
+                        outboxFrame(14L, 123L)
                 ));
     }
 

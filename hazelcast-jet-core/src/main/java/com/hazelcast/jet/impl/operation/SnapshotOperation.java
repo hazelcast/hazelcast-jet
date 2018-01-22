@@ -28,7 +28,7 @@ import java.io.IOException;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static com.hazelcast.jet.impl.util.Util.idToString;
 
-public class SnapshotOperation extends AsyncExecutionOperation {
+public class SnapshotOperation extends AsyncOperation {
 
     private long executionId;
     private long snapshotId;
@@ -47,16 +47,16 @@ public class SnapshotOperation extends AsyncExecutionOperation {
     protected void doRun() throws Exception {
         JetService service = getService();
         ExecutionContext ctx = service.getJobExecutionService().assertExecutionContext(
-                getCallerAddress(), jobId, executionId, this
+                getCallerAddress(), jobId(), executionId, this
         );
         ctx.beginSnapshot(snapshotId).thenAccept(r -> {
             logFine(getLogger(),
                     "Snapshot %s for job %s finished successfully on member",
-                    snapshotId, idToString(jobId));
+                    snapshotId, idToString(jobId()));
             doSendResponse(null);
         }).exceptionally(e -> {
             getLogger().warning(String.format("Snapshot %d for job %s finished with error on member",
-                    snapshotId, idToString(jobId)), e);
+                    snapshotId, idToString(jobId())), e);
             doSendResponse(new JetException("Exception during snapshot: " + e, e));
             return null;
         });
