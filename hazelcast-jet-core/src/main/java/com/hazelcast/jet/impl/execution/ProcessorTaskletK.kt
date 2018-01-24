@@ -14,11 +14,16 @@
  * limitations under the License.
  */
 
+@file:Suppress("NOTHING_TO_INLINE")
+
 package com.hazelcast.jet.impl.execution
 
+import com.hazelcast.jet.JetException
+import com.hazelcast.jet.core.Watermark
 import com.hazelcast.jet.core.kotlin.ProcessorK
-import com.hazelcast.jet.core.kotlin.yield
 import com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM
+import com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE
+import com.hazelcast.jet.impl.execution.WatermarkCoalescer.NO_NEW_WM
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx
 import com.hazelcast.jet.impl.util.ArrayDequeInbox
 import com.hazelcast.jet.impl.util.CircularListCursor
@@ -30,6 +35,7 @@ import java.util.*
 import kotlin.coroutines.experimental.Continuation
 import kotlin.coroutines.experimental.EmptyCoroutineContext
 import kotlin.coroutines.experimental.intrinsics.COROUTINE_SUSPENDED
+import kotlin.coroutines.experimental.intrinsics.suspendCoroutineOrReturn
 
 private const val OUTBOX_BATCH_SIZE = 2048
 
@@ -44,26 +50,33 @@ class ProcessorTaskletK(
 ) : Tasklet {
     private val progTracker = ProgressTracker()
     private val inbox = ArrayDequeInbox(progTracker)
-    private val outbox = createOutbox(outstreamList, ssCollector)
-
-    private fun createOutbox(outstreamList: List<OutboundEdgeStream>, ssCollector: OutboundCollector?): OutboxImpl {
+    private val watermarkCoalescer = WatermarkCoalescer.create(maxWatermarkRetainMillis, instreams.size)
+    private val outbox = run {
         val outstreams = outstreamList.sortedBy { it.ordinal() }.toTypedArray()
         val collectors = arrayOfNulls<OutboundCollector>(outstreams.size + (ssCollector?.let { 1 } ?: 0))
         for (i in outstreams.indices) {
             collectors[i] = outstreams[i].collector
         }
-        ssCollector?.also {
-            collectors[outstreams.size] = it
-        }
-        return OutboxImpl(collectors, ssCollector != null, progTracker,
+        ssCollector?.also { collectors[outstreams.size] = it }
+        OutboxImpl(collectors, ssCollector != null, progTracker,
                 context.serializationService, OUTBOX_BATCH_SIZE)
     }
+
+    private var nextSnapshotId = ssContext.lastSnapshotId() + 1
+
+    private var completing = false
 
     override fun isCooperative(): Boolean {
         return processor.isCooperative
     }
 
     private var continuation: Continuation<Unit>? = null
+    private var continuationAfterSnapshot: Continuation<Unit>? = null
+
+    private val suspendAction: (Continuation<Unit>) -> Any = {
+        continuation = it
+        COROUTINE_SUSPENDED
+    }
 
     private val done = object : Continuation<Unit> {
         override val context = EmptyCoroutineContext
@@ -72,13 +85,10 @@ class ProcessorTaskletK(
     }
 
     override fun init() {
-        val processor2 = context.serializationService.managedContext.initialize(processor)
-        assert(processor2 === processor) { "different object returned" }
+        val outProcessor = context.serializationService.managedContext.initialize(processor)
+        assert(outProcessor === processor) { "Managed context returned a different processor instance" }
         processor.init(outbox, context)
-        processor.suspendAction = {
-            continuation = it
-            COROUTINE_SUSPENDED
-        }
+        processor.suspendAction = suspendAction
     }
 
     override fun call(): ProgressState {
@@ -87,51 +97,141 @@ class ProcessorTaskletK(
         outbox.resetBatch()
         val currentContinuation = continuation
         if (currentContinuation == null) {
-            println("$processor launchProcessing")
-            launchProcessing()
-            println("after $processor launchProcessing")
+            launch(Unconfined) { driveProcessor() }
         } else {
             continuation = null
-            currentContinuation.resume(Unit)
+            if (completing && context.snapshottingEnabled() && continuationAfterSnapshot == null) {
+                launchSnapshotIfRequired(currentContinuation)
+            }
+            if (continuationAfterSnapshot == null) {
+                currentContinuation.resume(Unit)
+            }
         }
         if (continuation == null) {
             continuation = done
-            println("$processor done")
-            return if (currentContinuation == done)
+            return if (currentContinuation === done)
                 ProgressState.WAS_ALREADY_DONE else
                 ProgressState.DONE
         }
         return progTracker.toProgressState()
     }
 
-    private fun launchProcessing() = launch(Unconfined) coroutine@ {
+    private fun launchSnapshotIfRequired(currentContinuation: Continuation<Unit>) {
+        val currSnapshotId = ssContext.lastSnapshotId()
+        assert(currSnapshotId <= nextSnapshotId) {
+            "Unexpected new snapshot id $currSnapshotId, current id $nextSnapshotId"
+        }
+        if (currSnapshotId != nextSnapshotId) {
+            return
+        }
+        continuationAfterSnapshot = currentContinuation
+        launch(Unconfined) {
+            processor.saveToSnapshot()
+            emitToEdgesAndSnapshot(SnapshotBarrier(nextSnapshotId++))
+            continuation = continuationAfterSnapshot
+            continuationAfterSnapshot = null
+        }
+    }
+
+    private suspend fun driveProcessor() {
         val instreamGroupQueue = instreams
                 .groupByTo(TreeMap(), { it.priority() })
                 .map { CircularListCursor(it.value) }
                 .toCollection(ArrayDeque())
+        val receivedBarriers = BitSet(instreams.size)
         while (true) {
+            val now = watermarkCoalescer.time
+            handleWm(watermarkCoalescer.checkWmHistory(now))
             val instreamCursor = instreamGroupQueue.poll() ?: break
+            var itersSinceYield = 0
             do {
                 val instream = instreamCursor.value()
-                val result = instream.drainTo { inbox.add(it) }
-                if (result.isMadeProgress) {
-                    progTracker.madeProgress()
-                    processor.process(instreamCursor.value().ordinal(), inbox)
+                val ordinal = instream.ordinal()
+                val drainResult = instream.drainTo { inbox.add(it) }
+                when (inbox.peekLast()) {
+                    null -> { }
+                    is Watermark -> {
+                        val wmVal = (inbox.removeLast() as Watermark).timestamp()
+                        handleWm(watermarkCoalescer.observeWm(now, ordinal, wmVal))
+                    }
+                    is SnapshotBarrier -> {
+                        val barrier = inbox.removeLast() as SnapshotBarrier
+                        ensureCorrectId(barrier, nextSnapshotId, ordinal)
+                        receivedBarriers.set(ordinal)
+                    }
+                    !is BroadcastItem -> {
+                        watermarkCoalescer.observeEvent(ordinal)
+                    }
                 }
-                if (result.isDone) {
-                    processor.completeEdge(instream.ordinal())
+                if (drainResult.isMadeProgress) {
+                    if (instream.hasSnapshotData()) {
+                        processor.restoreFromSnapshot(inbox)
+                    } else {
+                        processor.process(ordinal, inbox)
+                    }
+                    assert(inbox.isEmpty) { "Processor did not drain the inbox: $this" }
+                }
+                if (drainResult.isDone) {
+                    handleWm(watermarkCoalescer.queueDone(ordinal))
+                    processor.completeEdge(ordinal)
                     instreamCursor.remove()
+                } else if (context.snapshottingEnabled()
+                        && receivedBarriers.cardinality() > 0
+                        && receivedBarriers.cardinality() == instreamCursor.listSize()
+                ) {
+                    processor.saveToSnapshot()
+                    emitToEdgesAndSnapshot(SnapshotBarrier(nextSnapshotId++))
+                    receivedBarriers.clear()
                 }
-                processor.yield()
+                if (++itersSinceYield >= instreamCursor.listSize()) {
+                    if (!instream.hasSnapshotData()) {
+                        processor.process()
+                    }
+                    yield()
+                    itersSinceYield = 0
+                }
             } while (instreamCursor.advance())
         }
+        completing = true
         processor.complete()
-        while (!outbox.offerToEdgesAndSnapshot(DONE_ITEM)) {
-            processor.yield()
+        emitToEdgesAndSnapshot(DONE_ITEM)
+    }
+
+    private suspend inline fun handleWm(wmVal: Long) {
+        if (wmVal == NO_NEW_WM) {
+            return
+        }
+        val wm = Watermark(wmVal)
+        if (wm != IDLE_MESSAGE) {
+            processor.processWatermark(wm)
+        }
+        emit(wm)
+    }
+
+    private fun ensureCorrectId(barrier: SnapshotBarrier, pendingSnapshotId: Long, ordinal: Int) {
+        if (barrier.snapshotId() != pendingSnapshotId) {
+            throw JetException("Unexpected snapshot barrier ${barrier.snapshotId()} from ordinal $ordinal," +
+                    " expected $pendingSnapshotId")
         }
     }
 
+    private fun InboundEdgeStream.hasSnapshotData() = priority() == Integer.MIN_VALUE
+
+    private suspend inline fun emit(item: Any) {
+        while (!outbox.offer(item)) {
+            yield()
+        }
+    }
+
+    private suspend inline fun emitToEdgesAndSnapshot(item: Any) {
+        while (!outbox.offerToEdgesAndSnapshot(item)) {
+            yield()
+        }
+    }
+
+    private suspend inline fun yield() = suspendCoroutineOrReturn(suspendAction)
+
     override fun toString(): String {
-        return "ProcessorTasklet{vertex=" + context.vertexName() + ", processor=" + processor + '}'.toString()
+        return "ProcessorTasklet{vertex=${context.vertexName()}, processor=$processor}"
     }
 }

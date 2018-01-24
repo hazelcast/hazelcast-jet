@@ -201,12 +201,16 @@ import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 public final class Processors {
 
     /**
-     *  When {@code true}, some of the factories will return processors
-     *  implemented in Kotlin.
+     * When true, the Kotlin ProcessorTasklet will be used to drive Kotlin
+     * processors where available.
      */
-    public static final boolean USE_KOTLIN = true;
+    public static final boolean USE_KOTLIN_TASKLET = true;
 
-    private static final boolean USE_KOTLIN_WRAPPER = false;
+    /**
+     *  When {@code true}, some of the factories will return a Kotlin processor
+     *  wrapped in an adapting Java processor.
+     */
+    static final boolean USE_KOTLIN_WRAPPER = false;
 
     private Processors() {
     }

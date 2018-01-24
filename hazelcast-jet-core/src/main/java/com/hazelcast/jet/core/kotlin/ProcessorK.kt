@@ -21,6 +21,7 @@ package com.hazelcast.jet.core.kotlin
 import com.hazelcast.jet.core.Inbox
 import com.hazelcast.jet.core.Outbox
 import com.hazelcast.jet.core.Processor
+import com.hazelcast.jet.core.Watermark
 import kotlin.coroutines.experimental.Continuation
 import kotlin.coroutines.experimental.intrinsics.suspendCoroutineOrReturn
 
@@ -35,6 +36,7 @@ interface ProcessorK {
 
     suspend fun process(ordinal: Int, inbox: Inbox) = Unit
     suspend fun process() = Unit
+    suspend fun processWatermark(wm: Watermark) = Unit
     suspend fun completeEdge(ordinal: Int) = Unit
     suspend fun complete() = Unit
     suspend fun saveToSnapshot() = Unit

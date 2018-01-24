@@ -30,10 +30,13 @@ fun <T0> hashJoinPK(
 
 class HashJoinPK<T0>(
         keyFns: List<JavaFunction<in T0, Any>>,
-        private val tags: List<Tag<Any?>>
+        tags: List<Tag<Any?>>
 ): AbstractProcessorK() {
     override var isCooperative = true
 
+    private val tags = if (tags.isNotEmpty())
+        tags.slice(0..0) + tags // item 0 of this list won't be used
+        else emptyList()
     private val keyFns = keyFns.slice(0..0) + keyFns // item 0 of this list won't be used
     private val lookupTables: Array<Map<Any, Any>?> = arrayOfNulls(keyFns.size + 1)
     private var ordinal0consumed = false
@@ -47,12 +50,13 @@ class HashJoinPK<T0>(
                 emit(if (keyFns.size == 2)
                     tuple2<T0, Any>(t0, lookupJoined(1, t0)) else
                     tuple3<T0, Any, Any>(t0, lookupJoined(1, t0), lookupJoined(2, t0)))
+            } else {
+                val ibt = ItemsByTag()
+                for (i in 1 until keyFns.size) {
+                    ibt.put(tags[i], lookupJoined(i, t0))
+                }
+                emit(tuple2<T0, ItemsByTag>(t0, ibt))
             }
-            val ibt = ItemsByTag()
-            for (i in 1 until keyFns.size) {
-                ibt.put(tags[i], lookupJoined(i, t0))
-            }
-            emit(tuple2<T0, ItemsByTag>(t0, ibt))
         }
         else -> inbox.drain {
             assert(!ordinal0consumed) { "Edge 0 must have a lower priority than all other edges" }

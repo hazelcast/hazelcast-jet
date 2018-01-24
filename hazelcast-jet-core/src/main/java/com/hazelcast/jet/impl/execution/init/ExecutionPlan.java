@@ -165,7 +165,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
                 OutboundCollector snapshotCollector = new ConveyorCollector(ssConveyor, localProcessorIdx, null);
 
-                ProcessorK kotlinP = Processors.USE_KOTLIN ? p.kotlinProcessor() : null;
+                ProcessorK kotlinP = Processors.USE_KOTLIN_TASKLET ? p.kotlinProcessor() : null;
                 Tasklet processorTasklet = kotlinP != null
                         ? new ProcessorTaskletK(context, kotlinP, inboundStreams, outboundStreams,
                         snapshotContext, snapshotCollector, jobConfig.getMaxWatermarkRetainMillis())

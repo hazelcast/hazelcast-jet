@@ -43,7 +43,7 @@ import static com.hazelcast.jet.Util.cacheEventToEntry;
 import static com.hazelcast.jet.Util.cachePutEvents;
 import static com.hazelcast.jet.Util.mapEventToEntry;
 import static com.hazelcast.jet.Util.mapPutEvents;
-import static com.hazelcast.jet.core.processor.Processors.USE_KOTLIN;
+import static com.hazelcast.jet.core.processor.Processors.USE_KOTLIN_WRAPPER;
 
 /**
  * Static utility class with factories of source processors (the DAG
@@ -320,7 +320,7 @@ public final class SourceProcessors {
     public static ProcessorMetaSupplier readFilesP(
             @Nonnull String directory, @Nonnull Charset charset, @Nonnull String glob
     ) {
-        return USE_KOTLIN
+        return USE_KOTLIN_WRAPPER
                 ? ReadFilesPK.metaSupplier(directory, charset.name(), glob)
                 : ReadFilesP.metaSupplier(directory, charset.name(), glob);
     }
@@ -332,7 +332,7 @@ public final class SourceProcessors {
     public static ProcessorMetaSupplier streamFilesP(
             @Nonnull String watchedDirectory, @Nonnull Charset charset, @Nonnull String glob
     ) {
-        return USE_KOTLIN
+        return USE_KOTLIN_WRAPPER
                 ? StreamFilesPK.metaSupplier(watchedDirectory, charset.name(), glob)
                 : StreamFilesP.metaSupplier(watchedDirectory, charset.name(), glob);
     }

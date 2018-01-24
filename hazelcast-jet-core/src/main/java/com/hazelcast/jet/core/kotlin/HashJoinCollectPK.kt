@@ -45,8 +45,6 @@ class HashJoinCollectPK<T, K, V>(
     }
 
     override suspend fun complete() {
-        for (e in map) {
-            emit(e)
-        }
+        emit(map)
     }
 }

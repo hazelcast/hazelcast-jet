@@ -280,8 +280,7 @@ public class ProcessorTasklet implements Tasklet {
             result = NO_PROGRESS;
 
             // skip ordinals where a snapshot barrier has already been received
-            if (ssContext != null && ssContext.processingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE
-                    && receivedBarriers.get(currInstream.ordinal())) {
+            if (ssContext.processingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE && receivedBarriers.get(currInstream.ordinal())) {
                 instreamCursor.advance();
                 continue;
             }

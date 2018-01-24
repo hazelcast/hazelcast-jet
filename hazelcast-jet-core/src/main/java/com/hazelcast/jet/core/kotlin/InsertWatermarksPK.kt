@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
+@file:Suppress("NOTHING_TO_INLINE")
+
 package com.hazelcast.jet.core.kotlin
 
-import com.hazelcast.jet.core.*
+import com.hazelcast.jet.core.BroadcastKey
 import com.hazelcast.jet.core.BroadcastKey.broadcastKey
+import com.hazelcast.jet.core.Inbox
+import com.hazelcast.jet.core.WatermarkGenerationParams
+import com.hazelcast.jet.core.WatermarkSourceUtil
 import com.hazelcast.jet.impl.util.LoggingUtil.logFine
-import java.util.function.ToLongFunction
 
 fun <T> insertWatermarksPK(
         wmGenParams: WatermarkGenerationParams<T>
@@ -30,30 +34,26 @@ class InsertWatermarksPK<T>(
 ): AbstractProcessorK() {
     override var isCooperative = true
 
-    private val getTimestampFn = wmGenParams.timestampF
-    private val wmPolicy = wmGenParams.newWmPolicyF().get()
-    private val wmEmitPolicy = wmGenParams.wmEmitPolicy()
-    private var currWm = Long.MIN_VALUE
+    private val wsu = WatermarkSourceUtil<T>(wmGenParams)
+    init {
+        wsu.increasePartitionCount(1)
+    }
+
     private var lastEmittedWm = Long.MIN_VALUE
 
     // value to be used temporarily during snapshot restore
     private var minRestoredWm = Long.MAX_VALUE
 
     override suspend fun process() {
-        currWm = wmPolicy.currentWatermark
-        emitWmIfIndicated()
+        val wm = wsu.handleNoEvent()
+        wm?.also { emit(it) }
     }
 
-    override suspend fun process(ordinal: Int, inbox: Inbox) = inbox.drain {
-        @Suppress("UNCHECKED_CAST")
-        val timestamp = getTimestampFn.applyAsLong(it as T)
-        currWm = wmPolicy.reportEvent(timestamp)
-        emitWmIfIndicated()
-        if (timestamp >= currWm) {
-            emit(it)
-        } else {
-            logger.takeIf { it.isInfoEnabled }?.apply { info("Dropped late event: $it") }
-        }
+    @Suppress("UNCHECKED_CAST")
+    override suspend fun process(ordinal: Int, inbox: Inbox) = inbox.drain { item ->
+        val wm = wsu.handleEvent(0, item as T)
+        wm?.also { emit(it) }
+        emit(item)
     }
 
     override suspend fun saveToSnapshot() {
@@ -69,13 +69,6 @@ class InsertWatermarksPK<T>(
     override suspend fun finishSnapshotRestore() {
         lastEmittedWm = minRestoredWm
         logFine(logger, "restored lastEmittedWm=%s", lastEmittedWm)
-    }
-
-    private inline suspend fun emitWmIfIndicated() {
-        if (wmEmitPolicy.shouldEmit(currWm, lastEmittedWm)) {
-            emit(Watermark(currWm))
-            lastEmittedWm = currWm
-        }
     }
 
     private enum class Keys {
