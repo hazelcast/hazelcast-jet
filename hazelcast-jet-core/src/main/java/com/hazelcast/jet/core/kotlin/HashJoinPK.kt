@@ -38,7 +38,7 @@ class HashJoinPK<T0>(
     private val lookupTables: Array<Map<Any, Any>?> = arrayOfNulls(keyFns.size + 1)
     private var ordinal0consumed = false
 
-    suspend override fun process(ordinal: Int, inbox: Inbox) = when (ordinal) {
+    override suspend fun process(ordinal: Int, inbox: Inbox) = when (ordinal) {
         0 -> inbox.drain {
             @Suppress("UNCHECKED_CAST")
             val t0 = it as T0

@@ -26,7 +26,7 @@ import kotlin.coroutines.experimental.Continuation
 
 @Suppress("NOTHING_TO_INLINE")
 abstract class AbstractProcessorK : ProcessorK {
-    override lateinit var suspendAction: (Continuation<Any>) -> Unit
+    override lateinit var suspendAction: (Continuation<Any>) -> Any
     protected lateinit var logger: ILogger
     protected lateinit var outbox: Outbox
 
@@ -67,7 +67,7 @@ inline fun Inbox.drainSnapshot(block: (key: Any, value: Any) -> Unit) {
     }
 }
 
-inline fun <T : Any> Traverser<T>.forEach(block: (T) -> Unit) {
+inline fun <T : Any> Traverser<out T>.forEach(block: (T) -> Unit) {
     while (true) {
         val t = next() ?: return
         block(t)

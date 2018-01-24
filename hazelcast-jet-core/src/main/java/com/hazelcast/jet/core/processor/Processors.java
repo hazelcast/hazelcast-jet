@@ -28,6 +28,8 @@ import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.WindowDefinition;
+import com.hazelcast.jet.core.kotlin.NoopPK;
+import com.hazelcast.jet.core.kotlin.ProcessorK;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
@@ -202,7 +204,9 @@ public final class Processors {
      *  When {@code true}, some of the factories will return processors
      *  implemented in Kotlin.
      */
-    public static final boolean USE_KOTLIN = false;
+    public static final boolean USE_KOTLIN = true;
+
+    private static final boolean USE_KOTLIN_WRAPPER = false;
 
     private Processors() {
     }
@@ -230,7 +234,7 @@ public final class Processors {
             @Nonnull DistributedFunction<? super T, K> getKeyFn,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        return USE_KOTLIN
+        return USE_KOTLIN_WRAPPER
                 ? () -> coGroupPK(getKeyFn, aggrOp)
                 : () -> new CoGroupP<>(getKeyFn, aggrOp);
     }
@@ -257,7 +261,7 @@ public final class Processors {
             @Nonnull DistributedFunction<? super T, K> getKeyFn,
             @Nonnull AggregateOperation1<? super T, A, ?> aggrOp
     ) {
-        return USE_KOTLIN
+        return USE_KOTLIN_WRAPPER
                 ? () -> coGroupPK(getKeyFn, aggrOp.withFinishFn(identity()))
                 : () -> new CoGroupP<>(getKeyFn, aggrOp.withFinishFn(identity()));
     }
@@ -287,7 +291,7 @@ public final class Processors {
             @Nonnull List<DistributedFunction<?, ? extends K>> getKeyFns,
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
-        return USE_KOTLIN
+        return USE_KOTLIN_WRAPPER
                 ? () -> coGroupPK(getKeyFns, aggrOp)
                 : () -> new CoGroupP<>(getKeyFns, aggrOp);
     }
@@ -318,7 +322,7 @@ public final class Processors {
             @Nonnull List<DistributedFunction<?, ? extends K>> getKeyFns,
             @Nonnull AggregateOperation<A, ?> aggrOp
     ) {
-        return USE_KOTLIN
+        return USE_KOTLIN_WRAPPER
                 ? () -> coGroupPK(getKeyFns, aggrOp.withFinishFn(identity()))
                 : () -> new CoGroupP<>(getKeyFns, aggrOp.withFinishFn(identity()));
     }
@@ -347,7 +351,7 @@ public final class Processors {
     public static <A, R> DistributedSupplier<Processor> combineByKeyP(
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
-        return USE_KOTLIN
+        return USE_KOTLIN_WRAPPER
             ? () -> coGroupPK(Entry::getKey, aggrOp.withCombiningAccumulateFn(Entry<Object, A>::getValue))
             : () -> new CoGroupP<>(Entry::getKey, aggrOp.withCombiningAccumulateFn(Entry<Object, A>::getValue));
     }
@@ -375,7 +379,7 @@ public final class Processors {
     public static <T, A, R> DistributedSupplier<Processor> aggregateP(
             @Nonnull AggregateOperation1<T, A, R> aggrOp
     ) {
-        return USE_KOTLIN
+        return USE_KOTLIN_WRAPPER
                 ? () -> aggregatePK(aggrOp)
                 : () -> new AggregateP<>(aggrOp);
     }
@@ -403,7 +407,7 @@ public final class Processors {
     public static <T, A, R> DistributedSupplier<Processor> accumulateP(
             @Nonnull AggregateOperation1<T, A, R> aggrOp
     ) {
-        return USE_KOTLIN
+        return USE_KOTLIN_WRAPPER
                 ? () -> aggregatePK(aggrOp.withFinishFn(identity()))
                 : () -> new AggregateP<>(aggrOp.withFinishFn(identity()));
     }
@@ -431,7 +435,7 @@ public final class Processors {
     public static <T, A, R> DistributedSupplier<Processor> combineP(
             @Nonnull AggregateOperation1<T, A, R> aggrOp
     ) {
-        return USE_KOTLIN
+        return USE_KOTLIN_WRAPPER
                 ? () -> aggregatePK(aggrOp.withCombiningAccumulateFn(identity()))
                 : () -> new AggregateP<>(aggrOp.withCombiningAccumulateFn(identity()));
     }
@@ -675,7 +679,7 @@ public final class Processors {
     public static <T> DistributedSupplier<Processor> insertWatermarksP(
             @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
-        return USE_KOTLIN
+        return USE_KOTLIN_WRAPPER
                 ? () -> insertWatermarksPK(wmGenParams)
                 : () -> new InsertWatermarksP<>(wmGenParams);
     }
@@ -702,9 +706,9 @@ public final class Processors {
                 trav.accept(mapper.apply(item));
                 return trav;
             };
-            return USE_KOTLIN
+            return USE_KOTLIN_WRAPPER
                     ? transformPK(mapFn)
-                    : new TransformP<>(mapFn);
+                    : new TransformP<>("mapP", mapFn);
         };
     }
 
@@ -725,9 +729,9 @@ public final class Processors {
                 trav.accept(predicate.test(item) ? item : null);
                 return trav;
             };
-            return USE_KOTLIN
+            return USE_KOTLIN_WRAPPER
                     ? transformPK(mapFn)
-                    : new TransformP<>(mapFn);
+                    : new TransformP<>("filterP", mapFn);
         };
     }
 
@@ -750,9 +754,9 @@ public final class Processors {
     public static <T, R> DistributedSupplier<Processor> flatMapP(
             @Nonnull DistributedFunction<T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return USE_KOTLIN
+        return USE_KOTLIN_WRAPPER
                 ? () -> transformPK(flatMapFn)
-                : () -> new TransformP<>(flatMapFn);
+                : () -> new TransformP<>("flatMapP", flatMapFn);
     }
 
     /**
@@ -806,6 +810,14 @@ public final class Processors {
 
     /** A no-operation processor. See {@link #noopP()} */
     private static class NoopP implements Processor {
+
+        private final NoopPK noopPK = new NoopPK();
+
+        @Override
+        public ProcessorK kotlinProcessor() {
+            return noopPK;
+        }
+
         @Override
         public void process(int ordinal, @Nonnull Inbox inbox) {
             inbox.drainJ(noopConsumer());

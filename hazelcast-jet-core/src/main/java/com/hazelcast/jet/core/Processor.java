@@ -19,9 +19,11 @@ package com.hazelcast.jet.core;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.ProcessingGuarantee;
+import com.hazelcast.jet.core.kotlin.ProcessorK;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * When Jet executes a DAG, it creates one or more instances of {@code
@@ -47,6 +49,11 @@ import javax.annotation.Nonnull;
  * processor should work.
  */
 public interface Processor {
+
+    @Nullable
+    default ProcessorK kotlinProcessor() {
+        return null;
+    }
 
     /**
      * Tells whether this processor is able to participate in cooperative
@@ -77,7 +84,8 @@ public interface Processor {
      * The default implementation returns {@code true}.
      */
     default boolean isCooperative() {
-        return true;
+        ProcessorK kotlinP = kotlinProcessor();
+        return kotlinP == null || kotlinP.isCooperative();
     }
 
     /**
@@ -89,6 +97,10 @@ public interface Processor {
      * The default implementation does nothing.
      */
     default void init(@Nonnull Outbox outbox, @Nonnull Context context) {
+        ProcessorK kotlinP = kotlinProcessor();
+        if (kotlinP != null) {
+            kotlinP.init(outbox, context);
+        }
     }
 
     /**

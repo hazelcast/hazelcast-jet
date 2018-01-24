@@ -18,6 +18,7 @@ package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
+import com.hazelcast.jet.core.kotlin.ProcessorK;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.CheckReturnValue;
@@ -72,6 +73,15 @@ public abstract class AbstractProcessor implements Processor {
 
     private Object pendingItem;
     private Entry<?, ?> pendingSnapshotItem;
+    private final ProcessorK kotlinProcessor;
+
+    protected AbstractProcessor(ProcessorK kotlinProcessor) {
+        this.kotlinProcessor = kotlinProcessor;
+    }
+
+    protected AbstractProcessor() {
+        this(null);
+    }
 
     // final implementations of Processor API
 
@@ -91,7 +101,13 @@ public abstract class AbstractProcessor implements Processor {
     }
 
     @Override
+    public ProcessorK kotlinProcessor() {
+        return kotlinProcessor;
+    }
+
+    @Override
     public final void init(@Nonnull Outbox outbox, @Nonnull Context context) {
+        Processor.super.init(outbox, context);
         this.outbox = outbox;
         this.logger = context.logger();
         try {

@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.core.kotlin.HashJoinCollectPK;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -34,6 +35,7 @@ public class HashJoinCollectP<K, E, V> extends AbstractProcessor {
     @Nonnull private final Function<E, V> projectFn;
 
     public HashJoinCollectP(@Nonnull Function<E, K> keyFn, @Nonnull Function<E, V> projectFn) {
+        super(new HashJoinCollectPK<>(keyFn, projectFn));
         this.keyFn = keyFn;
         this.projectFn = projectFn;
     }

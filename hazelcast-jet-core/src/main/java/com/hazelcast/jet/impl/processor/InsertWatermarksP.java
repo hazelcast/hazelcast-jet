@@ -22,6 +22,7 @@ import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.WatermarkSourceUtil;
+import com.hazelcast.jet.core.kotlin.InsertWatermarksPK;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -44,6 +45,7 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
     private long minRestoredWm = Long.MAX_VALUE;
 
     public InsertWatermarksP(WatermarkGenerationParams<T> wmGenParams) {
+        super(new InsertWatermarksPK<>(wmGenParams));
         wsu = new WatermarkSourceUtil<>(wmGenParams);
         wsu.increasePartitionCount(1);
     }

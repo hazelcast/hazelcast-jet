@@ -29,6 +29,8 @@ import kotlin.coroutines.experimental.intrinsics.COROUTINE_SUSPENDED
 open class KotlinWrapperP(
         private val wrapped: ProcessorK
 ) : Processor {
+    override fun kotlinProcessor() = wrapped
+
     private var continuation: Continuation<Unit>? = null
     init {
         wrapped.suspendAction = {
@@ -71,7 +73,7 @@ open class KotlinWrapperP(
     }
 
     override fun completeEdge(ordinal: Int): Boolean {
-        resumeOrLaunch { wrapped.completeEdge() }
+        resumeOrLaunch { wrapped.completeEdge(ordinal) }
         return continuation == null
     }
 

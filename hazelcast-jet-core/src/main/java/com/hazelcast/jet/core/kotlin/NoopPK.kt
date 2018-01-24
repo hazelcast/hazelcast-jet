@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,14 @@
 
 package com.hazelcast.jet.core.kotlin
 
-import java.io.Closeable
+import com.hazelcast.jet.core.Inbox
+import kotlin.coroutines.experimental.Continuation
 
-class CloseableKotlinWrapperP<P>(
-        private val wrappedCloseable: P
-) : KotlinWrapperP(wrappedCloseable), Closeable
-        where P : ProcessorK, P : Closeable
-{
-    override fun kotlinProcessor() = wrappedCloseable
-
-    override fun close() = wrappedCloseable.close()
+/**
+ * Javadoc pending.
+ */
+class NoopPK : ProcessorK {
+    override var isCooperative = true
+    override lateinit var suspendAction: (Continuation<Any>) -> Any
+    override suspend fun process(ordinal: Int, inbox: Inbox) = inbox.drain { }
 }

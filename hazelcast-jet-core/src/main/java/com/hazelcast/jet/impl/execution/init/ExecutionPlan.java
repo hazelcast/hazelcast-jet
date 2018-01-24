@@ -27,6 +27,8 @@ import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Edge.RoutingPolicy;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.core.kotlin.ProcessorK;
+import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.ConcurrentInboundEdgeStream;
 import com.hazelcast.jet.impl.execution.ConveyorCollector;
@@ -35,6 +37,7 @@ import com.hazelcast.jet.impl.execution.InboundEdgeStream;
 import com.hazelcast.jet.impl.execution.OutboundCollector;
 import com.hazelcast.jet.impl.execution.OutboundEdgeStream;
 import com.hazelcast.jet.impl.execution.ProcessorTasklet;
+import com.hazelcast.jet.impl.execution.ProcessorTaskletK;
 import com.hazelcast.jet.impl.execution.ReceiverTasklet;
 import com.hazelcast.jet.impl.execution.SenderTasklet;
 import com.hazelcast.jet.impl.execution.SnapshotContext;
@@ -162,7 +165,11 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
                 OutboundCollector snapshotCollector = new ConveyorCollector(ssConveyor, localProcessorIdx, null);
 
-                ProcessorTasklet processorTasklet = new ProcessorTasklet(context, p, inboundStreams, outboundStreams,
+                ProcessorK kotlinP = Processors.USE_KOTLIN ? p.kotlinProcessor() : null;
+                Tasklet processorTasklet = kotlinP != null
+                        ? new ProcessorTaskletK(context, kotlinP, inboundStreams, outboundStreams,
+                        snapshotContext, snapshotCollector, jobConfig.getMaxWatermarkRetainMillis())
+                        : new ProcessorTasklet(context, p, inboundStreams, outboundStreams,
                         snapshotContext, snapshotCollector, jobConfig.getMaxWatermarkRetainMillis());
                 tasklets.add(processorTasklet);
                 this.processors.add(p);

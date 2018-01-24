@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.core.kotlin.AggregatePK;
 
 import javax.annotation.Nonnull;
 import java.util.function.BiConsumer;
@@ -34,6 +35,7 @@ public class AggregateP<T, A, R> extends AbstractProcessor {
     private R result;
 
     public AggregateP(@Nonnull AggregateOperation1<? super T, A, R> aggregateOperation) {
+        super(new AggregatePK<>(aggregateOperation));
         this.accumulateFn = aggregateOperation.accumulateFn();
         this.finishFn = aggregateOperation.finishFn();
         this.acc = aggregateOperation.createFn().get();

@@ -29,13 +29,13 @@ import kotlin.coroutines.experimental.intrinsics.suspendCoroutineOrReturn
  */
 interface ProcessorK {
     var isCooperative: Boolean
-    var suspendAction: (Continuation<Any>) -> Unit
+    var suspendAction: (Continuation<Any>) -> Any
 
     fun init(outbox: Outbox, context: Processor.Context) = Unit
 
     suspend fun process(ordinal: Int, inbox: Inbox) = Unit
     suspend fun process() = Unit
-    suspend fun completeEdge() = Unit
+    suspend fun completeEdge(ordinal: Int) = Unit
     suspend fun complete() = Unit
     suspend fun saveToSnapshot() = Unit
     suspend fun restoreFromSnapshot(inbox: Inbox) = Unit

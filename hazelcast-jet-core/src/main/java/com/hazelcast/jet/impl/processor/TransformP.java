@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.core.kotlin.TransformPK;
 import com.hazelcast.jet.function.DistributedFunction;
 
 import javax.annotation.Nonnull;
@@ -35,7 +36,8 @@ public class TransformP<T, R> extends AbstractProcessor {
     /**
      * Constructs a processor with the given mapping function.
      */
-    public TransformP(@Nonnull DistributedFunction<T, ? extends Traverser<? extends R>> mapper) {
+    public TransformP(String name, @Nonnull DistributedFunction<T, ? extends Traverser<? extends R>> mapper) {
+        super(new TransformPK<>(name, mapper));
         this.flatMapper = flatMapper(mapper);
     }
 

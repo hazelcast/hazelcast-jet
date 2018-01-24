@@ -20,6 +20,7 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.CloseableProcessorSupplier;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.kotlin.StreamFilesPK;
 import com.hazelcast.jet.impl.util.ReflectionUtils;
 import com.hazelcast.logging.ILogger;
 
@@ -103,6 +104,7 @@ public class StreamFilesP extends AbstractProcessor implements Closeable {
     StreamFilesP(@Nonnull String watchedDirectory, @Nonnull Charset charset, @Nonnull String glob,
                  int parallelism, int id
     ) {
+        super(new StreamFilesPK(watchedDirectory, charset, glob, parallelism, id));
         this.watchedDirectory = Paths.get(watchedDirectory);
         this.charset = charset;
         this.glob = FileSystems.getDefault().getPathMatcher("glob:" + glob);

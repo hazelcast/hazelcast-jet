@@ -22,18 +22,17 @@ import com.hazelcast.jet.impl.util.LoggingUtil.logFine
 import java.util.function.ToLongFunction
 
 fun <T> insertWatermarksPK(
-        getTimestampFn: ToLongFunction<T>,
-        wmPolicy: WatermarkPolicy,
-        wmEmitPolicy: WatermarkEmissionPolicy
-) = KotlinWrapperP(InsertWatermarksPK(getTimestampFn, wmPolicy, wmEmitPolicy))
+        wmGenParams: WatermarkGenerationParams<T>
+) = KotlinWrapperP(InsertWatermarksPK(wmGenParams))
 
 class InsertWatermarksPK<T>(
-        private val getTimestampFn: ToLongFunction<T>,
-        private val wmPolicy: WatermarkPolicy,
-        private val wmEmitPolicy: WatermarkEmissionPolicy
+        wmGenParams: WatermarkGenerationParams<T>
 ): AbstractProcessorK() {
     override var isCooperative = true
 
+    private val getTimestampFn = wmGenParams.timestampF
+    private val wmPolicy = wmGenParams.newWmPolicyF().get()
+    private val wmEmitPolicy = wmGenParams.wmEmitPolicy()
     private var currWm = Long.MIN_VALUE
     private var lastEmittedWm = Long.MIN_VALUE
 

@@ -21,6 +21,7 @@ import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.CloseableProcessorSupplier;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.kotlin.ReadFilesPK;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 
 import javax.annotation.Nonnull;
@@ -63,6 +64,7 @@ public final class ReadFilesP extends AbstractProcessor implements Closeable {
     private Stream<String> currentFileLines;
 
     private ReadFilesP(String directory, Charset charset, String glob, int parallelism, int id) {
+        super(new ReadFilesPK(directory, charset, glob, parallelism, id));
         this.directory = Paths.get(directory);
         this.glob = glob;
         this.charset = charset;

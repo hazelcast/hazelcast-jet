@@ -37,7 +37,7 @@ class CoGroupPK<K, A, R>(
 
     private val keyToAcc = HashMap<K, A>()
 
-    suspend override fun process(ordinal: Int, inbox: Inbox) = inbox.drain {
+    override suspend fun process(ordinal: Int, inbox: Inbox) = inbox.drain {
         @Suppress("UNCHECKED_CAST")
         val keyFn = keyFns[ordinal] as JavaFunction<Any, K>
         val acc = keyToAcc.computeIfAbsent(keyFn.apply(it), { aggrOp.createFn().get() })
@@ -49,4 +49,6 @@ class CoGroupPK<K, A, R>(
             emit(entry(k, aggrOp.finishFn().apply(a)))
         }
     }
+
+    override fun toString(): String = "CoGroupPK"
 }

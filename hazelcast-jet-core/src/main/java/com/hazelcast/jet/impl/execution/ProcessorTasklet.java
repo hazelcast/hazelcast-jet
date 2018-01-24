@@ -63,6 +63,7 @@ public class ProcessorTasklet implements Tasklet {
     private final ProcCtx context;
 
     private final Processor processor;
+    @Nonnull
     private final SnapshotContext ssContext;
     private final BitSet receivedBarriers; // indicates if current snapshot is received on the ordinal
 

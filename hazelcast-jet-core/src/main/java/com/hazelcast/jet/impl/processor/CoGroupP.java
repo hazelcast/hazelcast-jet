@@ -20,6 +20,7 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.core.kotlin.CoGroupPK;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -48,6 +49,7 @@ public class CoGroupP<K, A, R> extends AbstractProcessor {
             @Nonnull List<? extends Function<?, ? extends K>> groupKeyFs,
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
+        super(new CoGroupPK<>(groupKeyFs, aggrOp));
         this.groupKeyFs = groupKeyFs;
         this.aggrOp = aggrOp;
         this.resultTraverser = traverseStream(keyToAcc

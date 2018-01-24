@@ -20,20 +20,23 @@ import com.hazelcast.jet.Traverser
 import com.hazelcast.jet.core.Inbox
 import java.util.function.Function as JavaFunction
 
-fun <T, R> transformPK(
+fun <T : Any, R : Any> transformPK(
         mapFn: JavaFunction<T, out Traverser<out R>>
-) = KotlinWrapperP(TransformPK(mapFn))
+) = KotlinWrapperP(TransformPK("", mapFn))
 
-class TransformPK<T, out R>(
+class TransformPK<T : Any, out R : Any>(
+        private val name: String,
         private val mapFn: JavaFunction<T, out Traverser<out R>>
 ) : AbstractProcessorK() {
     override var isCooperative = true
 
     override suspend fun process(ordinal: Int, inbox: Inbox) = inbox.drain {
         @Suppress("UNCHECKED_CAST")
-        val outTrav = mapFn.apply(it as T)
-        while (true) {
-            emit(outTrav.next() ?: break)
+        mapFn.apply(it as T).forEach {
+//            println("$this emit $it")
+            emit(it)
         }
     }
+
+    override fun toString(): String = name
 }

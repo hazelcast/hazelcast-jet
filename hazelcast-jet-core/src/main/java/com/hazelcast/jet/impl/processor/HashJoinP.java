@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.core.kotlin.HashJoinPK;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 
@@ -65,6 +66,7 @@ public class HashJoinP<T0> extends AbstractProcessor {
             @Nonnull List<Function<T0, Object>> keyFns,
             @Nonnull List<Tag> tags
     ) {
+        super(new HashJoinPK(keyFns, tags));
         this.keyFns = prependNull(keyFns);
         this.lookupTables = prependNull(Collections.nCopies(keyFns.size(), null));
         this.tags = tags.isEmpty() ? emptyList() : prependNull(tags);

@@ -47,7 +47,7 @@ class PeekWrappedPK<in T>(
         private val peekOutput: Boolean,
         private val peekSnapshot: Boolean
 ): ProcessorK {
-    override lateinit var suspendAction: (Continuation<Any>) -> Unit
+    override lateinit var suspendAction: (Continuation<Any>) -> Any
     override var isCooperative
         get() = wrapped.isCooperative
         set(value) { wrapped.isCooperative = value }
@@ -95,7 +95,7 @@ class PeekWrappedPK<in T>(
 
     override suspend fun process() = wrapped.process()
 
-    override suspend fun completeEdge() = wrapped.completeEdge()
+    override suspend fun completeEdge(ordinal: Int) = wrapped.completeEdge(ordinal)
 
     override suspend fun complete() = wrapped.complete()
 
