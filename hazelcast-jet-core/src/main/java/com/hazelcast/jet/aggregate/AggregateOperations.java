@@ -32,6 +32,7 @@ import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToDoubleFunction;
 import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.function.DistributedTriFunction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -237,6 +238,10 @@ public final class AggregateOperations {
                 .andFinish(LinTrendAccumulator::finish);
     }
 
+    /**
+     * Convenience for {@link #allOf(AggregateOperation1, AggregateOperation1,
+     * DistributedBiFunction)} with identity finish.
+     */
     @Nonnull
     public static <T, A1, A2, R1, R2> AggregateOperation1<T, Tuple2<A1, A2>, Tuple2<R1, R2>> allOf(
             @Nonnull AggregateOperation1<? super T, A1, R1> op1,
@@ -245,11 +250,28 @@ public final class AggregateOperations {
         return allOf(op1, op2, Tuple2::tuple2);
     }
 
+    /**
+     * Returns composite aggregate operation from 2 other aggregate operations.
+     * It allows you to calculate multiple aggregations over the same items at once.
+     *
+     * @param op1 1st operation
+     * @param op2 2nd operation
+     * @param finishFn a function combining 3 results into single target instance
+     *
+     * @param <T> type of input items
+     * @param <A1> 1st accumulator type
+     * @param <A2> 2nd accumulator type
+     * @param <R1> 1st result type
+     * @param <R2> 2nd result type
+     * @param <R> final result type
+     *
+     * @return the composite operation
+     */
     @Nonnull
     public static <T, A1, A2, R1, R2, R> AggregateOperation1<T, Tuple2<A1, A2>, R> allOf(
             @Nonnull AggregateOperation1<? super T, A1, R1> op1,
             @Nonnull AggregateOperation1<? super T, A2, R2> op2,
-                @Nonnull DistributedBiFunction<? super R1, ? super R2, R> finisher
+            @Nonnull DistributedBiFunction<? super R1, ? super R2, R> finishFn
     ) {
         return AggregateOperation
                 .withCreate(() -> tuple2(op1.createFn().get(), op2.createFn().get()))
@@ -267,14 +289,48 @@ public final class AggregateOperations {
                             op1.deductFn().accept(acc1.f0(), acc2.f0());
                             op2.deductFn().accept(acc1.f1(), acc2.f1());
                         })
-                .andFinish(acc -> finisher.apply(op1.finishFn().apply(acc.f0()), op2.finishFn().apply(acc.f1())));
+                .andFinish(acc -> finishFn.apply(op1.finishFn().apply(acc.f0()), op2.finishFn().apply(acc.f1())));
     }
 
+    /**
+     * Convenience for {@link #allOf(AggregateOperation1, AggregateOperation1,
+     * AggregateOperation1, DistributedTriFunction)} with identity finisher.
+     */
     @Nonnull
     public static <T, A1, A2, A3, R1, R2, R3> AggregateOperation1<T, Tuple3<A1, A2, A3>, Tuple3<R1, R2, R3>> allOf(
             @Nonnull AggregateOperation1<? super T, A1, R1> op1,
             @Nonnull AggregateOperation1<? super T, A2, R2> op2,
             @Nonnull AggregateOperation1<? super T, A3, R3> op3
+    ) {
+        return allOf(op1, op2, op3, Tuple3::tuple3);
+    }
+
+    /**
+     * Returns composite aggregate operation from 3 other aggregate operations.
+     * It allows you to calculate multiple aggregations over the same items at once.
+     *
+     * @param op1 1st operation
+     * @param op2 2nd operation
+     * @param op3 3rd operation
+     * @param finishFn a function combining 3 results into single target instance
+     *
+     * @param <T> type of input items
+     * @param <A1> 1st accumulator type
+     * @param <A2> 2nd accumulator type
+     * @param <A3> 3rd accumulator type
+     * @param <R1> 1st result type
+     * @param <R2> 2nd result type
+     * @param <R3> 3rd result type
+     * @param <R> final result type
+     *
+     * @return the composite operation
+     */
+    @Nonnull
+    public static <T, A1, A2, A3, R1, R2, R3, R> AggregateOperation1<T, Tuple3<A1, A2, A3>, R> allOf(
+            @Nonnull AggregateOperation1<? super T, A1, R1> op1,
+            @Nonnull AggregateOperation1<? super T, A2, R2> op2,
+            @Nonnull AggregateOperation1<? super T, A3, R3> op3,
+            @Nonnull DistributedTriFunction<? super R1, ? super R2, ? super R3, R> finishFn
     ) {
         return AggregateOperation
                 .withCreate(() -> tuple3(op1.createFn().get(), op2.createFn().get(), op3.createFn().get()))
@@ -295,12 +351,44 @@ public final class AggregateOperations {
                             op2.deductFn().accept(acc1.f1(), acc2.f1());
                             op3.deductFn().accept(acc1.f2(), acc2.f2());
                         })
-                .andFinish(acc -> tuple3(
+                .andFinish(acc -> finishFn.apply(
                         op1.finishFn().apply(acc.f0()),
                         op2.finishFn().apply(acc.f1()),
                         op3.finishFn().apply(acc.f2())));
     }
 
+    /**
+     * Returns a builder to create a composite aggregate operation, if the
+     * number of operations is 4 or more. It allows you to calculate multiple
+     * aggregations over the same items at once.
+     * <p>
+     * The aggregation results are always wrapped in {@link
+     * com.hazelcast.jet.datamodel.ItemsByTag}; you have to store the {@link
+     * com.hazelcast.jet.datamodel.Tag}s to be able to query the results. If
+     * you have 2 or 3 aggregate operations, you might prefer the
+     * tuple-producing versions ({@link #allOf(AggregateOperation1,
+     * AggregateOperation1) here} or {@link #allOf(AggregateOperation1,
+     * AggregateOperation1, AggregateOperation1) here}).
+     * <p>
+     * Example: to calculate sum and count at the same time, you can use:
+     * <pre>{@code
+     *     AllOfAggregationBuilder<Long> builder = allOfBuilder();
+     *     Tag<Long> tagSum = builder.add(summingLong(Long::longValue));
+     *     Tag<Long> tagCount = builder.add(counting());
+     *     AggregateOperation1<Long, ?, ItemsByTag> op = builder.build();
+     * }</pre>
+     *
+     * When you receive the resulting {@link com.hazelcast.jet.datamodel.ItemsByTag},
+     * query individual values like this:
+     * <pre>{@code
+     *     ItemsByTag result = ...;
+     *     Long sum = result.get(tagSum);
+     *     Long count = result.get(tagCount);
+     * }</pre>
+     *
+     * @param <T> type of input items
+     * @return the builder
+     */
     @Nonnull
     public static <T> AllOfAggregationBuilder<T> allOfBuilder() {
         return new AllOfAggregationBuilder<>();

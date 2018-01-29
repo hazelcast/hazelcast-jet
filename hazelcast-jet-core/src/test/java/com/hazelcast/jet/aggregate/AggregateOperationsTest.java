@@ -148,7 +148,7 @@ public class AggregateOperationsTest {
     }
 
     @Test
-    public void when_allOf() {
+    public void when_allOf2() {
         validateOp(
                 allOf(counting(), summingLong(Long::longValue)),
                 identity(), 10L, 11L,

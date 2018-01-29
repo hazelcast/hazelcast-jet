@@ -18,15 +18,16 @@ package com.hazelcast.jet.aggregate;
 
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
+import com.hazelcast.jet.function.DistributedFunction;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 
 import static com.hazelcast.jet.datamodel.Tag.tag;
+import static com.hazelcast.jet.function.DistributedFunction.identity;
 
 /**
- * TODO
- *
  * Use {@link AggregateOperations#allOfBuilder()} to create.
  *
  * @param <T>
@@ -38,15 +39,37 @@ public final class AllOfAggregationBuilder<T> {
 
     AllOfAggregationBuilder() { }
 
-    public <R> Tag<R> add(AggregateOperation1<? super T, ?, R> operation) {
+    /**
+     * Adds one aggregate operation to the composite. Use the returned {@link
+     * Tag} to query the final {@link ItemsByTag}.
+     *
+     * @param <R> the result type of this operation
+     */
+    @Nonnull
+    public <R> Tag<R> add(@Nonnull AggregateOperation1<? super T, ?, R> operation) {
         operations.add(operation);
         Tag<R> tag = tag(tags.size());
         tags.add(tag);
         return tag;
     }
 
+    /**
+     * Builds the final {@link AggregateOperation1}. The return type will be
+     * {@link ItemsByTag}.
+     */
+    @Nonnull
     public AggregateOperation1<T, Object[], ItemsByTag> build() {
-        return (AggregateOperation1<T, Object[], ItemsByTag>) AggregateOperation
+        return build(identity());
+    }
+
+    /**
+     * Builds the final {@link AggregateOperation1}.
+     *
+     * @param finishFn function to convert {@link ItemsByTag} to target result type
+     */
+    @Nonnull
+    public <R> AggregateOperation1<T, Object[], R> build(@Nonnull DistributedFunction<ItemsByTag, R> finishFn) {
+        return (AggregateOperation1<T, Object[], R>) AggregateOperation
                 .withCreate(() -> {
                     Object[] acc = new Object[tags.size()];
                     for (int i = 0; i < acc.length; i++) {
@@ -79,7 +102,7 @@ public final class AllOfAggregationBuilder<T> {
                         Object finishedVal = operations.get(i).finishFn().apply(acc[i]);
                         result.put(tags.get(i), finishedVal);
                     }
-                    return result;
+                    return finishFn.apply(result);
                 });
     }
 }
