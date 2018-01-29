@@ -35,6 +35,9 @@ import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
  * Represents a stage in a distributed computation {@link Pipeline
  * pipeline}. It accepts input from its upstream stages (if any) and passes
  * its output to its downstream stages.
+ * <p>
+ * Unless specified otherwise, all functions passed to member methods must
+ * be stateless.
  *
  * @param <E> the type of items coming out of this stage
  */
@@ -47,7 +50,7 @@ public interface ComputeStage<E> extends Stage {
      * nothing. Therefore this stage can be used to implement filtering
      * semantics as well.
      *
-     * @param mapFn the mapping function
+     * @param mapFn a stateless mapping function
      * @param <R> the result type of the mapping function
      * @return the newly attached stage
      */
@@ -58,7 +61,7 @@ public interface ComputeStage<E> extends Stage {
      * predicate function to each input item to decide whether to pass the item
      * to the output or to discard it. Returns the newly attached stage.
      *
-     * @param filterFn the filter predicate function
+     * @param filterFn a stateless filter predicate function
      */
     ComputeStage<E> filter(DistributedPredicate<E> filterFn);
 
@@ -71,7 +74,8 @@ public interface ComputeStage<E> extends Stage {
      * is, this operation will not attempt to emit any items after the first
      * {@code null} item.
      *
-     * @param flatMapFn the flatmapping function, whose result type is Jet's {@link Traverser}
+     * @param flatMapFn a stateless flatmapping function, whose result type is
+     *                  Jet's {@link Traverser}
      * @param <R> the type of items in the result's traversers
      * @return the newly attached stage
      */
