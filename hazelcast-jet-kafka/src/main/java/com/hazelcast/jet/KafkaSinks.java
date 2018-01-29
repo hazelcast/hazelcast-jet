@@ -57,6 +57,7 @@ public final class KafkaSinks {
      * @param <K> type of the key published to Kafka
      * @param <V> type of the value published to Kafka
      */
+    @Nonnull
     public static <E, K, V> Sink<E> kafka(
             @Nonnull Properties properties,
             @Nonnull DistributedFunction<? super E, ProducerRecord<K, V>> toRecordFn
@@ -79,6 +80,7 @@ public final class KafkaSinks {
      * @param extractValueFn function that extracts the value from the stream item
 *
      */
+    @Nonnull
     public static <E, K, V> Sink<E> kafka(
             @Nonnull Properties properties,
             @Nonnull String topic,
@@ -99,6 +101,7 @@ public final class KafkaSinks {
      *                   address and key/value serializers
      * @param topic      Kafka topic name to publish to
      */
+    @Nonnull
     public static <K, V> Sink<Entry<K, V>> kafka(@Nonnull Properties properties, @Nonnull String topic) {
         return kafka(properties, topic, Entry::getKey, Entry::getValue);
     }

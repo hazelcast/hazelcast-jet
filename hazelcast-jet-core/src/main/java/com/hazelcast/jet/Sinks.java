@@ -64,7 +64,8 @@ public final class Sinks {
      * @param sinkName user-friendly sink name
      * @param metaSupplier the processor meta-supplier
      */
-    public static <E> Sink<E> fromProcessor(String sinkName, ProcessorMetaSupplier metaSupplier) {
+    @Nonnull
+    public static <E> Sink<E> fromProcessor(@Nonnull String sinkName, @Nonnull ProcessorMetaSupplier metaSupplier) {
         return new SinkImpl<>(sinkName, metaSupplier);
     }
 
@@ -77,7 +78,8 @@ public final class Sinks {
      * but overwritten. After the job is restarted from snapshot, duplicate
      * items will not change the state in the target map.
      */
-    public static <E extends Map.Entry> Sink<E> map(String mapName) {
+    @Nonnull
+    public static <E extends Map.Entry> Sink<E> map(@Nonnull String mapName) {
         return fromProcessor("mapSink(" + mapName + ')', writeMapP(mapName));
     }
 
@@ -91,7 +93,8 @@ public final class Sinks {
      * but overwritten. After the job is restarted from snapshot, duplicate
      * items will not change the state in the target map.
      */
-    public static <E extends Map.Entry> Sink<E> remoteMap(String mapName, ClientConfig clientConfig) {
+    @Nonnull
+    public static <E extends Map.Entry> Sink<E> remoteMap(@Nonnull String mapName, @Nonnull ClientConfig clientConfig) {
         return fromProcessor("remoteMapSink(" + mapName + ')', writeRemoteMapP(mapName, clientConfig));
     }
 
@@ -135,6 +138,7 @@ public final class Sinks {
      * @param <K> key type
      * @param <V> value type
      */
+    @Nonnull
     public static <E, K, V> Sink<E> mapWithMerging(
             @Nonnull String mapName,
             @Nonnull DistributedFunction<E, K> toKeyFn,
@@ -150,6 +154,7 @@ public final class Sinks {
      * in a remote Hazelcast cluster identified by the supplied {@code
      * ClientConfig}.
      */
+    @Nonnull
     public static <E, K, V> Sink<E> remoteMapWithMerging(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
@@ -165,6 +170,7 @@ public final class Sinks {
      * Convenience for {@link #mapWithMerging} with {@link Map.Entry} as
      * input item.
      */
+    @Nonnull
     public static <E extends Map.Entry, V> Sink<E> mapWithMerging(
             @Nonnull String mapName,
             @Nonnull DistributedBinaryOperator<V> mergeFn
@@ -177,6 +183,7 @@ public final class Sinks {
      * Convenience for {@link #remoteMapWithMerging} with {@link Map.Entry} as
      * input item.
      */
+    @Nonnull
     public static <E extends Map.Entry, V> Sink<E> remoteMapWithMerging(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
@@ -221,6 +228,7 @@ public final class Sinks {
      * @param <K>      key type
      * @param <V>      value type
      */
+    @Nonnull
     public static <E, K, V> Sink<E> mapWithUpdating(
             @Nonnull String mapName,
             @Nonnull DistributedFunction<E, K> toKeyFn,
@@ -234,6 +242,7 @@ public final class Sinks {
      * in a remote Hazelcast cluster identified by the supplied {@code
      * ClientConfig}.
      */
+    @Nonnull
     public static <E, K, V> Sink<E> remoteMapWithUpdating(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
@@ -249,6 +258,7 @@ public final class Sinks {
      * Convenience for {@link #mapWithUpdating} with {@link Map.Entry} as
      * input item.
      */
+    @Nonnull
     public static <E extends Map.Entry, V> Sink<E> mapWithUpdating(
             @Nonnull String mapName,
             @Nonnull DistributedBiFunction<V, E, V> updateFn
@@ -261,6 +271,7 @@ public final class Sinks {
      * Convenience for {@link #remoteMapWithUpdating} with {@link Map.Entry} as
      * input item.
      */
+    @Nonnull
     public static <E extends Map.Entry, V> Sink<E> remoteMapWithUpdating(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
@@ -307,6 +318,7 @@ public final class Sinks {
      * @param <K> key type
      * @param <V> value type
      */
+    @Nonnull
     public static <E, K, V> Sink<E> mapWithEntryProcessor(
             @Nonnull String mapName,
             @Nonnull DistributedFunction<E, K> toKeyFn,
@@ -322,6 +334,7 @@ public final class Sinks {
      * in a remote Hazelcast cluster identified by the supplied {@code
      * ClientConfig}.
      */
+    @Nonnull
     public static <E, K, V> Sink<E> remoteMapWithEntryProcessor(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
@@ -342,7 +355,8 @@ public final class Sinks {
      * but overwritten. After the job is restarted from snapshot, duplicate
      * items will not change the state in the target map.
      */
-    public static <E extends Map.Entry> Sink<E> cache(String cacheName) {
+    @Nonnull
+    public static <E extends Map.Entry> Sink<E> cache(@Nonnull String cacheName) {
         return fromProcessor("cacheSink(" + cacheName + ')', writeCacheP(cacheName));
     }
 
@@ -356,7 +370,11 @@ public final class Sinks {
      * but overwritten. After the job is restarted from snapshot, duplicate
      * items will not change the state in the target map.
      */
-    public static <E extends Map.Entry> Sink<E> remoteCache(String cacheName, ClientConfig clientConfig) {
+    @Nonnull
+    public static <E extends Map.Entry> Sink<E> remoteCache(
+            @Nonnull String cacheName,
+            @Nonnull ClientConfig clientConfig
+    ) {
         return fromProcessor("remoteCacheSink(" + cacheName + ')', writeRemoteCacheP(cacheName, clientConfig));
     }
 
@@ -368,7 +386,8 @@ public final class Sinks {
      * the items will likely be duplicated, providing an <i>at-least-once</i>
      * guarantee.
      */
-    public static <E> Sink<E> list(String listName) {
+    @Nonnull
+    public static <E> Sink<E> list(@Nonnull String listName) {
         return fromProcessor("listSink(" + listName + ')', writeListP(listName));
     }
 
@@ -381,7 +400,8 @@ public final class Sinks {
      * the items will likely be duplicated, providing an <i>at-least-once</i>
      * guarantee.
      */
-    public static <E> Sink<E> remoteList(String listName, ClientConfig clientConfig) {
+    @Nonnull
+    public static <E> Sink<E> remoteList(@Nonnull String listName, @Nonnull ClientConfig clientConfig) {
         return fromProcessor("remoteListSink(" + listName + ')', writeRemoteListP(listName, clientConfig));
     }
 
@@ -396,6 +416,7 @@ public final class Sinks {
      * the items will likely be duplicated, providing an <i>at-least-once</i>
      * guarantee.
      */
+    @Nonnull
     public static <E> Sink<E> socket(
             @Nonnull String host,
             int port,
@@ -409,6 +430,7 @@ public final class Sinks {
      * Convenience for {@link #socket(String, int, DistributedFunction,
      * Charset)} with UTF-8 as the charset.
      */
+    @Nonnull
     public static <E> Sink<E> socket(
             @Nonnull String host,
             int port,
@@ -422,6 +444,7 @@ public final class Sinks {
      * Charset)} with {@code Object.toString} as the conversion function and
      * UTF-8 as the charset.
      */
+    @Nonnull
     public static <E> Sink<E> socket(@Nonnull String host, int port) {
         return fromProcessor("socketSink(" + host + ':' + port + ')',
                 writeSocketP(host, port, Object::toString, UTF_8));
@@ -467,7 +490,8 @@ public final class Sinks {
      */
     @Nonnull
     public static <E> Sink<E> files(
-            @Nonnull String directoryName, @Nonnull DistributedFunction<E, String> toStringFn
+            @Nonnull String directoryName,
+            @Nonnull DistributedFunction<E, String> toStringFn
     ) {
         return files(directoryName, toStringFn, UTF_8, false);
     }
