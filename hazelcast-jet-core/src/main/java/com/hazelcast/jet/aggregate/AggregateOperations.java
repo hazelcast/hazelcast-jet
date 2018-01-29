@@ -22,7 +22,10 @@ import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.accumulator.LongDoubleAccumulator;
 import com.hazelcast.jet.accumulator.LongLongAccumulator;
 import com.hazelcast.jet.accumulator.MutableReference;
+import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.DistributedBiConsumer;
+import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBinaryOperator;
 import com.hazelcast.jet.function.DistributedComparator;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -39,7 +42,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Stream;
+
+import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
+import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 
 /**
  * Utility class with factory methods for several useful aggregate
@@ -232,55 +237,73 @@ public final class AggregateOperations {
                 .andFinish(LinTrendAccumulator::finish);
     }
 
-    /**
-     * Returns a composite operation that computes multiple aggregate
-     * operations and returns their results in a {@code List<Object>}.
-     *
-     * @param operations aggregate operations to apply
-     */
-    @SafeVarargs @Nonnull
-    public static <T> AggregateOperation1<T, List<Object>, List<Object>> allOf(
-            @Nonnull AggregateOperation1<? super T, ?, ?>... operations
+    @Nonnull
+    public static <T, A1, A2, R1, R2> AggregateOperation1<T, Tuple2<A1, A2>, Tuple2<R1, R2>> allOf(
+            @Nonnull AggregateOperation1<? super T, A1, R1> op1,
+            @Nonnull AggregateOperation1<? super T, A2, R2> op2
     ) {
-        AggregateOperation1[] untypedOps = operations;
+        return allOf(op1, op2, Tuple2::tuple2);
+    }
 
+    @Nonnull
+    public static <T, A1, A2, R1, R2, R> AggregateOperation1<T, Tuple2<A1, A2>, R> allOf(
+            @Nonnull AggregateOperation1<? super T, A1, R1> op1,
+            @Nonnull AggregateOperation1<? super T, A2, R2> op2,
+                @Nonnull DistributedBiFunction<? super R1, ? super R2, R> finisher
+    ) {
         return AggregateOperation
-                .withCreate(() -> {
-                    List<Object> res = new ArrayList<>(untypedOps.length);
-                    for (AggregateOperation untypedOp : untypedOps) {
-                        res.add(untypedOp.createFn().get());
-                    }
-                    return res;
+                .withCreate(() -> tuple2(op1.createFn().get(), op2.createFn().get()))
+                .<T>andAccumulate((acc, item) -> {
+                    op1.accumulateFn().accept(acc.f0(), item);
+                    op2.accumulateFn().accept(acc.f1(), item);
                 })
-                .andAccumulate((List<Object> accs, T item) -> {
-                    for (int i = 0; i < untypedOps.length; i++) {
-                        untypedOps[i].accumulateFn().accept(accs.get(i), item);
-                    }
+                .andCombine(op1.combineFn() == null || op2.combineFn() == null ? null :
+                        (acc1, acc2) -> {
+                            op1.combineFn().accept(acc1.f0(), acc2.f0());
+                            op2.combineFn().accept(acc1.f1(), acc2.f1());
+                        })
+                .andDeduct(op1.deductFn() == null || op2.deductFn() == null ? null :
+                        (acc1, acc2) -> {
+                            op1.deductFn().accept(acc1.f0(), acc2.f0());
+                            op2.deductFn().accept(acc1.f1(), acc2.f1());
+                        })
+                .andFinish(acc -> finisher.apply(op1.finishFn().apply(acc.f0()), op2.finishFn().apply(acc.f1())));
+    }
+
+    @Nonnull
+    public static <T, A1, A2, A3, R1, R2, R3> AggregateOperation1<T, Tuple3<A1, A2, A3>, Tuple3<R1, R2, R3>> allOf(
+            @Nonnull AggregateOperation1<? super T, A1, R1> op1,
+            @Nonnull AggregateOperation1<? super T, A2, R2> op2,
+            @Nonnull AggregateOperation1<? super T, A3, R3> op3
+    ) {
+        return AggregateOperation
+                .withCreate(() -> tuple3(op1.createFn().get(), op2.createFn().get(), op3.createFn().get()))
+                .<T>andAccumulate((acc, item) -> {
+                    op1.accumulateFn().accept(acc.f0(), item);
+                    op2.accumulateFn().accept(acc.f1(), item);
+                    op3.accumulateFn().accept(acc.f2(), item);
                 })
-                .andCombine(
-                        // we can support combine only if all operations do
-                        Stream.of(untypedOps).allMatch(o -> o.combineFn() != null)
-                                ? (accs1, accs2) -> {
-                                    for (int i = 0; i < untypedOps.length; i++) {
-                                        untypedOps[i].combineFn().accept(accs1.get(i), accs2.get(i));
-                            }
-                        } : null)
-                .andDeduct(
-                        // we can support deduct only if all operations do
-                        Stream.of(untypedOps).allMatch(o -> o.deductFn() != null)
-                                ? (accs1, accs2) -> {
-                                    for (int i = 0; i < untypedOps.length; i++) {
-                                        untypedOps[i].deductFn().accept(accs1.get(i), accs2.get(i));
-                                    }
-                                }
-                                : null)
-                .andFinish(accs -> {
-                    List<Object> res = new ArrayList<>(untypedOps.length);
-                    for (int i = 0; i < untypedOps.length; i++) {
-                        res.add(untypedOps[i].finishFn().apply(accs.get(i)));
-                    }
-                    return res;
-                });
+                .andCombine(op1.combineFn() == null || op2.combineFn() == null ? null :
+                        (acc1, acc2) -> {
+                            op1.combineFn().accept(acc1.f0(), acc2.f0());
+                            op2.combineFn().accept(acc1.f1(), acc2.f1());
+                            op3.combineFn().accept(acc1.f2(), acc2.f2());
+                        })
+                .andDeduct(op1.deductFn() == null || op2.deductFn() == null ? null :
+                        (acc1, acc2) -> {
+                            op1.deductFn().accept(acc1.f0(), acc2.f0());
+                            op2.deductFn().accept(acc1.f1(), acc2.f1());
+                            op3.deductFn().accept(acc1.f2(), acc2.f2());
+                        })
+                .andFinish(acc -> tuple3(
+                        op1.finishFn().apply(acc.f0()),
+                        op2.finishFn().apply(acc.f1()),
+                        op3.finishFn().apply(acc.f2())));
+    }
+
+    @Nonnull
+    public static <T> AllOfAggregationBuilder<T> allOfBuilder() {
+        return new AllOfAggregationBuilder<>();
     }
 
     /**
