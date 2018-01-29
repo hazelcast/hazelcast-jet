@@ -48,6 +48,9 @@ public final class KafkaSinks {
      * <p>
      * IO failures are generally handled by Kafka producer and do not cause the
      * processor to fail. Refer to Kafka documentation for details.
+     * <p>
+     * Default local parallelism for this processor is 2 (or less if less CPUs
+     * are available).
      *
      * @param properties     producer properties which should contain broker
      *                       address and key/value serializers

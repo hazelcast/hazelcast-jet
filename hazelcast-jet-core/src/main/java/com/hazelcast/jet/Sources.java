@@ -62,6 +62,9 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * The same pipeline may contain more than one source, each starting its
  * own branch. The branches may be merged with multiple-input transforms
  * such as co-group and hash-join.
+ * <p>
+ * The default local parallelism for sources in this class is 1 or 2, check the
+ * documentation of individual methods.
  */
 public final class Sources {
 
@@ -73,6 +76,9 @@ public final class Sources {
     /**
      * Returns a source constructed directly from the given Core API processor
      * meta-supplier.
+     * <p>
+     * Default local parallelism for this source is specified by the given
+     * {@link ProcessorMetaSupplier#preferredLocalParallelism() metaSupplier}.
      *
      * @param sourceName user-friendly source name
      * @param metaSupplier the processor meta-supplier
@@ -97,6 +103,9 @@ public final class Sources {
      * If the {@code IMap} is modified while being read, or if there is a
      * cluster topology change (triggering data migration), the source may
      * miss and/or duplicate some entries.
+     * <p>
+     * Default local parallelism for this processor is 2 (or less if less CPUs
+     * are available).
      */
     @Nonnull
     public static <K, V> Source<Map.Entry<K, V>> map(@Nonnull String mapName) {
@@ -132,6 +141,9 @@ public final class Sources {
      * If the {@code IMap} is modified while being read, or if there is a
      * cluster topology change (triggering data migration), the source may
      * miss and/or duplicate some entries.
+     * <p>
+     * Default local parallelism for this processor is 2 (or less if less CPUs
+     * are available).
      *
      * @param mapName the name of the map
      * @param predicate the predicate to filter the events, you may use
@@ -185,6 +197,9 @@ public final class Sources {
      * The source saves the journal offset to the snapshot. If the job
      * restarts, it starts emitting from the saved offset with an
      * exactly-once guarantee (unless the journal has overflowed).
+     * <p>
+     * Default local parallelism for this processor is 2 (or less if less CPUs
+     * are available).
      *
      * @param mapName the name of the map
      * @param predicateFn the predicate to filter the events, you may use
@@ -239,6 +254,8 @@ public final class Sources {
      * If the {@code IMap} is modified while being read, or if there is a
      * cluster topology change (triggering data migration), the source may
      * miss and/or duplicate some entries.
+     * <p>
+     * Default local parallelism for this processor is 1.
      */
     @Nonnull
     public static <K, V> Source<Map.Entry<K, V>> remoteMap(
@@ -274,6 +291,8 @@ public final class Sources {
      * If the {@code IMap} is modified while being read, or if there is a
      * cluster topology change (triggering data migration), the source may
      * miss and/or duplicate some entries.
+     * <p>
+     * Default local parallelism for this processor is 1.
      *
      * @param mapName the name of the map
      * @param predicate the predicate to filter the events, you may use
@@ -327,6 +346,8 @@ public final class Sources {
      * The source saves the journal offset to the snapshot. If the job
      * restarts, it starts emitting from the saved offset with an
      * exactly-once guarantee (unless the journal has overflowed).
+     * <p>
+     * Default local parallelism for this processor is 1.
      *
      * @param mapName the name of the map
      * @param clientConfig configuration for the client to connect to the remote cluster
@@ -388,6 +409,9 @@ public final class Sources {
      * If the {@code ICache} is modified while being read, or if there is a
      * cluster topology change (triggering data migration), the source may
      * miss and/or duplicate some entries.
+     * <p>
+     * Default local parallelism for this processor is 2 (or less if less CPUs
+     * are available).
      */
     @Nonnull
     public static <K, V> Source<Map.Entry<K, V>> cache(@Nonnull String cacheName) {
@@ -414,6 +438,9 @@ public final class Sources {
      * The source saves the journal offset to the snapshot. If the job
      * restarts, it starts emitting from the saved offset with an
      * exactly-once guarantee (unless the journal has overflowed).
+     * <p>
+     * Default local parallelism for this processor is 2 (or less if less CPUs
+     * are available).
      *
      * @param cacheName the name of the cache
      * @param predicateFn the predicate to filter the events, you may use
@@ -469,6 +496,8 @@ public final class Sources {
      * If the {@code ICache} is modified while being read, or if there is a
      * cluster topology change (triggering data migration), the source may
      * miss and/or duplicate some entries.
+     * <p>
+     * Default local parallelism for this processor is 1.
      */
     @Nonnull
     public static <K, V> Source<Map.Entry<K, V>> remoteCache(
@@ -495,6 +524,8 @@ public final class Sources {
      * The source saves the journal offset to the snapshot. If the job
      * restarts, it starts emitting from the saved offset with an
      * exactly-once guarantee (unless the journal has overflowed).
+     * <p>
+     * Default local parallelism for this processor is 1.
      *
      * @param cacheName the name of the cache
      * @param clientConfig configuration for the client to connect to the remote cluster
@@ -548,6 +579,8 @@ public final class Sources {
      * <p>
      * The source does not save any state to snapshot. If the job is restarted,
      * it will re-emit all entries.
+     * <p>
+     * Default local parallelism for this processor is 1.
      */
     @Nonnull
     public static <E> Source<E> list(@Nonnull String listName) {
@@ -561,6 +594,8 @@ public final class Sources {
      * <p>
      * The source does not save any state to snapshot. If the job is restarted,
      * it will re-emit all entries.
+     * <p>
+     * Default local parallelism for this processor is 1.
      */
     @Nonnull
     public static <E> Source<E> remoteList(@Nonnull String listName, @Nonnull ClientConfig clientConfig) {
@@ -581,6 +616,8 @@ public final class Sources {
      * The source does not save any state to snapshot. On job restart, it will
      * emit whichever items the server sends. The implementation uses
      * non-blocking API, the processor is cooperative.
+     * <p>
+     * Default local parallelism for this processor is 1.
      */
     @Nonnull
     public static Source<String> socket(
@@ -602,6 +639,9 @@ public final class Sources {
      * it will re-emit all entries.
      * <p>
      * Any {@code IOException} will cause the job to fail.
+     * <p>
+     * Default local parallelism for this processor is 2 (or less if less CPUs
+     * are available).
      *
      * @param directory parent directory of the files
      * @param charset charset to use to decode the files
@@ -648,6 +688,9 @@ public final class Sources {
      * The source does not save any state to snapshot. If the job is restarted,
      * lines added after the restart will be emitted, which gives at-most-once
      * behavior.
+     * <p>
+     * Default local parallelism for this processor is 2 (or less if less CPUs
+     * are available).
      *
      * <h3>Limitation on Windows</h3>
      * On Windows the {@code WatchService} is not notified of appended lines
