@@ -52,8 +52,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * as its transform has the type {@link SinkStage} and accepts no
  * downstream stages.
  * <p>
- * The default local parallelism for sources in this class is 1, check the
- * documentation of individual methods.
+ * The default local parallelism for sources in this class is typically 1,
+ * check the documentation of individual methods.
  */
 public final class Sinks {
 
@@ -64,7 +64,7 @@ public final class Sinks {
      * Returns a sink constructed directly from the given Core API processor
      * meta-supplier.
      * <p>
-     * Default local parallelism for this source is specified by the given
+     * The default local parallelism for this source is specified by the given
      * {@link ProcessorMetaSupplier#preferredLocalParallelism() metaSupplier}.
      *
      * @param sinkName user-friendly sink name
@@ -84,7 +84,7 @@ public final class Sinks {
      * but overwritten. After the job is restarted from snapshot, duplicate
      * items will not change the state in the target map.
      * <p>
-     * Default local parallelism for this processor is 1.
+     * The default local parallelism for this processor is 1.
      */
     @Nonnull
     public static <E extends Map.Entry> Sink<E> map(@Nonnull String mapName) {
@@ -101,7 +101,7 @@ public final class Sinks {
      * but overwritten. After the job is restarted from snapshot, duplicate
      * items will not change the state in the target map.
      * <p>
-     * Default local parallelism for this processor is 1.
+     * The default local parallelism for this processor is 1.
      */
     @Nonnull
     public static <E extends Map.Entry> Sink<E> remoteMap(@Nonnull String mapName, @Nonnull ClientConfig clientConfig) {
@@ -139,7 +139,7 @@ public final class Sinks {
      * entries no matter if they are locked or not. Use {@link #mapWithEntryProcessor}
      * if you need locking.
      * <p>
-     * Default local parallelism for this processor is 1.
+     * The default local parallelism for this processor is 1.
      *
      * @param mapName   name of the map
      * @param toKeyFn   function that extracts the key from the input item
@@ -232,7 +232,7 @@ public final class Sinks {
      * no matter if they are locked or not.
      * Use {@link #mapWithEntryProcessor} if you need locking.
      * <p>
-     * Default local parallelism for this processor is 1.
+     * The default local parallelism for this processor is 1.
      *
      * @param mapName  name of the map
      * @param toKeyFn  function that extracts the key from the input item
@@ -324,7 +324,7 @@ public final class Sinks {
      * this operation <em>is</em> lock-aware. If the key is locked,
      * the EntryProcessor will wait until it acquires the lock.
      * <p>
-     * Default local parallelism for this processor is 1.
+     * The default local parallelism for this processor is 1.
      *
      * @param mapName  name of the map
      * @param toKeyFn  function that extracts the key from the input item
@@ -371,7 +371,7 @@ public final class Sinks {
      * but overwritten. After the job is restarted from snapshot, duplicate
      * items will not change the state in the target map.
      * <p>
-     * Default local parallelism for this processor is 1.
+     * The default local parallelism for this processor is 1.
      */
     @Nonnull
     public static <E extends Map.Entry> Sink<E> cache(@Nonnull String cacheName) {
@@ -388,7 +388,7 @@ public final class Sinks {
      * but overwritten. After the job is restarted from snapshot, duplicate
      * items will not change the state in the target map.
      * <p>
-     * Default local parallelism for this processor is 1.
+     * The default local parallelism for this processor is 1.
      */
     @Nonnull
     public static <E extends Map.Entry> Sink<E> remoteCache(
@@ -406,7 +406,7 @@ public final class Sinks {
      * the items will likely be duplicated, providing an <i>at-least-once</i>
      * guarantee.
      * <p>
-     * Default local parallelism for this processor is 1.
+     * The default local parallelism for this processor is 1.
      */
     @Nonnull
     public static <E> Sink<E> list(@Nonnull String listName) {
@@ -422,7 +422,7 @@ public final class Sinks {
      * the items will likely be duplicated, providing an <i>at-least-once</i>
      * guarantee.
      * <p>
-     * Default local parallelism for this processor is 1.
+     * The default local parallelism for this processor is 1.
      */
     @Nonnull
     public static <E> Sink<E> remoteList(@Nonnull String listName, @Nonnull ClientConfig clientConfig) {
@@ -440,7 +440,7 @@ public final class Sinks {
      * the items will likely be duplicated, providing an <i>at-least-once</i>
      * guarantee.
      * <p>
-     * Default local parallelism for this processor is 1.
+     * The default local parallelism for this processor is 1.
      */
     @Nonnull
     public static <E> Sink<E> socket(
@@ -492,7 +492,7 @@ public final class Sinks {
      * the items will likely be duplicated, providing an <i>at-least-once</i>
      * guarantee.
      * <p>
-     * Default local parallelism for this processor is 1.
+     * The default local parallelism for this processor is 1.
      *
      * @param directoryName directory to create the files in. Will be created
      *                      if it doesn't exist. Must be the same on all members.
@@ -543,7 +543,7 @@ public final class Sinks {
      * receive it. Its primary purpose is for development use, when running Jet
      * on a local machine.
      * <p>
-     * Default local parallelism for this processor is 1.
+     * The default local parallelism for this processor is 1.
      *
      * @param toStringFn a function that returns a string representation of a stream item
      * @param <E> stream item type
