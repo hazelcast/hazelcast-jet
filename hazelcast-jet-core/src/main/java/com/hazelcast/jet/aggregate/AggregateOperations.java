@@ -256,7 +256,7 @@ public final class AggregateOperations {
      *
      * @param op1 1st operation
      * @param op2 2nd operation
-     * @param finishFn a function combining 3 results into single target instance
+     * @param finishFn a function combining 2 results into single target instance
      *
      * @param <T> type of input items
      * @param <A1> 1st accumulator type
@@ -358,17 +358,15 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns a builder to create a composite aggregate operation, if the
-     * number of operations is 4 or more. It allows you to calculate multiple
-     * aggregations over the same items at once.
+     * Returns a builder to create a composite of multiple aggregate
+     * operations. It allows you to calculate multiple aggregations over the
+     * same items at once. The number of operations is unbounded. Results are
+     * stored in single {@link com.hazelcast.jet.datamodel.ItemsByTag} object.
      * <p>
-     * The aggregation results are always wrapped in {@link
-     * com.hazelcast.jet.datamodel.ItemsByTag}; you have to store the {@link
-     * com.hazelcast.jet.datamodel.Tag}s to be able to query the results. If
-     * you have 2 or 3 aggregate operations, you might prefer the
-     * tuple-producing versions ({@link #allOf(AggregateOperation1,
-     * AggregateOperation1) here} or {@link #allOf(AggregateOperation1,
-     * AggregateOperation1, AggregateOperation1) here}).
+     * If you have exactly 2 or 3 operations, you might prefer more type-safe
+     * versions ({@link #allOf(AggregateOperation1, AggregateOperation1) here}
+     * or {@link #allOf(AggregateOperation1, AggregateOperation1,
+     * AggregateOperation1) here}).
      * <p>
      * Example: to calculate sum and count at the same time, you can use:
      * <pre>{@code
@@ -378,8 +376,8 @@ public final class AggregateOperations {
      *     AggregateOperation1<Long, ?, ItemsByTag> op = builder.build();
      * }</pre>
      *
-     * When you receive the resulting {@link com.hazelcast.jet.datamodel.ItemsByTag},
-     * query individual values like this:
+     * When you receive the resulting {@link com.hazelcast.jet.datamodel.ItemsByTag}
+     * object, query individual values like this:
      * <pre>{@code
      *     ItemsByTag result = ...;
      *     Long sum = result.get(tagSum);
