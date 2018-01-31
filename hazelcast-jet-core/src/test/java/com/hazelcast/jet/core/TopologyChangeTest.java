@@ -36,7 +36,6 @@ import com.hazelcast.jet.impl.MasterContext;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.impl.operation.InitExecutionOperation;
-import com.hazelcast.test.AssertTask;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import org.junit.After;
 import org.junit.Before;
@@ -199,16 +198,13 @@ public class TopologyChangeTest extends JetTestSupport {
         final int count = nodeCount * 2 - 1;
         assertEquals(count, MockPS.initCount.get());
 
-        assertTrueEventually(new AssertTask() {
-            @Override
-            public void run() throws Exception {
-                assertEquals(count, MockPS.completeCount.get());
-                assertEquals(nodeCount, MockPS.completeErrors.size());
-                for (int i = 0; i < MockPS.completeErrors.size(); i++) {
-                    Throwable error = MockPS.completeErrors.get(i);
-                    assertTrue(error instanceof TopologyChangedException
-                            || error instanceof HazelcastInstanceNotActiveException);
-                }
+        assertTrueEventually(() -> {
+            assertEquals(count, MockPS.completeCount.get());
+            assertEquals(nodeCount, MockPS.completeErrors.size());
+            for (int i = 0; i < MockPS.completeErrors.size(); i++) {
+                Throwable error = MockPS.completeErrors.get(i);
+                assertTrue(error instanceof TopologyChangedException
+                        || error instanceof HazelcastInstanceNotActiveException);
             }
         });
     }
@@ -274,13 +270,10 @@ public class TopologyChangeTest extends JetTestSupport {
 
         JobRepository jobRepository = getJetService(instances[1]).getJobRepository();
 
-        assertTrueEventually(new AssertTask() {
-            @Override
-            public void run() throws Exception {
-                JobResult jobResult = jobRepository.getJobResult(completedJobId);
-                assertNotNull(jobResult);
-                assertTrue(jobResult.isSuccessful());
-            }
+        assertTrueEventually(() -> {
+            JobResult jobResult = jobRepository.getJobResult(completedJobId);
+            assertNotNull(jobResult);
+            assertTrue(jobResult.isSuccessful());
         });
 
         final int count = liteMemberFlags[0] ? (2 * nodeCount) : (2 * nodeCount - 1);
@@ -308,7 +301,7 @@ public class TopologyChangeTest extends JetTestSupport {
         Job job = client.newJob(dag, config);
         StuckProcessor.executionStarted.await();
 
-        instances[2].getHazelcastInstance().getLifecycleService().terminate();
+        instances[0].getHazelcastInstance().getLifecycleService().terminate();
         StuckProcessor.proceedLatch.countDown();
 
         Throwable ex = job.getFuture().handle((r, e) -> e).get();
@@ -350,7 +343,7 @@ public class TopologyChangeTest extends JetTestSupport {
     }
 
     @Test
-    public void when_jobParticipantHasStaleMemberList_then_jobInitRetries() throws Throwable {
+    public void when_jobParticipantHasStaleMemberList_then_jobInitRetries() {
         // Given
         dropOperationsBetween(instances[0].getHazelcastInstance(), instances[2].getHazelcastInstance(),
                 ClusterDataSerializerHook.F_ID, singletonList(MEMBER_INFO_UPDATE));
@@ -363,12 +356,8 @@ public class TopologyChangeTest extends JetTestSupport {
 
 
         // Then
-        assertTrueAllTheTime(new AssertTask() {
-            @Override
-            public void run() throws Exception {
-                assertEquals(STARTING, job.getStatus());
-            }
-        }, 5);
+        assertTrueEventually(() -> assertEquals(STARTING, job.getStatus()));
+        assertTrueAllTheTime(() -> assertEquals(STARTING, job.getStatus()), 5);
 
         resetPacketFiltersFrom(instances[0].getHazelcastInstance());
 
@@ -376,7 +365,7 @@ public class TopologyChangeTest extends JetTestSupport {
     }
 
     @Test
-    public void when_jobParticipantReceivesStaleInitOperation_then_jobRestarts() throws Throwable {
+    public void when_jobParticipantReceivesStaleInitOperation_then_jobRestarts() {
         // Given
         JetInstance newInstance = factory.newMember(config);
         for (JetInstance instance : instances) {
@@ -391,23 +380,14 @@ public class TopologyChangeTest extends JetTestSupport {
         Job job = instances[0].newJob(dag);
         JetService jetService = getJetService(instances[0]);
 
-        assertTrueEventually(new AssertTask() {
-            @Override
-            public void run() throws Exception {
-                assertFalse(jetService.getJobCoordinationService().getMasterContexts().isEmpty());
-            }
-        });
+        assertTrueEventually(() -> assertFalse(jetService.getJobCoordinationService().getMasterContexts().isEmpty()));
 
         MasterContext masterContext = jetService.getJobCoordinationService().getMasterContext(job.getId());
 
-        assertTrueEventually(new AssertTask() {
-            @Override
-            public void run() throws Exception {
-                assertEquals(STARTING, masterContext.jobStatus());
-                assertNotEquals(0, masterContext.getExecutionId());
-            }
+        assertTrueEventually(() -> {
+            assertEquals(STARTING, masterContext.jobStatus());
+            assertNotEquals(0, masterContext.getExecutionId());
         });
-
 
         // When
         long executionId = masterContext.getExecutionId();
@@ -425,7 +405,7 @@ public class TopologyChangeTest extends JetTestSupport {
     }
 
     @Test
-    public void when_nodeIsShuttingDownDuringInit_then_jobRestarts() throws Throwable {
+    public void when_nodeIsShuttingDownDuringInit_then_jobRestarts() {
         // Given that newInstance will have a long shutdown process
         for (JetInstance instance : instances) {
             warmUpPartitions(instance.getHazelcastInstance());
@@ -443,29 +423,13 @@ public class TopologyChangeTest extends JetTestSupport {
 
         JetService jetService = getJetService(instances[0]);
 
-        assertTrueEventually(new AssertTask() {
-            @Override
-            public void run() throws Exception {
-                assertFalse(jetService.getJobCoordinationService().getMasterContexts().isEmpty());
-            }
-        });
+        assertTrueEventually(() -> assertFalse(jetService.getJobCoordinationService().getMasterContexts().isEmpty()));
 
         spawn(instances[2]::shutdown);
 
         // Then, it restarts until the shutting down node is gone
-        assertTrueEventually(new AssertTask() {
-            @Override
-            public void run() throws Exception {
-                assertEquals(STARTING, job.getStatus());
-            }
-        });
-
-        assertTrueAllTheTime(new AssertTask() {
-            @Override
-            public void run() throws Exception {
-                assertEquals(STARTING, job.getStatus());
-            }
-        }, 5);
+        assertTrueEventually(() -> assertEquals(STARTING, job.getStatus()));
+        assertTrueAllTheTime(() -> assertEquals(STARTING, job.getStatus()), 5);
 
         resetPacketFiltersFrom(instances[2].getHazelcastInstance());
 
@@ -473,7 +437,7 @@ public class TopologyChangeTest extends JetTestSupport {
     }
 
     @Test
-    public void when_nodeIsShuttingDownAfterInit_then_jobRestarts() throws Throwable {
+    public void when_nodeIsShuttingDownAfterInit_then_jobRestarts() {
         // Given that the second node has not received ExecuteOperation yet
         for (JetInstance instance : instances) {
             warmUpPartitions(instance.getHazelcastInstance());
@@ -486,12 +450,7 @@ public class TopologyChangeTest extends JetTestSupport {
 
         Job job = instances[0].newJob(dag);
 
-        assertTrueEventually(new AssertTask() {
-            @Override
-            public void run() throws Exception {
-                assertEquals(RUNNING, job.getStatus());
-            }
-        });
+        assertTrueEventually(() -> assertEquals(RUNNING, job.getStatus()));
 
         // When a participant shuts down during execution
         instances[2].shutdown();

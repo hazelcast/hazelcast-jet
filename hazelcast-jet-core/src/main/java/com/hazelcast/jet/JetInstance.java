@@ -158,7 +158,7 @@ public interface JetInstance {
     JetCacheManager getCacheManager();
 
     /**
-     * Shutdowns the current instance.
+     * Shuts down the current instance.
      */
     void shutdown();
 
