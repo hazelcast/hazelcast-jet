@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.Charset;
+import java.nio.file.DirectoryStream;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -119,10 +120,12 @@ public class StreamFilesP extends AbstractProcessor implements Closeable {
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        for (Path file : Files.newDirectoryStream(watchedDirectory)) {
-            if (Files.isRegularFile(file)) {
-                // Negative offset means "initial offset", needed to skip the first line
-                fileOffsets.put(file, new FileOffset(-Files.size(file), ""));
+        try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(watchedDirectory)) {
+            for (Path file : directoryStream) {
+                if (Files.isRegularFile(file)) {
+                    // Negative offset means "initial offset", needed to skip the first line
+                    fileOffsets.put(file, new FileOffset(-Files.size(file), ""));
+                }
             }
         }
         watcher = FileSystems.getDefault().newWatchService();
