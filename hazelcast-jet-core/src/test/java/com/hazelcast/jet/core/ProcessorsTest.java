@@ -58,7 +58,7 @@ public class ProcessorsTest {
         inbox = new TestInbox();
         outbox = new TestOutbox(1);
         context = mock(Context.class);
-        bucket = outbox.queueWithOrdinal(0);
+        bucket = outbox.queue(0);
     }
 
     @Test

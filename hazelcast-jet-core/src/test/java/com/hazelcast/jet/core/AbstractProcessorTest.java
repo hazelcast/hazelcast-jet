@@ -365,7 +365,7 @@ public class AbstractProcessorTest {
 
     private void validateReceptionAtOrdinals(Object item, int... ordinals) {
         for (int i : range(0, OUTBOX_BUCKET_COUNT).toArray()) {
-            Queue<Object> q = outbox.queueWithOrdinal(i);
+            Queue<Object> q = outbox.queue(i);
             if (Arrays.stream(ordinals).anyMatch(ord -> ord == i)) {
                 assertEquals(item, q.poll());
             }

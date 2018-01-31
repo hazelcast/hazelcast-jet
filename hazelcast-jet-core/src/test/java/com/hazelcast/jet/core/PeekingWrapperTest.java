@@ -259,8 +259,8 @@ public class PeekingWrapperTest {
         verify(logger).info("Output to 0: " + format(0));
         verify(logger).info("Output to 1: " + format(0));
 
-        outbox.queueWithOrdinal(0).clear();
-        outbox.queueWithOrdinal(1).clear();
+        outbox.queue(0).clear();
+        outbox.queue(1).clear();
 
         // only one queue has available space, call complete() again to emit another object
         peekP.complete();
@@ -268,8 +268,8 @@ public class PeekingWrapperTest {
             verify(logger).info("Output to 1: " + format(1));
             verify(logger).info("Output to 0: " + format(1));
         }
-        outbox.queueWithOrdinal(0).clear();
-        outbox.queueWithOrdinal(1).clear();
+        outbox.queue(0).clear();
+        outbox.queue(1).clear();
         verifyZeroInteractions(logger);
 
         peekP.complete();

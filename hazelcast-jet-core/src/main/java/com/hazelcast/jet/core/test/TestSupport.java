@@ -42,7 +42,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Queue;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Supplier;
@@ -436,16 +435,17 @@ public final class TestSupport {
             } else {
                 methodName = processInbox(inbox, isCooperative, processor, wmToProcess);
             }
-            boolean madeProgress = inbox.isEmpty() || !outbox.queueWithOrdinal(0).isEmpty();
+            boolean madeProgress = inbox.isEmpty() || !outbox.queue(0).isEmpty();
             assertTrue(methodName + "() call without progress", !assertProgress || madeProgress);
             idleCount = idle(idler, idleCount, madeProgress);
-            if (outbox.queueWithOrdinal(0).size() == 1 && !inbox.isEmpty()) {
+            if (outbox.queue(0).size() == 1 && !inbox.isEmpty()) {
                 // if the outbox is full, call the process() method again. Cooperative
                 // processor must be able to cope with this situation and not try to put
                 // more items to the outbox.
+                outbox.resetBatch();
                 processInbox(inbox, isCooperative, processor, wmToProcess);
             }
-            drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
+            drainOutboxAndReset(outbox, actualOutput, logInputOutput);
             if (inbox.isEmpty() && wmToProcess[0] == null) {
                 snapshotAndRestore(processor, outbox, actualOutput, doSnapshots, doRestoreEvery, restoreCount);
             }
@@ -458,9 +458,9 @@ public final class TestSupport {
             double elapsed;
             do {
                 checkTime("complete", isCooperative, () -> done[0] = processor[0].complete());
-                boolean madeProgress = done[0] || !outbox.queueWithOrdinal(0).isEmpty();
+                boolean madeProgress = done[0] || !outbox.queue(0).isEmpty();
                 assertTrue("complete() call without progress", !assertProgress || madeProgress);
-                drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
+                drainOutboxAndReset(outbox, actualOutput, logInputOutput);
                 snapshotAndRestore(processor, outbox, actualOutput, madeProgress && doSnapshots && !done[0],
                         doRestoreEvery, restoreCount);
                 idleCount = idle(idler, idleCount, madeProgress);
@@ -532,8 +532,8 @@ public final class TestSupport {
             }
             assertTrue("saveToSnapshot() call without progress",
                     !assertProgress || done[0] || !outbox.snapshotQueue().isEmpty()
-                            || !outbox.queueWithOrdinal(0).isEmpty());
-            drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
+                            || !outbox.queue(0).isEmpty());
+            drainOutboxAndReset(outbox, actualOutput, logInputOutput);
             outbox.snapshotQueue().clear();
         } while (!done[0]);
 
@@ -554,16 +554,16 @@ public final class TestSupport {
             assertTrue("restoreFromSnapshot() call without progress",
                     !assertProgress
                             || lastInboxSize > snapshotInbox.size()
-                            || !outbox.queueWithOrdinal(0).isEmpty());
-            drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
+                            || !outbox.queue(0).isEmpty());
+            drainOutboxAndReset(outbox, actualOutput, logInputOutput);
             lastInboxSize = snapshotInbox.size();
         }
         do {
             checkTime("finishSnapshotRestore", isCooperative,
                     () -> done[0] = processor[0].finishSnapshotRestore());
             assertTrue("finishSnapshotRestore() call without progress",
-                    !assertProgress || done[0] || !outbox.queueWithOrdinal(0).isEmpty());
-            drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
+                    !assertProgress || done[0] || !outbox.queue(0).isEmpty());
+            drainOutboxAndReset(outbox, actualOutput, logInputOutput);
         } while (!done[0]);
     }
 
@@ -601,21 +601,9 @@ public final class TestSupport {
         return nanos / (double) MILLISECONDS.toNanos(1);
     }
 
-    /**
-     * Move all items from the outbox to the {@code target} list and make the
-     * outbox available to accept more items.
-     *
-     * @param outboxBucket the queue from Outbox to drain
-     * @param target       target list
-     * @param logItems     whether to log drained items to {@code System.out}
-     */
-    public static <T> void drainOutbox(Queue<T> outboxBucket, Collection<? super T> target, boolean logItems) {
-        for (T o; (o = outboxBucket.poll()) != null; ) {
-            target.add(o);
-            if (logItems) {
-                System.out.println(LocalTime.now() + " Output: " + o);
-            }
-        }
+    private void drainOutboxAndReset(TestOutbox outbox, Collection target, boolean logItems) {
+        outbox.drainQueue(0, target, logItems);
+        outbox.resetBatch();
     }
 
     /**
