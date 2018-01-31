@@ -22,7 +22,6 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.properties.GroupProperty;
-import com.hazelcast.test.AssertTask;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
@@ -77,7 +76,7 @@ public class CancellationTest extends JetTestSupport {
     }
 
     @Test
-    public void when_jobCancelledOnSingleNode_then_terminatedEventually() throws Throwable {
+    public void when_jobCancelledOnSingleNode_then_terminatedEventually() {
         // Given
         JetInstance instance = newInstance();
 
@@ -97,7 +96,7 @@ public class CancellationTest extends JetTestSupport {
     }
 
     @Test
-    public void when_jobCancelledOnMultipleNodes_then_terminatedEventually() throws Throwable {
+    public void when_jobCancelledOnMultipleNodes_then_terminatedEventually() {
         // Given
         newInstance();
         JetInstance instance = newInstance();
@@ -118,7 +117,7 @@ public class CancellationTest extends JetTestSupport {
     }
 
     @Test
-    public void when_jobCancelled_then_jobStatusIsSetEventually() throws Throwable {
+    public void when_jobCancelled_then_jobStatusIsSetEventually() {
         // Given
         JetInstance instance = newInstance();
 
@@ -132,16 +131,11 @@ public class CancellationTest extends JetTestSupport {
         job.cancel();
 
         // Then
-        assertTrueEventually(new AssertTask() {
-            @Override
-            public void run() throws Exception {
-                assertEquals(JobStatus.COMPLETED, job.getJobStatus());
-            }
-        });
+        assertTrueEventually(() -> assertEquals(JobStatus.COMPLETED, job.getJobStatus()));
     }
 
     @Test
-    public void when_jobCancelledFromClient_then_terminatedEventually() throws Throwable {
+    public void when_jobCancelledFromClient_then_terminatedEventually() {
         // Given
         newInstance();
         newInstance();
@@ -163,7 +157,7 @@ public class CancellationTest extends JetTestSupport {
     }
 
     @Test
-    public void when_jobCancelledFromClient_then_jobStatusIsSetEventually() throws Throwable {
+    public void when_jobCancelledFromClient_then_jobStatusIsSetEventually() {
         // Given
         newInstance();
         newInstance();
@@ -179,12 +173,7 @@ public class CancellationTest extends JetTestSupport {
         job.cancel();
 
         // Then
-        assertTrueEventually(new AssertTask() {
-            @Override
-            public void run() throws Exception {
-                assertEquals(JobStatus.COMPLETED, job.getJobStatus());
-            }
-        });
+        assertTrueEventually(() -> assertEquals(JobStatus.COMPLETED, job.getJobStatus()));
     }
 
     @Test

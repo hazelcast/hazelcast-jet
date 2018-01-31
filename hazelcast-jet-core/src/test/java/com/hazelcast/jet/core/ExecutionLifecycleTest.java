@@ -363,8 +363,8 @@ public class ExecutionLifecycleTest extends JetTestSupport {
 
     private JobResult getJobResult(Job job) {
         JetService jetService = getJetService(instance);
-        assertNull(jetService.getJobRepository().getJob(job.getJobId()));
-        JobResult jobResult = jetService.getJobCoordinationService().getJobResult(job.getJobId());
+        assertNull(jetService.getJobRepository().getJobRecord(job.getJobId()));
+        JobResult jobResult = jetService.getJobRepository().getJobResult(job.getJobId());
         assertNotNull(jobResult);
         return jobResult;
     }

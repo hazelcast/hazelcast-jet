@@ -89,9 +89,9 @@ public class JobRepositoryTest extends JetTestSupport {
         long executionId1 = jobRepository.newExecutionId(jobIb);
         long executionId2 = jobRepository.newExecutionId(jobIb);
 
-        jobRepository.cleanup(singleton(jobIb), emptySet());
+        jobRepository.cleanup(emptySet());
 
-        assertNull(jobRepository.getJob(jobIb));
+        assertNull(jobRepository.getJobRecord(jobIb));
         assertTrue(jobRepository.getJobResources(jobIb).isEmpty());
         assertFalse(jobIds.containsKey(executionId1));
         assertFalse(jobIds.containsKey(executionId2));
@@ -108,9 +108,9 @@ public class JobRepositoryTest extends JetTestSupport {
 
         sleepUntilJobExpires();
 
-        jobRepository.cleanup(emptySet(), singleton(jobIb));
+        jobRepository.cleanup(singleton(jobIb));
 
-        assertNotNull(jobRepository.getJob(jobIb));
+        assertNotNull(jobRepository.getJobRecord(jobIb));
         assertFalse(jobRepository.getJobResources(jobIb).isEmpty());
         assertTrue(jobIds.containsKey(executionId1));
         assertTrue(jobIds.containsKey(executionId2));
@@ -127,9 +127,9 @@ public class JobRepositoryTest extends JetTestSupport {
 
         sleepUntilJobExpires();
 
-        jobRepository.cleanup(emptySet(), emptySet());
+        jobRepository.cleanup(emptySet());
 
-        assertNotNull(jobRepository.getJob(jobIb));
+        assertNotNull(jobRepository.getJobRecord(jobIb));
         assertFalse(jobRepository.getJobResources(jobIb).isEmpty());
         assertTrue(jobIds.containsKey(executionId1));
         assertTrue(jobIds.containsKey(executionId2));
@@ -141,7 +141,7 @@ public class JobRepositoryTest extends JetTestSupport {
 
         sleepUntilJobExpires();
 
-        jobRepository.cleanup(emptySet(), emptySet());
+        jobRepository.cleanup(emptySet());
 
         assertTrue(jobRepository.getJobResources(jobIb).isEmpty());
     }
@@ -168,7 +168,7 @@ public class JobRepositoryTest extends JetTestSupport {
         boolean success = jobRepository.updateJobQuorumSizeIfLargerThanCurrent(jobIb, newQuorumSize);
 
         assertTrue(success);
-        jobRecord = jobRepository.getJob(jobIb);
+        jobRecord = jobRepository.getJobRecord(jobIb);
         assertEquals(newQuorumSize, jobRecord.getQuorumSize());
     }
 
@@ -184,7 +184,7 @@ public class JobRepositoryTest extends JetTestSupport {
         boolean success = jobRepository.updateJobQuorumSizeIfLargerThanCurrent(jobIb, newQuorumSize);
 
         assertFalse(success);
-        jobRecord = jobRepository.getJob(jobIb);
+        jobRecord = jobRepository.getJobRecord(jobIb);
         assertEquals(currentQuorumSize, jobRecord.getQuorumSize());
     }
 
@@ -195,7 +195,7 @@ public class JobRepositoryTest extends JetTestSupport {
         boolean success = jobRepository.updateJobQuorumSizeIfLargerThanCurrent(jobIb, 1);
 
         assertFalse(success);
-        assertNull(jobRepository.getJob(jobIb));
+        assertNull(jobRepository.getJobRecord(jobIb));
     }
 
     private long uploadResourcesForNewJob() {
