@@ -140,7 +140,7 @@ public class StreamFilesP extends AbstractProcessor implements Closeable {
             if (isClosed()) {
                 return;
             }
-            getLogger().info("Closing StreamFilesP");
+            getLogger().fine("Closing StreamFilesP");
             watcher.close();
         } catch (IOException e) {
             getLogger().severe("Failed to close StreamFilesP", e);
