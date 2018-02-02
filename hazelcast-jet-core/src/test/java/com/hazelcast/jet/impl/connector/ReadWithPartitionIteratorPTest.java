@@ -41,7 +41,6 @@ public class ReadWithPartitionIteratorPTest {
     @Test
     @SuppressWarnings("unchecked")
     public void when_readFromTwoPartitions_then_emitRoundRobin() {
-
         // Given
         final List<Integer> partitions = asList(0, 1);
         final Iterator<Entry<Integer, Integer>>[] content = new Iterator[]{
@@ -61,6 +60,7 @@ public class ReadWithPartitionIteratorPTest {
         assertEquals(entry(51), bucket.poll());
         assertEquals(entry(71), bucket.poll());
         assertEquals(entry(52), bucket.poll());
+        outbox.resetBatch();
 
         // When
         assertTrue(r.complete());

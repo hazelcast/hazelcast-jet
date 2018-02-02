@@ -35,7 +35,6 @@ import javax.annotation.Nonnull;
 import java.net.UnknownHostException;
 import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -445,7 +444,7 @@ public final class TestSupport {
                 outbox.resetBatch();
                 processInbox(inbox, isCooperative, processor, wmToProcess);
             }
-            drainOutboxAndReset(outbox, actualOutput, logInputOutput);
+            outbox.drainQueueAndReset(0, actualOutput, logInputOutput);
             if (inbox.isEmpty() && wmToProcess[0] == null) {
                 snapshotAndRestore(processor, outbox, actualOutput, doSnapshots, doRestoreEvery, restoreCount);
             }
@@ -460,7 +459,7 @@ public final class TestSupport {
                 checkTime("complete", isCooperative, () -> done[0] = processor[0].complete());
                 boolean madeProgress = done[0] || !outbox.queue(0).isEmpty();
                 assertTrue("complete() call without progress", !assertProgress || madeProgress);
-                drainOutboxAndReset(outbox, actualOutput, logInputOutput);
+                outbox.drainQueueAndReset(0, actualOutput, logInputOutput);
                 snapshotAndRestore(processor, outbox, actualOutput, madeProgress && doSnapshots && !done[0],
                         doRestoreEvery, restoreCount);
                 idleCount = idle(idler, idleCount, madeProgress);
@@ -533,7 +532,7 @@ public final class TestSupport {
             assertTrue("saveToSnapshot() call without progress",
                     !assertProgress || done[0] || !outbox.snapshotQueue().isEmpty()
                             || !outbox.queue(0).isEmpty());
-            drainOutboxAndReset(outbox, actualOutput, logInputOutput);
+            outbox.drainQueueAndReset(0, actualOutput, logInputOutput);
             outbox.snapshotQueue().clear();
         } while (!done[0]);
 
@@ -555,7 +554,7 @@ public final class TestSupport {
                     !assertProgress
                             || lastInboxSize > snapshotInbox.size()
                             || !outbox.queue(0).isEmpty());
-            drainOutboxAndReset(outbox, actualOutput, logInputOutput);
+            outbox.drainQueueAndReset(0, actualOutput, logInputOutput);
             lastInboxSize = snapshotInbox.size();
         }
         do {
@@ -563,7 +562,7 @@ public final class TestSupport {
                     () -> done[0] = processor[0].finishSnapshotRestore());
             assertTrue("finishSnapshotRestore() call without progress",
                     !assertProgress || done[0] || !outbox.queue(0).isEmpty());
-            drainOutboxAndReset(outbox, actualOutput, logInputOutput);
+            outbox.drainQueueAndReset(0, actualOutput, logInputOutput);
         } while (!done[0]);
     }
 
@@ -599,11 +598,6 @@ public final class TestSupport {
 
     private static double toMillis(long nanos) {
         return nanos / (double) MILLISECONDS.toNanos(1);
-    }
-
-    private void drainOutboxAndReset(TestOutbox outbox, Collection target, boolean logItems) {
-        outbox.drainQueue(0, target, logItems);
-        outbox.resetBatch();
     }
 
     /**

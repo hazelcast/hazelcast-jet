@@ -309,7 +309,7 @@ public class InsertWatermarksPTest {
         do {
             assertTrue(p.tryProcess());
             elapsedMs = NANOSECONDS.toMillis(System.nanoTime() - start);
-            outbox.drainQueue(0, resultToCheck, false);
+            outbox.drainQueueAndReset(0, resultToCheck, false);
             if (elapsedMs < 99) {
                 assertTrue("outbox should be empty, elapsedMs=" + elapsedMs, resultToCheck.isEmpty());
             } else if (!resultToCheck.isEmpty()) {
@@ -350,7 +350,7 @@ public class InsertWatermarksPTest {
         int count = 0;
         do {
             done = action.getAsBoolean();
-            outbox.drainQueue(0, resultToCheck, false);
+            outbox.drainQueueAndReset(0, resultToCheck, false);
             assertTrue("action not done in " + count + " attempts", ++count < 10);
         } while (!done);
     }

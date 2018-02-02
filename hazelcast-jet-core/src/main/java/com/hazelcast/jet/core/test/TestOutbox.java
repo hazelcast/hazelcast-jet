@@ -160,26 +160,28 @@ public final class TestOutbox implements Outbox {
 
     /**
      * Move all items from the queue to the {@code target} collection and make
-     * the outbox available to accept more items. If you have limited capacity
-     * outbox, you need to call this regularly.
+     * the outbox available to accept more items. Also calls {@link
+     * #resetBatch()}. If you have limited capacity outbox, you need to call
+     * this regularly.
      *
      * @param queueOrdinal the queue from Outbox to drain
      * @param target target list
      * @param logItems whether to log drained items to {@code System.out}
      */
-    public <T> void drainQueue(int queueOrdinal, Collection<T> target, boolean logItems) {
+    public <T> void drainQueueAndReset(int queueOrdinal, Collection<T> target, boolean logItems) {
         drainInternal(queue(queueOrdinal), target, logItems);
     }
 
     /**
      * Move all items from the snapshot queue to the {@code target} collection
-     * and make the outbox available to accept more items. If you have limited
-     * capacity outbox, you need to call this regularly.
+     * and make the outbox available to accept more items. Also calls {@link
+     * #resetBatch()}. If you have limited capacity outbox, you need to call
+     * this regularly.
      *
      * @param target target list
      * @param logItems whether to log drained items to {@code System.out}
      */
-    public <T> void drainSnapshotQueue(Collection<T> target, boolean logItems) {
+    public <T> void drainSnapshotQueueAndReset(Collection<T> target, boolean logItems) {
         drainInternal(snapshotQueue(), target, logItems);
     }
 
@@ -190,11 +192,14 @@ public final class TestOutbox implements Outbox {
                 System.out.println(LocalTime.now() + " Output: " + o);
             }
         }
+        resetBatch();
     }
 
     /**
      * Call this method after any of the {@code offer()} methods returned
-     * {@code false} to be able to offer again.
+     * {@code false} to be able to offer again. Method is called automatically
+     * from {@link #drainQueueAndReset} and {@link #drainSnapshotQueueAndReset}
+     * methods.
      */
     public void resetBatch() {
         outbox.reset();

@@ -35,8 +35,7 @@ public class TestOutboxTest {
         TestOutbox outbox = new TestOutbox(1);
         assertTrue(outbox.offer(1));
         assertFalse(outbox.offer(2));
-        outbox.drainQueue(0, new ArrayList<>(), false);
-        outbox.resetBatch();
+        outbox.drainQueueAndReset(0, new ArrayList<>(), false);
 
         // Then
         exception.expectMessage("Different");
@@ -49,8 +48,7 @@ public class TestOutboxTest {
         TestOutbox outbox = new TestOutbox(new int[]{1}, 1);
         assertTrue(outbox.offerToSnapshot("k1", "v1"));
         assertFalse(outbox.offerToSnapshot("k2", "v2"));
-        outbox.drainSnapshotQueue(new ArrayList<>(), false);
-        outbox.resetBatch();
+        outbox.drainSnapshotQueueAndReset(new ArrayList<>(), false);
 
         // Then
         exception.expectMessage("Different");

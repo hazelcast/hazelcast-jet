@@ -119,7 +119,7 @@ public class StreamEventJournalPTest extends JetTestSupport {
         // consume
         assertTrueEventually(() -> {
             assertFalse("Processor should never complete", p.complete());
-            outbox.drainQueue(0, actual, true);
+            outbox.drainQueueAndReset(0, actual, true);
             assertEquals("consumed more items than expected", batchSize, actual.size());
             assertEquals(IntStream.range(0, batchSize).boxed().collect(Collectors.toSet()), new HashSet<>(actual));
         }, 3);
@@ -131,7 +131,7 @@ public class StreamEventJournalPTest extends JetTestSupport {
         // consume again
         assertTrueEventually(() -> {
             assertFalse("Processor should never complete", p.complete());
-            outbox.drainQueue(0, actual, true);
+            outbox.drainQueueAndReset(0, actual, true);
             assertEquals("consumed more items than expected", JOURNAL_CAPACITY + 2, actual.size());
             assertEquals(IntStream.range(0, batchSize * 2).boxed().collect(Collectors.toSet()), new HashSet<>(actual));
         }, 3);
@@ -152,7 +152,7 @@ public class StreamEventJournalPTest extends JetTestSupport {
         List<Object> actual = new ArrayList<>();
         assertTrueEventually(() -> {
             assertFalse("Processor should never complete", p.complete());
-            outbox.drainQueue(0, actual, true);
+            outbox.drainQueueAndReset(0, actual, true);
             assertTrue("consumed less items than expected", actual.size() >= JOURNAL_CAPACITY);
         }, 3);
 
@@ -170,7 +170,7 @@ public class StreamEventJournalPTest extends JetTestSupport {
 
         assertTrueEventually(() -> {
             assertFalse("Processor should never complete", p.complete());
-            outbox.drainQueue(0, output, true);
+            outbox.drainQueueAndReset(0, output, true);
             assertTrue("consumed more items than expected", output.size() == 0);
         }, 3);
 
@@ -205,7 +205,7 @@ public class StreamEventJournalPTest extends JetTestSupport {
 
         assertTrueEventually(() -> {
             assertFalse("Processor should never complete", p.complete());
-            newOutbox.drainQueue(0, output, true);
+            newOutbox.drainQueueAndReset(0, output, true);
             assertEquals("consumed different number of items than expected", JOURNAL_CAPACITY, output.size());
         }, 3);
     }

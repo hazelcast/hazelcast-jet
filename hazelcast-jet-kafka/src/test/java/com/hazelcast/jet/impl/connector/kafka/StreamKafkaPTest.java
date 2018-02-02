@@ -416,7 +416,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
     private TestInbox saveSnapshot(StreamKafkaP streamKafkaP, TestOutbox outbox) {
         TestInbox snapshot = new TestInbox();
         assertTrue(streamKafkaP.saveToSnapshot());
-        outbox.drainSnapshotQueue(snapshot, false);
+        outbox.drainSnapshotQueueAndReset(snapshot, false);
         snapshot = snapshot.stream().map(e -> (Entry<MockData, MockData>) e)
                            .map(e -> entry(e.getKey().getObject(), e.getValue().getObject()))
                            .collect(toCollection(TestInbox::new));

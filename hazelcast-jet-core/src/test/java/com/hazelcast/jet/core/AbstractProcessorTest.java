@@ -21,6 +21,7 @@ import com.hazelcast.jet.core.AbstractProcessor.FlatMapper;
 import com.hazelcast.jet.core.TestProcessors.ProcessorThatFailsInInit;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Before;
@@ -364,13 +365,14 @@ public class AbstractProcessorTest {
     }
 
     private void validateReceptionAtOrdinals(Object item, int... ordinals) {
-        for (int i : range(0, OUTBOX_BUCKET_COUNT).toArray()) {
+        for (int i = 0; i < OUTBOX_BUCKET_COUNT; i++) {
             Queue<Object> q = outbox.queue(i);
-            if (Arrays.stream(ordinals).anyMatch(ord -> ord == i)) {
+            if (Util.arrayIndexOf(i, ordinals) >= 0) {
                 assertEquals(item, q.poll());
             }
             assertNull(q.poll());
         }
+        outbox.resetBatch();
     }
 
     private static class RegisteringMethodCallsP extends AbstractProcessor {
