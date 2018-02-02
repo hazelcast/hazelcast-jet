@@ -29,24 +29,24 @@ public class AggregateOperation2Impl<T0, T1, A, R>
         extends AggregateOperationImpl<A, R>
         implements AggregateOperation2<T0, T1, A, R> {
 
-    public AggregateOperation2Impl(@Nonnull DistributedSupplier<A> createAccumulatorFn,
-                                   @Nonnull DistributedBiConsumer<? super A, T0> accumulateItemF0,
-                                   @Nonnull DistributedBiConsumer<? super A, T1> accumulateItemF1,
-                                   @Nullable DistributedBiConsumer<? super A, ? super A> combineAccumulatorsFn,
-                                   @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorFn,
-                                   @Nonnull DistributedFunction<? super A, R> finishAccumulationFn
+    public AggregateOperation2Impl(@Nonnull DistributedSupplier<A> createFn,
+                                   @Nonnull DistributedBiConsumer<? super A, ? super T0> accumulateFn0,
+                                   @Nonnull DistributedBiConsumer<? super A, ? super T1> accumulateFn1,
+                                   @Nullable DistributedBiConsumer<? super A, ? super A> combineFn,
+                                   @Nullable DistributedBiConsumer<? super A, ? super A> deductFn,
+                                   @Nonnull DistributedFunction<? super A, R> finishFn
     ) {
-        super(createAccumulatorFn, accumulateFns(accumulateItemF0, accumulateItemF1),
-                combineAccumulatorsFn, deductAccumulatorFn, finishAccumulationFn);
+        super(createFn, accumulateFns(accumulateFn0, accumulateFn1),
+                combineFn, deductFn, finishFn);
     }
 
-    private AggregateOperation2Impl(@Nonnull DistributedSupplier<A> createAccumulatorFn,
-                                    @Nonnull DistributedBiConsumer<? super A, ?>[] accumulateFs,
-                                    @Nullable DistributedBiConsumer<? super A, ? super A> combineAccumulatorsFn,
-                                    @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorFn,
-                                    @Nonnull DistributedFunction<? super A, R> finishAccumulationFn
+    private AggregateOperation2Impl(@Nonnull DistributedSupplier<A> createFn,
+                                    @Nonnull DistributedBiConsumer<? super A, ?>[] accumulateFns,
+                                    @Nullable DistributedBiConsumer<? super A, ? super A> combineFn,
+                                    @Nullable DistributedBiConsumer<? super A, ? super A> deductFn,
+                                    @Nonnull DistributedFunction<? super A, R> finishFn
     ) {
-        super(createAccumulatorFn, accumulateFs, combineAccumulatorsFn, deductAccumulatorFn, finishAccumulationFn);
+        super(createFn, accumulateFns, combineFn, deductFn, finishFn);
     }
 
     @Nonnull @Override
@@ -62,8 +62,24 @@ public class AggregateOperation2Impl<T0, T1, A, R>
     }
 
     @Nonnull @Override
+    public <T0_NEW> AggregateOperation2<T0_NEW, T1, A, R> withAccumulateFn0(
+            @Nonnull DistributedBiConsumer<? super A, ? super T0_NEW> newAccFn0
+    ) {
+        return new AggregateOperation2Impl<>(
+                createFn(), newAccFn0, accumulateFn1(), combineFn(), deductFn(), finishFn());
+    }
+
+    @Nonnull @Override
+    public <T1_NEW> AggregateOperation2<T0, T1_NEW, A, R> withAccumulateFn1(
+            @Nonnull DistributedBiConsumer<? super A, ? super T1_NEW> newAccFn1
+    ) {
+        return new AggregateOperation2Impl<>(
+                createFn(), accumulateFn0(), newAccFn1, combineFn(), deductFn(), finishFn());
+    }
+
+    @Nonnull @Override
     @SuppressWarnings("unchecked")
-    public <T> DistributedBiConsumer<? super A, T> accumulateFn(Tag<T> tag) {
+    public <T> DistributedBiConsumer<? super A, T> accumulateFn(@Nonnull Tag<T> tag) {
         if (tag.index() > 1) {
             throw new IllegalArgumentException(
                     "AggregateOperation2 only recognizes tags with index 0 and 1, but asked for " + tag.index());

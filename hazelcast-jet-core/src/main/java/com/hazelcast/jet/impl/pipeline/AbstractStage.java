@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
+import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Stage;
 
@@ -39,6 +40,10 @@ public abstract class AbstractStage implements Stage {
         pipelineImpl.register(transform, acceptsDownstream ? new ArrayList<>() : emptyList());
     }
 
+    public static Transform transformOf(GeneralStage stage) {
+        return ((AbstractStage) stage).transform;
+    }
+
     @Override
     public Pipeline getPipeline() {
         return pipelineImpl;
@@ -48,9 +53,4 @@ public abstract class AbstractStage implements Stage {
     public String toString() {
         return String.valueOf(transform);
     }
-
-    public static Transform transformOf(Stage stage) {
-        return ((AbstractStage) stage).transform;
-    }
-
 }

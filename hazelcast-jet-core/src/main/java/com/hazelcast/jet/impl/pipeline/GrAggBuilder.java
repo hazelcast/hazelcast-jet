@@ -16,29 +16,28 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.function.DistributedBiConsumer;
+import com.hazelcast.jet.aggregate.AggregateOperation;
+import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.impl.aggregate.AggregateOperationImpl;
+import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
+import com.hazelcast.jet.impl.pipeline.transform.CoGroupTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.GeneralStage;
+import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
 import com.hazelcast.jet.pipeline.StageWithGrouping;
 import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
 import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
 import com.hazelcast.jet.pipeline.WindowDefinition;
-import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
-import com.hazelcast.jet.impl.pipeline.transform.CoGroupTransform;
-import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
 import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import static com.hazelcast.jet.datamodel.Tag.tag;
+import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DONT_ADAPT;
+import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -67,6 +66,7 @@ public class GrAggBuilder<K> {
     @SuppressWarnings("unchecked")
     public GrAggBuilder(StageWithGroupingAndWindow<?, K> stage) {
         ComputeStageImplBase computeStage = ((StageWithGroupingBase) stage).computeStage;
+        ensureJetEvents(computeStage, "This pipeline stage");
         pipelineImpl = (PipelineImpl) computeStage.getPipeline();
         wDef = stage.windowDefinition();
         upstreamStages.add(computeStage);
@@ -75,7 +75,9 @@ public class GrAggBuilder<K> {
 
     @SuppressWarnings("unchecked")
     public <E> Tag<E> add(StreamStageWithGrouping<E, K> stage) {
-        upstreamStages.add(((StageWithGroupingBase) stage).computeStage);
+        ComputeStageImplBase computeStage = ((StageWithGroupingBase) stage).computeStage;
+        ensureJetEvents(computeStage, "This pipeline stage");
+        upstreamStages.add(computeStage);
         keyFns.add(stage.keyFn());
         return (Tag<E>) tag(upstreamStages.size() - 1);
     }
@@ -92,13 +94,9 @@ public class GrAggBuilder<K> {
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull CreateOutStageFn<OUT, OUT_STAGE> createOutStageFn
     ) {
-        AggregateOperationImpl rawAggrOp = (AggregateOperationImpl) aggrOp;
-        DistributedBiConsumer[] adaptedAccumulateFns = new DistributedBiConsumer[rawAggrOp.arity()];
-        Arrays.setAll(adaptedAccumulateFns, i ->
-                upstreamStages.get(i).fnAdapters.adaptAccumulateFn(rawAggrOp.accumulateFn(i))
-        );
-        AggregateOperation adaptedAggrOp = rawAggrOp.withAccumulateFns(adaptedAccumulateFns);
-
+        AggregateOperation adaptedAggrOp = wDef != null
+                ? aggrOp
+                : ADAPT_TO_JET_EVENT.adaptAggregateOperation(aggrOp);
         List<Transform> upstreamTransforms = upstreamStages.stream().map(s -> s.transform).collect(toList());
         CoGroupTransform<K, A, R> transform = new CoGroupTransform<>(upstreamTransforms, keyFns, adaptedAggrOp, wDef);
         pipelineImpl.connect(upstreamTransforms, transform);

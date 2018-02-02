@@ -29,9 +29,9 @@ import com.hazelcast.jet.pipeline.StageWithGrouping;
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 
+import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DONT_ADAPT;
 import static java.util.Arrays.asList;
 
-@SuppressWarnings("unchecked")
 public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> implements StageWithGrouping<T, K> {
 
     StageWithGroupingImpl(
@@ -46,7 +46,7 @@ public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
         return computeStage.attach(new GroupTransform<T, K, A, R>(
-                computeStage.transform, keyFn(), aggrOp), computeStage.fnAdapters);
+                computeStage.transform, keyFn(), aggrOp), DONT_ADAPT);
     }
 
     @Nonnull
@@ -55,10 +55,10 @@ public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp
     ) {
         return computeStage.attach(
-                new CoGroupTransform<K, A, R>(
+                new CoGroupTransform<>(
                         asList(computeStage.transform, transformOf(stage1)),
                         asList(keyFn(), stage1.keyFn()),
-                        aggrOp), computeStage.fnAdapters);
+                        aggrOp), DONT_ADAPT);
     }
 
     @Nonnull
@@ -68,10 +68,10 @@ public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp
     ) {
         return computeStage.attach(
-                new CoGroupTransform<K, A, R>(
+                new CoGroupTransform<>(
                         asList(computeStage.transform, transformOf(stage1), transformOf(stage2)),
                         asList(keyFn(), stage1.keyFn(), stage2.keyFn()),
-                        aggrOp), computeStage.fnAdapters);
+                        aggrOp), DONT_ADAPT);
     }
 
     @Nonnull @Override

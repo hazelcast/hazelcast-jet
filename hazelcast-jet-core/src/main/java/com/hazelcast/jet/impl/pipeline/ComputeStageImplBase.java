@@ -17,23 +17,15 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
-import com.hazelcast.jet.aggregate.AggregateOperation2;
-import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.WatermarkPolicy;
-import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.function.DistributedTriFunction;
-import com.hazelcast.jet.impl.aggregate.AggregateOperationImpl;
 import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
-import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
-import com.hazelcast.jet.impl.pipeline.transform.CoAggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.FilterTransform;
 import com.hazelcast.jet.impl.pipeline.transform.FlatMapTransform;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
@@ -43,7 +35,6 @@ import com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform;
 import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkStage;
@@ -63,7 +54,7 @@ import static java.util.Collections.singletonList;
 public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
     public static final FunctionAdapters DONT_ADAPT = new FunctionAdapters();
-    static final FunctionAdapters ADAPT_TO_JET_EVENT = new JetEventFunctionAdapters();
+    static final JetEventFunctionAdapters ADAPT_TO_JET_EVENT = new JetEventFunctionAdapters();
 
     @Nonnull
     public final FunctionAdapters fnAdapters;
@@ -78,6 +69,15 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         this.fnAdapters = fnAdapters;
     }
 
+    static void ensureJetEvents(@Nonnull ComputeStageImplBase stage, @Nonnull String name) {
+        if (stage.fnAdapters != ADAPT_TO_JET_EVENT) {
+            throw new IllegalStateException(
+                    name + " is missing a timestamp and watermark definition. Call" +
+                            " .timestamp() on it before performing the aggregation."
+            );
+        }
+    }
+
     @Nonnull
     @SuppressWarnings("unchecked")
     public StreamStage<T> timestamp(
@@ -85,8 +85,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull WatermarkPolicy wmPolicy
     ) {
         return new StreamStageImpl<>(
-                new TimestampTransform<>(transform,
-                        wmGenParams(timestampFn, wmPolicy, suppressDuplicates(), 0L)),
+                new TimestampTransform<>(transform, wmGenParams(timestampFn, wmPolicy, suppressDuplicates(), 0L)),
                 ADAPT_TO_JET_EVENT,
                 pipelineImpl);
     }
@@ -140,50 +139,6 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 emptyList(),
                 fnAdapters.adaptMapToOutputFn(mapToOutputFn)
         ), fnAdapters);
-    }
-
-    @Nonnull
-    @SuppressWarnings("unchecked")
-    <A, R, RET> RET attachAggregate(
-            @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
-    ) {
-        AggregateOperation1 adapted = ((AggregateOperation1) aggrOp)
-                .withAccumulateFn(fnAdapters.adaptAccumulateFn(aggrOp.accumulateFn()));
-        return attach(new AggregateTransform<T, A, R>(transform, adapted), fnAdapters);
-    }
-
-    @Nonnull
-    <T1, A, R, RET> RET attachAggregate2(
-            @Nonnull GeneralStage<T1> stage1,
-            @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp
-    ) {
-        ComputeStageImplBase rawStage1 = (ComputeStageImplBase) stage1;
-        AggregateOperationImpl rawAggrOp = (AggregateOperationImpl) aggrOp;
-        DistributedBiConsumer[] adaptedAccFns = {
-                fnAdapters.adaptAccumulateFn(rawAggrOp.accumulateFn(0)),
-                rawStage1.fnAdapters.adaptAccumulateFn(rawAggrOp.accumulateFn(1))
-        };
-        AggregateOperation<?, ?> adaptedAggrOp = rawAggrOp.withAccumulateFns(adaptedAccFns);
-        return attach(new CoAggregateTransform<>(asList(transform, transformOf(stage1)), adaptedAggrOp), DONT_ADAPT);
-    }
-
-    @Nonnull
-    <T1, T2, A, R, RET> RET attachAggregate3(
-            @Nonnull GeneralStage<T1> stage1,
-            @Nonnull GeneralStage<T2> stage2,
-            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp
-    ) {
-        ComputeStageImplBase rawStage1 = (ComputeStageImplBase) stage1;
-        ComputeStageImplBase rawStage2 = (ComputeStageImplBase) stage2;
-        AggregateOperationImpl rawAggrOp = (AggregateOperationImpl) aggrOp;
-        DistributedBiConsumer[] adaptedAccFns = {
-                fnAdapters.adaptAccumulateFn(rawAggrOp.accumulateFn(0)),
-                rawStage1.fnAdapters.adaptAccumulateFn(rawAggrOp.accumulateFn(1)),
-                rawStage2.fnAdapters.adaptAccumulateFn(rawAggrOp.accumulateFn(2))
-        };
-        AggregateOperation<?, ?> adaptedAggrOp = rawAggrOp.withAccumulateFns(adaptedAccFns);
-        return attach(new CoAggregateTransform<>(
-                asList(transform, transformOf(stage1), transformOf(stage2)), adaptedAggrOp), DONT_ADAPT);
     }
 
     @Nonnull

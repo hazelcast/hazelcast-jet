@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
+import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.WindowDefinition;
@@ -27,14 +28,14 @@ public class GroupTransform<T, K, A, R> extends AbstractTransform implements Tra
     @Nonnull
     private DistributedFunction<? super T, ? extends K> keyFn;
     @Nonnull
-    private AggregateOperation1<? super T, A, ? extends R> aggrOp;
+    private AggregateOperation1<? super T, A, R> aggrOp;
     @Nullable
     private final WindowDefinition wDef;
 
     public GroupTransform(
             @Nonnull Transform upstream,
             @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
-            @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp,
+            @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
             @Nullable WindowDefinition wDef
     ) {
         super("group-and-aggregate", upstream);
@@ -46,7 +47,7 @@ public class GroupTransform<T, K, A, R> extends AbstractTransform implements Tra
     public GroupTransform(
             @Nonnull Transform upstream,
             @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
-            @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
+            @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
         this(upstream, keyFn, aggrOp, null);
     }
@@ -57,7 +58,7 @@ public class GroupTransform<T, K, A, R> extends AbstractTransform implements Tra
     }
 
     @Nonnull
-    public AggregateOperation1<? super T, A, ? extends R> aggrOp() {
+    public AggregateOperation1<? super T, A, R> aggrOp() {
         return aggrOp;
     }
 

@@ -17,16 +17,21 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedTriFunction;
+import com.hazelcast.jet.impl.aggregate.AggregateOperationImpl;
 import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
+import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
+import com.hazelcast.jet.impl.pipeline.transform.CoAggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.JoinClause;
@@ -34,20 +39,24 @@ import com.hazelcast.jet.pipeline.StageWithGrouping;
 
 import javax.annotation.Nonnull;
 
+import static java.util.Arrays.asList;
+
 public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchStage<T> {
 
+    /**
+     * This constructor exists only to comply with the signature of {@link
+     * com.hazelcast.jet.pipeline.GeneralHashJoinBuilder.CreateOutStageFn#get}.
+     */
     public BatchStageImpl(
             @Nonnull Transform transform,
             @Nonnull FunctionAdapters fnAdapters,
             @Nonnull PipelineImpl pipeline
     ) {
-        super(transform, fnAdapters, pipeline, true);
+        this(transform, pipeline);
+        assert fnAdapters == DONT_ADAPT : "FunctionAdapters on a batch stage may only be DONT_ADAPT";
     }
 
-    BatchStageImpl(
-            @Nonnull Transform transform,
-            @Nonnull PipelineImpl pipeline
-    ) {
+    BatchStageImpl(@Nonnull Transform transform, @Nonnull PipelineImpl pipeline) {
         super(transform, DONT_ADAPT, pipeline, true);
     }
 
@@ -94,8 +103,11 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
+    @SuppressWarnings("unchecked")
     public <A, R> BatchStage<R> aggregate(@Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp) {
-        return attachAggregate(aggrOp);
+        AggregateOperation1 adaptedAggrOp = ((AggregateOperation1) aggrOp)
+                .withAccumulateFn(fnAdapters.adaptAccumulateFn(aggrOp.accumulateFn()));
+        return attach(new AggregateTransform<T, A, R>(transform, adaptedAggrOp), fnAdapters);
     }
 
     @Nonnull @Override
@@ -103,7 +115,16 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BatchStage<T1> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp
     ) {
-        return attachAggregate2(stage1, aggrOp);
+        FunctionAdapters fnAdapters1 = ((ComputeStageImplBase) stage1).fnAdapters;
+        AggregateOperationImpl rawAggrOp = (AggregateOperationImpl) aggrOp;
+        DistributedBiConsumer[] adaptedAccFns = {
+                fnAdapters.adaptAccumulateFn(rawAggrOp.accumulateFn(0)),
+                fnAdapters1.adaptAccumulateFn(rawAggrOp.accumulateFn(1))
+        };
+        AggregateOperation<?, ?> adaptedAggrOp = rawAggrOp.withAccumulateFns(adaptedAccFns);
+        return attach(new CoAggregateTransform<>(
+                asList(transform, transformOf(stage1)),
+                adaptedAggrOp), DONT_ADAPT);
     }
 
     @Nonnull @Override
@@ -112,7 +133,18 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BatchStage<T2> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp
     ) {
-        return attachAggregate3(stage1, stage2, aggrOp);
+        FunctionAdapters fnAdapters1 = ((ComputeStageImplBase) stage1).fnAdapters;
+        FunctionAdapters fnAdapters2 = ((ComputeStageImplBase) stage2).fnAdapters;
+        AggregateOperationImpl rawAggrOp = (AggregateOperationImpl) aggrOp;
+        DistributedBiConsumer[] adaptedAccFns = {
+                fnAdapters.adaptAccumulateFn(rawAggrOp.accumulateFn(0)),
+                fnAdapters1.adaptAccumulateFn(rawAggrOp.accumulateFn(1)),
+                fnAdapters2.adaptAccumulateFn(rawAggrOp.accumulateFn(2))
+        };
+        AggregateOperation<?, ?> adaptedAggrOp = rawAggrOp.withAccumulateFns(adaptedAccFns);
+        return attach(new CoAggregateTransform<>(
+                asList(transform, transformOf(stage1), transformOf(stage2)), adaptedAggrOp, null),
+                DONT_ADAPT);
     }
 
     @Nonnull @Override
@@ -133,7 +165,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    <RET> RET attach(@Nonnull AbstractTransform transform, FunctionAdapters fnAdapters) {
+    <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapters fnAdapters) {
         pipelineImpl.connect(transform.upstream(), transform);
         return (RET) new BatchStageImpl<>(transform, pipelineImpl);
     }

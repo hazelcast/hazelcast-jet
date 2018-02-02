@@ -23,7 +23,6 @@ import com.hazelcast.jet.pipeline.GeneralStageWithGrouping;
 
 import javax.annotation.Nonnull;
 
-@SuppressWarnings("unchecked")
 class StageWithGroupingBase<T, K> {
 
     @Nonnull
@@ -42,11 +41,6 @@ class StageWithGroupingBase<T, K> {
     @Nonnull
     public DistributedFunction<? super T, ? extends K> keyFn() {
         return keyFn;
-    }
-
-    @Nonnull
-    GeneralStage<T> computeStage() {
-        return (GeneralStage<T>) computeStage;
     }
 
     static Transform transformOf(GeneralStageWithGrouping stage) {

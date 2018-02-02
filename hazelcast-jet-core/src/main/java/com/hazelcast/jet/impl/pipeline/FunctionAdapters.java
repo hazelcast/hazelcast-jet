@@ -19,15 +19,18 @@ package com.hazelcast.jet.impl.pipeline;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.aggregate.AggregateOperation2;
+import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedTriFunction;
+import com.hazelcast.jet.impl.aggregate.AggregateOperationImpl;
 import com.hazelcast.jet.pipeline.JoinClause;
 
 import javax.annotation.Nonnull;
-
+import java.util.Arrays;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.pipeline.JetEventImpl.jetEvent;
@@ -58,24 +61,8 @@ public class FunctionAdapters {
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    <K> DistributedFunction<?, K> adaptKeyFn(@Nonnull DistributedFunction<?, K> keyFn) {
-        return keyFn;
-    }
-
-    @Nonnull
-    @SuppressWarnings("unchecked")
     DistributedBiConsumer<?, ?> adaptAccumulateFn(@Nonnull DistributedBiConsumer accumulateFn) {
         return accumulateFn;
-    }
-
-    @Nonnull
-    AggregateOperation adaptAggregateOperation(@Nonnull AggregateOperation aggrOp) {
-        return aggrOp;
-    }
-
-    @Nonnull
-    AggregateOperation1 adaptAggregateOperation1(@Nonnull AggregateOperation1 aggrOp) {
-        return aggrOp;
     }
 
     @Nonnull
@@ -120,7 +107,7 @@ class JetEventFunctionAdapters extends FunctionAdapters {
         return e -> rawFn.apply(((JetEvent) e).payload()).map(r -> jetEvent(((JetEvent) e).timestamp(), r));
     }
 
-    @Nonnull @Override
+    @Nonnull
     @SuppressWarnings("unchecked")
     DistributedFunction adaptKeyFn(@Nonnull DistributedFunction keyFn) {
         return e -> keyFn.apply(((JetEvent) e).payload());
@@ -135,18 +122,26 @@ class JetEventFunctionAdapters extends FunctionAdapters {
     @Nonnull
     @SuppressWarnings("unchecked")
     AggregateOperation adaptAggregateOperation(@Nonnull AggregateOperation aggrOp) {
-        int arity = aggrOp.arity();
-        DistributedBiConsumer[] adaptedAccumulateFns = new DistributedBiConsumer[arity];
-        for (int i = 0; i < arity; i++) {
-            adaptedAccumulateFns[i] = adaptAccumulateFn(aggrOp.accumulateFn(i));
+        if (aggrOp instanceof AggregateOperation1) {
+            AggregateOperation1 aggrOp1 = (AggregateOperation1) aggrOp;
+            return aggrOp1
+                    .withAccumulateFn(adaptAccumulateFn(aggrOp1.accumulateFn()));
+        } else if (aggrOp instanceof AggregateOperation2) {
+            AggregateOperation2 aggrOp2 = (AggregateOperation2) aggrOp;
+            return aggrOp2
+                    .withAccumulateFn0(adaptAccumulateFn(aggrOp2.accumulateFn0()))
+                    .withAccumulateFn1(adaptAccumulateFn(aggrOp2.accumulateFn1()));
+        } else if (aggrOp instanceof AggregateOperation3) {
+            AggregateOperation3 aggrOp3 = (AggregateOperation3) aggrOp;
+            return aggrOp3
+                    .withAccumulateFn0(adaptAccumulateFn(aggrOp3.accumulateFn0()))
+                    .withAccumulateFn1(adaptAccumulateFn(aggrOp3.accumulateFn1()))
+                    .withAccumulateFn2(adaptAccumulateFn(aggrOp3.accumulateFn2()));
+        } else {
+            DistributedBiConsumer[] adaptedAccFns = new DistributedBiConsumer[aggrOp.arity()];
+            Arrays.setAll(adaptedAccFns, i -> adaptAccumulateFn(aggrOp.accumulateFn(i)));
+            return ((AggregateOperationImpl) aggrOp).withAccumulateFns(adaptedAccFns);
         }
-
-        return aggrOp;
-    }
-
-    @Nonnull
-    AggregateOperation1 adaptAggregateOperation1(@Nonnull AggregateOperation1 aggrOp) {
-        return aggrOp;
     }
 
     @Nonnull @Override

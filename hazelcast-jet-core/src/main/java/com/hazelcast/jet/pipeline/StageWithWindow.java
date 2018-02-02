@@ -22,27 +22,37 @@ import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
 
+import javax.annotation.Nonnull;
+
 /**
  * Javadoc pending.
  */
 public interface StageWithWindow<T> {
 
+    @Nonnull
     WindowDefinition windowDefinition();
 
-    <K> StageWithGroupingAndWindow<T, K> groupingKey(DistributedFunction<? super T, ? extends K> keyFn);
-
-    <A, R> StreamStage<TimestampedEntry<Void, R>> aggregate(
-            AggregateOperation1<? super T, A, ? extends R> aggrOp
+    @Nonnull
+    <K> StageWithGroupingAndWindow<T, K> groupingKey(
+            @Nonnull DistributedFunction<? super T, ? extends K> keyFn
     );
 
+    @Nonnull
+    <A, R> StreamStage<TimestampedEntry<Void, R>> aggregate(
+            @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
+    );
+
+    @Nonnull
     <T1, A, R> StreamStage<TimestampedEntry<Void, R>> aggregate2(
-            StreamStage<T1> stage1,
-            AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp);
+            @Nonnull StreamStage<T1> stage1,
+            @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp);
 
+    @Nonnull
     <T1, T2, A, R> StreamStage<TimestampedEntry<Void, R>> aggregate3(
-            StreamStage<T1> stage1,
-            StreamStage<T2> stage2,
-            AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp);
+            @Nonnull StreamStage<T1> stage1,
+            @Nonnull StreamStage<T2> stage2,
+            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp);
 
+    @Nonnull
     WindowAggregateBuilder<T> aggregateBuilder();
 }

@@ -52,8 +52,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
         return new StreamStageWithGroupingImpl<>(this, keyFn);
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public StageWithWindow<T> window(WindowDefinition wDef) {
         return new StageWithWindowImpl<>(this, wDef);
     }
