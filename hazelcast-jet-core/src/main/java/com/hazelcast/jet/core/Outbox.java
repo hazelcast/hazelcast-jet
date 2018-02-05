@@ -51,7 +51,7 @@ public interface Outbox {
      * same instance might be used by a downstream processor in different
      * thread, causing concurrent access.
      *
-     * @param ordinal output ordinal number of -1 to offer to all ordinals
+     * @param ordinal output ordinal number or -1 to offer to all ordinals
      * @return {@code true} if the outbox accepted the item
      */
     @CheckReturnValue

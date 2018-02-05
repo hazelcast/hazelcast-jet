@@ -264,7 +264,7 @@ public class PeekingWrapperTest {
 
         outbox.queue(0).clear();
         outbox.queue(1).clear();
-        outbox.resetBatch();
+        outbox.reset();
 
         // only one queue has available space, call complete() again to emit another object
         peekP.complete();
@@ -274,7 +274,7 @@ public class PeekingWrapperTest {
         }
         outbox.queue(0).clear();
         outbox.queue(1).clear();
-        outbox.resetBatch();
+        outbox.reset();
         verifyZeroInteractions(logger);
 
         peekP.complete();

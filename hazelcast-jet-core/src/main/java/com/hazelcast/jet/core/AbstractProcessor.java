@@ -303,9 +303,9 @@ public abstract class AbstractProcessor implements Processor {
     /**
      * Offers the item to the outbox bucket at the supplied ordinal.
      * <p>
-     * Emitted items should not be subsequently mutated because the
-     * same instance might be used by a downstream processor in different
-     * thread, causing concurrent access.
+     * Emitted items should not be subsequently mutated because the same
+     * instance might be used by a downstream processor in a different thread,
+     * causing concurrent access.
      *
      * @return {@code true}, if the item was accepted. If {@code false} is
      * returned, the call must be retried later with the same (or equal) item.
@@ -318,9 +318,9 @@ public abstract class AbstractProcessor implements Processor {
     /**
      * Offers the item to all the outbox buckets (except the snapshot outbox).
      * <p>
-     * Emitted items should not be subsequently mutated because the
-     * same instance might be used by a downstream processor in different
-     * thread, causing concurrent access.
+     * Emitted items should not be subsequently mutated because the same
+     * instance might be used by a downstream processor in a different thread,
+     * causing concurrent access.
      *
      * @return {@code true}, if the item was accepted. If {@code false} is
      * returned, the call must be retried later with the same (or equal) item.
@@ -333,9 +333,9 @@ public abstract class AbstractProcessor implements Processor {
     /**
      * Offers the item to the outbox buckets identified in the supplied array.
      * <p>
-     * Emitted items should not be subsequently mutated because the
-     * same instance might be used by a downstream processor in different
-     * thread, causing concurrent access.
+     * Emitted items should not be subsequently mutated because the same
+     * instance might be used by a downstream processor in a different thread,
+     * causing concurrent access.
      *
      * @return {@code true}, if the item was accepted. If {@code false} is
      * returned, the call must be retried later with the same (or equal) item.
@@ -351,9 +351,9 @@ public abstract class AbstractProcessor implements Processor {
      * supplied) for each emitted item. If the outbox refuses an item, it backs
      * off and returns {@code false}.
      * <p>
-     * Emitted items should not be subsequently mutated because the
-     * same instance might be used by a downstream processor in different
-     * thread, causing concurrent access.
+     * Emitted items should not be subsequently mutated because the same
+     * instance might be used by a downstream processor in a different thread,
+     * causing concurrent access.
      * <p>
      * If this method returns {@code false}, then the caller must retain the
      * traverser and pass it again in the subsequent invocation of this method,
@@ -396,9 +396,9 @@ public abstract class AbstractProcessor implements Processor {
      * supplied) for each emitted item. If the outbox refuses an item, it backs
      * off and returns {@code false}.
      * <p>
-     * Emitted items should not be subsequently mutated because the
-     * same instance might be used by a downstream processor in different
-     * thread, causing concurrent access.
+     * Emitted items should not be subsequently mutated because the same
+     * instance might be used by a downstream processor in a different thread,
+     * causing concurrent access.
      * <p>
      * If this method returns {@code false}, then the caller must retain the
      * traverser and pass it again in the subsequent invocation of this method,

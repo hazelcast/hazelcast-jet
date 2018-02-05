@@ -60,7 +60,7 @@ public class ReadWithPartitionIteratorPTest {
         assertEquals(entry(51), bucket.poll());
         assertEquals(entry(71), bucket.poll());
         assertEquals(entry(52), bucket.poll());
-        outbox.resetBatch();
+        outbox.reset();
 
         // When
         assertTrue(r.complete());

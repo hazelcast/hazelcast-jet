@@ -161,7 +161,7 @@ public final class TestOutbox implements Outbox {
     /**
      * Move all items from the queue to the {@code target} collection and make
      * the outbox available to accept more items. Also calls {@link
-     * #resetBatch()}. If you have limited capacity outbox, you need to call
+     * #reset()}. If you have a limited capacity outbox, you need to call
      * this regularly.
      *
      * @param queueOrdinal the queue from Outbox to drain
@@ -175,7 +175,7 @@ public final class TestOutbox implements Outbox {
     /**
      * Move all items from the snapshot queue to the {@code target} collection
      * and make the outbox available to accept more items. Also calls {@link
-     * #resetBatch()}. If you have limited capacity outbox, you need to call
+     * #reset()}. If you have a limited capacity outbox, you need to call
      * this regularly.
      *
      * @param target target list
@@ -192,7 +192,7 @@ public final class TestOutbox implements Outbox {
                 System.out.println(LocalTime.now() + " Output: " + o);
             }
         }
-        resetBatch();
+        reset();
     }
 
     /**
@@ -201,7 +201,7 @@ public final class TestOutbox implements Outbox {
      * from {@link #drainQueueAndReset} and {@link #drainSnapshotQueueAndReset}
      * methods.
      */
-    public void resetBatch() {
+    public void reset() {
         outbox.reset();
     }
 

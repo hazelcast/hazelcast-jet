@@ -441,7 +441,7 @@ public final class TestSupport {
                 // if the outbox is full, call the process() method again. Cooperative
                 // processor must be able to cope with this situation and not try to put
                 // more items to the outbox.
-                outbox.resetBatch();
+                outbox.reset();
                 processInbox(inbox, isCooperative, processor, wmToProcess);
             }
             outbox.drainQueueAndReset(0, actualOutput, logInputOutput);

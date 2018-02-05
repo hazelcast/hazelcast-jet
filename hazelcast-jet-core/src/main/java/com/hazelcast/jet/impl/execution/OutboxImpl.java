@@ -91,7 +91,7 @@ public class OutboxImpl implements Outbox {
     @Override
     public final boolean offer(int[] ordinals, @Nonnull Object item) {
         assert numRemainingInBatch != -1 : "Outbox.offer() called again after it returned false, without a " +
-                "call to resetBatch(). You probably didn't return from Processor method after Outbox.offer() " +
+                "call to reset(). You probably didn't return from Processor method after Outbox.offer() " +
                 "or AbstractProcessor.tryEmit() returned false";
         numRemainingInBatch--;
         if (numRemainingInBatch == -1) {

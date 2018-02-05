@@ -57,19 +57,19 @@ public class TestOutboxTest {
     }
 
     @Test
-    public void when_resetBatchCalled_then_offerSucceeds() {
+    public void when_resetCalled_then_offerSucceeds() {
         TestOutbox outbox = new TestOutbox(1);
         assertTrue(outbox.offer(1));
         assertFalse(outbox.offer(2));
 
         // When
-        outbox.resetBatch();
-        // Then - this would fail if resetBatch() was required
+        outbox.reset();
+        // Then - this would fail if reset() was required
         assertFalse(outbox.offer(2));
     }
 
     @Test
-    public void when_resetBatchNotCalled_then_offerFails() {
+    public void when_resetNotCalled_then_offerFails() {
         TestOutbox outbox = new TestOutbox(1);
         // When
         assertTrue(outbox.offer(1));

@@ -372,7 +372,7 @@ public class AbstractProcessorTest {
             }
             assertNull(q.poll());
         }
-        outbox.resetBatch();
+        outbox.reset();
     }
 
     private static class RegisteringMethodCallsP extends AbstractProcessor {
