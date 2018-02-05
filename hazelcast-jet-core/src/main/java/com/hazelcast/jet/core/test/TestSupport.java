@@ -35,14 +35,12 @@ import javax.annotation.Nonnull;
 import java.net.UnknownHostException;
 import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Queue;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Supplier;
@@ -266,7 +264,7 @@ public final class TestSupport {
      */
     public void expectOutput(@Nonnull List<?> expectedOutput) {
         this.expectedOutput = expectedOutput;
-        runTest(doSnapshots, doSnapshots);
+        runTest(doSnapshots, doSnapshots ? 1 : 0);
     }
 
     /**
@@ -372,19 +370,34 @@ public final class TestSupport {
         return this;
     }
 
-    private void runTest(boolean doSnapshots, boolean doRestore) {
-        assert doSnapshots || !doRestore : "Illegal combination: don't do snapshots, but do restore";
+    private static String modeDescription(boolean doSnapshots, int doRestoreEvery) {
+        if (!doSnapshots && doRestoreEvery == 0) {
+            return "snapshots disabled";
+        } else if (doSnapshots && doRestoreEvery == 1) {
+            return "snapshots enabled, restoring every snapshot";
+        } else if (doSnapshots && doRestoreEvery == 2) {
+            return "snapshots enabled, restoring every other snapshot";
+        } else if (doSnapshots && doRestoreEvery == Integer.MAX_VALUE) {
+            return "snapshots enabled, never restoring them";
+        } else {
+            throw new IllegalArgumentException("Unknown mode, doSnapshots=" + doSnapshots + ", doRestoreEvery="
+                    + doRestoreEvery);
+        }
+    }
+
+    private void runTest(boolean doSnapshots, int doRestoreEvery) {
+        assert doSnapshots || doRestoreEvery == 0 : "Illegal combination: don't do snapshots, but do restore";
         IdleStrategy idler = new BackoffIdleStrategy(0, 0, MICROSECONDS.toNanos(1),
                 MILLISECONDS.toNanos(1));
         int idleCount = 0;
-        if (doSnapshots && doRestore) {
+        if (doSnapshots && doRestoreEvery == 1) {
             // we do all 3 possible combinations: no snapshot, only snapshots and snapshots+restore
-            System.out.println("### Running the test with doSnapshots=false");
-            runTest(false, false);
-            System.out.println("### Running the test with doSnapshots=true, doRestore=false");
-            runTest(true, false);
-            System.out.println("### Running the test with doSnapshots=true, doRestore=true");
+            runTest(false, 0);
+            runTest(true, Integer.MAX_VALUE);
+            runTest(true, 2);
         }
+
+        System.out.println("### Running the test, mode=" + modeDescription(doSnapshots, doRestoreEvery));
 
         TestInbox inbox = new TestInbox();
         Processor[] processor = {supplier.get()};
@@ -397,8 +410,10 @@ public final class TestSupport {
         // create instance of your processor and call the init() method
         initProcessor(processor[0], outbox);
 
+        int[] restoreCount = {0};
+
         // do snapshot+restore before processing any item. This will test saveToSnapshot() in this edge case
-        snapshotAndRestore(processor, outbox, actualOutput, doSnapshots, doRestore);
+        snapshotAndRestore(processor, outbox, actualOutput, doSnapshots, doRestoreEvery, restoreCount);
 
         // call the process() method
         Iterator<?> inputIterator = input.iterator();
@@ -419,18 +434,19 @@ public final class TestSupport {
             } else {
                 methodName = processInbox(inbox, isCooperative, processor, wmToProcess);
             }
-            boolean madeProgress = inbox.isEmpty() || !outbox.queueWithOrdinal(0).isEmpty();
+            boolean madeProgress = inbox.isEmpty() || !outbox.queue(0).isEmpty();
             assertTrue(methodName + "() call without progress", !assertProgress || madeProgress);
             idleCount = idle(idler, idleCount, madeProgress);
-            if (outbox.queueWithOrdinal(0).size() == 1 && !inbox.isEmpty()) {
+            if (outbox.queue(0).size() == 1 && !inbox.isEmpty()) {
                 // if the outbox is full, call the process() method again. Cooperative
                 // processor must be able to cope with this situation and not try to put
                 // more items to the outbox.
+                outbox.reset();
                 processInbox(inbox, isCooperative, processor, wmToProcess);
             }
-            drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
+            outbox.drainQueueAndReset(0, actualOutput, logInputOutput);
             if (inbox.isEmpty() && wmToProcess[0] == null) {
-                snapshotAndRestore(processor, outbox, actualOutput, doSnapshots, doRestore);
+                snapshotAndRestore(processor, outbox, actualOutput, doSnapshots, doRestoreEvery, restoreCount);
             }
         }
 
@@ -441,10 +457,11 @@ public final class TestSupport {
             double elapsed;
             do {
                 checkTime("complete", isCooperative, () -> done[0] = processor[0].complete());
-                boolean madeProgress = done[0] || !outbox.queueWithOrdinal(0).isEmpty();
+                boolean madeProgress = done[0] || !outbox.queue(0).isEmpty();
                 assertTrue("complete() call without progress", !assertProgress || madeProgress);
-                drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
-                snapshotAndRestore(processor, outbox, actualOutput, madeProgress && doSnapshots && !done[0], doRestore);
+                outbox.drainQueueAndReset(0, actualOutput, logInputOutput);
+                snapshotAndRestore(processor, outbox, actualOutput, madeProgress && doSnapshots && !done[0],
+                        doRestoreEvery, restoreCount);
                 idleCount = idle(idler, idleCount, madeProgress);
                 if (runUntilCompletedTimeout > 0) {
                     elapsed = toMillis(System.nanoTime() - completeStart);
@@ -458,8 +475,8 @@ public final class TestSupport {
 
         // assert the outbox
         if (!outputChecker.test(expectedOutput, actualOutput)) {
-            assertEquals("processor output with doSnapshots=" + doSnapshots + ", doRestore=" + doRestore
-                            + " doesn't match", listToString(expectedOutput), listToString(actualOutput));
+            assertEquals("processor output in mode \"" + modeDescription(doSnapshots, doRestoreEvery)
+                            + "\" doesn't match", listToString(expectedOutput), listToString(actualOutput));
         }
     }
 
@@ -493,7 +510,8 @@ public final class TestSupport {
             TestOutbox outbox,
             List<Object> actualOutput,
             boolean doSnapshot,
-            boolean doRestore) {
+            int doRestoreEvery,
+            int[] restoreCount) {
         if (!doSnapshot) {
             return;
         }
@@ -513,12 +531,14 @@ public final class TestSupport {
             }
             assertTrue("saveToSnapshot() call without progress",
                     !assertProgress || done[0] || !outbox.snapshotQueue().isEmpty()
-                            || !outbox.queueWithOrdinal(0).isEmpty());
-            drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
+                            || !outbox.queue(0).isEmpty());
+            outbox.drainQueueAndReset(0, actualOutput, logInputOutput);
             outbox.snapshotQueue().clear();
         } while (!done[0]);
 
-        if (!doRestore) {
+        restoreCount[0]++;
+
+        if (restoreCount[0] % doRestoreEvery != 0) {
             return;
         }
 
@@ -533,16 +553,16 @@ public final class TestSupport {
             assertTrue("restoreFromSnapshot() call without progress",
                     !assertProgress
                             || lastInboxSize > snapshotInbox.size()
-                            || !outbox.queueWithOrdinal(0).isEmpty());
-            drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
+                            || !outbox.queue(0).isEmpty());
+            outbox.drainQueueAndReset(0, actualOutput, logInputOutput);
             lastInboxSize = snapshotInbox.size();
         }
         do {
             checkTime("finishSnapshotRestore", isCooperative,
                     () -> done[0] = processor[0].finishSnapshotRestore());
             assertTrue("finishSnapshotRestore() call without progress",
-                    !assertProgress || done[0] || !outbox.queueWithOrdinal(0).isEmpty());
-            drainOutbox(outbox.queueWithOrdinal(0), actualOutput, logInputOutput);
+                    !assertProgress || done[0] || !outbox.queue(0).isEmpty());
+            outbox.drainQueueAndReset(0, actualOutput, logInputOutput);
         } while (!done[0]);
     }
 
@@ -578,23 +598,6 @@ public final class TestSupport {
 
     private static double toMillis(long nanos) {
         return nanos / (double) MILLISECONDS.toNanos(1);
-    }
-
-    /**
-     * Move all items from the outbox to the {@code target} list and make the
-     * outbox available to accept more items.
-     *
-     * @param outboxBucket the queue from Outbox to drain
-     * @param target       target list
-     * @param logItems     whether to log drained items to {@code System.out}
-     */
-    public static <T> void drainOutbox(Queue<T> outboxBucket, Collection<? super T> target, boolean logItems) {
-        for (T o; (o = outboxBucket.poll()) != null; ) {
-            target.add(o);
-            if (logItems) {
-                System.out.println(LocalTime.now() + " Output: " + o);
-            }
-        }
     }
 
     /**
