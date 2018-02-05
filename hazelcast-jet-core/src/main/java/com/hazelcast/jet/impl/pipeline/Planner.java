@@ -36,6 +36,7 @@ import com.hazelcast.jet.impl.pipeline.transform.PeekTransform;
 import com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
+import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.processor.HashJoinCollectP;
 import com.hazelcast.jet.impl.processor.HashJoinP;
@@ -66,6 +67,7 @@ import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.filterP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapP;
+import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
@@ -95,6 +97,8 @@ class Planner {
                 handleSource((BatchSourceTransform) transform);
             } else if (transform instanceof StreamSourceTransform) {
                 handleStreamSource((StreamSourceTransform) transform);
+            } else if (transform instanceof TimestampTransform) {
+                handleTimestamp((TimestampTransform) transform);
             } else if (transform instanceof ProcessorTransform) {
                 handleProcessorStage((ProcessorTransform) transform);
             } else if (transform instanceof FilterTransform) {
@@ -137,6 +141,12 @@ class Planner {
 
     private void handleStreamSource(StreamSourceTransform source) {
         addVertex(source, vertexName(source.name(), ""), source.metaSupplier);
+    }
+
+    private void handleTimestamp(TimestampTransform tsTransform) {
+        PlannerVertex pv = addVertex(tsTransform, vertexName(tsTransform.name(), ""),
+                insertWatermarksP(tsTransform.wmGenParams));
+        addEdges(tsTransform, pv.v);
     }
 
     private void handleProcessorStage(ProcessorTransform procTransform) {

@@ -19,9 +19,9 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.impl.pipeline.ComputeStageImplBase;
 import com.hazelcast.jet.impl.pipeline.FunctionAdapters;
 import com.hazelcast.jet.impl.pipeline.PipelineImpl;
-import com.hazelcast.jet.impl.pipeline.StreamStageImpl;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 
@@ -33,7 +33,6 @@ import java.util.stream.Stream;
 
 import static com.hazelcast.jet.datamodel.Tag.tag;
 import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
-import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DONT_ADAPT;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
@@ -61,9 +60,7 @@ public abstract class GeneralHashJoinBuilder<T0> {
         this.transform0 = transformOf(stage0);
         this.pipelineImpl = (PipelineImpl) stage0.getPipeline();
         this.createOutStageFn = createOutStageFn;
-        this.fnAdapters = stage0 instanceof StreamStageImpl
-                ? ((StreamStageImpl) stage0).fnAdapters
-                : DONT_ADAPT;
+        this.fnAdapters = ((ComputeStageImplBase) stage0).fnAdapters;
     }
 
     /**

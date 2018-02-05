@@ -96,10 +96,10 @@ public final class Sources {
 
     public static <T> StreamSource<T> streamFromProcessor(
             @Nonnull String sourceName,
-            boolean emitsEvents,
+            boolean emitsJetEvents,
             @Nonnull ProcessorMetaSupplier metaSupplier
     ) {
-        return new StreamSourceTransform<>(sourceName, emitsEvents, metaSupplier);
+        return new StreamSourceTransform<>(sourceName, emitsJetEvents, metaSupplier);
     }
 
     /**
