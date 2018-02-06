@@ -22,6 +22,7 @@ import com.hazelcast.config.JoinConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.DAG;
@@ -161,10 +162,10 @@ public class WordCountTest extends HazelcastTestSupport implements Serializable 
                 })
         );
         // word -> (word, count)
-        Vertex aggregateStage1 = dag.newVertex("aggregateStage1", aggregateByKeyP(wholeItem(), counting()));
+        Vertex aggregateStage1 = dag.newVertex("aggregateStage1", aggregateByKeyP(wholeItem(), counting(), Util::entry));
         // (word, count) -> (word, count)
         Vertex aggregateStage2 = dag.newVertex("aggregateStage2",
-                aggregateByKeyP(Entry::getKey, summingLong(Entry<String, Long>::getValue)));
+                aggregateByKeyP(Entry::getKey, summingLong(Entry<String, Long>::getValue), Util::entry));
         Vertex sink = dag.newVertex("sink", SinkProcessors.writeMapP("counts"));
 
         dag.edge(between(source.localParallelism(1), tokenize))

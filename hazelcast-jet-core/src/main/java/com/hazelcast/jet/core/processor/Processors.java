@@ -17,6 +17,7 @@
 package com.hazelcast.jet.core.processor;
 
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -29,6 +30,7 @@ import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -157,9 +159,9 @@ import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
  * </tr><tr>
  *     <th>batch,<br>no grouping</th>
  *
- *     <td>{@link #aggregateP(AggregateOperation1) aggregate()}</td>
+ *     <td>{@link #aggregateP(AggregateOperation1, DistributedFunction) aggregate()}</td>
  *     <td>{@link #accumulateP(AggregateOperation1) accumulate()}</td>
- *     <td>{@link #combineP(AggregateOperation1) combine()}</td>
+ *     <td>{@link #combineP(AggregateOperation1, DistributedFunction) combine()}</td>
  * </tr><tr>
  *     <th>batch, group by key</th>
  *
@@ -217,11 +219,12 @@ public final class Processors {
      *            finishAccumulationFn()}
      */
     @Nonnull
-    public static <T, K, A, R> DistributedSupplier<Processor> aggregateByKeyP(
+    public static <T, K, A, R, OUT> DistributedSupplier<Processor> aggregateByKeyP(
             @Nonnull DistributedFunction<? super T, K> keyFn,
-            @Nonnull AggregateOperation1<? super T, A, R> aggrOp
+            @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
+            @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        return () -> new CoGroupP<>(keyFn, aggrOp);
+        return () -> new CoGroupP<>(keyFn, aggrOp, mapToOutputFn);
     }
 
     /**
@@ -246,7 +249,7 @@ public final class Processors {
             @Nonnull DistributedFunction<? super T, K> keyFn,
             @Nonnull AggregateOperation1<? super T, A, ?> aggrOp
     ) {
-        return () -> new CoGroupP<>(keyFn, aggrOp.withFinishFn(identity()));
+        return () -> new CoGroupP<>(keyFn, aggrOp.withFinishFn(identity()), Util::entry);
     }
 
     /**
@@ -270,11 +273,12 @@ public final class Processors {
      * @param <R> type of the finished result returned from {@code aggrOp.finishAccumulationFn()}
      */
     @Nonnull
-    public static <K, A, R> DistributedSupplier<Processor> coAggregateByKeyP(
+    public static <K, A, R, OUT> DistributedSupplier<Processor> coAggregateByKeyP(
             @Nonnull List<DistributedFunction<?, ? extends K>> getKeyFns,
-            @Nonnull AggregateOperation<A, R> aggrOp
+            @Nonnull AggregateOperation<A, R> aggrOp,
+            @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        return () -> new CoGroupP<>(getKeyFns, aggrOp);
+        return () -> new CoGroupP<>(getKeyFns, aggrOp, mapToOutputFn);
     }
 
     /**
@@ -303,7 +307,7 @@ public final class Processors {
             @Nonnull List<DistributedFunction<?, ? extends K>> getKeyFns,
             @Nonnull AggregateOperation<A, ?> aggrOp
     ) {
-        return () -> new CoGroupP<>(getKeyFns, aggrOp.withFinishFn(identity()));
+        return () -> new CoGroupP<>(getKeyFns, aggrOp.withFinishFn(identity()), Util::entry);
     }
 
     /**
@@ -327,36 +331,43 @@ public final class Processors {
      *            {@code aggrOp.finishAccumulationFn()}
      */
     @Nonnull
-    public static <T, A, R> DistributedSupplier<Processor> combineByKeyP(
-            @Nonnull AggregateOperation<A, R> aggrOp
+    public static <K, A, R, OUT> DistributedSupplier<Processor> combineByKeyP(
+            @Nonnull AggregateOperation<A, R> aggrOp,
+            @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        return () -> new CoGroupP<>(Entry::getKey, aggrOp.withCombiningAccumulateFn(Entry<Object, A>::getValue));
+        return () -> new CoGroupP<K, A, R, OUT>(
+                (DistributedFunction<? super Entry<K, ?>, ? extends K>) Entry::getKey,
+                aggrOp.withCombiningAccumulateFn(Entry<K, A>::getValue),
+                mapToOutputFn);
     }
 
     /**
      * Returns a supplier of processors for a vertex that performs the provided
      * aggregate operation on all the items it receives. After exhausting all
      * its input it emits a single item of type {@code R} &mdash;the result of
-     * the aggregate operation.
+     * the aggregate operation transformed by the supplied {@code mapToOutputFn}.
      * <p>
      * Since the input to this vertex must be bounded, its primary use case are
      * batch jobs.
      * <p>
      * This processor has state, but does not save it to snapshot. On job
      * restart, the state will be lost.
-     *
-     * @param aggrOp the aggregate operation to perform
      * @param <T> type of received item
      * @param <A> type of accumulator returned from {@code
      *            aggrOp.createAccumulatorFn()}
-     * @param <R> type of the finished result returned from {@code aggrOp.
-     *            finishAccumulationFn()}
+     * @param <R> type of the finished result returned from {@code
+     *            aggrOp.finishAccumulationFn()}
+     * @param <OUT> type of the emitted item
+     * @param aggrOp the aggregate operation to perform
+     * @param mapToOutputFn a function that transforms the result of the aggregate operation
+     *                      to the emitted output item
      */
     @Nonnull
-    public static <T, A, R> DistributedSupplier<Processor> aggregateP(
-            @Nonnull AggregateOperation1<T, A, R> aggrOp
+    public static <T, A, R, OUT> DistributedSupplier<Processor> aggregateP(
+            @Nonnull AggregateOperation1<T, A, R> aggrOp,
+            @Nonnull DistributedFunction<? super R, OUT> mapToOutputFn
     ) {
-        return () -> new AggregateP<>(aggrOp);
+        return () -> new AggregateP<>(aggrOp, mapToOutputFn);
     }
 
     /**
@@ -370,45 +381,46 @@ public final class Processors {
      * <p>
      * This processor has state, but does not save it to snapshot. On job
      * restart, the state will be lost.
-     *
-     * @param aggrOp the aggregate operation to perform
      * @param <T> type of received item
      * @param <A> type of accumulator returned from {@code
      *            aggrOp.createAccumulatorFn()}
      * @param <R> type of the finished result returned from {@code aggrOp.
      *            finishAccumulationFn()}
+     * @param aggrOp the aggregate operation to perform
      */
     @Nonnull
     public static <T, A, R> DistributedSupplier<Processor> accumulateP(
             @Nonnull AggregateOperation1<T, A, R> aggrOp
     ) {
-        return () -> new AggregateP<>(aggrOp.withFinishFn(identity()));
+        return () -> new AggregateP<>(aggrOp.withFinishFn(identity()), identity());
     }
 
     /**
      * Returns a supplier of processors for a vertex that performs the provided
      * aggregate operation on all the items it receives. After exhausting all
-     * its input it emits a single item of type {@code R} &mdash;the result of
-     * the aggregate operation.
+     * its input it emits a single item of type {@code OUT} &mdash;the result of
+     * the aggregate operation transformed by the supplied {@code mapToOutputFn}.
      * <p>
      * Since the input to this vertex must be bounded, its primary use case are
      * batch jobs.
      * <p>
      * This processor has state, but does not save it to snapshot. On job
      * restart, the state will be lost.
-     *
-     * @param aggrOp the aggregate operation to perform
      * @param <T> type of received item
      * @param <A> type of accumulator returned from {@code
      *            aggrOp.createAccumulatorFn()}
      * @param <R> type of the finished result returned from {@code aggrOp.
      *            finishAccumulationFn()}
+     * @param aggrOp the aggregate operation to perform
+     * @param mapToOutputFn a function to apply to the finished result of the aggregate
+     *                      operation
      */
     @Nonnull
-    public static <T, A, R> DistributedSupplier<Processor> combineP(
-            @Nonnull AggregateOperation1<T, A, R> aggrOp
+    public static <T, A, R, OUT> DistributedSupplier<Processor> combineP(
+            @Nonnull AggregateOperation1<T, A, R> aggrOp,
+            @Nonnull DistributedFunction<? super R, OUT> mapToOutputFn
     ) {
-        return () -> new AggregateP<>(aggrOp.withCombiningAccumulateFn(identity()));
+        return () -> new AggregateP<>(aggrOp.withCombiningAccumulateFn(identity()), mapToOutputFn);
     }
 
     /**

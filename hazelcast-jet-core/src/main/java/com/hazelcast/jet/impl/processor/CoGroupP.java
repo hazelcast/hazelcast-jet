@@ -16,20 +16,20 @@
 
 package com.hazelcast.jet.impl.processor;
 
-import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
-import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.function.DistributedFunction;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.Traversers.traverseStream;
-import static com.hazelcast.jet.Util.entry;
 import static java.util.Collections.singletonList;
 
 /**
@@ -38,35 +38,37 @@ import static java.util.Collections.singletonList;
  * more inbound edges. The supplied aggregate operation must have as many
  * accumulation functions as there are inbound edges.
  */
-public class CoGroupP<K, A, R> extends AbstractProcessor {
-    private final List<DistributedFunction<?, ? extends K>> groupKeyFs;
-    private final AggregateOperation<A, R> aggrOp;
+public class CoGroupP<K, A, R, OUT> extends AbstractProcessor {
+    @Nonnull private final List<DistributedFunction<?, ? extends K>> groupKeyFns;
+    @Nonnull private final AggregateOperation<A, R> aggrOp;
 
     private final Map<K, A> keyToAcc = new HashMap<>();
-    private final Traverser<Map.Entry<K, R>> resultTraverser;
+    private final Traverser<OUT> resultTraverser;
 
     public CoGroupP(
-            @Nonnull List<DistributedFunction<?, ? extends K>> groupKeyFs,
-            @Nonnull AggregateOperation<A, R> aggrOp
+            @Nonnull List<DistributedFunction<?, ? extends K>> groupKeyFns,
+            @Nonnull AggregateOperation<A, R> aggrOp,
+            @Nonnull BiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        this.groupKeyFs = groupKeyFs;
+        this.groupKeyFns = groupKeyFns;
         this.aggrOp = aggrOp;
         this.resultTraverser = traverseStream(keyToAcc
                 .entrySet().stream()
-                .map(e -> entry(e.getKey(), this.aggrOp.finishFn().apply(e.getValue()))));
+                .map(e -> mapToOutputFn.apply(e.getKey(), aggrOp.finishFn().apply(e.getValue()))));
     }
 
     public <T> CoGroupP(
             @Nonnull DistributedFunction<? super T, ? extends K> groupKeyFn,
-            @Nonnull AggregateOperation1<? super T, A, R> aggrOp
+            @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
+            @Nonnull BiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        this(singletonList(groupKeyFn), aggrOp);
+        this(singletonList(groupKeyFn), aggrOp, mapToOutputFn);
     }
 
     @Override
     @SuppressWarnings("unchecked")
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-        Function<Object, ? extends K> keyFn = (Function<Object, ? extends K>) groupKeyFs.get(ordinal);
+        Function<Object, ? extends K> keyFn = (Function<Object, ? extends K>) groupKeyFns.get(ordinal);
         K key = keyFn.apply(item);
         A acc = keyToAcc.computeIfAbsent(key, k -> aggrOp.createFn().get());
         aggrOp.accumulateFn(ordinal).accept(acc, item);

@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.Processor;
@@ -195,7 +196,7 @@ class Planner {
                 xform.keyFn(),
                 xform.aggrOp().withFinishFn(identity())
         ));
-        PlannerVertex pv2 = addVertex(xform, namePrefix + '2', combineByKeyP(xform.aggrOp()));
+        PlannerVertex pv2 = addVertex(xform, namePrefix + '2', combineByKeyP(xform.aggrOp(), Util::entry));
         addEdges(xform, v1, e -> e.partitioned(xform.keyFn(), HASH_CODE));
         dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }
@@ -290,7 +291,7 @@ class Planner {
         Vertex v1 = dag.newVertex(namePrefix + '1',
                 coAccumulateByKeyP(groupKeyFns, xform.aggrOp().withFinishFn(identity())));
         PlannerVertex pv2 = addVertex(xform, namePrefix + '2',
-                combineByKeyP(xform.aggrOp()));
+                combineByKeyP(xform.aggrOp(), Util::entry));
         addEdges(xform, v1, (e, ord) -> e.partitioned(groupKeyFns.get(ord), HASH_CODE));
         dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }

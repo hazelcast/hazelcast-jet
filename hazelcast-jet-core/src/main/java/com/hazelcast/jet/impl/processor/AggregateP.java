@@ -20,20 +20,23 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.AbstractProcessor;
 
 import javax.annotation.Nonnull;
+import java.util.function.Function;
 
 /**
  * Batch processor that computes the supplied aggregate operation on all
  * the received items. The number of inbound edges must not exceed the
  * number of {@code accumulate} primitives in the aggregate operation.
  */
-public class AggregateP<A, R> extends AbstractProcessor {
+public class AggregateP<A, R, OUT> extends AbstractProcessor {
     @Nonnull private final AggregateOperation<A, R> aggrOp;
+    @Nonnull private final Function<? super R, OUT> mapToOutputFn;
     @Nonnull private final A acc;
-    private R result;
+    private OUT result;
 
-    public AggregateP(@Nonnull AggregateOperation<A, R> aggrOp) {
+    public AggregateP(@Nonnull AggregateOperation<A, R> aggrOp, @Nonnull Function<? super R, OUT> mapToOutputFn) {
         this.acc = aggrOp.createFn().get();
         this.aggrOp = aggrOp;
+        this.mapToOutputFn = mapToOutputFn;
     }
 
     @Override
@@ -45,7 +48,7 @@ public class AggregateP<A, R> extends AbstractProcessor {
     @Override
     public boolean complete() {
         if (result == null) {
-            result = aggrOp.finishFn().apply(acc);
+            result = mapToOutputFn.apply(aggrOp.finishFn().apply(acc));
         }
         return tryEmit(result);
     }

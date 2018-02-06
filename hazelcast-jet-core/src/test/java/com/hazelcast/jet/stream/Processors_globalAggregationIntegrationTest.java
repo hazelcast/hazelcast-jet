@@ -42,6 +42,7 @@ import static com.hazelcast.jet.core.processor.Processors.accumulateP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateP;
 import static com.hazelcast.jet.core.processor.Processors.combineP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
+import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
@@ -75,7 +76,7 @@ public class Processors_globalAggregationIntegrationTest extends JetTestSupport 
         Vertex sink = dag.newVertex("sink", writeListP("sink"));
 
         if (singleStageProcessor) {
-            Vertex aggregate = dag.newVertex("aggregate", aggregateP(summingOp))
+            Vertex aggregate = dag.newVertex("aggregate", aggregateP(summingOp, identity()))
                     .localParallelism(1);
             dag
                     .edge(between(source, aggregate).distributed().allToOne())
@@ -83,7 +84,7 @@ public class Processors_globalAggregationIntegrationTest extends JetTestSupport 
 
         } else {
             Vertex accumulate = dag.newVertex("accumulate", accumulateP(summingOp));
-            Vertex combine = dag.newVertex("combine", combineP(summingOp)).localParallelism(1);
+            Vertex combine = dag.newVertex("combine", combineP(summingOp, identity())).localParallelism(1);
             dag
                     .edge(between(source, accumulate))
                     .edge(between(accumulate, combine).distributed().allToOne())
