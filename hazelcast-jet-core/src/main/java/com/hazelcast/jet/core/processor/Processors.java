@@ -573,7 +573,7 @@ public final class Processors {
                 keyFn,
                 timestampKind == EVENT
                         ? item -> windowDef.higherFrameTs(timestampFn.applyAsLong(item))
-                        : timestampFn,
+                        : item -> windowDef.higherFrameTs(timestampFn.applyAsLong(item) - 1),
                 windowDef,
                 aggrOp,
                 isLastStage);
