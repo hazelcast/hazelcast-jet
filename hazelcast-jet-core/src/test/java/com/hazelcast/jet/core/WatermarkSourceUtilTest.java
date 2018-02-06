@@ -58,15 +58,15 @@ public class WatermarkSourceUtilTest {
         // all partitions are active initially
         assertNull(wsu.handleNoEvent());
         // let's have events only in partition0. No WM is output because we wait for the other partition indefinitely
-        assertNull(wsu.handleEvent(0, 10L));
-        assertNull(wsu.handleEvent(0, 11L));
+        assertNull(wsu.handleEvent(10L, 0));
+        assertNull(wsu.handleEvent(11L, 0));
         // now have some events in the other partition, wms will be output
-        assertEquals(wm(10 - LAG), wsu.handleEvent(1, 10L));
-        assertEquals(wm(11 - LAG), wsu.handleEvent(1, 11L));
+        assertEquals(wm(10 - LAG), wsu.handleEvent(10L, 1));
+        assertEquals(wm(11 - LAG), wsu.handleEvent(11L, 1));
         // now partition1 will get ahead of partition0 -> no WM
-        assertNull(wsu.handleEvent(1, 12L));
+        assertNull(wsu.handleEvent(12L, 1));
         // another event in partition0, we'll get the wm
-        assertEquals(wm(12 - LAG), wsu.handleEvent(0, 13L));
+        assertEquals(wm(12 - LAG), wsu.handleEvent(13L, 0));
     }
 
     @Test
@@ -81,7 +81,7 @@ public class WatermarkSourceUtilTest {
         // after adding a partition and observing an event, WM should be emitted
         wsu.increasePartitionCount(1);
         assertNull(wsu.handleNoEvent()); // can't send WM here, we don't know what its value would be
-        assertEquals(wm(10 - LAG), wsu.handleEvent(0, 10L));
+        assertEquals(wm(10 - LAG), wsu.handleEvent(10L, 0));
     }
 
     @Test

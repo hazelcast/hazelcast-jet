@@ -194,8 +194,8 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
                             T projectedRecord = projectionFn.apply((K) r.key(), (V) r.value());
                             TopicPartition topicPartition = new TopicPartition(lastEmittedItem.topic(),
                                     lastEmittedItem.partition());
-                            Watermark wm = watermarkSourceUtil.handleEvent(currentAssignment.get(topicPartition),
-                                    projectedRecord);
+                            Watermark wm = watermarkSourceUtil.handleEvent(projectedRecord, currentAssignment.get(topicPartition)
+                            );
                             if (wm != null) {
                                 appendableTraverser.append(wm);
                             }

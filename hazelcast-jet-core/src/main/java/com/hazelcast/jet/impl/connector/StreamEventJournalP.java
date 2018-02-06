@@ -137,6 +137,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
+        watermarkSourceUtil.init(getOutbox());
         ICompletableFuture<EventJournalInitialSubscriberState>[] futures = new ICompletableFuture[partitionIds.length];
         Arrays.setAll(futures, i -> eventJournalReader.subscribeToEventJournal(partitionIds[i]));
         for (int i = 0; i < futures.length; i++) {
@@ -170,7 +171,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         while (resultSetPosition < resultSet.size()) {
             T event = resultSet.get(resultSetPosition);
             if (event != null) {
-                pendingWatermark = watermarkSourceUtil.handleEvent(currentPartitionIndex, event);
+                pendingWatermark = watermarkSourceUtil.handleEvent(event, currentPartitionIndex);
                 if (pendingWatermark != null) {
                     if (!tryEmit(pendingWatermark)) {
                         return;

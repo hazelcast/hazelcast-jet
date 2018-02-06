@@ -63,14 +63,19 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  */
 public class WatermarkSourceUtil<T> {
 
-    private final long idleTimeoutNanos;
-    private final DistributedToLongFunction<T> getTimestampF;
-    private final DistributedSupplier<WatermarkPolicy> newWmPolicyF;
-    private final WatermarkEmissionPolicy wmEmitPolicy;
+    private static final WatermarkPolicy[] EMPTY_WATERMARK_POLICIES = {};
+    private static final long[] EMPTY_LONGS = {};
 
-    private WatermarkPolicy[] wmPolicies = {};
-    private long[] watermarks = {};
-    private long[] markIdleAt = {};
+    private final long idleTimeoutNanos;
+    private final DistributedToLongFunction<T> timestampFn;
+    private final DistributedSupplier<WatermarkPolicy> newWmPolicyFn;
+    private final WatermarkEmissionPolicy wmEmitPolicy;
+    private final AppendableTraverser<Object> traverser = new AppendableTraverser<>(2);
+
+    private Outbox outbox;
+    private WatermarkPolicy[] wmPolicies = EMPTY_WATERMARK_POLICIES;
+    private long[] watermarks = EMPTY_LONGS;
+    private long[] markIdleAt = EMPTY_LONGS;
     private long lastEmittedWm = Long.MIN_VALUE;
     private boolean allAreIdle;
 
@@ -82,30 +87,46 @@ public class WatermarkSourceUtil<T> {
      **/
     public WatermarkSourceUtil(WatermarkGenerationParams<T> params) {
         this.idleTimeoutNanos = MILLISECONDS.toNanos(params.idleTimeoutMillis());
-        this.getTimestampF = params.getTimestampF();
-        this.newWmPolicyF = params.newWmPolicyF();
+        this.timestampFn = params.timestampFn();
+        this.newWmPolicyFn = params.newWmPolicyFn();
         this.wmEmitPolicy = params.wmEmitPolicy();
+    }
+
+    public void init(Outbox outbox) {
+        this.outbox = outbox;
+    }
+
+    public void acceptItem(T item, int partitionIndex) {
+        Watermark wm = handleEvent(item, partitionIndex);
+        if (wm != null) {
+            traverser.append(wm);
+        }
+        traverser.append(wrapIfNeeded(item, timestampFn.applyAsLong(item)));
     }
 
     /**
      * Call this method after the event was emitted to decide if a watermark
      * should be sent after it.
      *
-     * @param partitionIndex 0-based index of the source partition the event occurred in
      * @param event the event
+     * @param partitionIndex 0-based index of the source partition the event occurred in
      * @return watermark to emit before the event or {@code null}
      */
-    public Watermark handleEvent(int partitionIndex, T event) {
+    public Watermark handleEvent(T event, int partitionIndex) {
         return handleEvent(System.nanoTime(), partitionIndex, event);
     }
 
     // package-visible for tests
     Watermark handleEvent(long now, int partitionIndex, T event) {
-        long eventTime = getTimestampF.applyAsLong(event);
+        long eventTime = timestampFn.applyAsLong(event);
         watermarks[partitionIndex] = wmPolicies[partitionIndex].reportEvent(eventTime);
         markIdleAt[partitionIndex] = now + idleTimeoutNanos;
         allAreIdle = false;
         return handleNoEvent(now);
+    }
+
+    protected Object wrapIfNeeded(T item, long l) {
+        return item;
     }
 
     /**
@@ -173,7 +194,7 @@ public class WatermarkSourceUtil<T> {
         markIdleAt = Arrays.copyOf(markIdleAt, newPartitionCount);
 
         for (int i = oldPartitionCount; i < newPartitionCount; i++) {
-            wmPolicies[i] = newWmPolicyF.get();
+            wmPolicies[i] = newWmPolicyFn.get();
             watermarks[i] = Long.MIN_VALUE;
             markIdleAt[i] = now + idleTimeoutNanos;
         }

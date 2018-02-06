@@ -50,19 +50,19 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
 
     @Override
     public boolean tryProcess() {
-        return tryProcessInt(null);
+        return tryProcessInternal(null);
     }
 
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-        return tryProcessInt(item);
+        return tryProcessInternal(item);
     }
 
-    private boolean tryProcessInt(@Nullable Object item) {
+    private boolean tryProcessInternal(@Nullable Object item) {
         if (doneWithTraverser) {
             Watermark wm = item == null
                     ? wsu.handleNoEvent()
-                    : wsu.handleEvent(0, (T) item);
+                    : wsu.handleEvent((T) item, 0);
             if (wm != null) {
                 traverser.append(wm);
             }
