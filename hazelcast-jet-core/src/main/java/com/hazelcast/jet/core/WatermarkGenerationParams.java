@@ -47,19 +47,19 @@ public final class WatermarkGenerationParams<T> implements Serializable {
     };
 
     private final long idleTimeoutMillis;
-    @Nonnull private final DistributedToLongFunction<T> getTimestampF;
-    @Nonnull private final DistributedSupplier<WatermarkPolicy> newWmPolicyF;
+    @Nonnull private final DistributedToLongFunction<T> timestampFn;
+    @Nonnull private final DistributedSupplier<WatermarkPolicy> newWmPolicyFn;
     @Nonnull private final WatermarkEmissionPolicy wmEmitPolicy;
 
     private WatermarkGenerationParams(
-            @Nonnull DistributedToLongFunction<T> getTimestampF,
-            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyF,
+            @Nonnull DistributedToLongFunction<T> timestampFn,
+            @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyFn,
             @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
             long idleTimeoutMillis
     ) {
         this.idleTimeoutMillis = idleTimeoutMillis;
-        this.getTimestampF = getTimestampF;
-        this.newWmPolicyF = newWmPolicyF;
+        this.timestampFn = timestampFn;
+        this.newWmPolicyFn = newWmPolicyFn;
         this.wmEmitPolicy = wmEmitPolicy;
     }
 
@@ -114,16 +114,16 @@ public final class WatermarkGenerationParams<T> implements Serializable {
      * Returns the function to extract timestamps from observed events.
      */
     @Nonnull
-    public DistributedToLongFunction<T> getTimestampF() {
-        return getTimestampF;
+    public DistributedToLongFunction<T> timestampFn() {
+        return timestampFn;
     }
 
     /**
      * Returns watermark policy factory.
      */
     @Nonnull
-    public DistributedSupplier<WatermarkPolicy> newWmPolicyF() {
-        return newWmPolicyF;
+    public DistributedSupplier<WatermarkPolicy> newWmPolicyFn() {
+        return newWmPolicyFn;
     }
 
     /**

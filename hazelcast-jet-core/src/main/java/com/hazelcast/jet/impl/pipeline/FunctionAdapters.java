@@ -89,7 +89,7 @@ class JetEventFunctionAdapters extends FunctionAdapters {
     @Nonnull @Override
     @SuppressWarnings("unchecked")
     DistributedFunction adaptMapFn(@Nonnull DistributedFunction mapFn) {
-        return e -> jetEvent(((JetEvent) e).timestamp(), mapFn.apply(((JetEvent) e).payload()));
+        return e -> jetEvent(mapFn.apply(((JetEvent) e).payload()), ((JetEvent) e).timestamp());
     }
 
     @Nonnull @Override
@@ -104,7 +104,7 @@ class JetEventFunctionAdapters extends FunctionAdapters {
             @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         DistributedFunction<Object, Traverser> rawFn = (DistributedFunction<Object, Traverser>) (Function) flatMapFn;
-        return e -> rawFn.apply(((JetEvent) e).payload()).map(r -> jetEvent(((JetEvent) e).timestamp(), r));
+        return e -> rawFn.apply(((JetEvent) e).payload()).map(r -> jetEvent(r, ((JetEvent) e).timestamp()));
     }
 
     @Nonnull
@@ -158,7 +158,7 @@ class JetEventFunctionAdapters extends FunctionAdapters {
     ) {
         return (e, t1) -> {
             JetEvent<T> jetEvent = (JetEvent) e;
-            return jetEvent(jetEvent.timestamp(), mapToOutputFn.apply(jetEvent.payload(), t1));
+            return jetEvent(mapToOutputFn.apply(jetEvent.payload(), t1), jetEvent.timestamp());
         };
     }
 
@@ -169,7 +169,7 @@ class JetEventFunctionAdapters extends FunctionAdapters {
     ) {
         return (e, t1, t2) -> {
             JetEvent<T> jetEvent = (JetEvent) e;
-            return jetEvent(jetEvent.timestamp(), mapToOutputFn.apply(jetEvent.payload(), t1, t2));
+            return jetEvent(mapToOutputFn.apply(jetEvent.payload(), t1, t2), jetEvent.timestamp());
         };
     }
 }

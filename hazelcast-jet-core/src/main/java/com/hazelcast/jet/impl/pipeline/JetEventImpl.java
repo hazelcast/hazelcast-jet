@@ -28,7 +28,7 @@ public class JetEventImpl<T> implements JetEvent<T> {
         this.payload = payload;
     }
 
-    public static <T> JetEvent<T> jetEvent(long timestamp, T payload) {
+    public static <T> JetEvent<T> jetEvent(T payload, long timestamp) {
         return new JetEventImpl<>(timestamp, payload);
     }
 

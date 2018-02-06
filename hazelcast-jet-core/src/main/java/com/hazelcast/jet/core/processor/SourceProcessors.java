@@ -67,7 +67,7 @@ public final class SourceProcessors {
      * {@link com.hazelcast.jet.pipeline.Sources#map(String, Predicate, Projection)}.
      */
     @Nonnull
-    public static <K, V, T> ProcessorMetaSupplier readMapP(
+    public static <T, K, V> ProcessorMetaSupplier readMapP(
             @Nonnull String mapName,
             @Nonnull Predicate<K, V> predicate,
             @Nonnull Projection<Entry<K, V>, T> projectionFn
@@ -80,7 +80,7 @@ public final class SourceProcessors {
      * {@link com.hazelcast.jet.pipeline.Sources#map(String, Predicate, DistributedFunction)}.
      */
     @Nonnull
-    public static <K, V, T> ProcessorMetaSupplier readMapP(
+    public static <T, K, V> ProcessorMetaSupplier readMapP(
             @Nonnull String mapName,
             @Nonnull Predicate<K, V> predicate,
             @Nonnull DistributedFunction<Entry<K, V>, T> projectionFn
@@ -110,15 +110,14 @@ public final class SourceProcessors {
      * WatermarkGenerationParams)}.
      */
     @Nonnull
-    public static <K, V, T> ProcessorMetaSupplier streamMapP(
+    public static <T, K, V> ProcessorMetaSupplier streamMapP(
             @Nonnull String mapName,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
             @Nonnull JournalInitialPosition initialPos,
             WatermarkGenerationParams<T> wmGenParams
     ) {
-        return StreamEventJournalP.streamMapP(mapName, predicateFn, projectionFn, initialPos,
-                wmGenParams);
+        return StreamEventJournalP.streamMapP(mapName, predicateFn, projectionFn, initialPos, wmGenParams);
     }
 
     /**
@@ -135,7 +134,7 @@ public final class SourceProcessors {
      * {@link Sources#remoteMap(String, ClientConfig, Predicate, Projection)}.
      */
     @Nonnull
-    public static <K, V, T> ProcessorMetaSupplier readRemoteMapP(
+    public static <T, K, V> ProcessorMetaSupplier readRemoteMapP(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull Predicate<K, V> predicate,
@@ -149,7 +148,7 @@ public final class SourceProcessors {
      * {@link Sources#remoteMap(String, ClientConfig, Predicate, DistributedFunction)}.
      */
     @Nonnull
-    public static <K, V, T> ProcessorMetaSupplier readRemoteMapP(
+    public static <T, K, V> ProcessorMetaSupplier readRemoteMapP(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull Predicate<K, V> predicate,
@@ -183,7 +182,7 @@ public final class SourceProcessors {
      * WatermarkGenerationParams)}.
      */
     @Nonnull
-    public static <K, V, T> ProcessorMetaSupplier streamRemoteMapP(
+    public static <T, K, V> ProcessorMetaSupplier streamRemoteMapP(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
@@ -225,7 +224,7 @@ public final class SourceProcessors {
      * WatermarkGenerationParams)}.
      */
     @Nonnull
-    public static <K, V, T> ProcessorMetaSupplier streamCacheP(
+    public static <T, K, V> ProcessorMetaSupplier streamCacheP(
             @Nonnull String cacheName,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
@@ -269,7 +268,7 @@ public final class SourceProcessors {
      * WatermarkGenerationParams)}.
      */
     @Nonnull
-    public static <K, V, T> ProcessorMetaSupplier streamRemoteCacheP(
+    public static <T, K, V> ProcessorMetaSupplier streamRemoteCacheP(
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
