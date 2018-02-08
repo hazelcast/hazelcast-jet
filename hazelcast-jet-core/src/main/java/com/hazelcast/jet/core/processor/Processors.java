@@ -29,7 +29,7 @@ import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
-import com.hazelcast.jet.datamodel.Session;
+import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -690,7 +690,7 @@ public final class Processors {
      * Returns a supplier of processors for a vertex that aggregates events into
      * session windows. Events and windows under different grouping keys are
      * treated independently. Outputs objects of type {@link
-     * com.hazelcast.jet.datamodel.Session}.
+     * WindowResult}.
      * <p>
      * The functioning of this vertex is easiest to explain in terms of the
      * <em>event interval</em>: the range {@code [timestamp, timestamp +
@@ -728,7 +728,7 @@ public final class Processors {
             @Nonnull DistributedFunction<? super T, K> keyFn,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        return () -> new SessionWindowP<>(sessionTimeout, timestampFn, keyFn, aggrOp, Session::new);
+        return () -> new SessionWindowP<>(sessionTimeout, timestampFn, keyFn, aggrOp, WindowResult::new);
     }
 
     /**

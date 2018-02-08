@@ -21,7 +21,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
-import com.hazelcast.jet.datamodel.Session;
+import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.Repeat;
 import org.junit.After;
@@ -52,7 +52,7 @@ public class SessionWindowPTest {
 
     private static final int SESSION_TIMEOUT = 10;
     private Supplier<Processor> supplier;
-    private SessionWindowP<Entry<String, Long>, String, ?, Long, Session<String, Long>> lastSuppliedProcessor;
+    private SessionWindowP<Entry<String, Long>, String, ?, Long, WindowResult<String, Long>> lastSuppliedProcessor;
 
     @Before
     public void before() {
@@ -61,7 +61,7 @@ public class SessionWindowPTest {
                 Entry::getValue,
                 entryKey(),
                 AggregateOperations.counting(),
-                Session::new);
+                WindowResult::new);
     }
 
     @After
@@ -118,9 +118,9 @@ public class SessionWindowPTest {
         verifyProcessor(supplier)
                 .input(inbox)
                 .expectOutput(asList(
-                        new Session(1, 22, "a", 3),
+                        new WindowResult(1, 22, "a", 3),
                         new Watermark(25),
-                        new Session(30, 50, "a", 3)));
+                        new WindowResult(30, 50, "a", 3)));
     }
 
     private void assertCorrectness(List<Object> events) {
@@ -204,10 +204,10 @@ public class SessionWindowPTest {
         ));
     }
 
-    private static Stream<Session<String, Long>> expectedSessions(String key) {
+    private static Stream<WindowResult<String, Long>> expectedSessions(String key) {
         return Stream.of(
-                new Session<>(1, 22, key, 3L),
-                new Session<>(30, 50, key, 3L)
+                new WindowResult<>(1, 22, key, 3L),
+                new WindowResult<>(30, 50, key, 3L)
         );
     }
 }

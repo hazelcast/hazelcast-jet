@@ -23,6 +23,6 @@ import java.io.Serializable;
  * Javadoc pending.
  */
 @FunctionalInterface
-public interface WindowResultFunction<K, R, OUT> extends Serializable {
-    @Nonnull OUT finishWindow(long winStart, long winEnd, @Nonnull R windowResult);
+public interface WindowResultFunction<R, OUT> extends Serializable {
+    @Nonnull OUT apply(long winStart, long winEnd, @Nonnull R windowResult);
 }

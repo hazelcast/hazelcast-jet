@@ -53,15 +53,15 @@ import static java.util.Collections.singletonList;
  */
 public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
-    public static final FunctionAdapters DONT_ADAPT = new FunctionAdapters();
-    static final JetEventFunctionAdapters ADAPT_TO_JET_EVENT = new JetEventFunctionAdapters();
+    public static final FunctionAdapter DONT_ADAPT = new FunctionAdapter();
+    static final JetEventFunctionAdapter ADAPT_TO_JET_EVENT = new JetEventFunctionAdapter();
 
     @Nonnull
-    public final FunctionAdapters fnAdapters;
+    public final FunctionAdapter fnAdapters;
 
     ComputeStageImplBase(
             @Nonnull Transform transform,
-            @Nonnull FunctionAdapters fnAdapters,
+            @Nonnull FunctionAdapter fnAdapters,
             @Nonnull PipelineImpl pipelineImpl,
             boolean acceptsDownstream
     ) {
@@ -120,7 +120,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 asList(transform, transformOf(stage1)),
                 singletonList(fnAdapters.adaptJoinClause(joinClause)),
                 emptyList(),
-                fnAdapters.adaptMapToOutputFn(mapToOutputFn)
+                fnAdapters.adapthashJoinOutputFn(mapToOutputFn)
         ), fnAdapters);
     }
 
@@ -137,7 +137,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 asList(transform, transformOf(stage1), transformOf(stage2)),
                 asList(fnAdapters.adaptJoinClause(joinClause1), fnAdapters.adaptJoinClause(joinClause2)),
                 emptyList(),
-                fnAdapters.adaptMapToOutputFn(mapToOutputFn)
+                fnAdapters.adapthashJoinOutputFn(mapToOutputFn)
         ), fnAdapters);
     }
 
@@ -164,5 +164,5 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    abstract <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapters fnAdapters);
+    abstract <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapters);
 }

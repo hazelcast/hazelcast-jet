@@ -39,6 +39,8 @@ import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
+import com.hazelcast.jet.impl.pipeline.transform.WindowCoGroupTransform;
+import com.hazelcast.jet.impl.pipeline.transform.WindowGroupTransform;
 import com.hazelcast.jet.impl.processor.HashJoinCollectP;
 import com.hazelcast.jet.impl.processor.HashJoinP;
 import com.hazelcast.jet.pipeline.JoinClause;
@@ -186,35 +188,27 @@ class Planner {
     //                   ----------------
     //                  | combineByKeyP  |
     //                   ----------------
-    private void handleGroup(GroupTransform<Object, Object, Object, Object> xform) {
-        if (xform.wDef() != null) {
-            handleWindowedGroup(xform);
-            return;
-        }
+    private void handleGroup(GroupTransform<Object, Object, Object, Object, Object> xform) {
         String namePrefix = vertexName(xform.name(), "-stage");
-        Vertex v1 = dag.newVertex(namePrefix + '1', accumulateByKeyP(
-                xform.keyFn(),
-                xform.aggrOp().withFinishFn(identity())
-        ));
+        Vertex v1 = dag.newVertex(namePrefix + '1', accumulateByKeyP(xform.keyFn(), xform.aggrOp()));
         PlannerVertex pv2 = addVertex(xform, namePrefix + '2', combineByKeyP(xform.aggrOp(), Util::entry));
         addEdges(xform, v1, e -> e.partitioned(xform.keyFn(), HASH_CODE));
         dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }
 
     private void handleWindowedGroup(
-            GroupTransform<Object, Object, Object, Object> xform
+            WindowGroupTransform<Object, Object, Object, Object, Object> xform
     ) {
-        WindowDefinition wDef = requireNonNull(xform.wDef());
-        switch (wDef.kind()) {
+        switch (xform.wDef().kind()) {
             case TUMBLING:
             case SLIDING:
-                handleSlidingWindow(xform, wDef.downcast());
+                handleSlidingWindow(xform, xform.wDef().downcast());
                 return;
             case SESSION:
-                handleSessionWindow(xform, wDef.downcast());
+                handleSessionWindow(xform, xform.wDef().downcast());
                 return;
             default:
-                throw new IllegalArgumentException("Unknown window definition " + wDef.kind());
+                throw new IllegalArgumentException("Unknown window definition " + xform.wDef().kind());
         }
     }
 
@@ -235,7 +229,7 @@ class Planner {
     //                  | combineByFrameP |
     //                   -----------------
     private void handleSlidingWindow(
-            GroupTransform<Object, Object, Object, Object> xform,
+            WindowGroupTransform<Object, Object, Object, Object, Object> xform,
             SlidingWindowDef wDef
     ) {
         String namePrefix = vertexName("sliding-window", "-stage");
@@ -245,7 +239,7 @@ class Planner {
                 JetEvent<Object>::timestamp,
                 TimestampKind.EVENT,
                 winPolicy,
-                xform.aggrOp().withFinishFn(identity())));
+                xform.aggrOp()));
         PlannerVertex pv2 = addVertex(xform, namePrefix + '2',
                 combineToSlidingWindowP(winPolicy, xform.aggrOp()));
         addEdges(xform, v1, e -> e.partitioned(xform.keyFn(), HASH_CODE));
@@ -253,7 +247,7 @@ class Planner {
     }
 
     private void handleSessionWindow(
-            GroupTransform<Object, Object, Object, Object> xform,
+            WindowGroupTransform<Object, Object, Object, Object, Object> xform,
             SessionWindowDef wDef
     ) {
         PlannerVertex pv = addVertex(xform, vertexName("session-window", ""), aggregateToSessionWindowP(
@@ -281,22 +275,16 @@ class Planner {
     //                          ---------------
     //                         | combineByKeyP |
     //                          ---------------
-    private void handleCoGroup(CoGroupTransform<Object, Object, Object> xform) {
-        if (xform.wDef() != null) {
-            handleWindowedCoGroup(xform);
-            return;
-        }
+    private void handleCoGroup(CoGroupTransform<Object, Object, Object, Object> xform) {
         List<DistributedFunction<?, ?>> groupKeyFns = xform.groupKeyFns();
         String namePrefix = vertexName(xform.name(), "-stage");
-        Vertex v1 = dag.newVertex(namePrefix + '1',
-                coAccumulateByKeyP(groupKeyFns, xform.aggrOp().withFinishFn(identity())));
-        PlannerVertex pv2 = addVertex(xform, namePrefix + '2',
-                combineByKeyP(xform.aggrOp(), Util::entry));
+        Vertex v1 = dag.newVertex(namePrefix + '1', coAccumulateByKeyP(groupKeyFns, xform.aggrOp()));
+        PlannerVertex pv2 = addVertex(xform, namePrefix + '2', combineByKeyP(xform.aggrOp(), Util::entry));
         addEdges(xform, v1, (e, ord) -> e.partitioned(groupKeyFns.get(ord), HASH_CODE));
         dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }
 
-    private void handleWindowedCoGroup(CoGroupTransform<Object, Object, Object> xform) {
+    private void handleWindowedCoGroup(WindowCoGroupTransform<Object, Object, Object, Object> xform) {
         WindowDefinition wDef = requireNonNull(xform.wDef());
         switch (wDef.kind()) {
             case TUMBLING:
@@ -312,14 +300,14 @@ class Planner {
     }
 
     private void handleSlidingCoWindow(
-            CoGroupTransform<Object, Object, Object> xform,
+            WindowCoGroupTransform<Object, Object, Object, Object> xform,
             SlidingWindowDef wDef
     ) {
         throw new UnsupportedOperationException("Windowed co-grouping not yet implemented");
     }
 
     private void handleSessionCoWindow(
-            CoGroupTransform<Object, Object, Object> xform,
+            WindowCoGroupTransform<Object, Object, Object, Object> xform,
             SessionWindowDef downcast
     ) {
         throw new UnsupportedOperationException("Windowed co-grouping not yet implemented");

@@ -16,12 +16,15 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
+import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
 import com.hazelcast.jet.impl.pipeline.BatchStageImpl;
 import com.hazelcast.jet.impl.pipeline.GrAggBuilder;
 
+import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 
 public class GroupAggregateBuilder<T0, K> {
@@ -40,8 +43,16 @@ public class GroupAggregateBuilder<T0, K> {
         return graggBuilder.add(stage);
     }
 
-    public <A, R> BatchStage<Entry<K, R>> build(AggregateOperation<A, R> aggrOp) {
-        CreateOutStageFn<Entry<K, R>, BatchStage<Entry<K, R>>> createOutStageFn = BatchStageImpl<Entry<K, R>>::new;
-        return graggBuilder.build(aggrOp, createOutStageFn);
+    public <A, R, OUT> BatchStage<OUT> build(
+            @Nonnull AggregateOperation<A, R> aggrOp,
+            @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
+    ) {
+        return graggBuilder.buildBatch(aggrOp, mapToOutputFn);
+    }
+
+    public <A, R> BatchStage<Entry<K, R>> build(
+            @Nonnull AggregateOperation<A, R> aggrOp
+    ) {
+        return graggBuilder.buildBatch(aggrOp, Util::entry);
     }
 }

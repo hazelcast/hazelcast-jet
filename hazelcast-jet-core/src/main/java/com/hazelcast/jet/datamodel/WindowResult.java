@@ -17,14 +17,16 @@
 package com.hazelcast.jet.datamodel;
 
 import javax.annotation.Nonnull;
+import java.util.Map;
 
 /**
- * Holds the aggregated result of a session window.
+ * Holds the result of a group-and-aggregate operation performed in a time
+ * window.
  *
  * @param <K> type of key
  * @param <R> type of aggregated result
  */
-public class Session<K, R> {
+public class WindowResult<K, R> implements Map.Entry<K, R> {
     private final long start;
     private final long end;
     private final K key;
@@ -34,9 +36,9 @@ public class Session<K, R> {
      * @param start {@link #getStart()}
      * @param end {@link #getEnd()}
      * @param key {@link #getKey()}
-     * @param result {@link #getResult()}
+     * @param result {@link #getValue()}
      */
-    public Session(long start, long end, @Nonnull K key, @Nonnull R result) {
+    public WindowResult(long start, long end, @Nonnull K key, @Nonnull R result) {
         this.start = start;
         this.end = end;
         this.key = key;
@@ -44,41 +46,46 @@ public class Session<K, R> {
     }
 
     /**
-     * Returns the starting timestamp of the session.
+     * Returns the starting timestamp of the window.
      */
     public long getStart() {
         return start;
     }
 
     /**
-     * Returns the ending timestamp of the session.
+     * Returns the ending timestamp of the window.
      */
     public long getEnd() {
         return end;
     }
 
     /**
-     * Returns the session's key.
+     * Returns the key.
      */
-    @Nonnull
+    @Nonnull @Override
     public K getKey() {
         return key;
     }
 
     /**
-     * Returns the aggregated result for the session.
+     * Returns the aggregated result.
      */
-    @Nonnull
-    public R getResult() {
+    @Nonnull @Override
+    public R getValue() {
         return result;
     }
 
     @Override
+    public R setValue(R value) {
+        throw new UnsupportedOperationException("setValue called on the immutable WindowResult");
+    }
+
+    @Override
     public boolean equals(Object obj) {
-        Session that;
+        WindowResult that;
         return this == obj
-                || obj instanceof Session
-                    && this.start == (that = (Session) obj).start
+                || obj instanceof WindowResult
+                    && this.start == (that = (WindowResult) obj).start
                     && this.end == that.end
                     && this.key.equals(that.key)
                     && this.result.equals(that.result);

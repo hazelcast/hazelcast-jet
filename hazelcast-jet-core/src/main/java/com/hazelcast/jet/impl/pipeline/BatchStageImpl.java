@@ -43,21 +43,16 @@ import static java.util.Arrays.asList;
 
 public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchStage<T> {
 
-    /**
-     * This constructor exists only to comply with the signature of {@link
-     * com.hazelcast.jet.pipeline.GeneralHashJoinBuilder.CreateOutStageFn#get}.
-     */
-    public BatchStageImpl(
-            @Nonnull Transform transform,
-            @Nonnull FunctionAdapters fnAdapters,
-            @Nonnull PipelineImpl pipeline
-    ) {
-        this(transform, pipeline);
-        assert fnAdapters == DONT_ADAPT : "FunctionAdapters on a batch stage may only be DONT_ADAPT";
-    }
-
     BatchStageImpl(@Nonnull Transform transform, @Nonnull PipelineImpl pipeline) {
         super(transform, DONT_ADAPT, pipeline, true);
+    }
+
+    /**
+     * This constructor exists just to match the shape of the functional interface
+     * {@code GeneralHashJoinBuilder.CreateOutStageFn}
+     */
+    public BatchStageImpl(@Nonnull Transform transform, FunctionAdapter ignored, @Nonnull PipelineImpl pipeline) {
+        this(transform, pipeline);
     }
 
     @Nonnull
@@ -115,7 +110,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BatchStage<T1> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp
     ) {
-        FunctionAdapters fnAdapters1 = ((ComputeStageImplBase) stage1).fnAdapters;
+        FunctionAdapter fnAdapters1 = ((ComputeStageImplBase) stage1).fnAdapters;
         AggregateOperationImpl rawAggrOp = (AggregateOperationImpl) aggrOp;
         DistributedBiConsumer[] adaptedAccFns = {
                 fnAdapters.adaptAccumulateFn(rawAggrOp.accumulateFn(0)),
@@ -133,8 +128,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BatchStage<T2> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp
     ) {
-        FunctionAdapters fnAdapters1 = ((ComputeStageImplBase) stage1).fnAdapters;
-        FunctionAdapters fnAdapters2 = ((ComputeStageImplBase) stage2).fnAdapters;
+        FunctionAdapter fnAdapters1 = ((ComputeStageImplBase) stage1).fnAdapters;
+        FunctionAdapter fnAdapters2 = ((ComputeStageImplBase) stage2).fnAdapters;
         AggregateOperationImpl rawAggrOp = (AggregateOperationImpl) aggrOp;
         DistributedBiConsumer[] adaptedAccFns = {
                 fnAdapters.adaptAccumulateFn(rawAggrOp.accumulateFn(0)),
@@ -165,7 +160,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapters fnAdapters) {
+    <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapters) {
         pipelineImpl.connect(transform.upstream(), transform);
         return (RET) new BatchStageImpl<>(transform, pipelineImpl);
     }

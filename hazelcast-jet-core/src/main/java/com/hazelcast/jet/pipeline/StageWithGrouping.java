@@ -16,9 +16,11 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
+import com.hazelcast.jet.function.DistributedBiFunction;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
@@ -29,19 +31,46 @@ import java.util.Map.Entry;
 public interface StageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> {
 
     @Nonnull
-    <A, R> BatchStage<Entry<K, R>> aggregate(
-            @Nonnull AggregateOperation1<? super T, A, R> aggrOp);
+    <A, R, OUT> BatchStage<Entry<K, R>> aggregate(
+            @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
+            @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn);
 
     @Nonnull
-    <T1, A, R> BatchStage<Entry<K, R>> aggregate2(
+    default <A, R> BatchStage<Entry<K, R>> aggregate(
+            @Nonnull AggregateOperation1<? super T, A, R> aggrOp
+    ) {
+        return aggregate(aggrOp, Util::entry);
+    }
+
+    @Nonnull
+    <T1, A, R, OUT> BatchStage<Entry<K, R>> aggregate2(
             @Nonnull StageWithGrouping<T1, ? extends K> stage1,
-            @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp);
+            @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp,
+            @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn);
 
     @Nonnull
-    <T1, T2, A, R> BatchStage<Entry<K, R>> aggregate3(
+    default <T1, A, R> BatchStage<Entry<K, R>> aggregate2(
+            @Nonnull StageWithGrouping<T1, ? extends K> stage1,
+            @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp
+    ) {
+        return aggregate2(stage1, aggrOp, Util::entry);
+    }
+
+    @Nonnull
+    <T1, T2, A, R, OUT> BatchStage<Entry<K, R>> aggregate3(
             @Nonnull StageWithGrouping<T1, ? extends K> stage1,
             @Nonnull StageWithGrouping<T2, ? extends K> stage2,
-            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp);
+            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp,
+            @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn);
+
+    @Nonnull
+    default <T1, T2, A, R> BatchStage<Entry<K, R>> aggregate3(
+            @Nonnull StageWithGrouping<T1, ? extends K> stage1,
+            @Nonnull StageWithGrouping<T2, ? extends K> stage2,
+            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp
+    ) {
+        return aggregate3(stage1, stage2, aggrOp, Util::entry);
+    }
 
     @Nonnull
     GroupAggregateBuilder<T, K> aggregateBuilder();

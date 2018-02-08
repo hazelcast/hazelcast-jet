@@ -87,6 +87,6 @@ public class AggBuilder<T0> {
 
     @FunctionalInterface
     public interface CreateOutStageFn<OUT, OUT_STAGE extends GeneralStage<OUT>> {
-        OUT_STAGE get(Transform transform, FunctionAdapters fnAdapters, PipelineImpl pipeline);
+        OUT_STAGE get(Transform transform, FunctionAdapter fnAdapters, PipelineImpl pipeline);
     }
 }

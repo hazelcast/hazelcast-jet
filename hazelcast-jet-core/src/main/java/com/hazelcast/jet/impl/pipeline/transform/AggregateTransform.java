@@ -18,41 +18,24 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
-import com.hazelcast.jet.pipeline.WindowDefinition;
+import com.hazelcast.jet.function.DistributedFunction;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 public class AggregateTransform<T, A, R> extends AbstractTransform implements Transform {
     @Nonnull
-    private AggregateOperation<A, R> aggrOp;
-    @Nullable
-    private final WindowDefinition wDef;
-
-    public AggregateTransform(
-            @Nonnull Transform upstream,
-            @Nonnull AggregateOperation<A, R> aggrOp,
-            @Nullable WindowDefinition wDef
-    ) {
-        super("aggregate", upstream);
-        this.wDef = wDef;
-        this.aggrOp = aggrOp;
-    }
+    private final AggregateOperation1<T, A, R> aggrOp;
 
     public AggregateTransform(
             @Nonnull Transform upstream,
             @Nonnull AggregateOperation1<T, A, R> aggrOp
     ) {
-        this(upstream, aggrOp, null);
+        super("aggregate", upstream);
+        this.aggrOp = aggrOp;
     }
 
     @Nonnull
     public AggregateOperation<A, R> aggrOp() {
         return aggrOp;
-    }
-
-    @Nullable
-    public WindowDefinition wDef() {
-        return wDef;
     }
 }

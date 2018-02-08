@@ -20,7 +20,7 @@ import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.impl.pipeline.ComputeStageImplBase;
-import com.hazelcast.jet.impl.pipeline.FunctionAdapters;
+import com.hazelcast.jet.impl.pipeline.FunctionAdapter;
 import com.hazelcast.jet.impl.pipeline.PipelineImpl;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
@@ -52,7 +52,7 @@ import static java.util.stream.Stream.concat;
 public abstract class GeneralHashJoinBuilder<T0> {
     private final Transform transform0;
     private final PipelineImpl pipelineImpl;
-    private final FunctionAdapters fnAdapters;
+    private final FunctionAdapter fnAdapters;
     private final CreateOutStageFn<T0> createOutStageFn;
     private final Map<Tag<?>, TransformAndClause> clauses = new HashMap<>();
 
@@ -108,7 +108,7 @@ public abstract class GeneralHashJoinBuilder<T0> {
                 orderedClauses.stream()
                               .map(Entry::getKey)
                               .collect(toList()),
-                fnAdapters.adaptMapToOutputFn(mapToOutputFn));
+                fnAdapters.adapthashJoinOutputFn(mapToOutputFn));
         pipelineImpl.connect(upstream, hashJoinTransform);
         return createOutStageFn.get(hashJoinTransform, fnAdapters, pipelineImpl);
     }
@@ -116,7 +116,7 @@ public abstract class GeneralHashJoinBuilder<T0> {
     @FunctionalInterface
     public interface CreateOutStageFn<T0> {
         <R> GeneralStage<R> get(
-                HashJoinTransform<T0, R> hashJoinTransform, FunctionAdapters fnAdapters, PipelineImpl pipeline);
+                HashJoinTransform<T0, R> hashJoinTransform, FunctionAdapter fnAdapters, PipelineImpl pipeline);
     }
 
     private static class TransformAndClause<K, E0, T1, T1_OUT> {

@@ -19,9 +19,12 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
 import com.hazelcast.jet.impl.pipeline.StreamStageImpl;
 import com.hazelcast.jet.impl.pipeline.GrAggBuilder;
+
+import javax.annotation.Nonnull;
 
 public class WindowGroupAggregateBuilder<T0, K> {
     private final GrAggBuilder<K> graggBuilder;
@@ -39,9 +42,16 @@ public class WindowGroupAggregateBuilder<T0, K> {
         return graggBuilder.add(stage);
     }
 
-    public <A, R> StreamStage<TimestampedEntry<K, R>> build(AggregateOperation<A, R> aggrOp) {
-        CreateOutStageFn<TimestampedEntry<K, R>, StreamStage<TimestampedEntry<K, R>>> createOutStageFn
-                = StreamStageImpl<TimestampedEntry<K, R>>::new;
-        return graggBuilder.build(aggrOp, createOutStageFn);
+    public <A, R, OUT> StreamStage<OUT> build(
+            @Nonnull AggregateOperation<A, R> aggrOp,
+            @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
+    ) {
+        return graggBuilder.buildStream(aggrOp, mapToOutputFn);
+    }
+
+    public <A, R> StreamStage<TimestampedEntry<K, R>> build(
+            @Nonnull AggregateOperation<A, R> aggrOp
+    ) {
+        return graggBuilder.buildStream(aggrOp, TimestampedEntry::new);
     }
 }

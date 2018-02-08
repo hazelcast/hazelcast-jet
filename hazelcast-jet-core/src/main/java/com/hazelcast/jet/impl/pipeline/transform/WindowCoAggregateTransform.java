@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,38 +17,31 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.function.DistributedBiFunction;
-import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.KeyedWindowResultFunction;
+import com.hazelcast.jet.function.WindowResultFunction;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class CoGroupTransform<K, A, R, OUT> extends AbstractTransform implements Transform {
-    @Nonnull
-    private List<DistributedFunction<?, ? extends K>> groupKeyFns;
+public class WindowCoAggregateTransform<A, R, OUT> extends AbstractTransform implements Transform {
     @Nonnull
     private AggregateOperation<A, R> aggrOp;
     @Nonnull
-    private final DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn;
-
-    public CoGroupTransform(
-            @Nonnull List<Transform> upstream,
-            @Nonnull List<DistributedFunction<?, ? extends K>> groupKeyFns,
-            @Nonnull AggregateOperation<A, R> aggrOp,
-            @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
-    ) {
-        super(upstream.size() + "-way cogroup-and-aggregate", upstream);
-        this.groupKeyFns = groupKeyFns;
-        this.aggrOp = aggrOp;
-        this.mapToOutputFn = mapToOutputFn;
-    }
-
+    private final WindowDefinition wDef;
     @Nonnull
-    public List<DistributedFunction<?, ? extends K>> groupKeyFns() {
-        return groupKeyFns;
+    private final WindowResultFunction<? super R, ? extends OUT> mapToOutputFn;
+
+    public WindowCoAggregateTransform(
+            @Nonnull List<Transform> upstream,
+            @Nonnull WindowDefinition wDef,
+            @Nonnull AggregateOperation<A, R> aggrOp,
+            @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
+    ) {
+        super(upstream.size() + "-way co-aggregate", upstream);
+        this.aggrOp = aggrOp;
+        this.wDef = wDef;
+        this.mapToOutputFn = mapToOutputFn;
     }
 
     @Nonnull
@@ -57,7 +50,12 @@ public class CoGroupTransform<K, A, R, OUT> extends AbstractTransform implements
     }
 
     @Nonnull
-    public DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn() {
+    public WindowDefinition wDef() {
+        return wDef;
+    }
+
+    @Nonnull
+    public WindowResultFunction<? super R, ? extends OUT> mapToOutputFn() {
         return mapToOutputFn;
     }
 }

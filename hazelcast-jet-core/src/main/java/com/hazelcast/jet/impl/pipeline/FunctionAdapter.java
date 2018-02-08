@@ -26,6 +26,8 @@ import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedTriFunction;
+import com.hazelcast.jet.function.KeyedWindowResultFunction;
+import com.hazelcast.jet.function.WindowResultFunction;
 import com.hazelcast.jet.impl.aggregate.AggregateOperationImpl;
 import com.hazelcast.jet.pipeline.JoinClause;
 
@@ -37,7 +39,7 @@ import static com.hazelcast.jet.impl.pipeline.JetEventImpl.jetEvent;
 import static com.hazelcast.jet.pipeline.JoinClause.onKeys;
 
 
-public class FunctionAdapters {
+public class FunctionAdapter {
 
     @Nonnull
     @SuppressWarnings("unchecked")
@@ -71,21 +73,33 @@ public class FunctionAdapters {
     }
 
     @SuppressWarnings("unchecked")
-    public <T, T1, R> DistributedBiFunction<Object, T1, Object> adaptMapToOutputFn(
+    public <T, T1, R> DistributedBiFunction<Object, T1, Object> adapthashJoinOutputFn(
             DistributedBiFunction<T, T1, R> mapToOutputFn
     ) {
         return (DistributedBiFunction<Object, T1, Object>) mapToOutputFn;
     }
 
     @SuppressWarnings("unchecked")
-    <T, T1, T2, R> DistributedTriFunction<Object, T1, T2, Object> adaptMapToOutputFn(
+    <T, T1, T2, R> DistributedTriFunction<Object, T1, T2, Object> adapthashJoinOutputFn(
             DistributedTriFunction<T, T1, T2, R> mapToOutputFn
     ) {
         return (DistributedTriFunction<Object, T1, T2, Object>) mapToOutputFn;
     }
+
+    <R, OUT> WindowResultFunction adaptWindowResultFn(
+            WindowResultFunction<? super R, ? extends OUT> windowResultFn
+    ) {
+        return windowResultFn;
+    }
+
+    <K, R, OUT> KeyedWindowResultFunction adaptKeyedWindowResultFn(
+            KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> keyedWindowResultFn
+    ) {
+        return keyedWindowResultFn;
+    }
 }
 
-class JetEventFunctionAdapters extends FunctionAdapters {
+class JetEventFunctionAdapter extends FunctionAdapter {
     @Nonnull @Override
     @SuppressWarnings("unchecked")
     DistributedFunction adaptMapFn(@Nonnull DistributedFunction mapFn) {
@@ -109,8 +123,10 @@ class JetEventFunctionAdapters extends FunctionAdapters {
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    DistributedFunction adaptKeyFn(@Nonnull DistributedFunction keyFn) {
-        return e -> keyFn.apply(((JetEvent) e).payload());
+    <T, K> DistributedFunction<? super JetEvent<T>, ? extends K> adaptKeyFn(
+            @Nonnull DistributedFunction<? super T, ? extends K> keyFn
+    ) {
+        return e -> keyFn.apply(e.payload());
     }
 
     @Nonnull @Override
@@ -153,7 +169,7 @@ class JetEventFunctionAdapters extends FunctionAdapters {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T, T1, R> DistributedBiFunction<Object, T1, Object> adaptMapToOutputFn(
+    public <T, T1, R> DistributedBiFunction<Object, T1, Object> adapthashJoinOutputFn(
             DistributedBiFunction<T, T1, R> mapToOutputFn
     ) {
         return (e, t1) -> {
@@ -164,12 +180,28 @@ class JetEventFunctionAdapters extends FunctionAdapters {
 
     @Override
     @SuppressWarnings("unchecked")
-    <T, T1, T2, R> DistributedTriFunction<Object, T1, T2, Object> adaptMapToOutputFn(
+    <T, T1, T2, R> DistributedTriFunction<Object, T1, T2, Object> adapthashJoinOutputFn(
             DistributedTriFunction<T, T1, T2, R> mapToOutputFn
     ) {
         return (e, t1, t2) -> {
             JetEvent<T> jetEvent = (JetEvent) e;
             return jetEvent(mapToOutputFn.apply(jetEvent.payload(), t1, t2), jetEvent.timestamp());
         };
+    }
+
+    @Override
+    <R, OUT> WindowResultFunction<? super R, JetEvent<OUT>> adaptWindowResultFn(
+            WindowResultFunction<? super R, ? extends OUT> windowResultFn
+    ) {
+        return (long winStart, long winEnd, R windowResult) ->
+                jetEvent(windowResultFn.apply(winStart, winEnd, windowResult), winEnd);
+    }
+
+    @Override
+    <K, R, OUT> KeyedWindowResultFunction<? super K, ? super R, JetEvent<OUT>> adaptKeyedWindowResultFn(
+            KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> keyedWindowResultFn
+    ) {
+        return (long winStart, long winEnd, K key, R windowResult) ->
+                jetEvent(keyedWindowResultFn.apply(winStart, winEnd, key, windowResult), winEnd);
     }
 }

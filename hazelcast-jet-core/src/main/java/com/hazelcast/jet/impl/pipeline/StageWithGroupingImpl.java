@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.pipeline;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
+import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.pipeline.transform.CoGroupTransform;
 import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
@@ -42,36 +43,43 @@ public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> imp
     }
 
     @Nonnull
-    public <A, R> BatchStage<Entry<K, R>> aggregate(
-            @Nonnull AggregateOperation1<? super T, A, R> aggrOp
+    public <A, R, OUT> BatchStage<Entry<K, R>> aggregate(
+            @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
+            @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        return computeStage.attach(new GroupTransform<T, K, A, R>(
-                computeStage.transform, keyFn(), aggrOp), DONT_ADAPT);
+        return computeStage.attach(new GroupTransform<>(
+                computeStage.transform, keyFn(), aggrOp, mapToOutputFn), DONT_ADAPT);
     }
 
     @Nonnull
-    public <T1, A, R> BatchStage<Entry<K, R>> aggregate2(
+    public <T1, A, R, OUT> BatchStage<Entry<K, R>> aggregate2(
             @Nonnull StageWithGrouping<T1, ? extends K> stage1,
-            @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp
+            @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp,
+            @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
         return computeStage.attach(
                 new CoGroupTransform<>(
                         asList(computeStage.transform, transformOf(stage1)),
                         asList(keyFn(), stage1.keyFn()),
-                        aggrOp), DONT_ADAPT);
+                        aggrOp,
+                        mapToOutputFn
+                ), DONT_ADAPT);
     }
 
     @Nonnull
-    public <T1, T2, A, R> BatchStage<Entry<K, R>> aggregate3(
+    public <T1, T2, A, R, OUT> BatchStage<Entry<K, R>> aggregate3(
             @Nonnull StageWithGrouping<T1, ? extends K> stage1,
             @Nonnull StageWithGrouping<T2, ? extends K> stage2,
-            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp
+            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp,
+            @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
         return computeStage.attach(
                 new CoGroupTransform<>(
                         asList(computeStage.transform, transformOf(stage1), transformOf(stage2)),
                         asList(keyFn(), stage1.keyFn(), stage2.keyFn()),
-                        aggrOp), DONT_ADAPT);
+                        aggrOp,
+                        mapToOutputFn),
+                DONT_ADAPT);
     }
 
     @Nonnull @Override

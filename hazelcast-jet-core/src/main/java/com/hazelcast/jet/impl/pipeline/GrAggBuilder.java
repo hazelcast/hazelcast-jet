@@ -18,14 +18,17 @@ package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
+import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
+import com.hazelcast.jet.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.impl.pipeline.transform.CoGroupTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
-import com.hazelcast.jet.pipeline.GeneralStage;
+import com.hazelcast.jet.impl.pipeline.transform.WindowCoGroupTransform;
+import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
 import com.hazelcast.jet.pipeline.StageWithGrouping;
 import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
+import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder;
@@ -90,16 +93,27 @@ public class GrAggBuilder<K> {
     }
 
     @SuppressWarnings("unchecked")
-    public <A, R, OUT, OUT_STAGE extends GeneralStage<OUT>> OUT_STAGE build(
-            @Nonnull AggregateOperation<A, R> aggrOp,
-            @Nonnull CreateOutStageFn<OUT, OUT_STAGE> createOutStageFn
+    public <A, R, OUT> BatchStage<OUT> buildBatch(
+            @Nonnull AggregateOperation<A, ? extends R> aggrOp,
+            @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        AggregateOperation adaptedAggrOp = wDef != null
-                ? aggrOp
-                : ADAPT_TO_JET_EVENT.adaptAggregateOperation(aggrOp);
         List<Transform> upstreamTransforms = upstreamStages.stream().map(s -> s.transform).collect(toList());
-        CoGroupTransform<K, A, R> transform = new CoGroupTransform<>(upstreamTransforms, keyFns, adaptedAggrOp, wDef);
+        AggregateOperation adaptedAggrOp = ADAPT_TO_JET_EVENT.adaptAggregateOperation(aggrOp);
+        Transform transform = new CoGroupTransform<>(upstreamTransforms, keyFns, adaptedAggrOp, mapToOutputFn);
         pipelineImpl.connect(upstreamTransforms, transform);
-        return createOutStageFn.get(transform, DONT_ADAPT, pipelineImpl);
+        return new BatchStageImpl<>(transform, pipelineImpl);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <A, R, OUT> StreamStage<OUT> buildStream(
+            @Nonnull AggregateOperation<A, ? extends R> aggrOp,
+            @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
+    ) {
+        List<Transform> upstreamTransforms = upstreamStages.stream().map(s -> s.transform).collect(toList());
+        Transform transform = new WindowCoGroupTransform<K, A, R, OUT>(
+                upstreamTransforms, wDef, keyFns, ADAPT_TO_JET_EVENT.adaptAggregateOperation(aggrOp), mapToOutputFn
+        );
+        pipelineImpl.connect(upstreamTransforms, transform);
+        return new StreamStageImpl<>(transform, DONT_ADAPT, pipelineImpl);
     }
 }

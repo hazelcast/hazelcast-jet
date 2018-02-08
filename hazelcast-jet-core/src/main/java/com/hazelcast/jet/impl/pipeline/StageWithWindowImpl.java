@@ -20,10 +20,10 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
-import com.hazelcast.jet.impl.pipeline.transform.CoAggregateTransform;
+import com.hazelcast.jet.function.WindowResultFunction;
+import com.hazelcast.jet.impl.pipeline.transform.WindowAggregateTransform;
+import com.hazelcast.jet.impl.pipeline.transform.WindowCoAggregateTransform;
 import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
 import com.hazelcast.jet.pipeline.StageWithWindow;
 import com.hazelcast.jet.pipeline.StreamStage;
@@ -41,10 +41,12 @@ import static java.util.Arrays.asList;
  */
 public class StageWithWindowImpl<T> implements StageWithWindow<T> {
 
+    @Nonnull
     private final StreamStageImpl<T> streamStage;
+    @Nonnull
     private final WindowDefinition wDef;
 
-    StageWithWindowImpl(StreamStageImpl<T> streamStage, WindowDefinition wDef) {
+    StageWithWindowImpl(@Nonnull StreamStageImpl<T> streamStage, @Nonnull WindowDefinition wDef) {
         this.streamStage = streamStage;
         this.wDef = wDef;
     }
@@ -63,50 +65,61 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    public <A, R> StreamStage<TimestampedEntry<Void, R>> aggregate(
-            @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
+    public <A, R, OUT> StreamStage<OUT> aggregate(
+            @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp,
+            @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
     ) {
         ensureJetEvents(streamStage, "This pipeline stage");
-        AggregateOperation<?, ?> adaptedAggrOp = ADAPT_TO_JET_EVENT.adaptAggregateOperation(aggrOp);
-        return streamStage.attach(new AggregateTransform<>(
-                streamStage.transform, adaptedAggrOp, wDef
-        ), ADAPT_TO_JET_EVENT);
+        JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
+        AggregateOperation1<JetEvent<T>, A, R> adaptedAggrOp = (AggregateOperation1)
+                fnAdapter.adaptAggregateOperation(aggrOp);
+        return streamStage.attach(new WindowAggregateTransform<JetEvent<T>, A, R, JetEvent<OUT>>(
+                streamStage.transform, wDef, adaptedAggrOp,
+                fnAdapter.adaptWindowResultFn(mapToOutputFn)
+        ), fnAdapter);
     }
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    public <T1, A, R> StreamStage<TimestampedEntry<Void, R>> aggregate2(
+    public <T1, A, R, OUT> StreamStage<OUT> aggregate2(
             @Nonnull StreamStage<T1> stage1,
-            @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp
+            @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp,
+            @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
     ) {
         ComputeStageImplBase stageImpl1 = (ComputeStageImplBase) stage1;
         ensureJetEvents(streamStage, "This pipeline stage");
         ensureJetEvents(stageImpl1, "stage1");
-        AggregateOperation<?, ?> adaptedAggrOp = ADAPT_TO_JET_EVENT.adaptAggregateOperation(aggrOp);
-        return streamStage.attach(new CoAggregateTransform<>(
+        JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
+        AggregateOperation<A, R> adaptedAggrOp = fnAdapter.adaptAggregateOperation(aggrOp);
+        return streamStage.attach(new WindowCoAggregateTransform<A, R, JetEvent<OUT>>(
                 asList(streamStage.transform, stageImpl1.transform),
-                adaptedAggrOp, wDef
-        ), ADAPT_TO_JET_EVENT);
+                wDef,
+                adaptedAggrOp,
+                fnAdapter.adaptWindowResultFn(mapToOutputFn)
+        ), fnAdapter);
     }
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    public <T1, T2, A, R> StreamStage<TimestampedEntry<Void, R>> aggregate3(
+    public <T1, T2, A, R, OUT> StreamStage<OUT> aggregate3(
             @Nonnull StreamStage<T1> stage1,
             @Nonnull StreamStage<T2> stage2,
-            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp
+            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp,
+            @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
     ) {
         ComputeStageImplBase stageImpl1 = (ComputeStageImplBase) stage1;
         ComputeStageImplBase stageImpl2 = (ComputeStageImplBase) stage2;
         ensureJetEvents(streamStage, "This pipeline stage");
         ensureJetEvents(stageImpl1, "stage1");
         ensureJetEvents(stageImpl2, "stage2");
-        AggregateOperation<?, ?> adaptedAggrOp = ADAPT_TO_JET_EVENT.adaptAggregateOperation(aggrOp);
-        return streamStage.attach(new CoAggregateTransform<>(
+        JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
+        AggregateOperation<A, R> adaptedAggrOp = fnAdapter.adaptAggregateOperation(aggrOp);
+        return streamStage.attach(new WindowCoAggregateTransform<A, R, JetEvent<OUT>>(
                 asList(streamStage.transform, stageImpl1.transform, stageImpl2.transform),
+                wDef,
                 adaptedAggrOp,
-                wDef
-        ), ADAPT_TO_JET_EVENT);
+                fnAdapter.adaptWindowResultFn(mapToOutputFn)
+        ), fnAdapter);
     }
 
     @Nonnull @Override
