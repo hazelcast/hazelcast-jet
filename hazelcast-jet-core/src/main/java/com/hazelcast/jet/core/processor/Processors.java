@@ -52,6 +52,7 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.core.TimestampKind.EVENT;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
+import static java.util.Collections.singletonList;
 
 /**
  * Static utility class with factory methods for Jet processors. These
@@ -168,13 +169,23 @@ import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
  *
  *     <td>{@link #aggregateByKeyP}</td>
  *     <td>{@link #accumulateByKeyP}</td>
- *     <td>{@link #combineByKeyP}</td>
+ *     <td rowspan='2'>{@link #combineByKeyP}</td>
+ * </tr><tr>
+ *     <th>batch, co-group by key</th>
+ *
+ *     <td>{@link #coAggregateByKeyP}</td>
+ *     <td>{@link #coAccumulateByKeyP}</td>
  * </tr><tr>
  *     <th>stream, group by key<br>and aligned window</th>
  *
  *     <td>{@link #aggregateToSlidingWindowP}</td>
  *     <td>{@link #accumulateByFrameP}</td>
- *     <td>{@link #combineToSlidingWindowP}</td>
+ *     <td rowspan='2'>{@link #combineToSlidingWindowP}</td>
+ * </tr><tr>
+ *     <th>stream, co-group by key<br>and aligned window</th>
+ *
+ *     <td>{@link #coAggregateToSlidingWindowP}</td>
+ *     <td>{@link #coAccumulateByFrameP}</td>
  * </tr><tr>
  *     <th>stream, group by key<br>and session window</th>
  *     <td>{@link #aggregateToSessionWindowP}</td>
@@ -445,14 +456,14 @@ public final class Processors {
      * done in previous execution.
      */
     @Nonnull
-    public static <T, K, A, R> DistributedSupplier<Processor> aggregateToSlidingWindowP(
-            @Nonnull DistributedFunction<? super T, K> keyFn,
+    public static <T, A, R> DistributedSupplier<Processor> aggregateToSlidingWindowP(
+            @Nonnull DistributedFunction<? super T, ?> keyFn,
             @Nonnull DistributedToLongFunction<? super T> timestampFn,
             @Nonnull TimestampKind timestampKind,
             @Nonnull SlidingWindowPolicy windowDef,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        return Processors.<T, K, A, R>aggregateByKeyAndWindowP(keyFn, timestampFn, timestampKind,
+        return Processors.<T, A, R>aggregateByKeyAndWindowP(singletonList(keyFn), timestampFn, timestampKind,
                 windowDef, aggrOp, true);
     }
 
@@ -481,20 +492,19 @@ public final class Processors {
      * processor and nothing is saved to snapshot.
      *
      * @param <T> input item type
-     * @param <K> type of key returned from {@code keyFn}
      * @param <A> type of accumulator returned from {@code aggrOp.
      *            createAccumulatorFn()}
      */
     @Nonnull
-    public static <T, K, A> DistributedSupplier<Processor> accumulateByFrameP(
-            @Nonnull DistributedFunction<? super T, K> keyFn,
+    public static <T, A> DistributedSupplier<Processor> accumulateByFrameP(
+            @Nonnull DistributedFunction<? super T, ?> keyFn,
             @Nonnull DistributedToLongFunction<? super T> timestampFn,
             @Nonnull TimestampKind timestampKind,
             @Nonnull SlidingWindowPolicy windowDef,
             @Nonnull AggregateOperation1<? super T, A, ?> aggrOp
     ) {
         SlidingWindowPolicy tumblingByFrame = windowDef.toTumblingByFrame();
-        return Processors.<T, K, A, A>aggregateByKeyAndWindowP(keyFn, timestampFn, timestampKind, tumblingByFrame,
+        return Processors.<T, A, A>aggregateByKeyAndWindowP(singletonList(keyFn), timestampFn, timestampKind, tumblingByFrame,
                 aggrOp.withFinishFn(identity()), false
         );
     }
@@ -536,13 +546,106 @@ public final class Processors {
      *            finishAccumulationFn()}
      */
     @Nonnull
-    public static <K, A, R> DistributedSupplier<Processor> combineToSlidingWindowP(
+    public static <A, R> DistributedSupplier<Processor> combineToSlidingWindowP(
             @Nonnull SlidingWindowPolicy windowDef,
-            @Nonnull AggregateOperation1<?, A, R> aggrOp
+            @Nonnull AggregateOperation<A, R> aggrOp
     ) {
-        return aggregateByKeyAndWindowP(
-                TimestampedEntry::getKey, TimestampedEntry::getTimestamp, TimestampKind.FRAME,
-                windowDef, aggrOp.withCombiningAccumulateFn(TimestampedEntry<K, A>::getValue), true
+        return Processors.<TimestampedEntry<?, A>, A, R>aggregateByKeyAndWindowP(
+                singletonList(TimestampedEntry::getKey), TimestampedEntry::getTimestamp, TimestampKind.FRAME,
+                windowDef, aggrOp.withCombiningAccumulateFn(TimestampedEntry<Object, A>::getValue), true
+        );
+    }
+
+    /**
+     * Returns a supplier of processors for a vertex that aggregates events
+     * into a sliding window in a single stage (see the {@link Processors
+     * class Javadoc} for an explanation of aggregation stages). The vertex
+     * groups items by the grouping key (as obtained from the given
+     * key-extracting function) and by <em>frame</em>, which is a range of
+     * timestamps equal to the sliding step. It emits sliding window results
+     * labeled with the timestamp denoting the window's end time (the exclusive
+     * upper bound of the timestamps belonging to the window).
+     * <p>
+     * The vertex accepts input from one or more inbound edges. The type of
+     * items may be different on each edge. For each edge a separate key
+     * extracting function must be supplied and the aggregate operation must
+     * contain a separate accumulation function for each edge.
+     * <p>
+     * When the vertex receives a watermark with a given {@code wmVal}, it
+     * emits the result of aggregation for all the positions of the sliding
+     * window with {@code windowTimestamp <= wmVal}. It computes the window
+     * result by combining the partial results of the frames belonging to it
+     * and finally applying the {@code finish} aggregation primitive. After this
+     * it deletes from storage all the frames that trail behind the emitted
+     * windows. The type of emitted items is {@link TimestampedEntry
+     * TimestampedEntry&lt;K, A>} so there is one item per key per window position.
+     * <p>
+     * <i>Behavior on job restart</i><br>
+     * This processor saves its state to snapshot. After restart, it can
+     * continue accumulating where it left off.
+     * <p>
+     * After a restart in at-least-once mode, watermarks are allowed to go back
+     * in time. If such a watermark is received, some windows that were emitted
+     * in previous execution will be re-emitted. These windows might miss
+     * events as some of them had already been evicted before the snapshot was
+     * done in previous execution.
+     */
+    @Nonnull
+    public static <T, A, R> DistributedSupplier<Processor> coAggregateToSlidingWindowP(
+            @Nonnull List<DistributedFunction<? super T, ?>> keyFns,
+            @Nonnull DistributedToLongFunction<? super T> timestampFn,
+            @Nonnull TimestampKind timestampKind,
+            @Nonnull SlidingWindowPolicy windowDef,
+            @Nonnull AggregateOperation<A, R> aggrOp
+    ) {
+        return Processors.aggregateByKeyAndWindowP(keyFns, timestampFn, timestampKind,
+                windowDef, aggrOp, true);
+    }
+
+    /**
+     * Returns a supplier of processors for the first-stage vertex in a
+     * two-stage sliding window aggregation setup (see the {@link Processors
+     * class Javadoc} for an explanation of aggregation stages). The vertex
+     * groups items by the grouping key (as obtained from the given
+     * key-extracting function) and by <em>frame</em>, which is a range of
+     * timestamps equal to the sliding step. It applies the {@link
+     * AggregateOperation1#accumulateFn() accumulate} aggregation primitive to
+     * each key-frame group.
+     * <p>
+     * The frame is identified by the timestamp denoting its end time (equal to
+     * the exclusive upper bound of its timestamp range). {@link
+     * SlidingWindowPolicy#higherFrameTs(long)} maps the event timestamp to the
+     * timestamp of the frame it belongs to.
+     * <p>
+     * The vertex accepts input from one or more inbound edges. The type of
+     * items may be different on each edge. For each edge a separate key
+     * extracting function must be supplied and the aggregate operation must
+     * contain a separate accumulation function for each edge.
+     * <p>
+     * When the processor receives a watermark with a given {@code wmVal}, it
+     * emits the current accumulated state of all frames with {@code
+     * timestamp <= wmVal} and deletes these frames from its storage.
+     * The type of emitted items is {@link TimestampedEntry
+     * TimestampedEntry&lt;K, A>} so there is one item per key per frame.
+     * <p>
+     * When a state snapshot is requested, the state is flushed to second-stage
+     * processor and nothing is saved to snapshot.
+     *
+     * @param <T> input item type
+     * @param <A> type of accumulator returned from {@code aggrOp.
+     *            createAccumulatorFn()}
+     */
+    @Nonnull
+    public static <T, A> DistributedSupplier<Processor> coAccumulateByFrameP(
+            @Nonnull List<DistributedFunction<? super T, ?>> keyFns,
+            @Nonnull DistributedToLongFunction<? super T> timestampFn,
+            @Nonnull TimestampKind timestampKind,
+            @Nonnull SlidingWindowPolicy windowDef,
+            @Nonnull AggregateOperation<A, ?> aggrOp
+    ) {
+        SlidingWindowPolicy tumblingByFrame = windowDef.toTumblingByFrame();
+        return Processors.aggregateByKeyAndWindowP(keyFns, timestampFn, timestampKind, tumblingByFrame,
+                aggrOp.withFinishFn(identity()), false
         );
     }
 
@@ -551,7 +654,7 @@ public final class Processors {
      * group-by-key-and-window operation and applies the provided aggregate
      * operation on groups.
      *
-     * @param keyFn function that extracts the grouping key from the input item
+     * @param keyFns functions that extracts the grouping key from the input item
      * @param timestampFn function that extracts the timestamp from the input item
      * @param timestampKind the kind of timestamp extracted by {@code timestampFn}: either the
      *                      event timestamp or the frame timestamp
@@ -560,21 +663,20 @@ public final class Processors {
      * @param isLastStage if this is the last stage of multi-stage setup
      *
      * @param <T> type of stream item
-     * @param <K> type of grouping key
      * @param <A> type of the aggregate operation's accumulator
      * @param <R> type of the aggregated result
      */
     @Nonnull
-    private static <T, K, A, R> DistributedSupplier<Processor> aggregateByKeyAndWindowP(
-            @Nonnull DistributedFunction<? super T, K> keyFn,
+    private static <T, A, R> DistributedSupplier<Processor> aggregateByKeyAndWindowP(
+            @Nonnull List<DistributedFunction<? super T, ?>> keyFns,
             @Nonnull DistributedToLongFunction<? super T> timestampFn,
             @Nonnull TimestampKind timestampKind,
             @Nonnull SlidingWindowPolicy winPolicy,
-            @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
+            @Nonnull AggregateOperation<A, R> aggrOp,
             boolean isLastStage
     ) {
-        return () -> new SlidingWindowP<T, A, R, TimestampedEntry<Object, R>>(
-                keyFn,
+        return () -> new SlidingWindowP<>(
+                keyFns,
                 timestampKind == EVENT
                         ? item -> winPolicy.higherFrameTs(timestampFn.applyAsLong(item))
                         : item -> winPolicy.higherFrameTs(timestampFn.applyAsLong(item) - 1),

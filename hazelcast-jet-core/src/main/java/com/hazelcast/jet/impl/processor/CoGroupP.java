@@ -30,6 +30,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.Traversers.traverseStream;
+import static com.hazelcast.util.Preconditions.checkTrue;
 import static java.util.Collections.singletonList;
 
 /**
@@ -50,6 +51,8 @@ public class CoGroupP<K, A, R, OUT> extends AbstractProcessor {
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull BiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
+        checkTrue(groupKeyFns.size() == aggrOp.arity(), groupKeyFns.size() + " key functions " +
+                "provided for " + aggrOp.arity() + "-arity aggregate operation");
         this.groupKeyFns = groupKeyFns;
         this.aggrOp = aggrOp;
         this.resultTraverser = traverseStream(keyToAcc

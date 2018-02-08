@@ -19,21 +19,22 @@ package com.hazelcast.jet.impl.processor;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.function.KeyedWindowResultFunction;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
 import java.util.function.ToLongFunction;
 import java.util.stream.LongStream;
 
@@ -44,6 +45,7 @@ import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.function.DistributedComparator.naturalOrder;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static com.hazelcast.util.Preconditions.checkNotNull;
+import static com.hazelcast.util.Preconditions.checkTrue;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.emptyMap;
@@ -69,9 +71,9 @@ public class SlidingWindowP<T, A, R, OUT> extends AbstractProcessor {
     @Nonnull
     private final ToLongFunction<? super T> frameTimestampFn;
     @Nonnull
-    private final Function<? super T, ?> keyFn;
+    private final List<DistributedFunction<? super T, ?>> keyFns;
     @Nonnull
-    private final AggregateOperation1<? super T, A, R> aggrOp;
+    private final AggregateOperation<A, R> aggrOp;
     @Nonnull
     private final KeyedWindowResultFunction<Object, R, OUT> mapToOutputFn;
     @Nonnull
@@ -96,19 +98,21 @@ public class SlidingWindowP<T, A, R, OUT> extends AbstractProcessor {
     private ProcessingGuarantee processingGuarantee;
 
     public SlidingWindowP(
-            @Nonnull Function<? super T, ?> keyFn,
+            @Nonnull List<DistributedFunction<? super T, ?>> keyFns,
             @Nonnull DistributedToLongFunction<? super T> frameTimestampFn,
             @Nonnull SlidingWindowPolicy winPolicy,
-            @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
+            @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull KeyedWindowResultFunction<Object, R, OUT> mapToOutputFn,
             boolean isLastStage
     ) {
+        checkTrue(keyFns.size() == aggrOp.arity(), keyFns.size() + " key functions " +
+                "provided for " + aggrOp.arity() + "-arity aggregate operation");
         if (!winPolicy.isTumbling()) {
             checkNotNull(aggrOp.combineFn(), "AggregateOperation lacks the combine primitive");
         }
         this.winPolicy = winPolicy;
         this.frameTimestampFn = frameTimestampFn;
-        this.keyFn = keyFn;
+        this.keyFns = keyFns;
         this.aggrOp = aggrOp;
         this.combineFn = requireNonNull(aggrOp.combineFn());
         this.mapToOutputFn = mapToOutputFn;
@@ -143,10 +147,10 @@ public class SlidingWindowP<T, A, R, OUT> extends AbstractProcessor {
             }
             return true;
         }
-        final Object key = keyFn.apply(t);
+        final Object key = keyFns.get(ordinal).apply(t);
         A acc = tsToKeyToAcc.computeIfAbsent(frameTs, x -> new HashMap<>())
                             .computeIfAbsent(key, k -> aggrOp.createFn().get());
-        aggrOp.accumulateFn().accept(acc, t);
+        aggrOp.accumulateFn(ordinal).accept(acc, t);
         topTs = max(topTs, frameTs);
         return true;
     }
@@ -201,7 +205,7 @@ public class SlidingWindowP<T, A, R, OUT> extends AbstractProcessor {
     @Override
     public boolean finishSnapshotRestore() {
         // In the first stage we should theoretically have saved `nextWinToEmit`
-        // to the snapshot. We don't bother since the first stage is effetively a
+        // to the snapshot. We don't bother since the first stage is effectively a
         // tumbling window and it makes no difference in that case. So we don't
         // restore and remain at MIN_VALUE.
         if (isLastStage) {

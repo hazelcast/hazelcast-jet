@@ -41,6 +41,7 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastParallelClassRunner.class)
@@ -55,7 +56,7 @@ public class SlidingWindowP_failoverTest {
     private void init(ProcessingGuarantee guarantee) {
         SlidingWindowPolicy wDef = SlidingWindowPolicy.tumblingWinPolicy(1);
         AggregateOperation1<Object, LongAccumulator, Long> aggrOp = counting();
-        p = new SlidingWindowP<>(entryKey(), Entry::getValue, wDef, aggrOp, TimestampedEntry::new, true);
+        p = new SlidingWindowP<>(singletonList(entryKey()), Entry::getValue, wDef, aggrOp, TimestampedEntry::new, true);
 
         Outbox outbox = new TestOutbox(128);
         Context context = new TestProcessorContext()

@@ -22,8 +22,13 @@ import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.accumulator.LongDoubleAccumulator;
 import com.hazelcast.jet.accumulator.LongLongAccumulator;
 import com.hazelcast.jet.accumulator.MutableReference;
+import com.hazelcast.jet.aggregate.AggregateOperationBuilder.VarArity;
+import com.hazelcast.jet.datamodel.BagsByTag;
+import com.hazelcast.jet.datamodel.Tag;
+import com.hazelcast.jet.datamodel.ThreeBags;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
+import com.hazelcast.jet.datamodel.TwoBags;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBinaryOperator;
@@ -46,6 +51,7 @@ import java.util.Set;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
+import static com.hazelcast.util.Preconditions.checkPositive;
 
 /**
  * Utility class with factory methods for several useful aggregate
@@ -765,5 +771,74 @@ public final class AggregateOperations {
                         ? (a, b) -> a.set(deductFn.apply(a.get(), b.get()))
                         : null)
                 .andFinish(MutableReference::get);
+    }
+
+    /**
+     * Returns an {@code AggregateOperation} that accumulates the items from
+     * exactly two inputs into {@link TwoBags}: items from <em>inputN</em> are
+     * accumulated into <em>bagN</em>.
+     *
+     * @param <T0> item type on input0
+     * @param <T1> item type on input1
+     *
+     * @see #toThreeBags()
+     * @see #toNBags(Tag[])
+     */
+    @Nonnull
+    public static <T0, T1> AggregateOperation<TwoBags<T0, T1>, TwoBags<T0, T1>> toTwoBags() {
+        return AggregateOperation
+                .withCreate(TwoBags::<T0, T1>twoBags)
+                .<T0>andAccumulate0((acc, item0) -> acc.bag0().add(item0))
+                .<T1>andAccumulate1((acc, item1) -> acc.bag1().add(item1))
+                .andCombine(TwoBags::combineWith)
+                .andIdentityFinish();
+    }
+
+    /**
+     * Returns an {@code AggregateOperation} that accumulates the items from
+     * exactly three inputs into {@link ThreeBags}: items from <em>inputN</em>
+     * are accumulated into <em>bagN</em>.
+     *
+     * @param <T0> item type on input0
+     * @param <T1> item type on input1
+     * @param <T2> item type on input2
+     *
+     * @see #toTwoBags()
+     * @see #toNBags(Tag[])
+     */
+    @Nonnull
+    public static <T0, T1, T2> AggregateOperation<ThreeBags<T0, T1, T2>, ThreeBags<T0, T1, T2>> toThreeBags() {
+        return AggregateOperation
+                .withCreate(ThreeBags::<T0, T1, T2>threeBags)
+                .<T0>andAccumulate0((acc, item0) -> acc.bag0().add(item0))
+                .<T1>andAccumulate1((acc, item1) -> acc.bag1().add(item1))
+                .<T2>andAccumulate2((acc, item2) -> acc.bag2().add(item2))
+                .andCombine(ThreeBags::combineWith)
+                .andIdentityFinish();
+    }
+
+    /**
+     * Returns an {@code AggregateOperation} that accumulates the items from
+     * any number of inputs into {@link BagsByTag}: items from <em>inputN</em>
+     * are accumulated into under <em>tagN</em>.
+     *
+     * @see #toThreeBags()
+     * @see #toNBags(Tag[])
+     */
+    @Nonnull
+    public static AggregateOperation<BagsByTag, BagsByTag> toNBags(@Nonnull Tag<?> ... tags) {
+        checkPositive(tags.length, "At least one tag required");
+        VarArity<BagsByTag> builder = AggregateOperation
+                .withCreate(BagsByTag::new)
+                .andAccumulate(tags[0], (acc, item) -> ((Collection) acc.ensureBag(tags[0])).add(item));
+
+        for (int i = 1; i < tags.length; i++) {
+            Tag tag = tags[i];
+            builder = builder.andAccumulate(tag, (acc, item) -> acc.ensureBag(tag).add(item));
+        }
+
+        return builder
+                .andCombine(BagsByTag::combineWith)
+                .andIdentityFinish();
     }
 }
