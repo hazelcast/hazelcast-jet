@@ -73,7 +73,7 @@ public class SlidingWindowPTest {
     public boolean singleStageProcessor;
 
     private DistributedSupplier<Processor> supplier;
-    private SlidingWindowP<?, ?, Long> lastSuppliedProcessor;
+    private SlidingWindowP<?, ?, Long, ?> lastSuppliedProcessor;
 
     @Parameters(name = "hasDeduct={0}, singleStageProcessor={1}")
     public static Collection<Object[]> parameters() {
@@ -106,7 +106,7 @@ public class SlidingWindowPTest {
                 : combineToSlidingWindowP(windowDef, operation);
 
         // new supplier to save the last supplied instance
-        supplier = () -> lastSuppliedProcessor = (SlidingWindowP<?, ?, Long>) procSupplier.get();
+        supplier = () -> lastSuppliedProcessor = (SlidingWindowP<?, ?, Long, ?>) procSupplier.get();
     }
 
     @After

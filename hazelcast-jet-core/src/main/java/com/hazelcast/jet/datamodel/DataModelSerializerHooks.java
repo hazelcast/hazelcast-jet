@@ -104,7 +104,7 @@ class DataModelSerializerHooks {
                     long start = in.readLong();
                     long end = in.readLong();
                     Object result = in.readObject();
-                    return new Session<>(key, start, end, result);
+                    return new Session<>(start, end, key, result);
                 }
 
                 @Override

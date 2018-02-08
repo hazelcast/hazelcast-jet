@@ -29,6 +29,7 @@ import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
+import com.hazelcast.jet.datamodel.Session;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -159,33 +160,24 @@ import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
  * </tr><tr>
  *     <th>batch,<br>no grouping</th>
  *
- *     <td>{@link #aggregateP(AggregateOperation1, DistributedFunction) aggregate()}</td>
- *     <td>{@link #accumulateP(AggregateOperation1) accumulate()}</td>
- *     <td>{@link #combineP(AggregateOperation1, DistributedFunction) combine()}</td>
+ *     <td>{@link #aggregateP}</td>
+ *     <td>{@link #accumulateP}</td>
+ *     <td>{@link #combineP}</td>
  * </tr><tr>
  *     <th>batch, group by key</th>
  *
- *     <td>{@link #aggregateByKeyP(DistributedFunction, AggregateOperation1)
- *          aggregateByKey()}</td>
- *     <td>{@link #accumulateByKeyP(DistributedFunction, AggregateOperation1)
- *          accumulateByKey()}</td>
- *     <td>{@link #combineByKeyP(AggregateOperation) combineByKey()}</td>
+ *     <td>{@link #aggregateByKeyP}</td>
+ *     <td>{@link #accumulateByKeyP}</td>
+ *     <td>{@link #combineByKeyP}</td>
  * </tr><tr>
  *     <th>stream, group by key<br>and aligned window</th>
  *
- *     <td>{@link #aggregateToSlidingWindowP(DistributedFunction, DistributedToLongFunction,
- *          TimestampKind, SlidingWindowPolicy, AggregateOperation1)
- *          aggregateToSlidingWindow()}</td>
- *     <td>{@link #accumulateByFrameP(DistributedFunction, DistributedToLongFunction,
- *          TimestampKind, SlidingWindowPolicy, AggregateOperation1)
- *          accumulateByFrame()}</td>
- *     <td>{@link #combineToSlidingWindowP(SlidingWindowPolicy, AggregateOperation1)
- *          combineToSlidingWindow()}</td>
+ *     <td>{@link #aggregateToSlidingWindowP}</td>
+ *     <td>{@link #accumulateByFrameP}</td>
+ *     <td>{@link #combineToSlidingWindowP}</td>
  * </tr><tr>
  *     <th>stream, group by key<br>and session window</th>
- *     <td>{@link #aggregateToSessionWindowP(long, DistributedToLongFunction,
- *          DistributedFunction, AggregateOperation1)
- *          aggregateToSessionWindow()}</td>
+ *     <td>{@link #aggregateToSessionWindowP}</td>
  *     <td>N/A</td>
  *     <td>N/A</td>
  * </tr></table>
@@ -563,7 +555,7 @@ public final class Processors {
      * @param timestampFn function that extracts the timestamp from the input item
      * @param timestampKind the kind of timestamp extracted by {@code timestampFn}: either the
      *                      event timestamp or the frame timestamp
-     * @param windowDef definition of the window to compute
+     * @param winPolicy definition of the window to compute
      * @param aggrOp aggregate operation to perform on each group in a window
      * @param isLastStage if this is the last stage of multi-stage setup
      *
@@ -577,17 +569,18 @@ public final class Processors {
             @Nonnull DistributedFunction<? super T, K> keyFn,
             @Nonnull DistributedToLongFunction<? super T> timestampFn,
             @Nonnull TimestampKind timestampKind,
-            @Nonnull SlidingWindowPolicy windowDef,
+            @Nonnull SlidingWindowPolicy winPolicy,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
             boolean isLastStage
     ) {
-        return () -> new SlidingWindowP<T, A, R>(
+        return () -> new SlidingWindowP<T, A, R, TimestampedEntry<Object, R>>(
                 keyFn,
                 timestampKind == EVENT
-                        ? item -> windowDef.higherFrameTs(timestampFn.applyAsLong(item))
-                        : item -> windowDef.higherFrameTs(timestampFn.applyAsLong(item) - 1),
-                windowDef,
+                        ? item -> winPolicy.higherFrameTs(timestampFn.applyAsLong(item))
+                        : item -> winPolicy.higherFrameTs(timestampFn.applyAsLong(item) - 1),
+                winPolicy,
                 aggrOp,
+                TimestampedEntry::new,
                 isLastStage);
     }
 
@@ -633,7 +626,7 @@ public final class Processors {
             @Nonnull DistributedFunction<? super T, K> keyFn,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        return () -> new SessionWindowP<>(sessionTimeout, timestampFn, keyFn, aggrOp);
+        return () -> new SessionWindowP<>(sessionTimeout, timestampFn, keyFn, aggrOp, Session::new);
     }
 
     /**

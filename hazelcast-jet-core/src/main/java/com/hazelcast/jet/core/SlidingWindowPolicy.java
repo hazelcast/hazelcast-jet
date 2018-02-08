@@ -65,7 +65,7 @@ public class SlidingWindowPolicy implements Serializable {
     /**
      * Returns the length of the frame (equal to the sliding step).
      */
-    public long frameLength() {
+    public long frameSize() {
         return frameSize;
     }
 
@@ -79,9 +79,9 @@ public class SlidingWindowPolicy implements Serializable {
 
     /**
      * Returns the length of the window (the size of the timestamp range it covers).
-     * It is an integer multiple of {@link #frameLength()}.
+     * It is an integer multiple of {@link #frameSize()}.
      */
-    public long windowLength() {
+    public long windowSize() {
         return windowSize;
     }
 

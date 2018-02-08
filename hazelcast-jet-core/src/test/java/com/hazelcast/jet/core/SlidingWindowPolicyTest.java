@@ -121,8 +121,8 @@ public class SlidingWindowPolicyTest {
     @Test
     public void test_tumblingWindowDef() {
         definition = tumblingWinPolicy(123L);
-        assertEquals(123L, definition.frameLength());
-        assertEquals(123L, definition.windowLength());
+        assertEquals(123L, definition.frameSize());
+        assertEquals(123L, definition.windowSize());
         assertEquals(0, definition.frameOffset());
     }
 
@@ -130,8 +130,8 @@ public class SlidingWindowPolicyTest {
     public void test_toTumblingByFrame() {
         definition = slidingWinPolicy(1000, 100);
         definition = definition.toTumblingByFrame();
-        assertEquals(100, definition.windowLength());
-        assertEquals(100, definition.frameLength());
+        assertEquals(100, definition.windowSize());
+        assertEquals(100, definition.frameSize());
     }
 
     @Test

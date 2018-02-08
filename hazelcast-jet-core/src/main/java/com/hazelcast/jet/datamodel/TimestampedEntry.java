@@ -46,6 +46,18 @@ public final class TimestampedEntry<K, V> implements Map.Entry<K, V>, JetEvent<E
     }
 
     /**
+     * This constructor exists in order to match the shape of the functional
+     * interface {@link com.hazelcast.jet.function.KeyedWindowResultFunction
+     * KeyedWindowResultFunction}.
+     * <p>
+     * Constructs a timestamped entry with the supplied field values. Ignores
+     * the {@code winStart} argument.
+     */
+    public TimestampedEntry(long ignored, long timestamp, @Nonnull K key, @Nonnull V value) {
+        this(timestamp, key, value);
+    }
+
+    /**
      * Returns the timestamp of this entry.
      */
     public long getTimestamp() {

@@ -219,7 +219,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
             long cnt = 0;
             for (long value = 1; value <= sup.elementsInPartition; value++) {
                 cnt++;
-                if (value % wDef.frameLength() == 0) {
+                if (value % wDef.frameSize() == 0) {
                     expectedMap.put(asList(value, partition), cnt);
                     cnt = 0;
                 }

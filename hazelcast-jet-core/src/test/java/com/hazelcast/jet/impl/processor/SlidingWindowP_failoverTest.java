@@ -25,6 +25,7 @@ import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
+import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.impl.processor.SlidingWindowP.Keys;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelTest;
@@ -49,12 +50,12 @@ public class SlidingWindowP_failoverTest {
     @Rule
     public ExpectedException exception = ExpectedException.none();
 
-    private SlidingWindowP<Entry<String, Long>, ?, Long> p;
+    private SlidingWindowP<Entry<String, Long>, ?, Long, ?> p;
 
     private void init(ProcessingGuarantee guarantee) {
         SlidingWindowPolicy wDef = SlidingWindowPolicy.tumblingWinPolicy(1);
         AggregateOperation1<Object, LongAccumulator, Long> aggrOp = counting();
-        p = new SlidingWindowP<>(entryKey(), Entry::getValue, wDef, aggrOp, true);
+        p = new SlidingWindowP<>(entryKey(), Entry::getValue, wDef, aggrOp, TimestampedEntry::new, true);
 
         Outbox outbox = new TestOutbox(128);
         Context context = new TestProcessorContext()

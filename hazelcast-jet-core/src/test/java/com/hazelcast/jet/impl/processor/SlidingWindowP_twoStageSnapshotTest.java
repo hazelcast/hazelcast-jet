@@ -63,8 +63,8 @@ public class SlidingWindowP_twoStageSnapshotTest {
     @Parameter
     public boolean simulateRestore;
 
-    private SlidingWindowP<?, ?, ?> lastSuppliedStage1Processor;
-    private SlidingWindowP<?, ?, ?> lastSuppliedStage2Processor;
+    private SlidingWindowP<?, ?, ?, ?> lastSuppliedStage1Processor;
+    private SlidingWindowP<?, ?, ?, ?> lastSuppliedStage2Processor;
     private DistributedSupplier<SlidingWindowP> stage1Supplier;
     private DistributedSupplier<SlidingWindowP> stage2Supplier;
 
@@ -94,8 +94,8 @@ public class SlidingWindowP_twoStageSnapshotTest {
         DistributedSupplier<Processor> procSupplier2 = combineToSlidingWindowP(windowDef, operation);
 
         // new supplier to save the last supplied instance
-        stage1Supplier = () -> lastSuppliedStage1Processor = (SlidingWindowP<?, ?, ?>) procSupplier1.get();
-        stage2Supplier = () -> lastSuppliedStage2Processor = (SlidingWindowP<?, ?, ?>) procSupplier2.get();
+        stage1Supplier = () -> lastSuppliedStage1Processor = (SlidingWindowP<?, ?, ?, ?>) procSupplier1.get();
+        stage2Supplier = () -> lastSuppliedStage2Processor = (SlidingWindowP<?, ?, ?, ?>) procSupplier2.get();
     }
 
     @After

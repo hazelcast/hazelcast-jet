@@ -51,12 +51,12 @@ public class SlidingWindowP_stage1Test {
     @Rule
     public ExpectedException exception = ExpectedException.none();
 
-    private SlidingWindowP<Entry<Long, Long>, Long, ?> processor;
+    private SlidingWindowP<Entry<Long, Long>, Long, ?, ?> processor;
 
     @Before
     @SuppressWarnings("unchecked")
     public void before() {
-        processor = (SlidingWindowP<Entry<Long, Long>, Long, ?>) accumulateByFrameP(
+        processor = (SlidingWindowP<Entry<Long, Long>, Long, ?, ?>) accumulateByFrameP(
                 x -> KEY,
                 Entry::getKey,
                 TimestampKind.EVENT,

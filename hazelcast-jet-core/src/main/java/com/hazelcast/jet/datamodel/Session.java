@@ -25,22 +25,36 @@ import javax.annotation.Nonnull;
  * @param <R> type of aggregated result
  */
 public class Session<K, R> {
-    private final K key;
     private final long start;
     private final long end;
+    private final K key;
     private final R result;
 
     /**
-     * @param key {@link #getKey()}
      * @param start {@link #getStart()}
      * @param end {@link #getEnd()}
+     * @param key {@link #getKey()}
      * @param result {@link #getResult()}
      */
-    public Session(@Nonnull K key, long start, long end, @Nonnull R result) {
-        this.key = key;
+    public Session(long start, long end, @Nonnull K key, @Nonnull R result) {
         this.start = start;
         this.end = end;
+        this.key = key;
         this.result = result;
+    }
+
+    /**
+     * Returns the starting timestamp of the session.
+     */
+    public long getStart() {
+        return start;
+    }
+
+    /**
+     * Returns the ending timestamp of the session.
+     */
+    public long getEnd() {
+        return end;
     }
 
     /**
@@ -59,20 +73,6 @@ public class Session<K, R> {
         return result;
     }
 
-    /**
-     * Returns the starting timestamp of the session.
-     */
-    public long getStart() {
-        return start;
-    }
-
-    /**
-     * Returns the ending timestamp of the session.
-     */
-    public long getEnd() {
-        return end;
-    }
-
     @Override
     public boolean equals(Object obj) {
         Session that;
@@ -87,15 +87,15 @@ public class Session<K, R> {
     @Override
     public int hashCode() {
         int hc = 17;
-        hc = 73 * hc + key.hashCode();
-        hc = 73 * hc + result.hashCode();
         hc = 73 * hc + Long.hashCode(start);
         hc = 73 * hc + Long.hashCode(end);
+        hc = 73 * hc + key.hashCode();
+        hc = 73 * hc + result.hashCode();
         return hc;
     }
 
     @Override
     public String toString() {
-        return key + "[" + start + ".." + end + "]=" + result;
+        return "[" + start + ".." + end + "]: " + key + " = " + result;
     }
 }

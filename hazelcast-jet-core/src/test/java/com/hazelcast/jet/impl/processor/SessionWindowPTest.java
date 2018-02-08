@@ -52,7 +52,7 @@ public class SessionWindowPTest {
 
     private static final int SESSION_TIMEOUT = 10;
     private Supplier<Processor> supplier;
-    private SessionWindowP<Entry<String, Long>, String, ?, Long> lastSuppliedProcessor;
+    private SessionWindowP<Entry<String, Long>, String, ?, Long, Session<String, Long>> lastSuppliedProcessor;
 
     @Before
     public void before() {
@@ -60,7 +60,8 @@ public class SessionWindowPTest {
                 SESSION_TIMEOUT,
                 Entry::getValue,
                 entryKey(),
-                AggregateOperations.counting());
+                AggregateOperations.counting(),
+                Session::new);
     }
 
     @After
@@ -117,9 +118,9 @@ public class SessionWindowPTest {
         verifyProcessor(supplier)
                 .input(inbox)
                 .expectOutput(asList(
-                        new Session("a", 1, 22, 3),
+                        new Session(1, 22, "a", 3),
                         new Watermark(25),
-                        new Session("a", 30, 50, 3)));
+                        new Session(30, 50, "a", 3)));
     }
 
     private void assertCorrectness(List<Object> events) {
@@ -205,8 +206,8 @@ public class SessionWindowPTest {
 
     private static Stream<Session<String, Long>> expectedSessions(String key) {
         return Stream.of(
-                new Session<>(key, 1, 22, 3L),
-                new Session<>(key, 30, 50, 3L)
+                new Session<>(1, 22, key, 3L),
+                new Session<>(30, 50, key, 3L)
         );
     }
 }
