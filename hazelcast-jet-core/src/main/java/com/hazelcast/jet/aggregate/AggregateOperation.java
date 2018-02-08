@@ -25,10 +25,7 @@ import com.hazelcast.jet.impl.aggregate.AggregateOperation1Impl;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
-import java.util.List;
 import java.util.Objects;
-
-import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * Contains primitives needed to compute an aggregated result of stream

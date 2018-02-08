@@ -504,8 +504,8 @@ public final class Processors {
             @Nonnull AggregateOperation1<? super T, A, ?> aggrOp
     ) {
         SlidingWindowPolicy tumblingByFrame = windowDef.toTumblingByFrame();
-        return Processors.<T, A, A>aggregateByKeyAndWindowP(singletonList(keyFn), timestampFn, timestampKind, tumblingByFrame,
-                aggrOp.withFinishFn(identity()), false
+        return Processors.<T, A, A>aggregateByKeyAndWindowP(singletonList(keyFn), timestampFn, timestampKind,
+                tumblingByFrame, aggrOp.withFinishFn(identity()), false
         );
     }
 

@@ -19,7 +19,7 @@ package com.hazelcast.jet.impl.pipeline;
 /**
  * Javadoc pending.
  */
-public class JetEventImpl<T> implements JetEvent<T> {
+public final class JetEventImpl<T> implements JetEvent<T> {
     private final long timestamp;
     private final T payload;
 
