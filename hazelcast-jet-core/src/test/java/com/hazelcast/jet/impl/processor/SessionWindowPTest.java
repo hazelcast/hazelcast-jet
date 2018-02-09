@@ -43,6 +43,7 @@ import static com.hazelcast.jet.core.test.TestSupport.verifyProcessor;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static java.util.Arrays.asList;
 import static java.util.Collections.shuffle;
+import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertTrue;
@@ -59,7 +60,7 @@ public class SessionWindowPTest {
         supplier = () -> lastSuppliedProcessor = new SessionWindowP<>(
                 SESSION_TIMEOUT,
                 Entry::getValue,
-                entryKey(),
+                singletonList(entryKey()),
                 AggregateOperations.counting(),
                 WindowResult::new);
     }
