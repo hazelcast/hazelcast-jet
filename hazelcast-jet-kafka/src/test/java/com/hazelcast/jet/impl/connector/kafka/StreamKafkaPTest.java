@@ -69,6 +69,7 @@ import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.processor.KafkaProcessors.streamKafkaP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
+import static com.hazelcast.jet.impl.pipeline.JetEventImpl.jetEvent;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.toCollection;
@@ -374,7 +375,8 @@ public class StreamKafkaPTest extends KafkaTestSupport {
     public void when_customProjectionToNull_then_filteredOut() {
         // When
         StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name),
-                (k, v) -> "0".equals(v) ? null : v, 1, noWatermarks());
+                (k, v) -> "0".equals(v) ? null : v, 1,
+                wmGenParams((String v) -> Long.parseLong(v), limitingLag(0), suppressDuplicates(), 0));
         TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
         processor.init(outbox, new TestProcessorContext());
         produce(topic1Name, 0, "0");
@@ -385,7 +387,8 @@ public class StreamKafkaPTest extends KafkaTestSupport {
             assertFalse(processor.complete());
             assertFalse("no item in outbox", outbox.queue(0).isEmpty());
         }, 3);
-        assertEquals("1", outbox.queue(0).poll());
+        assertEquals(new Watermark(1), outbox.queue(0).poll());
+        assertEquals(jetEvent("1", 1), outbox.queue(0).poll());
         assertNull(outbox.queue(0).poll());
     }
 

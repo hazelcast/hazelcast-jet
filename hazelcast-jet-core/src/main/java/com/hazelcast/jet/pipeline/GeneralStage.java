@@ -140,7 +140,7 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     StreamStage<T> timestamp(
             @Nonnull DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull WatermarkPolicy wmPolicy
+            @Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy
     );
 
     /**

@@ -80,7 +80,7 @@ public class StreamEventJournalPTest extends JetTestSupport {
 
         supplier = () -> new StreamEventJournalP<>(map, allPartitions, e -> true,
                 EventJournalMapEvent::getNewValue, START_FROM_OLDEST, false,
-                wmGenParams(Integer::intValue, limitingLag(0), suppressAll(), -1));
+                wmGenParams(Integer::intValue, limitingLag(0), suppressAll(), -1), (item, ts) -> item);
     }
 
 

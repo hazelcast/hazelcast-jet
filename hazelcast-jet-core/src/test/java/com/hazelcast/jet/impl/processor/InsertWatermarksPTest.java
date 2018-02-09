@@ -22,6 +22,7 @@ import com.hazelcast.jet.core.WatermarkEmissionPolicy;
 import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.Before;
@@ -69,7 +70,7 @@ public class InsertWatermarksPTest {
     private TestOutbox outbox;
     private List<Object> resultToCheck = new ArrayList<>();
     private Context context;
-    private WatermarkPolicy wmPolicy = limitingLag(LAG);
+    private DistributedSupplier<WatermarkPolicy> wmPolicy = limitingLag(LAG);
     private WatermarkEmissionPolicy wmEmissionPolicy = suppressDuplicates();
 
     @Parameters(name = "outboxCapacity={0}")
@@ -85,7 +86,7 @@ public class InsertWatermarksPTest {
 
     @Test
     public void when_firstEventLate_then_notDropped() {
-        wmPolicy = limitingTimestampAndWallClockLag(0, 0, clock::now);
+        wmPolicy = () -> limitingTimestampAndWallClockLag(0, 0, clock::now);
         doTest(
                 singletonList(item(clock.now - 1)),
                 asList(wm(clock.now), item(clock.now - 1)));
@@ -321,7 +322,8 @@ public class InsertWatermarksPTest {
     }
 
     private void createProcessor(long idleTimeoutMillis) {
-        p = new InsertWatermarksP<>(wmGenParams(Item::getTimestamp, wmPolicy, wmEmissionPolicy, idleTimeoutMillis));
+        p = new InsertWatermarksP<>(wmGenParams(Item::getTimestamp, wmPolicy, wmEmissionPolicy, idleTimeoutMillis),
+                (item, ts) -> item);
         p.init(outbox, context);
     }
 

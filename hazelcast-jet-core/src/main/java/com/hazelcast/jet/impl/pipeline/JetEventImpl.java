@@ -16,20 +16,22 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import java.util.Objects;
+
 /**
  * Javadoc pending.
  */
 public final class JetEventImpl<T> implements JetEvent<T> {
-    private final long timestamp;
     private final T payload;
+    private final long timestamp;
 
-    private JetEventImpl(long timestamp, T payload) {
+    private JetEventImpl(T payload, long timestamp) {
         this.timestamp = timestamp;
         this.payload = payload;
     }
 
     public static <T> JetEvent<T> jetEvent(T payload, long timestamp) {
-        return new JetEventImpl<>(timestamp, payload);
+        return new JetEventImpl<>(payload, timestamp);
     }
 
     @Override
@@ -44,6 +46,24 @@ public final class JetEventImpl<T> implements JetEvent<T> {
 
     @Override
     public String toString() {
-        return String.format("%,d %s", timestamp, payload);
+        return String.format("%s (t=%,d)", payload, timestamp);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        JetEventImpl<?> jetEvent = (JetEventImpl<?>) o;
+        return timestamp == jetEvent.timestamp &&
+                Objects.equals(payload, jetEvent.payload);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(payload, timestamp);
     }
 }

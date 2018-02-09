@@ -16,9 +16,12 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
@@ -36,6 +39,8 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  *
  * This utility helps you track watermarks per partition and decide when to
  * emit it.
+ *
+ * TODO Javadoc needs updating
  *
  * <h3>Usage</h3>
  * <ul>
@@ -70,9 +75,9 @@ public class WatermarkSourceUtil<T> {
     private final DistributedToLongFunction<T> timestampFn;
     private final DistributedSupplier<WatermarkPolicy> newWmPolicyFn;
     private final WatermarkEmissionPolicy wmEmitPolicy;
+    private final DistributedBiFunction<T, Long, ?> wrapFn;
     private final AppendableTraverser<Object> traverser = new AppendableTraverser<>(2);
 
-    private Outbox outbox;
     private WatermarkPolicy[] wmPolicies = EMPTY_WATERMARK_POLICIES;
     private long[] watermarks = EMPTY_LONGS;
     private long[] markIdleAt = EMPTY_LONGS;
@@ -85,39 +90,36 @@ public class WatermarkSourceUtil<T> {
      * The partition count is initially set to 0, call {@link
      * #increasePartitionCount} to set it.
      **/
-    public WatermarkSourceUtil(WatermarkGenerationParams<T> params) {
+    public WatermarkSourceUtil(WatermarkGenerationParams<T> params,
+                               DistributedBiFunction<T, Long, ?> wrapFn) {
         this.idleTimeoutNanos = MILLISECONDS.toNanos(params.idleTimeoutMillis());
         this.timestampFn = params.timestampFn();
         this.newWmPolicyFn = params.newWmPolicyFn();
         this.wmEmitPolicy = params.wmEmitPolicy();
-    }
-
-    public void init(Outbox outbox) {
-        this.outbox = outbox;
-    }
-
-    public void acceptItem(T item, int partitionIndex) {
-        Watermark wm = handleEvent(item, partitionIndex);
-        if (wm != null) {
-            traverser.append(wm);
-        }
-        traverser.append(wrapIfNeeded(item, timestampFn.applyAsLong(item)));
+        this.wrapFn = wrapFn;
     }
 
     /**
-     * Call this method after the event was emitted to decide if a watermark
-     * should be sent after it.
-     *
-     * @param event the event
-     * @param partitionIndex 0-based index of the source partition the event occurred in
-     * @return watermark to emit before the event or {@code null}
+     * TODO Javadoc pending
      */
-    public Watermark handleEvent(T event, int partitionIndex) {
-        return handleEvent(System.nanoTime(), partitionIndex, event);
+    public Traverser<Object> flatMap(@Nullable T item, int partitionIndex) {
+        return flatMap(System.nanoTime(), item, partitionIndex);
     }
 
     // package-visible for tests
-    Watermark handleEvent(long now, int partitionIndex, T event) {
+    Traverser<Object> flatMap(long now, T item, int partitionIndex) {
+        assert traverser.isEmpty();
+        Watermark wm = item != null ? handleEvent(now, partitionIndex, item) : handleNoEvent(now);
+        if (wm != null) {
+            traverser.append(wm);
+        }
+        if (item != null) {
+            traverser.append(wrapFn.apply(item, timestampFn.applyAsLong(item)));
+        }
+        return traverser;
+    }
+
+    private Watermark handleEvent(long now, int partitionIndex, T event) {
         long eventTime = timestampFn.applyAsLong(event);
         watermarks[partitionIndex] = wmPolicies[partitionIndex].reportEvent(eventTime);
         markIdleAt[partitionIndex] = now + idleTimeoutNanos;
@@ -125,23 +127,7 @@ public class WatermarkSourceUtil<T> {
         return handleNoEvent(now);
     }
 
-    protected Object wrapIfNeeded(T item, long l) {
-        return item;
-    }
-
-    /**
-     * Call this method when there are no observed events. Checks, if a
-     * watermark should be emitted based on the passage of system time, which
-     * could cause some partitions to become idle.
-     *
-     * @return watermark to emit or {@code null}
-     */
-    public Watermark handleNoEvent() {
-        return handleNoEvent(System.nanoTime());
-    }
-
-    // package-visible for tests
-    Watermark handleNoEvent(long now) {
+    private Watermark handleNoEvent(long now) {
         long min = Long.MAX_VALUE;
         for (int i = 0; i < watermarks.length; i++) {
             if (idleTimeoutNanos > 0 && markIdleAt[i] <= now) {

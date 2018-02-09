@@ -16,12 +16,12 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.core.AppendableTraverser;
 import com.hazelcast.jet.core.BroadcastKey;
-import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.WatermarkSourceUtil;
+import com.hazelcast.jet.function.DistributedBiFunction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -37,14 +37,13 @@ import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 public class InsertWatermarksP<T> extends AbstractProcessor {
 
     private final WatermarkSourceUtil<T> wsu;
-    private final AppendableTraverser<Object> traverser = new AppendableTraverser<>(2);
-    private boolean doneWithTraverser = true;
+    private Traverser<Object> traverser;
 
     // value to be used temporarily during snapshot restore
     private long minRestoredWm = Long.MAX_VALUE;
 
-    public InsertWatermarksP(WatermarkGenerationParams<T> wmGenParams) {
-        wsu = new WatermarkSourceUtil<>(wmGenParams);
+    public InsertWatermarksP(WatermarkGenerationParams<T> wmGenParams, DistributedBiFunction<T, Long, ?> wrapOutputFn) {
+        wsu = new WatermarkSourceUtil<>(wmGenParams, wrapOutputFn);
         wsu.increasePartitionCount(1);
     }
 
@@ -59,19 +58,14 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
     }
 
     private boolean tryProcessInternal(@Nullable Object item) {
-        if (doneWithTraverser) {
-            Watermark wm = item == null
-                    ? wsu.handleNoEvent()
-                    : wsu.handleEvent((T) item, 0);
-            if (wm != null) {
-                traverser.append(wm);
-            }
-            if (item != null) {
-                traverser.append(item);
-            }
-            doneWithTraverser = traverser.isEmpty();
+        if (traverser == null) {
+            traverser = wsu.flatMap((T) item, 0);
         }
-        return emitFromTraverser(traverser, o -> doneWithTraverser = traverser.isEmpty());
+        if (emitFromTraverser(traverser)) {
+            traverser = null;
+            return true;
+        }
+        return false;
     }
 
     @Override

@@ -82,7 +82,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @SuppressWarnings("unchecked")
     public StreamStage<T> timestamp(
             @Nonnull DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull WatermarkPolicy wmPolicy
+            @Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy
     ) {
         return new StreamStageImpl<>(
                 new TimestampTransform<>(transform, wmGenParams(timestampFn, wmPolicy, suppressDuplicates(), 0L)),

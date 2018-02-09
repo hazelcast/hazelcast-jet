@@ -76,11 +76,11 @@ public final class WatermarkGenerationParams<T> implements Serializable {
      */
     public static <T> WatermarkGenerationParams<T> wmGenParams(
             @Nonnull DistributedToLongFunction<T> timestampFn,
-            @Nonnull WatermarkPolicy wmPolicy,
+            @Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy,
             @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
             long idleTimeoutMillis
     ) {
-        return new WatermarkGenerationParams<>(timestampFn, () -> wmPolicy, wmEmitPolicy, idleTimeoutMillis);
+        return new WatermarkGenerationParams<>(timestampFn, wmPolicy, wmEmitPolicy, idleTimeoutMillis);
     }
 
     /**
@@ -88,7 +88,7 @@ public final class WatermarkGenerationParams<T> implements Serializable {
      */
     public static <T> WatermarkGenerationParams<T> wmGenParams(
             @Nonnull DistributedToLongFunction<T> timestampFn,
-            @Nonnull WatermarkPolicy wmPolicy
+            @Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy
     ) {
         return wmGenParams(timestampFn, wmPolicy, suppressDuplicates(), 0L);
     }
