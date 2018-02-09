@@ -726,10 +726,60 @@ public final class Processors {
     public static <T, K, A, R> DistributedSupplier<Processor> aggregateToSessionWindowP(
             long sessionTimeout,
             @Nonnull DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull DistributedFunction<? super T, K> keyFn,
-            @Nonnull AggregateOperation1<? super T, A, R> aggrOp
+            @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
+            @Nonnull AggregateOperation<A, R> aggrOp
     ) {
-        return () -> new SessionWindowP<>(sessionTimeout, timestampFn, keyFn, aggrOp, WindowResult::new);
+        return coAggregateToSessionWindowP(sessionTimeout, timestampFn, singletonList(keyFn), aggrOp);
+    }
+
+    /**
+     * Returns a supplier of processors for a vertex that aggregates events into
+     * session windows. Events and windows under different grouping keys are
+     * treated independently. Outputs objects of type {@link
+     * WindowResult}.
+     * <p>
+     * The vertex accepts input from one or more inbound edges. The type of
+     * items may be different on each edge. For each edge a separate key
+     * extracting function must be supplied and the aggregate operation must
+     * contain a separate accumulation function for each edge.
+     * <p>
+     * The functioning of this vertex is easiest to explain in terms of the
+     * <em>event interval</em>: the range {@code [timestamp, timestamp +
+     * sessionTimeout]}. Initially an event causes a new session window to be
+     * created, covering exactly the event interval. A following event under
+     * the same key belongs to this window iff its interval overlaps it. The
+     * window is extended to cover the entire interval of the new event. The
+     * event may happen to belong to two existing windows if its interval
+     * bridges the gap between them; in that case they are combined into one.
+     * <p>
+     * <i>Behavior on job restart</i><br>
+     * This processor saves its state to snapshot. After restart, it can
+     * continue accumulating where it left off.
+     * <p>
+     * After a restart in at-least-once mode, watermarks are allowed to go back
+     * in time. The processor evicts state based on watermarks it received. If
+     * it receives duplicate watermark, it might emit sessions with missing
+     * events, because they were already evicted. The sessions before and after
+     * snapshot might overlap, which they normally don't.
+     *
+     * @param sessionTimeout maximum gap between consecutive events in the same session window
+     * @param timestampFn function to extract the timestamp from the item
+     * @param keyFns      functions to extract the grouping key from the item
+     * @param aggrOp         the aggregate operation
+     *
+     * @param <T> type of the stream event
+     * @param <K> type of the item's grouping key
+     * @param <A> type of the container of the accumulated value
+     * @param <R> type of the session window's result value
+     */
+    @Nonnull
+    public static <T, K, A, R> DistributedSupplier<Processor> coAggregateToSessionWindowP(
+            long sessionTimeout,
+            @Nonnull DistributedToLongFunction<? super T> timestampFn,
+            @Nonnull List<DistributedFunction<? super T, ? extends K>> keyFns,
+            @Nonnull AggregateOperation<A, R> aggrOp
+    ) {
+        return () -> new SessionWindowP<>(sessionTimeout, timestampFn, keyFns, aggrOp, WindowResult::new);
     }
 
     /**

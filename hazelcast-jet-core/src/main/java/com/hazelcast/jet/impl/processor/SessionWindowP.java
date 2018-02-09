@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -43,13 +43,13 @@ import java.util.SortedMap;
 import java.util.StringJoiner;
 import java.util.TreeMap;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
 import java.util.function.ToLongFunction;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
+import static com.hazelcast.util.Preconditions.checkTrue;
 import static java.lang.Math.min;
 import static java.lang.System.arraycopy;
 import static java.util.Objects.requireNonNull;
@@ -57,9 +57,8 @@ import static java.util.stream.Collectors.toList;
 
 /**
  * Session window processor. See {@link
- *      com.hazelcast.jet.core.processor.Processors#aggregateToSessionWindowP(long,
- *      DistributedToLongFunction, DistributedFunction, AggregateOperation1)
- * WindowingProcessors.sessionWindow()} for documentation.
+ *      com.hazelcast.jet.core.processor.Processors#aggregateToSessionWindowP
+ * Processors.aggregateToSessionWindowP()} for documentation.
  *
  * @param <T> type of the stream item
  * @param <K> type of the extracted grouping key
@@ -77,9 +76,9 @@ public class SessionWindowP<T, K, A, R, OUT> extends AbstractProcessor {
     @Nonnull
     private final ToLongFunction<? super T> timestampFn;
     @Nonnull
-    private final Function<? super T, K> keyFn;
+    private final List<DistributedFunction<? super T, ? extends K>> keyFns;
     @Nonnull
-    private final AggregateOperation1<? super T, A, R> aggrOp;
+    private final AggregateOperation<A, R> aggrOp;
     @Nonnull
     private final BiConsumer<? super A, ? super A> combineFn;
     @Nonnull
@@ -92,12 +91,14 @@ public class SessionWindowP<T, K, A, R, OUT> extends AbstractProcessor {
     public SessionWindowP(
             long sessionTimeout,
             @Nonnull DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull DistributedFunction<? super T, K> keyFn,
-            @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
+            @Nonnull List<DistributedFunction<? super T, ? extends K>> keyFns,
+            @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull KeyedWindowResultFunction<K, R, OUT> mapToOutputFn
     ) {
+        checkTrue(keyFns.size() == aggrOp.arity(), keyFns.size() + " key functions " +
+                "provided for " + aggrOp.arity() + "-arity aggregate operation");
         this.timestampFn = timestampFn;
-        this.keyFn = keyFn;
+        this.keyFns = keyFns;
         this.aggrOp = aggrOp;
         this.combineFn = requireNonNull(aggrOp.combineFn());
         this.mapToOutputFn = mapToOutputFn;
@@ -110,8 +111,8 @@ public class SessionWindowP<T, K, A, R, OUT> extends AbstractProcessor {
         @SuppressWarnings("unchecked")
         final T event = (T) item;
         final long timestamp = timestampFn.applyAsLong(event);
-        K key = keyFn.apply(event);
-        addEvent(keyToWindows.computeIfAbsent(key, k -> new Windows<>()),
+        K key = keyFns.get(ordinal).apply(event);
+        addEvent(ordinal, keyToWindows.computeIfAbsent(key, k -> new Windows<>()),
                 key, timestamp, event);
         return true;
     }
@@ -181,8 +182,8 @@ public class SessionWindowP<T, K, A, R, OUT> extends AbstractProcessor {
         return true;
     }
 
-    private void addEvent(Windows<A> w, K key, long timestamp, T event) {
-        aggrOp.accumulateFn().accept(resolveAcc(w, key, timestamp), event);
+    private void addEvent(int ordinal, Windows<A> w, K key, long timestamp, T event) {
+        aggrOp.accumulateFn(ordinal).accept(resolveAcc(w, key, timestamp), event);
     }
 
     private List<OUT> closeWindows(Windows<A> w, K key, long wm) {
