@@ -16,26 +16,61 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
-import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.Processors;
+import com.hazelcast.jet.impl.pipeline.Planner;
+import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
 import javax.annotation.Nonnull;
 
-public class AggregateTransform<T, A, R> extends AbstractTransform implements Transform {
+import java.util.List;
+
+import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.processor.Processors.accumulateP;
+import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
+
+public class AggregateTransform<A, R> extends AbstractTransform implements Transform {
     @Nonnull
-    private final AggregateOperation1<T, A, R> aggrOp;
+    private final AggregateOperation<A, R> aggrOp;
 
     public AggregateTransform(
-            @Nonnull Transform upstream,
-            @Nonnull AggregateOperation1<T, A, R> aggrOp
+            @Nonnull List<Transform> upstream,
+            @Nonnull AggregateOperation<A, R> aggrOp
     ) {
-        super("aggregate", upstream);
+        super(upstream.size() + "-way co-aggregate", upstream);
         this.aggrOp = aggrOp;
     }
 
     @Nonnull
     public AggregateOperation<A, R> aggrOp() {
         return aggrOp;
+    }
+
+    //                       --------
+    //                      | source |
+    //                       --------
+    //                           |
+    //                           |
+    //                           v
+    //                  -------------------
+    //                 | accumulatebyKeyP  |
+    //                  -------------------
+    //                           |
+    //                      distributed
+    //                       all-to-one
+    //                           v
+    //                   ----------------
+    //                  | combineByKeyP  |
+    //                   ----------------
+    @Override
+    public void addToDag(Planner p) {
+        String namePrefix = p.vertexName(name(), "-stage");
+        Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateP(aggrOp()));
+        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', combineByKeyP(aggrOp(), Util::entry));
+        p.addEdges(this, v1);
+        p.dag.edge(between(v1, pv2.v).distributed().allToOne());
     }
 }

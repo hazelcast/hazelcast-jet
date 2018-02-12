@@ -626,6 +626,75 @@ public final class AggregateOperations {
     }
 
     /**
+     * Returns an {@code AggregateOperation} that accumulates the items from
+     * exactly two inputs into {@link TwoBags}: items from <em>inputN</em> are
+     * accumulated into <em>bagN</em>.
+     *
+     * @param <T0> item type on input0
+     * @param <T1> item type on input1
+     *
+     * @see #toThreeBags()
+     * @see #toBagsByTag(Tag[])
+     */
+    @Nonnull
+    public static <T0, T1> AggregateOperation<TwoBags<T0, T1>, TwoBags<T0, T1>> toTwoBags() {
+        return AggregateOperation
+                .withCreate(TwoBags::<T0, T1>twoBags)
+                .<T0>andAccumulate0((acc, item0) -> acc.bag0().add(item0))
+                .<T1>andAccumulate1((acc, item1) -> acc.bag1().add(item1))
+                .andCombine(TwoBags::combineWith)
+                .andIdentityFinish();
+    }
+
+    /**
+     * Returns an {@code AggregateOperation} that accumulates the items from
+     * exactly three inputs into {@link ThreeBags}: items from <em>inputN</em>
+     * are accumulated into <em>bagN</em>.
+     *
+     * @param <T0> item type on input0
+     * @param <T1> item type on input1
+     * @param <T2> item type on input2
+     *
+     * @see #toTwoBags()
+     * @see #toBagsByTag(Tag[])
+     */
+    @Nonnull
+    public static <T0, T1, T2> AggregateOperation<ThreeBags<T0, T1, T2>, ThreeBags<T0, T1, T2>> toThreeBags() {
+        return AggregateOperation
+                .withCreate(ThreeBags::<T0, T1, T2>threeBags)
+                .<T0>andAccumulate0((acc, item0) -> acc.bag0().add(item0))
+                .<T1>andAccumulate1((acc, item1) -> acc.bag1().add(item1))
+                .<T2>andAccumulate2((acc, item2) -> acc.bag2().add(item2))
+                .andCombine(ThreeBags::combineWith)
+                .andIdentityFinish();
+    }
+
+    /**
+     * Returns an {@code AggregateOperation} that accumulates the items from
+     * any number of inputs into {@link BagsByTag}: items from <em>inputN</em>
+     * are accumulated into under <em>tagN</em>.
+     *
+     * @see #toTwoBags()
+     * @see #toThreeBags()
+     */
+    @Nonnull
+    public static AggregateOperation<BagsByTag, BagsByTag> toBagsByTag(@Nonnull Tag<?> ... tags) {
+        checkPositive(tags.length, "At least one tag required");
+        VarArity<BagsByTag> builder = AggregateOperation
+                .withCreate(BagsByTag::new)
+                .andAccumulate(tags[0], (acc, item) -> ((Collection) acc.ensureBag(tags[0])).add(item));
+
+        for (int i = 1; i < tags.length; i++) {
+            Tag tag = tags[i];
+            builder = builder.andAccumulate(tag, (acc, item) -> acc.ensureBag(tag).add(item));
+        }
+
+        return builder
+                .andCombine(BagsByTag::combineWith)
+                .andIdentityFinish();
+    }
+
+    /**
      * Returns an {@code AggregateOperation1} that accumulates the items into a
      * {@code HashMap} where the key is the result of applying {@code toKeyFn}
      * and the value is a list of the items with that key.
@@ -723,8 +792,6 @@ public final class AggregateOperations {
                 .andCombine(combineFn).andFinish(finisher);
     }
 
-
-
     /**
      * A reducing operation maintains an accumulated value that starts out as
      * {@code emptyAccValue} and is iteratively transformed by applying
@@ -771,74 +838,5 @@ public final class AggregateOperations {
                         ? (a, b) -> a.set(deductFn.apply(a.get(), b.get()))
                         : null)
                 .andFinish(MutableReference::get);
-    }
-
-    /**
-     * Returns an {@code AggregateOperation} that accumulates the items from
-     * exactly two inputs into {@link TwoBags}: items from <em>inputN</em> are
-     * accumulated into <em>bagN</em>.
-     *
-     * @param <T0> item type on input0
-     * @param <T1> item type on input1
-     *
-     * @see #toThreeBags()
-     * @see #toNBags(Tag[])
-     */
-    @Nonnull
-    public static <T0, T1> AggregateOperation<TwoBags<T0, T1>, TwoBags<T0, T1>> toTwoBags() {
-        return AggregateOperation
-                .withCreate(TwoBags::<T0, T1>twoBags)
-                .<T0>andAccumulate0((acc, item0) -> acc.bag0().add(item0))
-                .<T1>andAccumulate1((acc, item1) -> acc.bag1().add(item1))
-                .andCombine(TwoBags::combineWith)
-                .andIdentityFinish();
-    }
-
-    /**
-     * Returns an {@code AggregateOperation} that accumulates the items from
-     * exactly three inputs into {@link ThreeBags}: items from <em>inputN</em>
-     * are accumulated into <em>bagN</em>.
-     *
-     * @param <T0> item type on input0
-     * @param <T1> item type on input1
-     * @param <T2> item type on input2
-     *
-     * @see #toTwoBags()
-     * @see #toNBags(Tag[])
-     */
-    @Nonnull
-    public static <T0, T1, T2> AggregateOperation<ThreeBags<T0, T1, T2>, ThreeBags<T0, T1, T2>> toThreeBags() {
-        return AggregateOperation
-                .withCreate(ThreeBags::<T0, T1, T2>threeBags)
-                .<T0>andAccumulate0((acc, item0) -> acc.bag0().add(item0))
-                .<T1>andAccumulate1((acc, item1) -> acc.bag1().add(item1))
-                .<T2>andAccumulate2((acc, item2) -> acc.bag2().add(item2))
-                .andCombine(ThreeBags::combineWith)
-                .andIdentityFinish();
-    }
-
-    /**
-     * Returns an {@code AggregateOperation} that accumulates the items from
-     * any number of inputs into {@link BagsByTag}: items from <em>inputN</em>
-     * are accumulated into under <em>tagN</em>.
-     *
-     * @see #toThreeBags()
-     * @see #toNBags(Tag[])
-     */
-    @Nonnull
-    public static AggregateOperation<BagsByTag, BagsByTag> toNBags(@Nonnull Tag<?> ... tags) {
-        checkPositive(tags.length, "At least one tag required");
-        VarArity<BagsByTag> builder = AggregateOperation
-                .withCreate(BagsByTag::new)
-                .andAccumulate(tags[0], (acc, item) -> ((Collection) acc.ensureBag(tags[0])).add(item));
-
-        for (int i = 1; i < tags.length; i++) {
-            Tag tag = tags[i];
-            builder = builder.andAccumulate(tag, (acc, item) -> acc.ensureBag(tag).add(item));
-        }
-
-        return builder
-                .andCombine(BagsByTag::combineWith)
-                .andIdentityFinish();
     }
 }

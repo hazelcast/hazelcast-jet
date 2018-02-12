@@ -21,8 +21,11 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.Test;
@@ -46,10 +49,9 @@ import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLagAndLull;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
-import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
-import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
+import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -106,17 +108,28 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
 
         if (singleStageProcessor) {
             Vertex slidingWin = dag.newVertex("slidingWin",
-                    aggregateToSlidingWindowP(MyEvent::getKey,
-                            MyEvent::getTimestamp, TimestampKind.EVENT, wDef, counting));
+                    Processors.aggregateToSlidingWindowP(
+                            singletonList((DistributedFunction<? super MyEvent, ? extends String>) MyEvent::getKey),
+                            singletonList((DistributedToLongFunction<? super MyEvent>) MyEvent::getTimestamp),
+                            TimestampKind.EVENT,
+                            wDef,
+                            counting,
+                            TimestampedEntry::new));
             dag
                     .edge(between(insertPP, slidingWin).partitioned(MyEvent::getKey).distributed())
                     .edge(between(slidingWin, sink));
 
         } else {
             Vertex accumulateByFrame = dag.newVertex("accumulateByFrame",
-                    accumulateByFrameP(MyEvent::getKey,
-                            MyEvent::getTimestamp, TimestampKind.EVENT, wDef, counting));
-            Vertex slidingWin = dag.newVertex("slidingWin", combineToSlidingWindowP(wDef, counting));
+                    Processors.accumulateByFrameP(
+                            singletonList((DistributedFunction<? super MyEvent, ?>) MyEvent::getKey),
+                            singletonList((DistributedToLongFunction<? super MyEvent>) MyEvent::getTimestamp),
+                            TimestampKind.EVENT,
+                            wDef,
+                            ((AggregateOperation1<? super MyEvent, ?, ?>) counting).withFinishFn(identity())
+                    ));
+            Vertex slidingWin = dag.newVertex("slidingWin",
+                    combineToSlidingWindowP(wDef, counting, TimestampedEntry::new));
             dag
                     .edge(between(insertPP, accumulateByFrame).partitioned(MyEvent::getKey))
                     .edge(between(accumulateByFrame, slidingWin).partitioned(entryKey()).distributed())

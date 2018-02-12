@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
+import com.hazelcast.jet.impl.pipeline.Planner;
+
 import javax.annotation.Nonnull;
 import java.io.Serializable;
 import java.util.List;
@@ -35,4 +37,6 @@ public interface Transform extends Serializable {
 
     @Nonnull
     List<? extends Transform> upstream();
+
+    void addToDag(Planner p);
 }

@@ -23,8 +23,11 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.After;
@@ -98,12 +101,13 @@ public class SlidingWindowPTest {
 
         DistributedSupplier<Processor> procSupplier = singleStageProcessor
                 ? aggregateToSlidingWindowP(
-                            t -> KEY,
-                            Entry<Long, Long>::getKey,
-                            TimestampKind.EVENT,
-                            windowDef,
-                            operation)
-                : combineToSlidingWindowP(windowDef, operation);
+                        singletonList((DistributedFunction<Entry<Long, Long>, Long>) t -> KEY),
+                        singletonList((DistributedToLongFunction<Entry<Long, Long>>) Entry::getKey),
+                        TimestampKind.EVENT,
+                        windowDef,
+                        operation,
+                        TimestampedEntry::new)
+                : combineToSlidingWindowP(windowDef, operation, TimestampedEntry::new);
 
         // new supplier to save the last supplied instance
         supplier = () -> lastSuppliedProcessor = (SlidingWindowP<?, ?, Long, ?>) procSupplier.get();

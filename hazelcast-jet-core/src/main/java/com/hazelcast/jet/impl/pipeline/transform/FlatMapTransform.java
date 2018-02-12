@@ -18,8 +18,12 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.impl.pipeline.Planner;
+import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
 import javax.annotation.Nonnull;
+
+import static com.hazelcast.jet.core.processor.Processors.flatMapP;
 
 public class FlatMapTransform<T, R> extends AbstractTransform implements Transform {
     @Nonnull
@@ -36,5 +40,11 @@ public class FlatMapTransform<T, R> extends AbstractTransform implements Transfo
     @Nonnull
     public DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn() {
         return flatMapFn;
+    }
+
+    @Override
+    public void addToDag(Planner p) {
+        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), flatMapP(flatMapFn()));
+        p.addEdges(this, pv.v);
     }
 }

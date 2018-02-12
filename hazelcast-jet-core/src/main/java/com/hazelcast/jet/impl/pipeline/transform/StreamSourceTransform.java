@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.pipeline.StreamSource;
 
 import javax.annotation.Nonnull;
@@ -41,5 +42,10 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
         super(name, emptyList());
         this.emitsJetEvents = emitsJetEvents;
         this.metaSupplier = metaSupplier;
+    }
+
+    @Override
+    public void addToDag(Planner p) {
+        p.addVertex(this, p.vertexName(name(), ""), metaSupplier);
     }
 }

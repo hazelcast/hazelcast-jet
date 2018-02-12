@@ -25,10 +25,12 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
+import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.core.test.TestProcessorMetaSupplierContext;
 import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
@@ -63,13 +65,12 @@ import static com.hazelcast.jet.core.TestUtil.throttle;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
-import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
-import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
+import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.util.Util.arrayIndexOf;
 import static com.hazelcast.test.PacketFiltersUtil.delayOperationsFrom;
@@ -158,11 +159,15 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         Vertex writeMap = dag.newVertex("writeMap", SinkProcessors.writeMapP("result"));
 
         if (twoStage) {
-            Vertex aggregateStage1 = dag.newVertex("aggregateStage1", accumulateByFrameP(
-                    t -> ((Entry<Integer, Integer>) t).getKey(),
-                    t -> ((Entry<Integer, Integer>) t).getValue(),
-                    TimestampKind.EVENT, wDef, aggrOp));
-            Vertex aggregateStage2 = dag.newVertex("aggregateStage2", combineToSlidingWindowP(wDef, aggrOp));
+            Vertex aggregateStage1 = dag.newVertex("aggregateStage1", Processors.accumulateByFrameP(
+                    singletonList((DistributedFunction<? super Object, ?>) t -> ((Entry<Integer, Integer>) t).getKey()),
+                    singletonList(t1 -> ((Entry<Integer, Integer>) t1).getValue()),
+                    TimestampKind.EVENT,
+                    wDef,
+                    aggrOp.withFinishFn(identity())
+            ));
+            Vertex aggregateStage2 = dag.newVertex("aggregateStage2",
+                    combineToSlidingWindowP(wDef, aggrOp, TimestampedEntry::new));
 
             dag.edge(between(insWm, aggregateStage1)
                     .partitioned(entryKey()))
@@ -171,10 +176,13 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                        .partitioned(entryKey()))
                .edge(between(aggregateStage2, map));
         } else {
-            Vertex aggregate = dag.newVertex("aggregate", aggregateToSlidingWindowP(
-                    t -> ((Entry<Integer, Integer>) t).getKey(),
-                    t -> ((Entry<Integer, Integer>) t).getValue(),
-                    TimestampKind.EVENT, wDef, aggrOp));
+            Vertex aggregate = dag.newVertex("aggregate", Processors.aggregateToSlidingWindowP(
+                    singletonList((DistributedFunction<Object, Integer>) t -> ((Entry<Integer, Integer>) t).getKey()),
+                    singletonList(t1 -> ((Entry<Integer, Integer>) t1).getValue()),
+                    TimestampKind.EVENT,
+                    wDef,
+                    aggrOp,
+                    TimestampedEntry::new));
 
             dag.edge(between(insWm, aggregate)
                     .distributed()

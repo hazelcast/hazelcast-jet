@@ -36,8 +36,8 @@ import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.impl.pipeline.JetEventImpl;
-import com.hazelcast.jet.impl.processor.AggregateP;
 import com.hazelcast.jet.impl.processor.CoGroupP;
 import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
@@ -52,8 +52,11 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.core.TimestampKind.EVENT;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
+import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
+import static java.util.Collections.nCopies;
 import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toList;
 
 /**
  * Static utility class with factory methods for Jet processors. These
@@ -174,8 +177,8 @@ import static java.util.Collections.singletonList;
  * </tr><tr>
  *     <th>batch, co-group by key</th>
  *
- *     <td>{@link #coAggregateByKeyP}</td>
- *     <td>{@link #coAccumulateByKeyP}</td>
+ *     <td>{@link #aggregateByKeyP}</td>
+ *     <td>{@link #accumulateByKeyP}</td>
  * </tr><tr>
  *     <th>stream, group by key<br>and aligned window</th>
  *
@@ -185,8 +188,8 @@ import static java.util.Collections.singletonList;
  * </tr><tr>
  *     <th>stream, co-group by key<br>and aligned window</th>
  *
- *     <td>{@link #coAggregateToSlidingWindowP}</td>
- *     <td>{@link #coAccumulateByFrameP}</td>
+ *     <td>{@link #aggregateToSlidingWindowP}</td>
+ *     <td>{@link #accumulateByFrameP}</td>
  * </tr><tr>
  *     <th>stream, group by key<br>and session window</th>
  *     <td>{@link #aggregateToSessionWindowP}</td>
@@ -205,62 +208,88 @@ public final class Processors {
     }
 
     /**
-     * Returns a supplier of processors for a vertex that groups items by key
-     * and performs the provided aggregate operation on each group. After
-     * exhausting all its input it emits one {@code Map.Entry<K, R>} per
-     * distinct key.
+     * Returns a supplier of processors for a vertex that performs the provided
+     * aggregate operation on all the items it receives. After exhausting all
+     * its input it emits a single item of type {@code R} &mdash;the result of
+     * the aggregate operation.
+     * <p>
+     * Since the input to this vertex must be bounded, its primary use case are
+     * batch jobs.
      * <p>
      * This processor has state, but does not save it to snapshot. On job
      * restart, the state will be lost.
-     *
-     * @param keyFn computes the key from the entry
+     * @param <A> type of accumulator returned from {@code
+     *            aggrOp.createAccumulatorFn()}
+     * @param <R> type of the finished result returned from {@code
+     *            aggrOp.finishAccumulationFn()}
      * @param aggrOp the aggregate operation to perform
-     * @param <T> type of received item
-     * @param <K> type of key
-     * @param <A> type of accumulator returned from {@code aggregateOperation.
-     *            createAccumulatorFn()}
-     * @param <R> type of the finished result returned from {@code aggregateOperation.
+     */
+    @Nonnull
+    public static <A, R> DistributedSupplier<Processor> aggregateP(
+            @Nonnull AggregateOperation<A, R> aggrOp
+    ) {
+        return () -> new CoGroupP<>(nCopies(aggrOp.arity(), constantKey()), aggrOp, (k, r) -> r);
+    }
+
+    /**
+     * Returns a supplier of processors for a vertex that performs the provided
+     * aggregate operation on all the items it receives. After exhausting all
+     * its input it emits a single item of type {@code R} &mdash;the result of
+     * the aggregate operation.
+     * <p>
+     * Since the input to this vertex must be bounded, its primary use case are
+     * batch jobs.
+     * <p>
+     * This processor has state, but does not save it to snapshot. On job
+     * restart, the state will be lost.
+     * @param <A> type of accumulator returned from {@code
+     *            aggrOp.createAccumulatorFn()}
+     * @param <R> type of the finished result returned from {@code aggrOp.
      *            finishAccumulationFn()}
+     * @param aggrOp the aggregate operation to perform
      */
     @Nonnull
-    public static <T, K, A, R, OUT> DistributedSupplier<Processor> aggregateByKeyP(
-            @Nonnull DistributedFunction<? super T, K> keyFn,
-            @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
-            @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
-    ) {
-        return () -> new CoGroupP<>(keyFn, aggrOp, mapToOutputFn);
+    public static <A, R> DistributedSupplier<Processor> accumulateP(@Nonnull AggregateOperation<A, R> aggrOp) {
+        return () -> new CoGroupP<>(
+                nCopies(aggrOp.arity(), constantKey()),
+                aggrOp.withFinishFn(identity()),
+                (k, r) -> r);
     }
 
     /**
-     * Returns a supplier of processors for the first-stage vertex in a
-     * two-stage group-and-aggregate setup. The vertex groups items by the
-     * grouping key (as obtained from the given key-extracting function) and
-     * applies the {@link AggregateOperation1#accumulateFn()} accumulate}
-     * primitive to each group. After exhausting all its input it emits one
-     * {@code Map.Entry<K, A>} per observed key.
+     * Returns a supplier of processors for a vertex that performs the provided
+     * aggregate operation on all the items it receives. After exhausting all
+     * its input it emits a single item of type {@code R} &mdash;the result of
+     * the aggregate operation.
+     * <p>
+     * Since the input to this vertex must be bounded, its primary use case are
+     * batch jobs.
      * <p>
      * This processor has state, but does not save it to snapshot. On job
      * restart, the state will be lost.
-     *
-     * @param keyFn computes the key from the entry
-     * @param aggrOp the aggregate operation to perform
      * @param <T> type of received item
-     * @param <K> type of key
-     * @param <A> type of accumulator returned from {@code aggrOp.createAccumulatorFn()}
+     * @param <A> type of accumulator returned from {@code
+     *            aggrOp.createAccumulatorFn()}
+     * @param <R> type of the finished result returned from {@code aggrOp.
+     *            finishAccumulationFn()}
+     * @param aggrOp the aggregate operation to perform
      */
     @Nonnull
-    public static <T, K, A> DistributedSupplier<Processor> accumulateByKeyP(
-            @Nonnull DistributedFunction<? super T, K> keyFn,
-            @Nonnull AggregateOperation1<? super T, A, ?> aggrOp
+    public static <T, A, R> DistributedSupplier<Processor> combineP(
+            @Nonnull AggregateOperation1<T, A, R> aggrOp
     ) {
-        return () -> new CoGroupP<>(keyFn, aggrOp.withFinishFn(identity()), Util::entry);
+        return () -> new CoGroupP<>(
+                constantKey(),
+                aggrOp.withCombiningAccumulateFn(identity()),
+                (k, r) -> r);
     }
 
     /**
      * Returns a supplier of processors for a vertex that groups items by key
      * and performs the provided aggregate operation on each group. After
-     * exhausting all its input it emits one {@code Map.Entry<K, R>} per
-     * distinct key.
+     * exhausting all its input it emits one item per distinct key. It computes
+     * the item to emit by passing each (key, result) pair to {@code
+     * mapToOutputFn}.
      * <p>
      * The vertex accepts input from one or more inbound edges. The type of
      * items may be different on each edge. For each edge a separate key
@@ -270,19 +299,20 @@ public final class Processors {
      * This processor has state, but does not save it to snapshot. On job
      * restart, the state will be lost.
      *
-     * @param getKeyFns functions that compute the grouping key
+     * @param keyFns functions that compute the grouping key
      * @param aggrOp the aggregate operation
      * @param <K> type of key
      * @param <A> type of accumulator returned from {@code aggrOp.createAccumulatorFn()}
-     * @param <R> type of the finished result returned from {@code aggrOp.finishAccumulationFn()}
+     * @param <R> type of the result returned from {@code aggrOp.finishAccumulationFn()}
+     * @param <OUT> type of the item to emit
      */
     @Nonnull
-    public static <K, A, R, OUT> DistributedSupplier<Processor> coAggregateByKeyP(
-            @Nonnull List<DistributedFunction<?, ? extends K>> getKeyFns,
+    public static <K, A, R, OUT> DistributedSupplier<Processor> aggregateByKeyP(
+            @Nonnull List<DistributedFunction<?, ? extends K>> keyFns,
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        return () -> new CoGroupP<>(getKeyFns, aggrOp, mapToOutputFn);
+        return () -> new CoGroupP<>(keyFns, aggrOp, mapToOutputFn);
     }
 
     /**
@@ -307,7 +337,7 @@ public final class Processors {
      * @param <A> type of accumulator returned from {@code aggrOp.createAccumulatorFn()}
      */
     @Nonnull
-    public static <K, A> DistributedSupplier<Processor> coAccumulateByKeyP(
+    public static <K, A> DistributedSupplier<Processor> accumulateByKeyP(
             @Nonnull List<DistributedFunction<?, ? extends K>> getKeyFns,
             @Nonnull AggregateOperation<A, ?> aggrOp
     ) {
@@ -319,9 +349,9 @@ public final class Processors {
      * two-stage group-and-aggregate setup. Each processor applies the {@link
      * AggregateOperation1#combineFn() combine} aggregation primitive to the
      * entries received from several upstream instances of {@link
-     * #accumulateByKeyP(DistributedFunction, AggregateOperation1)
-     * accumulateByKey()}. After exhausting all its input it emits one
-     * {@code Map.Entry<K, R>} per distinct key.
+     * #accumulateByKeyP}. After exhausting all its input it emits one item per
+     * distinct key. It computes the item to emit by passing each (key, result)
+     * pair to {@code mapToOutputFn}.
      * <p>
      * Since the input to this vertex must be bounded, its primary use case
      * are batch jobs.
@@ -333,6 +363,7 @@ public final class Processors {
      * @param <A> type of accumulator returned from {@code aggrOp.createAccumulatorFn()}
      * @param <R> type of the finished result returned from
      *            {@code aggrOp.finishAccumulationFn()}
+     * @param <OUT> type of the item to emit
      */
     @Nonnull
     public static <K, A, R, OUT> DistributedSupplier<Processor> combineByKeyP(
@@ -346,88 +377,6 @@ public final class Processors {
     }
 
     /**
-     * Returns a supplier of processors for a vertex that performs the provided
-     * aggregate operation on all the items it receives. After exhausting all
-     * its input it emits a single item of type {@code R} &mdash;the result of
-     * the aggregate operation transformed by the supplied {@code mapToOutputFn}.
-     * <p>
-     * Since the input to this vertex must be bounded, its primary use case are
-     * batch jobs.
-     * <p>
-     * This processor has state, but does not save it to snapshot. On job
-     * restart, the state will be lost.
-     * @param <T> type of received item
-     * @param <A> type of accumulator returned from {@code
-     *            aggrOp.createAccumulatorFn()}
-     * @param <R> type of the finished result returned from {@code
-     *            aggrOp.finishAccumulationFn()}
-     * @param <OUT> type of the emitted item
-     * @param aggrOp the aggregate operation to perform
-     * @param mapToOutputFn a function that transforms the result of the aggregate operation
-     *                      to the emitted output item
-     */
-    @Nonnull
-    public static <T, A, R, OUT> DistributedSupplier<Processor> aggregateP(
-            @Nonnull AggregateOperation1<T, A, R> aggrOp,
-            @Nonnull DistributedFunction<? super R, OUT> mapToOutputFn
-    ) {
-        return () -> new AggregateP<>(aggrOp, mapToOutputFn);
-    }
-
-    /**
-     * Returns a supplier of processors for a vertex that performs the provided
-     * aggregate operation on all the items it receives. After exhausting all
-     * its input it emits a single item of type {@code R} &mdash;the result of
-     * the aggregate operation.
-     * <p>
-     * Since the input to this vertex must be bounded, its primary use case are
-     * batch jobs.
-     * <p>
-     * This processor has state, but does not save it to snapshot. On job
-     * restart, the state will be lost.
-     * @param <T> type of received item
-     * @param <A> type of accumulator returned from {@code
-     *            aggrOp.createAccumulatorFn()}
-     * @param <R> type of the finished result returned from {@code aggrOp.
-     *            finishAccumulationFn()}
-     * @param aggrOp the aggregate operation to perform
-     */
-    @Nonnull
-    public static <T, A, R> DistributedSupplier<Processor> accumulateP(
-            @Nonnull AggregateOperation1<T, A, R> aggrOp
-    ) {
-        return () -> new AggregateP<>(aggrOp.withFinishFn(identity()), identity());
-    }
-
-    /**
-     * Returns a supplier of processors for a vertex that performs the provided
-     * aggregate operation on all the items it receives. After exhausting all
-     * its input it emits a single item of type {@code OUT} &mdash;the result of
-     * the aggregate operation transformed by the supplied {@code mapToOutputFn}.
-     * <p>
-     * Since the input to this vertex must be bounded, its primary use case are
-     * batch jobs.
-     * <p>
-     * This processor has state, but does not save it to snapshot. On job
-     * restart, the state will be lost.
-     * @param <T> type of received item
-     * @param <A> type of accumulator returned from {@code
-     *            aggrOp.createAccumulatorFn()}
-     * @param <R> type of the finished result returned from {@code aggrOp.
-     *            finishAccumulationFn()}
-     * @param aggrOp the aggregate operation to perform
-     * @param mapToOutputFn a function to apply to the finished result of the aggregate
-     *                      operation
-     */
-    @Nonnull
-    public static <T, A, R, OUT> DistributedSupplier<Processor> combineP(
-            @Nonnull AggregateOperation1<T, A, R> aggrOp,
-            @Nonnull DistributedFunction<? super R, OUT> mapToOutputFn
-    ) {
-        return () -> new AggregateP<>(aggrOp.withCombiningAccumulateFn(identity()), mapToOutputFn);
-    }
-
-    /**
      * Returns a supplier of processors for a vertex that aggregates events
      * into a sliding window in a single stage (see the {@link Processors
      * class Javadoc} for an explanation of aggregation stages). The vertex
@@ -436,6 +385,11 @@ public final class Processors {
      * timestamps equal to the sliding step. It emits sliding window results
      * labeled with the timestamp denoting the window's end time (the exclusive
      * upper bound of the timestamps belonging to the window).
+     * <p>
+     * The vertex accepts input from one or more inbound edges. The type of
+     * items may be different on each edge. For each edge a separate key
+     * extracting function must be supplied and the aggregate operation must
+     * contain a separate accumulation function for each edge.
      * <p>
      * When the vertex receives a watermark with a given {@code wmVal}, it
      * emits the result of aggregation for all the positions of the sliding
@@ -457,15 +411,15 @@ public final class Processors {
      * done in previous execution.
      */
     @Nonnull
-    public static <T, A, R> DistributedSupplier<Processor> aggregateToSlidingWindowP(
-            @Nonnull DistributedFunction<? super T, ?> keyFn,
-            @Nonnull DistributedToLongFunction<? super T> timestampFn,
+    public static <K, A, R, OUT> DistributedSupplier<Processor> aggregateToSlidingWindowP(
+            @Nonnull List<DistributedFunction<?, ? extends K>> keyFns,
+            @Nonnull List<DistributedToLongFunction<?>> timestampFns,
             @Nonnull TimestampKind timestampKind,
-            @Nonnull SlidingWindowPolicy windowDef,
-            @Nonnull AggregateOperation1<? super T, A, R> aggrOp
+            @Nonnull SlidingWindowPolicy winPolicy,
+            @Nonnull AggregateOperation<A, R> aggrOp,
+            @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        return Processors.<T, A, R>aggregateByKeyAndWindowP(singletonList(keyFn), timestampFn, timestampKind,
-                windowDef, aggrOp, true);
+        return aggregateByKeyAndWindowP(keyFns, timestampFns, timestampKind, winPolicy, aggrOp, mapToOutputFn, true);
     }
 
     /**
@@ -483,6 +437,11 @@ public final class Processors {
      * SlidingWindowPolicy#higherFrameTs(long)} maps the event timestamp to the
      * timestamp of the frame it belongs to.
      * <p>
+     * The vertex accepts input from one or more inbound edges. The type of
+     * items may be different on each edge. For each edge a separate key
+     * extracting function must be supplied and the aggregate operation must
+     * contain a separate accumulation function for each edge.
+     * <p>
      * When the processor receives a watermark with a given {@code wmVal}, it
      * emits the current accumulated state of all frames with {@code
      * timestamp <= wmVal} and deletes these frames from its storage.
@@ -492,21 +451,26 @@ public final class Processors {
      * When a state snapshot is requested, the state is flushed to second-stage
      * processor and nothing is saved to snapshot.
      *
-     * @param <T> input item type
+     * @param <K> type of the grouping key
      * @param <A> type of accumulator returned from {@code aggrOp.
      *            createAccumulatorFn()}
      */
     @Nonnull
-    public static <T, A> DistributedSupplier<Processor> accumulateByFrameP(
-            @Nonnull DistributedFunction<? super T, ?> keyFn,
-            @Nonnull DistributedToLongFunction<? super T> timestampFn,
+    public static <K, A> DistributedSupplier<Processor> accumulateByFrameP(
+            @Nonnull List<DistributedFunction<?, ? extends K>> keyFns,
+            @Nonnull List<DistributedToLongFunction<?>> timestampFns,
             @Nonnull TimestampKind timestampKind,
-            @Nonnull SlidingWindowPolicy windowDef,
-            @Nonnull AggregateOperation1<? super T, A, ?> aggrOp
+            @Nonnull SlidingWindowPolicy winPolicy,
+            @Nonnull AggregateOperation<A, ?> aggrOp
     ) {
-        SlidingWindowPolicy tumblingByFrame = windowDef.toTumblingByFrame();
-        return Processors.<T, A, A>aggregateByKeyAndWindowP(singletonList(keyFn), timestampFn, timestampKind,
-                tumblingByFrame, aggrOp.withFinishFn(identity()), false
+        return aggregateByKeyAndWindowP(
+                keyFns,
+                timestampFns,
+                timestampKind,
+                winPolicy.toTumblingByFrame(),
+                aggrOp.withFinishFn(identity()),
+                TimestampedEntry::new,
+                false
         );
     }
 
@@ -515,22 +479,19 @@ public final class Processors {
      * two-stage sliding window aggregation setup (see the {@link Processors
      * class Javadoc} for an explanation of aggregation stages). Each
      * processor applies the {@link AggregateOperation1#combineFn() combine}
-     * aggregation primitive to frames received from several upstream instances
-     * of {@link #accumulateByFrameP(
-     *      DistributedFunction, DistributedToLongFunction,
-     *      TimestampKind, SlidingWindowPolicy, AggregateOperation1)
-     * accumulateByFrame()}. It emits sliding window results labeled with
-     * the timestamp denoting the window's end time. This timestamp is equal to
-     * the exclusive upper bound of timestamps belonging to the window.
+     * aggregation primitive to the frames received from several upstream
+     * instances of {@link #accumulateByFrameP accumulateByFrame()}.
      * <p>
      * When the processor receives a watermark with a given {@code wmVal},
      * it emits the result of aggregation for all positions of the sliding
      * window with {@code windowTimestamp <= wmVal}. It computes the window
      * result by combining the partial results of the frames belonging to it
-     * and finally applying the {@code finish} aggregation primitive. After this
-     * it deletes from storage all the frames that trail behind the emitted
-     * windows. The type of emitted items is {@link TimestampedEntry
-     * TimestampedEntry&lt;K, A>} so there is one item per key per window position.
+     * and finally applying the {@code finish} aggregation primitive. After
+     * this it deletes from storage all the frames that trail behind the
+     * emitted windows. To compte the item to emit, it calls {@code
+     * mapToOutputFn} with the window's start and end timestamps, the key and
+     * the aggregation result. The window end time is the exclusive upper bound
+     * of the timestamps belonging to the window.
      * <p>
      * <i>Behavior on job restart</i><br>
      * This processor saves its state to snapshot. After restart, it can
@@ -545,108 +506,24 @@ public final class Processors {
      * @param <A> type of the accumulator
      * @param <R> type of the finished result returned from {@code aggrOp.
      *            finishAccumulationFn()}
+     * @param <OUT> type of the item to emit
      */
     @Nonnull
-    public static <A, R> DistributedSupplier<Processor> combineToSlidingWindowP(
-            @Nonnull SlidingWindowPolicy windowDef,
-            @Nonnull AggregateOperation<A, R> aggrOp
+    public static <K, A, R, OUT> DistributedSupplier<Processor> combineToSlidingWindowP(
+            @Nonnull SlidingWindowPolicy winPolicy,
+            @Nonnull AggregateOperation<A, R> aggrOp,
+            @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        return Processors.<TimestampedEntry<?, A>, A, R>aggregateByKeyAndWindowP(
-                singletonList(TimestampedEntry::getKey), TimestampedEntry::getTimestamp, TimestampKind.FRAME,
-                windowDef, aggrOp.withCombiningAccumulateFn(TimestampedEntry<Object, A>::getValue), true
-        );
-    }
-
-    /**
-     * Returns a supplier of processors for a vertex that aggregates events
-     * into a sliding window in a single stage (see the {@link Processors
-     * class Javadoc} for an explanation of aggregation stages). The vertex
-     * groups items by the grouping key (as obtained from the given
-     * key-extracting function) and by <em>frame</em>, which is a range of
-     * timestamps equal to the sliding step. It emits sliding window results
-     * labeled with the timestamp denoting the window's end time (the exclusive
-     * upper bound of the timestamps belonging to the window).
-     * <p>
-     * The vertex accepts input from one or more inbound edges. The type of
-     * items may be different on each edge. For each edge a separate key
-     * extracting function must be supplied and the aggregate operation must
-     * contain a separate accumulation function for each edge.
-     * <p>
-     * When the vertex receives a watermark with a given {@code wmVal}, it
-     * emits the result of aggregation for all the positions of the sliding
-     * window with {@code windowTimestamp <= wmVal}. It computes the window
-     * result by combining the partial results of the frames belonging to it
-     * and finally applying the {@code finish} aggregation primitive. After this
-     * it deletes from storage all the frames that trail behind the emitted
-     * windows. The type of emitted items is {@link TimestampedEntry
-     * TimestampedEntry&lt;K, A>} so there is one item per key per window position.
-     * <p>
-     * <i>Behavior on job restart</i><br>
-     * This processor saves its state to snapshot. After restart, it can
-     * continue accumulating where it left off.
-     * <p>
-     * After a restart in at-least-once mode, watermarks are allowed to go back
-     * in time. If such a watermark is received, some windows that were emitted
-     * in previous execution will be re-emitted. These windows might miss
-     * events as some of them had already been evicted before the snapshot was
-     * done in previous execution.
-     */
-    @Nonnull
-    public static <T, A, R> DistributedSupplier<Processor> coAggregateToSlidingWindowP(
-            @Nonnull List<DistributedFunction<? super T, ?>> keyFns,
-            @Nonnull DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull TimestampKind timestampKind,
-            @Nonnull SlidingWindowPolicy windowDef,
-            @Nonnull AggregateOperation<A, R> aggrOp
-    ) {
-        return Processors.aggregateByKeyAndWindowP(keyFns, timestampFn, timestampKind,
-                windowDef, aggrOp, true);
-    }
-
-    /**
-     * Returns a supplier of processors for the first-stage vertex in a
-     * two-stage sliding window aggregation setup (see the {@link Processors
-     * class Javadoc} for an explanation of aggregation stages). The vertex
-     * groups items by the grouping key (as obtained from the given
-     * key-extracting function) and by <em>frame</em>, which is a range of
-     * timestamps equal to the sliding step. It applies the {@link
-     * AggregateOperation1#accumulateFn() accumulate} aggregation primitive to
-     * each key-frame group.
-     * <p>
-     * The frame is identified by the timestamp denoting its end time (equal to
-     * the exclusive upper bound of its timestamp range). {@link
-     * SlidingWindowPolicy#higherFrameTs(long)} maps the event timestamp to the
-     * timestamp of the frame it belongs to.
-     * <p>
-     * The vertex accepts input from one or more inbound edges. The type of
-     * items may be different on each edge. For each edge a separate key
-     * extracting function must be supplied and the aggregate operation must
-     * contain a separate accumulation function for each edge.
-     * <p>
-     * When the processor receives a watermark with a given {@code wmVal}, it
-     * emits the current accumulated state of all frames with {@code
-     * timestamp <= wmVal} and deletes these frames from its storage.
-     * The type of emitted items is {@link TimestampedEntry
-     * TimestampedEntry&lt;K, A>} so there is one item per key per frame.
-     * <p>
-     * When a state snapshot is requested, the state is flushed to second-stage
-     * processor and nothing is saved to snapshot.
-     *
-     * @param <T> input item type
-     * @param <A> type of accumulator returned from {@code aggrOp.
-     *            createAccumulatorFn()}
-     */
-    @Nonnull
-    public static <T, A> DistributedSupplier<Processor> coAccumulateByFrameP(
-            @Nonnull List<DistributedFunction<? super T, ?>> keyFns,
-            @Nonnull DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull TimestampKind timestampKind,
-            @Nonnull SlidingWindowPolicy windowDef,
-            @Nonnull AggregateOperation<A, ?> aggrOp
-    ) {
-        SlidingWindowPolicy tumblingByFrame = windowDef.toTumblingByFrame();
-        return Processors.aggregateByKeyAndWindowP(keyFns, timestampFn, timestampKind, tumblingByFrame,
-                aggrOp.withFinishFn(identity()), false
+        DistributedFunction<TimestampedEntry<K, A>, K> keyFn = TimestampedEntry::getKey;
+        DistributedToLongFunction<TimestampedEntry<K, A>> timestampFn = TimestampedEntry::getTimestamp;
+        return aggregateByKeyAndWindowP(
+                singletonList(keyFn),
+                singletonList(timestampFn),
+                TimestampKind.FRAME,
+                winPolicy,
+                aggrOp.withCombiningAccumulateFn(TimestampedEntry<Object, A>::getValue),
+                mapToOutputFn,
+                true
         );
     }
 
@@ -656,80 +533,48 @@ public final class Processors {
      * operation on groups.
      *
      * @param keyFns functions that extracts the grouping key from the input item
-     * @param timestampFn function that extracts the timestamp from the input item
-     * @param timestampKind the kind of timestamp extracted by {@code timestampFn}: either the
+     * @param timestampFns function that extracts the timestamp from the input item
+     * @param timestampKind the kind of timestamp extracted by {@code timestampFns}: either the
      *                      event timestamp or the frame timestamp
      * @param winPolicy definition of the window to compute
      * @param aggrOp aggregate operation to perform on each group in a window
      * @param isLastStage if this is the last stage of multi-stage setup
      *
-     * @param <T> type of stream item
+     * @param <K> type of the grouping key
      * @param <A> type of the aggregate operation's accumulator
      * @param <R> type of the aggregated result
      */
     @Nonnull
-    private static <T, A, R> DistributedSupplier<Processor> aggregateByKeyAndWindowP(
-            @Nonnull List<DistributedFunction<? super T, ?>> keyFns,
-            @Nonnull DistributedToLongFunction<? super T> timestampFn,
+    private static <K, A, R, OUT> DistributedSupplier<Processor> aggregateByKeyAndWindowP(
+            @Nonnull List<DistributedFunction<?, ? extends K>> keyFns,
+            @Nonnull List<DistributedToLongFunction<?>> timestampFns,
             @Nonnull TimestampKind timestampKind,
             @Nonnull SlidingWindowPolicy winPolicy,
             @Nonnull AggregateOperation<A, R> aggrOp,
+            @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn,
             boolean isLastStage
     ) {
         return () -> new SlidingWindowP<>(
                 keyFns,
-                timestampKind == EVENT
-                        ? item -> winPolicy.higherFrameTs(timestampFn.applyAsLong(item))
-                        : item -> winPolicy.higherFrameTs(timestampFn.applyAsLong(item) - 1),
+                timestampFns.stream()
+                            .map(f -> toFrameTimestampFn(f, timestampKind, winPolicy))
+                            .collect(toList()),
                 winPolicy,
                 aggrOp,
-                TimestampedEntry::new,
+                mapToOutputFn,
                 isLastStage);
     }
 
-    /**
-     * Returns a supplier of processors for a vertex that aggregates events into
-     * session windows. Events and windows under different grouping keys are
-     * treated independently. Outputs objects of type {@link
-     * WindowResult}.
-     * <p>
-     * The functioning of this vertex is easiest to explain in terms of the
-     * <em>event interval</em>: the range {@code [timestamp, timestamp +
-     * sessionTimeout]}. Initially an event causes a new session window to be
-     * created, covering exactly the event interval. A following event under
-     * the same key belongs to this window iff its interval overlaps it. The
-     * window is extended to cover the entire interval of the new event. The
-     * event may happen to belong to two existing windows if its interval
-     * bridges the gap between them; in that case they are combined into one.
-     * <p>
-     * <i>Behavior on job restart</i><br>
-     * This processor saves its state to snapshot. After restart, it can
-     * continue accumulating where it left off.
-     * <p>
-     * After a restart in at-least-once mode, watermarks are allowed to go back
-     * in time. The processor evicts state based on watermarks it received. If
-     * it receives duplicate watermark, it might emit sessions with missing
-     * events, because they were already evicted. The sessions before and after
-     * snapshot might overlap, which they normally don't.
-     *
-     * @param sessionTimeout maximum gap between consecutive events in the same session window
-     * @param timestampFn function to extract the timestamp from the item
-     * @param keyFn       function to extract the grouping key from the item
-     * @param aggrOp         the aggregate operation
-     *
-     * @param <T> type of the stream event
-     * @param <K> type of the item's grouping key
-     * @param <A> type of the container of the accumulated value
-     * @param <R> type of the session window's result value
-     */
-    @Nonnull
-    public static <T, K, A, R> DistributedSupplier<Processor> aggregateToSessionWindowP(
-            long sessionTimeout,
-            @Nonnull DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
-            @Nonnull AggregateOperation<A, R> aggrOp
+    private static DistributedToLongFunction<Object> toFrameTimestampFn(
+            @Nonnull DistributedToLongFunction<?> timestampFnX,
+            @Nonnull TimestampKind timestampKind,
+            @Nonnull SlidingWindowPolicy winPolicy
     ) {
-        return coAggregateToSessionWindowP(sessionTimeout, timestampFn, singletonList(keyFn), aggrOp);
+        @SuppressWarnings("unchecked")
+        DistributedToLongFunction<Object> timestampFn = (DistributedToLongFunction<Object>) timestampFnX;
+        return timestampKind == EVENT
+                ? item -> winPolicy.higherFrameTs(timestampFn.applyAsLong(item))
+                : item -> winPolicy.higherFrameTs(timestampFn.applyAsLong(item) - 1);
     }
 
     /**
@@ -763,23 +608,23 @@ public final class Processors {
      * snapshot might overlap, which they normally don't.
      *
      * @param sessionTimeout maximum gap between consecutive events in the same session window
-     * @param timestampFn function to extract the timestamp from the item
-     * @param keyFns      functions to extract the grouping key from the item
+     * @param timestampFns   functions to extract the timestamp from the item
+     * @param keyFns         functions to extract the grouping key from the item
      * @param aggrOp         the aggregate operation
      *
-     * @param <T> type of the stream event
      * @param <K> type of the item's grouping key
      * @param <A> type of the container of the accumulated value
      * @param <R> type of the session window's result value
      */
     @Nonnull
-    public static <T, K, A, R> DistributedSupplier<Processor> coAggregateToSessionWindowP(
+    public static <K, A, R, OUT> DistributedSupplier<Processor> aggregateToSessionWindowP(
             long sessionTimeout,
-            @Nonnull DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull List<DistributedFunction<? super T, ? extends K>> keyFns,
-            @Nonnull AggregateOperation<A, R> aggrOp
+            @Nonnull List<DistributedToLongFunction<?>> timestampFns,
+            @Nonnull List<DistributedFunction<?, ? extends K>> keyFns,
+            @Nonnull AggregateOperation<A, R> aggrOp,
+            @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        return () -> new SessionWindowP<>(sessionTimeout, timestampFn, keyFns, aggrOp, WindowResult::new);
+        return () -> new SessionWindowP<>(sessionTimeout, timestampFns, keyFns, aggrOp, mapToOutputFn);
     }
 
     /**

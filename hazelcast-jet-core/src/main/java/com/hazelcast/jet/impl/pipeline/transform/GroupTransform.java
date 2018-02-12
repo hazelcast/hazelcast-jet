@@ -16,44 +16,81 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.Util;
+import com.hazelcast.jet.aggregate.AggregateOperation;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.impl.pipeline.Planner;
+import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 
-public class GroupTransform<T, K, A, R, OUT> extends AbstractTransform implements Transform {
+import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
+import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
+import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
+import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+
+public class GroupTransform<K, A, R, OUT> extends AbstractTransform implements Transform {
     @Nonnull
-    private DistributedFunction<? super T, ? extends K> keyFn;
+    private List<DistributedFunction<?, ? extends K>> groupKeyFns;
     @Nonnull
-    private AggregateOperation1<? super T, A, R> aggrOp;
+    private AggregateOperation<A, R> aggrOp;
     @Nonnull
     private final DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn;
 
     public GroupTransform(
-            @Nonnull Transform upstream,
-            @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
-            @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
+            @Nonnull List<Transform> upstream,
+            @Nonnull List<DistributedFunction<?, ? extends K>> groupKeyFns,
+            @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        super("group-and-aggregate", upstream);
-        this.keyFn = keyFn;
+        super(upstream.size() + "-way cogroup-and-aggregate", upstream);
+        this.groupKeyFns = groupKeyFns;
         this.aggrOp = aggrOp;
         this.mapToOutputFn = mapToOutputFn;
     }
 
     @Nonnull
-    public DistributedFunction<? super T, ? extends K> keyFn() {
-        return keyFn;
+    public List<DistributedFunction<?, ? extends K>> groupKeyFns() {
+        return groupKeyFns;
     }
 
     @Nonnull
-    public AggregateOperation1<? super T, A, R> aggrOp() {
+    public AggregateOperation<A, R> aggrOp() {
         return aggrOp;
     }
 
     @Nonnull
     public DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn() {
         return mapToOutputFn;
+    }
+
+    //           ----------       ----------         ----------
+    //          | source-1 |     | source-2 |  ...  | source-n |
+    //           ----------       ----------         ----------
+    //               |                 |                  |
+    //          partitioned       partitioned        partitioned
+    //               \------------v    v    v------------/
+    //                       --------------------
+    //                      | coAccumulateByKeyP |
+    //                       --------------------
+    //                                 |
+    //                            distributed
+    //                            partitioned
+    //                                 v
+    //                          ---------------
+    //                         | combineByKeyP |
+    //                          ---------------
+    @Override
+    public void addToDag(Planner p) {
+        List<DistributedFunction<?, ? extends K>> groupKeyFns = groupKeyFns();
+        String namePrefix = p.vertexName(this.name(), "-stage");
+        Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateByKeyP(groupKeyFns, this.aggrOp()));
+        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', combineByKeyP(this.aggrOp(), Util::entry));
+        p.addEdges(this, v1, (e, ord) -> e.partitioned(groupKeyFns.get(ord), HASH_CODE));
+        p.dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }
 }

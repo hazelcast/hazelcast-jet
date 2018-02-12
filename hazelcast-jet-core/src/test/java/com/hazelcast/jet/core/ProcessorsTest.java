@@ -21,6 +21,8 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.test.TestSupport;
+import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Test;
@@ -28,14 +30,11 @@ import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
-import static com.hazelcast.jet.core.processor.Processors.accumulateP;
-import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
-import static com.hazelcast.jet.core.processor.Processors.aggregateP;
 import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineP;
 import static com.hazelcast.jet.core.processor.Processors.filterP;
@@ -89,7 +88,7 @@ public class ProcessorsTest {
     @Test
     public void aggregateByKey() {
         TestSupport
-                .verifyProcessor(aggregateByKeyP(Object::toString, aggregateToListAndString(), Util::entry))
+                .verifyProcessor(Processors.aggregateByKeyP(singletonList((DistributedFunction<? super Object, String>) Object::toString), aggregateToListAndString(), (DistributedBiFunction<? super String, ? super String, Entry<String, String>>) Util::entry))
                 .disableSnapshots()
                 .outputChecker(TestSupport.SAME_ITEMS_ANY_ORDER)
                 .input(asList(1, 1, 2, 2))
@@ -102,7 +101,7 @@ public class ProcessorsTest {
     @Test
     public void accumulateByKey() {
         TestSupport
-                .verifyProcessor(accumulateByKeyP(Object::toString, aggregateToListAndString()))
+                .verifyProcessor(Processors.accumulateByKeyP(singletonList((DistributedFunction<? super Object, String>) Object::toString), aggregateToListAndString()))
                 .disableSnapshots()
                 .input(asList(1, 1, 2, 2))
                 .outputChecker(TestSupport.SAME_ITEMS_ANY_ORDER)
@@ -133,7 +132,7 @@ public class ProcessorsTest {
     @Test
     public void aggregate() {
         TestSupport
-                .verifyProcessor(aggregateP(aggregateToListAndString(), identity()))
+                .verifyProcessor(Processors.aggregateP(aggregateToListAndString()))
                 .disableSnapshots()
                 .input(asList(1, 2))
                 .expectOutput(singletonList("[1, 2]"));
@@ -142,7 +141,7 @@ public class ProcessorsTest {
     @Test
     public void accumulate() {
         TestSupport
-                .verifyProcessor(accumulateP(aggregateToListAndString()))
+                .verifyProcessor(Processors.accumulateP(aggregateToListAndString()))
                 .disableSnapshots()
                 .input(asList(1, 2))
                 .expectOutput(singletonList(asList(1, 2)));
@@ -151,7 +150,7 @@ public class ProcessorsTest {
     @Test
     public void combine() {
         TestSupport
-                .verifyProcessor(combineP(aggregateToListAndString(), identity()))
+                .verifyProcessor(combineP(aggregateToListAndString()))
                 .disableSnapshots()
                 .input(asList(
                         singletonList(1),

@@ -21,9 +21,9 @@ import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.KeyedWindowResultFunction;
-import com.hazelcast.jet.impl.pipeline.transform.CoGroupTransform;
+import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
-import com.hazelcast.jet.impl.pipeline.transform.WindowCoGroupTransform;
+import com.hazelcast.jet.impl.pipeline.transform.WindowGroupTransform;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
 import com.hazelcast.jet.pipeline.StageWithGrouping;
@@ -99,7 +99,7 @@ public class GrAggBuilder<K> {
     ) {
         List<Transform> upstreamTransforms = upstreamStages.stream().map(s -> s.transform).collect(toList());
         AggregateOperation adaptedAggrOp = ADAPT_TO_JET_EVENT.adaptAggregateOperation(aggrOp);
-        Transform transform = new CoGroupTransform<>(upstreamTransforms, keyFns, adaptedAggrOp, mapToOutputFn);
+        Transform transform = new GroupTransform<>(upstreamTransforms, keyFns, adaptedAggrOp, mapToOutputFn);
         pipelineImpl.connect(upstreamTransforms, transform);
         return new BatchStageImpl<>(transform, pipelineImpl);
     }
@@ -110,7 +110,7 @@ public class GrAggBuilder<K> {
             @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
         List<Transform> upstreamTransforms = upstreamStages.stream().map(s -> s.transform).collect(toList());
-        Transform transform = new WindowCoGroupTransform<K, A, R, OUT>(
+        Transform transform = new WindowGroupTransform<K, A, R, OUT>(
                 upstreamTransforms, wDef, keyFns, ADAPT_TO_JET_EVENT.adaptAggregateOperation(aggrOp), mapToOutputFn
         );
         pipelineImpl.connect(upstreamTransforms, transform);

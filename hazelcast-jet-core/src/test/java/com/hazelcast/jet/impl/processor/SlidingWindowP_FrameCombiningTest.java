@@ -46,7 +46,7 @@ public class SlidingWindowP_FrameCombiningTest {
     @Test
     public void when_multipleFrames_then_combine() {
         TestSupport
-                .verifyProcessor(combineToSlidingWindowP(slidingWinPolicy(8, 4), toSet()))
+                .verifyProcessor(combineToSlidingWindowP(slidingWinPolicy(8, 4), toSet(), TimestampedEntry::new))
                 .input(asList(
                         frame(2, set("a")),
                         frame(4, set("b")),

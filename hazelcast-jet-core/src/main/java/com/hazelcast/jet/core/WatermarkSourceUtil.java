@@ -100,7 +100,7 @@ public class WatermarkSourceUtil<T> {
     }
 
     /**
-     * TODO Javadoc pending
+     * Javadoc pending
      */
     public Traverser<Object> flatMap(@Nullable T item, int partitionIndex) {
         return flatMap(System.nanoTime(), item, partitionIndex);
@@ -117,6 +117,10 @@ public class WatermarkSourceUtil<T> {
             traverser.append(wrapFn.apply(item, timestampFn.applyAsLong(item)));
         }
         return traverser;
+    }
+
+    public Watermark handleNoEvent() {
+        return handleNoEvent(System.nanoTime());
     }
 
     private Watermark handleEvent(long now, int partitionIndex, T event) {

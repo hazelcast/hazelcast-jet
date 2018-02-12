@@ -22,6 +22,7 @@ import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.datamodel.WindowResult;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.Repeat;
 import org.junit.After;
@@ -53,13 +54,13 @@ public class SessionWindowPTest {
 
     private static final int SESSION_TIMEOUT = 10;
     private Supplier<Processor> supplier;
-    private SessionWindowP<Entry<String, Long>, String, ?, Long, WindowResult<String, Long>> lastSuppliedProcessor;
+    private SessionWindowP<String, ?, Long, WindowResult<String, Long>> lastSuppliedProcessor;
 
     @Before
     public void before() {
         supplier = () -> lastSuppliedProcessor = new SessionWindowP<>(
                 SESSION_TIMEOUT,
-                Entry::getValue,
+                singletonList((DistributedToLongFunction<Entry<Object, Long>>) Entry::getValue),
                 singletonList(entryKey()),
                 AggregateOperations.counting(),
                 WindowResult::new);

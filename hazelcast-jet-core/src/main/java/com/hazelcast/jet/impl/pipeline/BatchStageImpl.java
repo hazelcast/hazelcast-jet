@@ -31,7 +31,6 @@ import com.hazelcast.jet.function.DistributedTriFunction;
 import com.hazelcast.jet.impl.aggregate.AggregateOperationImpl;
 import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
-import com.hazelcast.jet.impl.pipeline.transform.CoAggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.JoinClause;
@@ -40,6 +39,7 @@ import com.hazelcast.jet.pipeline.StageWithGrouping;
 import javax.annotation.Nonnull;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 
 public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchStage<T> {
 
@@ -102,7 +102,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     public <A, R> BatchStage<R> aggregate(@Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp) {
         AggregateOperation1 adaptedAggrOp = ((AggregateOperation1) aggrOp)
                 .withAccumulateFn(fnAdapters.adaptAccumulateFn(aggrOp.accumulateFn()));
-        return attach(new AggregateTransform<T, A, R>(transform, adaptedAggrOp), fnAdapters);
+        return attach(new AggregateTransform<A, R>(singletonList(transform), adaptedAggrOp), fnAdapters);
     }
 
     @Nonnull @Override
@@ -117,7 +117,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
                 fnAdapters1.adaptAccumulateFn(rawAggrOp.accumulateFn(1))
         };
         AggregateOperation<?, ?> adaptedAggrOp = rawAggrOp.withAccumulateFns(adaptedAccFns);
-        return attach(new CoAggregateTransform<>(
+        return attach(new AggregateTransform<>(
                 asList(transform, transformOf(stage1)),
                 adaptedAggrOp), DONT_ADAPT);
     }
@@ -137,8 +137,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
                 fnAdapters2.adaptAccumulateFn(rawAggrOp.accumulateFn(2))
         };
         AggregateOperation<?, ?> adaptedAggrOp = rawAggrOp.withAccumulateFns(adaptedAccFns);
-        return attach(new CoAggregateTransform<>(
-                asList(transform, transformOf(stage1), transformOf(stage2)), adaptedAggrOp, null),
+        return attach(new AggregateTransform<>(
+                asList(transform, transformOf(stage1), transformOf(stage2)), adaptedAggrOp),
                 DONT_ADAPT);
     }
 

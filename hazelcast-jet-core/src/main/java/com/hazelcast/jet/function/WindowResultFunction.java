@@ -24,5 +24,9 @@ import java.io.Serializable;
  */
 @FunctionalInterface
 public interface WindowResultFunction<R, OUT> extends Serializable {
-    @Nonnull OUT apply(long winStart, long winEnd, @Nonnull R windowResult);
+    @Nonnull OUT apply(long start, long end, @Nonnull R result);
+
+    default KeyedWindowResultFunction<Object, R, OUT> toKeyedWindowResultFn() {
+        return (start, end, k, result) -> apply(start, end, result);
+    }
 }

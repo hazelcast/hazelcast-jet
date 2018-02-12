@@ -16,15 +16,25 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedTriFunction;
+import com.hazelcast.jet.impl.pipeline.Planner;
+import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.jet.impl.processor.HashJoinCollectP;
+import com.hazelcast.jet.impl.processor.HashJoinP;
 import com.hazelcast.jet.pipeline.JoinClause;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.function.BiFunction;
+
+import static com.hazelcast.jet.core.Edge.from;
+import static com.hazelcast.jet.impl.pipeline.Planner.tailList;
+import static java.util.stream.Collectors.toList;
 
 public class HashJoinTransform<T0, R> extends AbstractTransform implements Transform {
     @Nonnull
@@ -60,5 +70,60 @@ public class HashJoinTransform<T0, R> extends AbstractTransform implements Trans
         this.tags = tags;
         this.mapToOutputBiFn = null;
         this.mapToOutputTriFn = mapToOutputTriFn;
+    }
+
+    //         ---------           ----------           ----------
+    //        | primary |         | joined-1 |         | joined-2 |
+    //         ---------           ----------           ----------
+    //             |                   |                     |
+    //             |              distributed          distributed
+    //             |               broadcast            broadcast
+    //             |                   v                     v
+    //             |             -------------         -------------
+    //             |            | collector-1 |       | collector-2 |
+    //             |             -------------         -------------
+    //             |                   |                     |
+    //             |                 local                 local
+    //        distributed          broadcast             broadcast
+    //        partitioned         prioritized           prioritized
+    //         ordinal 0           ordinal 1             ordinal 2
+    //             \                   |                     |
+    //              ----------------\  |   /----------------/
+    //                              v  v  v
+    //                              --------
+    //                             | joiner |
+    //                              --------
+    @Override
+    @SuppressWarnings("unchecked")
+    public void addToDag(Planner p) {
+        String namePrefix = p.vertexName(this.name(), "");
+        PlannerVertex primary = p.xform2vertex.get(this.upstream().get(0));
+        List keyFns = this.clauses.stream()
+                                      .map(JoinClause::leftKeyFn)
+                                      .collect(toList());
+        Vertex joiner = p.addVertex(this, namePrefix + "joiner",
+                () -> new HashJoinP(keyFns, this.tags, this.mapToOutputBiFn, null)).v;
+        p.dag.edge(from(primary.v, primary.availableOrdinal++).to(joiner, 0));
+
+        String collectorName = namePrefix + "collector-";
+        int collectorOrdinal = 1;
+        for (Transform fromTransform : tailList(this.upstream())) {
+            PlannerVertex fromPv = p.xform2vertex.get(fromTransform);
+            JoinClause<?, ?, ?, ?> clause = this.clauses.get(collectorOrdinal - 1);
+            DistributedFunction<Object, Object> getKeyFn =
+                    (DistributedFunction<Object, Object>) clause.rightKeyFn();
+            DistributedFunction<Object, Object> projectFn =
+                    (DistributedFunction<Object, Object>) clause.rightProjectFn();
+            Vertex collector = p.dag.newVertex(collectorName + collectorOrdinal,
+                    () -> new HashJoinCollectP(getKeyFn, projectFn));
+            collector.localParallelism(1);
+            p.dag.edge(from(fromPv.v, fromPv.availableOrdinal++)
+                    .to(collector, 0)
+                    .distributed().broadcast());
+            p.dag.edge(from(collector, 0)
+                    .to(joiner, collectorOrdinal)
+                    .broadcast().priority(-1));
+            collectorOrdinal++;
+        }
     }
 }

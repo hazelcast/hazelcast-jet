@@ -16,54 +16,109 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.aggregate.AggregateOperation;
+import com.hazelcast.jet.core.SlidingWindowPolicy;
+import com.hazelcast.jet.core.TimestampKind;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.function.KeyedWindowResultFunction;
+import com.hazelcast.jet.impl.pipeline.JetEvent;
+import com.hazelcast.jet.impl.pipeline.Planner;
+import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.jet.pipeline.SessionWindowDef;
+import com.hazelcast.jet.pipeline.SlidingWindowDef;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 
-public class WindowGroupTransform<T, K, A, R, OUT> extends AbstractTransform implements Transform {
+import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
+import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
+import static com.hazelcast.jet.core.processor.Processors.aggregateToSessionWindowP;
+import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
+import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static java.util.Collections.nCopies;
+
+public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform implements Transform {
     @Nonnull
-    private DistributedFunction<? super T, ? extends K> keyFn;
+    private WindowDefinition wDef;
     @Nonnull
-    private AggregateOperation1<? super T, A, R> aggrOp;
+    private List<DistributedFunction<?, ? extends K>> keyFns;
     @Nonnull
-    private final KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn;
+    private AggregateOperation<A, ? extends R> aggrOp;
     @Nonnull
-    private final WindowDefinition wDef;
+    private final KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn;
 
     public WindowGroupTransform(
-            @Nonnull Transform upstream,
+            @Nonnull List<Transform> upstream,
             @Nonnull WindowDefinition wDef,
-            @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
-            @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
-            @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull List<DistributedFunction<?, ? extends K>> keyFns,
+            @Nonnull AggregateOperation<A, ? extends R> aggrOp,
+            @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        super("group-and-aggregate", upstream);
+        super(upstream.size() + "-way windowed cogroup-and-aggregate", upstream);
         this.wDef = wDef;
-        this.keyFn = keyFn;
+        this.keyFns = keyFns;
         this.aggrOp = aggrOp;
         this.mapToOutputFn = mapToOutputFn;
     }
-;
-    @Nonnull
-    public DistributedFunction<? super T, ? extends K> keyFn() {
-        return keyFn;
+
+    @Override
+    public void addToDag(Planner p) {
+        switch (wDef.kind()) {
+            case TUMBLING:
+            case SLIDING:
+                addSlidingWindow(p, wDef.downcast());
+                return;
+            case SESSION:
+                addSessionWindow(p, wDef.downcast());
+                return;
+            default:
+                throw new IllegalArgumentException("Unknown window definition " + wDef.kind());
+        }
     }
 
-    @Nonnull
-    public AggregateOperation1<? super T, A, R> aggrOp() {
-        return aggrOp;
+    //              ---------       ---------
+    //             | source0 | ... | sourceN |
+    //              ---------       ---------
+    //                  |               |
+    //             partitioned     partitioned
+    //                  v               v
+    //                 --------------------
+    //                | accumulatebyFrameP |
+    //                 --------------------
+    //                           |
+    //                      distributed
+    //                      partitioned
+    //                           v
+    //                   -----------------
+    //                  | combineByFrameP |
+    //                   -----------------
+    private void addSlidingWindow(Planner p, SlidingWindowDef wDef) {
+        String namePrefix = p.vertexName("sliding-window", "-stage");
+        SlidingWindowPolicy winPolicy = wDef.toSlidingWindowPolicy();
+        Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateByFrameP(
+                keyFns,
+                nCopies(keyFns.size(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),
+                TimestampKind.EVENT,
+                winPolicy,
+                aggrOp));
+        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2',
+                combineToSlidingWindowP(winPolicy, aggrOp, mapToOutputFn));
+        p.addEdges(this, v1, (e, ord) -> e.partitioned(keyFns.get(ord), HASH_CODE));
+        p.dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }
 
-    @Nonnull
-    public KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn() {
-        return mapToOutputFn;
-    }
-
-    @Nonnull
-    public WindowDefinition wDef() {
-        return wDef;
+    private void addSessionWindow(Planner p, SessionWindowDef wDef) {
+        PlannerVertex pv = p.addVertex(this, p.vertexName("session-window", ""), aggregateToSessionWindowP(
+                wDef.sessionTimeout(),
+                nCopies(keyFns.size(), (DistributedToLongFunction<Object>) x -> 0L),
+                keyFns,
+                aggrOp,
+                mapToOutputFn
+        ));
+        p.addEdges(this, pv.v, (e, ord) -> e.partitioned(keyFns.get(ord)));
     }
 }

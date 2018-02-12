@@ -21,7 +21,6 @@ import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.impl.pipeline.transform.CoGroupTransform;
 import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
@@ -32,6 +31,7 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DONT_ADAPT;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 
 public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> implements StageWithGrouping<T, K> {
 
@@ -48,7 +48,11 @@ public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
         return computeStage.attach(new GroupTransform<>(
-                computeStage.transform, keyFn(), aggrOp, mapToOutputFn), DONT_ADAPT);
+                        singletonList(computeStage.transform),
+                        singletonList(keyFn()),
+                        aggrOp,
+                        mapToOutputFn),
+                DONT_ADAPT);
     }
 
     @Nonnull
@@ -58,7 +62,7 @@ public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
         return computeStage.attach(
-                new CoGroupTransform<>(
+                new GroupTransform<>(
                         asList(computeStage.transform, transformOf(stage1)),
                         asList(keyFn(), stage1.keyFn()),
                         aggrOp,
@@ -74,7 +78,7 @@ public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
         return computeStage.attach(
-                new CoGroupTransform<>(
+                new GroupTransform<>(
                         asList(computeStage.transform, transformOf(stage1), transformOf(stage2)),
                         asList(keyFn(), stage1.keyFn(), stage2.keyFn()),
                         aggrOp,

@@ -18,8 +18,12 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
+import com.hazelcast.jet.impl.pipeline.Planner;
+import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
 import javax.annotation.Nonnull;
+
+import static com.hazelcast.jet.core.processor.DiagnosticProcessors.peekOutputP;
 
 public class PeekTransform<T> extends AbstractTransform implements Transform {
     @Nonnull
@@ -35,5 +39,14 @@ public class PeekTransform<T> extends AbstractTransform implements Transform {
         super("peek", upstream);
         this.shouldLogFn = shouldLogFn;
         this.toStringFn = toStringFn;
+    }
+
+    @Override
+    public void addToDag(Planner p) {
+        PlannerVertex peekedPv = p.xform2vertex.get(this.upstream().get(0));
+        // Peeking transform doesn't add a vertex, so point to the upstream
+        // transform's vertex:
+        p.xform2vertex.put(this, peekedPv);
+        peekedPv.v.updateMetaSupplier(sup -> peekOutputP(toStringFn, shouldLogFn, sup));
     }
 }

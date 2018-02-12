@@ -28,8 +28,11 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
+import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.test.HazelcastSerialClassRunner;
@@ -58,11 +61,11 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapP;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -162,10 +165,10 @@ public class WordCountTest extends HazelcastTestSupport implements Serializable 
                 })
         );
         // word -> (word, count)
-        Vertex aggregateStage1 = dag.newVertex("aggregateStage1", aggregateByKeyP(wholeItem(), counting(), Util::entry));
+        Vertex aggregateStage1 = dag.newVertex("aggregateStage1", Processors.aggregateByKeyP(singletonList(wholeItem()), counting(), (DistributedBiFunction<? super Object, ? super Long, Entry<Object, Long>>) Util::entry));
         // (word, count) -> (word, count)
         Vertex aggregateStage2 = dag.newVertex("aggregateStage2",
-                aggregateByKeyP(Entry::getKey, summingLong(Entry<String, Long>::getValue), Util::entry));
+                Processors.aggregateByKeyP(singletonList((DistributedFunction<? super Entry<String, Long>, String>) Entry::getKey), summingLong(Entry<String, Long>::getValue), (DistributedBiFunction<? super String, ? super Long, Entry<String, Long>>) Util::entry));
         Vertex sink = dag.newVertex("sink", SinkProcessors.writeMapP("counts"));
 
         dag.edge(between(source.localParallelism(1), tokenize))

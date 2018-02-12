@@ -137,7 +137,7 @@ public final class Sources {
      * Projections.singleAttribute()} and {@link
      *     com.hazelcast.projection.Projections#multiAttribute(String...)
      * Projections.multiAttribute()}) to create your projection instance and
-     * using the {@link GenericPredicates} factory or
+     * using the {@link com.hazelcast.jet.GenericPredicates} factory or
      * {@link com.hazelcast.query.PredicateBuilder PredicateBuilder} to create
      * the predicate. In this case Jet can test the predicate and apply the
      * projection without deserializing the whole object.
@@ -157,13 +157,13 @@ public final class Sources {
      * CPU is available).
      *
      * @param mapName the name of the map
-     * @param predicate the predicate to filter the events, you may use
-     *      {@link GenericPredicates#alwaysTrue()} to pass all entries,
-     *      if you want to use projection only
-     * @param projection the projection to map the events, you may use
-     *     {@link Projections#identity()} if you want just the predicate.
-     *     If the projection returns a {@code null} for an item, that item
-     *     will be filtered out.
+     * @param predicate the predicate to filter the events. If you want to specify just the
+     *                  projection, use {@link
+     *                  com.hazelcast.jet.GenericPredicates#alwaysTrue()} as a pass-through
+     *                  predicate
+     * @param projection the projection to map the events. If the projection returns a {@code
+     *                   null} for an item, that item will be filtered out. If you want to
+     *                   specify just the predicate, use {@link Projections#identity()}.
      * @param <T> type of emitted item
      */
     @Nonnull
@@ -213,13 +213,13 @@ public final class Sources {
      * CPU is available).
      *
      * @param mapName the name of the map
-     * @param predicateFn the predicate to filter the events, you may use
-     *      {@link Util#mapPutEvents} to pass only {@link com.hazelcast.core.EntryEventType#ADDED
-     *      ADDED} and {@link com.hazelcast.core.EntryEventType#UPDATED UPDATED} events
-     * @param projectionFn the projection to map the events, you may use
-     *     {@link Util#mapEventToEntry()} to project new value from the event
-     *     If the projection returns a {@code null} for an item, that item
-     *     will be filtered out.
+     * @param predicateFn the predicate to filter the events. If you want to specify just the
+     *                    projection, use {@link Util#mapPutEvents} to pass only {@link
+     *                    com.hazelcast.core.EntryEventType#ADDED ADDED} and {@link
+     *                    com.hazelcast.core.EntryEventType#UPDATED UPDATED} events.
+     * @param projectionFn the projection to map the events. If the projection returns a {@code
+     *                     null} for an item, that item will be filtered out. You may use {@link
+     *                     Util#mapEventToEntry()} to extract just the key and the new value.
      * @param initialPos describes which event to start receiving from
      * @param wmGenParams parameters for watermark generation, see {@link
      *      WatermarkGenerationParams#wmGenParams}
@@ -291,7 +291,7 @@ public final class Sources {
      * Projections.singleAttribute()} and {@link
      *     com.hazelcast.projection.Projections#multiAttribute(String...)
      * Projections.multiAttribute()}) to create your projection instance and
-     * using the {@link GenericPredicates} factory or
+     * using the {@link com.hazelcast.jet.GenericPredicates} factory or
      * {@link com.hazelcast.query.PredicateBuilder PredicateBuilder} to create
      * the predicate. In this case Jet can test the predicate and apply the
      * projection without deserializing the whole object.
@@ -306,13 +306,13 @@ public final class Sources {
      * The default local parallelism for this processor is 1.
      *
      * @param mapName the name of the map
-     * @param predicate the predicate to filter the events, you may use
-     *      {@link GenericPredicates#alwaysTrue()} to pass all entries,
-     *      if you want to use projection only
-     * @param projection the projection to map the events, you may use
-     *     {@link Projections#identity()} if you want just the predicate.
-     *     If the projection returns a {@code null} for an item, that item
-     *     will be filtered out.
+     * @param predicate the predicate to filter the events. If you want to specify just the
+     *                  projection, use {@link
+     *                  com.hazelcast.jet.GenericPredicates#alwaysTrue()} as a pass-through
+     *                  predicate
+     * @param projection the projection to map the events. If the projection returns a {@code
+     *                   null} for an item, that item will be filtered out. If you want to
+     *                   specify just the predicate, use {@link Projections#identity()}.
      * @param <T> type of emitted item
      */
     @Nonnull
@@ -362,16 +362,16 @@ public final class Sources {
      *
      * @param mapName the name of the map
      * @param clientConfig configuration for the client to connect to the remote cluster
-     * @param predicateFn the predicate to filter the events, you may use
-     *      {@link Util#mapPutEvents} to pass only {@link com.hazelcast.core.EntryEventType#ADDED
-     *      ADDED} and {@link com.hazelcast.core.EntryEventType#UPDATED UPDATED} events
-     * @param projectionFn the projection to map the events, you may use
-     *     {@link Util#mapEventToEntry()} to project new value from the event.
-     *     If the projection returns a {@code null} for an item, that item
-     *     will be filtered out.
+     * @param predicateFn the predicate to filter the events. You may use {@link Util#mapPutEvents}
+     *                    to pass only {@link com.hazelcast.core.EntryEventType#ADDED
+     *                    ADDED} and {@link com.hazelcast.core.EntryEventType#UPDATED UPDATED}
+     *                    events.
+     * @param projectionFn the projection to map the events. If the projection returns a {@code
+     *                     null} for an item, that item will be filtered out. You may use {@link
+     *                     Util#mapEventToEntry()} to extract just the key and the new value.
      * @param initialPos describes which event to start receiving from
      * @param wmGenParams parameters for watermark generation, see {@link
-     *      WatermarkGenerationParams#wmGenParams}
+     *                    WatermarkGenerationParams#wmGenParams}
      * @param <K> type of key
      * @param <V> type of value
      * @param <T> type of emitted item
@@ -454,13 +454,13 @@ public final class Sources {
      * CPU is available).
      *
      * @param cacheName the name of the cache
-     * @param predicateFn the predicate to filter the events, you may use
-     *      {@link Util#cachePutEvents()} to pass only {@link com.hazelcast.cache.CacheEventType#CREATED
-     *      CREATED} and {@link com.hazelcast.cache.CacheEventType#UPDATED UPDATED} events
-     * @param projectionFn the projection to map the events, you may use
-     *     {@link Util#cacheEventToEntry()} to project new value from the event.
-     *     If the projection returns a {@code null} for an item, that item
-     *     will be filtered out.
+     * @param predicateFn the predicate to filter the events. You may use {@link
+     *                    Util#cachePutEvents()} to pass only {@link
+     *                    com.hazelcast.cache.CacheEventType#CREATED CREATED} and {@link
+     *                    com.hazelcast.cache.CacheEventType#UPDATED UPDATED} events.
+     * @param projectionFn the projection to map the events. If the projection returns a {@code
+     *                     null} for an item, that item will be filtered out. You may use {@link
+     *                     Util#cacheEventToEntry()} to extract just the key and the new value.
      * @param initialPos describes which event to start receiving from
      * @param wmGenParams parameters for watermark generation, see {@link
      *      WatermarkGenerationParams#wmGenParams}
@@ -540,13 +540,13 @@ public final class Sources {
      *
      * @param cacheName the name of the cache
      * @param clientConfig configuration for the client to connect to the remote cluster
-     * @param predicateFn the predicate to filter the events, you may use
-     *      {@link Util#cachePutEvents()} to pass only {@link com.hazelcast.cache.CacheEventType#CREATED
-     *      CREATED} and {@link com.hazelcast.cache.CacheEventType#UPDATED UPDATED} events
-     * @param projectionFn the projection to map the events, you may use
-     *     {@link Util#cacheEventToEntry()} to project new value from the event.
-     *     If the projection returns a {@code null} for an item, that item
-     *     will be filtered out.
+     * @param predicateFn the predicate to filter the events. You may use {@link
+     *                    Util#cachePutEvents()} to pass only {@link
+     *                    com.hazelcast.cache.CacheEventType#CREATED CREATED} and {@link
+     *                    com.hazelcast.cache.CacheEventType#UPDATED UPDATED} events.
+     * @param projectionFn the projection to map the events. If the projection returns a {@code
+     *                     null} for an item, that item will be filtered out. You may use {@link
+     *                     Util#cacheEventToEntry()} to extract just the key and the new value.
      * @param initialPos describes which event to start receiving from
      * @param wmGenParams parameters for watermark generation, see {@link
      *      WatermarkGenerationParams#wmGenParams}

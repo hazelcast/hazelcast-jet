@@ -18,6 +18,8 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.impl.pipeline.Planner;
+import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
 import javax.annotation.Nonnull;
 
@@ -36,5 +38,11 @@ public class ProcessorTransform extends AbstractTransform implements Transform {
     ) {
         super(name, upstream);
         this.procSupplier = procSupplier;
+    }
+
+    @Override
+    public void addToDag(Planner p) {
+        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), procSupplier);
+        p.addEdges(this, pv.v);
     }
 }

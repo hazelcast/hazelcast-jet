@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.pipeline.BatchSource;
 
 import javax.annotation.Nonnull;
@@ -33,5 +34,10 @@ public class BatchSourceTransform<T> extends AbstractTransform implements BatchS
     ) {
         super(name, emptyList());
         this.metaSupplier = metaSupplier;
+    }
+
+    @Override
+    public void addToDag(Planner p) {
+        p.addVertex(this, p.vertexName(name(), ""), metaSupplier);
     }
 }

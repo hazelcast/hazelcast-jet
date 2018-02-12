@@ -17,8 +17,12 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.function.DistributedPredicate;
+import com.hazelcast.jet.impl.pipeline.Planner;
+import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
 import javax.annotation.Nonnull;
+
+import static com.hazelcast.jet.core.processor.Processors.filterP;
 
 public class FilterTransform<T> extends AbstractTransform implements Transform {
     @Nonnull
@@ -34,5 +38,11 @@ public class FilterTransform<T> extends AbstractTransform implements Transform {
 
     public DistributedPredicate<? super T> filterFn() {
         return filterFn;
+    }
+
+    @Override
+    public void addToDag(Planner p) {
+        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), filterP(filterFn()));
+        p.addEdges(this, pv.v);
     }
 }

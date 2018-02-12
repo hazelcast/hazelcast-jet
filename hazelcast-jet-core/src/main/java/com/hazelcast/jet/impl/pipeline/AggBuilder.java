@@ -18,8 +18,10 @@ package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.impl.pipeline.transform.CoAggregateTransform;
+import com.hazelcast.jet.function.WindowResultFunction;
+import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
+import com.hazelcast.jet.impl.pipeline.transform.WindowAggregateTransform;
 import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
@@ -32,6 +34,7 @@ import static com.hazelcast.jet.datamodel.Tag.tag;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DONT_ADAPT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
 public class AggBuilder<T0> {
@@ -70,7 +73,8 @@ public class AggBuilder<T0> {
     @SuppressWarnings("unchecked")
     public <A, R, OUT, OUT_STAGE extends GeneralStage<OUT>> OUT_STAGE build(
             @Nonnull AggregateOperation<A, R> aggrOp,
-            @Nonnull CreateOutStageFn<OUT, OUT_STAGE> createOutStageFn
+            @Nonnull CreateOutStageFn<OUT, OUT_STAGE> createOutStageFn,
+            @Nullable WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
     ) {
         AggregateOperation adaptedAggrOp = wDef != null
             ? aggrOp
@@ -79,7 +83,13 @@ public class AggBuilder<T0> {
                 .stream()
                 .map(s -> ((AbstractStage) s).transform)
                 .collect(toList());
-        CoAggregateTransform<A, R> transform = new CoAggregateTransform<>(upstreamTransforms, adaptedAggrOp, wDef);
+        final Transform transform;
+        if (wDef != null) {
+            requireNonNull(mapToOutputFn, "wDef != null but mapToOutputFn == null");
+            transform = new WindowAggregateTransform<>(upstreamTransforms, wDef, adaptedAggrOp, mapToOutputFn);
+        } else {
+            transform = new AggregateTransform<>(upstreamTransforms, adaptedAggrOp);
+        }
         OUT_STAGE attached = createOutStageFn.get(transform, DONT_ADAPT, pipelineImpl);
         pipelineImpl.connect(upstreamTransforms, transform);
         return attached;

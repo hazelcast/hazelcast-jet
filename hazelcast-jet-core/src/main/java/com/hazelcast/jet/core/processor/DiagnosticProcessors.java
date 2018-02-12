@@ -61,7 +61,7 @@ public final class DiagnosticProcessors {
      */
     @Nonnull
     public static <T> ProcessorMetaSupplier writeLoggerP(
-            @Nonnull DistributedFunction<T, String> toStringFn
+            @Nonnull DistributedFunction<T, ? extends CharSequence> toStringFn
     ) {
         return dontParallelize(() -> new WriteLoggerP<>(toStringFn));
     }
@@ -109,7 +109,7 @@ public final class DiagnosticProcessors {
      */
     @Nonnull
     public static <T> ProcessorMetaSupplier peekInputP(
-            @Nonnull DistributedFunction<T, String> toStringFn,
+            @Nonnull DistributedFunction<T, ? extends CharSequence> toStringFn,
             @Nonnull DistributedPredicate<T> shouldLogFn,
             @Nonnull ProcessorMetaSupplier wrapped
     ) {
@@ -124,7 +124,7 @@ public final class DiagnosticProcessors {
      */
     @Nonnull
     public static <T> ProcessorSupplier peekInputP(
-            @Nonnull DistributedFunction<T, String> toStringFn,
+            @Nonnull DistributedFunction<T, ? extends CharSequence> toStringFn,
             @Nonnull DistributedPredicate<T> shouldLogFn,
             @Nonnull ProcessorSupplier wrapped
     ) {
@@ -140,7 +140,7 @@ public final class DiagnosticProcessors {
      */
     @Nonnull
     public static <T> DistributedSupplier<Processor> peekInputP(
-            @Nonnull DistributedFunction<T, String> toStringFn,
+            @Nonnull DistributedFunction<T, ? extends CharSequence> toStringFn,
             @Nonnull DistributedPredicate<T> shouldLogFn,
             @Nonnull DistributedSupplier<Processor> wrapped
     ) {
@@ -220,8 +220,8 @@ public final class DiagnosticProcessors {
      */
     @Nonnull
     public static <T> ProcessorMetaSupplier peekOutputP(
-            @Nonnull DistributedFunction<T, String> toStringFn,
-            @Nonnull DistributedPredicate<T> shouldLogFn,
+            @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn,
+            @Nonnull DistributedPredicate<? super T> shouldLogFn,
             @Nonnull ProcessorMetaSupplier wrapped
     ) {
         return new WrappingProcessorMetaSupplier(wrapped, p ->
@@ -235,8 +235,8 @@ public final class DiagnosticProcessors {
      */
     @Nonnull
     public static <T> ProcessorSupplier peekOutputP(
-            @Nonnull DistributedFunction<T, String> toStringFn,
-            @Nonnull DistributedPredicate<T> shouldLogFn,
+            @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn,
+            @Nonnull DistributedPredicate<? super T> shouldLogFn,
             @Nonnull ProcessorSupplier wrapped
     ) {
         return new WrappingProcessorSupplier(wrapped, p ->
@@ -251,8 +251,8 @@ public final class DiagnosticProcessors {
      */
     @Nonnull
     public static <T> DistributedSupplier<Processor> peekOutputP(
-            @Nonnull DistributedFunction<T, String> toStringFn,
-            @Nonnull DistributedPredicate<T> shouldLogFn,
+            @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn,
+            @Nonnull DistributedPredicate<? super T> shouldLogFn,
             @Nonnull DistributedSupplier<Processor> wrapped) {
         return () -> new PeekWrappedP<>(wrapped.get(), toStringFn, shouldLogFn, false, true, false);
     }
@@ -321,8 +321,8 @@ public final class DiagnosticProcessors {
      */
     @Nonnull
     public static <K, V> ProcessorMetaSupplier peekSnapshotP(
-            @Nonnull DistributedFunction<Entry<K, V>, String> toStringFn,
-            @Nonnull DistributedPredicate<Entry<K, V>> shouldLogFn,
+            @Nonnull DistributedFunction<? super Entry<K, V>, ? extends CharSequence> toStringFn,
+            @Nonnull DistributedPredicate<? super Entry<K, V>> shouldLogFn,
             @Nonnull ProcessorMetaSupplier wrapped
     ) {
         return new WrappingProcessorMetaSupplier(wrapped, p ->
@@ -336,8 +336,8 @@ public final class DiagnosticProcessors {
      */
     @Nonnull
     public static <K, V> ProcessorSupplier peekSnapshotP(
-            @Nonnull DistributedFunction<Entry<K, V>, String> toStringFn,
-            @Nonnull DistributedPredicate<Entry<K, V>> shouldLogFn,
+            @Nonnull DistributedFunction<? super Entry<K, V>, ? extends CharSequence> toStringFn,
+            @Nonnull DistributedPredicate<? super Entry<K, V>> shouldLogFn,
             @Nonnull ProcessorSupplier wrapped
     ) {
         return new WrappingProcessorSupplier(wrapped, p ->
@@ -352,8 +352,8 @@ public final class DiagnosticProcessors {
      */
     @Nonnull
     public static <K, V> DistributedSupplier<Processor> peekSnapshotP(
-            @Nonnull DistributedFunction<Entry<K, V>, String> toStringFn,
-            @Nonnull DistributedPredicate<Entry<K, V>> shouldLogFn,
+            @Nonnull DistributedFunction<? super Entry<K, V>, ? extends CharSequence> toStringFn,
+            @Nonnull DistributedPredicate<? super Entry<K, V>> shouldLogFn,
             @Nonnull DistributedSupplier<Processor> wrapped) {
         return () -> new PeekWrappedP<>(wrapped.get(), toStringFn, shouldLogFn, false, false, true);
     }

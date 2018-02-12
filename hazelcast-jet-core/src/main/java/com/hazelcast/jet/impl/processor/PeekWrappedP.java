@@ -42,8 +42,8 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 public final class PeekWrappedP<T> implements Processor {
 
     private final Processor wrappedProcessor;
-    private final DistributedFunction<T, String> toStringFn;
-    private final Predicate<T> shouldLogFn;
+    private final DistributedFunction<? super T, ? extends CharSequence> toStringFn;
+    private final Predicate<? super T> shouldLogFn;
     private final LoggingInbox loggingInbox;
     private ILogger logger;
 
@@ -53,8 +53,12 @@ public final class PeekWrappedP<T> implements Processor {
 
     private boolean peekedWatermarkLogged;
 
-    public PeekWrappedP(@Nonnull Processor wrappedProcessor, @Nonnull DistributedFunction<T, String> toStringFn,
-                        @Nonnull Predicate<T> shouldLogFn, boolean peekInput, boolean peekOutput, boolean peekSnapshot) {
+    public PeekWrappedP(
+            @Nonnull Processor wrappedProcessor,
+            @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn,
+            @Nonnull Predicate<? super T> shouldLogFn,
+            boolean peekInput, boolean peekOutput, boolean peekSnapshot
+    ) {
         checkNotNull(wrappedProcessor, "wrappedProcessor");
         checkNotNull(toStringFn, "toStringFn");
         checkNotNull(shouldLogFn, "shouldLogFn");

@@ -21,6 +21,8 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.impl.pipeline.Planner;
+import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.pipeline.Sink;
 
 import javax.annotation.Nonnull;
@@ -60,5 +62,11 @@ public class SinkTransform<T> extends AbstractTransform implements Sink<T> {
     @Nonnull
     public ProcessorMetaSupplier metaSupplier() {
         return metaSupplier;
+    }
+
+    @Override
+    public void addToDag(Planner p) {
+        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), metaSupplier());
+        p.addEdges(this, pv.v);
     }
 }

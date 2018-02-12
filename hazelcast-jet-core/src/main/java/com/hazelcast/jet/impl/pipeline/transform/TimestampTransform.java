@@ -17,8 +17,12 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.core.WatermarkGenerationParams;
+import com.hazelcast.jet.impl.pipeline.Planner;
+import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
 import javax.annotation.Nonnull;
+
+import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 
 /**
  * Javadoc pending.
@@ -33,5 +37,12 @@ public class TimestampTransform<T> extends AbstractTransform implements Transfor
     ) {
         super("timestamp", upstream);
         this.wmGenParams = wmGenParams;
+    }
+
+    @Override
+    public void addToDag(Planner p) {
+        @SuppressWarnings("unchecked")
+        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), insertWatermarksP(wmGenParams));
+        p.addEdges(this, pv.v);
     }
 }

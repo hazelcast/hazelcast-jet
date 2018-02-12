@@ -18,6 +18,7 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
+import com.hazelcast.jet.function.WindowResultFunction;
 import com.hazelcast.jet.impl.pipeline.AggBuilder;
 import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
 import com.hazelcast.jet.impl.pipeline.BatchStageImpl;
@@ -39,8 +40,11 @@ public class AggregateBuilder<T0> {
     }
 
     @SuppressWarnings("unchecked")
-    public <A, R> BatchStage<R> build(AggregateOperation<A, R> aggrOp) {
-        CreateOutStageFn<R, BatchStage<R>> createOutStageFn = BatchStageImpl<R>::new;
-        return aggBuilder.build(aggrOp, createOutStageFn);
+    public <A, R, OUT> BatchStage<OUT> build(
+            AggregateOperation<A, R> aggrOp,
+            WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
+    ) {
+        CreateOutStageFn<OUT, BatchStage<OUT>> createOutStageFn = BatchStageImpl::new;
+        return aggBuilder.build(aggrOp, createOutStageFn, mapToOutputFn);
     }
 }
