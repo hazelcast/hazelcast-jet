@@ -126,6 +126,6 @@ public final class ThreeBags<T0, T1, T2> {
 
     @Override
     public String toString() {
-        return "ThreeBags{" + bag0 + ", " + bag1 + ", " + bag2 + '}';
+        return "ThreeBags{bag0=" + bag0 + ", bag1=" + bag1 + ", bag2=" + bag2 + '}';
     }
 }

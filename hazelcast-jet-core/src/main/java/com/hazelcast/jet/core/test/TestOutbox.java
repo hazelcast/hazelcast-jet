@@ -32,6 +32,7 @@ import java.time.LocalTime;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.stream.IntStream;
@@ -162,34 +163,49 @@ public final class TestOutbox implements Outbox {
      * Move all items from the queue to the {@code target} collection and make
      * the outbox available to accept more items. Also calls {@link
      * #reset()}. If you have a limited capacity outbox, you need to call
-     * this regularly.
+     * this method regularly.
      *
      * @param queueOrdinal the queue from Outbox to drain
-     * @param target target list
+     * @param target target collection
      * @param logItems whether to log drained items to {@code System.out}
      */
     public <T> void drainQueueAndReset(int queueOrdinal, Collection<T> target, boolean logItems) {
-        drainInternal(queue(queueOrdinal), target, logItems);
+        drainInternal(queue(queueOrdinal), target, logItems, "Output-" + queueOrdinal);
+    }
+
+    /**
+     * Move all items from all queues (except the snapshot queue) to the {@code
+     * target} list of collections. Queue N is moved to collection at target N
+     * etc. Also calls {@link #reset()}. If you have a limited capacity outbox,
+     * you need to call this method regularly.
+     *
+     * @param target list of target collections
+     * @param logItems whether to log drained items to {@code System.out}
+     */
+    public <T> void drainQueuesAndReset(List<? extends Collection<T>> target, boolean logItems) {
+        for (int ordinal : allOrdinals) {
+            drainQueueAndReset(ordinal, target.get(ordinal), logItems);
+        }
     }
 
     /**
      * Move all items from the snapshot queue to the {@code target} collection
      * and make the outbox available to accept more items. Also calls {@link
      * #reset()}. If you have a limited capacity outbox, you need to call
-     * this regularly.
+     * this method regularly.
      *
      * @param target target list
      * @param logItems whether to log drained items to {@code System.out}
      */
     public <T> void drainSnapshotQueueAndReset(Collection<T> target, boolean logItems) {
-        drainInternal(snapshotQueue(), target, logItems);
+        drainInternal(snapshotQueue(), target, logItems, "Output-ss");
     }
 
-    private <T> void drainInternal(Queue<?> q, Collection<T> target, boolean logItems) {
+    private <T> void drainInternal(Queue<?> q, Collection<T> target, boolean logItems, String prefix) {
         for (Object o; (o = q.poll()) != null; ) {
             target.add((T) o);
             if (logItems) {
-                System.out.println(LocalTime.now() + " Output: " + o);
+                System.out.println(LocalTime.now() + " " + prefix + ": " + o);
             }
         }
         reset();

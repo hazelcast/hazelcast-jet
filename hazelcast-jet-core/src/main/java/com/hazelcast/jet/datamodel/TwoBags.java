@@ -106,4 +106,9 @@ public final class TwoBags<T0, T1> {
         hc = 73 * hc + bag1.hashCode();
         return hc;
     }
+
+    @Override
+    public String toString() {
+        return "TwoBags{bag0=" + bag0 + ", bag1=" + bag1 + '}';
+    }
 }
