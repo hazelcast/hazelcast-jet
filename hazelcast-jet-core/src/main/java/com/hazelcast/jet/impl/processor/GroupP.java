@@ -39,14 +39,14 @@ import static java.util.Collections.singletonList;
  * more inbound edges. The supplied aggregate operation must have as many
  * accumulation functions as there are inbound edges.
  */
-public class CoGroupP<K, A, R, OUT> extends AbstractProcessor {
+public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     @Nonnull private final List<DistributedFunction<?, ? extends K>> groupKeyFns;
     @Nonnull private final AggregateOperation<A, R> aggrOp;
 
     private final Map<K, A> keyToAcc = new HashMap<>();
     private final Traverser<OUT> resultTraverser;
 
-    public CoGroupP(
+    public GroupP(
             @Nonnull List<DistributedFunction<?, ? extends K>> groupKeyFns,
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull BiFunction<? super K, ? super R, OUT> mapToOutputFn
@@ -60,7 +60,7 @@ public class CoGroupP<K, A, R, OUT> extends AbstractProcessor {
                 .map(e -> mapToOutputFn.apply(e.getKey(), aggrOp.finishFn().apply(e.getValue()))));
     }
 
-    public <T> CoGroupP(
+    public <T> GroupP(
             @Nonnull DistributedFunction<? super T, ? extends K> groupKeyFn,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
             @Nonnull BiFunction<? super K, ? super R, OUT> mapToOutputFn

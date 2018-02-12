@@ -38,7 +38,7 @@ import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.impl.pipeline.JetEventImpl;
-import com.hazelcast.jet.impl.processor.CoGroupP;
+import com.hazelcast.jet.impl.processor.GroupP;
 import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
@@ -228,7 +228,7 @@ public final class Processors {
     public static <A, R> DistributedSupplier<Processor> aggregateP(
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
-        return () -> new CoGroupP<>(nCopies(aggrOp.arity(), constantKey()), aggrOp, (k, r) -> r);
+        return () -> new GroupP<>(nCopies(aggrOp.arity(), constantKey()), aggrOp, (k, r) -> r);
     }
 
     /**
@@ -250,7 +250,7 @@ public final class Processors {
      */
     @Nonnull
     public static <A, R> DistributedSupplier<Processor> accumulateP(@Nonnull AggregateOperation<A, R> aggrOp) {
-        return () -> new CoGroupP<>(
+        return () -> new GroupP<>(
                 nCopies(aggrOp.arity(), constantKey()),
                 aggrOp.withFinishFn(identity()),
                 (k, r) -> r);
@@ -278,7 +278,7 @@ public final class Processors {
     public static <T, A, R> DistributedSupplier<Processor> combineP(
             @Nonnull AggregateOperation1<T, A, R> aggrOp
     ) {
-        return () -> new CoGroupP<>(
+        return () -> new GroupP<>(
                 constantKey(),
                 aggrOp.withCombiningAccumulateFn(identity()),
                 (k, r) -> r);
@@ -312,7 +312,7 @@ public final class Processors {
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        return () -> new CoGroupP<>(keyFns, aggrOp, mapToOutputFn);
+        return () -> new GroupP<>(keyFns, aggrOp, mapToOutputFn);
     }
 
     /**
@@ -341,7 +341,7 @@ public final class Processors {
             @Nonnull List<DistributedFunction<?, ? extends K>> getKeyFns,
             @Nonnull AggregateOperation<A, ?> aggrOp
     ) {
-        return () -> new CoGroupP<>(getKeyFns, aggrOp.withFinishFn(identity()), Util::entry);
+        return () -> new GroupP<>(getKeyFns, aggrOp.withFinishFn(identity()), Util::entry);
     }
 
     /**
@@ -370,8 +370,8 @@ public final class Processors {
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        return () -> new CoGroupP<K, A, R, OUT>(
-                (DistributedFunction<? super Entry<K, ?>, ? extends K>) Entry::getKey,
+        return () -> new GroupP<>(
+                Entry::getKey,
                 aggrOp.withCombiningAccumulateFn(Entry<K, A>::getValue),
                 mapToOutputFn);
     }
