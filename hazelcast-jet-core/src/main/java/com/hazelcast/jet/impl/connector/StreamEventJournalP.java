@@ -117,14 +117,16 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     private Traverser<Entry<BroadcastKey<Integer>, long[]>> snapshotTraverser;
     private Traverser<Object> traverser = Traversers.empty();
 
-    StreamEventJournalP(@Nonnull EventJournalReader<E> eventJournalReader,
-                        @Nonnull List<Integer> assignedPartitions,
-                        @Nonnull DistributedPredicate<E> predicateFn,
-                        @Nonnull DistributedFunction<E, T> projectionFn,
-                        @Nonnull JournalInitialPosition initialPos,
-                        boolean isRemoteReader,
-                        @Nonnull WatermarkGenerationParams<T> wmGenParams,
-                        DistributedBiFunction<T, Long, ?> wrapFn) {
+    StreamEventJournalP(
+            @Nonnull EventJournalReader<E> eventJournalReader,
+            @Nonnull List<Integer> assignedPartitions,
+            @Nonnull DistributedPredicate<E> predicateFn,
+            @Nonnull DistributedFunction<E, T> projectionFn,
+            @Nonnull JournalInitialPosition initialPos,
+            boolean isRemoteReader,
+            @Nonnull WatermarkGenerationParams<T> wmGenParams,
+            DistributedBiFunction<T, Long, ?> wrapFn
+    ) {
         this.eventJournalReader = eventJournalReader;
         this.predicate = (Serializable & Predicate<E>) predicateFn::test;
         this.projection = toProjection(projectionFn);
@@ -323,7 +325,8 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 @Nonnull DistributedPredicate<E> predicate,
                 @Nonnull DistributedFunction<E, T> projection,
                 @Nonnull JournalInitialPosition initialPos,
-                @Nonnull WatermarkGenerationParams<T> wmGenParams) {
+                @Nonnull WatermarkGenerationParams<T> wmGenParams
+        ) {
             this.serializableConfig = clientConfig == null ? null : new SerializableClientConfig(clientConfig);
             this.eventJournalReaderSupplier = eventJournalReaderSupplier;
             this.predicate = predicate;
@@ -407,7 +410,8 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 @Nonnull DistributedPredicate<E> predicate,
                 @Nonnull DistributedFunction<E, T> projection,
                 @Nonnull JournalInitialPosition initialPos,
-                @Nonnull WatermarkGenerationParams<T> wmGenParams) {
+                @Nonnull WatermarkGenerationParams<T> wmGenParams
+        ) {
             this.ownedPartitions = ownedPartitions;
             this.serializableClientConfig = serializableClientConfig;
             this.eventJournalReaderSupplier = eventJournalReaderSupplier;
