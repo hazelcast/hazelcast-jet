@@ -49,12 +49,12 @@ public class AggregateTransform<A, R> extends AbstractTransform implements Trans
         return aggrOp;
     }
 
-    //                       --------
-    //                      | source |
-    //                       --------
-    //                           |
-    //                           |
-    //                           v
+    //               ---------       ---------
+    //              | source0 | ... | sourceN |
+    //               ---------       ---------
+    //                   |              |
+    //                   |              |
+    //                   v              v
     //                  -------------------
     //                 | accumulatebyKeyP  |
     //                  -------------------

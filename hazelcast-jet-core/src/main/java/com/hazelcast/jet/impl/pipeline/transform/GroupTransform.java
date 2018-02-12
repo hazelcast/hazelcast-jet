@@ -53,27 +53,12 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform implements T
         this.mapToOutputFn = mapToOutputFn;
     }
 
-    @Nonnull
-    public List<DistributedFunction<?, ? extends K>> groupKeyFns() {
-        return groupKeyFns;
-    }
-
-    @Nonnull
-    public AggregateOperation<A, R> aggrOp() {
-        return aggrOp;
-    }
-
-    @Nonnull
-    public DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn() {
-        return mapToOutputFn;
-    }
-
-    //           ----------       ----------         ----------
-    //          | source-1 |     | source-2 |  ...  | source-n |
-    //           ----------       ----------         ----------
-    //               |                 |                  |
-    //          partitioned       partitioned        partitioned
-    //               \------------v    v    v------------/
+    //                   ---------        ---------
+    //                  | source0 |  ... | sourceN |
+    //                   ---------        ---------
+    //                       |                  |
+    //                  partitioned        partitioned
+    //                       v                  v
     //                       --------------------
     //                      | coAccumulateByKeyP |
     //                       --------------------
@@ -86,10 +71,10 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform implements T
     //                          ---------------
     @Override
     public void addToDag(Planner p) {
-        List<DistributedFunction<?, ? extends K>> groupKeyFns = groupKeyFns();
+        List<DistributedFunction<?, ? extends K>> groupKeyFns = this.groupKeyFns;
         String namePrefix = p.vertexName(this.name(), "-stage");
-        Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateByKeyP(groupKeyFns, this.aggrOp()));
-        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', combineByKeyP(this.aggrOp(), Util::entry));
+        Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateByKeyP(groupKeyFns, aggrOp));
+        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', combineByKeyP(aggrOp, mapToOutputFn));
         p.addEdges(this, v1, (e, ord) -> e.partitioned(groupKeyFns.get(ord), HASH_CODE));
         p.dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }

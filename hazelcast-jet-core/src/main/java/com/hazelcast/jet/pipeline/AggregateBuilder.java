@@ -41,10 +41,9 @@ public class AggregateBuilder<T0> {
 
     @SuppressWarnings("unchecked")
     public <A, R, OUT> BatchStage<OUT> build(
-            AggregateOperation<A, R> aggrOp,
-            WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
+            AggregateOperation<A, R> aggrOp
     ) {
         CreateOutStageFn<OUT, BatchStage<OUT>> createOutStageFn = BatchStageImpl::new;
-        return aggBuilder.build(aggrOp, createOutStageFn, mapToOutputFn);
+        return aggBuilder.build(aggrOp, createOutStageFn, null);
     }
 }
