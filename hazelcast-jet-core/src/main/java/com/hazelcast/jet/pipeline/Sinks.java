@@ -71,7 +71,10 @@ public final class Sinks {
      * @param metaSupplier the processor meta-supplier
      */
     @Nonnull
-    public static <T> Sink<T> fromProcessor(@Nonnull String sinkName, @Nonnull ProcessorMetaSupplier metaSupplier) {
+    public static <T> Sink<T> fromProcessor(
+            @Nonnull String sinkName,
+            @Nonnull ProcessorMetaSupplier metaSupplier
+    ) {
         return new SinkTransform<>(sinkName, metaSupplier);
     }
 

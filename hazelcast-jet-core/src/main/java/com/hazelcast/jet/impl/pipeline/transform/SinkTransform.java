@@ -16,17 +16,15 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.pipeline.Sink;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.List;
 
 import static com.hazelcast.jet.function.DistributedUnaryOperator.identity;
 
@@ -45,18 +43,8 @@ public class SinkTransform<T> extends AbstractTransform implements Sink<T> {
         this.mapFn = identity();
     }
 
-    public SinkTransform(
-            @Nonnull String name,
-            @Nonnull ProcessorSupplier supplier
-    ) {
-        this(name, ProcessorMetaSupplier.of(supplier));
-    }
-
-    public SinkTransform(
-            @Nonnull String name,
-            @Nonnull DistributedSupplier<Processor> supplier
-    ) {
-        this(name, ProcessorMetaSupplier.of(supplier));
+    public void addUpstream(Transform upstream) {
+        upstream().add(upstream);
     }
 
     @Nonnull

@@ -68,12 +68,6 @@ public class PipelineImpl implements Pipeline {
         upstream.forEach(u -> connect(u, downstream));
     }
 
-    <T> SinkStage drain(Transform upstream, Sink<T> sink) {
-        SinkStageImpl output = new SinkStageImpl((SinkTransform) sink, this);
-        connect(upstream, (SinkTransform) sink);
-        return output;
-    }
-
     Map<Transform, List<Transform>> adjacencyMap() {
         Map<Transform, List<Transform>> safeCopy = new HashMap<>();
         adjacencyMap.forEach((k, v) -> safeCopy.put(k, new ArrayList<>(v)));

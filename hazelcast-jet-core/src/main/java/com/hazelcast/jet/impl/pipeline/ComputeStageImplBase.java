@@ -32,6 +32,7 @@ import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
 import com.hazelcast.jet.impl.pipeline.transform.MapTransform;
 import com.hazelcast.jet.impl.pipeline.transform.PeekTransform;
 import com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform;
+import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
@@ -53,7 +54,7 @@ import static java.util.Collections.singletonList;
  */
 public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
-    public static final FunctionAdapter DONT_ADAPT = new FunctionAdapter();
+    static final FunctionAdapter DONT_ADAPT = new FunctionAdapter();
     static final JetEventFunctionAdapter ADAPT_TO_JET_EVENT = new JetEventFunctionAdapter();
 
     @Nonnull
@@ -160,7 +161,11 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @Nonnull
     @SuppressWarnings("unchecked")
     public SinkStage drainTo(@Nonnull Sink<? super T> sink) {
-        return pipelineImpl.drain(this.transform, sink);
+        SinkTransform<T> sinkTransform = (SinkTransform<T>) sink;
+        sinkTransform.addUpstream(this.transform);
+        SinkStageImpl output = new SinkStageImpl(sinkTransform, pipelineImpl);
+        pipelineImpl.connect(this.transform, sinkTransform);
+        return output;
     }
 
     @Nonnull
