@@ -197,9 +197,7 @@ import static java.util.stream.Collectors.toList;
  * </tr></table>
  * <p>
  * Tumbling window is a special case of sliding window with sliding step =
- * window size. To achieve the effect of aggregation without a
- * grouping key, specify {@link com.hazelcast.jet.function.DistributedFunctions#constantKey()
- * constantKey()} as the key-extracting function.
+ * window size.
  */
 public final class Processors {
 
@@ -261,7 +259,7 @@ public final class Processors {
      * its input it emits a single item of type {@code R} &mdash;the result of
      * the aggregate operation.
      * <p>
-     * Since the input to this vertex must be bounded, its primary use case are
+     * Since the input to this vertex must be bounded, its primary use case is
      * batch jobs.
      * <p>
      * This processor has state, but does not save it to snapshot. On job
@@ -274,8 +272,8 @@ public final class Processors {
      * @param aggrOp the aggregate operation to perform
      */
     @Nonnull
-    public static <T, A, R> DistributedSupplier<Processor> combineP(
-            @Nonnull AggregateOperation1<T, A, R> aggrOp
+    public static <A, R> DistributedSupplier<Processor> combineP(
+            @Nonnull AggregateOperation<A, R> aggrOp
     ) {
         return () -> new GroupP<>(
                 constantKey(),

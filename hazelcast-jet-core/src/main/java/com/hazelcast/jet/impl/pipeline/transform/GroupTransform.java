@@ -59,7 +59,7 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform implements T
     //                  partitioned        partitioned
     //                       v                  v
     //                       --------------------
-    //                      | coAccumulateByKeyP |
+    //                      |  accumulateByKeyP  |
     //                       --------------------
     //                                 |
     //                            distributed

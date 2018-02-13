@@ -83,7 +83,7 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform imple
     //                   |               |
     //                   v               v
     //                  --------------------
-    //                 | accumulatebyFrameP | keyFn = constantKey()
+    //                 | accumulateByFrameP | keyFn = constantKey()
     //                  --------------------
     //                           |
     //                      distributed
@@ -104,6 +104,7 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform imple
         ));
         PlannerVertex pv2 = p.addVertex(this, namePrefix + '2',
                 combineToSlidingWindowP(winPolicy, aggrOp, mapToOutputFn.toKeyedWindowResultFn()));
+        pv2.v.localParallelism(1);
         p.addEdges(this, v1);
         p.dag.edge(between(v1, pv2.v).distributed().allToOne());
     }
@@ -111,7 +112,7 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform imple
     private void addSessionWindow(Planner p, SessionWindowDef wDef) {
         PlannerVertex pv = p.addVertex(this, p.vertexName("session-window", ""), aggregateToSessionWindowP(
                 wDef.sessionTimeout(),
-                nCopies(aggrOp.arity(), (DistributedToLongFunction<Object>) x -> 0L),
+                nCopies(aggrOp.arity(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),
                 nCopies(aggrOp.arity(), constantKey()),
                 aggrOp,
                 mapToOutputFn.toKeyedWindowResultFn()));

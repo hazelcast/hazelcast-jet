@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.Planner;
@@ -27,7 +26,7 @@ import java.util.List;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.accumulateP;
-import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
+import static com.hazelcast.jet.core.processor.Processors.combineP;
 
 public class AggregateTransform<A, R> extends AbstractTransform implements Transform {
     @Nonnull
@@ -48,20 +47,21 @@ public class AggregateTransform<A, R> extends AbstractTransform implements Trans
     //                   |              |
     //                   v              v
     //                  -------------------
-    //                 | accumulatebyKeyP  |
+    //                 |    accumulateP    |
     //                  -------------------
     //                           |
     //                      distributed
     //                       all-to-one
     //                           v
     //                   ----------------
-    //                  | combineByKeyP  |
+    //                  |    combineP    |
     //                   ----------------
     @Override
     public void addToDag(Planner p) {
         String namePrefix = p.vertexName(name(), "-stage");
         Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateP(aggrOp));
-        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', combineByKeyP(aggrOp, Util::entry));
+        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', combineP(aggrOp));
+        pv2.v.localParallelism(1);
         p.addEdges(this, v1);
         p.dag.edge(between(v1, pv2.v).distributed().allToOne());
     }

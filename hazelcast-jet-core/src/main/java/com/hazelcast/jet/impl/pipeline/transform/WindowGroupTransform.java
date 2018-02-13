@@ -87,15 +87,15 @@ public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform implem
     //             partitioned     partitioned
     //                  v               v
     //                 --------------------
-    //                | accumulatebyFrameP |
+    //                | accumulateByFrameP |
     //                 --------------------
     //                           |
     //                      distributed
     //                      partitioned
     //                           v
-    //                   -----------------
-    //                  | combineByFrameP |
-    //                   -----------------
+    //              -------------------------
+    //             | combineToSlidingWindowP |
+    //              -------------------------
     private void addSlidingWindow(Planner p, SlidingWindowDef wDef) {
         String namePrefix = p.vertexName("sliding-window", "-stage");
         SlidingWindowPolicy winPolicy = wDef.toSlidingWindowPolicy();
@@ -114,7 +114,7 @@ public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform implem
     private void addSessionWindow(Planner p, SessionWindowDef wDef) {
         PlannerVertex pv = p.addVertex(this, p.vertexName("session-window", ""), aggregateToSessionWindowP(
                 wDef.sessionTimeout(),
-                nCopies(keyFns.size(), (DistributedToLongFunction<Object>) x -> 0L),
+                nCopies(keyFns.size(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),
                 keyFns,
                 aggrOp,
                 mapToOutputFn
