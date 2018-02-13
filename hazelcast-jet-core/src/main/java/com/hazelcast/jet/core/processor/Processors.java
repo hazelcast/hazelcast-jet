@@ -29,7 +29,6 @@ import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
-import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -581,7 +580,7 @@ public final class Processors {
      * Returns a supplier of processors for a vertex that aggregates events into
      * session windows. Events and windows under different grouping keys are
      * treated independently. Outputs objects of type {@link
-     * WindowResult}.
+     * com.hazelcast.jet.datamodel.WindowResult}.
      * <p>
      * The vertex accepts input from one or more inbound edges. The type of
      * items may be different on each edge. For each edge a separate key

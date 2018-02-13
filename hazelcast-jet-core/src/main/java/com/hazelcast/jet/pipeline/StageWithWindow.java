@@ -19,7 +19,6 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.WindowResultFunction;

@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.function.DistributedBiFunction;

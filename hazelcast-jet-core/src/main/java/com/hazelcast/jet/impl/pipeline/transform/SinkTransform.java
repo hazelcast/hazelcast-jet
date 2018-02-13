@@ -24,7 +24,6 @@ import com.hazelcast.jet.pipeline.Sink;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.List;
 
 import static com.hazelcast.jet.function.DistributedUnaryOperator.identity;
 

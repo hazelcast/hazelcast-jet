@@ -759,7 +759,7 @@ public final class TestSupport {
         final int ordinal;
         final Object item;
 
-        public ObjectWithOrdinal(int ordinal, Object item) {
+        ObjectWithOrdinal(int ordinal, Object item) {
             this.ordinal = ordinal;
             this.item = item;
         }

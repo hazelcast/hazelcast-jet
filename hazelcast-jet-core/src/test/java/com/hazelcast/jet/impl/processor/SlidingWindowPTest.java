@@ -23,7 +23,6 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -76,7 +75,7 @@ public class SlidingWindowPTest {
     public boolean singleStageProcessor;
 
     private DistributedSupplier<Processor> supplier;
-    private SlidingWindowP<?, ?, Long, ?> lastSuppliedProcessor;
+    private SlidingWindowP lastSuppliedProcessor;
 
     @Parameters(name = "hasDeduct={0}, singleStageProcessor={1}")
     public static Collection<Object[]> parameters() {
@@ -99,10 +98,12 @@ public class SlidingWindowPTest {
                 .andDeduct(hasDeduct ? LongAccumulator::subtractExact : null)
                 .andFinish(LongAccumulator::get);
 
+        DistributedFunction<?, Long> keyFn = t -> KEY;
+        DistributedToLongFunction<Entry<Long, Long>> timestampFn = Entry::getKey;
         DistributedSupplier<Processor> procSupplier = singleStageProcessor
                 ? aggregateToSlidingWindowP(
-                        singletonList((DistributedFunction<Entry<Long, Long>, Long>) t -> KEY),
-                        singletonList((DistributedToLongFunction<Entry<Long, Long>>) Entry::getKey),
+                        singletonList(keyFn),
+                        singletonList(timestampFn),
                         TimestampKind.EVENT,
                         windowDef,
                         operation,
@@ -110,7 +111,7 @@ public class SlidingWindowPTest {
                 : combineToSlidingWindowP(windowDef, operation, TimestampedEntry::new);
 
         // new supplier to save the last supplied instance
-        supplier = () -> lastSuppliedProcessor = (SlidingWindowP<?, ?, Long, ?>) procSupplier.get();
+        supplier = () -> lastSuppliedProcessor = (SlidingWindowP) procSupplier.get();
     }
 
     @After

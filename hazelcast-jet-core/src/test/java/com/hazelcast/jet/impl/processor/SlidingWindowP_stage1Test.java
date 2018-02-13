@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.accumulator.LongAccumulator;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.processor.Processors;
@@ -55,17 +54,19 @@ public class SlidingWindowP_stage1Test {
     @Rule
     public ExpectedException exception = ExpectedException.none();
 
-    private SlidingWindowP<Entry<Long, Long>, Long, ?, ?> processor;
+    private SlidingWindowP processor;
 
     @Before
     @SuppressWarnings("unchecked")
     public void before() {
-        processor = (SlidingWindowP<Entry<Long, Long>, Long, ?, ?>) Processors.accumulateByFrameP(
-                singletonList((DistributedFunction<? super Entry<Long, Long>, ?>) x -> KEY),
-                singletonList((DistributedToLongFunction<? super Entry<Long, Long>>) Entry::getKey),
+        DistributedFunction<Entry<Long, Long>, Object> keyFn = x -> KEY;
+        DistributedToLongFunction<Entry<Long, Long>> timestampFn = Entry::getKey;
+        processor = (SlidingWindowP) Processors.accumulateByFrameP(
+                singletonList(keyFn),
+                singletonList(timestampFn),
                 TimestampKind.EVENT,
                 slidingWinPolicy(16, 4),
-                ((AggregateOperation1<? super Entry<Long, Long>, LongAccumulator, ?>) summingLong(Entry<Long, Long>::getValue)).withFinishFn(identity())
+                summingLong(Entry<Long, Long>::getValue).withFinishFn(identity())
         ).get();
     }
 

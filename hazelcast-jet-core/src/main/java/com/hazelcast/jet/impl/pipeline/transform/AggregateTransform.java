@@ -18,14 +18,11 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
 import javax.annotation.Nonnull;
-
 import java.util.List;
 
 import static com.hazelcast.jet.core.Edge.between;
