@@ -97,7 +97,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     @Nonnull @Override
     @SuppressWarnings("unchecked")
     public <A, R> BatchStage<R> aggregate(@Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp) {
-        return attach(new AggregateTransform<>(singletonList(transform), aggrOp), fnAdapters);
+        return attach(new AggregateTransform<>(singletonList(transform), aggrOp), fnAdapter);
     }
 
     @Nonnull @Override
@@ -136,7 +136,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapters) {
+    <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter) {
         pipelineImpl.connect(transform.upstream(), transform);
         return (RET) new BatchStageImpl<>(transform, pipelineImpl);
     }

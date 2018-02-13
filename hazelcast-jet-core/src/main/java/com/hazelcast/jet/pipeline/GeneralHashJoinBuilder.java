@@ -52,7 +52,7 @@ import static java.util.stream.Stream.concat;
 public abstract class GeneralHashJoinBuilder<T0> {
     private final Transform transform0;
     private final PipelineImpl pipelineImpl;
-    private final FunctionAdapter fnAdapters;
+    private final FunctionAdapter fnAdapter;
     private final CreateOutStageFn<T0> createOutStageFn;
     private final Map<Tag<?>, TransformAndClause> clauses = new HashMap<>();
 
@@ -60,7 +60,7 @@ public abstract class GeneralHashJoinBuilder<T0> {
         this.transform0 = transformOf(stage0);
         this.pipelineImpl = (PipelineImpl) stage0.getPipeline();
         this.createOutStageFn = createOutStageFn;
-        this.fnAdapters = ((ComputeStageImplBase) stage0).fnAdapters;
+        this.fnAdapter = ((ComputeStageImplBase) stage0).fnAdapter;
     }
 
     /**
@@ -101,22 +101,22 @@ public abstract class GeneralHashJoinBuilder<T0> {
                 .stream()
                 .skip(1)
                 .map(e -> e.getValue().clause())
-                .map(fnAdapters::adaptJoinClause);
+                .map(fnAdapter::adaptJoinClause);
         HashJoinTransform<T0, R> hashJoinTransform = new HashJoinTransform<>(
                 upstream,
                 joinClauses.collect(toList()),
                 orderedClauses.stream()
                               .map(Entry::getKey)
                               .collect(toList()),
-                fnAdapters.adapthashJoinOutputFn(mapToOutputFn));
+                fnAdapter.adapthashJoinOutputFn(mapToOutputFn));
         pipelineImpl.connect(upstream, hashJoinTransform);
-        return createOutStageFn.get(hashJoinTransform, fnAdapters, pipelineImpl);
+        return createOutStageFn.get(hashJoinTransform, fnAdapter, pipelineImpl);
     }
 
     @FunctionalInterface
     public interface CreateOutStageFn<T0> {
         <R> GeneralStage<R> get(
-                HashJoinTransform<T0, R> hashJoinTransform, FunctionAdapter fnAdapters, PipelineImpl pipeline);
+                HashJoinTransform<T0, R> hashJoinTransform, FunctionAdapter fnAdapter, PipelineImpl pipeline);
     }
 
     private static class TransformAndClause<K, E0, T1, T1_OUT> {

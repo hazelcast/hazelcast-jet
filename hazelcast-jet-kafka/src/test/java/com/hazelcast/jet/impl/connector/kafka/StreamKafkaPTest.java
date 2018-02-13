@@ -29,13 +29,13 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
-import com.hazelcast.jet.core.test.TestOutbox.MockData;
 import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.pipeline.JetEvent;
 import com.hazelcast.jet.stream.IStreamMap;
+import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -423,8 +423,9 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         TestInbox snapshot = new TestInbox();
         assertTrue(streamKafkaP.saveToSnapshot());
         outbox.drainSnapshotQueueAndReset(snapshot, false);
-        snapshot = snapshot.stream().map(e -> (Entry<MockData, MockData>) e)
-                           .map(e -> entry(e.getKey().getObject(), e.getValue().getObject()))
+        snapshot = snapshot.stream()
+                           .map(e -> (Entry<Data, Data>) e)
+                           .map(e -> entry(e.getKey(), e.getValue()))
                            .collect(toCollection(TestInbox::new));
         return snapshot;
     }

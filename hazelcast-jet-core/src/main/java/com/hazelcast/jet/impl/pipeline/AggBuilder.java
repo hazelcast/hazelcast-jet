@@ -31,9 +31,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.hazelcast.jet.datamodel.Tag.tag;
-import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DONT_ADAPT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
+import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptAggregateOperation;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
@@ -76,9 +76,7 @@ public class AggBuilder<T0> {
             @Nonnull CreateOutStageFn<OUT, OUT_STAGE> createOutStageFn,
             @Nullable WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
     ) {
-        AggregateOperation adaptedAggrOp = wDef != null
-            ? aggrOp
-            : ADAPT_TO_JET_EVENT.adaptAggregateOperation(aggrOp);
+        AggregateOperation adaptedAggrOp = wDef != null ? aggrOp : adaptAggregateOperation(aggrOp);
         List<Transform> upstreamTransforms = upstreamStages
                 .stream()
                 .map(s -> ((AbstractStage) s).transform)
@@ -97,6 +95,6 @@ public class AggBuilder<T0> {
 
     @FunctionalInterface
     public interface CreateOutStageFn<OUT, OUT_STAGE extends GeneralStage<OUT>> {
-        OUT_STAGE get(Transform transform, FunctionAdapter fnAdapters, PipelineImpl pipeline);
+        OUT_STAGE get(Transform transform, FunctionAdapter fnAdapter, PipelineImpl pipeline);
     }
 }

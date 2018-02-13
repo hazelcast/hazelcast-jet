@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
@@ -33,6 +32,8 @@ import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
+import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptAggregateOperation;
+import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptAggregateOperation1;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
@@ -72,7 +73,7 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
         ensureJetEvents(streamStage, "This pipeline stage");
         JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
         AggregateOperation1<JetEvent<T>, A, R> adaptedAggrOp =
-                fnAdapter.adaptAggregateOperation1(aggrOp);
+                adaptAggregateOperation1(aggrOp);
         return streamStage.attach(new WindowAggregateTransform<A, R, JetEvent<OUT>>(
                 singletonList(streamStage.transform), wDef, adaptedAggrOp,
                 fnAdapter.adaptWindowResultFn(mapToOutputFn)
@@ -90,11 +91,10 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
         ensureJetEvents(streamStage, "This pipeline stage");
         ensureJetEvents(stageImpl1, "stage1");
         JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
-        AggregateOperation<A, R> adaptedAggrOp = fnAdapter.adaptAggregateOperation(aggrOp);
         return streamStage.attach(new WindowAggregateTransform<A, R, JetEvent<OUT>>(
                 asList(streamStage.transform, stageImpl1.transform),
                 wDef,
-                adaptedAggrOp,
+                adaptAggregateOperation(aggrOp),
                 fnAdapter.adaptWindowResultFn(mapToOutputFn)
         ), fnAdapter);
     }
@@ -113,11 +113,10 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
         ensureJetEvents(stageImpl1, "stage1");
         ensureJetEvents(stageImpl2, "stage2");
         JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
-        AggregateOperation<A, R> adaptedAggrOp = fnAdapter.adaptAggregateOperation(aggrOp);
         return streamStage.attach(new WindowAggregateTransform<A, R, JetEvent<OUT>>(
                 asList(streamStage.transform, stageImpl1.transform, stageImpl2.transform),
                 wDef,
-                adaptedAggrOp,
+                adaptAggregateOperation(aggrOp),
                 fnAdapter.adaptWindowResultFn(mapToOutputFn)
         ), fnAdapter);
     }

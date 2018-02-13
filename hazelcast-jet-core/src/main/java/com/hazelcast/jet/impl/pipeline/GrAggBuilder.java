@@ -38,9 +38,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.hazelcast.jet.datamodel.Tag.tag;
-import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DONT_ADAPT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
+import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptAggregateOperation;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -98,7 +98,7 @@ public class GrAggBuilder<K> {
             @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
         List<Transform> upstreamTransforms = upstreamStages.stream().map(s -> s.transform).collect(toList());
-        AggregateOperation adaptedAggrOp = ADAPT_TO_JET_EVENT.adaptAggregateOperation(aggrOp);
+        AggregateOperation adaptedAggrOp = adaptAggregateOperation(aggrOp);
         Transform transform = new GroupTransform<>(upstreamTransforms, keyFns, adaptedAggrOp, mapToOutputFn);
         pipelineImpl.connect(upstreamTransforms, transform);
         return new BatchStageImpl<>(transform, pipelineImpl);
@@ -111,7 +111,7 @@ public class GrAggBuilder<K> {
     ) {
         List<Transform> upstreamTransforms = upstreamStages.stream().map(s -> s.transform).collect(toList());
         Transform transform = new WindowGroupTransform<K, A, R, OUT>(
-                upstreamTransforms, wDef, keyFns, ADAPT_TO_JET_EVENT.adaptAggregateOperation(aggrOp), mapToOutputFn
+                upstreamTransforms, wDef, keyFns, adaptAggregateOperation(aggrOp), mapToOutputFn
         );
         pipelineImpl.connect(upstreamTransforms, transform);
         return new StreamStageImpl<>(transform, DONT_ADAPT, pipelineImpl);

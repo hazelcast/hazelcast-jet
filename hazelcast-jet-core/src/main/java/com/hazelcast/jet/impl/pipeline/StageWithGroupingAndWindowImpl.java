@@ -33,6 +33,10 @@ import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
+import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptAggregateOperation1;
+import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptAggregateOperation2;
+import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptAggregateOperation3;
+import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptKeyFn;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
@@ -65,13 +69,11 @@ public class StageWithGroupingAndWindowImpl<T, K>
     ) {
         ensureJetEvents(computeStage, "This pipeline stage");
         JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
-        AggregateOperation1<JetEvent<T>, A, R> adaptedAggrOp =
-                fnAdapter.adaptAggregateOperation1(aggrOp);
         return computeStage.attach(new WindowGroupTransform<K, A, R, JetEvent<OUT>>(
                         singletonList(computeStage.transform),
                         wDef,
-                        singletonList(fnAdapter.adaptKeyFn(keyFn())),
-                        adaptedAggrOp,
+                        singletonList(adaptKeyFn(keyFn())),
+                        adaptAggregateOperation1(aggrOp),
                         fnAdapter.adaptKeyedWindowResultFn(mapToOutputFn)
                 ),
                 fnAdapter);
@@ -95,17 +97,14 @@ public class StageWithGroupingAndWindowImpl<T, K>
         ComputeStageImplBase stageImpl1 = ((StageWithGroupingBase) stage1).computeStage;
         ensureJetEvents(computeStage, "This pipeline stage");
         ensureJetEvents(stageImpl1, "stage1");
-        JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
-        AggregateOperation2<JetEvent<T>, JetEvent<T1>, A, R> adaptedAggrOp =
-                fnAdapter.adaptAggregateOperation2(aggrOp);
         return computeStage.attach(new WindowGroupTransform<K, A, R, OUT>(
                 asList(computeStage.transform, stageImpl1.transform),
                 wDef,
-                asList(fnAdapter.adaptKeyFn(keyFn()),
-                       fnAdapter.adaptKeyFn(stage1.keyFn())),
-                adaptedAggrOp,
+                asList(adaptKeyFn(keyFn()),
+                       adaptKeyFn(stage1.keyFn())),
+                adaptAggregateOperation2(aggrOp),
                 mapToOutputFn
-        ), fnAdapter);
+        ), ADAPT_TO_JET_EVENT);
     }
 
     @Nonnull @Override
@@ -129,19 +128,16 @@ public class StageWithGroupingAndWindowImpl<T, K>
         ensureJetEvents(computeStage, "This pipeline stage");
         ensureJetEvents(stageImpl1, "stage1");
         ensureJetEvents(stageImpl2, "stage2");
-        JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
-        AggregateOperation3<JetEvent<T>, JetEvent<T1>, JetEvent<T2>, A, R> adaptedAggrOp =
-                fnAdapter.adaptAggregateOperation3(aggrOp);
         return computeStage.attach(
                 new WindowGroupTransform<K, A, R, OUT>(
                         asList(computeStage.transform, stageImpl1.transform, stageImpl2.transform),
                         wDef,
-                        asList(fnAdapter.adaptKeyFn(keyFn()),
-                               fnAdapter.adaptKeyFn(stage1.keyFn()),
-                               fnAdapter.adaptKeyFn(stage2.keyFn())),
-                        adaptedAggrOp,
+                        asList(adaptKeyFn(keyFn()),
+                               adaptKeyFn(stage1.keyFn()),
+                               adaptKeyFn(stage2.keyFn())),
+                        adaptAggregateOperation3(aggrOp),
                         mapToOutputFn
-                ), fnAdapter);
+                ), ADAPT_TO_JET_EVENT);
     }
 
     @Nonnull @Override

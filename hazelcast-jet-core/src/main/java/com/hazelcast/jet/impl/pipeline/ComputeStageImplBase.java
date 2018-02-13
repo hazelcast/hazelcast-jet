@@ -58,20 +58,20 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     static final JetEventFunctionAdapter ADAPT_TO_JET_EVENT = new JetEventFunctionAdapter();
 
     @Nonnull
-    public final FunctionAdapter fnAdapters;
+    public final FunctionAdapter fnAdapter;
 
     ComputeStageImplBase(
             @Nonnull Transform transform,
-            @Nonnull FunctionAdapter fnAdapters,
+            @Nonnull FunctionAdapter fnAdapter,
             @Nonnull PipelineImpl pipelineImpl,
             boolean acceptsDownstream
     ) {
         super(transform, acceptsDownstream, pipelineImpl);
-        this.fnAdapters = fnAdapters;
+        this.fnAdapter = fnAdapter;
     }
 
     static void ensureJetEvents(@Nonnull ComputeStageImplBase stage, @Nonnull String name) {
-        if (stage.fnAdapters != ADAPT_TO_JET_EVENT) {
+        if (stage.fnAdapter != ADAPT_TO_JET_EVENT) {
             throw new IllegalStateException(
                     name + " is missing a timestamp and watermark definition. Call" +
                             " .timestamp() on it before performing the aggregation."
@@ -94,20 +94,20 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @Nonnull
     @SuppressWarnings("unchecked")
     <R, RET> RET attachMap(@Nonnull DistributedFunction<? super T, ? extends R> mapFn) {
-        return (RET) attach(new MapTransform(this.transform, fnAdapters.adaptMapFn(mapFn)), fnAdapters);
+        return (RET) attach(new MapTransform(this.transform, fnAdapter.adaptMapFn(mapFn)), fnAdapter);
     }
 
     @Nonnull
     @SuppressWarnings("unchecked")
     <RET> RET attachFilter(@Nonnull DistributedPredicate<T> filterFn) {
-        return (RET) attach(new FilterTransform(transform, fnAdapters.adaptFilterFn(filterFn)), fnAdapters);
+        return (RET) attach(new FilterTransform(transform, fnAdapter.adaptFilterFn(filterFn)), fnAdapter);
     }
 
     @Nonnull
     <R, RET> RET attachFlatMap(
             @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return attach(new FlatMapTransform<>(transform, fnAdapters.adaptFlatMapFn(flatMapFn)), fnAdapters);
+        return attach(new FlatMapTransform<>(transform, fnAdapter.adaptFlatMapFn(flatMapFn)), fnAdapter);
     }
 
     @Nonnull
@@ -119,10 +119,10 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     ) {
         return (RET) attach(new HashJoinTransform<>(
                 asList(transform, transformOf(stage1)),
-                singletonList(fnAdapters.adaptJoinClause(joinClause)),
+                singletonList(fnAdapter.adaptJoinClause(joinClause)),
                 emptyList(),
-                fnAdapters.adapthashJoinOutputFn(mapToOutputFn)
-        ), fnAdapters);
+                fnAdapter.adapthashJoinOutputFn(mapToOutputFn)
+        ), fnAdapter);
     }
 
     @Nonnull
@@ -136,10 +136,10 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     ) {
         return (RET) attach(new HashJoinTransform<>(
                 asList(transform, transformOf(stage1), transformOf(stage2)),
-                asList(fnAdapters.adaptJoinClause(joinClause1), fnAdapters.adaptJoinClause(joinClause2)),
+                asList(fnAdapter.adaptJoinClause(joinClause1), fnAdapter.adaptJoinClause(joinClause2)),
                 emptyList(),
-                fnAdapters.adapthashJoinOutputFn(mapToOutputFn)
-        ), fnAdapters);
+                fnAdapter.adapthashJoinOutputFn(mapToOutputFn)
+        ), fnAdapter);
     }
 
     @Nonnull
@@ -155,7 +155,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull String stageName,
             @Nonnull DistributedSupplier<Processor> procSupplier
     ) {
-        return attach(new ProcessorTransform(transform, stageName, procSupplier), fnAdapters);
+        return attach(new ProcessorTransform(transform, stageName, procSupplier), fnAdapter);
     }
 
     @Nonnull
@@ -169,5 +169,5 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    abstract <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapters);
+    abstract <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter);
 }
