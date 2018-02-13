@@ -96,6 +96,11 @@ public final class WatermarkGenerationParams<T> implements Serializable {
     /**
      * Returns watermark generation parameters that will never emit any
      * watermark.
+     * <p>
+     * Only useful when using streaming sources in jobs where there is no
+     * aggregation. For example to stream map journal events to a file etc.
+     * If there is an aggregation in the job, you'll have no output at all with
+     * this method.
      */
     public static <T> WatermarkGenerationParams<T> noWatermarks() {
         return new WatermarkGenerationParams<>(i -> Long.MIN_VALUE, NO_WATERMARK_POLICY, suppressDuplicates(), -1);
