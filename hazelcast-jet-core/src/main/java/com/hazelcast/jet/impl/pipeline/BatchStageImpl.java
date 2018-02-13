@@ -17,18 +17,15 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedTriFunction;
-import com.hazelcast.jet.impl.aggregate.AggregateOperationImpl;
 import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
@@ -100,9 +97,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     @Nonnull @Override
     @SuppressWarnings("unchecked")
     public <A, R> BatchStage<R> aggregate(@Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp) {
-        AggregateOperation1 adaptedAggrOp = ((AggregateOperation1) aggrOp)
-                .withAccumulateFn(fnAdapters.adaptAccumulateFn(aggrOp.accumulateFn()));
-        return attach(new AggregateTransform<A, R>(singletonList(transform), adaptedAggrOp), fnAdapters);
+        return attach(new AggregateTransform<>(singletonList(transform), aggrOp), fnAdapters);
     }
 
     @Nonnull @Override
@@ -110,16 +105,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BatchStage<T1> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp
     ) {
-        FunctionAdapter fnAdapters1 = ((ComputeStageImplBase) stage1).fnAdapters;
-        AggregateOperationImpl rawAggrOp = (AggregateOperationImpl) aggrOp;
-        DistributedBiConsumer[] adaptedAccFns = {
-                fnAdapters.adaptAccumulateFn(rawAggrOp.accumulateFn(0)),
-                fnAdapters1.adaptAccumulateFn(rawAggrOp.accumulateFn(1))
-        };
-        AggregateOperation<?, ?> adaptedAggrOp = rawAggrOp.withAccumulateFns(adaptedAccFns);
-        return attach(new AggregateTransform<>(
-                asList(transform, transformOf(stage1)),
-                adaptedAggrOp), DONT_ADAPT);
+        return attach(new AggregateTransform<>(asList(transform, transformOf(stage1)), aggrOp), DONT_ADAPT);
     }
 
     @Nonnull @Override
@@ -128,17 +114,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BatchStage<T2> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp
     ) {
-        FunctionAdapter fnAdapters1 = ((ComputeStageImplBase) stage1).fnAdapters;
-        FunctionAdapter fnAdapters2 = ((ComputeStageImplBase) stage2).fnAdapters;
-        AggregateOperationImpl rawAggrOp = (AggregateOperationImpl) aggrOp;
-        DistributedBiConsumer[] adaptedAccFns = {
-                fnAdapters.adaptAccumulateFn(rawAggrOp.accumulateFn(0)),
-                fnAdapters1.adaptAccumulateFn(rawAggrOp.accumulateFn(1)),
-                fnAdapters2.adaptAccumulateFn(rawAggrOp.accumulateFn(2))
-        };
-        AggregateOperation<?, ?> adaptedAggrOp = rawAggrOp.withAccumulateFns(adaptedAccFns);
-        return attach(new AggregateTransform<>(
-                asList(transform, transformOf(stage1), transformOf(stage2)), adaptedAggrOp),
+        return attach(new AggregateTransform<>(asList(transform, transformOf(stage1), transformOf(stage2)), aggrOp),
                 DONT_ADAPT);
     }
 

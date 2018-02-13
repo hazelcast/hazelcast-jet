@@ -66,13 +66,13 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
     @Nonnull @Override
     @SuppressWarnings("unchecked")
     public <A, R, OUT> StreamStage<OUT> aggregate(
-            @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp,
+            @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
             @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
     ) {
         ensureJetEvents(streamStage, "This pipeline stage");
         JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
-        AggregateOperation1<JetEvent<T>, A, R> adaptedAggrOp = (AggregateOperation1)
-                fnAdapter.adaptAggregateOperation(aggrOp);
+        AggregateOperation1<JetEvent<T>, A, R> adaptedAggrOp =
+                fnAdapter.adaptAggregateOperation1(aggrOp);
         return streamStage.attach(new WindowAggregateTransform<A, R, JetEvent<OUT>>(
                 singletonList(streamStage.transform), wDef, adaptedAggrOp,
                 fnAdapter.adaptWindowResultFn(mapToOutputFn)
@@ -83,7 +83,7 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
     @SuppressWarnings("unchecked")
     public <T1, A, R, OUT> StreamStage<OUT> aggregate2(
             @Nonnull StreamStage<T1> stage1,
-            @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp,
+            @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp,
             @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
     ) {
         ComputeStageImplBase stageImpl1 = (ComputeStageImplBase) stage1;
@@ -104,7 +104,7 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
     public <T1, T2, A, R, OUT> StreamStage<OUT> aggregate3(
             @Nonnull StreamStage<T1> stage1,
             @Nonnull StreamStage<T2> stage2,
-            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp,
+            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp,
             @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
     ) {
         ComputeStageImplBase stageImpl1 = (ComputeStageImplBase) stage1;

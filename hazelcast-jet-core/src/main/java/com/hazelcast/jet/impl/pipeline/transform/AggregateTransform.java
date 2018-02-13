@@ -31,19 +31,14 @@ import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
 
 public class AggregateTransform<A, R> extends AbstractTransform implements Transform {
     @Nonnull
-    private final AggregateOperation<A, R> aggrOp;
+    private final AggregateOperation<A, ? extends R> aggrOp;
 
     public AggregateTransform(
             @Nonnull List<Transform> upstream,
-            @Nonnull AggregateOperation<A, R> aggrOp
+            @Nonnull AggregateOperation<A, ? extends R> aggrOp
     ) {
         super(upstream.size() + "-way co-aggregate", upstream);
         this.aggrOp = aggrOp;
-    }
-
-    @Nonnull
-    public AggregateOperation<A, R> aggrOp() {
-        return aggrOp;
     }
 
     //               ---------       ---------
@@ -65,8 +60,8 @@ public class AggregateTransform<A, R> extends AbstractTransform implements Trans
     @Override
     public void addToDag(Planner p) {
         String namePrefix = p.vertexName(name(), "-stage");
-        Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateP(aggrOp()));
-        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', combineByKeyP(aggrOp(), Util::entry));
+        Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateP(aggrOp));
+        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', combineByKeyP(aggrOp, Util::entry));
         p.addEdges(this, v1);
         p.dag.edge(between(v1, pv2.v).distributed().allToOne());
     }

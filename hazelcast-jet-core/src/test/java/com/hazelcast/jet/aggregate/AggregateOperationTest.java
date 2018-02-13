@@ -86,7 +86,7 @@ public class AggregateOperationTest {
 
         // When
         DistributedFunction<LongAccumulator, String> newFinishFn = Object::toString;
-        AggregateOperation<LongAccumulator, String> newAggrOp = aggrOp.withFinishFn(newFinishFn);
+        AggregateOperation<LongAccumulator, ? extends String> newAggrOp = aggrOp.withFinishFn(newFinishFn);
 
         // Then
         assertSame(newFinishFn, newAggrOp.finishFn());

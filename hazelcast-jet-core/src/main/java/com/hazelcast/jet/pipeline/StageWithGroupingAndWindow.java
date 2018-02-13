@@ -40,7 +40,7 @@ public interface StageWithGroupingAndWindow<T, K> {
     @SuppressWarnings("unchecked")
     <A, R, OUT> StreamStage<OUT> aggregate(
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
-            @Nonnull KeyedWindowResultFunction<K, R, OUT> mapToOutputFn
+            @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
     );
 
     @Nonnull
@@ -51,7 +51,7 @@ public interface StageWithGroupingAndWindow<T, K> {
     <T1, A, R, OUT> StreamStage<OUT> aggregate2(
             @Nonnull StreamStageWithGrouping<T1, ? extends K> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp,
-            @Nonnull KeyedWindowResultFunction<K, R, OUT> mapToOutputFn
+            @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
     );
 
     @Nonnull
@@ -64,7 +64,7 @@ public interface StageWithGroupingAndWindow<T, K> {
             @Nonnull StreamStageWithGrouping<T1, ? extends K> stage1,
             @Nonnull StreamStageWithGrouping<T2, ? extends K> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp,
-            @Nonnull KeyedWindowResultFunction<K, R, OUT> mapToOutputFn);
+            @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn);
 
     @Nonnull
     <T1, T2, A, R> StreamStage<TimestampedEntry<K, R>> aggregate3(

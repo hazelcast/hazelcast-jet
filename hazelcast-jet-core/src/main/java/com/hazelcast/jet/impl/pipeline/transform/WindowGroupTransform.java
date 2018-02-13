@@ -47,7 +47,7 @@ public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform implem
     @Nonnull
     private List<DistributedFunction<?, ? extends K>> keyFns;
     @Nonnull
-    private AggregateOperation<A, ? extends R> aggrOp;
+    private AggregateOperation<A, R> aggrOp;
     @Nonnull
     private final KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn;
 
@@ -55,7 +55,7 @@ public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform implem
             @Nonnull List<Transform> upstream,
             @Nonnull WindowDefinition wDef,
             @Nonnull List<DistributedFunction<?, ? extends K>> keyFns,
-            @Nonnull AggregateOperation<A, ? extends R> aggrOp,
+            @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
         super(upstream.size() + "-way windowed cogroup-and-aggregate", upstream);

@@ -62,12 +62,6 @@ public class FunctionAdapter {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
-    DistributedBiConsumer<?, ?> adaptAccumulateFn(@Nonnull DistributedBiConsumer accumulateFn) {
-        return accumulateFn;
-    }
-
-    @Nonnull
     public JoinClause adaptJoinClause(@Nonnull JoinClause joinClause) {
         return joinClause;
     }
@@ -129,19 +123,11 @@ class JetEventFunctionAdapter extends FunctionAdapter {
         return e -> keyFn.apply(e.payload());
     }
 
-    @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    DistributedBiConsumer adaptAccumulateFn(@Nonnull DistributedBiConsumer accumulateFn) {
-        return (Object acc, Object e) -> accumulateFn.accept(acc, ((JetEvent) e).payload());
-    }
-
     @Nonnull
     @SuppressWarnings("unchecked")
     AggregateOperation adaptAggregateOperation(@Nonnull AggregateOperation aggrOp) {
         if (aggrOp instanceof AggregateOperation1) {
-            AggregateOperation1 aggrOp1 = (AggregateOperation1) aggrOp;
-            return aggrOp1
-                    .withAccumulateFn(adaptAccumulateFn(aggrOp1.accumulateFn()));
+            return adaptAggregateOperation1((AggregateOperation1) aggrOp);
         } else if (aggrOp instanceof AggregateOperation2) {
             AggregateOperation2 aggrOp2 = (AggregateOperation2) aggrOp;
             return aggrOp2
@@ -158,6 +144,37 @@ class JetEventFunctionAdapter extends FunctionAdapter {
             Arrays.setAll(adaptedAccFns, i -> adaptAccumulateFn(aggrOp.accumulateFn(i)));
             return ((AggregateOperationImpl) aggrOp).withAccumulateFns(adaptedAccFns);
         }
+    }
+
+    <T, A, R> AggregateOperation1<JetEvent<T>, A, R> adaptAggregateOperation1(
+            @Nonnull AggregateOperation1<? super T, A, R> aggrOp
+    ) {
+        return aggrOp.withAccumulateFn(adaptAccumulateFn(aggrOp.accumulateFn()));
+    }
+
+    <T0, T1, A, R> AggregateOperation2<JetEvent<T0>, JetEvent<T1>, A, R> adaptAggregateOperation2(
+            @Nonnull AggregateOperation2<? super T0, ? super T1, A, R> aggrOp
+    ) {
+        return aggrOp
+                .<JetEvent<T0>>withAccumulateFn0(adaptAccumulateFn(aggrOp.accumulateFn0()))
+                .withAccumulateFn1(adaptAccumulateFn(aggrOp.accumulateFn1()));
+    }
+
+    <T0, T1, T2, A, R> AggregateOperation3<JetEvent<T0>, JetEvent<T1>, JetEvent<T2>, A, R> adaptAggregateOperation3(
+            @Nonnull AggregateOperation3<? super T0, ? super T1, ? super T2, A, R> aggrOp
+    ) {
+        return aggrOp
+                .<JetEvent<T0>>withAccumulateFn0(adaptAccumulateFn(aggrOp.accumulateFn0()))
+                .<JetEvent<T1>>withAccumulateFn1(adaptAccumulateFn(aggrOp.accumulateFn1()))
+                .withAccumulateFn2(adaptAccumulateFn(aggrOp.accumulateFn2()));
+    }
+
+    @Nonnull
+    @SuppressWarnings("unchecked")
+    private static <A, T> DistributedBiConsumer<? super A, ? super JetEvent<T>> adaptAccumulateFn(
+            @Nonnull DistributedBiConsumer<? super A, ? super T> accumulateFn
+    ) {
+        return (A acc, JetEvent<T> t) -> accumulateFn.accept(acc, t.payload());
     }
 
     @Nonnull @Override

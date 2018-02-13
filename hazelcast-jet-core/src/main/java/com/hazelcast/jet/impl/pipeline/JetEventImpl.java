@@ -46,7 +46,7 @@ public final class JetEventImpl<T> implements JetEvent<T> {
 
     @Override
     public String toString() {
-        return String.format("%s (t=%,d)", payload, timestamp);
+        return String.format("JetEvent (t=%,d) %s", timestamp, payload);
     }
 
     @Override

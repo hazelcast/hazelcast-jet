@@ -169,7 +169,7 @@ public interface AggregateOperation<A, R> extends Serializable {
      * @param <R_NEW> the new aggregation result type
      */
     @Nonnull
-    <R_NEW> AggregateOperation<A, R_NEW> withFinishFn(
+    <R_NEW> AggregateOperation<A, ? extends R_NEW> withFinishFn(
             @Nonnull DistributedFunction<? super A, R_NEW> finishFn
     );
 

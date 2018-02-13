@@ -40,13 +40,13 @@ public interface StageWithWindow<T> {
 
     @Nonnull
     <A, R, OUT> StreamStage<OUT> aggregate(
-            @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp,
+            @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
             @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
     );
 
     @Nonnull
     default <A, R> StreamStage<TimestampedItem<R>> aggregate(
-            @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
+            @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
         return aggregate(aggrOp, (WindowResultFunction<R, TimestampedItem<R>>) TimestampedItem::new);
     }
@@ -54,13 +54,13 @@ public interface StageWithWindow<T> {
     @Nonnull
     <T1, A, R, OUT> StreamStage<OUT> aggregate2(
             @Nonnull StreamStage<T1> stage1,
-            @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp,
+            @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp,
             @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn);
 
     @Nonnull
     default <T1, A, R> StreamStage<TimestampedItem<R>> aggregate2(
             @Nonnull StreamStage<T1> stage1,
-            @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp
+            @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp
     ) {
         return aggregate2(stage1, aggrOp, (WindowResultFunction<R, TimestampedItem<R>>) TimestampedItem::new);
     }
@@ -69,14 +69,14 @@ public interface StageWithWindow<T> {
     <T1, T2, A, R, OUT> StreamStage<OUT> aggregate3(
             @Nonnull StreamStage<T1> stage1,
             @Nonnull StreamStage<T2> stage2,
-            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp,
+            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp,
             @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn);
 
     @Nonnull
     default <T1, T2, A, R> StreamStage<TimestampedItem<R>> aggregate3(
             @Nonnull StreamStage<T1> stage1,
             @Nonnull StreamStage<T2> stage2,
-            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp
+            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp
     ) {
         return aggregate3(stage1, stage2, aggrOp, (WindowResultFunction<R, TimestampedItem<R>>) TimestampedItem::new);
     }
