@@ -24,7 +24,6 @@ import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.core.test.TestOutbox.MockData;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingServiceImpl;
 import com.hazelcast.nio.Address;
@@ -49,7 +48,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.test.JetAssert.assertEquals;
 import static com.hazelcast.jet.core.test.JetAssert.assertTrue;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
@@ -630,18 +628,19 @@ public final class TestSupport {
         Set<Object> keys = new HashSet<>();
         do {
             checkTime("saveSnapshot", isCooperative, () -> done[0] = processor[0].saveToSnapshot());
-            for (Entry<MockData, MockData> entry : outbox[0].snapshotQueue()) {
-                Object key = entry.getKey().getObject();
-                assertTrue("Duplicate key produced in saveToSnapshot()\n  " +
-                        "Duplicate: " + key + "\n  Keys so far: " + keys, keys.add(key));
-                snapshotInbox.add(entry(key, entry.getValue().getObject()));
-            }
             assertTrue("saveToSnapshot() call without progress",
                     !assertProgress || done[0] || !outbox[0].snapshotQueue().isEmpty()
                             || !outbox[0].queue(0).isEmpty());
+            outbox[0].drainSnapshotQueueAndReset(snapshotInbox, false);
             outbox[0].drainQueuesAndReset(actualOutput, logInputOutput);
-            outbox[0].snapshotQueue().clear();
         } while (!done[0]);
+
+        // check snapshot for duplicate keys
+        for (Object item : snapshotInbox) {
+            Entry<Object, Object> item2 = (Entry<Object, Object>) item;
+            assertTrue("Duplicate key produced in saveToSnapshot()\n  " +
+                    "Duplicate: " + item2.getKey() + "\n  Keys so far: " + keys, keys.add(item2.getKey()));
+        }
 
         restoreCount[0]++;
 

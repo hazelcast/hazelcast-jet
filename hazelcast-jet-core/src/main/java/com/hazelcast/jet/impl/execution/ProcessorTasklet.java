@@ -124,8 +124,10 @@ public class ProcessorTasklet implements Tasklet {
 
     @Override
     public void init() {
-        Object processor2 = context.getSerializationService().getManagedContext().initialize(processor);
-        assert processor2 == processor : "different object returned";
+        if (context.getSerializationService().getManagedContext() != null) {
+            Object processor2 = context.getSerializationService().getManagedContext().initialize(processor);
+            assert processor2 == processor : "different object returned";
+        }
         processor.init(outbox, context);
     }
 
