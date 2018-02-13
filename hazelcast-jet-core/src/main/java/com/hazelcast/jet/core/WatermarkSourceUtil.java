@@ -21,6 +21,7 @@ import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 
@@ -28,29 +29,58 @@ import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
- * A utility to help emitting {@link Watermark} from a source. It is useful if
- * the source reads events from multiple partitions.
+ * A utility to help emitting {@link Watermark}s from a source which reads
+ * events from multiple external partitions.
  *
- * <h3>The problem</h3>
- * On restart it can happen that partition1 has one very recent event and
- * partition2 has one old event. If partition1 is checked first and the event
- * emitted, it will advance the watermark. Then, partition2 is checked and its
- * event might be dropped as late.
+ * <h3>The problems</h3>
+ * <h4>1. Reading partition by partition</h4>
+ * On restart it can happen that <em>partition1</em> has one very recent event
+ * and <em>partition2</em> has one old event. If <em>partition1</em> is polled
+ * first and the event is emitted, it will advance the watermark. Then later
+ * <em>partition2</em> is polled and its event might be dropped as late.
  *
  * This utility helps you track watermarks per partition and decide when to
  * emit it.
  *
- * TODO Javadoc needs updating
+ * <h4>2. Some partition having no data</h4>
+ * It can happen that some partition does not have any events at all and others
+ * do. Or that the processor is not assigned any external partitions. In this
+ * both cases no watermarks will be emitted. This utility supports <em>idle
+ * timeout</em>: if some partition does not have any event during this time,
+ * it will be marked as <em>idle</em>. If all partitions are idle or there are
+ * no partitions, special <em>idle message</em> will be emitted and the
+ * downstream will exclude this processor from watermark coalescing.
  *
  * <h3>Usage</h3>
+ * API is designed to be used as a flat-mapping step in {@link Traverser}. Your
+ * source might follow this pattern:
+ *
+ * <pre>{@code
+ *   public boolean complete() {
+ *       if (traverser == null) {
+ *           List<Record> records = poll(); // get a batch of items from external source
+ *           if (records.isEmpty()) {
+ *               traverser = watermarkSourceUtil.handleNoEvent();
+ *           } else {
+ *               traverser = traverserIterable(records)
+ *                   .flatMap(item -> watermarkSourceUtil.handleEvent(item, item.getPartition()));
+ *           }
+ *           traverser = traverser.onFirstNull(() -> traverser = null);
+ *       }
+ *       emitFromTraverser(traverser, item -> {
+ *           if (!(item instanceof Watermark)) {
+ *               // store your offset after item was emitted
+ *               offsetsMap.put(item.getPartition(), item.getOffset());
+ *           }
+ *       });
+ *       return false;
+ *   }
+ * }</pre>
+ *
+ * Other methods:
  * <ul>
- *     <li>Call {@link #increasePartitionCount} to set your partition count.
- *
- *     <li>For each event you receive call {@link #handleEvent} method. If it
- *     returns a watermark, emit it <em>before</em> the event itself.
- *
- *     <li>If you didn't emit an event for some time (~100-1000ms), call {@link
- *     #handleNoEvent}. If it returns a watermark, emit it.
+ *     <li>Call {@link #increasePartitionCount} to set your partition count
+ *     initially or whenever the count increases.
  *
  *     <li>If you support state snapshots, save the value returned by {@link
  *     #getWatermark} for all partitions to the snapshot. When restoring the
@@ -100,16 +130,33 @@ public class WatermarkSourceUtil<T> {
     }
 
     /**
-     * Javadoc pending
+     * Flat-maps the given {@code item} by (possibly) prepending it with a
+     * watermark. Designed to use when emitting from traverser:
+     * <pre>{@code
+     *     Traverser t = traverserIterable(...)
+     *         .flatMap(item -> watermarkSourceUtil.flatMap(item, item.getPartition()));
+     * }</pre>
      */
-    public Traverser<Object> flatMap(@Nullable T item, int partitionIndex) {
-        return flatMap(System.nanoTime(), item, partitionIndex);
+    @Nonnull
+    public Traverser<Object> handleEvent(@Nonnull T item, int partitionIndex) {
+        return handleEvent(System.nanoTime(), item, partitionIndex);
+    }
+
+    /**
+     * Call this method when there is no event coming. It returns a traverser
+     * with 0 or 1 object (the watermark). If you need just the Watermark, call
+     * {@code next()} on the result.
+     */
+    @Nonnull
+    public Traverser<Object> handleNoEvent() {
+        return handleEvent(System.nanoTime(), null, -1);
     }
 
     // package-visible for tests
-    Traverser<Object> flatMap(long now, T item, int partitionIndex) {
-        assert traverser.isEmpty();
-        Watermark wm = item != null ? handleEvent(now, partitionIndex, item) : handleNoEvent(now);
+    Traverser<Object> handleEvent(long now, @Nullable T item, int partitionIndex) {
+        assert traverser.isEmpty() : "the traverser returned previously not yet drained: remove all " +
+                "items from the traverser before you call this method again.";
+        Watermark wm = item != null ? handleEventInt(now, partitionIndex, item) : handleNoEventInt(now);
         if (wm != null) {
             traverser.append(wm);
         }
@@ -119,19 +166,15 @@ public class WatermarkSourceUtil<T> {
         return traverser;
     }
 
-    public Watermark handleNoEvent() {
-        return handleNoEvent(System.nanoTime());
-    }
-
-    private Watermark handleEvent(long now, int partitionIndex, T event) {
+    private Watermark handleEventInt(long now, int partitionIndex, T event) {
         long eventTime = timestampFn.applyAsLong(event);
         wmPolicies[partitionIndex].reportEvent(eventTime);
         markIdleAt[partitionIndex] = now + idleTimeoutNanos;
         allAreIdle = false;
-        return handleNoEvent(now);
+        return handleNoEventInt(now);
     }
 
-    private Watermark handleNoEvent(long now) {
+    private Watermark handleNoEventInt(long now) {
         long min = Long.MAX_VALUE;
         for (int i = 0; i < watermarks.length; i++) {
             if (idleTimeoutNanos > 0 && markIdleAt[i] <= now) {

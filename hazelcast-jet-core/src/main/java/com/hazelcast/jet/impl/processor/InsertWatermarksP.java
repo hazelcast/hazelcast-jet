@@ -59,7 +59,7 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
 
     private boolean tryProcessInternal(@Nullable Object item) {
         if (traverser == null) {
-            traverser = wsu.flatMap((T) item, 0);
+            traverser = wsu.handleEvent((T) item, 0);
         }
         if (emitFromTraverser(traverser)) {
             traverser = null;

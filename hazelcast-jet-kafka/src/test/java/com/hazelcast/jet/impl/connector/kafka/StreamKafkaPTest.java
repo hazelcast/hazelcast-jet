@@ -34,6 +34,7 @@ import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
+import com.hazelcast.jet.impl.pipeline.JetEvent;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
@@ -70,6 +71,7 @@ import static com.hazelcast.jet.core.processor.KafkaProcessors.streamKafkaP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static com.hazelcast.jet.impl.pipeline.JetEventImpl.jetEvent;
+import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.toCollection;
@@ -143,8 +145,10 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         assertTrueEventually(() -> {
             assertEquals(messageCount * 2, list.size());
             for (int i = 0; i < messageCount; i++) {
-                assertTrue(list.contains(createEntry(i)));
-                assertTrue(list.contains(createEntry(i - messageCount)));
+                JetEvent<Entry<Integer, String>> entry1 = jetEvent(createEntry(i), Long.MIN_VALUE);
+                JetEvent<Entry<Integer, String>> entry2 = jetEvent(createEntry(i - messageCount), Long.MIN_VALUE);
+                assertTrue("missing entry: " + entry1, list.contains(entry1));
+                assertTrue("missing entry: " + entry2, list.contains(entry2));
             }
         }, 5);
 
@@ -306,10 +310,10 @@ public class StreamKafkaPTest extends KafkaTestSupport {
     ) {
         assert numTopics == 1 || numTopics == 2;
         return new StreamKafkaP<>(properties,
-                numTopics == 1 ? singletonList(topic1Name) : Arrays.asList(topic1Name, topic2Name),
+                numTopics == 1 ? singletonList(topic1Name) : asList(topic1Name, topic2Name),
                 projectionFn, globalParallelism,
                 wmGenParams(e -> e instanceof Entry ? (int) ((Entry) e).getKey() : System.currentTimeMillis(),
-                limitingLag(LAG), suppressDuplicates(), idleTimeoutMillis));
+                limitingLag(LAG), suppressDuplicates(), idleTimeoutMillis), (item, ts) -> item);
     }
 
     @Test
@@ -376,7 +380,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         // When
         StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name),
                 (k, v) -> "0".equals(v) ? null : v, 1,
-                wmGenParams((String v) -> Long.parseLong(v), limitingLag(0), suppressDuplicates(), 0));
+                wmGenParams((String v) -> Long.parseLong(v), limitingLag(0), suppressDuplicates(), 0), (item, ts) -> item);
         TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
         processor.init(outbox, new TestProcessorContext());
         produce(topic1Name, 0, "0");
@@ -387,8 +391,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
             assertFalse(processor.complete());
             assertFalse("no item in outbox", outbox.queue(0).isEmpty());
         }, 3);
-        assertEquals(new Watermark(1), outbox.queue(0).poll());
-        assertEquals(jetEvent("1", 1), outbox.queue(0).poll());
+        assertEquals("1", outbox.queue(0).poll());
         assertNull(outbox.queue(0).poll());
     }
 

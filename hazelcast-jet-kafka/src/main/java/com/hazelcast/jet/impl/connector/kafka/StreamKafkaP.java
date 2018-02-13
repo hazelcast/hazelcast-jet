@@ -23,7 +23,6 @@ import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.CloseableProcessorSupplier;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.WatermarkSourceUtil;
@@ -75,7 +74,6 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
     private final WatermarkSourceUtil<T> watermarkSourceUtil;
     private boolean snapshottingEnabled;
     private KafkaConsumer<Object, Object> consumer;
-    private final ResettableSingletonTraverser<Object> singletonTraverser = new ResettableSingletonTraverser<>();
 
     private final int[] partitionCounts;
     private long nextMetadataCheck = Long.MIN_VALUE;
@@ -96,14 +94,14 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
             @Nonnull List<String> topics,
             @Nonnull DistributedBiFunction<K, V, T> projectionFn,
             int globalParallelism,
-            @Nonnull WatermarkGenerationParams<T> wmGenParams
-    ) {
+            @Nonnull WatermarkGenerationParams<T> wmGenParams,
+            DistributedBiFunction<T, Long, ?> wrapFn) {
         this.properties = properties;
         this.topics = topics;
         this.projectionFn = projectionFn;
         this.globalParallelism = globalParallelism;
 
-        watermarkSourceUtil = new WatermarkSourceUtil<>(wmGenParams, JetEventImpl::jetEvent/*TODO*/);
+        watermarkSourceUtil = new WatermarkSourceUtil<>(wmGenParams, wrapFn);
         partitionCounts = new int[topics.size()];
     }
 
@@ -184,11 +182,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
                 }
             }
             if (records == null || records.isEmpty()) {
-                Watermark wm = watermarkSourceUtil.handleNoEvent();
-                if (wm != null) {
-                    singletonTraverser.append(wm);
-                    traverser = singletonTraverser;
-                }
+                traverser = watermarkSourceUtil.handleNoEvent();
             } else {
                 traverser = traverseIterable(records)
                         .flatMap(r -> {
@@ -199,11 +193,8 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
                             }
                             TopicPartition topicPartition = new TopicPartition(lastEmittedItem.topic(),
                                     lastEmittedItem.partition());
-                            return watermarkSourceUtil.flatMap(projectedRecord, currentAssignment.get(topicPartition));
+                            return watermarkSourceUtil.handleEvent(projectedRecord, currentAssignment.get(topicPartition));
                         });
-            }
-            if (traverser == null) {
-                return false;
             }
 
             traverser = traverser.onFirstNull(() -> traverser = null);
@@ -314,7 +305,8 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
         @Override
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
             return address -> new CloseableProcessorSupplier<>(
-                    () -> new StreamKafkaP(properties, topics, projectionFn, totalParallelism, wmGenParams));
+                    () -> new StreamKafkaP(properties, topics, projectionFn, totalParallelism, wmGenParams,
+                            (item, ts) -> JetEventImpl.jetEvent(item, (long) ts)/*TODO*/));
         }
     }
 

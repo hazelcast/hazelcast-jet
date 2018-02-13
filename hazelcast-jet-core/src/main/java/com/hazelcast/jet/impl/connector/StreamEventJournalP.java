@@ -172,7 +172,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         assert resultSet != null : "null resultSet";
         while (resultSetPosition < resultSet.size()) {
             T event = resultSet.get(resultSetPosition);
-            traverser = watermarkSourceUtil.flatMap(event, currentPartitionIndex);
+            traverser = watermarkSourceUtil.handleEvent(event, currentPartitionIndex);
             if (!emitFromTraverser(traverser, this::afterEmit)) {
                 return;
             }
@@ -260,7 +260,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
         if (currentPartitionIndex == partitionIds.length) {
             currentPartitionIndex = -1;
-            traverser = watermarkSourceUtil.flatMap(null, 0);
+            traverser = watermarkSourceUtil.handleNoEvent();
         }
     }
 

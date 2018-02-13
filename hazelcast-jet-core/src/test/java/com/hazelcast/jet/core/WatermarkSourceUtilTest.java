@@ -40,16 +40,16 @@ public class WatermarkSourceUtilTest {
         wsu.increasePartitionCount(0L, 2);
 
         // all partitions are active initially
-        assertTraverser(wsu.flatMap(ns(1), null, 0));
+        assertTraverser(wsu.handleEvent(ns(1), null, 0));
         // now idle timeout passed for all partitions, IDLE_MESSAGE should be emitted
-        assertTraverser(wsu.flatMap(ns(5), null, 0), IDLE_MESSAGE);
+        assertTraverser(wsu.handleEvent(ns(5), null, 0), IDLE_MESSAGE);
         // still all partitions are idle, but IDLE_MESSAGE should not be emitted for the second time
-        assertTraverser(wsu.flatMap(ns(5), null, 0));
+        assertTraverser(wsu.handleEvent(ns(5), null, 0));
         // now we observe event on partition0, watermark should be immediately forwarded because the other queue is idle
-        assertTraverser(wsu.flatMap(ns(5), 100L, 0), wm(100 - LAG), 100L);
+        assertTraverser(wsu.handleEvent(ns(5), 100L, 0), wm(100 - LAG), 100L);
         // now we'll have a event on the other partition. No WM is emitted because it's older than already emitted one
-        assertTraverser(wsu.flatMap(ns(5), 90L, 0), 90L);
-        assertTraverser(wsu.flatMap(ns(5), 101L, 0), wm(101 - LAG), 101L);
+        assertTraverser(wsu.handleEvent(ns(5), 90L, 0), 90L);
+        assertTraverser(wsu.handleEvent(ns(5), 101L, 0), wm(101 - LAG), 101L);
     }
 
     @Test
@@ -59,17 +59,17 @@ public class WatermarkSourceUtilTest {
         wsu.increasePartitionCount(2);
 
         // all partitions are active initially
-        assertTraverser(wsu.flatMap(null, 0));
+        assertTraverser(wsu.handleNoEvent());
         // let's have events only in partition0. No WM is output because we wait for the other partition indefinitely
-        assertTraverser(wsu.flatMap(10L, 0), 10L);
-        assertTraverser(wsu.flatMap(11L, 0), 11L);
+        assertTraverser(wsu.handleEvent(10L, 0), 10L);
+        assertTraverser(wsu.handleEvent(11L, 0), 11L);
         // now have some events in the other partition, wms will be output
-        assertTraverser(wsu.flatMap(10L, 1), wm(10 - LAG), 10L);
-        assertTraverser(wsu.flatMap(11L, 1), wm(11 - LAG), 11L);
+        assertTraverser(wsu.handleEvent(10L, 1), wm(10 - LAG), 10L);
+        assertTraverser(wsu.handleEvent(11L, 1), wm(11 - LAG), 11L);
         // now partition1 will get ahead of partition0 -> no WM
-        assertTraverser(wsu.flatMap(12L, 1), 12L);
+        assertTraverser(wsu.handleEvent(12L, 1), 12L);
         // another event in partition0, we'll get the wm
-        assertTraverser(wsu.flatMap(13L, 0), wm(12 - LAG), 13L);
+        assertTraverser(wsu.handleEvent(13L, 0), wm(12 - LAG), 13L);
     }
 
     @Test
@@ -78,13 +78,13 @@ public class WatermarkSourceUtilTest {
                 limitingLag(LAG), suppressDuplicates(), -1), outputOnlyItem);
 
         // it should immediately emit the idle message, even though the idle timeout is -1
-        assertTraverser(wsu.flatMap(null, 0), IDLE_MESSAGE);
-        assertTraverser(wsu.flatMap(null, 0));
+        assertTraverser(wsu.handleNoEvent(), IDLE_MESSAGE);
+        assertTraverser(wsu.handleNoEvent());
 
         // after adding a partition and observing an event, WM should be emitted
         wsu.increasePartitionCount(1);
-        assertTraverser(wsu.flatMap(null, 0)); // can't send WM here, we don't know what its value would be
-        assertTraverser(wsu.flatMap(10L, 0), wm(10 - LAG), 10L);
+        assertTraverser(wsu.handleNoEvent()); // can't send WM here, we don't know what its value would be
+        assertTraverser(wsu.handleEvent(10L, 0), wm(10 - LAG), 10L);
     }
 
     @Test
@@ -92,15 +92,15 @@ public class WatermarkSourceUtilTest {
         WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(wmGenParams(Long::longValue, limitingLag(LAG),
                 suppressDuplicates(), 10), outputOnlyItem);
         wsu.increasePartitionCount(1);
-        assertTraverser(wsu.flatMap(ns(0), 10L, 0), wm(10 - LAG), 10L);
+        assertTraverser(wsu.handleEvent(ns(0), 10L, 0), wm(10 - LAG), 10L);
 
         // When - become idle
-        assertTraverser(wsu.flatMap(ns(10), null, 0), IDLE_MESSAGE);
+        assertTraverser(wsu.handleEvent(ns(10), null, 0), IDLE_MESSAGE);
         // When - another event, but no new WM
-        assertTraverser(wsu.flatMap(ns(10), 10L, 0), 10L);
+        assertTraverser(wsu.handleEvent(ns(10), 10L, 0), 10L);
         // When - become idle again
-        assertTraverser(wsu.flatMap(ns(10), null, 0));
-        assertTraverser(wsu.flatMap(ns(20), null, 0), IDLE_MESSAGE);
+        assertTraverser(wsu.handleEvent(ns(10), null, 0));
+        assertTraverser(wsu.handleEvent(ns(20), null, 0), IDLE_MESSAGE);
     }
 
     private <T> void assertTraverser(Traverser<T> actual, T ... expected) {
