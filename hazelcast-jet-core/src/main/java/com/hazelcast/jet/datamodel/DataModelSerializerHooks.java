@@ -109,7 +109,7 @@ class DataModelSerializerHooks {
 
                 @Override
                 public int getTypeId() {
-                    return SerializerHookConstants.SESSION;
+                    return SerializerHookConstants.WINDOW_RESULT;
                 }
 
                 @Override
