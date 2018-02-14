@@ -32,6 +32,7 @@ import com.hazelcast.jet.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.function.WindowResultFunction;
 import com.hazelcast.jet.impl.aggregate.AggregateOperationImpl;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
+import com.hazelcast.jet.impl.processor.ProcessorWrapper;
 import com.hazelcast.jet.impl.util.WrappingProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.JoinClause;
 
@@ -260,16 +261,14 @@ class JetEventFunctionAdapter extends FunctionAdapter {
         }
     }
 
-    private static final class AdaptingProcessor implements Processor {
-        private final Processor proc;
-
-        AdaptingProcessor(Processor proc) {
-            this.proc = proc;
+    private static final class AdaptingProcessor extends ProcessorWrapper {
+        AdaptingProcessor(Processor wrapped) {
+            super(wrapped);
         }
 
         @Override
         public void process(int ordinal, @Nonnull Inbox inbox) {
-            proc.process(ordinal, new AdaptingInbox(inbox));
+            super.process(ordinal, new AdaptingInbox(inbox));
         }
     }
 }
