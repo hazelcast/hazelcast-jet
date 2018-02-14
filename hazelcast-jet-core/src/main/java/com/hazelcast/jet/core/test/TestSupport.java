@@ -735,7 +735,16 @@ public final class TestSupport {
         return LOGGING_SERVICE.getLogger(clazz);
     }
 
-    private static String listToString(List<?> list) {
+    /**
+     * Converts a list to a string putting {@code toString()} of each element
+     * on separate line. It is useful to transform list inputs to {@code
+     * assertEquals()}: the exception will show the entire collections instead
+     * of just non-equal sizes or the first non-equal element.
+     *
+     * @param list Input list
+     * @return Output string
+     */
+    public static String listToString(List<?> list) {
         return list.stream()
                    .map(String::valueOf)
                    .collect(Collectors.joining("\n"));

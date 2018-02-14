@@ -103,6 +103,21 @@ public class WatermarkSourceUtilTest {
         assertTraverser(wsu.handleEvent(ns(20), null, 0), IDLE_MESSAGE);
     }
 
+    @Test
+    public void when_eventInOneOfTwoPartitions_then_wmAndIdleMessageForwardedAfterTimeout() {
+        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(wmGenParams(Long::longValue, limitingLag(LAG),
+                suppressDuplicates(), 10), outputOnlyItem);
+        wsu.increasePartitionCount(ns(0), 2);
+
+        // When
+        assertTraverser(wsu.handleEvent(ns(0), 10L, 0), 10L);
+
+        // Then
+        assertTraverser(wsu.handleEvent(ns(10), null, 0),
+                wm(10 - LAG),
+                IDLE_MESSAGE);
+    }
+
     private <T> void assertTraverser(Traverser<T> actual, T ... expected) {
         for (T element : expected) {
             assertEquals(element, actual.next());

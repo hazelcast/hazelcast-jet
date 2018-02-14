@@ -112,6 +112,7 @@ public class WatermarkSourceUtil<T> {
     private long[] watermarks = EMPTY_LONGS;
     private long[] markIdleAt = EMPTY_LONGS;
     private long lastEmittedWm = Long.MIN_VALUE;
+    private long topObservedWm = Long.MIN_VALUE;
     private boolean allAreIdle;
 
     /**
@@ -156,9 +157,10 @@ public class WatermarkSourceUtil<T> {
     Traverser<Object> handleEvent(long now, @Nullable T item, int partitionIndex) {
         assert traverser.isEmpty() : "the traverser returned previously not yet drained: remove all " +
                 "items from the traverser before you call this method again.";
-        Watermark wm = item != null ? handleEventInt(now, partitionIndex, item) : handleNoEventInt(now);
-        if (wm != null) {
-            traverser.append(wm);
+        if (item != null) {
+            handleEventInt(now, partitionIndex, item);
+        } else {
+            handleNoEventInt(now);
         }
         if (item != null) {
             traverser.append(wrapFn.apply(item, timestampFn.applyAsLong(item)));
@@ -166,38 +168,43 @@ public class WatermarkSourceUtil<T> {
         return traverser;
     }
 
-    private Watermark handleEventInt(long now, int partitionIndex, T event) {
+    private void handleEventInt(long now, int partitionIndex, @Nonnull T event) {
         long eventTime = timestampFn.applyAsLong(event);
         wmPolicies[partitionIndex].reportEvent(eventTime);
         markIdleAt[partitionIndex] = now + idleTimeoutNanos;
         allAreIdle = false;
-        return handleNoEventInt(now);
+        handleNoEventInt(now);
     }
 
-    private Watermark handleNoEventInt(long now) {
+    private void handleNoEventInt(long now) {
         long min = Long.MAX_VALUE;
         for (int i = 0; i < watermarks.length; i++) {
             if (idleTimeoutNanos > 0 && markIdleAt[i] <= now) {
                 continue;
             }
             watermarks[i] = wmPolicies[i].getCurrentWatermark();
+            topObservedWm = Math.max(topObservedWm, watermarks[i]);
             min = Math.min(min, watermarks[i]);
         }
 
         if (min == Long.MAX_VALUE) {
             if (allAreIdle) {
-                return null;
+                return;
             }
+            // we've just became fully idle. Forward the top WM now, if needed
+            min = topObservedWm;
             allAreIdle = true;
-            return IDLE_MESSAGE;
+        } else {
+            allAreIdle = false;
         }
 
-        if (!wmEmitPolicy.shouldEmit(min, lastEmittedWm)) {
-            return null;
+        if (wmEmitPolicy.shouldEmit(min, lastEmittedWm)) {
+            traverser.append(new Watermark(min));
+            lastEmittedWm = min;
         }
-        allAreIdle = false;
-        lastEmittedWm = min;
-        return new Watermark(min);
+        if (allAreIdle) {
+            traverser.append(IDLE_MESSAGE);
+        }
     }
 
     /**
