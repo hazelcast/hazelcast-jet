@@ -246,7 +246,7 @@ public class ProcessorTaskletTest_Snapshots {
                 if (!outbox.offer(item)) {
                     return;
                 } else {
-                    snapshotQueue.offer(entry(UuidUtil.newUnsecureUUID(), inbox.remove()));
+                    snapshotQueue.offer(entry(UuidUtil.newUnsecureUUID(), inbox.poll()));
                 }
             }
         }

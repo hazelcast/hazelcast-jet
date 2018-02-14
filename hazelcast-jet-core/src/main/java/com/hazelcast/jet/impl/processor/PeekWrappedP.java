@@ -153,9 +153,9 @@ public final class PeekWrappedP<T> extends ProcessorWrapper {
         }
 
         @Override
-        public Object remove() {
+        public void remove() {
             peekedItemLogged = false;
-            return wrappedInbox.remove();
+            wrappedInbox.remove();
         }
     }
 

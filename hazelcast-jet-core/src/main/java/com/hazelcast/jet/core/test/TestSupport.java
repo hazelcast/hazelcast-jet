@@ -484,7 +484,7 @@ public final class TestSupport {
         while (inputIterator.hasNext() || !inbox.isEmpty() || wmToProcess[0] != null) {
             if (inbox.isEmpty() && wmToProcess[0] == null && inputIterator.hasNext()) {
                 ObjectWithOrdinal objectWithOrdinal = inputIterator.next();
-                inbox.add(objectWithOrdinal.item);
+                inbox.queue().add(objectWithOrdinal.item);
                 inboxOrdinal = objectWithOrdinal.ordinal;
                 if (logInputOutput) {
                     System.out.println(LocalTime.now() + " Input-" + objectWithOrdinal.ordinal + ": " + inbox.peek());
@@ -586,7 +586,7 @@ public final class TestSupport {
 
     private String processInbox(TestInbox inbox, int inboxOrdinal, boolean isCooperative, Processor[] processor,
                                 Watermark[] wmToEmit) {
-        if (inbox.getFirst() instanceof Watermark) {
+        if (inbox.peek() instanceof Watermark) {
             Watermark wm = ((Watermark) inbox.peek());
             checkTime("tryProcessWatermark", isCooperative, () -> {
                 if (processor[0].tryProcessWatermark(wm)) {
@@ -631,12 +631,12 @@ public final class TestSupport {
             assertTrue("saveToSnapshot() call without progress",
                     !assertProgress || done[0] || !outbox[0].snapshotQueue().isEmpty()
                             || !outbox[0].queue(0).isEmpty());
-            outbox[0].drainSnapshotQueueAndReset(snapshotInbox, false);
+            outbox[0].drainSnapshotQueueAndReset(snapshotInbox.queue(), false);
             outbox[0].drainQueuesAndReset(actualOutput, logInputOutput);
         } while (!done[0]);
 
         // check snapshot for duplicate keys
-        for (Object item : snapshotInbox) {
+        for (Object item : snapshotInbox.queue()) {
             Entry<Object, Object> item2 = (Entry<Object, Object>) item;
             assertTrue("Duplicate key produced in saveToSnapshot()\n  " +
                     "Duplicate: " + item2.getKey() + "\n  Keys so far: " + keys, keys.add(item2.getKey()));
@@ -655,16 +655,16 @@ public final class TestSupport {
         outbox[0] = createOutbox();
         initProcessor(processor[0], outbox[0]);
 
-        int lastInboxSize = snapshotInbox.size();
+        int lastInboxSize = snapshotInbox.queue().size();
         while (!snapshotInbox.isEmpty()) {
             checkTime("restoreSnapshot", isCooperative,
                     () -> processor[0].restoreFromSnapshot(snapshotInbox));
             assertTrue("restoreFromSnapshot() call without progress",
                     !assertProgress
-                            || lastInboxSize > snapshotInbox.size()
+                            || lastInboxSize > snapshotInbox.queue().size()
                             || !outbox[0].queue(0).isEmpty());
             outbox[0].drainQueuesAndReset(actualOutput, logInputOutput);
-            lastInboxSize = snapshotInbox.size();
+            lastInboxSize = snapshotInbox.queue().size();
         }
         do {
             checkTime("finishSnapshotRestore", isCooperative,

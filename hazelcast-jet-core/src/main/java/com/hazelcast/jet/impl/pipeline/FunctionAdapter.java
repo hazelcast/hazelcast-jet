@@ -252,8 +252,8 @@ class JetEventFunctionAdapter extends FunctionAdapter {
         }
 
         @Override
-        public Object remove() {
-            return unwrapPayload(inbox.remove());
+        public void remove() {
+            inbox.remove();
         }
 
         private static Object unwrapPayload(Object jetEvent) {

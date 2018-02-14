@@ -331,7 +331,7 @@ public class PeekingWrapperTest {
             for (Object o; (o = inbox.peek()) != null; ) {
                 assertNotNull("Inbox returned null object", o);
                 assertEquals("second peek didn't return the same object", inbox.peek(), o);
-                assertEquals("remove didn't return the same object", inbox.remove(), o);
+                assertEquals("remove didn't return the same object", inbox.poll(), o);
             }
             assertNull(inbox.peek());
             try {
