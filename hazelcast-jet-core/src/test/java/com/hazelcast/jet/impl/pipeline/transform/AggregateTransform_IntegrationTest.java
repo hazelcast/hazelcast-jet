@@ -19,30 +19,23 @@ package com.hazelcast.jet.impl.pipeline.transform;
 import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.JournalInitialPosition;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JetTestSupport;
-import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.pipeline.WindowDefinition;
+import com.hazelcast.spi.properties.GroupProperty;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.Map;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
 import static com.hazelcast.jet.core.TestUtil.set;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
-import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
-import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.test.TestSupport.listToString;
-import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 
-public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
+public class AggregateTransform_IntegrationTest extends JetTestSupport {
 
     private JetInstance instance;
 
@@ -51,31 +44,25 @@ public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
         JetConfig config = new JetConfig();
         config.getHazelcastConfig().addEventJournalConfig(
                 new EventJournalConfig().setMapName("source").setEnabled(true));
+        config.getHazelcastConfig().setProperty(GroupProperty.PARTITION_COUNT.getName(), "6");
         instance = createJetMember(config);
     }
 
     @Test
     public void test() {
-        Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST,
-                wmGenParams(Map.Entry::getKey, limitingLag(0), suppressDuplicates(), 2000)))
-         .window(WindowDefinition.tumbling(2))
-         .aggregate(toSet())
-         .drainTo(Sinks.list("sink"));
-
-        instance.newJob(p);
         IMap<Long, String> map = instance.getMap("source");
         map.put(0L, "foo");
         map.put(1L, "bar");
-        map.put(2L, "baz");
-        map.put(10L, "flush-item");
 
-        assertTrueEventually(() -> {
-            assertEquals(
-                    listToString(asList(
-                            new TimestampedItem<>(2, set(entry(0L, "foo"), entry(1L, "bar"))),
-                            new TimestampedItem<>(4, set(entry(2L, "baz"))))),
-                    listToString(instance.getHazelcastInstance().getList("sink")));
-        }, 6);
+        Pipeline p = Pipeline.create();
+        p.drawFrom(Sources.<Long, String>map("source"))
+         .aggregate(toSet())
+         .drainTo(Sinks.list("sink"));
+
+        instance.newJob(p).join();
+
+        assertEquals(
+                listToString(singletonList(set(entry(0L, "foo"), entry(1L, "bar")))),
+                listToString(instance.getHazelcastInstance().getList("sink")));
     }
 }

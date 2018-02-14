@@ -286,7 +286,7 @@ public class ProcessorTasklet implements Tasklet {
                 instreamCursor.advance();
                 continue;
             }
-            result = currInstream.drainTo(o -> inbox.queue().add(o));
+            result = currInstream.drainTo(inbox.queue()::add);
             progTracker.madeProgress(result.isMadeProgress());
 
             if (result.isDone()) {
