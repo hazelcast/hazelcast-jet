@@ -229,46 +229,49 @@ class JetEventFunctionAdapter extends FunctionAdapter {
         return (A acc, JetEvent<T> t) -> accumulateFn.accept(acc, t.payload());
     }
 
-    private static final class AdaptingInbox implements Inbox {
-        private final Inbox inbox;
-
-        AdaptingInbox(Inbox inbox) {
-            this.inbox = inbox;
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return inbox.isEmpty();
-        }
-
-        @Override
-        public Object peek() {
-            return unwrapPayload(inbox.peek());
-        }
-
-        @Override
-        public Object poll() {
-            return unwrapPayload(inbox.poll());
-        }
-
-        @Override
-        public void remove() {
-            inbox.remove();
-        }
-
-        private static Object unwrapPayload(Object jetEvent) {
-            return ((JetEvent) jetEvent).payload();
-        }
-    }
-
     private static final class AdaptingProcessor extends ProcessorWrapper {
+        private final AdaptingInbox adaptingInbox = new AdaptingInbox();
+
         AdaptingProcessor(Processor wrapped) {
             super(wrapped);
         }
 
         @Override
         public void process(int ordinal, @Nonnull Inbox inbox) {
-            super.process(ordinal, new AdaptingInbox(inbox));
+            adaptingInbox.setWrappedInbox(inbox);
+            super.process(ordinal, adaptingInbox);
+        }
+    }
+
+    private static final class AdaptingInbox implements Inbox {
+        private Inbox wrapped;
+
+        final void setWrappedInbox(@Nonnull Inbox wrapped) {
+            this.wrapped = wrapped;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return wrapped.isEmpty();
+        }
+
+        @Override
+        public Object peek() {
+            return unwrapPayload(wrapped.peek());
+        }
+
+        @Override
+        public Object poll() {
+            return unwrapPayload(wrapped.poll());
+        }
+
+        @Override
+        public void remove() {
+            wrapped.remove();
+        }
+
+        private static Object unwrapPayload(Object jetEvent) {
+            return jetEvent != null ? ((JetEvent) jetEvent).payload() : null;
         }
     }
 }
