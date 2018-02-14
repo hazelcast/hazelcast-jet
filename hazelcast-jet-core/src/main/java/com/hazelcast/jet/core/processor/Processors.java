@@ -264,7 +264,6 @@ public final class Processors {
      * <p>
      * This processor has state, but does not save it to snapshot. On job
      * restart, the state will be lost.
-     * @param <T> type of received item
      * @param <A> type of accumulator returned from {@code
      *            aggrOp.createAccumulatorFn()}
      * @param <R> type of the finished result returned from {@code aggrOp.
