@@ -27,6 +27,7 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
@@ -175,8 +176,10 @@ public class StreamKafkaPTest extends KafkaTestSupport {
             assertTrueEventually(() -> {
                 assertTrue("Not all messages were received", list.size() >= messageCount * 4);
                 for (int i = 0; i < 2 * messageCount; i++) {
-                    assertTrue(list.contains(createEntry(i)));
-                    assertTrue(list.contains(createEntry(i - messageCount)));
+                    Entry<Integer, String> entry1 = createEntry(i);
+                    Entry<Integer, String> entry2 = createEntry(i - messageCount);
+                    assertTrue("missing entry: " + entry1.toString(), list.contains(entry1));
+                    assertTrue("missing entry: " + entry2.toString(), list.contains(entry2));
                 }
             }, 10);
         }
@@ -276,7 +279,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
 
         // create snapshot
         TestInbox snapshot = saveSnapshot(processor, outbox);
-        Set snapshotItems = unwrapBroadcastKey(snapshot);
+        Set snapshotItems = unwrapBroadcastKey(snapshot.queue());
 
         // consume one more item
         produce(topic1Name, 1, "1");
@@ -292,7 +295,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         assertTrue("snapshot not fully processed", snapshot.isEmpty());
 
         TestInbox snapshot2 = saveSnapshot(processor, outbox);
-        assertEquals("new snapshot not equal after restore", snapshotItems, unwrapBroadcastKey(snapshot2));
+        assertEquals("new snapshot not equal after restore", snapshotItems, unwrapBroadcastKey(snapshot2.queue()));
 
         // the second item should be produced one more time
         assertEquals(entry(1, "1"), consumeEventually(processor, outbox));
@@ -311,7 +314,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
                 numTopics == 1 ? singletonList(topic1Name) : asList(topic1Name, topic2Name),
                 projectionFn, globalParallelism,
                 wmGenParams(e -> e instanceof Entry ? (int) ((Entry) e).getKey() : System.currentTimeMillis(),
-                limitingLag(LAG), suppressDuplicates(), idleTimeoutMillis), (item, ts) -> item);
+                        limitingLag(LAG), suppressDuplicates(), idleTimeoutMillis), (item, ts) -> item);
     }
 
     @Test
@@ -376,9 +379,16 @@ public class StreamKafkaPTest extends KafkaTestSupport {
     @Test
     public void when_customProjectionToNull_then_filteredOut() {
         // When
-        StreamKafkaP processor = new StreamKafkaP(properties, singletonList(topic1Name),
+        WatermarkGenerationParams<String> wmParams = wmGenParams(
+                Long::parseLong,
+                limitingLag(0),
+                suppressDuplicates(),
+                0
+        );
+        StreamKafkaP processor = new StreamKafkaP<Integer, String, String>(properties,
+                singletonList(topic1Name),
                 (k, v) -> "0".equals(v) ? null : v, 1,
-                wmGenParams((String v) -> Long.parseLong(v), limitingLag(0), suppressDuplicates(), 0), (item, ts) -> item);
+                wmParams, (item, ts) -> item);
         TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
         processor.init(outbox, new TestProcessorContext());
         produce(topic1Name, 0, "0");
@@ -420,7 +430,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
     private TestInbox saveSnapshot(StreamKafkaP streamKafkaP, TestOutbox outbox) {
         TestInbox snapshot = new TestInbox();
         assertTrue(streamKafkaP.saveToSnapshot());
-        outbox.drainSnapshotQueueAndReset(snapshot, false);
+        outbox.drainSnapshotQueueAndReset(snapshot.queue(), false);
         return snapshot;
     }
 
