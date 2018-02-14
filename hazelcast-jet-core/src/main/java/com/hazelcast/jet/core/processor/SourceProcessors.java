@@ -112,7 +112,7 @@ public final class SourceProcessors {
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
             @Nonnull JournalInitialPosition initialPos,
-            WatermarkGenerationParams<T> wmGenParams
+            WatermarkGenerationParams<? super T> wmGenParams
     ) {
         return StreamEventJournalP.streamMapP(mapName, predicateFn, projectionFn, initialPos, wmGenParams);
     }

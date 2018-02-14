@@ -102,9 +102,9 @@ public class WatermarkSourceUtil<T> {
     private static final long[] EMPTY_LONGS = {};
 
     private final long idleTimeoutNanos;
-    private final ToLongFunction<T> timestampFn;
+    private final ToLongFunction<? super T> timestampFn;
     private final Supplier<WatermarkPolicy> newWmPolicyFn;
-    private final ObjLongBiFunction<T, ?> wrapFn;
+    private final ObjLongBiFunction<? super T, ?> wrapFn;
     private final WatermarkEmissionPolicy wmEmitPolicy;
     private final AppendableTraverser<Object> traverser = new AppendableTraverser<>(2);
 
@@ -121,7 +121,7 @@ public class WatermarkSourceUtil<T> {
      * The partition count is initially set to 0, call {@link
      * #increasePartitionCount} to set it.
      **/
-    public WatermarkSourceUtil(WatermarkGenerationParams<T> params) {
+    public WatermarkSourceUtil(WatermarkGenerationParams<? super T> params) {
         this.idleTimeoutNanos = MILLISECONDS.toNanos(params.idleTimeoutMillis());
         this.timestampFn = params.timestampFn();
         this.wrapFn = params.wrapFn();
