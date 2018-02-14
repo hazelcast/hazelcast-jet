@@ -36,6 +36,7 @@ import java.io.File;
 import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Function;
 
 import static com.hazelcast.jet.Util.cacheEventToEntry;
 import static com.hazelcast.jet.Util.cachePutEvents;
@@ -81,7 +82,7 @@ public final class Sources {
      * meta-supplier.
      * <p>
      * The default local parallelism for this source is specified by the given
-     * {@link ProcessorMetaSupplier#preferredLocalParallelism() metaSupplier}.
+     * {@link ProcessorMetaSupplier#preferredLocalParallelism() metaSupplierFn}.
      *
      * @param sourceName user-friendly source name
      * @param metaSupplier the processor meta-supplier
@@ -96,10 +97,9 @@ public final class Sources {
 
     public static <T> StreamSource<T> streamFromProcessor(
             @Nonnull String sourceName,
-            boolean emitsJetEvents,
-            @Nonnull ProcessorMetaSupplier metaSupplier
+            @Nonnull Function<WatermarkGenerationParams<T>, ProcessorMetaSupplier> metaSupplierFn
     ) {
-        return new StreamSourceTransform<>(sourceName, emitsJetEvents, metaSupplier);
+        return new StreamSourceTransform<>(sourceName, metaSupplierFn);
     }
 
     /**
@@ -221,8 +221,6 @@ public final class Sources {
      *                     null} for an item, that item will be filtered out. You may use {@link
      *                     Util#mapEventToEntry()} to extract just the key and the new value.
      * @param initialPos describes which event to start receiving from
-     * @param wmGenParams parameters for watermark generation, see {@link
-     *      WatermarkGenerationParams#wmGenParams}
      * @param <T> type of emitted item
      */
     @Nonnull
@@ -230,16 +228,15 @@ public final class Sources {
             @Nonnull String mapName,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos,
-            @Nonnull WatermarkGenerationParams<T> wmGenParams
+            @Nonnull JournalInitialPosition initialPos
     ) {
-        return streamFromProcessor("mapJournalSource(" + mapName + ')', true,
-                streamMapP(mapName, predicateFn, projectionFn, initialPos, wmGenParams));
+        return streamFromProcessor("mapJournalSource(" + mapName + ')',
+                w -> streamMapP(mapName, predicateFn, projectionFn, initialPos, w));
     }
 
     /**
      * Convenience for {@link #mapJournal(String, DistributedPredicate,
-     * DistributedFunction, JournalInitialPosition, WatermarkGenerationParams)}
+     * DistributedFunction, JournalInitialPosition)}
      * which will pass only {@link com.hazelcast.core.EntryEventType#ADDED
      * ADDED} and {@link com.hazelcast.core.EntryEventType#UPDATED UPDATED}
      * events and will project the event's key and new value into a {@code
@@ -248,10 +245,9 @@ public final class Sources {
     @Nonnull
     public static <K, V> StreamSource<Entry<K, V>> mapJournal(
             @Nonnull String mapName,
-            @Nonnull JournalInitialPosition initialPos,
-            @Nonnull WatermarkGenerationParams<Entry<K, V>> wmGenParams
+            @Nonnull JournalInitialPosition initialPos
     ) {
-        return mapJournal(mapName, mapPutEvents(), mapEventToEntry(), initialPos, wmGenParams);
+        return mapJournal(mapName, mapPutEvents(), mapEventToEntry(), initialPos);
     }
 
     /**
@@ -370,8 +366,6 @@ public final class Sources {
      *                     null} for an item, that item will be filtered out. You may use {@link
      *                     Util#mapEventToEntry()} to extract just the key and the new value.
      * @param initialPos describes which event to start receiving from
-     * @param wmGenParams parameters for watermark generation, see {@link
-     *                    WatermarkGenerationParams#wmGenParams}
      * @param <K> type of key
      * @param <V> type of value
      * @param <T> type of emitted item
@@ -382,29 +376,26 @@ public final class Sources {
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos,
-            @Nonnull WatermarkGenerationParams<T> wmGenParams
+            @Nonnull JournalInitialPosition initialPos
     ) {
-        return streamFromProcessor("remoteMapJournalSource(" + mapName + ')', true,
-                streamRemoteMapP(mapName, clientConfig, predicateFn, projectionFn, initialPos, wmGenParams));
+        return streamFromProcessor("remoteMapJournalSource(" + mapName + ')',
+                w -> streamRemoteMapP(mapName, clientConfig, predicateFn, projectionFn, initialPos, w));
     }
 
     /**
      * Convenience for {@link #remoteMapJournal(String, ClientConfig,
-     * DistributedPredicate, DistributedFunction, JournalInitialPosition,
-     * WatermarkGenerationParams)} which will pass only {@link
-     * com.hazelcast.core.EntryEventType#ADDED ADDED} and {@link
-     * com.hazelcast.core.EntryEventType#UPDATED UPDATED} events and will
+     * DistributedPredicate, DistributedFunction, JournalInitialPosition)}
+     * which will pass only {@link com.hazelcast.core.EntryEventType#ADDED ADDED}
+     * and {@link com.hazelcast.core.EntryEventType#UPDATED UPDATED} events and will
      * project the event's key and new value into a {@code Map.Entry}.
      */
     @Nonnull
     public static <K, V> StreamSource<Entry<K, V>> remoteMapJournal(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
-            @Nonnull JournalInitialPosition initialPos,
-            @Nonnull WatermarkGenerationParams<Entry<K, V>> wmGenParams
+            @Nonnull JournalInitialPosition initialPos
     ) {
-        return remoteMapJournal(mapName, clientConfig, mapPutEvents(), mapEventToEntry(), initialPos, wmGenParams);
+        return remoteMapJournal(mapName, clientConfig, mapPutEvents(), mapEventToEntry(), initialPos);
     }
 
     /**
@@ -462,8 +453,6 @@ public final class Sources {
      *                     null} for an item, that item will be filtered out. You may use {@link
      *                     Util#cacheEventToEntry()} to extract just the key and the new value.
      * @param initialPos describes which event to start receiving from
-     * @param wmGenParams parameters for watermark generation, see {@link
-     *      WatermarkGenerationParams#wmGenParams}
      * @param <T> type of emitted item
      */
     @Nonnull
@@ -471,17 +460,16 @@ public final class Sources {
             @Nonnull String cacheName,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos,
-            @Nonnull WatermarkGenerationParams<T> wmGenParams
+            @Nonnull JournalInitialPosition initialPos
     ) {
-        return streamFromProcessor("cacheJournalSource(" + cacheName + ')', true,
-                streamCacheP(cacheName, predicateFn, projectionFn, initialPos, wmGenParams)
+        return streamFromProcessor("cacheJournalSource(" + cacheName + ')',
+                w -> streamCacheP(cacheName, predicateFn, projectionFn, initialPos, w)
         );
     }
 
     /**
      * Convenience for {@link #cacheJournal(String, DistributedPredicate,
-     * DistributedFunction, JournalInitialPosition, WatermarkGenerationParams)}
+     * DistributedFunction, JournalInitialPosition)}
      * which will pass only {@link com.hazelcast.cache.CacheEventType#CREATED
      * CREATED} and {@link com.hazelcast.cache.CacheEventType#UPDATED UPDATED}
      * events and will project the event's key and new value into a {@code
@@ -490,10 +478,9 @@ public final class Sources {
     @Nonnull
     public static <K, V> StreamSource<Entry<K, V>> cacheJournal(
             @Nonnull String cacheName,
-            @Nonnull JournalInitialPosition initialPos,
-            @Nonnull WatermarkGenerationParams<Entry<K, V>> wmGenParams
+            @Nonnull JournalInitialPosition initialPos
     ) {
-        return cacheJournal(cacheName, cachePutEvents(), cacheEventToEntry(), initialPos, wmGenParams);
+        return cacheJournal(cacheName, cachePutEvents(), cacheEventToEntry(), initialPos);
     }
 
     /**
@@ -515,7 +502,8 @@ public final class Sources {
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig
     ) {
-        return batchFromProcessor("remoteCacheSource(" + cacheName + ')', readRemoteCacheP(cacheName, clientConfig)
+        return batchFromProcessor(
+                "remoteCacheSource(" + cacheName + ')', readRemoteCacheP(cacheName, clientConfig)
         );
     }
 
@@ -548,8 +536,6 @@ public final class Sources {
      *                     null} for an item, that item will be filtered out. You may use {@link
      *                     Util#cacheEventToEntry()} to extract just the key and the new value.
      * @param initialPos describes which event to start receiving from
-     * @param wmGenParams parameters for watermark generation, see {@link
-     *      WatermarkGenerationParams#wmGenParams}
      * @param <T> type of emitted item
      */
     @Nonnull
@@ -558,29 +544,28 @@ public final class Sources {
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicateFn,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos,
-            @Nonnull WatermarkGenerationParams<T> wmGenParams
+            @Nonnull JournalInitialPosition initialPos
     ) {
-        return streamFromProcessor("remoteCacheJournalSource(" + cacheName + ')', true,
-                streamRemoteCacheP(cacheName, clientConfig, predicateFn, projectionFn, initialPos, wmGenParams));
+        return streamFromProcessor("remoteCacheJournalSource(" + cacheName + ')',
+                w -> streamRemoteCacheP(cacheName, clientConfig, predicateFn, projectionFn, initialPos, w));
     }
 
     /**
      * Convenience for {@link #remoteCacheJournal(String, ClientConfig,
-     * DistributedPredicate, DistributedFunction, JournalInitialPosition,
-     * WatermarkGenerationParams)} which will pass only {@link
-     * com.hazelcast.cache.CacheEventType#CREATED CREATED} and {@link
-     * com.hazelcast.cache.CacheEventType#UPDATED UPDATED} events and will
-     * project the event's key and new value into a {@code Map.Entry}.
+     * DistributedPredicate, DistributedFunction, JournalInitialPosition)}
+     * which will pass only
+     * {@link com.hazelcast.cache.CacheEventType#CREATED CREATED}
+     * and {@link com.hazelcast.cache.CacheEventType#UPDATED UPDATED}
+     * events and will project the event's key and new value
+     * into a {@code Map.Entry}.
      */
     @Nonnull
     public static <K, V> StreamSource<Entry<K, V>> remoteCacheJournal(
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig,
-            @Nonnull JournalInitialPosition initialPos,
-            @Nonnull WatermarkGenerationParams<Entry<K, V>> wmGenParams
+            @Nonnull JournalInitialPosition initialPos
     ) {
-        return remoteCacheJournal(cacheName, clientConfig, cachePutEvents(), cacheEventToEntry(), initialPos, wmGenParams);
+        return remoteCacheJournal(cacheName, clientConfig, cachePutEvents(), cacheEventToEntry(), initialPos);
     }
 
     /**
@@ -635,7 +620,8 @@ public final class Sources {
             @Nonnull String host, int port, @Nonnull Charset charset
     ) {
         return streamFromProcessor(
-                "socketSource(" + host + ':' + port + ')', false, streamSocketP(host, port, charset));
+                "socketSource(" + host + ':' + port + ')', ignored -> streamSocketP(host, port, charset)
+        );
     }
 
     /**
@@ -729,8 +715,8 @@ public final class Sources {
     public static StreamSource<String> fileWatcher(
             @Nonnull String watchedDirectory, @Nonnull Charset charset, @Nonnull String glob
     ) {
-        return streamFromProcessor("fileWatcherSource(" + watchedDirectory + '/' + glob + ')', false,
-                streamFilesP(watchedDirectory, charset, glob)
+        return streamFromProcessor("fileWatcherSource(" + watchedDirectory + '/' + glob + ')',
+                ignored -> streamFilesP(watchedDirectory, charset, glob)
         );
     }
 

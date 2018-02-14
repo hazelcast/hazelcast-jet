@@ -27,7 +27,6 @@ import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.WatermarkSourceUtil;
 import com.hazelcast.jet.function.DistributedBiFunction;
-import com.hazelcast.jet.impl.pipeline.JetEventImpl;
 import com.hazelcast.nio.Address;
 import com.hazelcast.util.Preconditions;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -94,14 +93,14 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
             @Nonnull List<String> topics,
             @Nonnull DistributedBiFunction<K, V, T> projectionFn,
             int globalParallelism,
-            @Nonnull WatermarkGenerationParams<T> wmGenParams,
-            DistributedBiFunction<T, Long, ?> wrapFn) {
+            @Nonnull WatermarkGenerationParams<T> wmGenParams
+    ) {
         this.properties = properties;
         this.topics = topics;
         this.projectionFn = projectionFn;
         this.globalParallelism = globalParallelism;
 
-        watermarkSourceUtil = new WatermarkSourceUtil<>(wmGenParams, wrapFn);
+        watermarkSourceUtil = new WatermarkSourceUtil<>(wmGenParams);
         partitionCounts = new int[topics.size()];
     }
 
@@ -280,9 +279,9 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
         private int totalParallelism;
 
         public MetaSupplier(
-                Properties properties,
-                List<String> topics,
-                DistributedBiFunction<K, V, T> projectionFn,
+                @Nonnull Properties properties,
+                @Nonnull List<String> topics,
+                @Nonnull DistributedBiFunction<K, V, T> projectionFn,
                 @Nonnull WatermarkGenerationParams<T> wmGenParams) {
             this.properties = new Properties();
             this.properties.putAll(properties);
@@ -305,8 +304,8 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
         @Override
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
             return address -> new CloseableProcessorSupplier<>(
-                    () -> new StreamKafkaP(properties, topics, projectionFn, totalParallelism, wmGenParams,
-                            (item, ts) -> JetEventImpl.jetEvent(item, (long) ts)/*TODO*/));
+                    () -> new StreamKafkaP<>(properties, topics, projectionFn, totalParallelism, wmGenParams)
+            );
         }
     }
 

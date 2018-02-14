@@ -119,7 +119,7 @@ public final class DiagnosticProcessors {
 
     /**
      * Same as {@link #peekInputP(DistributedFunction, DistributedPredicate,
-     * ProcessorMetaSupplier) peekInput(toStringFn, shouldLogFn, metaSupplier)},
+     * ProcessorMetaSupplier) peekInput(toStringFn, shouldLogFn, metaSupplierFn)},
      * but accepts a {@code ProcessorSupplier} instead of a meta-supplier.
      */
     @Nonnull
@@ -134,7 +134,7 @@ public final class DiagnosticProcessors {
 
     /**
      * Same as {@link #peekInputP(DistributedFunction, DistributedPredicate,
-     * ProcessorMetaSupplier) peekInput(toStringFn, shouldLogFn, metaSupplier)},
+     * ProcessorMetaSupplier) peekInput(toStringFn, shouldLogFn, metaSupplierFn)},
      * but accepts a {@code DistributedSupplier} of processors instead of a
      * meta-supplier.
      */
@@ -150,7 +150,7 @@ public final class DiagnosticProcessors {
     /**
      * Convenience for {@link #peekInputP(DistributedFunction,
      * DistributedPredicate, ProcessorMetaSupplier) peekInput(toStringFn,
-     * shouldLogFn, metaSupplier)} with a pass-through filter and {@code
+     * shouldLogFn, metaSupplierFn)} with a pass-through filter and {@code
      * Object#toString} as the formatting function.
      */
     @Nonnull
@@ -161,7 +161,7 @@ public final class DiagnosticProcessors {
     /**
      * Convenience for {@link #peekInputP(DistributedFunction,
      * DistributedPredicate, ProcessorMetaSupplier) peekInput(toStringFn,
-     * shouldLogFn, metaSupplier)} with a pass-through filter and {@code
+     * shouldLogFn, metaSupplierFn)} with a pass-through filter and {@code
      * Object#toString} as the formatting function. This variant accepts a
      * {@code ProcessorSupplier} instead of a meta-supplier.
      */
@@ -173,7 +173,7 @@ public final class DiagnosticProcessors {
     /**
      * Convenience for {@link #peekInputP(DistributedFunction,
      * DistributedPredicate, ProcessorMetaSupplier) peekInput(toStringFn,
-     * shouldLogFn, metaSupplier)} with a pass-through filter and {@code
+     * shouldLogFn, metaSupplierFn)} with a pass-through filter and {@code
      * Object#toString} as the formatting function. This variant accepts a
      * {@code DistributedSupplier} of processors instead of a meta-supplier.
      */
@@ -230,7 +230,7 @@ public final class DiagnosticProcessors {
 
     /**
      * Same as {@link #peekOutputP(DistributedFunction, DistributedPredicate,
-     * ProcessorMetaSupplier) peekOutput(toStringFn, shouldLogFn, metaSupplier)},
+     * ProcessorMetaSupplier) peekOutput(toStringFn, shouldLogFn, metaSupplierFn)},
      * but accepts a {@code ProcessorSupplier} instead of a meta-supplier.
      */
     @Nonnull
@@ -245,7 +245,7 @@ public final class DiagnosticProcessors {
 
     /**
      * Same as {@link #peekOutputP(DistributedFunction, DistributedPredicate,
-     * ProcessorMetaSupplier) peekOutput(toStringFn, shouldLogFn, metaSupplier)},
+     * ProcessorMetaSupplier) peekOutput(toStringFn, shouldLogFn, metaSupplierFn)},
      * but accepts a {@code DistributedSupplier} of processors instead of a
      * meta-supplier.
      */
@@ -260,7 +260,7 @@ public final class DiagnosticProcessors {
     /**
      * Convenience for {@link #peekOutputP(DistributedFunction,
      * DistributedPredicate, ProcessorMetaSupplier) peekOutput(toStringFn,
-     * shouldLogFn, metaSupplier} with a pass-through filter and {@code
+     * shouldLogFn, metaSupplierFn} with a pass-through filter and {@code
      * Object#toString} as the formatting function.
      */
     @Nonnull
@@ -271,7 +271,7 @@ public final class DiagnosticProcessors {
     /**
      * Convenience for {@link #peekOutputP(DistributedFunction,
      * DistributedPredicate, ProcessorMetaSupplier) peekOutput(toStringFn,
-     * shouldLogFn, metaSupplier} with a pass-through filter and {@code
+     * shouldLogFn, metaSupplierFn} with a pass-through filter and {@code
      * Object#toString} as the formatting function. This variant accepts a
      * {@code ProcessorSupplier} instead of a meta-supplier.
      */
@@ -283,7 +283,7 @@ public final class DiagnosticProcessors {
     /**
      * Convenience for {@link #peekOutputP(DistributedFunction,
      * DistributedPredicate, ProcessorMetaSupplier) peekOutput(toStringFn,
-     * shouldLogFn, metaSupplier} with a pass-through filter and {@code
+     * shouldLogFn, metaSupplierFn} with a pass-through filter and {@code
      * Object#toString} as the formatting function. This variant accepts a
      * {@code DistributedSupplier} of processors instead of a meta-supplier.
      */
@@ -331,7 +331,7 @@ public final class DiagnosticProcessors {
 
     /**
      * Same as {@link #peekSnapshotP(DistributedFunction, DistributedPredicate,
-     * ProcessorMetaSupplier) peekSnapshot(toStringFn, shouldLogFn, metaSupplier)},
+     * ProcessorMetaSupplier) peekSnapshot(toStringFn, shouldLogFn, metaSupplierFn)},
      * but accepts a {@code ProcessorSupplier} instead of a meta-supplier.
      */
     @Nonnull
@@ -346,7 +346,7 @@ public final class DiagnosticProcessors {
 
     /**
      * Same as {@link #peekSnapshotP(DistributedFunction, DistributedPredicate,
-     * ProcessorMetaSupplier) peekSnapshot(toStringFn, shouldLogFn, metaSupplier)},
+     * ProcessorMetaSupplier) peekSnapshot(toStringFn, shouldLogFn, metaSupplierFn)},
      * but accepts a {@code DistributedSupplier} of processors instead of a
      * meta-supplier.
      */
@@ -361,7 +361,7 @@ public final class DiagnosticProcessors {
     /**
      * Convenience for {@link #peekSnapshotP(DistributedFunction,
      * DistributedPredicate, ProcessorMetaSupplier) peekSnapshot(toStringFn,
-     * shouldLogFn, metaSupplier} with a pass-through filter and {@code
+     * shouldLogFn, metaSupplierFn} with a pass-through filter and {@code
      * Object#toString} as the formatting function. This variant accepts a
      * {@code DistributedSupplier} of processors instead of a meta-supplier.
      */
@@ -373,7 +373,7 @@ public final class DiagnosticProcessors {
     /**
      * Convenience for {@link #peekSnapshotP(DistributedFunction,
      * DistributedPredicate, ProcessorMetaSupplier) peekSnapshot(toStringFn,
-     * shouldLogFn, metaSupplier} with a pass-through filter and {@code
+     * shouldLogFn, metaSupplierFn} with a pass-through filter and {@code
      * Object#toString} as the formatting function.
      */
     @Nonnull
@@ -384,7 +384,7 @@ public final class DiagnosticProcessors {
     /**
      * Convenience for {@link #peekSnapshotP(DistributedFunction,
      * DistributedPredicate, ProcessorMetaSupplier) peekSnapshot(toStringFn,
-     * shouldLogFn, metaSupplier} with a pass-through filter and {@code
+     * shouldLogFn, metaSupplierFn} with a pass-through filter and {@code
      * Object#toString} as the formatting function. This variant accepts a
      * {@code ProcessorSupplier} instead of a meta-supplier.
      */

@@ -36,10 +36,8 @@ import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.WatermarkSourceUtil;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
-import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
-import com.hazelcast.jet.impl.pipeline.JetEventImpl;
 import com.hazelcast.journal.EventJournalInitialSubscriberState;
 import com.hazelcast.journal.EventJournalReader;
 import com.hazelcast.map.journal.EventJournalMapEvent;
@@ -124,8 +122,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull DistributedFunction<E, T> projectionFn,
             @Nonnull JournalInitialPosition initialPos,
             boolean isRemoteReader,
-            @Nonnull WatermarkGenerationParams<T> wmGenParams,
-            DistributedBiFunction<T, Long, ?> wrapFn
+            @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
         this.eventJournalReader = eventJournalReader;
         this.predicate = (Serializable & Predicate<E>) predicateFn::test;
@@ -137,7 +134,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         emitOffsets = new long[partitionIds.length];
         readOffsets = new long[partitionIds.length];
 
-        watermarkSourceUtil = new WatermarkSourceUtil<>(wmGenParams, wrapFn);
+        watermarkSourceUtil = new WatermarkSourceUtil<>(wmGenParams);
         watermarkSourceUtil.increasePartitionCount(assignedPartitions.size());
     }
 
@@ -450,7 +447,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             return partitions.isEmpty()
                     ? Processors.noopP().get()
                     : new StreamEventJournalP<>(eventJournalReader, partitions, predicate, projection,
-                    initialPos, client != null, wmGenParams, /*TODO*/ JetEventImpl::jetEvent);
+                    initialPos, client != null, wmGenParams /*TODO*/);
         }
     }
 

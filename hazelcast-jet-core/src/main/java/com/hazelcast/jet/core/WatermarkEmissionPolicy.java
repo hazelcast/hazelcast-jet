@@ -85,4 +85,12 @@ public interface WatermarkEmissionPolicy extends Serializable {
     static WatermarkEmissionPolicy emitByFrame(SlidingWindowPolicy wDef) {
         return (currentWm, lastEmittedWm) -> wDef.floorFrameTs(currentWm) > lastEmittedWm;
     }
+
+    /**
+     * Javadoc pending
+     */
+    @Nonnull
+    static WatermarkEmissionPolicy emitByFrame(long frameSize) {
+        return emitByFrame(SlidingWindowPolicy.slidingWinPolicy(frameSize, frameSize));
+    }
 }

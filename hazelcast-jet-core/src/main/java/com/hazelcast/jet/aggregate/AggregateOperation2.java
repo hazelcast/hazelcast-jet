@@ -46,11 +46,17 @@ public interface AggregateOperation2<T0, T1, A, R> extends AggregateOperation<A,
     @Nonnull
     DistributedBiConsumer<? super A, ? super T1> accumulateFn1();
 
+    /**
+     * Javadoc pending
+     */
     @Nonnull
     <T0_NEW> AggregateOperation2<T0_NEW, T1, A, R> withAccumulateFn0(
             @Nonnull DistributedBiConsumer<? super A, ? super T0_NEW> newAccFn0
     );
 
+    /**
+     * Javadoc pending
+     */
     @Nonnull
     <T1_NEW> AggregateOperation2<T0, T1_NEW, A, R> withAccumulateFn1(
             @Nonnull DistributedBiConsumer<? super A, ? super T1_NEW> newAccFn1

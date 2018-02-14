@@ -17,11 +17,9 @@
 package com.hazelcast.jet.impl.util;
 
 import com.hazelcast.jet.core.Inbox;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.Queue;
 
 /**
  * An {@link Inbox} implementation backed by an {@link ArrayDeque}.

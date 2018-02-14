@@ -22,6 +22,8 @@ import java.io.Serializable;
 import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
 
 /**
+ * Javadoc pending
+ *
  * @param <T> type of the item
  */
 public final class TimestampedItem<T> implements Serializable {
@@ -49,10 +51,16 @@ public final class TimestampedItem<T> implements Serializable {
         this(timestamp, item);
     }
 
+    /**
+     * Returns the timestamp associated with the item.
+     */
     public long timestamp() {
         return timestamp;
     }
 
+    /**
+     * Returns the item.
+     */
     public T item() {
         return item;
     }

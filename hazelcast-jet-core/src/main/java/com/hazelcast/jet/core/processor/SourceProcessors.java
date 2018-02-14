@@ -91,8 +91,7 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.pipeline.Sources#mapJournal(String,
-     * JournalInitialPosition, WatermarkGenerationParams)}.
+     * {@link #mapJournal(String, JournalInitialPosition)}.
      */
     @Nonnull
     public static <K, V> ProcessorMetaSupplier streamMapP(
@@ -105,9 +104,7 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.pipeline.Sources#mapJournal(String,
-     * DistributedPredicate, DistributedFunction, JournalInitialPosition,
-     * WatermarkGenerationParams)}.
+     * {@link #mapJournal(String, DistributedPredicate}.
      */
     @Nonnull
     public static <T, K, V> ProcessorMetaSupplier streamMapP(
@@ -161,8 +158,7 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.pipeline.Sources#remoteMapJournal(String, ClientConfig,
-     * JournalInitialPosition, WatermarkGenerationParams)}.
+     * {@link #remoteMapJournal(String, ClientConfig, JournalInitialPosition)}.
      */
     @Nonnull
     public static <K, V> ProcessorMetaSupplier streamRemoteMapP(
@@ -205,8 +201,7 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.pipeline.Sources#cacheJournal(String, JournalInitialPosition,
-     * WatermarkGenerationParams)}.
+     * {@link #cacheJournal(String, JournalInitialPosition)}.
      */
     @Nonnull
     public static <K, V> ProcessorMetaSupplier streamCacheP(

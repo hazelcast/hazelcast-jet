@@ -32,6 +32,7 @@ import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.pipeline.JetEvent;
@@ -55,6 +56,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
@@ -310,11 +312,18 @@ public class StreamKafkaPTest extends KafkaTestSupport {
             long idleTimeoutMillis
     ) {
         assert numTopics == 1 || numTopics == 2;
-        return new StreamKafkaP<>(properties,
-                numTopics == 1 ? singletonList(topic1Name) : asList(topic1Name, topic2Name),
-                projectionFn, globalParallelism,
-                wmGenParams(e -> e instanceof Entry ? (int) ((Entry) e).getKey() : System.currentTimeMillis(),
-                        limitingLag(LAG), suppressDuplicates(), idleTimeoutMillis), (item, ts) -> item);
+        DistributedToLongFunction<T> timestampFn = e ->
+                e instanceof Entry ?
+                        (int) ((Entry) e).getKey()
+                        :
+                        System.currentTimeMillis();
+        WatermarkGenerationParams<T> wmParams = wmGenParams(
+                timestampFn, limitingLag(LAG), suppressDuplicates(), idleTimeoutMillis);
+        List<String> topics = numTopics == 1 ?
+                singletonList(topic1Name)
+                :
+                asList(topic1Name, topic2Name);
+        return new StreamKafkaP<>(properties, topics, projectionFn, globalParallelism, wmParams);
     }
 
     @Test
@@ -385,10 +394,10 @@ public class StreamKafkaPTest extends KafkaTestSupport {
                 suppressDuplicates(),
                 0
         );
-        StreamKafkaP processor = new StreamKafkaP<Integer, String, String>(properties,
-                singletonList(topic1Name),
-                (k, v) -> "0".equals(v) ? null : v, 1,
-                wmParams, (item, ts) -> item);
+        DistributedBiFunction<Integer, String, String> projectionFn = (k, v) -> "0".equals(v) ? null : v;
+        StreamKafkaP processor = new StreamKafkaP<>(
+                properties, singletonList(topic1Name), projectionFn, 1, wmParams
+        );
         TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
         processor.init(outbox, new TestProcessorContext());
         produce(topic1Name, 0, "0");

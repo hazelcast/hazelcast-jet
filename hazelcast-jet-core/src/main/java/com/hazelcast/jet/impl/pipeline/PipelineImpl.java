@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
-import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DONT_ADAPT;
 
 public class PipelineImpl implements Pipeline {
 
@@ -49,7 +48,7 @@ public class PipelineImpl implements Pipeline {
     @SuppressWarnings("unchecked")
     public <T> StreamStage<T> drawFrom(@Nonnull StreamSource<? extends T> source) {
         StreamSourceTransform<? extends T> xform = (StreamSourceTransform<? extends T>) source;
-        return new StreamStageImpl<>(xform, xform.emitsJetEvents ? ADAPT_TO_JET_EVENT : DONT_ADAPT, this);
+        return new StreamStageImpl<>(xform, ADAPT_TO_JET_EVENT, this);
     }
 
     @Nonnull @Override

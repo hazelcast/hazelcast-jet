@@ -43,7 +43,7 @@ public final class KafkaProcessors {
     /**
      * Returns a supplier of processors for
      * {@link com.hazelcast.jet.KafkaSources#kafka(Properties,
-     * DistributedBiFunction, WatermarkGenerationParams, String...)}.
+     * DistributedBiFunction, String...)}.
      */
     public static <K, V, T> ProcessorMetaSupplier streamKafkaP(
             @Nonnull Properties properties,
@@ -58,8 +58,7 @@ public final class KafkaProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link com.hazelcast.jet.KafkaSources#kafka(Properties,
-     * WatermarkGenerationParams, String...)}.
+     * {@link com.hazelcast.jet.KafkaSources#kafka(Properties, String...)}.
      */
     public static <K, V> ProcessorMetaSupplier streamKafkaP(
             @Nonnull Properties properties,

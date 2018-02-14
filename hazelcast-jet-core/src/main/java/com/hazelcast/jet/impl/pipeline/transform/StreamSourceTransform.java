@@ -17,11 +17,21 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.WatermarkEmissionPolicy;
+import com.hazelcast.jet.core.WatermarkGenerationParams;
+import com.hazelcast.jet.core.WatermarkPolicy;
+import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.impl.pipeline.JetEventImpl;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.pipeline.StreamSource;
 
 import javax.annotation.Nonnull;
+import java.util.function.Function;
 
+import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
+import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static java.util.Collections.emptyList;
 
 /**
@@ -29,23 +39,51 @@ import static java.util.Collections.emptyList;
  */
 public class StreamSourceTransform<T> extends AbstractTransform implements StreamSource<T> {
 
-    public final boolean emitsJetEvents;
+    private static final long DEFAULT_IDLE_TIMEOUT = 2000L;
+    private static final long DEFAULT_LAG = 1000L;
 
-    @Nonnull
-    public final ProcessorMetaSupplier metaSupplier;
+    private final Function<WatermarkGenerationParams<T>, ProcessorMetaSupplier> metaSupplierFn;
+    private DistributedToLongFunction<T> timestampFn = t -> System.currentTimeMillis();
+    private long idleTimeout = DEFAULT_IDLE_TIMEOUT;
+    private DistributedSupplier<WatermarkPolicy> wmPolicy = limitingLag(DEFAULT_LAG);
+    private WatermarkEmissionPolicy wmEmitPolicy = suppressDuplicates();
 
     public StreamSourceTransform(
             @Nonnull String name,
-            boolean emitsJetEvents,
-            @Nonnull ProcessorMetaSupplier metaSupplier
+            @Nonnull Function<WatermarkGenerationParams<T>, ProcessorMetaSupplier> metaSupplierFn
     ) {
         super(name, emptyList());
-        this.emitsJetEvents = emitsJetEvents;
-        this.metaSupplier = metaSupplier;
+        this.metaSupplierFn = metaSupplierFn;
     }
 
     @Override
     public void addToDag(Planner p) {
-        p.addVertex(this, p.vertexName(name(), ""), metaSupplier);
+        WatermarkGenerationParams<T> params = wmGenParams(timestampFn,
+                JetEventImpl::jetEvent, wmPolicy, wmEmitPolicy, idleTimeout);
+        p.addVertex(this, p.vertexName(name(), ""), metaSupplierFn.apply(params));
+    }
+
+    @Nonnull @Override
+    public StreamSource<T> timestampFn(@Nonnull DistributedToLongFunction<T> timestampFn) {
+        this.timestampFn = timestampFn;
+        return this;
+    }
+
+    @Nonnull @Override
+    public StreamSource<T> idleTimeout(long idleTimeout) {
+        this.idleTimeout = idleTimeout;
+        return this;
+    }
+
+    @Nonnull @Override
+    public StreamSource<T> wmPolicy(@Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy) {
+        this.wmPolicy = wmPolicy;
+        return this;
+    }
+
+    @Nonnull @Override
+    public StreamSource<T> wmEmissionPolicy(@Nonnull WatermarkEmissionPolicy wmEmitPolicy) {
+        this.wmEmitPolicy = wmEmitPolicy;
+        return this;
     }
 }

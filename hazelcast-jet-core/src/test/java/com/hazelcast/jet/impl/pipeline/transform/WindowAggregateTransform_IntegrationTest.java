@@ -41,8 +41,6 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
 import static com.hazelcast.jet.core.TestUtil.set;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
-import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.test.TestSupport.listToString;
 import static java.util.Arrays.asList;
@@ -72,8 +70,9 @@ public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
         map.put(10L, "flush-item");
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST,
-                wmGenParams(Map.Entry::getKey, limitingLag(0), suppressDuplicates(), 2000)))
+        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
+                .timestampFn(Map.Entry::getKey)
+                .wmPolicy(limitingLag(0)))
          .window(WindowDefinition.tumbling(2))
          .aggregate(toSet())
          .drainTo(Sinks.list("sink"));

@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.jet.function.DistributedObjLongBiFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 
@@ -47,20 +48,44 @@ public final class WatermarkGenerationParams<T> implements Serializable {
     };
 
     private final long idleTimeoutMillis;
-    @Nonnull private final DistributedToLongFunction<T> timestampFn;
-    @Nonnull private final DistributedSupplier<WatermarkPolicy> newWmPolicyFn;
-    @Nonnull private final WatermarkEmissionPolicy wmEmitPolicy;
+    private final DistributedToLongFunction<T> timestampFn;
+    private final DistributedSupplier<WatermarkPolicy> newWmPolicyFn;
+    private final WatermarkEmissionPolicy wmEmitPolicy;
+    private final DistributedObjLongBiFunction<T, ?> wrapFn;
 
     private WatermarkGenerationParams(
             @Nonnull DistributedToLongFunction<T> timestampFn,
             @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyFn,
             @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            @Nonnull DistributedObjLongBiFunction<T, ?> wrapFn,
             long idleTimeoutMillis
     ) {
         this.idleTimeoutMillis = idleTimeoutMillis;
         this.timestampFn = timestampFn;
         this.newWmPolicyFn = newWmPolicyFn;
         this.wmEmitPolicy = wmEmitPolicy;
+        this.wrapFn = wrapFn;
+    }
+
+    /**
+     * Creates new watermark generation parameters. See {@link #noWatermarks()}
+     * if you don't need any watermarks.
+     * @param timestampFn a function to extract timestamps from observed
+     *      events.
+     * @param wrapFn Javadoc pending
+     * @param wmPolicy Javadoc pending
+     * @param wmEmitPolicy watermark emission policy
+     * @param idleTimeoutMillis a timeout after which the source partition will
+*      be marked as <em>idle</em>. If <=0, partitions will never be marked
+     */
+    public static <T> WatermarkGenerationParams<T> wmGenParams(
+            @Nonnull DistributedToLongFunction<T> timestampFn,
+            @Nonnull DistributedObjLongBiFunction<T, ?> wrapFn,
+            @Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy,
+            @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
+            long idleTimeoutMillis
+    ) {
+        return new WatermarkGenerationParams<>(timestampFn, wmPolicy, wmEmitPolicy, wrapFn, idleTimeoutMillis);
     }
 
     /**
@@ -69,6 +94,7 @@ public final class WatermarkGenerationParams<T> implements Serializable {
      *
      * @param timestampFn a function to extract timestamps from observed
      *      events.
+     * @param wmPolicy Javadoc pending
      * @param wmEmitPolicy watermark emission policy
      * @param idleTimeoutMillis a timeout after which the source partition will
      *      be marked as <em>idle</em>. If <=0, partitions will never be marked
@@ -80,19 +106,8 @@ public final class WatermarkGenerationParams<T> implements Serializable {
             @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
             long idleTimeoutMillis
     ) {
-        return new WatermarkGenerationParams<>(timestampFn, wmPolicy, wmEmitPolicy, idleTimeoutMillis);
+        return wmGenParams(timestampFn, (t, l) -> t, wmPolicy, wmEmitPolicy, idleTimeoutMillis);
     }
-
-    /**
-     * Javadoc pending
-     */
-    public static <T> WatermarkGenerationParams<T> wmGenParams(
-            @Nonnull DistributedToLongFunction<T> timestampFn,
-            @Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy
-    ) {
-        return wmGenParams(timestampFn, wmPolicy, suppressDuplicates(), 0L);
-    }
-
     /**
      * Returns watermark generation parameters that will never emit any
      * watermark.
@@ -103,7 +118,7 @@ public final class WatermarkGenerationParams<T> implements Serializable {
      * this method.
      */
     public static <T> WatermarkGenerationParams<T> noWatermarks() {
-        return new WatermarkGenerationParams<>(i -> Long.MIN_VALUE, NO_WATERMARK_POLICY, suppressDuplicates(), -1);
+        return wmGenParams(i -> Long.MIN_VALUE, NO_WATERMARK_POLICY, suppressDuplicates(), -1);
     }
 
     /**
@@ -137,5 +152,14 @@ public final class WatermarkGenerationParams<T> implements Serializable {
     @Nonnull
     public WatermarkEmissionPolicy wmEmitPolicy() {
         return wmEmitPolicy;
+    }
+
+    /**
+     *
+     * @return
+     */
+    @Nonnull
+    public DistributedObjLongBiFunction<T, ?> wrapFn() {
+        return wrapFn;
     }
 }

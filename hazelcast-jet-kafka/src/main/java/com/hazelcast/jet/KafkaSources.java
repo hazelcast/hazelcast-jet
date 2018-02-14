@@ -16,9 +16,7 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.function.DistributedBiFunction;
-import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSource;
 
 import javax.annotation.Nonnull;
@@ -26,6 +24,7 @@ import java.util.Map.Entry;
 import java.util.Properties;
 
 import static com.hazelcast.jet.core.processor.KafkaProcessors.streamKafkaP;
+import static com.hazelcast.jet.pipeline.Sources.streamFromProcessor;
 
 /**
  * Contains factory methods for Apache Kafka sources.
@@ -36,17 +35,15 @@ public final class KafkaSources {
     }
 
     /**
-     * Convenience for {@link #kafka(Properties, DistributedBiFunction,
-     * WatermarkGenerationParams, String...)} wrapping the output in {@code
+     * Convenience for {@link #kafka(Properties, DistributedBiFunction} wrapping the output in {@code
      * Map.Entry}.
      */
     @Nonnull
     public static <K, V> StreamSource<Entry<K, V>> kafka(
             @Nonnull Properties properties,
-            @Nonnull WatermarkGenerationParams<Entry<K, V>> wmGenParams,
             @Nonnull String... topics
     ) {
-        return Sources.streamFromProcessor("streamKafka", true, streamKafkaP(properties, wmGenParams, topics));
+        return streamFromProcessor("streamKafka", w -> streamKafkaP(properties, w, topics));
     }
 
     /**
@@ -96,10 +93,9 @@ public final class KafkaSources {
     public static <K, V, T> StreamSource<T> kafka(
             @Nonnull Properties properties,
             @Nonnull DistributedBiFunction<K, V, T> projectionFn,
-            @Nonnull WatermarkGenerationParams<T> wmGenParams,
             @Nonnull String... topics
     ) {
-        return Sources.streamFromProcessor("streamKafka", true,
-                streamKafkaP(properties, projectionFn, wmGenParams, topics));
+        return streamFromProcessor("streamKafka",
+                w -> streamKafkaP(properties, projectionFn, w, topics));
     }
 }

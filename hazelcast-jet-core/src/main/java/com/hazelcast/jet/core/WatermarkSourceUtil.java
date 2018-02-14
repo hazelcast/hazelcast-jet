@@ -17,13 +17,13 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.function.DistributedBiFunction;
-import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.function.ObjLongBiFunction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.function.Supplier;
+import java.util.function.ToLongFunction;
 
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -102,10 +102,10 @@ public class WatermarkSourceUtil<T> {
     private static final long[] EMPTY_LONGS = {};
 
     private final long idleTimeoutNanos;
-    private final DistributedToLongFunction<T> timestampFn;
-    private final DistributedSupplier<WatermarkPolicy> newWmPolicyFn;
+    private final ToLongFunction<T> timestampFn;
+    private final Supplier<WatermarkPolicy> newWmPolicyFn;
+    private final ObjLongBiFunction<T, ?> wrapFn;
     private final WatermarkEmissionPolicy wmEmitPolicy;
-    private final DistributedBiFunction<T, Long, ?> wrapFn;
     private final AppendableTraverser<Object> traverser = new AppendableTraverser<>(2);
 
     private WatermarkPolicy[] wmPolicies = EMPTY_WATERMARK_POLICIES;
@@ -121,13 +121,12 @@ public class WatermarkSourceUtil<T> {
      * The partition count is initially set to 0, call {@link
      * #increasePartitionCount} to set it.
      **/
-    public WatermarkSourceUtil(WatermarkGenerationParams<T> params,
-                               DistributedBiFunction<T, Long, ?> wrapFn) {
+    public WatermarkSourceUtil(WatermarkGenerationParams<T> params) {
         this.idleTimeoutNanos = MILLISECONDS.toNanos(params.idleTimeoutMillis());
         this.timestampFn = params.timestampFn();
+        this.wrapFn = params.wrapFn();
         this.newWmPolicyFn = params.newWmPolicyFn();
         this.wmEmitPolicy = params.wmEmitPolicy();
-        this.wrapFn = wrapFn;
     }
 
     /**

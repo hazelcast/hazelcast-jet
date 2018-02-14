@@ -322,8 +322,8 @@ public class InsertWatermarksPTest {
     }
 
     private void createProcessor(long idleTimeoutMillis) {
-        p = new InsertWatermarksP<>(wmGenParams(Item::getTimestamp, wmPolicy, wmEmissionPolicy, idleTimeoutMillis),
-                (item, ts) -> item);
+        p = new InsertWatermarksP<>(wmGenParams(Item::getTimestamp, wmPolicy, wmEmissionPolicy, idleTimeoutMillis)
+        );
         p.init(outbox, context);
     }
 

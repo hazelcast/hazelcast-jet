@@ -65,7 +65,7 @@ public final class Sinks {
      * meta-supplier.
      * <p>
      * The default local parallelism for this source is specified by the given
-     * {@link ProcessorMetaSupplier#preferredLocalParallelism() metaSupplier}.
+     * {@link ProcessorMetaSupplier#preferredLocalParallelism() metaSupplierFn}.
      *
      * @param sinkName user-friendly sink name
      * @param metaSupplier the processor meta-supplier

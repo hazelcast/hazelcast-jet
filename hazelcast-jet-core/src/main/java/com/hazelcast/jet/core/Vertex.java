@@ -105,7 +105,7 @@ public class Vertex implements IdentifiedDataSerializable {
     public Vertex(@Nonnull String name, @Nonnull ProcessorMetaSupplier metaSupplier) {
         checkNotNull(name, "name");
         checkNotNull(metaSupplier, "supplier");
-        checkSerializable(metaSupplier, "metaSupplier");
+        checkSerializable(metaSupplier, "metaSupplierFn");
 
         this.metaSupplier = metaSupplier;
         this.name = name;

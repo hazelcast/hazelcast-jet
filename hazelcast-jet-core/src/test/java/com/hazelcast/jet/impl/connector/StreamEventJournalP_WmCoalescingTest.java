@@ -167,7 +167,7 @@ public class StreamEventJournalP_WmCoalescingTest extends JetTestSupport {
     public Supplier<Processor> createSupplier(List<Integer> assignedPartitions, long idleTimeout) {
         return () -> new StreamEventJournalP<>(map, assignedPartitions, e -> true,
                 EventJournalMapEvent::getNewValue, START_FROM_OLDEST, false,
-                wmGenParams(Integer::intValue, limitingLag(0), suppressDuplicates(), idleTimeout), (item, ts) -> item);
+                wmGenParams(Integer::intValue, limitingLag(0), suppressDuplicates(), idleTimeout));
     }
 
     private Watermark wm(long timestamp) {

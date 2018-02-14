@@ -36,7 +36,6 @@ import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.function.KeyedWindowResultFunction;
-import com.hazelcast.jet.impl.pipeline.JetEventImpl;
 import com.hazelcast.jet.impl.processor.GroupP;
 import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
@@ -649,7 +648,7 @@ public final class Processors {
     public static <T> DistributedSupplier<Processor> insertWatermarksP(
             @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
-        return () -> new InsertWatermarksP<>(wmGenParams, /*TODO*/ JetEventImpl::jetEvent);
+        return () -> new InsertWatermarksP<>(wmGenParams /*TODO*/);
     }
 
     /**

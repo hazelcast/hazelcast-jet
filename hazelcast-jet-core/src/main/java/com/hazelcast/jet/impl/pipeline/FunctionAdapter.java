@@ -246,7 +246,7 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     private static final class AdaptingInbox implements Inbox {
         private Inbox wrapped;
 
-        final void setWrappedInbox(@Nonnull Inbox wrapped) {
+        void setWrappedInbox(@Nonnull Inbox wrapped) {
             this.wrapped = wrapped;
         }
 
