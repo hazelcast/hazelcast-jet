@@ -22,7 +22,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JournalInitialPosition;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JetTestSupport;
-import com.hazelcast.jet.datamodel.TimestampedItem;
+import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -35,7 +35,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import java.util.Map;
+import java.util.HashSet;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
@@ -50,7 +50,7 @@ import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastParallelClassRunner.class)
 @Category(ParallelTest.class)
-public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
+public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
 
     private JetInstance instance;
 
@@ -63,53 +63,96 @@ public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
     }
 
     @Test
-    public void test() {
-        IMap<Long, String> map = instance.getMap("source");
-        // key is timestamp
-        map.put(0L, "foo");
-        map.put(1L, "bar");
-        map.put(2L, "baz");
-        map.put(10L, "flush-item");
-
+    public void testSliding_groupingFirst() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST,
-                wmGenParams(Map.Entry::getKey, limitingLag(0), suppressDuplicates(), 2000)))
+                wmGenParams(Entry::getKey, limitingLag(0), suppressDuplicates(), 2000)))
+         .groupingKey(entry -> entry.getValue().charAt(0))
          .window(WindowDefinition.tumbling(2))
          .aggregate(toSet())
          .drainTo(Sinks.list("sink"));
 
+        testSliding(p);
+    }
+
+    @Test
+    public void testSliding_windowFirst() {
+        Pipeline p = Pipeline.create();
+        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST,
+                wmGenParams(Entry::getKey, limitingLag(0), suppressDuplicates(), 2000)))
+         .window(WindowDefinition.tumbling(2))
+         .groupingKey(entry -> entry.getValue().charAt(0))
+         .aggregate(toSet())
+         .drainTo(Sinks.list("sink"));
+
+        testSliding(p);
+    }
+
+    private void testSliding(Pipeline p) {
+        IMap<Long, String> map = instance.getMap("source");
+        map.put(0L, "foo");
+        map.put(1L, "bar");
+        map.put(2L, "baz");
+        map.put(3L, "booze");
+        map.put(10L, "flush-item");
+
         instance.newJob(p);
+
         assertTrueEventually(() -> {
             assertEquals(
-                    listToString(asList(
-                            new TimestampedItem<>(2, set(entry(0L, "foo"), entry(1L, "bar"))),
-                            new TimestampedItem<>(4, set(entry(2L, "baz"))))),
-                    listToString(instance.getHazelcastInstance().getList("sink")));
+                    set(
+                            new TimestampedEntry<>(2, 'f', set(entry(0L, "foo"))),
+                            new TimestampedEntry<>(2, 'b', set(entry(1L, "bar"))),
+                            new TimestampedEntry<>(4, 'b', set(
+                                    entry(2L, "baz"),
+                                    entry(3L, "booze"))
+                            )),
+                    new HashSet<>(instance.getHazelcastInstance().getList("sink")));
         }, 5);
     }
 
     @Test
-    public void testSession() {
-        IMap<Long, String> map = instance.getMap("source");
-        map.put(0L, "foo");
-        map.put(3L, "bar");
-        map.put(4L, "baz");
-        map.put(10L, "flush-item");
-
+    public void testSession_windowFirst() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST,
                 wmGenParams(Entry::getKey, limitingLag(0), suppressDuplicates(), 2000)))
          .window(WindowDefinition.session(2))
-         .aggregate(toSet(), (winStart, winEnd, result) -> new WindowResult(winStart, winEnd, "", result))
+         .groupingKey(entry -> entry.getValue().charAt(0))
+         .aggregate(toSet(), WindowResult::new)
          .drainTo(Sinks.list("sink"));
+
+        testSession(p);
+    }
+
+    @Test
+    public void testSession_groupingFirst() {
+        Pipeline p = Pipeline.create();
+        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST,
+                wmGenParams(Entry::getKey, limitingLag(0), suppressDuplicates(), 2000)))
+         .groupingKey(entry -> entry.getValue().charAt(0))
+         .window(WindowDefinition.session(2))
+         .aggregate(toSet(), WindowResult::new)
+         .drainTo(Sinks.list("sink"));
+
+        testSession(p);
+    }
+
+    public void testSession(Pipeline p) {
+        IMap<Long, String> map = instance.getMap("source");
+        map.put(0L, "foo");
+        map.put(1L, "bar");
+        map.put(4L, "baz");
+        map.put(5L, "booze");
+        map.put(10L, "flush-item");
 
         instance.newJob(p);
 
         assertTrueEventually(() -> {
             assertEquals(
                     listToString(asList(
-                            new WindowResult<>(0, 2, "", set(entry(0L, "foo"))),
-                            new WindowResult<>(3, 6, "", set(entry(3L, "bar"), entry(4L, "baz"))))),
+                            new WindowResult<>(0, 2, 'f', set(entry(0L, "foo"))),
+                            new WindowResult<>(1, 3, 'b', set(entry(1L, "bar"))),
+                            new WindowResult<>(4, 7, 'b', set(entry(4L, "baz"), entry(5L, "booze"))))),
                     listToString(instance.getHazelcastInstance().getList("sink")));
         }, 5);
     }

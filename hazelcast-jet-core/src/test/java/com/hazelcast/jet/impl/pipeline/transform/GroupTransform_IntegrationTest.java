@@ -24,7 +24,6 @@ import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.spi.properties.GroupProperty;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.Before;
@@ -32,16 +31,16 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
+import java.util.HashSet;
+
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
 import static com.hazelcast.jet.core.TestUtil.set;
-import static com.hazelcast.jet.core.test.TestSupport.listToString;
-import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastParallelClassRunner.class)
 @Category(ParallelTest.class)
-public class AggregateTransform_IntegrationTest extends JetTestSupport {
+public class GroupTransform_IntegrationTest extends JetTestSupport {
 
     private JetInstance instance;
 
@@ -50,7 +49,6 @@ public class AggregateTransform_IntegrationTest extends JetTestSupport {
         JetConfig config = new JetConfig();
         config.getHazelcastConfig().addEventJournalConfig(
                 new EventJournalConfig().setMapName("source").setEnabled(true));
-        config.getHazelcastConfig().setProperty(GroupProperty.PARTITION_COUNT.getName(), "6");
         instance = createJetMember(config);
     }
 
@@ -59,16 +57,20 @@ public class AggregateTransform_IntegrationTest extends JetTestSupport {
         IMap<Long, String> map = instance.getMap("source");
         map.put(0L, "foo");
         map.put(1L, "bar");
+        map.put(2L, "baz");
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Long, String>map("source"))
+         .groupingKey(entry -> entry.getValue().charAt(0))
          .aggregate(toSet())
          .drainTo(Sinks.list("sink"));
 
         instance.newJob(p).join();
 
         assertEquals(
-                listToString(singletonList(set(entry(0L, "foo"), entry(1L, "bar")))),
-                listToString(instance.getHazelcastInstance().getList("sink")));
+                set(
+                        entry('f', set(entry(0L, "foo"))),
+                        entry('b', set(entry(1L, "bar"), entry(2L, "baz")))),
+                new HashSet<>(instance.getHazelcastInstance().getList("sink")));
     }
 }
