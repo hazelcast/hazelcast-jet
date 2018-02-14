@@ -24,14 +24,13 @@ import com.hazelcast.jet.pipeline.Sink;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.function.Function;
 
 import static com.hazelcast.jet.function.DistributedUnaryOperator.identity;
 
 public class SinkTransform<T> extends AbstractTransform implements Sink<T> {
     @Nonnull
-    private final ProcessorMetaSupplier metaSupplier;
-    @Nonnull
-    private DistributedFunction<? super T, ?> mapFn;
+    private ProcessorMetaSupplier metaSupplier;
 
     public SinkTransform(
             @Nonnull String name,
@@ -39,7 +38,6 @@ public class SinkTransform<T> extends AbstractTransform implements Sink<T> {
     ) {
         super(name, new ArrayList<>());
         this.metaSupplier = metaSupplier;
-        this.mapFn = identity();
     }
 
     public void addUpstream(Transform upstream) {
@@ -49,6 +47,12 @@ public class SinkTransform<T> extends AbstractTransform implements Sink<T> {
     @Nonnull
     public ProcessorMetaSupplier metaSupplier() {
         return metaSupplier;
+    }
+
+    public void replaceMetaSupplier(
+            @Nonnull Function<? super ProcessorMetaSupplier, ? extends ProcessorMetaSupplier> updateMetaSupplierFn
+    ) {
+        metaSupplier = updateMetaSupplierFn.apply(metaSupplier);
     }
 
     @Override

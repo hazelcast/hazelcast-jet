@@ -21,6 +21,9 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
+import com.hazelcast.jet.core.Inbox;
+import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -29,6 +32,8 @@ import com.hazelcast.jet.function.DistributedTriFunction;
 import com.hazelcast.jet.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.function.WindowResultFunction;
 import com.hazelcast.jet.impl.aggregate.AggregateOperationImpl;
+import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
+import com.hazelcast.jet.impl.util.WrappingProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.JoinClause;
 
 import javax.annotation.Nonnull;
@@ -90,6 +95,9 @@ public class FunctionAdapter {
             KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> keyedWindowResultFn
     ) {
         return keyedWindowResultFn;
+    }
+
+    <T> void adaptMetaSupplier(SinkTransform<T> sinkTransform) {
     }
 }
 
@@ -160,6 +168,11 @@ class JetEventFunctionAdapter extends FunctionAdapter {
                 jetEvent(keyedWindowResultFn.apply(winStart, winEnd, key, windowResult), winEnd);
     }
 
+    <T> void adaptMetaSupplier(SinkTransform<T> sinkTransform) {
+        sinkTransform.replaceMetaSupplier(
+                metaSup -> new WrappingProcessorMetaSupplier(metaSup, AdaptingProcessor::new));
+    }
+
     @Nonnull
     @SuppressWarnings("unchecked")
     static AggregateOperation adaptAggregateOperation(@Nonnull AggregateOperation aggrOp) {
@@ -214,5 +227,50 @@ class JetEventFunctionAdapter extends FunctionAdapter {
             @Nonnull DistributedBiConsumer<? super A, ? super T> accumulateFn
     ) {
         return (A acc, JetEvent<T> t) -> accumulateFn.accept(acc, t.payload());
+    }
+
+    private static final class AdaptingInbox implements Inbox {
+        private final Inbox inbox;
+
+        AdaptingInbox(Inbox inbox) {
+            this.inbox = inbox;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return inbox.isEmpty();
+        }
+
+        @Override
+        public Object peek() {
+            return unwrapPayload(inbox.peek());
+        }
+
+        @Override
+        public Object poll() {
+            return unwrapPayload(inbox.poll());
+        }
+
+        @Override
+        public Object remove() {
+            return unwrapPayload(inbox.remove());
+        }
+
+        private static Object unwrapPayload(Object jetEvent) {
+            return ((JetEvent) jetEvent).payload();
+        }
+    }
+
+    private static final class AdaptingProcessor implements Processor {
+        private final Processor proc;
+
+        AdaptingProcessor(Processor proc) {
+            this.proc = proc;
+        }
+
+        @Override
+        public void process(int ordinal, @Nonnull Inbox inbox) {
+            proc.process(ordinal, new AdaptingInbox(inbox));
+        }
     }
 }

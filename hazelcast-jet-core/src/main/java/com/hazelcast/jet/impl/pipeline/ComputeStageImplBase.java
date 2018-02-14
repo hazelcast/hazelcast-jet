@@ -151,7 +151,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    <RET, R> RET attachCustomTransform(
+    <RET> RET attachCustomTransform(
             @Nonnull String stageName,
             @Nonnull DistributedSupplier<Processor> procSupplier
     ) {
@@ -162,9 +162,10 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @SuppressWarnings("unchecked")
     public SinkStage drainTo(@Nonnull Sink<? super T> sink) {
         SinkTransform<T> sinkTransform = (SinkTransform<T>) sink;
-        sinkTransform.addUpstream(this.transform);
+        fnAdapter.adaptMetaSupplier(sinkTransform);
+        sinkTransform.addUpstream(transform);
         SinkStageImpl output = new SinkStageImpl(sinkTransform, pipelineImpl);
-        pipelineImpl.connect(this.transform, sinkTransform);
+        pipelineImpl.connect(transform, sinkTransform);
         return output;
     }
 
