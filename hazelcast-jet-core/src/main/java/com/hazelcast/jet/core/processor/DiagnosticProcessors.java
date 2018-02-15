@@ -202,9 +202,17 @@ public final class DiagnosticProcessors {
      * data, but this wrapper only logs the regular data. See {@link
      * #peekSnapshotP(DistributedFunction, DistributedPredicate, ProcessorMetaSupplier)
      * peekSnapshot()}.
-     * <p>
-     * Note: Watermarks are always logged. {@link Watermark} objects are not
-     * passed to {@code shouldLogFn} and {@code toStringFn}.
+     *
+     * <h4>Logging of Watermarks</h4>
+     *
+     * There are two kinds of watermarks:<ol>
+     *     <li>Watermarks originated in the processor, prefixed in the logs
+     *     with {@code "Output to N: "}
+     *     <li>Watermarks received on input, which are forwarded automatically.
+     *     These are prefixed with {@code "Output forwarded: "}
+     * </ol>
+     * Both are always logged. {@link Watermark} objects are not passed to
+     * {@code shouldLogFn} or {@code toStringFn}.
      *
      * @param toStringFn  a function that returns the string representation of the item.
      *                    You can use {@code Object::toString}.

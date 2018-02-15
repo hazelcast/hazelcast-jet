@@ -61,7 +61,7 @@ public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
     }
 
     @Test
-    public void test() {
+    public void testTumbling() {
         IMap<Long, String> map = instance.getMap("source");
         // key is timestamp
         map.put(0L, "foo");

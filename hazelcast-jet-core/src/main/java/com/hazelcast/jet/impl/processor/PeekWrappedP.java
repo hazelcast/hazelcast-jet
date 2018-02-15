@@ -112,7 +112,7 @@ public final class PeekWrappedP<T> extends ProcessorWrapper {
         if (super.tryProcessWatermark(watermark)) {
             peekedWatermarkLogged = false;
             if (peekOutput) {
-                logger.info("Output: forwarding " + watermark);
+                logger.info("Output forwarded: " + watermark);
             }
             return true;
         }
