@@ -152,7 +152,7 @@ public final class PeekWrappedP<T> extends ProcessorWrapper {
         }
 
         private void log(T res) {
-            PeekWrappedP.this.log("Input from " + ordinal, res);
+            PeekWrappedP.this.log("Input from ordinal " + ordinal, res);
         }
 
         @Override
@@ -193,7 +193,7 @@ public final class PeekWrappedP<T> extends ProcessorWrapper {
                 return false;
             }
             if (logOutput) {
-                String prefix = "Output to " + ordinal;
+                String prefix = "Output to ordinal " + ordinal;
                 if (item instanceof Watermark) {
                     logger.info(prefix + ": " + item);
                 } else {
