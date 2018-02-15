@@ -25,6 +25,7 @@ import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.impl.pipeline.JetEventImpl;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
 import java.util.function.Function;
@@ -43,47 +44,74 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
     private static final long DEFAULT_LAG = 1000L;
 
     private final Function<WatermarkGenerationParams<T>, ProcessorMetaSupplier> metaSupplierFn;
+
     private DistributedToLongFunction<T> timestampFn = t -> System.currentTimeMillis();
     private long idleTimeout = DEFAULT_IDLE_TIMEOUT;
     private DistributedSupplier<WatermarkPolicy> wmPolicy = limitingLag(DEFAULT_LAG);
     private WatermarkEmissionPolicy wmEmitPolicy = suppressDuplicates();
 
+    private boolean hasWatermark = true;
+
     public StreamSourceTransform(
             @Nonnull String name,
+            boolean supportsWatermarks,
             @Nonnull Function<WatermarkGenerationParams<T>, ProcessorMetaSupplier> metaSupplierFn
     ) {
         super(name, emptyList());
+        this.hasWatermark = supportsWatermarks;
         this.metaSupplierFn = metaSupplierFn;
     }
 
     @Override
     public void addToDag(Planner p) {
-        WatermarkGenerationParams<T> params = wmGenParams(timestampFn,
-                JetEventImpl::jetEvent, wmPolicy, wmEmitPolicy, idleTimeout);
+        WatermarkGenerationParams<T> params = hasWatermark ?
+                wmGenParams(timestampFn, JetEventImpl::jetEvent, wmPolicy, wmEmitPolicy, idleTimeout)
+                :
+                WatermarkGenerationParams.noWatermarks();
         p.addVertex(this, p.vertexName(name(), ""), metaSupplierFn.apply(params));
     }
 
     @Nonnull @Override
     public StreamSource<T> timestampFn(@Nonnull DistributedToLongFunction<T> timestampFn) {
+        assertWatermarksEnabled();
         this.timestampFn = timestampFn;
         return this;
     }
 
     @Nonnull @Override
     public StreamSource<T> idleTimeout(long idleTimeout) {
+        assertWatermarksEnabled();
         this.idleTimeout = idleTimeout;
         return this;
     }
 
     @Nonnull @Override
     public StreamSource<T> wmPolicy(@Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy) {
+        assertWatermarksEnabled();
         this.wmPolicy = wmPolicy;
         return this;
     }
 
     @Nonnull @Override
     public StreamSource<T> wmEmissionPolicy(@Nonnull WatermarkEmissionPolicy wmEmitPolicy) {
+        assertWatermarksEnabled();
         this.wmEmitPolicy = wmEmitPolicy;
         return this;
     }
+
+    private void assertWatermarksEnabled() {
+        Preconditions.checkTrue(hasWatermark, "This source does not support watermarks or" +
+                " is configured not to emit watermarks");
+    }
+
+    @Nonnull @Override
+    public StreamSource<T> noWatermarks() {
+        hasWatermark = false;
+        return this;
+    }
+
+    public boolean emitsJetEvents() {
+        return hasWatermark;
+    }
+
 }

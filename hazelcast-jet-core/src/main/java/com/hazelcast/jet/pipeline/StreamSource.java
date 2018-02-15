@@ -58,5 +58,10 @@ public interface StreamSource<T> {
     @Nonnull
     StreamSource<T> wmEmissionPolicy(@Nonnull WatermarkEmissionPolicy wmEmitPolicy);
 
+    /**
+     * Javadoc pending
+     */
+    @Nonnull
+    StreamSource<T> noWatermarks();
 
 }

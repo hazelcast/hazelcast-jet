@@ -24,7 +24,7 @@ import java.util.Map.Entry;
 import java.util.Properties;
 
 import static com.hazelcast.jet.core.processor.KafkaProcessors.streamKafkaP;
-import static com.hazelcast.jet.pipeline.Sources.streamFromProcessor;
+import static com.hazelcast.jet.pipeline.Sources.streamFromProcessorWithWatermarks;
 
 /**
  * Contains factory methods for Apache Kafka sources.
@@ -43,7 +43,7 @@ public final class KafkaSources {
             @Nonnull Properties properties,
             @Nonnull String... topics
     ) {
-        return streamFromProcessor("streamKafka", w -> streamKafkaP(properties, w, topics));
+        return streamFromProcessorWithWatermarks("streamKafka", w -> streamKafkaP(properties, w, topics));
     }
 
     /**
@@ -95,7 +95,7 @@ public final class KafkaSources {
             @Nonnull DistributedBiFunction<K, V, T> projectionFn,
             @Nonnull String... topics
     ) {
-        return streamFromProcessor("streamKafka",
+        return streamFromProcessorWithWatermarks("streamKafka",
                 w -> streamKafkaP(properties, projectionFn, w, topics));
     }
 }

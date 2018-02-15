@@ -96,11 +96,26 @@ public final class Sources {
         return new BatchSourceTransform<>(sourceName, metaSupplier);
     }
 
-    public static <T> StreamSource<T> streamFromProcessor(
+    /**
+     * Javadoc pending
+     */
+    @Nonnull
+    public static <T> StreamSource<T> streamFromProcessorWithWatermarks(
             @Nonnull String sourceName,
             @Nonnull Function<WatermarkGenerationParams<T>, ProcessorMetaSupplier> metaSupplierFn
     ) {
-        return new StreamSourceTransform<>(sourceName, metaSupplierFn);
+        return new StreamSourceTransform<>(sourceName, true, metaSupplierFn);
+    }
+
+    /**
+     * Javadoc pending
+     */
+    @Nonnull
+    public static <T> StreamSource<T> streamFromProcessor(
+            @Nonnull String sourceName,
+            @Nonnull ProcessorMetaSupplier metaSupplier
+    ) {
+        return new StreamSourceTransform<>(sourceName, false, w -> metaSupplier);
     }
 
     /**
@@ -231,7 +246,7 @@ public final class Sources {
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
             @Nonnull JournalInitialPosition initialPos
     ) {
-        return streamFromProcessor("mapJournalSource(" + mapName + ')',
+        return streamFromProcessorWithWatermarks("mapJournalSource(" + mapName + ')',
                 w -> streamMapP(mapName, predicateFn, projectionFn, initialPos, w));
     }
 
@@ -379,7 +394,7 @@ public final class Sources {
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projectionFn,
             @Nonnull JournalInitialPosition initialPos
     ) {
-        return streamFromProcessor("remoteMapJournalSource(" + mapName + ')',
+        return streamFromProcessorWithWatermarks("remoteMapJournalSource(" + mapName + ')',
                 w -> streamRemoteMapP(mapName, clientConfig, predicateFn, projectionFn, initialPos, w));
     }
 
@@ -463,7 +478,7 @@ public final class Sources {
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
             @Nonnull JournalInitialPosition initialPos
     ) {
-        return streamFromProcessor("cacheJournalSource(" + cacheName + ')',
+        return streamFromProcessorWithWatermarks("cacheJournalSource(" + cacheName + ')',
                 w -> streamCacheP(cacheName, predicateFn, projectionFn, initialPos, w)
         );
     }
@@ -547,7 +562,7 @@ public final class Sources {
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projectionFn,
             @Nonnull JournalInitialPosition initialPos
     ) {
-        return streamFromProcessor("remoteCacheJournalSource(" + cacheName + ')',
+        return streamFromProcessorWithWatermarks("remoteCacheJournalSource(" + cacheName + ')',
                 w -> streamRemoteCacheP(cacheName, clientConfig, predicateFn, projectionFn, initialPos, w));
     }
 
@@ -621,7 +636,7 @@ public final class Sources {
             @Nonnull String host, int port, @Nonnull Charset charset
     ) {
         return streamFromProcessor(
-                "socketSource(" + host + ':' + port + ')', ignored -> streamSocketP(host, port, charset)
+                "socketSource(" + host + ':' + port + ')', streamSocketP(host, port, charset)
         );
     }
 
@@ -717,7 +732,7 @@ public final class Sources {
             @Nonnull String watchedDirectory, @Nonnull Charset charset, @Nonnull String glob
     ) {
         return streamFromProcessor("fileWatcherSource(" + watchedDirectory + '/' + glob + ')',
-                ignored -> streamFilesP(watchedDirectory, charset, glob)
+                 streamFilesP(watchedDirectory, charset, glob)
         );
     }
 
