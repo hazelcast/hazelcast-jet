@@ -42,7 +42,9 @@ public class TimestampTransform<T> extends AbstractTransform {
     @Override
     public void addToDag(Planner p) {
         @SuppressWarnings("unchecked")
-        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), getLocalParallelism(), insertWatermarksP(wmGenParams));
+        PlannerVertex pv = p.addVertex(
+                this, p.vertexName(name(), ""), getLocalParallelism(), insertWatermarksP(wmGenParams)
+        );
         p.addEdges(this, pv.v);
     }
 }

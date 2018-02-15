@@ -48,16 +48,16 @@ public final class WatermarkGenerationParams<T> implements Serializable {
     };
 
     private final long idleTimeoutMillis;
-    private final DistributedToLongFunction<T> timestampFn;
+    private final DistributedToLongFunction<? super T> timestampFn;
     private final DistributedSupplier<WatermarkPolicy> newWmPolicyFn;
     private final WatermarkEmissionPolicy wmEmitPolicy;
-    private final DistributedObjLongBiFunction<T, ?> wrapFn;
+    private final DistributedObjLongBiFunction<? super T, ?> wrapFn;
 
     private WatermarkGenerationParams(
-            @Nonnull DistributedToLongFunction<T> timestampFn,
+            @Nonnull DistributedToLongFunction<? super T> timestampFn,
             @Nonnull DistributedSupplier<WatermarkPolicy> newWmPolicyFn,
             @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
-            @Nonnull DistributedObjLongBiFunction<T, ?> wrapFn,
+            @Nonnull DistributedObjLongBiFunction<? super T, ?> wrapFn,
             long idleTimeoutMillis
     ) {
         this.idleTimeoutMillis = idleTimeoutMillis;
@@ -79,8 +79,8 @@ public final class WatermarkGenerationParams<T> implements Serializable {
 *      be marked as <em>idle</em>. If <=0, partitions will never be marked
      */
     public static <T> WatermarkGenerationParams<T> wmGenParams(
-            @Nonnull DistributedToLongFunction<T> timestampFn,
-            @Nonnull DistributedObjLongBiFunction<T, ?> wrapFn,
+            @Nonnull DistributedToLongFunction<? super T> timestampFn,
+            @Nonnull DistributedObjLongBiFunction<? super T, ?> wrapFn,
             @Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy,
             @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
             long idleTimeoutMillis
@@ -134,7 +134,7 @@ public final class WatermarkGenerationParams<T> implements Serializable {
      * Returns the function to extract timestamps from observed events.
      */
     @Nonnull
-    public DistributedToLongFunction<T> timestampFn() {
+    public DistributedToLongFunction<? super T> timestampFn() {
         return timestampFn;
     }
 
@@ -158,7 +158,7 @@ public final class WatermarkGenerationParams<T> implements Serializable {
      * Javadoc pending.
      */
     @Nonnull
-    public DistributedObjLongBiFunction<T, ?> wrapFn() {
+    public DistributedObjLongBiFunction<? super T, ?> wrapFn() {
         return wrapFn;
     }
 }

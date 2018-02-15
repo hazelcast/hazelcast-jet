@@ -16,9 +16,6 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.core.WatermarkEmissionPolicy;
-import com.hazelcast.jet.core.WatermarkPolicy;
-import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 
 import javax.annotation.Nonnull;
@@ -34,34 +31,13 @@ public interface StreamSource<T> {
     @Nonnull
     String name();
 
-    /**
-     * Javadoc pending.
-     */
     @Nonnull
-    StreamSource<T> timestamp(@Nonnull DistributedToLongFunction<T> timestampFn);
+    StreamSource<T> timestampWithSystemTime();
 
-    /**
-     * Javadoc pending.
-     */
     @Nonnull
-    StreamSource<T> idleTimeout(long idleTimeout);
+    StreamSource<T> timestampWithEventTime(DistributedToLongFunction<? super T> timestampFn, long allowedLatenessMs);
 
-    /**
-     * Javadoc pending.
-     */
     @Nonnull
-    StreamSource<T> watermarkPolicy(@Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy);
-
-    /**
-     * Javadoc pending.
-     */
-    @Nonnull
-    StreamSource<T> watermarkEmissionPolicy(@Nonnull WatermarkEmissionPolicy wmEmitPolicy);
-
-    /**
-     * Javadoc pending.
-     */
-    @Nonnull
-    StreamSource<T> noWatermarks();
+    StreamSource<T> setMaximumTimeBetweenEvents(long maxTimeMs);
 
 }

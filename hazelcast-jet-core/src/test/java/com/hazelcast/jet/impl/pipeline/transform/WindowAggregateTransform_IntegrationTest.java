@@ -41,7 +41,6 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
 import static com.hazelcast.jet.core.TestUtil.set;
-import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.test.TestSupport.listToString;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
@@ -71,8 +70,8 @@ public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
-                .timestamp(Map.Entry::getKey)
-                .watermarkPolicy(limitingLag(0)))
+                .timestampWithEventTime(Map.Entry::getKey, 0)
+                .setMaximumTimeBetweenEvents(1000L))
          .window(WindowDefinition.tumbling(2))
          .aggregate(toSet())
          .drainTo(Sinks.list("sink"));
@@ -97,9 +96,8 @@ public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
-                .timestamp(Entry::getKey)
-                .watermarkPolicy(limitingLag(0))
-                .idleTimeout(2000))
+                .timestampWithEventTime(Entry::getKey, 0)
+                .setMaximumTimeBetweenEvents(2000))
          .window(WindowDefinition.session(2))
          .aggregate(toSet(), (winStart, winEnd, result) -> new WindowResult(winStart, winEnd, "", result))
          .drainTo(Sinks.list("sink"));

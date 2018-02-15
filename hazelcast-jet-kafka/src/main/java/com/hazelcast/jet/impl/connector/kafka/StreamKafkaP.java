@@ -93,7 +93,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
             @Nonnull List<String> topics,
             @Nonnull DistributedBiFunction<K, V, T> projectionFn,
             int globalParallelism,
-            @Nonnull WatermarkGenerationParams<T> wmGenParams
+            @Nonnull WatermarkGenerationParams<? super T> wmGenParams
     ) {
         this.properties = properties;
         this.topics = topics;
@@ -275,14 +275,14 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
         private final Properties properties;
         private final List<String> topics;
         private final DistributedBiFunction<K, V, T> projectionFn;
-        private final WatermarkGenerationParams<T> wmGenParams;
+        private final WatermarkGenerationParams<? super T> wmGenParams;
         private int totalParallelism;
 
         public MetaSupplier(
                 @Nonnull Properties properties,
                 @Nonnull List<String> topics,
                 @Nonnull DistributedBiFunction<K, V, T> projectionFn,
-                @Nonnull WatermarkGenerationParams<T> wmGenParams) {
+                @Nonnull WatermarkGenerationParams<? super T> wmGenParams) {
             this.properties = new Properties();
             this.properties.putAll(properties);
             this.topics = topics;

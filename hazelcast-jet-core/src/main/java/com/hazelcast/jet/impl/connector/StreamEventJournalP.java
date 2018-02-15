@@ -122,7 +122,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull DistributedFunction<E, T> projectionFn,
             @Nonnull JournalInitialPosition initialPos,
             boolean isRemoteReader,
-            @Nonnull WatermarkGenerationParams<T> wmGenParams
+            @Nonnull WatermarkGenerationParams<? super T> wmGenParams
     ) {
         this.eventJournalReader = eventJournalReader;
         this.predicate = (Serializable & Predicate<E>) predicateFn::test;
@@ -311,7 +311,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         private final DistributedPredicate<E> predicate;
         private final DistributedFunction<E, T> projection;
         private final JournalInitialPosition initialPos;
-        private final WatermarkGenerationParams<T> wmGenParams;
+        private final WatermarkGenerationParams<? super T> wmGenParams;
 
         private transient int remotePartitionCount;
         private transient Map<Address, List<Integer>> addrToPartitions;
@@ -322,7 +322,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 @Nonnull DistributedPredicate<E> predicate,
                 @Nonnull DistributedFunction<E, T> projection,
                 @Nonnull JournalInitialPosition initialPos,
-                @Nonnull WatermarkGenerationParams<T> wmGenParams
+                @Nonnull WatermarkGenerationParams<? super T> wmGenParams
         ) {
             this.serializableConfig = clientConfig == null ? null : new SerializableClientConfig(clientConfig);
             this.eventJournalReaderSupplier = eventJournalReaderSupplier;
@@ -395,7 +395,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         @Nonnull
         private final JournalInitialPosition initialPos;
         @Nonnull
-        private final WatermarkGenerationParams<T> wmGenParams;
+        private final WatermarkGenerationParams<? super T> wmGenParams;
 
         private transient HazelcastInstance client;
         private transient EventJournalReader<E> eventJournalReader;
@@ -407,7 +407,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 @Nonnull DistributedPredicate<E> predicate,
                 @Nonnull DistributedFunction<E, T> projection,
                 @Nonnull JournalInitialPosition initialPos,
-                @Nonnull WatermarkGenerationParams<T> wmGenParams
+                @Nonnull WatermarkGenerationParams<? super T> wmGenParams
         ) {
             this.ownedPartitions = ownedPartitions;
             this.serializableClientConfig = serializableClientConfig;
@@ -457,7 +457,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projection,
             @Nonnull JournalInitialPosition initialPos,
-            WatermarkGenerationParams<T> wmGenParams) {
+            WatermarkGenerationParams<? super T> wmGenParams) {
         return new ClusterMetaSupplier<>(null,
                 instance -> (EventJournalReader<EventJournalMapEvent<K, V>>) instance.getMap(mapName),
                 predicate, projection, initialPos, wmGenParams);
