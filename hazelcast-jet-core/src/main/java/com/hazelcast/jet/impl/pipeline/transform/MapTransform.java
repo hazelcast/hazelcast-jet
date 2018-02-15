@@ -24,7 +24,7 @@ import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 
-public class MapTransform<T, R> extends AbstractTransform implements Transform {
+public class MapTransform<T, R> extends AbstractTransform {
     @Nonnull
     private DistributedFunction<? super T, ? extends R> mapFn;
 
@@ -42,7 +42,7 @@ public class MapTransform<T, R> extends AbstractTransform implements Transform {
 
     @Override
     public void addToDag(Planner p) {
-        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), mapP(mapFn()));
+        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), getLocalParallelism(), mapP(mapFn()));
         p.addEdges(this, pv.v);
     }
 }

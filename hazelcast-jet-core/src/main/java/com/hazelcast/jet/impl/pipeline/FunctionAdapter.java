@@ -72,14 +72,14 @@ public class FunctionAdapter {
     }
 
     @SuppressWarnings("unchecked")
-    public <T, T1, R> DistributedBiFunction<Object, T1, Object> adapthashJoinOutputFn(
+    public <T, T1, R> DistributedBiFunction<Object, T1, Object> adaptHashJoinOutputFn(
             DistributedBiFunction<T, T1, R> mapToOutputFn
     ) {
         return (DistributedBiFunction<Object, T1, Object>) mapToOutputFn;
     }
 
     @SuppressWarnings("unchecked")
-    <T, T1, T2, R> DistributedTriFunction<Object, T1, T2, Object> adapthashJoinOutputFn(
+    <T, T1, T2, R> DistributedTriFunction<Object, T1, T2, Object> adaptHashJoinOutputFn(
             DistributedTriFunction<T, T1, T2, R> mapToOutputFn
     ) {
         return (DistributedTriFunction<Object, T1, T2, Object>) mapToOutputFn;
@@ -132,7 +132,7 @@ class JetEventFunctionAdapter extends FunctionAdapter {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T, T1, R> DistributedBiFunction<Object, T1, Object> adapthashJoinOutputFn(
+    public <T, T1, R> DistributedBiFunction<Object, T1, Object> adaptHashJoinOutputFn(
             DistributedBiFunction<T, T1, R> mapToOutputFn
     ) {
         return (e, t1) -> {
@@ -143,7 +143,7 @@ class JetEventFunctionAdapter extends FunctionAdapter {
 
     @Override
     @SuppressWarnings("unchecked")
-    <T, T1, T2, R> DistributedTriFunction<Object, T1, T2, Object> adapthashJoinOutputFn(
+    <T, T1, T2, R> DistributedTriFunction<Object, T1, T2, Object> adaptHashJoinOutputFn(
             DistributedTriFunction<T, T1, T2, R> mapToOutputFn
     ) {
         return (e, t1, t2) -> {

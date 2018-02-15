@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
+import com.hazelcast.jet.core.Vertex;
+
 import javax.annotation.Nonnull;
 import java.util.List;
 
@@ -29,6 +31,7 @@ public abstract class AbstractTransform implements Transform {
     private final String name;
     @Nonnull
     private final List<Transform> upstream;
+    private int localParallelism = Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
 
     protected AbstractTransform(@Nonnull String name, @Nonnull List<Transform> upstream) {
         this.name = name;
@@ -47,6 +50,16 @@ public abstract class AbstractTransform implements Transform {
     @Nonnull @Override
     public String name() {
         return name;
+    }
+
+    @Override
+    public void localParallelism(int localParallelism) {
+        this.localParallelism = Vertex.checkLocalParallelism(localParallelism);
+    }
+
+    @Override
+    public int getLocalParallelism() {
+        return localParallelism;
     }
 
     @Override

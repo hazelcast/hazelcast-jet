@@ -25,7 +25,7 @@ import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.core.processor.DiagnosticProcessors.peekOutputP;
 
-public class PeekTransform<T> extends AbstractTransform implements Transform {
+public class PeekTransform<T> extends AbstractTransform {
     @Nonnull
     public final DistributedPredicate<? super T> shouldLogFn;
     @Nonnull

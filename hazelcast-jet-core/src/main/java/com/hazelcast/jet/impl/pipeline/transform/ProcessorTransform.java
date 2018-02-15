@@ -27,7 +27,7 @@ import javax.annotation.Nonnull;
  * A unary transform constructed directly from a provided Core API
  * processor supplier.
  */
-public class ProcessorTransform extends AbstractTransform implements Transform {
+public class ProcessorTransform extends AbstractTransform {
     @Nonnull
     public final DistributedSupplier<Processor> procSupplier;
 
@@ -42,7 +42,7 @@ public class ProcessorTransform extends AbstractTransform implements Transform {
 
     @Override
     public void addToDag(Planner p) {
-        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), procSupplier);
+        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), getLocalParallelism(), procSupplier);
         p.addEdges(this, pv.v);
     }
 }

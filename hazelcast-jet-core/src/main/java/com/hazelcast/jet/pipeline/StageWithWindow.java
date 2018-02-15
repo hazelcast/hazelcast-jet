@@ -48,7 +48,7 @@ public interface StageWithWindow<T> {
     default <A, R> StreamStage<TimestampedItem<R>> aggregate(
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp
     ) {
-        return aggregate(aggrOp, (WindowResultFunction<R, TimestampedItem<R>>) TimestampedItem::new);
+        return aggregate(aggrOp, TimestampedItem::new);
     }
 
     @Nonnull
@@ -62,7 +62,7 @@ public interface StageWithWindow<T> {
             @Nonnull StreamStage<T1> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp
     ) {
-        return aggregate2(stage1, aggrOp, (WindowResultFunction<R, TimestampedItem<R>>) TimestampedItem::new);
+        return aggregate2(stage1, aggrOp, TimestampedItem::new);
     }
 
     @Nonnull
@@ -78,7 +78,7 @@ public interface StageWithWindow<T> {
             @Nonnull StreamStage<T2> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp
     ) {
-        return aggregate3(stage1, stage2, aggrOp, (WindowResultFunction<R, TimestampedItem<R>>) TimestampedItem::new);
+        return aggregate3(stage1, stage2, aggrOp, TimestampedItem::new);
     }
 
     @Nonnull

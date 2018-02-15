@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.pipeline;
 
+import javax.annotation.Nonnull;
+
 /**
  * The basic element of a Jet {@link Pipeline pipeline}.
  * To build a pipeline, start with {@link Pipeline#drawFrom(BatchSource)} to
@@ -28,4 +30,7 @@ public interface Stage {
      * Returns the {@link Pipeline} this pipeline belongs to.
      */
     Pipeline getPipeline();
+
+    @Nonnull
+    Stage localParallelism(int localParallelism);
 }

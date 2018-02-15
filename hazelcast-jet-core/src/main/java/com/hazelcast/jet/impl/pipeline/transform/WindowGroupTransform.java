@@ -41,7 +41,7 @@ import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindow
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static java.util.Collections.nCopies;
 
-public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform implements Transform {
+public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform {
     @Nonnull
     private WindowDefinition wDef;
     @Nonnull
@@ -105,20 +105,22 @@ public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform implem
                 TimestampKind.EVENT,
                 winPolicy,
                 aggrOp));
-        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2',
+        v1.localParallelism(getLocalParallelism());
+        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', getLocalParallelism(),
                 combineToSlidingWindowP(winPolicy, aggrOp, mapToOutputFn));
         p.addEdges(this, v1, (e, ord) -> e.partitioned(keyFns.get(ord), HASH_CODE));
         p.dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }
 
     private void addSessionWindow(Planner p, SessionWindowDef wDef) {
-        PlannerVertex pv = p.addVertex(this, p.vertexName("session-window", ""), aggregateToSessionWindowP(
-                wDef.sessionTimeout(),
-                nCopies(keyFns.size(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),
-                keyFns,
-                aggrOp,
-                mapToOutputFn
-        ));
+        PlannerVertex pv = p.addVertex(this, p.vertexName("session-window", ""), getLocalParallelism(),
+                aggregateToSessionWindowP(
+                        wDef.sessionTimeout(),
+                        nCopies(keyFns.size(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),
+                        keyFns,
+                        aggrOp,
+                        mapToOutputFn
+                ));
         p.addEdges(this, pv.v, (e, ord) -> e.partitioned(keyFns.get(ord)));
     }
 }

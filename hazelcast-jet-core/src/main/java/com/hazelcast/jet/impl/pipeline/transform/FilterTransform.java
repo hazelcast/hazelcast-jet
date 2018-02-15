@@ -24,7 +24,7 @@ import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.core.processor.Processors.filterP;
 
-public class FilterTransform<T> extends AbstractTransform implements Transform {
+public class FilterTransform<T> extends AbstractTransform {
     @Nonnull
     private DistributedPredicate<? super T> filterFn;
 
@@ -42,7 +42,7 @@ public class FilterTransform<T> extends AbstractTransform implements Transform {
 
     @Override
     public void addToDag(Planner p) {
-        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), filterP(filterFn()));
+        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), getLocalParallelism(), filterP(filterFn()));
         p.addEdges(this, pv.v);
     }
 }

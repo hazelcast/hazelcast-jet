@@ -32,7 +32,7 @@ import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 
-public class GroupTransform<K, A, R, OUT> extends AbstractTransform implements Transform {
+public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     @Nonnull
     private List<DistributedFunction<?, ? extends K>> groupKeyFns;
     @Nonnull
@@ -72,8 +72,10 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform implements T
     public void addToDag(Planner p) {
         List<DistributedFunction<?, ? extends K>> groupKeyFns = this.groupKeyFns;
         String namePrefix = p.vertexName(this.name(), "-stage");
-        Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateByKeyP(groupKeyFns, aggrOp));
-        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', combineByKeyP(aggrOp, mapToOutputFn));
+        Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateByKeyP(groupKeyFns, aggrOp))
+                .localParallelism(getLocalParallelism());
+        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', getLocalParallelism(),
+                combineByKeyP(aggrOp, mapToOutputFn));
         p.addEdges(this, v1, (e, ord) -> e.partitioned(groupKeyFns.get(ord), HASH_CODE));
         p.dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }

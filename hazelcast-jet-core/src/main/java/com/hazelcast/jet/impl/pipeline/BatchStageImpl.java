@@ -135,6 +135,12 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
+    public BatchStage<T> localParallelism(int localParallelism) {
+        transform.localParallelism(localParallelism);
+        return this;
+    }
+
+    @Nonnull @Override
     @SuppressWarnings("unchecked")
     <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter) {
         pipelineImpl.connect(transform.upstream(), transform);

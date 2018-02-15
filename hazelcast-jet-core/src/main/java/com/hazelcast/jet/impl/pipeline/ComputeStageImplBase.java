@@ -121,7 +121,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 asList(transform, transformOf(stage1)),
                 singletonList(fnAdapter.adaptJoinClause(joinClause)),
                 emptyList(),
-                fnAdapter.adapthashJoinOutputFn(mapToOutputFn)
+                fnAdapter.adaptHashJoinOutputFn(mapToOutputFn)
         ), fnAdapter);
     }
 
@@ -138,7 +138,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 asList(transform, transformOf(stage1), transformOf(stage2)),
                 asList(fnAdapter.adaptJoinClause(joinClause1), fnAdapter.adaptJoinClause(joinClause2)),
                 emptyList(),
-                fnAdapter.adapthashJoinOutputFn(mapToOutputFn)
+                fnAdapter.adaptHashJoinOutputFn(mapToOutputFn)
         ), fnAdapter);
     }
 

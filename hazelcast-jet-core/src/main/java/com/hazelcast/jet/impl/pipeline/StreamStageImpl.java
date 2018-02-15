@@ -111,6 +111,12 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     }
 
     @Nonnull @Override
+    public StreamStage<T> localParallelism(int localParallelism) {
+        transform.localParallelism(localParallelism);
+        return this;
+    }
+
+    @Nonnull @Override
     @SuppressWarnings("unchecked")
     <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter) {
         pipelineImpl.connect(transform.upstream(), transform);

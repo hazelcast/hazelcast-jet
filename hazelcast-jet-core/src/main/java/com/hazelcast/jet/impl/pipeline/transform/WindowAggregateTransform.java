@@ -41,7 +41,7 @@ import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static java.util.Collections.nCopies;
 
-public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform implements Transform {
+public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
     @Nonnull
     private AggregateOperation<A, R> aggrOp;
     @Nonnull
@@ -102,20 +102,21 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform imple
                 winPolicy,
                 aggrOp.withFinishFn(identity())
         ));
-        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2',
+        v1.localParallelism(getLocalParallelism());
+        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', 1,
                 combineToSlidingWindowP(winPolicy, aggrOp, mapToOutputFn.toKeyedWindowResultFn()));
-        pv2.v.localParallelism(1);
         p.addEdges(this, v1);
         p.dag.edge(between(v1, pv2.v).distributed().allToOne());
     }
 
     private void addSessionWindow(Planner p, SessionWindowDef wDef) {
-        PlannerVertex pv = p.addVertex(this, p.vertexName("session-window", ""), aggregateToSessionWindowP(
-                wDef.sessionTimeout(),
-                nCopies(aggrOp.arity(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),
-                nCopies(aggrOp.arity(), constantKey()),
-                aggrOp,
-                mapToOutputFn.toKeyedWindowResultFn()));
+        PlannerVertex pv = p.addVertex(this, p.vertexName("session-window", ""), getLocalParallelism(),
+                aggregateToSessionWindowP(
+                        wDef.sessionTimeout(),
+                        nCopies(aggrOp.arity(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),
+                        nCopies(aggrOp.arity(), constantKey()),
+                        aggrOp,
+                        mapToOutputFn.toKeyedWindowResultFn()));
         p.addEdges(this, pv.v, Edge::allToOne);
     }
 }

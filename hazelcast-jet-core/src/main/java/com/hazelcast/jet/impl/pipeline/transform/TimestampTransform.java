@@ -27,7 +27,7 @@ import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 /**
  * Javadoc pending.
  */
-public class TimestampTransform<T> extends AbstractTransform implements Transform {
+public class TimestampTransform<T> extends AbstractTransform {
     @Nonnull
     public final WatermarkGenerationParams wmGenParams;
 
@@ -42,7 +42,7 @@ public class TimestampTransform<T> extends AbstractTransform implements Transfor
     @Override
     public void addToDag(Planner p) {
         @SuppressWarnings("unchecked")
-        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), insertWatermarksP(wmGenParams));
+        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), getLocalParallelism(), insertWatermarksP(wmGenParams));
         p.addEdges(this, pv.v);
     }
 }

@@ -25,7 +25,7 @@ import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.core.processor.Processors.flatMapP;
 
-public class FlatMapTransform<T, R> extends AbstractTransform implements Transform {
+public class FlatMapTransform<T, R> extends AbstractTransform {
     @Nonnull
     private DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn;
 
@@ -44,7 +44,7 @@ public class FlatMapTransform<T, R> extends AbstractTransform implements Transfo
 
     @Override
     public void addToDag(Planner p) {
-        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), flatMapP(flatMapFn()));
+        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), getLocalParallelism(), flatMapP(flatMapFn()));
         p.addEdges(this, pv.v);
     }
 }

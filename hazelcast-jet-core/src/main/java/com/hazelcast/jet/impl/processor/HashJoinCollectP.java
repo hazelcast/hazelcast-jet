@@ -46,7 +46,8 @@ public class HashJoinCollectP<K, E, V> extends AbstractProcessor {
         V value = projectFn.apply(e);
         V previous = map.put(key, value);
         if (previous != null) {
-            throw new IllegalStateException("Duplicate values for key " + key + ": " + previous + " and " + value);
+            throw new IllegalStateException("Duplicate values for key '" + key + "': '" + previous + "' and '" + value
+                    + "'");
         }
         return true;
     }

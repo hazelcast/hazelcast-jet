@@ -123,6 +123,8 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
          .window(WindowDefinition.session(2))
          .groupingKey(entry -> entry.getValue().charAt(0))
          .aggregate(toSet(), WindowResult::new)
+         .peek()
+         .localParallelism(3)
          .drainTo(Sinks.list("sink"));
 
         testSession(p);

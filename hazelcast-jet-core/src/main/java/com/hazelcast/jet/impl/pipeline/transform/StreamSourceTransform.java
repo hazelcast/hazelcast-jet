@@ -68,7 +68,7 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
                 wmGenParams(timestampFn, JetEventImpl::jetEvent, wmPolicy, wmEmitPolicy, idleTimeout)
                 :
                 WatermarkGenerationParams.noWatermarks();
-        p.addVertex(this, p.vertexName(name(), ""), metaSupplierFn.apply(params));
+        p.addVertex(this, p.vertexName(name(), ""), getLocalParallelism(), metaSupplierFn.apply(params));
     }
 
     @Nonnull @Override

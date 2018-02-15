@@ -28,7 +28,7 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.accumulateP;
 import static com.hazelcast.jet.core.processor.Processors.combineP;
 
-public class AggregateTransform<A, R> extends AbstractTransform implements Transform {
+public class AggregateTransform<A, R> extends AbstractTransform {
     @Nonnull
     private final AggregateOperation<A, ? extends R> aggrOp;
 
@@ -59,9 +59,9 @@ public class AggregateTransform<A, R> extends AbstractTransform implements Trans
     @Override
     public void addToDag(Planner p) {
         String namePrefix = p.vertexName(name(), "-stage");
-        Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateP(aggrOp));
-        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', combineP(aggrOp));
-        pv2.v.localParallelism(1);
+        Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateP(aggrOp))
+                .localParallelism(getLocalParallelism());
+        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', 1, combineP(aggrOp));
         p.addEdges(this, v1);
         p.dag.edge(between(v1, pv2.v).distributed().allToOne());
     }

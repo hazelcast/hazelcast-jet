@@ -108,7 +108,7 @@ public abstract class GeneralHashJoinBuilder<T0> {
                 orderedClauses.stream()
                               .map(Entry::getKey)
                               .collect(toList()),
-                fnAdapter.adapthashJoinOutputFn(mapToOutputFn));
+                fnAdapter.adaptHashJoinOutputFn(mapToOutputFn));
         pipelineImpl.connect(upstream, hashJoinTransform);
         return createOutStageFn.get(hashJoinTransform, fnAdapter, pipelineImpl);
     }

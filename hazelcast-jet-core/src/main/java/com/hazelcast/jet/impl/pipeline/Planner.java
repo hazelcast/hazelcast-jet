@@ -74,12 +74,15 @@ public class Planner {
         }
     }
 
-    public PlannerVertex addVertex(Transform transform, String name, DistributedSupplier<Processor> procSupplier) {
-        return addVertex(transform, name, ProcessorMetaSupplier.of(procSupplier));
+    public PlannerVertex addVertex(Transform transform, String name, int localParallelism,
+                                   DistributedSupplier<Processor> procSupplier) {
+        return addVertex(transform, name, localParallelism, ProcessorMetaSupplier.of(procSupplier));
     }
 
-    public PlannerVertex addVertex(Transform transform, String name, ProcessorMetaSupplier metaSupplier) {
+    public PlannerVertex addVertex(Transform transform, String name, int localParallelism,
+                                   ProcessorMetaSupplier metaSupplier) {
         PlannerVertex pv = new PlannerVertex(dag.newVertex(name, metaSupplier));
+        pv.v.localParallelism(localParallelism);
         xform2vertex.put(transform, pv);
         return pv;
     }

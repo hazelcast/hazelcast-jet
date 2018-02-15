@@ -35,6 +35,9 @@ public interface Transform extends Serializable {
     @Nonnull
     String name();
 
+    int getLocalParallelism();
+    void localParallelism(int localParallelism);
+
     @Nonnull
     List<? extends Transform> upstream();
 

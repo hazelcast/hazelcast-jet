@@ -19,9 +19,18 @@ package com.hazelcast.jet.impl.pipeline;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.pipeline.SinkStage;
 
+import javax.annotation.Nonnull;
+
 class SinkStageImpl extends AbstractStage implements SinkStage {
 
     SinkStageImpl(SinkTransform sink, PipelineImpl pipeline) {
         super(sink, false, pipeline);
+    }
+
+    @Nonnull
+    @Override
+    public SinkStage localParallelism(int localParallelism) {
+        transform.localParallelism(localParallelism);
+        return this;
     }
 }

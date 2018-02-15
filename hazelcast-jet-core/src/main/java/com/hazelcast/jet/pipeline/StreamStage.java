@@ -81,4 +81,7 @@ public interface StreamStage<T> extends GeneralStage<T> {
     <R> StreamStage<R> customTransform(
             @Nonnull String stageName,
             @Nonnull DistributedSupplier<Processor> procSupplier);
+
+    @Nonnull
+    StreamStage<T> localParallelism(int localParallelism);
 }

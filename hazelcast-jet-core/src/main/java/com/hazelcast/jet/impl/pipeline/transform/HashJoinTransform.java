@@ -36,7 +36,7 @@ import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.impl.pipeline.Planner.tailList;
 import static java.util.stream.Collectors.toList;
 
-public class HashJoinTransform<T0, R> extends AbstractTransform implements Transform {
+public class HashJoinTransform<T0, R> extends AbstractTransform {
     @Nonnull
     public final List<JoinClause<?, ? super T0, ?, ?>> clauses;
     @Nonnull
@@ -84,8 +84,8 @@ public class HashJoinTransform<T0, R> extends AbstractTransform implements Trans
     //             |             -------------         -------------
     //             |                   |                     |
     //             |                 local                 local
-    //        distributed          broadcast             broadcast
-    //        partitioned         prioritized           prioritized
+    //           local             broadcast             broadcast
+    //          unicast           prioritized           prioritized
     //         ordinal 0           ordinal 1             ordinal 2
     //             \                   |                     |
     //              ----------------\  |   /----------------/
@@ -101,7 +101,7 @@ public class HashJoinTransform<T0, R> extends AbstractTransform implements Trans
         List keyFns = this.clauses.stream()
                                       .map(JoinClause::leftKeyFn)
                                       .collect(toList());
-        Vertex joiner = p.addVertex(this, namePrefix + "joiner",
+        Vertex joiner = p.addVertex(this, namePrefix + "joiner", getLocalParallelism(),
                 () -> new HashJoinP(keyFns, this.tags, this.mapToOutputBiFn, null)).v;
         p.dag.edge(from(primary.v, primary.availableOrdinal++).to(joiner, 0));
 
