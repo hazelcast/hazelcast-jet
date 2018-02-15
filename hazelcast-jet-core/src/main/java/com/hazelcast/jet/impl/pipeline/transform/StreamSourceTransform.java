@@ -44,30 +44,27 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
     private static final long DEFAULT_LAG = 1000L;
 
     private final Function<WatermarkGenerationParams<T>, ProcessorMetaSupplier> metaSupplierFn;
-
     private DistributedToLongFunction<T> timestampFn = t -> System.currentTimeMillis();
-    private long idleTimeout = DEFAULT_IDLE_TIMEOUT;
-    private DistributedSupplier<WatermarkPolicy> wmPolicy = limitingLag(DEFAULT_LAG);
+    private DistributedSupplier<WatermarkPolicy> wmPolicyFn = limitingLag(DEFAULT_LAG);
     private WatermarkEmissionPolicy wmEmitPolicy = suppressDuplicates();
-
-    private boolean hasWatermark = true;
+    private long idleTimeout = DEFAULT_IDLE_TIMEOUT;
+    private boolean emitsJetEvents;
 
     public StreamSourceTransform(
             @Nonnull String name,
-            boolean supportsWatermarks,
-            @Nonnull Function<WatermarkGenerationParams<T>, ProcessorMetaSupplier> metaSupplierFn
+            @Nonnull Function<WatermarkGenerationParams<T>, ProcessorMetaSupplier> metaSupplierFn,
+            boolean emitsJetEvents
     ) {
         super(name, emptyList());
-        this.hasWatermark = supportsWatermarks;
+        this.emitsJetEvents = emitsJetEvents;
         this.metaSupplierFn = metaSupplierFn;
     }
 
     @Override
     public void addToDag(Planner p) {
-        WatermarkGenerationParams<T> params = hasWatermark ?
-                wmGenParams(timestampFn, JetEventImpl::jetEvent, wmPolicy, wmEmitPolicy, idleTimeout)
-                :
-                WatermarkGenerationParams.noWatermarks();
+        WatermarkGenerationParams<T> params = emitsJetEvents
+                ? wmGenParams(timestampFn, JetEventImpl::jetEvent, wmPolicyFn, wmEmitPolicy, idleTimeout)
+                : WatermarkGenerationParams.noWatermarks();
         p.addVertex(this, p.vertexName(name(), ""), getLocalParallelism(), metaSupplierFn.apply(params));
     }
 
@@ -88,7 +85,7 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
     @Nonnull @Override
     public StreamSource<T> watermarkPolicy(@Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy) {
         assertWatermarksEnabled();
-        this.wmPolicy = wmPolicy;
+        this.wmPolicyFn = wmPolicy;
         return this;
     }
 
@@ -99,19 +96,19 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
         return this;
     }
 
-    private void assertWatermarksEnabled() {
-        Preconditions.checkTrue(hasWatermark, "This source does not support watermarks or" +
-                " is configured not to emit watermarks");
-    }
-
     @Nonnull @Override
     public StreamSource<T> noWatermarks() {
-        hasWatermark = false;
+        emitsJetEvents = false;
         return this;
     }
 
     public boolean emitsJetEvents() {
-        return hasWatermark;
+        return emitsJetEvents;
+    }
+
+    private void assertWatermarksEnabled() {
+        Preconditions.checkTrue(emitsJetEvents, "This source does not support watermarks or" +
+                " is configured not to emit watermarks");
     }
 
 }

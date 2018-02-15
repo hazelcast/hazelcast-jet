@@ -155,8 +155,7 @@ public final class WatermarkGenerationParams<T> implements Serializable {
     }
 
     /**
-     *
-     * @return
+     * Javadoc pending.
      */
     @Nonnull
     public DistributedObjLongBiFunction<T, ?> wrapFn() {

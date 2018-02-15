@@ -104,7 +104,7 @@ public final class Sources {
             @Nonnull String sourceName,
             @Nonnull Function<WatermarkGenerationParams<T>, ProcessorMetaSupplier> metaSupplierFn
     ) {
-        return new StreamSourceTransform<>(sourceName, true, metaSupplierFn);
+        return new StreamSourceTransform<>(sourceName, metaSupplierFn, true);
     }
 
     /**
@@ -115,7 +115,7 @@ public final class Sources {
             @Nonnull String sourceName,
             @Nonnull ProcessorMetaSupplier metaSupplier
     ) {
-        return new StreamSourceTransform<>(sourceName, false, w -> metaSupplier);
+        return new StreamSourceTransform<>(sourceName, w -> metaSupplier, false);
     }
 
     /**
