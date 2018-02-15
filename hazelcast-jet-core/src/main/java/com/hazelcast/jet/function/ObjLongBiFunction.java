@@ -18,7 +18,7 @@ package com.hazelcast.jet.function;
 
 /**
  * Represents a specialization of {@link java.util.function.BiFunction} where
- * one of the arguments is a {@code long}.
+ * the second argument is a {@code long}.
  **/
 @FunctionalInterface
 public interface ObjLongBiFunction<T, R> {
@@ -27,8 +27,8 @@ public interface ObjLongBiFunction<T, R> {
      * Applies this function to the given arguments.
      *
      * @param t the first function argument
-     * @param value the second function argument
+     * @param u the second function argument
      * @return the function result
      */
-    R apply(T t, long value);
+    R apply(T t, long u);
 }

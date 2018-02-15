@@ -96,8 +96,10 @@ public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
         map.put(10L, "flush-item");
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST,
-                wmGenParams(Entry::getKey, limitingLag(0), suppressDuplicates(), 2000)))
+        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
+                .timestampFn(Entry::getKey)
+                .wmPolicy(limitingLag(0))
+                .idleTimeout(2000))
          .window(WindowDefinition.session(2))
          .aggregate(toSet(), (winStart, winEnd, result) -> new WindowResult(winStart, winEnd, "", result))
          .drainTo(Sinks.list("sink"));

@@ -41,8 +41,6 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
 import static com.hazelcast.jet.core.TestUtil.set;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
-import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.test.TestSupport.listToString;
 import static java.util.Arrays.asList;
@@ -65,8 +63,10 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
     @Test
     public void testSliding_groupingFirst() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST,
-                wmGenParams(Entry::getKey, limitingLag(0), suppressDuplicates(), 2000)))
+        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
+                .timestampFn(Entry::getKey)
+                .wmPolicy(limitingLag(0))
+                .idleTimeout(2000))
          .groupingKey(entry -> entry.getValue().charAt(0))
          .window(WindowDefinition.tumbling(2))
          .aggregate(toSet())
@@ -78,8 +78,10 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
     @Test
     public void testSliding_windowFirst() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST,
-                wmGenParams(Entry::getKey, limitingLag(0), suppressDuplicates(), 2000)))
+        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
+                .timestampFn(Entry::getKey)
+                .wmPolicy(limitingLag(0))
+                .idleTimeout(2000))
          .window(WindowDefinition.tumbling(2))
          .groupingKey(entry -> entry.getValue().charAt(0))
          .aggregate(toSet())
@@ -114,8 +116,10 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
     @Test
     public void testSession_windowFirst() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST,
-                wmGenParams(Entry::getKey, limitingLag(0), suppressDuplicates(), 2000)))
+        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
+                .timestampFn(Entry::getKey)
+                .wmPolicy(limitingLag(0))
+                .idleTimeout(2000))
          .window(WindowDefinition.session(2))
          .groupingKey(entry -> entry.getValue().charAt(0))
          .aggregate(toSet(), WindowResult::new)
@@ -127,8 +131,10 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
     @Test
     public void testSession_groupingFirst() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST,
-                wmGenParams(Entry::getKey, limitingLag(0), suppressDuplicates(), 2000)))
+        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
+                .timestampFn(Entry::getKey)
+                .wmPolicy(limitingLag(0))
+                .idleTimeout(2000))
          .groupingKey(entry -> entry.getValue().charAt(0))
          .window(WindowDefinition.session(2))
          .aggregate(toSet(), WindowResult::new)

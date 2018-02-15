@@ -81,8 +81,9 @@ public final class Sources {
      * Returns a source constructed directly from the given Core API processor
      * meta-supplier.
      * <p>
-     * The default local parallelism for this source is specified by the given
-     * {@link ProcessorMetaSupplier#preferredLocalParallelism() metaSupplierFn}.
+     * The {@link ProcessorMetaSupplier#preferredLocalParallelism() default
+     * local parallelism} for this source is specified by the given {@code
+     * metaSupplier}.
      *
      * @param sourceName user-friendly source name
      * @param metaSupplier the processor meta-supplier

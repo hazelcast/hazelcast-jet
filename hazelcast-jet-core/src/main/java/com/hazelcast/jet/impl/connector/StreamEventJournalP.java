@@ -447,7 +447,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             return partitions.isEmpty()
                     ? Processors.noopP().get()
                     : new StreamEventJournalP<>(eventJournalReader, partitions, predicate, projection,
-                    initialPos, client != null, wmGenParams /*TODO*/);
+                    initialPos, client != null, wmGenParams);
         }
     }
 

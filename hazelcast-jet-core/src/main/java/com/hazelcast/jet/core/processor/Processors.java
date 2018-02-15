@@ -648,7 +648,7 @@ public final class Processors {
     public static <T> DistributedSupplier<Processor> insertWatermarksP(
             @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
-        return () -> new InsertWatermarksP<>(wmGenParams /*TODO*/);
+        return () -> new InsertWatermarksP<>(wmGenParams);
     }
 
     /**
