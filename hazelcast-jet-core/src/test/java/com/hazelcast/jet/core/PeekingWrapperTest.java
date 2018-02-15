@@ -281,6 +281,11 @@ public class PeekingWrapperTest {
         Watermark wm = new Watermark(2);
         verify(logger).info("Output to 0: " + wm);
         verify(logger).info("Output to 1: " + wm);
+
+        wm = new Watermark(3);
+        peekP.tryProcessWatermark(wm);
+        verify(logger).info("Output: forwarding " + wm);
+        verifyZeroInteractions(logger);
     }
 
     private void assertPeekSnapshot() {

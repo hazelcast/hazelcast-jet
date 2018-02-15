@@ -35,8 +35,8 @@ public final class KafkaSources {
     }
 
     /**
-     * Convenience for {@link #kafka(Properties, DistributedBiFunction} wrapping the output in {@code
-     * Map.Entry}.
+     * Convenience for {@link #kafka(Properties, DistributedBiFunction, String...)}
+     * wrapping the output in {@code Map.Entry}.
      */
     @Nonnull
     public static <K, V> StreamSource<Entry<K, V>> kafka(
