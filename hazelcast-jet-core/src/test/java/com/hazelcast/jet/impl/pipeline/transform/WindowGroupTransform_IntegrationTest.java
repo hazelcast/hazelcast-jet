@@ -64,8 +64,8 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
     public void testSliding_groupingFirst() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
-                .timestampFn(Entry::getKey)
-                .wmPolicy(limitingLag(0))
+                .timestamp(Entry::getKey)
+                .watermarkPolicy(limitingLag(0))
                 .idleTimeout(2000))
          .groupingKey(entry -> entry.getValue().charAt(0))
          .window(WindowDefinition.tumbling(2))
@@ -79,8 +79,8 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
     public void testSliding_windowFirst() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
-                .timestampFn(Entry::getKey)
-                .wmPolicy(limitingLag(0))
+                .timestamp(Entry::getKey)
+                .watermarkPolicy(limitingLag(0))
                 .idleTimeout(2000))
          .window(WindowDefinition.tumbling(2))
          .groupingKey(entry -> entry.getValue().charAt(0))
@@ -117,8 +117,8 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
     public void testSession_windowFirst() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
-                .timestampFn(Entry::getKey)
-                .wmPolicy(limitingLag(0))
+                .timestamp(Entry::getKey)
+                .watermarkPolicy(limitingLag(0))
                 .idleTimeout(2000))
          .window(WindowDefinition.session(2))
          .groupingKey(entry -> entry.getValue().charAt(0))
@@ -132,8 +132,8 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
     public void testSession_groupingFirst() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
-                .timestampFn(Entry::getKey)
-                .wmPolicy(limitingLag(0))
+                .timestamp(Entry::getKey)
+                .watermarkPolicy(limitingLag(0))
                 .idleTimeout(2000))
          .groupingKey(entry -> entry.getValue().charAt(0))
          .window(WindowDefinition.session(2))

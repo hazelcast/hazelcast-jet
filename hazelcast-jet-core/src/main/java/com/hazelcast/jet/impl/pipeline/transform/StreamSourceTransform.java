@@ -72,7 +72,7 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
     }
 
     @Nonnull @Override
-    public StreamSource<T> timestampFn(@Nonnull DistributedToLongFunction<T> timestampFn) {
+    public StreamSource<T> timestamp(@Nonnull DistributedToLongFunction<T> timestampFn) {
         assertWatermarksEnabled();
         this.timestampFn = timestampFn;
         return this;
@@ -86,14 +86,14 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
     }
 
     @Nonnull @Override
-    public StreamSource<T> wmPolicy(@Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy) {
+    public StreamSource<T> watermarkPolicy(@Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy) {
         assertWatermarksEnabled();
         this.wmPolicy = wmPolicy;
         return this;
     }
 
     @Nonnull @Override
-    public StreamSource<T> wmEmissionPolicy(@Nonnull WatermarkEmissionPolicy wmEmitPolicy) {
+    public StreamSource<T> watermarkEmissionPolicy(@Nonnull WatermarkEmissionPolicy wmEmitPolicy) {
         assertWatermarksEnabled();
         this.wmEmitPolicy = wmEmitPolicy;
         return this;

@@ -38,7 +38,7 @@ public interface StreamSource<T> {
      * Javadoc pending.
      */
     @Nonnull
-    StreamSource<T> timestampFn(@Nonnull DistributedToLongFunction<T> timestampFn);
+    StreamSource<T> timestamp(@Nonnull DistributedToLongFunction<T> timestampFn);
 
     /**
      * Javadoc pending.
@@ -50,16 +50,16 @@ public interface StreamSource<T> {
      * Javadoc pending.
      */
     @Nonnull
-    StreamSource<T> wmPolicy(@Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy);
+    StreamSource<T> watermarkPolicy(@Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy);
 
     /**
      * Javadoc pending.
      */
     @Nonnull
-    StreamSource<T> wmEmissionPolicy(@Nonnull WatermarkEmissionPolicy wmEmitPolicy);
+    StreamSource<T> watermarkEmissionPolicy(@Nonnull WatermarkEmissionPolicy wmEmitPolicy);
 
     /**
-     * Javadoc pending
+     * Javadoc pending.
      */
     @Nonnull
     StreamSource<T> noWatermarks();
