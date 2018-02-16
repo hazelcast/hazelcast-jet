@@ -106,6 +106,13 @@ public final class ThreeBags<T0, T1, T2> {
         bag2.removeAll(that.bag2());
     }
 
+    /**
+     * Returns a safe copy of this container.
+     */
+    public ThreeBags<T0, T1, T2> finish() {
+        return new ThreeBags<>(new ArrayList<>(bag0), new ArrayList<>(bag1), new ArrayList<>(bag2));
+    }
+
     @Override
     public boolean equals(Object o) {
         ThreeBags<?, ?, ?> that;

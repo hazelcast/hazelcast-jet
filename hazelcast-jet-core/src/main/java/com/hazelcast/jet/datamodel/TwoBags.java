@@ -91,6 +91,13 @@ public final class TwoBags<T0, T1> {
         bag1.removeAll(that.bag1());
     }
 
+    /**
+     * Returns a safe copy of this container.
+     */
+    public TwoBags<T0, T1> finish() {
+        return new TwoBags<>(new ArrayList<>(bag0), new ArrayList<>(bag1));
+    }
+
     @Override
     public boolean equals(Object o) {
         TwoBags<?, ?> that;
