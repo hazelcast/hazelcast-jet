@@ -49,6 +49,9 @@
                         <manifest>
                             <mainClass>com.hazelcast.jet.server.StartServer</mainClass>
                         </manifest>
+                        <manifestEntries>
+                            <Automatic-Module-Name>com.hazelcast.jet</Automatic-Module-Name>
+                        </manifestEntries>
                     </archive>
                 </configuration>
             </plugin>
