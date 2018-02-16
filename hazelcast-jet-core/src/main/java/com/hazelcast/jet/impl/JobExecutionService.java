@@ -22,7 +22,6 @@ import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.cluster.impl.MembershipManager;
 import com.hazelcast.internal.cluster.impl.operations.TriggerMemberListPublishOp;
 import com.hazelcast.jet.core.TopologyChangedException;
-import com.hazelcast.jet.impl.deployment.JetClassLoader;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.SenderTasklet;
 import com.hazelcast.jet.impl.execution.TaskletExecutionService;
@@ -65,7 +64,7 @@ public class JobExecutionService {
     // rely on specific semantics of computeIfAbsent. ConcurrentMap.computeIfAbsent
     // does not guarantee at most one computation per key.
     // key: jobId
-    private final ConcurrentHashMap<Long, JetClassLoader> classLoaders = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, ClassLoader> classLoaders = new ConcurrentHashMap<>();
 
     JobExecutionService(NodeEngineImpl nodeEngine, TaskletExecutionService taskletExecutionService) {
         this.nodeEngine = nodeEngine;
@@ -73,7 +72,7 @@ public class JobExecutionService {
         this.taskletExecutionService = taskletExecutionService;
     }
 
-    public ClassLoader getClassLoader(long jobId, PrivilegedAction<JetClassLoader> action) {
+    public ClassLoader getClassLoader(long jobId, PrivilegedAction<? extends ClassLoader> action) {
         return classLoaders.computeIfAbsent(jobId, k -> AccessController.doPrivileged(action));
     }
 
