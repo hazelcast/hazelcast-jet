@@ -81,7 +81,7 @@
         <maven.compiler.plugin.version>3.7.0</maven.compiler.plugin.version>
         <maven.jar.plugin.version>2.4</maven.jar.plugin.version>
         <maven.source.plugin.version>2.2.1</maven.source.plugin.version>
-        <maven.javadoc.plugin.version>2.10.4</maven.javadoc.plugin.version>
+        <maven.javadoc.plugin.version>3.0.0</maven.javadoc.plugin.version>
         <maven.gpg.plugin.version>1.4</maven.gpg.plugin.version>
         <maven.assembly.plugin.version>3.0.0</maven.assembly.plugin.version>
         <maven.bundle.plugin.version>2.4.0</maven.bundle.plugin.version>
@@ -332,8 +332,9 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>${maven.javadoc.plugin.version}</version>
                 <configuration>
+                    <doclint>-missing</doclint>
                     <maxmemory>1024</maxmemory>
-                    <additionalparam>-Xdoclint:-missing -tag apiNote::a -tag implSpec:a -link https://docs.oracle.com/javase/8/docs/api/</additionalparam>
+                    <detectJavaApiLink>true</detectJavaApiLink>
                     <excludePackageNames>
                         *.impl:*.internal
                     </excludePackageNames>
