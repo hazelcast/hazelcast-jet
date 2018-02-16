@@ -70,25 +70,16 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         this.fnAdapter = fnAdapter;
     }
 
-    static void ensureJetEvents(@Nonnull ComputeStageImplBase stage, @Nonnull String name) {
-        if (stage.fnAdapter != ADAPT_TO_JET_EVENT) {
-            throw new IllegalStateException(
-                    name + " is missing a timestamp and watermark definition. Call" +
-                            " .timestamp() on it before performing the aggregation."
-            );
-        }
-    }
-
     @Nonnull
     @SuppressWarnings("unchecked")
     public StreamStage<T> timestamp(
             @Nonnull DistributedToLongFunction<? super T> timestampFn,
             @Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy
     ) {
-        return new StreamStageImpl<>(
-                new TimestampTransform<>(transform, wmGenParams(timestampFn, wmPolicy, suppressDuplicates(), 0L)),
-                ADAPT_TO_JET_EVENT,
-                pipelineImpl);
+        TimestampTransform<T> tsTransform =
+                new TimestampTransform<>(transform, wmGenParams(timestampFn, wmPolicy, suppressDuplicates(), 0L));
+        pipelineImpl.connect(transform, tsTransform);
+        return new StreamStageImpl<>(tsTransform, ADAPT_TO_JET_EVENT, pipelineImpl);
     }
 
     @Nonnull
@@ -171,4 +162,13 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
     @Nonnull
     abstract <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter);
+
+    static void ensureJetEvents(@Nonnull ComputeStageImplBase stage, @Nonnull String name) {
+        if (stage.fnAdapter != ADAPT_TO_JET_EVENT) {
+            throw new IllegalStateException(
+                    name + " is missing a timestamp and watermark definition. Call" +
+                            " .timestamp() on it before performing the aggregation."
+            );
+        }
+    }
 }

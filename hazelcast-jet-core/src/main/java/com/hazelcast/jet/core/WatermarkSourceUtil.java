@@ -138,7 +138,7 @@ public class WatermarkSourceUtil<T> {
      * }</pre>
      */
     @Nonnull
-    public Traverser<Object> handleEvent(@Nonnull T item, int partitionIndex) {
+    public Traverser<Object> handleEvent(T item, int partitionIndex) {
         return handleEvent(System.nanoTime(), item, partitionIndex);
     }
 

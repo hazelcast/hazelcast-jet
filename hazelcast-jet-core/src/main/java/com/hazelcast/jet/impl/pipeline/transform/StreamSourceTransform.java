@@ -60,16 +60,41 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
         this.supportsWatermarks = supportsWatermarks;
     }
 
+    @Nonnull @Override
+    public StreamSource<T> timestampWithSystemTime() {
+        this.timestampFn = t -> System.currentTimeMillis();
+        this.maxLag = 0;
+        return this;
+    }
+
+    @Nonnull @Override
+    public StreamSource<T> timestampWithEventTime(
+            DistributedToLongFunction<? super T> timestampFn, long allowedLatenessMs
+    ) {
+        this.timestampFn = timestampFn;
+        this.maxLag = allowedLatenessMs;
+        return this;
+    }
+
+    @Nonnull @Override
+    public StreamSource<T> setMaximumTimeBetweenEvents(long maxTimeMs) {
+        assertWatermarksEnabled();
+        this.idleTimeout = maxTimeMs;
+        return this;
+    }
+
+    public boolean emitsJetEvents() {
+        return timestampFn != null;
+    }
+
     @Override
     public void addToDag(Planner p) {
         WatermarkGenerationParams<T> params = emitsJetEvents()
-                ? wmGenParams(timestampFn, JetEventImpl::jetEvent, limitingLag(maxLag), suppressDuplicates(), idleTimeout)
+                ? wmGenParams(timestampFn, JetEventImpl::jetEvent, limitingLag(maxLag),
+                                suppressDuplicates(), idleTimeout)
                 : noWatermarks();
-
         if (supportsWatermarks || !emitsJetEvents()) {
-            p.addVertex(
-                    this, p.vertexName(name(), ""), getLocalParallelism(), metaSupplierFn.apply(params)
-            );
+            p.addVertex(this, p.vertexName(name(), ""), getLocalParallelism(), metaSupplierFn.apply(params));
         } else {
             //                  ------------
             //                 |  sourceP   |
@@ -87,34 +112,7 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
             );
             p.dag.edge(between(v1, pv2.v).isolated());
         }
-
     }
-
-    @Nonnull @Override
-    public StreamSource<T> timestampWithSystemTime() {
-        this.timestampFn = t -> System.currentTimeMillis();
-        this.maxLag = 0;
-        return this;
-    }
-
-    @Nonnull @Override
-    public StreamSource<T> timestampWithEventTime(DistributedToLongFunction<? super T> timestampFn, long allowedLatenessMs) {
-        this.timestampFn = timestampFn;
-        this.maxLag = allowedLatenessMs;
-        return this;
-    }
-
-    @Nonnull @Override
-    public StreamSource<T> setMaximumTimeBetweenEvents(long maxTimeMs) {
-        assertWatermarksEnabled();
-        this.idleTimeout = maxTimeMs;
-        return this;
-    }
-
-    public boolean emitsJetEvents() {
-        return timestampFn != null;
-    }
-
     private void assertWatermarksEnabled() {
         Preconditions.checkTrue(timestampFn != null, "This source does not support watermarks or" +
                 " is configured not to emit watermarks");

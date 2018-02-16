@@ -42,7 +42,7 @@ public interface Transform extends Serializable {
     void optimizeNetworkTraffic();
 
     @Nonnull
-    List<? extends Transform> upstream();
+    List<Transform> upstream();
 
     void addToDag(Planner p);
 }
