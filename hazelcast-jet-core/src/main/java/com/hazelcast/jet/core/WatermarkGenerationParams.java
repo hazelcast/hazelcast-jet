@@ -76,7 +76,8 @@ public final class WatermarkGenerationParams<T> implements Serializable {
      * @param wmPolicy Javadoc pending
      * @param wmEmitPolicy watermark emission policy
      * @param idleTimeoutMillis a timeout after which the source partition will
-*      be marked as <em>idle</em>. If <=0, partitions will never be marked
+     *      be marked as <em>idle</em>. If <=0, partitions will never be marked
+     *      as idle.
      */
     public static <T> WatermarkGenerationParams<T> wmGenParams(
             @Nonnull DistributedToLongFunction<? super T> timestampFn,

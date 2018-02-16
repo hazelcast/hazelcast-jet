@@ -37,8 +37,11 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSessionWindowP;
+import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.impl.pipeline.transform.AbstractTransform.Optimization.MEMORY;
+import static com.hazelcast.jet.pipeline.WindowDefinition.WindowKind.SESSION;
 import static java.util.Collections.nCopies;
 
 public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform {
@@ -67,23 +70,45 @@ public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p) {
-        switch (wDef.kind()) {
-            case TUMBLING:
-            case SLIDING:
-                addSlidingWindow(p, wDef.downcast());
-                return;
-            case SESSION:
-                addSessionWindow(p, wDef.downcast());
-                return;
-            default:
-                throw new IllegalArgumentException("Unknown window definition " + wDef.kind());
+        if (wDef.kind() == SESSION) {
+            addSessionWindow(p, wDef.downcast());
+        } else if (aggrOp.combineFn() == null || getOptimization() == MEMORY) {
+            addSlidingWindowSingleStage(p, wDef.downcast());
+        } else {
+            addSlidingWindowTwoStage(p, wDef.downcast());
         }
+    }
+
+    //               ---------       ---------
+    //              | source0 | ... | sourceN |
+    //               ---------       ---------
+    //                   |              |
+    //              distributed    distributed
+    //              partitioned    partitioned
+    //                   \              /
+    //                    ---\    /-----
+    //                        v  v
+    //             ---------------------------
+    //            | aggregateToSlidingWindowP |
+    //             ---------------------------
+    private void addSlidingWindowSingleStage(Planner p, SlidingWindowDef wDef) {
+        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), getLocalParallelism(),
+                aggregateToSlidingWindowP(
+                        keyFns,
+                        nCopies(keyFns.size(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),
+                        TimestampKind.EVENT,
+                        wDef.toSlidingWindowPolicy(),
+                        aggrOp,
+                        mapToOutputFn
+                ));
+        p.addEdges(this, pv.v, (e, ord) -> e.partitioned(keyFns.get(ord)));
     }
 
     //              ---------       ---------
     //             | source0 | ... | sourceN |
     //              ---------       ---------
     //                  |               |
+    //                local           local
     //             partitioned     partitioned
     //                  v               v
     //                 --------------------
@@ -96,7 +121,7 @@ public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform {
     //              -------------------------
     //             | combineToSlidingWindowP |
     //              -------------------------
-    private void addSlidingWindow(Planner p, SlidingWindowDef wDef) {
+    private void addSlidingWindowTwoStage(Planner p, SlidingWindowDef wDef) {
         String namePrefix = p.vertexName("sliding-window", "-stage");
         SlidingWindowPolicy winPolicy = wDef.toSlidingWindowPolicy();
         Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateByFrameP(

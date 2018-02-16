@@ -146,4 +146,16 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
         pipelineImpl.connect(transform.upstream(), transform);
         return (RET) new BatchStageImpl<>(transform, pipelineImpl);
     }
+
+    @Nonnull @Override
+    public BatchStageImpl<T> optimizeMemory() {
+        super.optimizeMemory();
+        return this;
+    }
+
+    @Nonnull @Override
+    public BatchStageImpl<T> optimizeNetworkTraffic() {
+        super.optimizeNetworkTraffic();
+        return this;
+    }
 }

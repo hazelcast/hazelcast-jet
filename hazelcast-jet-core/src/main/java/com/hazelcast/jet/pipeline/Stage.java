@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.jet.aggregate.AggregateOperation;
+
 import javax.annotation.Nonnull;
 
 /**
@@ -33,4 +35,39 @@ public interface Stage {
 
     @Nonnull
     Stage localParallelism(int localParallelism);
+
+    /**
+     * A <em>hint</em> to prefer DAG setup that uses less memory for this
+     * stage. It is an opposite strategy to {@link #optimizeNetworkTraffic()}
+     * (the default), see it for more details.
+     */
+    @Nonnull
+    Stage optimizeMemory();
+
+    /**
+     * A <em>hint</em> to prefer DAG setup that transfers less data over the
+     * network. This is the default strategy, the opposite strategy is {@link
+     * #optimizeMemory()}.
+     * <p>
+     * Currently only aggregation stages consider this hint. It makes them to
+     * choose two step aggregation. That is, first pre-aggregate items
+     * locally, then send the partial results to target member processing the
+     * key and combine them. This setup avoids serialization and network IO
+     * costs by transferring only the pre-aggregated values. On the other hand,
+     * each member might see all keys in the 1st stage so the memory usage can
+     * be much higher.
+     * <p>
+     * Two step aggregation is not possible in this scenarios:<ul>
+     *     <li>when using non-aligned windows (such as session windows)
+     *     <li>if the aggregate operation doesn't support
+     *     {@link AggregateOperation#combineFn() combine} primitive.
+     * </ul>
+     * pre deliver the item to the
+     * member processing its partition and accumulate there. As a result
+     * <p>
+     * The other optimization strategy is {@link #optimizeNetworkTraffic()},
+     * which is the default.
+     */
+    @Nonnull
+    Stage optimizeNetworkTraffic();
 }

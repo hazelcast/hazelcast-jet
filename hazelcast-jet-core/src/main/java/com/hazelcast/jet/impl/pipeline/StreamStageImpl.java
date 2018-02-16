@@ -117,6 +117,18 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     }
 
     @Nonnull @Override
+    public StreamStageImpl<T> optimizeMemory() {
+        super.optimizeMemory();
+        return this;
+    }
+
+    @Nonnull @Override
+    public StreamStageImpl<T> optimizeNetworkTraffic() {
+        super.optimizeNetworkTraffic();
+        return this;
+    }
+
+    @Nonnull @Override
     @SuppressWarnings("unchecked")
     <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter) {
         pipelineImpl.connect(transform.upstream(), transform);

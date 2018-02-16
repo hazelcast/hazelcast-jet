@@ -26,6 +26,7 @@ import java.util.List;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.accumulateP;
+import static com.hazelcast.jet.core.processor.Processors.aggregateP;
 import static com.hazelcast.jet.core.processor.Processors.combineP;
 
 public class AggregateTransform<A, R> extends AbstractTransform {
@@ -40,11 +41,40 @@ public class AggregateTransform<A, R> extends AbstractTransform {
         this.aggrOp = aggrOp;
     }
 
+    @Override
+    public void addToDag(Planner p) {
+        // We don't use single-stage if optimizing for memory usage, because single-stage
+        // setup doesn't save memory when we have just one global key.
+        if (aggrOp.combineFn() == null) {
+            addToDagSingleStage(p);
+        } else {
+            addToDagTwoStage(p);
+        }
+    }
+
     //               ---------       ---------
     //              | source0 | ... | sourceN |
     //               ---------       ---------
     //                   |              |
+    //              distributed    distributed
+    //              all-to-one      all-to-one
+    //                   \              /
+    //                    ---\    /-----
+    //                        v  v
+    //                   ----------------
+    //                  |   aggregateP   | local parallelism = 1
+    //                   ----------------
+    private void addToDagSingleStage(Planner p) {
+        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), 1, aggregateP(aggrOp));
+        p.addEdges(this, pv.v, edge -> edge.distributed().allToOne());
+    }
+
+    //               ---------       ---------
+    //              | source0 | ... | sourceN |
+    //               ---------       ---------
     //                   |              |
+    //                 local          local
+    //                unicast        unicast
     //                   v              v
     //                  -------------------
     //                 |    accumulateP    |
@@ -54,13 +84,12 @@ public class AggregateTransform<A, R> extends AbstractTransform {
     //                       all-to-one
     //                           v
     //                   ----------------
-    //                  |    combineP    |
+    //                  |    combineP    | local parallelism = 1
     //                   ----------------
-    @Override
-    public void addToDag(Planner p) {
+    private void addToDagTwoStage(Planner p) {
         String namePrefix = p.vertexName(name(), "-stage");
         Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateP(aggrOp))
-                .localParallelism(getLocalParallelism());
+                         .localParallelism(getLocalParallelism());
         PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', 1, combineP(aggrOp));
         p.addEdges(this, v1);
         p.dag.edge(between(v1, pv2.v).distributed().allToOne());

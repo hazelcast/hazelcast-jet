@@ -36,9 +36,10 @@ import java.util.List;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSessionWindowP;
+import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
-import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
+import static com.hazelcast.jet.pipeline.WindowDefinition.WindowKind.SESSION;
 import static java.util.Collections.nCopies;
 
 public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
@@ -55,32 +56,60 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
     ) {
-        super(upstream.size() + "-way co-aggregate", upstream);
+        super(createName(wDef), upstream);
         this.aggrOp = aggrOp;
         this.wDef = wDef;
         this.mapToOutputFn = mapToOutputFn;
     }
 
+    private static String createName(WindowDefinition wDef) {
+        return wDef.kind().name().toLowerCase() + "-window";
+    }
+
     @Override
     public void addToDag(Planner p) {
-        switch (wDef.kind()) {
-            case TUMBLING:
-            case SLIDING:
-                addSlidingWindow(p, wDef.downcast());
-                return;
-            case SESSION:
-                addSessionWindow(p, wDef.downcast());
-                return;
-            default:
-                throw new IllegalArgumentException("Unknown window definition " + wDef.kind());
+        if (wDef.kind() == SESSION) {
+            addSessionWindow(p, wDef.downcast());
+        } else if (aggrOp.combineFn() == null) {
+            // We don't use single-stage if optimizing for memory usage, because single-stage
+            // setup doesn't save memory when we have just one global key.
+            addSlidingWindowSingleStage(p, wDef.downcast());
+        } else {
+            addSlidingWindowTwoStage(p, wDef.downcast());
         }
+    }
+
+    //               ---------       ---------
+    //              | source0 | ... | sourceN |
+    //               ---------       ---------
+    //                   |              |
+    //              distributed    distributed
+    //              all-to-one      all-to-one
+    //                   \              /
+    //                    ---\    /-----
+    //                        v  v
+    //             ---------------------------
+    //            | aggregateToSlidingWindowP | local parallelism = 1
+    //             ---------------------------
+    private void addSlidingWindowSingleStage(Planner p, SlidingWindowDef wDef) {
+        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), 1,
+                aggregateToSlidingWindowP(
+                        nCopies(aggrOp.arity(), constantKey()),
+                        nCopies(aggrOp.arity(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),
+                        TimestampKind.EVENT,
+                        wDef.toSlidingWindowPolicy(),
+                        aggrOp,
+                        mapToOutputFn.toKeyedWindowResultFn()
+                ));
+        p.addEdges(this, pv.v, edge -> edge.distributed().allToOne());
     }
 
     //               --------        ---------
     //              | source0 | ... | sourceN |
     //               --------        ---------
     //                   |               |
-    //                   |               |
+    //                 local           local
+    //                unicast         unicast
     //                   v               v
     //                  --------------------
     //                 | accumulateByFrameP | keyFn = constantKey()
@@ -90,17 +119,17 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
     //                       all-to-one
     //                           v
     //               -------------------------
-    //              | combineToSlidingWindowP |
+    //              | combineToSlidingWindowP | local parallelism = 1
     //               -------------------------
-    private void addSlidingWindow(Planner p, SlidingWindowDef wDef) {
-        String namePrefix = p.vertexName("sliding-window", "-stage");
+    private void addSlidingWindowTwoStage(Planner p, SlidingWindowDef wDef) {
+        String namePrefix = p.vertexName(name(), "-stage");
         SlidingWindowPolicy winPolicy = wDef.toSlidingWindowPolicy();
         Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateByFrameP(
                 nCopies(aggrOp.arity(), constantKey()),
                 nCopies(aggrOp.arity(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),
                 TimestampKind.EVENT,
                 winPolicy,
-                aggrOp.withFinishFn(identity())
+                aggrOp
         ));
         v1.localParallelism(getLocalParallelism());
         PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', 1,
@@ -110,7 +139,7 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
     }
 
     private void addSessionWindow(Planner p, SessionWindowDef wDef) {
-        PlannerVertex pv = p.addVertex(this, p.vertexName("session-window", ""), getLocalParallelism(),
+        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), getLocalParallelism(),
                 aggregateToSessionWindowP(
                         wDef.sessionTimeout(),
                         nCopies(aggrOp.arity(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),

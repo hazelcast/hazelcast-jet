@@ -107,6 +107,12 @@ public interface BatchStage<T> extends GeneralStage<T> {
         return new AggregateBuilder<>(this);
     }
 
-    @Nonnull
+    @Nonnull @Override
     BatchStage<T> localParallelism(int localParallelism);
+
+    @Nonnull @Override
+    BatchStage<T> optimizeMemory();
+
+    @Nonnull @Override
+    BatchStage<T> optimizeNetworkTraffic();
 }

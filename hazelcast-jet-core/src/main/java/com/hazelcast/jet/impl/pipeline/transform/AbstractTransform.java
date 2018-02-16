@@ -32,6 +32,8 @@ public abstract class AbstractTransform implements Transform {
     @Nonnull
     private final List<Transform> upstream;
     private int localParallelism = Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
+    @Nonnull
+    private Optimization optimization = Optimization.NETWORK_TRAFFIC;
 
     protected AbstractTransform(@Nonnull String name, @Nonnull List<Transform> upstream) {
         this.name = name;
@@ -63,7 +65,27 @@ public abstract class AbstractTransform implements Transform {
     }
 
     @Override
+    public void optimizeMemory() {
+        optimization = Optimization.MEMORY;
+    }
+
+    @Override
+    public void optimizeNetworkTraffic() {
+        optimization = Optimization.NETWORK_TRAFFIC;
+    }
+
+    @Nonnull
+    public Optimization getOptimization() {
+        return optimization;
+    }
+
+    @Override
     public String toString() {
         return name;
+    }
+
+    public enum Optimization {
+        NETWORK_TRAFFIC,
+        MEMORY;
     }
 }

@@ -27,16 +27,22 @@ import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.WindowDefinition;
-import com.hazelcast.test.HazelcastParallelClassRunner;
+import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
+import org.junit.runners.Parameterized.UseParametersRunnerFactory;
 
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
@@ -45,11 +51,20 @@ import static com.hazelcast.jet.core.test.TestSupport.listToString;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 
-@RunWith(HazelcastParallelClassRunner.class)
+@RunWith(Parameterized.class)
+@UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 @Category(ParallelTest.class)
 public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
 
+    @Parameter
+    public boolean singleStage;
+
     private JetInstance instance;
+
+    @Parameters(name = "singleStage={0}")
+    public static Object[] parameters() {
+        return new Object[]{true, false};
+    }
 
     @Before
     public void before() {
@@ -69,12 +84,16 @@ public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
         map.put(10L, "flush-item");
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
-                .timestampWithEventTime(Map.Entry::getKey, 0)
-                .setMaximumTimeBetweenEvents(1000L))
-         .window(WindowDefinition.tumbling(2))
-         .aggregate(toSet())
-         .drainTo(Sinks.list("sink"));
+        StreamStage<TimestampedItem<Set<Entry<Long, String>>>> stage =
+                p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
+                        .timestampWithEventTime(Map.Entry::getKey, 0)
+                        .setMaximumTimeBetweenEvents(1000L))
+                 .window(WindowDefinition.tumbling(2))
+                 .aggregate(toSet());
+        if (singleStage) {
+            stage = stage.optimizeMemory();
+        }
+        stage.drainTo(Sinks.list("sink"));
 
         instance.newJob(p);
         assertTrueEventually(() -> {
@@ -95,12 +114,17 @@ public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
         map.put(10L, "flush-item");
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
-                .timestampWithEventTime(Entry::getKey, 0)
-                .setMaximumTimeBetweenEvents(2000))
-         .window(WindowDefinition.session(2))
-         .aggregate(toSet(), (winStart, winEnd, result) -> new WindowResult(winStart, winEnd, "", result))
-         .drainTo(Sinks.list("sink"));
+        StreamStage<WindowResult> stage =
+                p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
+                        .timestampWithEventTime(Entry::getKey, 0)
+                        .setMaximumTimeBetweenEvents(2000))
+                 .window(WindowDefinition.session(2))
+                 .aggregate(toSet(), (winStart, winEnd, result) -> new WindowResult(winStart, winEnd, "", result));
+        if (singleStage) {
+            // this has no effect for the dag, but anyway, should work.
+            stage = stage.optimizeMemory();
+        }
+        stage.drainTo(Sinks.list("sink"));
 
         instance.newJob(p);
 

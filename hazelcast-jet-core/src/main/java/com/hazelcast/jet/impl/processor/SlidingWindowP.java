@@ -28,6 +28,7 @@ import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.function.KeyedWindowResultFunction;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +50,6 @@ import static com.hazelcast.util.Preconditions.checkTrue;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.emptyMap;
-import static java.util.Objects.requireNonNull;
 
 /**
  * Handles various setups of sliding and tumbling window aggregation.
@@ -75,7 +75,7 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
     private final AggregateOperation<A, R> aggrOp;
     @Nonnull
     private final KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn;
-    @Nonnull
+    @Nullable
     private final BiConsumer<? super A, ? super A> combineFn;
     private final boolean isLastStage;
 
@@ -108,13 +108,13 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
         checkTrue(keyFns.size() == aggrOp.arity(), keyFns.size() + " key functions " +
                 "provided for " + aggrOp.arity() + "-arity aggregate operation");
         if (!winPolicy.isTumbling()) {
-            checkNotNull(aggrOp.combineFn(), "AggregateOperation lacks the combine primitive");
+            checkNotNull(aggrOp.combineFn(), "combine primitive of AggregateOperation is required for sliding windows");
         }
         this.winPolicy = winPolicy;
         this.frameTimestampFns = (List<ToLongFunction<Object>>) frameTimestampFns;
         this.keyFns = (List<Function<Object, ? extends K>>) keyFns;
         this.aggrOp = aggrOp;
-        this.combineFn = requireNonNull(aggrOp.combineFn());
+        this.combineFn = aggrOp.combineFn();
         this.mapToOutputFn = mapToOutputFn;
         this.isLastStage = isLastStage;
         this.wmFlatMapper = flatMapper(

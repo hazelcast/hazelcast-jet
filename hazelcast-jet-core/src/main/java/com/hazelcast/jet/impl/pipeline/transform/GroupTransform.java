@@ -29,8 +29,10 @@ import java.util.List;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
+import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.impl.pipeline.transform.AbstractTransform.Optimization.MEMORY;
 
 public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     @Nonnull
@@ -52,24 +54,52 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
         this.mapToOutputFn = mapToOutputFn;
     }
 
+    @Override
+    public void addToDag(Planner p) {
+        if (getOptimization() == MEMORY || aggrOp.combineFn() == null) {
+            addToDagSingleStage(p);
+        } else {
+            addToDagTwoStage(p);
+        }
+    }
+
     //                   ---------        ---------
     //                  | source0 |  ... | sourceN |
     //                   ---------        ---------
     //                       |                  |
+    //                  distributed        distributed
     //                  partitioned        partitioned
-    //                       v                  v
-    //                       --------------------
-    //                      |  accumulateByKeyP  |
-    //                       --------------------
-    //                                 |
-    //                            distributed
-    //                            partitioned
-    //                                 v
-    //                          ---------------
-    //                         | combineByKeyP |
-    //                          ---------------
-    @Override
-    public void addToDag(Planner p) {
+    //                       |                  |
+    //                       \                  /
+    //                        ----\      /------
+    //                            v      v
+    //                         -----------------
+    //                        | aggregateByKeyP |
+    //                         -----------------
+    private void addToDagSingleStage(Planner p) {
+        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), getLocalParallelism(),
+                aggregateByKeyP(groupKeyFns, aggrOp, mapToOutputFn));
+        p.addEdges(this, pv.v, (e, ord) -> e.distributed().partitioned(groupKeyFns.get(ord)));
+    }
+
+    //                   ---------        ---------
+    //                  | source0 |  ... | sourceN |
+    //                   ---------        ---------
+    //                       |                |
+    //                     local            local
+    //                  partitioned      partitioned
+    //                       v                v
+    //                      --------------------
+    //                     |  accumulateByKeyP  |
+    //                      --------------------
+    //                                |
+    //                           distributed
+    //                           partitioned
+    //                                v
+    //                         ---------------
+    //                        | combineByKeyP |
+    //                         ---------------
+    private void addToDagTwoStage(Planner p) {
         List<DistributedFunction<?, ? extends K>> groupKeyFns = this.groupKeyFns;
         String namePrefix = p.vertexName(this.name(), "-stage");
         Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateByKeyP(groupKeyFns, aggrOp))

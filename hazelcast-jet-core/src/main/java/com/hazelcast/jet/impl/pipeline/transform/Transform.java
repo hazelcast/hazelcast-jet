@@ -38,6 +38,9 @@ public interface Transform extends Serializable {
     int getLocalParallelism();
     void localParallelism(int localParallelism);
 
+    void optimizeMemory();
+    void optimizeNetworkTraffic();
+
     @Nonnull
     List<? extends Transform> upstream();
 

@@ -21,6 +21,7 @@ import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Stage;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 
 import static java.util.Collections.emptyList;
@@ -52,5 +53,17 @@ public abstract class AbstractStage implements Stage {
     @Override
     public String toString() {
         return String.valueOf(transform);
+    }
+
+    @Nonnull @Override
+    public AbstractStage optimizeMemory() {
+        transform.optimizeMemory();
+        return this;
+    }
+
+    @Nonnull @Override
+    public AbstractStage optimizeNetworkTraffic() {
+        transform.optimizeNetworkTraffic();
+        return this;
     }
 }

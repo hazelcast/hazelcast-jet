@@ -21,16 +21,24 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.spi.properties.GroupProperty;
-import com.hazelcast.test.HazelcastParallelClassRunner;
+import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
+import org.junit.runners.Parameterized.UseParametersRunnerFactory;
+
+import java.util.Map.Entry;
+import java.util.Set;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
@@ -39,11 +47,20 @@ import static com.hazelcast.jet.core.test.TestSupport.listToString;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 
-@RunWith(HazelcastParallelClassRunner.class)
+@RunWith(Parameterized.class)
+@UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 @Category(ParallelTest.class)
 public class AggregateTransform_IntegrationTest extends JetTestSupport {
 
+    @Parameter
+    public boolean singleStage;
+
     private JetInstance instance;
+
+    @Parameters(name = "singleStage={0}")
+    public static Object[] parameters() {
+        return new Object[]{true, false};
+    }
 
     @Before
     public void before() {
@@ -61,9 +78,13 @@ public class AggregateTransform_IntegrationTest extends JetTestSupport {
         map.put(1L, "bar");
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Long, String>map("source"))
-         .aggregate(toSet())
-         .drainTo(Sinks.list("sink"));
+        BatchStage<Set<Entry<Long, String>>> stage =
+                p.drawFrom(Sources.<Long, String>map("source"))
+                 .aggregate(toSet());
+        if (singleStage) {
+            stage = stage.optimizeMemory();
+        }
+        stage.drainTo(Sinks.list("sink"));
 
         instance.newJob(p).join();
 

@@ -27,29 +27,42 @@ import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.WindowDefinition;
-import com.hazelcast.test.HazelcastParallelClassRunner;
+import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
+import org.junit.runners.Parameterized.UseParametersRunnerFactory;
 
 import java.util.HashSet;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
 import static com.hazelcast.jet.core.TestUtil.set;
-import static com.hazelcast.jet.core.test.TestSupport.listToString;
-import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 
-@RunWith(HazelcastParallelClassRunner.class)
+@RunWith(Parameterized.class)
+@UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 @Category(ParallelTest.class)
 public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
 
+    @Parameter
+    public boolean singleStage;
+
     private JetInstance instance;
+
+    @Parameters(name = "singleStage={0}")
+    public static Object[] parameters() {
+        return new Object[]{true, false};
+    }
 
     @Before
     public void before() {
@@ -62,13 +75,17 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
     @Test
     public void testSliding_groupingFirst() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
-                .timestampWithEventTime(Entry::getKey, 0)
-                .setMaximumTimeBetweenEvents(2000))
-         .groupingKey(entry -> entry.getValue().charAt(0))
-         .window(WindowDefinition.tumbling(2))
-         .aggregate(toSet())
-         .drainTo(Sinks.list("sink"));
+        StreamStage<TimestampedEntry<Character, Set<Entry<Long, String>>>> stage =
+                p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
+                        .timestampWithEventTime(Entry::getKey, 0)
+                        .setMaximumTimeBetweenEvents(2000))
+                 .groupingKey(entry -> entry.getValue().charAt(0))
+                 .window(WindowDefinition.tumbling(2))
+                 .aggregate(toSet());
+        if (singleStage) {
+            stage = stage.optimizeMemory();
+        }
+        stage.drainTo(Sinks.list("sink"));
 
         testSliding(p);
     }
@@ -76,13 +93,17 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
     @Test
     public void testSliding_windowFirst() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
-                .timestampWithEventTime(Entry::getKey, 0)
-                .setMaximumTimeBetweenEvents(2000))
-         .window(WindowDefinition.tumbling(2))
-         .groupingKey(entry -> entry.getValue().charAt(0))
-         .aggregate(toSet())
-         .drainTo(Sinks.list("sink"));
+        StreamStage<TimestampedEntry<Character, Set<Entry<Long, String>>>> stage =
+                p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
+                        .timestampWithEventTime(Entry::getKey, 0)
+                        .setMaximumTimeBetweenEvents(2000))
+                 .window(WindowDefinition.tumbling(2))
+                 .groupingKey(entry -> entry.getValue().charAt(0))
+                 .aggregate(toSet());
+        if (singleStage) {
+            stage = stage.optimizeMemory();
+        }
+        stage.drainTo(Sinks.list("sink"));
 
         testSliding(p);
     }
@@ -119,7 +140,6 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
          .window(WindowDefinition.session(2))
          .groupingKey(entry -> entry.getValue().charAt(0))
          .aggregate(toSet(), WindowResult::new)
-         .localParallelism(3)
          .drainTo(Sinks.list("sink"));
 
         testSession(p);
@@ -139,7 +159,7 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
         testSession(p);
     }
 
-    public void testSession(Pipeline p) {
+    private void testSession(Pipeline p) {
         IMap<Long, String> map = instance.getMap("source");
         map.put(0L, "foo");
         map.put(1L, "bar");
@@ -151,11 +171,11 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
 
         assertTrueEventually(() -> {
             assertEquals(
-                    listToString(asList(
+                    set(
                             new WindowResult<>(0, 2, 'f', set(entry(0L, "foo"))),
                             new WindowResult<>(1, 3, 'b', set(entry(1L, "bar"))),
-                            new WindowResult<>(4, 7, 'b', set(entry(4L, "baz"), entry(5L, "booze"))))),
-                    listToString(instance.getHazelcastInstance().getList("sink")));
+                            new WindowResult<>(4, 7, 'b', set(entry(4L, "baz"), entry(5L, "booze")))),
+                    new HashSet<>(instance.getHazelcastInstance().getList("sink")));
         }, 5);
     }
 }
