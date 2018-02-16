@@ -45,6 +45,7 @@ import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
+import static com.hazelcast.jet.impl.pipeline.JetEventImpl.jetEvent;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -77,7 +78,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy
     ) {
         TimestampTransform<T> tsTransform =
-                new TimestampTransform<>(transform, wmGenParams(timestampFn, wmPolicy, suppressDuplicates(), 0L));
+                new TimestampTransform<>(transform,
+                        wmGenParams(timestampFn, JetEventImpl::jetEvent, wmPolicy, suppressDuplicates(), 0L));
         pipelineImpl.connect(transform, tsTransform);
         return new StreamStageImpl<>(tsTransform, ADAPT_TO_JET_EVENT, pipelineImpl);
     }

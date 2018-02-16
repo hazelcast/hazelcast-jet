@@ -637,13 +637,14 @@ public final class AggregateOperations {
      * @see #toBagsByTag(Tag[])
      */
     @Nonnull
-    public static <T0, T1> AggregateOperation<TwoBags<T0, T1>, TwoBags<T0, T1>> toTwoBags() {
+    public static <T0, T1> AggregateOperation2<T0, T1, TwoBags<T0, T1>, TwoBags<T0, T1>> toTwoBags() {
         return AggregateOperation
                 .withCreate(TwoBags::<T0, T1>twoBags)
                 .<T0>andAccumulate0((acc, item0) -> acc.bag0().add(item0))
                 .<T1>andAccumulate1((acc, item1) -> acc.bag1().add(item1))
                 .andCombine(TwoBags::combineWith)
-                .andIdentityFinish();
+                .andDeduct(TwoBags::deduct)
+                .andFinish(TwoBags::finish);
     }
 
     /**
@@ -659,14 +660,16 @@ public final class AggregateOperations {
      * @see #toBagsByTag(Tag[])
      */
     @Nonnull
-    public static <T0, T1, T2> AggregateOperation<ThreeBags<T0, T1, T2>, ThreeBags<T0, T1, T2>> toThreeBags() {
+    public static <T0, T1, T2>
+    AggregateOperation3<T0, T1, T2, ThreeBags<T0, T1, T2>, ThreeBags<T0, T1, T2>> toThreeBags() {
         return AggregateOperation
-                .withCreate(ThreeBags::<T0, T1, T2>threeBags)
+                .withCreate(ThreeBags::< T0, T1, T2>threeBags)
                 .<T0>andAccumulate0((acc, item0) -> acc.bag0().add(item0))
                 .<T1>andAccumulate1((acc, item1) -> acc.bag1().add(item1))
                 .<T2>andAccumulate2((acc, item2) -> acc.bag2().add(item2))
                 .andCombine(ThreeBags::combineWith)
-                .andIdentityFinish();
+                .andDeduct(ThreeBags::deduct)
+                .andFinish(ThreeBags::finish);
     }
 
     /**
@@ -678,20 +681,19 @@ public final class AggregateOperations {
      * @see #toThreeBags()
      */
     @Nonnull
+    @SuppressWarnings("unchecked")
     public static AggregateOperation<BagsByTag, BagsByTag> toBagsByTag(@Nonnull Tag<?> ... tags) {
         checkPositive(tags.length, "At least one tag required");
         VarArity<BagsByTag> builder = AggregateOperation
                 .withCreate(BagsByTag::new)
                 .andAccumulate(tags[0], (acc, item) -> ((Collection) acc.ensureBag(tags[0])).add(item));
-
         for (int i = 1; i < tags.length; i++) {
             Tag tag = tags[i];
             builder = builder.andAccumulate(tag, (acc, item) -> acc.ensureBag(tag).add(item));
         }
-
         return builder
                 .andCombine(BagsByTag::combineWith)
-                .andIdentityFinish();
+                .andFinish(BagsByTag::finish);
     }
 
     /**

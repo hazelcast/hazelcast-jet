@@ -36,12 +36,16 @@ import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.hazelcast.jet.datamodel.Tag.tag;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DONT_ADAPT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
 import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptAggregateOperation;
+import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptKeyFn;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -112,8 +116,15 @@ public class GrAggBuilder<K> {
     ) {
         List<Transform> upstreamTransforms = upstreamStages.stream().map(s -> s.transform).collect(toList());
         JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
+
+        // Avoided Stream API here due to static typing issues
+        List<DistributedFunction<?, ? extends K>> adaptedKeyFns = new ArrayList<>();
+        for (DistributedFunction keyFn : keyFns) {
+            adaptedKeyFns.add(adaptKeyFn(keyFn));
+        }
+
         Transform transform = new WindowGroupTransform<K, A, R, JetEvent<OUT>>(
-                upstreamTransforms, wDef, keyFns, adaptAggregateOperation(aggrOp),
+                upstreamTransforms, wDef, adaptedKeyFns, adaptAggregateOperation(aggrOp),
                 fnAdapter.adaptKeyedWindowResultFn(mapToOutputFn)
         );
         pipelineImpl.connect(upstreamTransforms, transform);
