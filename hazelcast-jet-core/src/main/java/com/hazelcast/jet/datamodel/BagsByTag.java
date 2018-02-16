@@ -101,6 +101,15 @@ public class BagsByTag {
         that.components.forEach((k, v) -> ensureBag(k).addAll(v));
     }
 
+    /**
+     * Returns a safe copy of this container.
+     */
+    public BagsByTag finish() {
+        BagsByTag copy = new BagsByTag();
+        copy.components.putAll(components);
+        return copy;
+    }
+
     @Override
     public boolean equals(Object o) {
         return this == o
