@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.hazelcast.jet.datamodel.Tag.tag;
+import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DONT_ADAPT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
 import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptAggregateOperation;
@@ -110,10 +111,12 @@ public class GrAggBuilder<K> {
             @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
         List<Transform> upstreamTransforms = upstreamStages.stream().map(s -> s.transform).collect(toList());
-        Transform transform = new WindowGroupTransform<K, A, R, OUT>(
-                upstreamTransforms, wDef, keyFns, adaptAggregateOperation(aggrOp), mapToOutputFn
+        JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
+        Transform transform = new WindowGroupTransform<K, A, R, JetEvent<OUT>>(
+                upstreamTransforms, wDef, keyFns, adaptAggregateOperation(aggrOp),
+                fnAdapter.adaptKeyedWindowResultFn(mapToOutputFn)
         );
         pipelineImpl.connect(upstreamTransforms, transform);
-        return new StreamStageImpl<>(transform, DONT_ADAPT, pipelineImpl);
+        return new StreamStageImpl<>(transform, fnAdapter, pipelineImpl);
     }
 }

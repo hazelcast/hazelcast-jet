@@ -65,6 +65,11 @@ public class PipelineImpl implements Pipeline {
         upstream.forEach(u -> connect(u, downstream));
     }
 
+    @Override
+    public String toString() {
+        return "Pipeline " + adjacencyMap;
+    }
+
     Map<Transform, List<Transform>> adjacencyMap() {
         Map<Transform, List<Transform>> safeCopy = new HashMap<>();
         adjacencyMap.forEach((k, v) -> safeCopy.put(k, new ArrayList<>(v)));
