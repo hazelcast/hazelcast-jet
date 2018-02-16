@@ -98,7 +98,4 @@ public class InstanceConfigTest {
         // Then
         assertEquals(500, instanceConfig.getFlowControlPeriodMs());
     }
-
-
-
 }

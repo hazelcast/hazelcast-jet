@@ -232,11 +232,4 @@ public class JobConfigTest {
         assertEquals(1, resourceConfigs.size());
         return resourceConfigs.iterator().next();
     }
-
-
 }
-
-
-
-
-

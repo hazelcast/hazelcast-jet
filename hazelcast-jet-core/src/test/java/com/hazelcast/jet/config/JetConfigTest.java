@@ -75,11 +75,4 @@ public class JetConfigTest {
         // Then
         assertEquals(properties, jetConfig.getProperties());
     }
-
-
 }
-
-
-
-
-
