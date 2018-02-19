@@ -17,15 +17,14 @@
 package com.hazelcast.jet.impl.deployment;
 
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.test.IgnoredForCoverage;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.impl.deployment.LoadPersonIsolated.LoadPersonIsolatedMetaSupplier;
+import com.hazelcast.jet.impl.deployment.LoadResource.LoadResourceMetaSupplier;
 import com.hazelcast.jet.stream.IStreamMap;
+import com.hazelcast.jet.test.IgnoredForCoverage;
 import com.hazelcast.test.HazelcastTestSupport;
-import com.hazelcast.util.FilteringClassLoader;
 import java.io.Serializable;
-import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.List;
@@ -46,18 +45,15 @@ public abstract class AbstractDeploymentTest extends HazelcastTestSupport {
     protected abstract void createCluster();
 
     @Test
-    public void test_Jar_Distribution() throws Throwable {
+    public void testDeployment_whenJarAddedAsResource_thenClassesAvailableOnClassLoader() throws Throwable {
         createCluster();
 
         DAG dag = new DAG();
-        dag.newVertex("create and print person", new LoadPersonIsolatedMetaSupplier());
-
+        dag.newVertex("load class", new LoadPersonIsolatedMetaSupplier());
 
         JetInstance jetInstance = getJetInstance();
         JobConfig jobConfig = new JobConfig();
-        jobConfig.addJar(this.getClass().getResource("/sample-pojo-1.0-person.jar"));
-        jobConfig.addJar(this.getClass().getResource("/sample-pojo-1.0-deployment.jar"));
-        jobConfig.addClass(AbstractDeploymentTest.class);
+        jobConfig.addJar(this.getClass().getResource("/deployment/sample-pojo-1.0-person.jar"));
 
         executeAndPeel(jetInstance.newJob(dag, jobConfig));
     }
@@ -86,7 +82,7 @@ public abstract class AbstractDeploymentTest extends HazelcastTestSupport {
     }
 
     @Test
-    public void test_Class_Distribution() throws Throwable {
+    public void testDeployment_whenClassAddedAsResource_thenClassAvailableOnClassLoader() throws Throwable {
         createCluster();
 
         DAG dag = new DAG();
@@ -97,25 +93,22 @@ public abstract class AbstractDeploymentTest extends HazelcastTestSupport {
         URLClassLoader urlClassLoader = new URLClassLoader(new URL[]{classUrl}, null);
         Class<?> appearance = urlClassLoader.loadClass("com.sample.pojo.person.Person$Appereance");
         jobConfig.addClass(appearance);
-        jobConfig.addJar(this.getClass().getResource("/sample-pojo-1.0-deployment.jar"));
-        jobConfig.addClass(AbstractDeploymentTest.class);
 
         executeAndPeel(getJetInstance().newJob(dag, jobConfig));
     }
 
-    static Object createIsolatedNode(Thread thread, FilteringClassLoader cl) throws Exception {
-        thread.setContextClassLoader(cl);
-        Class<?> jetConfigClazz = cl.loadClass("com.hazelcast.jet.config.JetConfig");
-        Class<?> hazelcastConfigClazz = cl.loadClass("com.hazelcast.config.Config");
-        Object config = jetConfigClazz.newInstance();
-        Method getHazelcastConfig = jetConfigClazz.getDeclaredMethod("getHazelcastConfig");
-        Object hazelcastConfig = getHazelcastConfig.invoke(config);
-        Method setClassLoader = hazelcastConfigClazz.getDeclaredMethod("setClassLoader", ClassLoader.class);
-        setClassLoader.invoke(hazelcastConfig, cl);
 
-        Class<?> jetClazz = cl.loadClass("com.hazelcast.jet.Jet");
-        Method newJetInstance = jetClazz.getDeclaredMethod("newJetInstance", jetConfigClazz);
-        return newJetInstance.invoke(jetClazz, config);
+    @Test
+    public void testDeployment_whenFileAddedAsResource_thenAvailableOnClassLoader() throws Throwable {
+        createCluster();
+
+        DAG dag = new DAG();
+        dag.newVertex("load resource", new LoadResourceMetaSupplier());
+
+        JobConfig jobConfig = new JobConfig();
+        jobConfig.addResource(this.getClass().getResource("/deployment/resource.txt"), "customId");
+
+        executeAndPeel(getJetInstance().newJob(dag, jobConfig));
     }
 
     static class MyMapper implements Function<Map.Entry<Integer, Integer>, Integer>, Serializable {

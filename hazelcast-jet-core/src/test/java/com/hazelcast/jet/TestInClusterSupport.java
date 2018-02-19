@@ -38,7 +38,8 @@ import java.util.function.Supplier;
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 public abstract class TestInClusterSupport extends JetTestSupport {
 
-    protected static final String JOURNALED_MAP_PREFIX = "journaledMap.";
+    public static final String JOURNALED_MAP_PREFIX = "journaledMap.";
+    public static final String JOURNALED_CACHE_PREFIX = "journaledCache.";
 
     private static final int MEMBER_COUNT = 2;
 
@@ -60,13 +61,14 @@ public abstract class TestInClusterSupport extends JetTestSupport {
     }
 
     @BeforeClass
-    public static void setupCluster() throws Exception {
+    public static void setupCluster() {
         int parallelism = Runtime.getRuntime().availableProcessors() / MEMBER_COUNT / 2;
         JetConfig config = new JetConfig();
         config.getInstanceConfig().setCooperativeThreadCount(parallelism <= 2 ? 2 : parallelism);
         Config hzConfig = config.getHazelcastConfig();
         hzConfig.addCacheConfig(new CacheSimpleConfig().setName("*"));
         hzConfig.getMapEventJournalConfig(JOURNALED_MAP_PREFIX + '*').setEnabled(true);
+        hzConfig.getCacheEventJournalConfig(JOURNALED_CACHE_PREFIX + '*').setEnabled(true);
         member = createCluster(MEMBER_COUNT, config);
         client = factory.newClient();
     }
