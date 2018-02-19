@@ -169,9 +169,13 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         assert resultSet != null : "null resultSet";
         while (resultSetPosition < resultSet.size()) {
             T event = resultSet.get(resultSetPosition);
-            traverser = watermarkSourceUtil.handleEvent(event, currentPartitionIndex);
-            if (!emitFromTraverser(traverser, this::afterEmit)) {
-                return;
+            if (event != null) {
+                traverser = watermarkSourceUtil.handleEvent(event, currentPartitionIndex);
+                if (!emitFromTraverser(traverser, this::afterEmit)) {
+                    return;
+                }
+            } else {
+                afterEmit(null);
             }
         }
         // we're done with current resultSet
@@ -179,7 +183,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         resultSet = null;
     }
 
-    private void afterEmit(Object object) {
+    private void afterEmit(@Nullable Object object) {
         if (object instanceof Watermark) {
             return;
         }
@@ -288,7 +292,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     }
 
     private ICompletableFuture<ReadResultSet<T>> readFromJournal(int partition, long offset) {
-        logFine(getLogger(), "Reading from partition %s and offset %s", partition, offset);
+        logFine(getLogger(), "Reading from partition %d and offset %d", partition, offset);
         return eventJournalReader.readFromEventJournal(offset,
                 1, MAX_FETCH_SIZE, partition, predicate, projection);
     }

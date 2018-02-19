@@ -42,12 +42,12 @@ import static java.util.Collections.emptyList;
  */
 public class StreamSourceTransform<T> extends AbstractTransform implements StreamSource<T> {
 
-    private static final long DEFAULT_IDLE_TIMEOUT = 60000L;
+    private static final long DEFAULT_IDLE_TIMEOUT_MS = 60_000L;
 
     private final Function<WatermarkGenerationParams<T>, ProcessorMetaSupplier> metaSupplierFn;
     private final boolean supportsWatermarks;
     private DistributedToLongFunction<? super T> timestampFn;
-    private long idleTimeout = DEFAULT_IDLE_TIMEOUT;
+    private long idleTimeoutMs = DEFAULT_IDLE_TIMEOUT_MS;
     private long maxLag;
 
     public StreamSourceTransform(
@@ -79,7 +79,7 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
     @Nonnull @Override
     public StreamSource<T> setMaximumTimeBetweenEvents(long maxTimeMs) {
         assertWatermarksEnabled();
-        this.idleTimeout = maxTimeMs;
+        this.idleTimeoutMs = maxTimeMs;
         return this;
     }
 
@@ -91,7 +91,7 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
     public void addToDag(Planner p) {
         WatermarkGenerationParams<T> params = emitsJetEvents()
                 ? wmGenParams(timestampFn, JetEventImpl::jetEvent, limitingLag(maxLag),
-                                suppressDuplicates(), idleTimeout)
+                                suppressDuplicates(), idleTimeoutMs)
                 : noWatermarks();
         if (supportsWatermarks || !emitsJetEvents()) {
             p.addVertex(this, p.vertexName(name(), ""), getLocalParallelism(), metaSupplierFn.apply(params));

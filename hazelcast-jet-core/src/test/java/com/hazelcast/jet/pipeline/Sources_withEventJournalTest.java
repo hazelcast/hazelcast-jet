@@ -145,7 +145,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
                         .stream()
                         .sorted()
                         .collect(joining("\n"))
-        ));
+        ), 5);
     }
 
     @Test
