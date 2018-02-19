@@ -663,7 +663,7 @@ public final class AggregateOperations {
     public static <T0, T1, T2>
     AggregateOperation3<T0, T1, T2, ThreeBags<T0, T1, T2>, ThreeBags<T0, T1, T2>> toThreeBags() {
         return AggregateOperation
-                .withCreate(ThreeBags::< T0, T1, T2>threeBags)
+                .withCreate(ThreeBags::<T0, T1, T2>threeBags)
                 .<T0>andAccumulate0((acc, item0) -> acc.bag0().add(item0))
                 .<T1>andAccumulate1((acc, item1) -> acc.bag1().add(item1))
                 .<T2>andAccumulate2((acc, item2) -> acc.bag2().add(item2))
