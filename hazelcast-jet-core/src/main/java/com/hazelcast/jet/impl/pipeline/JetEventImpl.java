@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import javax.annotation.Nonnull;
 import java.util.Objects;
 
 /**
@@ -25,7 +26,7 @@ public final class JetEventImpl<T> implements JetEvent<T> {
     private final T payload;
     private final long timestamp;
 
-    private JetEventImpl(T payload, long timestamp) {
+    private JetEventImpl(@Nonnull T payload, long timestamp) {
         this.timestamp = timestamp;
         this.payload = payload;
     }
@@ -39,6 +40,7 @@ public final class JetEventImpl<T> implements JetEvent<T> {
         return timestamp;
     }
 
+    @Nonnull
     @Override
     public T payload() {
         return payload;

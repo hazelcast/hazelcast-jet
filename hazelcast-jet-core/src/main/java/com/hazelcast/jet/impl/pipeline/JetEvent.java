@@ -16,11 +16,14 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import javax.annotation.Nonnull;
+
 /**
  * Javadoc pending.
  */
 public interface JetEvent<T> {
     long timestamp();
 
+    @Nonnull
     T payload();
 }
