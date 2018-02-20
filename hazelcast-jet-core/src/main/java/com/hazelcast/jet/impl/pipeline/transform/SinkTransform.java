@@ -26,8 +26,10 @@ import java.util.ArrayList;
 import java.util.function.Function;
 
 public class SinkTransform<T> extends AbstractTransform implements Sink<T> {
+
     @Nonnull
     private ProcessorMetaSupplier metaSupplier;
+    private boolean metaSupplierReplaced;
 
     public SinkTransform(
             @Nonnull String name,
@@ -49,7 +51,10 @@ public class SinkTransform<T> extends AbstractTransform implements Sink<T> {
     public void replaceMetaSupplier(
             @Nonnull Function<? super ProcessorMetaSupplier, ? extends ProcessorMetaSupplier> updateMetaSupplierFn
     ) {
-        metaSupplier = updateMetaSupplierFn.apply(metaSupplier);
+        if (!metaSupplierReplaced) {
+            metaSupplierReplaced = true;
+            metaSupplier = updateMetaSupplierFn.apply(metaSupplier);
+        }
     }
 
     @Override
