@@ -82,10 +82,9 @@ public final class JoinClause<K, T0, T1, T1_OUT> implements Serializable {
      * @param leftKeyFn the function to extract the key from the primary stream
      * @param <K> the type of the key
      * @param <T0> the type of the primary stream
-     * @param <T1> the type of the enriching stream's entry value
-     * @param <T1_IN> the type of the enriching stream ({@code Map.Entry<K, T1>})
+     * @param <T1_OUT> the type of the enriching stream's entry value
      */
-    public static <K, T0, T1_IN extends Entry<K, T1>, T1> JoinClause<K, T0, T1_IN, T1> joinMapEntries(
+    public static <K, T0, T1_OUT> JoinClause<K, T0, Entry<K, T1_OUT>, T1_OUT> joinMapEntries(
             DistributedFunction<? super T0, ? extends K> leftKeyFn
     ) {
         return new JoinClause<>(leftKeyFn, Entry::getKey, Entry::getValue);
