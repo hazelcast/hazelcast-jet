@@ -119,26 +119,26 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     }
 
     @Nonnull @Override
-    public StreamStage<T> localParallelism(int localParallelism) {
-        super.localParallelism(localParallelism);
+    public StreamStage<T> setLocalParallelism(int localParallelism) {
+        super.setLocalParallelism(localParallelism);
         return this;
     }
 
     @Nonnull @Override
-    public StreamStage<T> optimizeMemory() {
-        super.optimizeMemory();
+    public StreamStage<T> setOptimizeMemory() {
+        super.setOptimizeMemory();
         return this;
     }
 
     @Nonnull @Override
-    public StreamStage<T> optimizeNetworkTraffic() {
-        super.optimizeNetworkTraffic();
+    public StreamStage<T> setOptimizeNetworkTraffic() {
+        super.setOptimizeNetworkTraffic();
         return this;
     }
 
     @Nonnull @Override
-    public StreamStage<T> debugName(@Nullable String name) {
-        super.debugName(name);
+    public StreamStage<T> setDebugName(@Nullable String name) {
+        super.setDebugName(name);
         return this;
     }
 }

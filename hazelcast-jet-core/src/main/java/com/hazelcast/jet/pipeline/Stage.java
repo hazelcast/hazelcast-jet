@@ -50,20 +50,20 @@ public interface Stage {
      * from the global default and processor meta-supplier's preferred value.
      */
     @Nonnull
-    Stage localParallelism(int localParallelism);
+    Stage setLocalParallelism(int localParallelism);
 
     /**
      * A <em>hint</em> to prefer DAG setup that uses less memory for this
-     * stage. It is an opposite strategy to {@link #optimizeNetworkTraffic()}
+     * stage. It is an opposite strategy to {@link #setOptimizeNetworkTraffic()}
      * (the default), see it for more details.
      */
     @Nonnull
-    Stage optimizeMemory();
+    Stage setOptimizeMemory();
 
     /**
      * A <em>hint</em> to prefer DAG setup that transfers less data over the
      * network. This is the default strategy, the opposite strategy is {@link
-     * #optimizeMemory()}.
+     * #setOptimizeMemory()}.
      * <p>
      * Currently only aggregation stages consider this hint. It makes them to
      * choose two step aggregation. That is, first pre-aggregate items
@@ -82,7 +82,7 @@ public interface Stage {
      * member processing its partition and accumulate there. As a result
      */
     @Nonnull
-    Stage optimizeNetworkTraffic();
+    Stage setOptimizeNetworkTraffic();
 
     /**
      * Sets the name to use for debugging. Doesn't have any effect on
@@ -93,5 +93,5 @@ public interface Stage {
      * @return this stage with name set
      */
     @Nonnull
-    Stage debugName(@Nullable String name);
+    Stage setDebugName(@Nullable String name);
 }

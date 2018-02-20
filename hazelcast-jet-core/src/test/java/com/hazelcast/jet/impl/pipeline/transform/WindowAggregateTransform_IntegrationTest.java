@@ -85,13 +85,12 @@ public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         StreamStage<TimestampedItem<Set<Entry<Long, String>>>> stage =
-                p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
-                        .timestampWithEventTime(Map.Entry::getKey, 0)
-                        .setMaximumTimeBetweenEvents(1000L))
+                p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST))
+                 .setTimestampWithEventTime(Map.Entry::getKey, 0)
                  .window(WindowDefinition.tumbling(2))
                  .aggregate(toSet());
         if (singleStage) {
-            stage = stage.optimizeMemory();
+            stage = stage.setOptimizeMemory();
         }
         stage.drainTo(Sinks.list("sink"));
 
@@ -115,14 +114,13 @@ public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         StreamStage<WindowResult> stage =
-                p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST)
-                        .timestampWithEventTime(Entry::getKey, 0)
-                        .setMaximumTimeBetweenEvents(2000))
+                p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST))
+                 .setTimestampWithEventTime(Entry::getKey, 0)
                  .window(WindowDefinition.session(2))
-                 .aggregate(toSet(), (winStart, winEnd, result) -> new WindowResult(winStart, winEnd, "", result));
+                 .aggregate(toSet(), (winStart, winEnd, result) -> new WindowResult<>(winStart, winEnd, "", result));
         if (singleStage) {
             // this has no effect for the dag, but anyway, should work.
-            stage = stage.optimizeMemory();
+            stage = stage.setOptimizeMemory();
         }
         stage.drainTo(Sinks.list("sink"));
 

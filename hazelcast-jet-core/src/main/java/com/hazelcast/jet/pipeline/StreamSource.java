@@ -16,8 +16,6 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.function.DistributedToLongFunction;
-
 import javax.annotation.Nonnull;
 
 /**
@@ -30,14 +28,5 @@ public interface StreamSource<T> {
      */
     @Nonnull
     String name();
-
-    @Nonnull
-    StreamSource<T> timestampWithSystemTime();
-
-    @Nonnull
-    StreamSource<T> timestampWithEventTime(DistributedToLongFunction<? super T> timestampFn, long allowedLatenessMs);
-
-    @Nonnull
-    StreamSource<T> setMaximumTimeBetweenEvents(long maxTimeMs);
 
 }

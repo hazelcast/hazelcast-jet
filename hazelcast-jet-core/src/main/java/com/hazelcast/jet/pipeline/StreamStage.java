@@ -84,14 +84,14 @@ public interface StreamStage<T> extends GeneralStage<T> {
             @Nonnull DistributedSupplier<Processor> procSupplier);
 
     @Nonnull @Override
-    StreamStage<T> localParallelism(int localParallelism);
+    StreamStage<T> setLocalParallelism(int localParallelism);
 
     @Nonnull @Override
-    StreamStage<T> optimizeMemory();
+    StreamStage<T> setOptimizeMemory();
 
     @Nonnull @Override
-    StreamStage<T> optimizeNetworkTraffic();
+    StreamStage<T> setOptimizeNetworkTraffic();
 
     @Nonnull @Override
-    StreamStage<T> debugName(@Nullable String name);
+    StreamStage<T> setDebugName(@Nullable String name);
 }

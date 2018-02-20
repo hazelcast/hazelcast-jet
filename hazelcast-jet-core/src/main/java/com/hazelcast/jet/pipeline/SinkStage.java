@@ -26,14 +26,14 @@ import javax.annotation.Nullable;
 public interface SinkStage extends Stage {
 
     @Nonnull @Override
-    SinkStage localParallelism(int localParallelism);
+    SinkStage setLocalParallelism(int localParallelism);
 
     @Nonnull @Override
-    SinkStage optimizeMemory();
+    SinkStage setOptimizeMemory();
 
     @Nonnull @Override
-    SinkStage optimizeNetworkTraffic();
+    SinkStage setOptimizeNetworkTraffic();
 
     @Nonnull @Override
-    SinkStage debugName(@Nullable String name);
+    SinkStage setDebugName(@Nullable String name);
 }

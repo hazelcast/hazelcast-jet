@@ -82,7 +82,7 @@ public class AggregateTransform_IntegrationTest extends JetTestSupport {
                 p.drawFrom(Sources.<Long, String>map("source"))
                  .aggregate(toSet());
         if (singleStage) {
-            stage = stage.optimizeMemory();
+            stage = stage.setOptimizeMemory();
         }
         stage.drainTo(Sinks.list("sink"));
 

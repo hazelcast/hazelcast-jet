@@ -81,7 +81,7 @@ public class GroupTransform_IntegrationTest extends JetTestSupport {
                  .groupingKey(entry -> entry.getValue().charAt(0))
                  .aggregate(toSet());
         if (singleStage) {
-            stage = stage.optimizeMemory();
+            stage = stage.setOptimizeMemory();
         }
         stage.drainTo(Sinks.list("sink"));
 

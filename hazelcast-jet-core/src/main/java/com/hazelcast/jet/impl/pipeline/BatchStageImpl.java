@@ -143,26 +143,26 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    public BatchStage<T> localParallelism(int localParallelism) {
-        super.localParallelism(localParallelism);
+    public BatchStage<T> setLocalParallelism(int localParallelism) {
+        super.setLocalParallelism(localParallelism);
         return this;
     }
 
     @Nonnull @Override
-    public BatchStage<T> optimizeMemory() {
-        super.optimizeMemory();
+    public BatchStage<T> setOptimizeMemory() {
+        super.setOptimizeMemory();
         return this;
     }
 
     @Nonnull @Override
-    public BatchStage<T> optimizeNetworkTraffic() {
-        super.optimizeNetworkTraffic();
+    public BatchStage<T> setOptimizeNetworkTraffic() {
+        super.setOptimizeNetworkTraffic();
         return this;
     }
 
     @Nonnull @Override
-    public BatchStage<T> debugName(@Nullable String name) {
-        super.debugName(name);
+    public BatchStage<T> setDebugName(@Nullable String name) {
+        super.setDebugName(name);
         return this;
     }
 }

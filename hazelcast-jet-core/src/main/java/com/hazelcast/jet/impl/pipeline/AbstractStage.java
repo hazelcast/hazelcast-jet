@@ -57,25 +57,25 @@ public abstract class AbstractStage implements Stage {
     }
 
     @Nonnull @Override
-    public Stage localParallelism(int localParallelism) {
+    public Stage setLocalParallelism(int localParallelism) {
         transform.localParallelism(localParallelism);
         return this;
     }
 
     @Nonnull @Override
-    public Stage optimizeMemory() {
+    public Stage setOptimizeMemory() {
         transform.optimizeMemory();
         return this;
     }
 
     @Nonnull @Override
-    public Stage optimizeNetworkTraffic() {
+    public Stage setOptimizeNetworkTraffic() {
         transform.optimizeNetworkTraffic();
         return this;
     }
 
     @Nonnull @Override
-    public Stage debugName(@Nullable String name) {
+    public Stage setDebugName(@Nullable String name) {
         transform.debugName(name);
         return this;
     }

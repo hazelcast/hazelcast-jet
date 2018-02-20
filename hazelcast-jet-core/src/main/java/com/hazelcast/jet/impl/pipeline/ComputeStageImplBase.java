@@ -18,6 +18,8 @@ package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.WatermarkEmissionPolicy;
+import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -33,6 +35,7 @@ import com.hazelcast.jet.impl.pipeline.transform.MapTransform;
 import com.hazelcast.jet.impl.pipeline.transform.PeekTransform;
 import com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
+import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
@@ -44,8 +47,10 @@ import com.hazelcast.jet.pipeline.StreamStage;
 import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.DEFAULT_IDLE_TIMEOUT;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
-import static com.hazelcast.jet.impl.pipeline.JetEventImpl.jetEvent;
+import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
+import static com.hazelcast.util.Preconditions.checkFalse;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -59,7 +64,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     static final JetEventFunctionAdapter ADAPT_TO_JET_EVENT = new JetEventFunctionAdapter();
 
     @Nonnull
-    public final FunctionAdapter fnAdapter;
+    public FunctionAdapter fnAdapter;
 
     ComputeStageImplBase(
             @Nonnull Transform transform,
@@ -72,14 +77,29 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
+    public StreamStage<T> setTimestampWithSystemTime() {
+        return setTimestampWithEventTime(o -> System.currentTimeMillis(), 0);
+    }
+
+    @Nonnull
     @SuppressWarnings("unchecked")
-    public StreamStage<T> timestamp(
-            @Nonnull DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy
+    public StreamStage<T> setTimestampWithEventTime(
+            DistributedToLongFunction<? super T> timestampFn, long allowedLatenessMs
     ) {
-        TimestampTransform<T> tsTransform =
-                new TimestampTransform<>(transform,
-                        wmGenParams(timestampFn, JetEventImpl::jetEvent, wmPolicy, suppressDuplicates(), 0L));
+        checkFalse(fnAdapter.equals(ADAPT_TO_JET_EVENT), "This stage already has timestamps assigned to it.");
+
+        WatermarkEmissionPolicy emissionPolicy = suppressDuplicates(); //TODO
+        DistributedSupplier<WatermarkPolicy> wmPolicy = limitingLag(allowedLatenessMs);
+        WatermarkGenerationParams<T> wmParams = wmGenParams(
+                timestampFn, JetEventImpl::jetEvent, wmPolicy, emissionPolicy, DEFAULT_IDLE_TIMEOUT
+        );
+
+        if (transform instanceof StreamSourceTransform) {
+            ((StreamSourceTransform<T>) transform).setWmGenerationParams(wmParams);
+            this.fnAdapter = ADAPT_TO_JET_EVENT;
+            return (StreamStage<T>) this;
+        }
+        TimestampTransform<T> tsTransform = new TimestampTransform<>(transform, wmParams);
         pipelineImpl.connect(transform, tsTransform);
         return new StreamStageImpl<>(tsTransform, ADAPT_TO_JET_EVENT, pipelineImpl);
     }
@@ -169,7 +189,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         if (stage.fnAdapter != ADAPT_TO_JET_EVENT) {
             throw new IllegalStateException(
                     name + " is missing a timestamp and watermark definition. Call" +
-                            " .timestamp() on it before performing the aggregation."
+                            " one of the .timestampWith() methods on it before performing" +
+                            " the aggregation."
             );
         }
     }

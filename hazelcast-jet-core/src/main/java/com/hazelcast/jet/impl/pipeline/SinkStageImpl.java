@@ -29,26 +29,26 @@ class SinkStageImpl extends AbstractStage implements SinkStage {
     }
 
     @Nonnull @Override
-    public SinkStage localParallelism(int localParallelism) {
-        super.localParallelism(localParallelism);
+    public SinkStage setLocalParallelism(int localParallelism) {
+        super.setLocalParallelism(localParallelism);
         return this;
     }
 
     @Nonnull @Override
-    public SinkStage optimizeMemory() {
-        super.optimizeMemory();
+    public SinkStage setOptimizeMemory() {
+        super.setOptimizeMemory();
         return this;
     }
 
     @Nonnull @Override
-    public SinkStage optimizeNetworkTraffic() {
-        super.optimizeNetworkTraffic();
+    public SinkStage setOptimizeNetworkTraffic() {
+        super.setOptimizeNetworkTraffic();
         return this;
     }
 
     @Nonnull @Override
-    public SinkStage debugName(@Nullable String name) {
-        super.debugName(name);
+    public SinkStage setDebugName(@Nullable String name) {
+        super.setDebugName(name);
         return this;
     }
 }

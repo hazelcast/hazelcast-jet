@@ -18,7 +18,6 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
@@ -137,11 +136,23 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     <K> GeneralStageWithGrouping<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);
 
+    /**
+     * Javadoc pending
+     *
+     * @return
+     */
     @Nonnull
-    StreamStage<T> timestamp(
-            @Nonnull DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull DistributedSupplier<WatermarkPolicy> wmPolicy
-    );
+    StreamStage<T> setTimestampWithSystemTime();
+
+    /**
+     * Javadoc pending
+     * @param timestampFn
+     * @param allowedLatenessMs
+     *
+     * @return
+     */
+    @Nonnull
+    StreamStage<T> setTimestampWithEventTime(DistributedToLongFunction<? super T> timestampFn, long allowedLatenessMs);
 
     /**
      * Attaches to this pipeline a sink pipeline, one that accepts data but doesn't

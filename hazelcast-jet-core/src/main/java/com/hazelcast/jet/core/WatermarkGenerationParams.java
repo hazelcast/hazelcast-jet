@@ -33,6 +33,11 @@ import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
 public final class WatermarkGenerationParams<T> implements Serializable {
 
     /**
+     * Default value of idle timeout to use
+     */
+    public static final long DEFAULT_IDLE_TIMEOUT = 60_000L;
+
+    /**
      * A watermark policy that will never emit any watermark.
      */
     private static final DistributedSupplier<WatermarkPolicy> NO_WATERMARK_POLICY = () -> new WatermarkPolicy() {
