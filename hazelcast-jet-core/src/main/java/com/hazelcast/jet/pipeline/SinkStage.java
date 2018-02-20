@@ -16,9 +16,24 @@
 
 package com.hazelcast.jet.pipeline;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 /**
  * A pipeline pipeline that doesn't allow any downstream stages to be attached
  * to it. Corresponds to a data sink.
  */
 public interface SinkStage extends Stage {
+
+    @Nonnull @Override
+    SinkStage localParallelism(int localParallelism);
+
+    @Nonnull @Override
+    SinkStage optimizeMemory();
+
+    @Nonnull @Override
+    SinkStage optimizeNetworkTraffic();
+
+    @Nonnull @Override
+    SinkStage debugName(@Nullable String name);
 }

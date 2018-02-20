@@ -25,6 +25,7 @@ import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedTriFunction;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Javadoc pending.
@@ -90,4 +91,7 @@ public interface StreamStage<T> extends GeneralStage<T> {
 
     @Nonnull @Override
     StreamStage<T> optimizeNetworkTraffic();
+
+    @Nonnull @Override
+    StreamStage<T> debugName(@Nullable String name);
 }

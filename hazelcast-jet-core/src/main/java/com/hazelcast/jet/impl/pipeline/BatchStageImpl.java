@@ -34,6 +34,7 @@ import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.StageWithGrouping;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -135,12 +136,6 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    public BatchStage<T> localParallelism(int localParallelism) {
-        transform.localParallelism(localParallelism);
-        return this;
-    }
-
-    @Nonnull @Override
     @SuppressWarnings("unchecked")
     <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter) {
         pipelineImpl.connect(transform.upstream(), transform);
@@ -148,14 +143,26 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    public BatchStageImpl<T> optimizeMemory() {
+    public BatchStage<T> localParallelism(int localParallelism) {
+        super.localParallelism(localParallelism);
+        return this;
+    }
+
+    @Nonnull @Override
+    public BatchStage<T> optimizeMemory() {
         super.optimizeMemory();
         return this;
     }
 
     @Nonnull @Override
-    public BatchStageImpl<T> optimizeNetworkTraffic() {
+    public BatchStage<T> optimizeNetworkTraffic() {
         super.optimizeNetworkTraffic();
+        return this;
+    }
+
+    @Nonnull @Override
+    public BatchStage<T> debugName(@Nullable String name) {
+        super.debugName(name);
         return this;
     }
 }

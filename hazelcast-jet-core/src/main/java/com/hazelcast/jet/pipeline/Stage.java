@@ -19,6 +19,7 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * The basic element of a Jet {@link Pipeline pipeline}.
@@ -33,6 +34,21 @@ public interface Stage {
      */
     Pipeline getPipeline();
 
+    /**
+     * Sets the number of processors running DAG vertices backing this stage
+     * that will be created on each member. Most stages are backed by 1 vertex,
+     * some are backed by multiple vertices or no vertex at all.
+     * <p>
+     * The value specifies <em>local</em> parallelism, i.e. the number of
+     * parallel workers running on each member. Total (global) parallelism is
+     * determined as <em>localParallelism * numberOfMembers</em>. If a new
+     * member is added, the total parallelism is increased.
+     * <p>
+     * If the value is {@value
+     * com.hazelcast.jet.core.Vertex#LOCAL_PARALLELISM_USE_DEFAULT}, Jet will
+     * determine the vertex's local parallelism during job initialization
+     * from the global default and processor meta-supplier's preferred value.
+     */
     @Nonnull
     Stage localParallelism(int localParallelism);
 
@@ -64,10 +80,18 @@ public interface Stage {
      * </ul>
      * pre deliver the item to the
      * member processing its partition and accumulate there. As a result
-     * <p>
-     * The other optimization strategy is {@link #optimizeNetworkTraffic()},
-     * which is the default.
      */
     @Nonnull
     Stage optimizeNetworkTraffic();
+
+    /**
+     * Sets the name to use for debugging. Doesn't have any effect on
+     * semantics.
+     *
+     * @param name the name to be used in debug output. If {@code null},
+     *             default name will be used
+     * @return this stage with name set
+     */
+    @Nonnull
+    Stage debugName(@Nullable String name);
 }

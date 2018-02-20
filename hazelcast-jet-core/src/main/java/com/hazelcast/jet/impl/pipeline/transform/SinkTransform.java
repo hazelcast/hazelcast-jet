@@ -54,7 +54,7 @@ public class SinkTransform<T> extends AbstractTransform implements Sink<T> {
 
     @Override
     public void addToDag(Planner p) {
-        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), getLocalParallelism(), metaSupplier());
+        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), getLocalParallelism(), metaSupplier());
         p.addEdges(this, pv.v);
     }
 }

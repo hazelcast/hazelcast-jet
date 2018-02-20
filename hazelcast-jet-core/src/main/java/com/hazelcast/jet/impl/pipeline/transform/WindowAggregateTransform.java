@@ -44,7 +44,7 @@ import static java.util.Collections.nCopies;
 
 public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
     @Nonnull
-    private AggregateOperation<A, R> aggrOp;
+    private final AggregateOperation<A, R> aggrOp;
     @Nonnull
     private final WindowDefinition wDef;
     @Nonnull
@@ -92,7 +92,7 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
     //            | aggregateToSlidingWindowP | local parallelism = 1
     //             ---------------------------
     private void addSlidingWindowSingleStage(Planner p, SlidingWindowDef wDef) {
-        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), 1,
+        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), 1,
                 aggregateToSlidingWindowP(
                         nCopies(aggrOp.arity(), constantKey()),
                         nCopies(aggrOp.arity(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),
@@ -122,7 +122,7 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
     //              | combineToSlidingWindowP | local parallelism = 1
     //               -------------------------
     private void addSlidingWindowTwoStage(Planner p, SlidingWindowDef wDef) {
-        String namePrefix = p.vertexName(name(), "-stage");
+        String namePrefix = p.uniqueVertexName(name(), "-step");
         SlidingWindowPolicy winPolicy = wDef.toSlidingWindowPolicy();
         Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateByFrameP(
                 nCopies(aggrOp.arity(), constantKey()),
@@ -139,7 +139,7 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
     }
 
     private void addSessionWindow(Planner p, SessionWindowDef wDef) {
-        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), getLocalParallelism(),
+        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), getLocalParallelism(),
                 aggregateToSessionWindowP(
                         wDef.sessionTimeout(),
                         nCopies(aggrOp.arity(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),

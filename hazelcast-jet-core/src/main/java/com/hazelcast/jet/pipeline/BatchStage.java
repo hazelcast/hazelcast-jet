@@ -28,6 +28,7 @@ import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedTriFunction;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Represents a pipeline in a distributed computation {@link Pipeline
@@ -115,4 +116,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
 
     @Nonnull @Override
     BatchStage<T> optimizeNetworkTraffic();
+
+    @Nonnull @Override
+    BatchStage<T> debugName(@Nullable String name);
 }

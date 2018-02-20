@@ -46,11 +46,11 @@ import static java.util.Collections.nCopies;
 
 public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform {
     @Nonnull
-    private WindowDefinition wDef;
+    private final WindowDefinition wDef;
     @Nonnull
-    private List<DistributedFunction<?, ? extends K>> keyFns;
+    private final List<DistributedFunction<?, ? extends K>> keyFns;
     @Nonnull
-    private AggregateOperation<A, R> aggrOp;
+    private final AggregateOperation<A, R> aggrOp;
     @Nonnull
     private final KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn;
 
@@ -61,11 +61,15 @@ public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform {
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        super(upstream.size() + "-way windowed cogroup-and-aggregate", upstream);
+        super(createName(wDef), upstream);
         this.wDef = wDef;
         this.keyFns = keyFns;
         this.aggrOp = aggrOp;
         this.mapToOutputFn = mapToOutputFn;
+    }
+
+    private static String createName(WindowDefinition wDef) {
+        return wDef.kind().name().toLowerCase() + "-window";
     }
 
     @Override
@@ -92,7 +96,7 @@ public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform {
     //            | aggregateToSlidingWindowP |
     //             ---------------------------
     private void addSlidingWindowSingleStage(Planner p, SlidingWindowDef wDef) {
-        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), getLocalParallelism(),
+        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), getLocalParallelism(),
                 aggregateToSlidingWindowP(
                         keyFns,
                         nCopies(keyFns.size(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),
@@ -122,7 +126,7 @@ public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform {
     //             | combineToSlidingWindowP |
     //              -------------------------
     private void addSlidingWindowTwoStage(Planner p, SlidingWindowDef wDef) {
-        String namePrefix = p.vertexName("sliding-window", "-stage");
+        String namePrefix = p.uniqueVertexName(name(), "-step");
         SlidingWindowPolicy winPolicy = wDef.toSlidingWindowPolicy();
         Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateByFrameP(
                 keyFns,
@@ -138,7 +142,7 @@ public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform {
     }
 
     private void addSessionWindow(Planner p, SessionWindowDef wDef) {
-        PlannerVertex pv = p.addVertex(this, p.vertexName("session-window", ""), getLocalParallelism(),
+        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), getLocalParallelism(),
                 aggregateToSessionWindowP(
                         wDef.sessionTimeout(),
                         nCopies(keyFns.size(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),

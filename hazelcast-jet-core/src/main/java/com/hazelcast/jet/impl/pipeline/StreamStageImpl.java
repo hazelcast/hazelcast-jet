@@ -33,6 +33,7 @@ import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Javadoc pending.
@@ -111,27 +112,33 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     }
 
     @Nonnull @Override
+    @SuppressWarnings("unchecked")
+    <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter) {
+        pipelineImpl.connect(transform.upstream(), transform);
+        return (RET) new StreamStageImpl<>(transform, fnAdapter, pipelineImpl);
+    }
+
+    @Nonnull @Override
     public StreamStage<T> localParallelism(int localParallelism) {
-        transform.localParallelism(localParallelism);
+        super.localParallelism(localParallelism);
         return this;
     }
 
     @Nonnull @Override
-    public StreamStageImpl<T> optimizeMemory() {
+    public StreamStage<T> optimizeMemory() {
         super.optimizeMemory();
         return this;
     }
 
     @Nonnull @Override
-    public StreamStageImpl<T> optimizeNetworkTraffic() {
+    public StreamStage<T> optimizeNetworkTraffic() {
         super.optimizeNetworkTraffic();
         return this;
     }
 
     @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter) {
-        pipelineImpl.connect(transform.upstream(), transform);
-        return (RET) new StreamStageImpl<>(transform, fnAdapter, pipelineImpl);
+    public StreamStage<T> debugName(@Nullable String name) {
+        super.debugName(name);
+        return this;
     }
 }

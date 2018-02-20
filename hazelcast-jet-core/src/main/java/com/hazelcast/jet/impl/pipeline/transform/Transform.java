@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.pipeline.transform;
 import com.hazelcast.jet.impl.pipeline.Planner;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.List;
 
@@ -34,6 +35,7 @@ public interface Transform extends Serializable {
      */
     @Nonnull
     String name();
+    void debugName(@Nullable String name);
 
     int getLocalParallelism();
     void localParallelism(int localParallelism);

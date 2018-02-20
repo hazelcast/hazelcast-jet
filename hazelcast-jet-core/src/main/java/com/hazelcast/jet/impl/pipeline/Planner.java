@@ -106,11 +106,17 @@ public class Planner {
         addEdges(transform, toVertex, e -> { });
     }
 
-    public String vertexName(@Nonnull String name, @Nonnull String suffix) {
+    /**
+     * Makes the proposed name unique in the DAG by adding optional "-N"
+     * between the name and the suffix.
+     *
+     * @return unique name to be used for the vertex
+     */
+    public String uniqueVertexName(@Nonnull String proposedName, @Nonnull String proposedNameSuffix) {
         for (int index = 1; ; index++) {
-            String candidate = name
+            String candidate = proposedName
                     + (index == 1 ? "" : "-" + index)
-                    + suffix;
+                    + proposedNameSuffix;
             if (vertexNames.add(candidate)) {
                 return candidate;
             }

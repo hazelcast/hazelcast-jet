@@ -36,9 +36,9 @@ import static com.hazelcast.jet.impl.pipeline.transform.AbstractTransform.Optimi
 
 public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     @Nonnull
-    private List<DistributedFunction<?, ? extends K>> groupKeyFns;
+    private final List<DistributedFunction<?, ? extends K>> groupKeyFns;
     @Nonnull
-    private AggregateOperation<A, R> aggrOp;
+    private final AggregateOperation<A, R> aggrOp;
     @Nonnull
     private final DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn;
 
@@ -48,10 +48,16 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        super(upstream.size() + "-way cogroup-and-aggregate", upstream);
+        super(createName(upstream), upstream);
         this.groupKeyFns = groupKeyFns;
         this.aggrOp = aggrOp;
         this.mapToOutputFn = mapToOutputFn;
+    }
+
+    private static String createName(@Nonnull List<Transform> upstream) {
+        return upstream.size() == 1
+                ? "group-and-aggregate"
+                : upstream.size() + "-way cogroup-and-aggregate";
     }
 
     @Override
@@ -77,7 +83,7 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     //                        | aggregateByKeyP |
     //                         -----------------
     private void addToDagSingleStage(Planner p) {
-        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), getLocalParallelism(),
+        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), getLocalParallelism(),
                 aggregateByKeyP(groupKeyFns, aggrOp, mapToOutputFn));
         p.addEdges(this, pv.v, (e, ord) -> e.distributed().partitioned(groupKeyFns.get(ord)));
     }
@@ -101,7 +107,7 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     //                         ---------------
     private void addToDagTwoStage(Planner p) {
         List<DistributedFunction<?, ? extends K>> groupKeyFns = this.groupKeyFns;
-        String namePrefix = p.vertexName(this.name(), "-stage");
+        String namePrefix = p.uniqueVertexName(this.name(), "-step");
         Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateByKeyP(groupKeyFns, aggrOp))
                 .localParallelism(getLocalParallelism());
         PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', getLocalParallelism(),

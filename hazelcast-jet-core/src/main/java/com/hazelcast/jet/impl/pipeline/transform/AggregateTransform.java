@@ -37,8 +37,14 @@ public class AggregateTransform<A, R> extends AbstractTransform {
             @Nonnull List<Transform> upstream,
             @Nonnull AggregateOperation<A, ? extends R> aggrOp
     ) {
-        super(upstream.size() + "-way co-aggregate", upstream);
+        super(createName(upstream), upstream);
         this.aggrOp = aggrOp;
+    }
+
+    private static String createName(@Nonnull List<Transform> upstream) {
+        return upstream.size() == 1
+                ? "aggregate"
+                : upstream.size() + "-way co-aggregate";
     }
 
     @Override
@@ -65,7 +71,7 @@ public class AggregateTransform<A, R> extends AbstractTransform {
     //                  |   aggregateP   | local parallelism = 1
     //                   ----------------
     private void addToDagSingleStage(Planner p) {
-        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), 1, aggregateP(aggrOp));
+        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), 1, aggregateP(aggrOp));
         p.addEdges(this, pv.v, edge -> edge.distributed().allToOne());
     }
 
@@ -87,7 +93,7 @@ public class AggregateTransform<A, R> extends AbstractTransform {
     //                  |    combineP    | local parallelism = 1
     //                   ----------------
     private void addToDagTwoStage(Planner p) {
-        String namePrefix = p.vertexName(name(), "-stage");
+        String namePrefix = p.uniqueVertexName(name(), "-step");
         Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateP(aggrOp))
                          .localParallelism(getLocalParallelism());
         PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', 1, combineP(aggrOp));

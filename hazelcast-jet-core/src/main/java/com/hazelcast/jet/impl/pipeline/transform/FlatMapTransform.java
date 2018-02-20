@@ -44,7 +44,7 @@ public class FlatMapTransform<T, R> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p) {
-        PlannerVertex pv = p.addVertex(this, p.vertexName(name(), ""), getLocalParallelism(), flatMapP(flatMapFn()));
+        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), getLocalParallelism(), flatMapP(flatMapFn()));
         p.addEdges(this, pv.v);
     }
 }

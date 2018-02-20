@@ -22,6 +22,7 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Stage;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 
 import static java.util.Collections.emptyList;
@@ -56,14 +57,26 @@ public abstract class AbstractStage implements Stage {
     }
 
     @Nonnull @Override
-    public AbstractStage optimizeMemory() {
+    public Stage localParallelism(int localParallelism) {
+        transform.localParallelism(localParallelism);
+        return this;
+    }
+
+    @Nonnull @Override
+    public Stage optimizeMemory() {
         transform.optimizeMemory();
         return this;
     }
 
     @Nonnull @Override
-    public AbstractStage optimizeNetworkTraffic() {
+    public Stage optimizeNetworkTraffic() {
         transform.optimizeNetworkTraffic();
+        return this;
+    }
+
+    @Nonnull @Override
+    public Stage debugName(@Nullable String name) {
+        transform.debugName(name);
         return this;
     }
 }

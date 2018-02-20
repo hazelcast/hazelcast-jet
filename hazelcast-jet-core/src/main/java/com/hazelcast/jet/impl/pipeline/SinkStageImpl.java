@@ -20,6 +20,7 @@ import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.pipeline.SinkStage;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 class SinkStageImpl extends AbstractStage implements SinkStage {
 
@@ -27,10 +28,27 @@ class SinkStageImpl extends AbstractStage implements SinkStage {
         super(sink, false, pipeline);
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public SinkStage localParallelism(int localParallelism) {
-        transform.localParallelism(localParallelism);
+        super.localParallelism(localParallelism);
+        return this;
+    }
+
+    @Nonnull @Override
+    public SinkStage optimizeMemory() {
+        super.optimizeMemory();
+        return this;
+    }
+
+    @Nonnull @Override
+    public SinkStage optimizeNetworkTraffic() {
+        super.optimizeNetworkTraffic();
+        return this;
+    }
+
+    @Nonnull @Override
+    public SinkStage debugName(@Nullable String name) {
+        super.debugName(name);
         return this;
     }
 }
