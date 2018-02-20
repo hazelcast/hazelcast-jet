@@ -33,6 +33,9 @@ import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
  * Represents a pipeline in a distributed computation {@link Pipeline
  * pipeline}. It accepts input from its upstream stages (if any) and passes
  * its output to its downstream stages.
+ * <p>
+ * Unless specified otherwise, all functions passed to member methods must
+ * be stateless.
  *
  * @param <T> the type of items coming out of this pipeline
  */
@@ -41,10 +44,13 @@ public interface GeneralStage<T> extends Stage {
     /**
      * Attaches to this pipeline a mapping pipeline, one which applies the supplied
      * function to each input item independently and emits the function's
-     * result as the output item. Returns the newly attached pipeline.
+     * result as the output item. If the result is {@code null}, it emits
+     * nothing. Therefore this stage can be used to implement filtering
+     * semantics as well.
      *
-     * @param mapFn the mapping function
+     * @param mapFn a stateless mapping function
      * @param <R> the result type of the mapping function
+     * @return the newly attached pipeline
      */
     @Nonnull
     <R> GeneralStage<R> map(@Nonnull DistributedFunction<? super T, ? extends R> mapFn);
@@ -54,7 +60,7 @@ public interface GeneralStage<T> extends Stage {
      * predicate function to each input item to decide whether to pass the item
      * to the output or to discard it. Returns the newly attached pipeline.
      *
-     * @param filterFn the filter predicate function
+     * @param filterFn a stateless filter predicate function
      */
     @Nonnull
     GeneralStage<T> filter(@Nonnull DistributedPredicate<T> filterFn);
@@ -62,11 +68,16 @@ public interface GeneralStage<T> extends Stage {
     /**
      * Attaches to this pipeline a flat-mapping pipeline, one which applies the
      * supplied function to each input item independently and emits all items
-     * from the {@link Traverser} it returns as the output items. Returns the
-     * newly attached pipeline.
+     * from the {@link Traverser} it returns as the output items.
+     * <p>
+     * The traverser returned from the {@code flatMapFn} must be finite. That
+     * is, this operation will not attempt to emit any items after the first
+     * {@code null} item.
      *
-     * @param flatMapFn the flatmapping function, whose result type is Jet's {@link Traverser}
+     * @param flatMapFn a stateless flatmapping function, whose result type is
+     *                  Jet's {@link Traverser}
      * @param <R> the type of items in the result's traversers
+     * @return the newly attached pipeline
      */
     @Nonnull
     <R> GeneralStage<R> flatMap(
