@@ -125,20 +125,8 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     }
 
     @Nonnull @Override
-    public StreamStage<T> setOptimizeMemory() {
-        super.setOptimizeMemory();
-        return this;
-    }
-
-    @Nonnull @Override
-    public StreamStage<T> setOptimizeNetworkTraffic() {
-        super.setOptimizeNetworkTraffic();
-        return this;
-    }
-
-    @Nonnull @Override
-    public StreamStage<T> setDebugName(@Nullable String name) {
-        super.setDebugName(name);
+    public StreamStage<T> setName(@Nullable String name) {
+        super.setName(name);
         return this;
     }
 }

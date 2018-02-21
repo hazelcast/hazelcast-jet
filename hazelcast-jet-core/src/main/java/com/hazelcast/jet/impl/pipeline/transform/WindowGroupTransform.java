@@ -96,7 +96,7 @@ public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform {
     //            | aggregateToSlidingWindowP |
     //             ---------------------------
     private void addSlidingWindowSingleStage(Planner p, SlidingWindowDef wDef) {
-        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), getLocalParallelism(),
+        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), localParallelism(),
                 aggregateToSlidingWindowP(
                         keyFns,
                         nCopies(keyFns.size(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),
@@ -134,15 +134,15 @@ public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform {
                 TimestampKind.EVENT,
                 winPolicy,
                 aggrOp));
-        v1.localParallelism(getLocalParallelism());
-        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', getLocalParallelism(),
+        v1.localParallelism(localParallelism());
+        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', localParallelism(),
                 combineToSlidingWindowP(winPolicy, aggrOp, mapToOutputFn));
         p.addEdges(this, v1, (e, ord) -> e.partitioned(keyFns.get(ord), HASH_CODE));
         p.dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }
 
     private void addSessionWindow(Planner p, SessionWindowDef wDef) {
-        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), getLocalParallelism(),
+        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), localParallelism(),
                 aggregateToSessionWindowP(
                         wDef.sessionTimeout(),
                         nCopies(keyFns.size(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),

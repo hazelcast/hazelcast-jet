@@ -18,22 +18,29 @@ package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
+import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sink;
+import com.hazelcast.jet.pipeline.SinkStage;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.StreamStage;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DONT_ADAPT;
+import static java.util.stream.Collectors.toList;
 
 public class PipelineImpl implements Pipeline {
 
@@ -50,6 +57,22 @@ public class PipelineImpl implements Pipeline {
     public <T> StreamStage<T> drawFrom(@Nonnull StreamSource<? extends T> source) {
         StreamSourceTransform<? extends T> xform = (StreamSourceTransform<? extends T>) source;
         return new StreamStageImpl<>(xform, xform.emitsJetEvents() ? ADAPT_TO_JET_EVENT : DONT_ADAPT, this);
+    }
+
+    @Override
+    public <T> SinkStage drainTo(@Nonnull Sink<T> sink, GeneralStage<?>... stages) {
+        List<Transform> upstream = Arrays.stream(stages)
+                                        .map(s -> (AbstractStage) s)
+                                        .map(s -> s.transform)
+                                        .collect(toList());
+        int[] ordinalsToAdapt = IntStream
+                .range(0, stages.length)
+                .filter(i -> ((ComputeStageImplBase) stages[i]).fnAdapter == ADAPT_TO_JET_EVENT)
+                .toArray();
+        SinkTransform sinkTransform = new SinkTransform((SinkImpl) sink, upstream, ordinalsToAdapt);
+        SinkStageImpl sinkStage = new SinkStageImpl(sinkTransform, this);
+        connect(upstream, sinkTransform);
+        return sinkStage;
     }
 
     @Nonnull @Override

@@ -20,7 +20,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * A pipeline pipeline that doesn't allow any downstream stages to be attached
+ * A pipeline stage that doesn't allow any downstream stages to be attached
  * to it. Corresponds to a data sink.
  */
 public interface SinkStage extends Stage {
@@ -29,11 +29,5 @@ public interface SinkStage extends Stage {
     SinkStage setLocalParallelism(int localParallelism);
 
     @Nonnull @Override
-    SinkStage setOptimizeMemory();
-
-    @Nonnull @Override
-    SinkStage setOptimizeNetworkTraffic();
-
-    @Nonnull @Override
-    SinkStage setDebugName(@Nullable String name);
+    SinkStage setName(@Nullable String name);
 }

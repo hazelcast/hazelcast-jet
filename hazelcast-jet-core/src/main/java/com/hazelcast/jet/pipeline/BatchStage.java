@@ -117,11 +117,5 @@ public interface BatchStage<T> extends GeneralStage<T> {
     BatchStage<T> setLocalParallelism(int localParallelism);
 
     @Nonnull @Override
-    BatchStage<T> setOptimizeMemory();
-
-    @Nonnull @Override
-    BatchStage<T> setOptimizeNetworkTraffic();
-
-    @Nonnull @Override
-    BatchStage<T> setDebugName(@Nullable String name);
+    BatchStage<T> setName(@Nullable String name);
 }

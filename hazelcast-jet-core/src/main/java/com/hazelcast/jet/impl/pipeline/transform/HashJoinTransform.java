@@ -101,7 +101,7 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
         List keyFns = this.clauses.stream()
                                       .map(JoinClause::leftKeyFn)
                                       .collect(toList());
-        Vertex joiner = p.addVertex(this, namePrefix + "-joiner", getLocalParallelism(),
+        Vertex joiner = p.addVertex(this, namePrefix + "-joiner", localParallelism(),
                 () -> new HashJoinP(keyFns, this.tags, this.mapToOutputBiFn, null)).v;
         p.dag.edge(from(primary.v, primary.availableOrdinal++).to(joiner, 0));
 

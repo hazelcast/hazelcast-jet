@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.config.EventJournalConfig;
+import com.hazelcast.core.HazelcastTest;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JournalInitialPosition;
@@ -29,6 +30,7 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.WindowDefinition;
+import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.Before;
@@ -49,13 +51,9 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
 import static com.hazelcast.jet.core.TestUtil.set;
 import static org.junit.Assert.assertEquals;
 
-@RunWith(Parameterized.class)
-@UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 @Category(ParallelTest.class)
+@RunWith(HazelcastParallelClassRunner.class)
 public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
-
-    @Parameter
-    public boolean singleStage;
 
     private JetInstance instance;
 
@@ -81,9 +79,6 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
                  .groupingKey(entry -> entry.getValue().charAt(0))
                  .window(WindowDefinition.tumbling(2))
                  .aggregate(toSet());
-        if (singleStage) {
-            stage = stage.setOptimizeMemory();
-        }
         stage.drainTo(Sinks.list("sink"));
 
         testSliding(p);
@@ -98,9 +93,6 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
                  .window(WindowDefinition.tumbling(2))
                  .groupingKey(entry -> entry.getValue().charAt(0))
                  .aggregate(toSet());
-        if (singleStage) {
-            stage = stage.setOptimizeMemory();
-        }
         stage.drainTo(Sinks.list("sink"));
 
         testSliding(p);

@@ -32,11 +32,7 @@ public abstract class AbstractStage implements Stage {
     final PipelineImpl pipelineImpl;
     final Transform transform;
 
-    AbstractStage(
-            Transform transform,
-            boolean acceptsDownstream,
-            PipelineImpl pipelineImpl
-    ) {
+    AbstractStage(Transform transform, boolean acceptsDownstream, PipelineImpl pipelineImpl) {
         this.transform = transform;
         this.pipelineImpl = pipelineImpl;
         pipelineImpl.register(transform, acceptsDownstream ? new ArrayList<>() : emptyList());
@@ -51,11 +47,6 @@ public abstract class AbstractStage implements Stage {
         return pipelineImpl;
     }
 
-    @Override
-    public String toString() {
-        return String.valueOf(transform);
-    }
-
     @Nonnull @Override
     public Stage setLocalParallelism(int localParallelism) {
         transform.localParallelism(localParallelism);
@@ -63,20 +54,18 @@ public abstract class AbstractStage implements Stage {
     }
 
     @Nonnull @Override
-    public Stage setOptimizeMemory() {
-        transform.optimizeMemory();
+    public Stage setName(@Nullable String name) {
+        transform.setName(name);
         return this;
     }
 
-    @Nonnull @Override
-    public Stage setOptimizeNetworkTraffic() {
-        transform.optimizeNetworkTraffic();
-        return this;
+    @Override
+    public String name() {
+        return transform.name();
     }
 
-    @Nonnull @Override
-    public Stage setDebugName(@Nullable String name) {
-        transform.debugName(name);
-        return this;
+    @Override
+    public String toString() {
+        return String.valueOf(transform);
     }
 }

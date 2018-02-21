@@ -95,7 +95,7 @@ public class AggregateTransform<A, R> extends AbstractTransform {
     private void addToDagTwoStage(Planner p) {
         String namePrefix = p.uniqueVertexName(name(), "-step");
         Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateP(aggrOp))
-                         .localParallelism(getLocalParallelism());
+                         .localParallelism(localParallelism());
         PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', 1, combineP(aggrOp));
         p.addEdges(this, v1);
         p.dag.edge(between(v1, pv2.v).distributed().allToOne());

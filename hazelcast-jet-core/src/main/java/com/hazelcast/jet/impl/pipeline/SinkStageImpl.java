@@ -24,8 +24,8 @@ import javax.annotation.Nullable;
 
 class SinkStageImpl extends AbstractStage implements SinkStage {
 
-    SinkStageImpl(SinkTransform sink, PipelineImpl pipeline) {
-        super(sink, false, pipeline);
+    SinkStageImpl(SinkTransform transform, PipelineImpl pipeline) {
+        super(transform, false, pipeline);
     }
 
     @Nonnull @Override
@@ -35,20 +35,8 @@ class SinkStageImpl extends AbstractStage implements SinkStage {
     }
 
     @Nonnull @Override
-    public SinkStage setOptimizeMemory() {
-        super.setOptimizeMemory();
-        return this;
-    }
-
-    @Nonnull @Override
-    public SinkStage setOptimizeNetworkTraffic() {
-        super.setOptimizeNetworkTraffic();
-        return this;
-    }
-
-    @Nonnull @Override
-    public SinkStage setDebugName(@Nullable String name) {
-        super.setDebugName(name);
+    public SinkStage setName(@Nullable String name) {
+        super.setName(name);
         return this;
     }
 }

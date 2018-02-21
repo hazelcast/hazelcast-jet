@@ -16,8 +16,6 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.aggregate.AggregateOperation;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -53,45 +51,17 @@ public interface Stage {
     Stage setLocalParallelism(int localParallelism);
 
     /**
-     * A <em>hint</em> to prefer DAG setup that uses less memory for this
-     * stage. It is an opposite strategy to {@link #setOptimizeNetworkTraffic()}
-     * (the default), see it for more details.
-     */
-    @Nonnull
-    Stage setOptimizeMemory();
-
-    /**
-     * A <em>hint</em> to prefer DAG setup that transfers less data over the
-     * network. This is the default strategy, the opposite strategy is {@link
-     * #setOptimizeMemory()}.
-     * <p>
-     * Currently only aggregation stages consider this hint. It makes them to
-     * choose two step aggregation. That is, first pre-aggregate items
-     * locally, then send the partial results to target member processing the
-     * key and combine them. This setup avoids serialization and network IO
-     * costs by transferring only the pre-aggregated values. On the other hand,
-     * each member might see all keys in the 1st stage so the memory usage can
-     * be much higher.
-     * <p>
-     * Two step aggregation is not possible in this scenarios:<ul>
-     *     <li>when using non-aligned windows (such as session windows)
-     *     <li>if the aggregate operation doesn't support
-     *     {@link AggregateOperation#combineFn() combine} primitive.
-     * </ul>
-     * pre deliver the item to the
-     * member processing its partition and accumulate there. As a result
-     */
-    @Nonnull
-    Stage setOptimizeNetworkTraffic();
-
-    /**
-     * Sets the name to use for debugging. Doesn't have any effect on
-     * semantics.
+     * Overrides the default name of the stage with the name you choose. This
+     * can be useful for debugging purposes, to better distinguish pipeline
+     * stages in the diagnostic output.
      *
-     * @param name the name to be used in debug output. If {@code null},
-     *             default name will be used
-     * @return this stage with name set
+     * @param name the stage name
      */
     @Nonnull
-    Stage setDebugName(@Nullable String name);
+    Stage setName(@Nonnull String name);
+
+    /**
+     * Returns the display name of this stage. It's used in diagnostic output.
+     */
+    String name();
 }

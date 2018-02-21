@@ -149,20 +149,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    public BatchStage<T> setOptimizeMemory() {
-        super.setOptimizeMemory();
-        return this;
-    }
-
-    @Nonnull @Override
-    public BatchStage<T> setOptimizeNetworkTraffic() {
-        super.setOptimizeNetworkTraffic();
-        return this;
-    }
-
-    @Nonnull @Override
-    public BatchStage<T> setDebugName(@Nullable String name) {
-        super.setDebugName(name);
+    public BatchStage<T> setName(@Nullable String name) {
+        super.setName(name);
         return this;
     }
 }

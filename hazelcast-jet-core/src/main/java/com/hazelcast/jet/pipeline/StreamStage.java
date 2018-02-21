@@ -92,11 +92,5 @@ public interface StreamStage<T> extends GeneralStage<T> {
     StreamStage<T> setLocalParallelism(int localParallelism);
 
     @Nonnull @Override
-    StreamStage<T> setOptimizeMemory();
-
-    @Nonnull @Override
-    StreamStage<T> setOptimizeNetworkTraffic();
-
-    @Nonnull @Override
-    StreamStage<T> setDebugName(@Nullable String name);
+    StreamStage<T> setName(@Nullable String name);
 }

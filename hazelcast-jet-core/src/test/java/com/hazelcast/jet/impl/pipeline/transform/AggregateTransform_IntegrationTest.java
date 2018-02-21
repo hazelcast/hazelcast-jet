@@ -26,16 +26,14 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.spi.properties.GroupProperty;
-import com.hazelcast.test.HazelcastParametersRunnerFactory;
+import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
-import org.junit.runners.Parameterized.UseParametersRunnerFactory;
 
 import java.util.Map.Entry;
 import java.util.Set;
@@ -47,9 +45,8 @@ import static com.hazelcast.jet.core.test.TestSupport.listToString;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 
-@RunWith(Parameterized.class)
-@UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 @Category(ParallelTest.class)
+@RunWith(HazelcastParallelClassRunner.class)
 public class AggregateTransform_IntegrationTest extends JetTestSupport {
 
     @Parameter
@@ -81,9 +78,6 @@ public class AggregateTransform_IntegrationTest extends JetTestSupport {
         BatchStage<Set<Entry<Long, String>>> stage =
                 p.drawFrom(Sources.<Long, String>map("source"))
                  .aggregate(toSet());
-        if (singleStage) {
-            stage = stage.setOptimizeMemory();
-        }
         stage.drainTo(Sinks.list("sink"));
 
         instance.newJob(p).join();

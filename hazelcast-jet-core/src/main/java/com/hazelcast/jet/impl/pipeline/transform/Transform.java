@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.impl.pipeline.Planner;
+import com.hazelcast.jet.pipeline.Stage;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -35,13 +36,17 @@ public interface Transform extends Serializable {
      */
     @Nonnull
     String name();
-    void debugName(@Nullable String name);
 
-    int getLocalParallelism();
+    /**
+     * Sets a descriptive name for this transform.
+     *
+     * @param name the stage name. If {@code null}, the stage will use its default name
+     */
+    void setName(@Nonnull String name);
+
+    int localParallelism();
+
     void localParallelism(int localParallelism);
-
-    void optimizeMemory();
-    void optimizeNetworkTraffic();
 
     @Nonnull
     List<Transform> upstream();

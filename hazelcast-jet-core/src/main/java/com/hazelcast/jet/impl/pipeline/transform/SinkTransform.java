@@ -19,44 +19,38 @@ package com.hazelcast.jet.impl.pipeline.transform;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
-import com.hazelcast.jet.pipeline.Sink;
+import com.hazelcast.jet.impl.pipeline.SinkImpl;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
-import java.util.BitSet;
+import java.util.List;
 
 import static com.hazelcast.jet.impl.pipeline.FunctionAdapter.adaptingMetaSupplier;
 
 
-public class SinkTransform<T> extends AbstractTransform implements Sink<T> {
+public class SinkTransform<T> extends AbstractTransform {
+    private static final int[] EMPTY_ORDINALS = new int[0];
 
     @Nonnull
     private ProcessorMetaSupplier metaSupplier;
-
-    private final BitSet shouldAdaptOrdinal = new BitSet();
-    private int nextOrdinal;
-
-    public SinkTransform(
-            @Nonnull String name,
-            @Nonnull ProcessorMetaSupplier metaSupplier
-    ) {
-        super(name, new ArrayList<>());
-        this.metaSupplier = metaSupplier;
-    }
-
-    public void addUpstream(Transform upstream, boolean adaptToJetEvent) {
-        shouldAdaptOrdinal.set(nextOrdinal++, adaptToJetEvent);
-        upstream().add(upstream);
-    }
-
     @Nonnull
-    public ProcessorMetaSupplier metaSupplier() {
-        return adaptingMetaSupplier(metaSupplier, shouldAdaptOrdinal);
+    private final int[] ordinalsToAdapt;
+
+    public SinkTransform(@Nonnull SinkImpl sink, @Nonnull List<Transform> upstream, @Nonnull int[] ordinalsToAdapt) {
+        super(sink.name(), upstream);
+        this.metaSupplier = sink.metaSupplier();
+        this.ordinalsToAdapt = ordinalsToAdapt;
+    }
+
+    public SinkTransform(@Nonnull SinkImpl sink, @Nonnull Transform upstream, boolean adaptToJetEvents) {
+        super(sink.name(), upstream);
+        this.metaSupplier = sink.metaSupplier();
+        this.ordinalsToAdapt = adaptToJetEvents ? new int[] {0} : EMPTY_ORDINALS;
     }
 
     @Override
     public void addToDag(Planner p) {
-        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), getLocalParallelism(), metaSupplier());
+        adaptingMetaSupplier(metaSupplier, ordinalsToAdapt);
+        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), localParallelism(), metaSupplier);
         p.addEdges(this, pv.v);
     }
 }

@@ -42,7 +42,7 @@ public class ProcessorTransform extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p) {
-        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), getLocalParallelism(), procSupplier);
+        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), localParallelism(), procSupplier);
         p.addEdges(this, pv.v);
     }
 }

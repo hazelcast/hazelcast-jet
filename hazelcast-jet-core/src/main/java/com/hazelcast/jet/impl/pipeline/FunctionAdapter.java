@@ -99,17 +99,19 @@ public class FunctionAdapter {
     }
 
     @Nonnull
-    public static ProcessorMetaSupplier adaptingMetaSupplier(ProcessorMetaSupplier metaSup, BitSet adaptedOrdinals) {
-        return new WrappingProcessorMetaSupplier(metaSup, p -> new AdaptingProcessor(p, adaptedOrdinals));
+    public static ProcessorMetaSupplier adaptingMetaSupplier(ProcessorMetaSupplier metaSup, int[] ordinalsToAdapt) {
+        return new WrappingProcessorMetaSupplier(metaSup, p -> new AdaptingProcessor(p, ordinalsToAdapt));
     }
 
     private static final class AdaptingProcessor extends ProcessorWrapper {
         private final AdaptingInbox adaptingInbox = new AdaptingInbox();
-        private final BitSet shouldAdaptOrdinal;
+        private final BitSet shouldAdaptOrdinal = new BitSet();
 
-        AdaptingProcessor(Processor wrapped, BitSet shouldAdaptOrdinal) {
+        AdaptingProcessor(Processor wrapped, int[] ordinalsToAdapt) {
             super(wrapped);
-            this.shouldAdaptOrdinal = shouldAdaptOrdinal;
+            for (int ordinal : ordinalsToAdapt) {
+                shouldAdaptOrdinal.set(ordinal);
+            }
         }
 
         @Override

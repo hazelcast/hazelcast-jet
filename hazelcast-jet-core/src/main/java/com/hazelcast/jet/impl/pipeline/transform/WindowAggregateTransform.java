@@ -131,7 +131,7 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
                 winPolicy,
                 aggrOp
         ));
-        v1.localParallelism(getLocalParallelism());
+        v1.localParallelism(localParallelism());
         PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', 1,
                 combineToSlidingWindowP(winPolicy, aggrOp, mapToOutputFn.toKeyedWindowResultFn()));
         p.addEdges(this, v1);
@@ -139,7 +139,7 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
     }
 
     private void addSessionWindow(Planner p, SessionWindowDef wDef) {
-        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), getLocalParallelism(),
+        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), localParallelism(),
                 aggregateToSessionWindowP(
                         wDef.sessionTimeout(),
                         nCopies(aggrOp.arity(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),

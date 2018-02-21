@@ -59,7 +59,7 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
 
         if (supportsWatermarks || !emitsJetEvents()) {
             p.addVertex(this, p.uniqueVertexName(name(), ""),
-                    getLocalParallelism(), metaSupplierFn.apply(params)
+                    localParallelism(), metaSupplierFn.apply(params)
             );
         } else {
             //                  ------------
@@ -72,9 +72,9 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
             //                 |  insertWMP  |
             //                  -------------
             String v1name = p.uniqueVertexName(name(), "");
-            Vertex v1 = p.dag.newVertex(v1name, metaSupplierFn.apply(params)).localParallelism(getLocalParallelism());
+            Vertex v1 = p.dag.newVertex(v1name, metaSupplierFn.apply(params)).localParallelism(localParallelism());
             PlannerVertex pv2 = p.addVertex(
-                    this, v1name + "-insertWM", getLocalParallelism(), insertWatermarksP(params)
+                    this, v1name + "-insertWM", localParallelism(), insertWatermarksP(params)
             );
             p.dag.edge(between(v1, pv2.v).isolated());
         }

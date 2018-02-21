@@ -55,6 +55,8 @@ public interface Pipeline {
     @Nonnull
     <T> StreamStage<T> drawFrom(@Nonnull StreamSource<? extends T> source);
 
+    <T> SinkStage drainTo(@Nonnull Sink<T> sink, GeneralStage<?>... stages);
+
     /**
      * Transforms the pipeline into a Jet DAG, which can be submitted for
      * execution to a Jet instance.

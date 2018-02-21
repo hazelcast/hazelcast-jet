@@ -30,16 +30,14 @@ import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.spi.properties.GroupProperty;
-import com.hazelcast.test.HazelcastParametersRunnerFactory;
+import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
-import org.junit.runners.Parameterized.UseParametersRunnerFactory;
 
 import java.util.Map;
 import java.util.Map.Entry;
@@ -52,9 +50,8 @@ import static com.hazelcast.jet.core.test.TestSupport.listToString;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 
-@RunWith(Parameterized.class)
-@UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 @Category(ParallelTest.class)
+@RunWith(HazelcastParallelClassRunner.class)
 public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
 
     @Parameter
@@ -91,9 +88,6 @@ public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
                  .setTimestampWithEventTime(Map.Entry::getKey, 0)
                  .window(WindowDefinition.tumbling(2))
                  .aggregate(toSet());
-        if (singleStage) {
-            stage = stage.setOptimizeMemory();
-        }
         stage.drainTo(Sinks.list("sink"));
 
         instance.newJob(p);
@@ -120,10 +114,6 @@ public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
                  .setTimestampWithEventTime(Entry::getKey, 0)
                  .window(WindowDefinition.session(2))
                  .aggregate(toSet(), (winStart, winEnd, result) -> new WindowResult<>(winStart, winEnd, "", result));
-        if (singleStage) {
-            // this has no effect for the dag, but anyway, should work.
-            stage = stage.setOptimizeMemory();
-        }
         stage.drainTo(Sinks.list("sink"));
 
         instance.newJob(p);

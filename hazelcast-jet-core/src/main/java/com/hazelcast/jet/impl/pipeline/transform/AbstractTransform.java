@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.pipeline.transform;
 import com.hazelcast.jet.core.Vertex;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.List;
 
 import static java.util.Collections.singletonList;
@@ -29,14 +28,13 @@ import static java.util.Collections.singletonList;
  */
 public abstract class AbstractTransform implements Transform {
     @Nonnull
-    private final String name;
-    @Nullable
-    private String debugName;
+    private String name;
     @Nonnull
     private final List<Transform> upstream;
-    private int localParallelism = Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
     @Nonnull
     private Optimization optimization = Optimization.NETWORK_TRAFFIC;
+
+    private int localParallelism = Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
 
     protected AbstractTransform(@Nonnull String name, @Nonnull List<Transform> upstream) {
         this.name = name;
@@ -52,9 +50,14 @@ public abstract class AbstractTransform implements Transform {
         return upstream;
     }
 
+    @Override
+    public void setName(@Nonnull String name) {
+        this.name = name;
+    }
+
     @Nonnull @Override
     public String name() {
-        return debugName != null ? debugName : name;
+        return name;
     }
 
     @Override
@@ -63,28 +66,13 @@ public abstract class AbstractTransform implements Transform {
     }
 
     @Override
-    public int getLocalParallelism() {
+    public int localParallelism() {
         return localParallelism;
     }
 
-    @Override
-    public void optimizeMemory() {
-        optimization = Optimization.MEMORY;
-    }
-
-    @Override
-    public void optimizeNetworkTraffic() {
-        optimization = Optimization.NETWORK_TRAFFIC;
-    }
-
     @Nonnull
-    public Optimization getOptimization() {
+    Optimization getOptimization() {
         return optimization;
-    }
-
-    @Override
-    public void debugName(@Nullable String name) {
-        this.debugName = name;
     }
 
     @Override
