@@ -329,9 +329,12 @@ public final class SourceProcessors {
      * {@link com.hazelcast.jet.Sources#fileWatcher(String, Charset, String)}.
      */
     public static ProcessorMetaSupplier streamFilesP(
-            @Nonnull String watchedDirectory, @Nonnull Charset charset, @Nonnull String glob
+            @Nonnull String watchedDirectory,
+            @Nonnull Charset charset,
+            @Nonnull String glob,
+            @Nonnull DistributedBiFunction<String, String, ?> mapOutputFn
     ) {
-        return StreamFilesP.metaSupplier(watchedDirectory, charset.name(), glob);
+        return StreamFilesP.metaSupplier(watchedDirectory, charset.name(), glob, mapOutputFn);
     }
 
     private static <I, O> Projection<I, O> toProjection(DistributedFunction<I, O> projectionFn) {

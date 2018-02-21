@@ -142,8 +142,7 @@ public final class ReadFilesP<R> extends AbstractProcessor implements Closeable 
     }
 
     /**
-     * Private API. Use {@link SourceProcessors#readFilesP(String, Charset, String)}
-     * instead.
+     * Private API. Use {@link SourceProcessors#readFilesP} instead.
      */
     public static ProcessorMetaSupplier metaSupplier(
             @Nonnull String directory,

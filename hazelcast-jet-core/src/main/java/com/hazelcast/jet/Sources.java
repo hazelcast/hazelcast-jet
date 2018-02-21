@@ -719,7 +719,7 @@ public final class Sources {
             @Nonnull String watchedDirectory, @Nonnull Charset charset, @Nonnull String glob
     ) {
         return fromProcessor("fileWatcherSource(" + watchedDirectory + '/' + glob + ')',
-                streamFilesP(watchedDirectory, charset, glob)
+                streamFilesP(watchedDirectory, charset, glob, (file, line) -> line)
         );
     }
 
