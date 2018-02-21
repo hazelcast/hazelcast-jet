@@ -34,6 +34,9 @@ public interface StageWithWindow<T> {
     WindowDefinition windowDefinition();
 
     @Nonnull
+    StreamStage<T> streamStage();
+
+    @Nonnull
     <K> StageWithGroupingAndWindow<T, K> groupingKey(
             @Nonnull DistributedFunction<? super T, ? extends K> keyFn
     );
@@ -82,5 +85,7 @@ public interface StageWithWindow<T> {
     }
 
     @Nonnull
-    WindowAggregateBuilder<T> aggregateBuilder();
+    default WindowAggregateBuilder<T> aggregateBuilder() {
+        return new WindowAggregateBuilder<>(streamStage(), windowDefinition());
+    }
 }

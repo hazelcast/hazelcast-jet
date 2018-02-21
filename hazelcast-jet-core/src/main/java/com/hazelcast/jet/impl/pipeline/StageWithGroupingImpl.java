@@ -23,7 +23,6 @@ import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
 import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
 import com.hazelcast.jet.pipeline.StageWithGrouping;
 
 import javax.annotation.Nonnull;
@@ -84,10 +83,5 @@ public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> imp
                         aggrOp,
                         mapToOutputFn),
                 DONT_ADAPT);
-    }
-
-    @Nonnull @Override
-    public GroupAggregateBuilder<T, K> aggregateBuilder() {
-        return new GroupAggregateBuilder<>(this);
     }
 }

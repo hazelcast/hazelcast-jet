@@ -73,5 +73,7 @@ public interface StageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> 
     }
 
     @Nonnull
-    GroupAggregateBuilder<T, K> aggregateBuilder();
+    default GroupAggregateBuilder<T, K> aggregateBuilder() {
+        return new GroupAggregateBuilder<>(this);
+    }
 }

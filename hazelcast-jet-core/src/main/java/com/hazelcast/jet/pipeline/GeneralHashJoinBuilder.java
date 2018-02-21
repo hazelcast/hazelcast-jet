@@ -38,16 +38,16 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
 
 /**
- * Offers a step-by-step fluent API to build a hash-join pipeline pipeline.
+ * Offers a step-by-step fluent API to build a hash-join pipeline stage.
  * To obtain it, call {@link GeneralStage#hashJoinBuilder()} on the primary
- * pipeline, whose data will be enriched from all other stages.
+ * stage, whose data will be enriched from all other stages.
  * <p>
- * This object is mainly intended to build a hash-join of the primary pipeline
- * with three or more contributing stages. For one or two stages the direct
- * {@code pipeline.hashJoin(...)} calls should be preferred because they offer
- * more static type safety.
+ * This object is mainly intended to build a hash-join of the primary stage
+ * with three or more contributing stages. For one or two stages, prefer the
+ * direct {@code stage.hashJoin(...)} calls because they offer more static
+ * type safety.
  *
- * @param <T0> the type of the stream-0 item
+ * @param <T0> the type of the items in the primary stage
  */
 public abstract class GeneralHashJoinBuilder<T0> {
     private final Transform transform0;
