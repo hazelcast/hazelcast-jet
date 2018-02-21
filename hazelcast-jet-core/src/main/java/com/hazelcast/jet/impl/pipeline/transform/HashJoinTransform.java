@@ -50,12 +50,12 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
             @Nonnull List<Transform> upstream,
             @Nonnull List<JoinClause<?, ? super T0, ?, ?>> clauses,
             @Nonnull List<Tag> tags,
-            @Nonnull DistributedBiFunction mapToOutpuBiFn
+            @Nonnull DistributedBiFunction mapToOutputBiFn
     ) {
-        super(tags.size() + "-way hash-join", upstream);
+        super(upstream.size() + "-way hash-join", upstream);
         this.clauses = clauses;
         this.tags = tags;
-        this.mapToOutputBiFn = mapToOutpuBiFn;
+        this.mapToOutputBiFn = mapToOutputBiFn;
         this.mapToOutputTriFn = null;
     }
 
@@ -65,7 +65,7 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
             @Nonnull List<Tag> tags,
             @Nonnull DistributedTriFunction<T0, T1, T2, R> mapToOutputTriFn
     ) {
-        super(tags.size() + "-way hash-join", upstream);
+        super(upstream.size() + "-way hash-join", upstream);
         this.clauses = clauses;
         this.tags = tags;
         this.mapToOutputBiFn = null;
@@ -101,11 +101,11 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
         List keyFns = this.clauses.stream()
                                       .map(JoinClause::leftKeyFn)
                                       .collect(toList());
-        Vertex joiner = p.addVertex(this, namePrefix + "joiner", getLocalParallelism(),
+        Vertex joiner = p.addVertex(this, namePrefix + "-joiner", getLocalParallelism(),
                 () -> new HashJoinP(keyFns, this.tags, this.mapToOutputBiFn, null)).v;
         p.dag.edge(from(primary.v, primary.availableOrdinal++).to(joiner, 0));
 
-        String collectorName = namePrefix + "collector-";
+        String collectorName = namePrefix + "-collector";
         int collectorOrdinal = 1;
         for (Transform fromTransform : tailList(this.upstream())) {
             PlannerVertex fromPv = p.xform2vertex.get(fromTransform);
