@@ -653,7 +653,8 @@ public final class Sources {
     public static Source<String> files(
             @Nonnull String directory, @Nonnull Charset charset, @Nonnull String glob
     ) {
-        return fromProcessor("filesSource(" + new File(directory, glob) + ')', readFilesP(directory, charset, glob));
+        return fromProcessor("filesSource(" + new File(directory, glob) + ')',
+                readFilesP(directory, charset, glob, (file, line) -> line));
     }
 
     /**
