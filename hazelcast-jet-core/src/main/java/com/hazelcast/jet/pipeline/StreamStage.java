@@ -69,6 +69,11 @@ public interface StreamStage<T> extends GeneralStage<T> {
     }
 
     @Nonnull @Override
+    default StreamStage<T> peek() {
+        return (StreamStage<T>) GeneralStage.super.peek();
+    }
+
+    @Nonnull @Override
     StreamStage<T> peek(
             @Nonnull DistributedPredicate<? super T> shouldLogFn,
             @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn);

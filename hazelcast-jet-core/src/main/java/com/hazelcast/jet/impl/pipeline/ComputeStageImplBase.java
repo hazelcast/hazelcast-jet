@@ -160,7 +160,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull DistributedPredicate<? super T> shouldLogFn,
             @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn
     ) {
-        return attach(new PeekTransform<>(transform, shouldLogFn, toStringFn), DONT_ADAPT);
+        return attach(new PeekTransform<>(transform, shouldLogFn, toStringFn), fnAdapter);
     }
 
     @Nonnull

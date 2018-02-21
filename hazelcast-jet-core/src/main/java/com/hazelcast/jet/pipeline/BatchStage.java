@@ -73,6 +73,11 @@ public interface BatchStage<T> extends GeneralStage<T> {
     }
 
     @Nonnull @Override
+    default BatchStage<T> peek() {
+        return (BatchStage<T>) GeneralStage.super.peek();
+    }
+
+    @Nonnull @Override
     BatchStage<T> peek(
             @Nonnull DistributedPredicate<? super T> shouldLogFn,
             @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn
