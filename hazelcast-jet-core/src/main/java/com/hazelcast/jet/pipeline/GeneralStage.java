@@ -90,13 +90,13 @@ public interface GeneralStage<T> extends Stage {
      * the hash-join. Please refer to the {@link com.hazelcast.jet
      * package Javadoc} for a detailed description of the hash-join transform.
      *
-     * @param stage1     the pipeline to hash-join with this one
-     * @param joinClause1 specifies how to join the two streams
+     * @param stage1        the pipeline to hash-join with this one
+     * @param joinClause1   specifies how to join the two streams
      * @param mapToOutputFn function to map the joined items to the output value
-     * @param <K>        the type of the join key
-     * @param <T1_IN>    the type of {@code stage1} items
-     * @param <T1>       the result type of projection on {@code stage1} items
-     * @param <R>        the resulting output type
+     * @param <K>            the type of the join key
+     * @param <T1_IN>        the type of {@code stage1} items
+     * @param <T1>           the result type of projection on {@code stage1} items
+     * @param <R>            the resulting output type
      */
     @Nonnull
     <K, T1_IN, T1, R> GeneralStage<R> hashJoin(
@@ -111,21 +111,21 @@ public interface GeneralStage<T> extends Stage {
      * the hash-join. Please refer to the {@link com.hazelcast.jet package
      * Javadoc} for a detailed description of the hash-join transform.
      *
-     * @param stage1      the first pipeline to join
-     * @param joinClause1 specifies how to join with {@code stage1}
-     * @param stage2      the second pipeline to join
-     * @param joinClause2 specifices how to join with {@code stage2}
+     * @param stage1        the first pipeline to join
+     * @param joinClause1   specifies how to join with {@code stage1}
+     * @param stage2        the second pipeline to join
+     * @param joinClause2   specifices how to join with {@code stage2}
      * @param mapToOutputFn function to map the joined items to the output value
-     * @param <K1>        the type of key for {@code stage1}
-     * @param <T1_IN>     the type of {@code stage1} items
-     * @param <T1>        the result type of projection of {@code stage1} items
-     * @param <K2>        the type of key for {@code stage2}
-     * @param <T2_IN>     the type of {@code stage2} items
-     * @param <T2>        the result type of projection of {@code stage2} items
-     * @param <R>         the resulting output type
+     * @param <K1>           the type of key for {@code stage1}
+     * @param <T1_IN>        the type of {@code stage1} items
+     * @param <T1>           the result type of projection of {@code stage1} items
+     * @param <K2>           the type of key for {@code stage2}
+     * @param <T2_IN>        the type of {@code stage2} items
+     * @param <T2>           the result type of projection of {@code stage2} items
+     * @param <R>            the resulting output type
      */
     @Nonnull
-    <K1, T1_IN, T1, K2, T2_IN, T2, R> GeneralStage<R> hashJoin(
+    <K1, T1_IN, T1, K2, T2_IN, T2, R> GeneralStage<R> hashJoin2(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
             @Nonnull BatchStage<T2_IN> stage2,

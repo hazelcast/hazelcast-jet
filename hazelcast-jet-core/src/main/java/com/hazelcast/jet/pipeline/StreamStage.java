@@ -55,7 +55,7 @@ public interface StreamStage<T> extends GeneralStage<T> {
     );
 
     @Nonnull @Override
-    <K1, T1_IN, T1, K2, T2_IN, T2, R> StreamStage<R> hashJoin(
+    <K1, T1_IN, T1, K2, T2_IN, T2, R> StreamStage<R> hashJoin2(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
             @Nonnull BatchStage<T2_IN> stage2,

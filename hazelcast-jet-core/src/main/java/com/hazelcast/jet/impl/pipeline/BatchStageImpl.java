@@ -85,14 +85,14 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    public <K1, T1_IN, T1, K2, T2_IN, T2, R> BatchStage<R> hashJoin(
+    public <K1, T1_IN, T1, K2, T2_IN, T2, R> BatchStage<R> hashJoin2(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
             @Nonnull BatchStage<T2_IN> stage2,
             @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2,
             @Nonnull DistributedTriFunction<T, T1, T2, R> mapToOutputFn
     ) {
-        return attachHashJoin(stage1, joinClause1, stage2, joinClause2, mapToOutputFn);
+        return attachHashJoin2(stage1, joinClause1, stage2, joinClause2, mapToOutputFn);
     }
 
     @Nonnull @Override
