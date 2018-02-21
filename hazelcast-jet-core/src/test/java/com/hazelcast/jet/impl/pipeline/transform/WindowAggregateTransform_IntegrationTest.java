@@ -29,6 +29,7 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.WindowDefinition;
+import com.hazelcast.spi.properties.GroupProperty;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.Before;
@@ -71,6 +72,7 @@ public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
         JetConfig config = new JetConfig();
         config.getHazelcastConfig().addEventJournalConfig(
                 new EventJournalConfig().setMapName("source").setEnabled(true));
+        config.getHazelcastConfig().setProperty(GroupProperty.PARTITION_COUNT.getName(), "1");
         instance = createJetMember(config);
     }
 
