@@ -30,8 +30,6 @@ import java.util.Arrays;
 import java.util.Map.Entry;
 import java.util.Properties;
 
-import static com.hazelcast.jet.impl.connector.kafka.StreamKafkaP.recordToEntry;
-
 /**
  * Static utility class with factories of Apache Kafka source and sink
  * processors.
@@ -66,7 +64,7 @@ public final class KafkaProcessors {
             @Nonnull WatermarkGenerationParams<Entry<K, V>> wmGenParams,
             @Nonnull String... topics
     ) {
-        return KafkaProcessors.<K, V, Entry<K,V>>streamKafkaP(
+        return KafkaProcessors.<K, V, Entry<K, V>>streamKafkaP(
                 properties, StreamKafkaP::recordToEntry, wmGenParams, topics
         );
     }
