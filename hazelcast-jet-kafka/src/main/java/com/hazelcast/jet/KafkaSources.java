@@ -16,8 +16,9 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.StreamSource;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
@@ -35,7 +36,7 @@ public final class KafkaSources {
     }
 
     /**
-     * Convenience for {@link #kafka(Properties, DistributedBiFunction, String...)}
+     * Convenience for {@link #kafka(Properties, DistributedFunction, String...)}
      * wrapping the output in {@code Map.Entry}.
      */
     @Nonnull
@@ -83,16 +84,16 @@ public final class KafkaSources {
      * Default local parallelism for this processor is 2 (or less if less CPUs
      * are available).
      *
-     * @param properties consumer properties broker address and key/value deserializers
-     * @param projectionFn function to create output objects from key and value.
+     * @param properties   consumer properties broker address and key/value deserializers
+     * @param projectionFn function to create output objects from the Kafka record.
      *                     If the projection returns a {@code null} for an item, that item
      *                     will be filtered out.
-     * @param topics     the list of topics
+     * @param topics       the list of topics
      */
     @Nonnull
     public static <K, V, T> StreamSource<T> kafka(
             @Nonnull Properties properties,
-            @Nonnull DistributedBiFunction<K, V, T> projectionFn,
+            @Nonnull DistributedFunction<ConsumerRecord<K, V>, T> projectionFn,
             @Nonnull String... topics
     ) {
         return streamFromProcessorWithWatermarks("streamKafka",

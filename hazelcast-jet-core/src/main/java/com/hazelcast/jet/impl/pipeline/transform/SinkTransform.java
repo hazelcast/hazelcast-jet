@@ -34,7 +34,7 @@ public class SinkTransform<T> extends AbstractTransform implements Sink<T> {
     private ProcessorMetaSupplier metaSupplier;
 
     private final BitSet shouldAdaptOrdinal = new BitSet();
-    private int nextOrdinal = 0;
+    private int nextOrdinal;
 
     public SinkTransform(
             @Nonnull String name,

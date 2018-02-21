@@ -16,20 +16,21 @@
 
 package com.hazelcast.jet.core.processor;
 
-import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
-import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.connector.kafka.StreamKafkaP;
 import com.hazelcast.jet.impl.connector.kafka.WriteKafkaP;
 import com.hazelcast.util.Preconditions;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
 import javax.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.Map.Entry;
 import java.util.Properties;
+
+import static com.hazelcast.jet.impl.connector.kafka.StreamKafkaP.recordToEntry;
 
 /**
  * Static utility class with factories of Apache Kafka source and sink
@@ -43,11 +44,11 @@ public final class KafkaProcessors {
     /**
      * Returns a supplier of processors for
      * {@link com.hazelcast.jet.KafkaSources#kafka(Properties,
-     * DistributedBiFunction, String...)}.
+     * DistributedFunction, String...)}.
      */
     public static <K, V, T> ProcessorMetaSupplier streamKafkaP(
             @Nonnull Properties properties,
-            @Nonnull DistributedBiFunction<K, V, T> projectionFn,
+            @Nonnull DistributedFunction<ConsumerRecord<K, V>, T> projectionFn,
             @Nonnull WatermarkGenerationParams<T> wmGenParams,
             @Nonnull String... topics
     ) {
@@ -65,7 +66,9 @@ public final class KafkaProcessors {
             @Nonnull WatermarkGenerationParams<Entry<K, V>> wmGenParams,
             @Nonnull String... topics
     ) {
-        return KafkaProcessors.<K, V, Entry<K, V>>streamKafkaP(properties, Util::entry, wmGenParams, topics);
+        return KafkaProcessors.<K, V, Entry<K,V>>streamKafkaP(
+                properties, StreamKafkaP::recordToEntry, wmGenParams, topics
+        );
     }
 
     /**
