@@ -23,13 +23,18 @@ import com.hazelcast.jet.pipeline.Sink;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.function.Function;
+import java.util.BitSet;
+
+import static com.hazelcast.jet.impl.pipeline.FunctionAdapter.adaptingMetaSupplier;
+
 
 public class SinkTransform<T> extends AbstractTransform implements Sink<T> {
 
     @Nonnull
     private ProcessorMetaSupplier metaSupplier;
-    private boolean metaSupplierReplaced;
+
+    private final BitSet shouldAdaptOrdinal = new BitSet();
+    private int nextOrdinal = 0;
 
     public SinkTransform(
             @Nonnull String name,
@@ -39,22 +44,14 @@ public class SinkTransform<T> extends AbstractTransform implements Sink<T> {
         this.metaSupplier = metaSupplier;
     }
 
-    public void addUpstream(Transform upstream) {
+    public void addUpstream(Transform upstream, boolean adaptToJetEvent) {
+        shouldAdaptOrdinal.set(nextOrdinal++, adaptToJetEvent);
         upstream().add(upstream);
     }
 
     @Nonnull
     public ProcessorMetaSupplier metaSupplier() {
-        return metaSupplier;
-    }
-
-    public void replaceMetaSupplier(
-            @Nonnull Function<? super ProcessorMetaSupplier, ? extends ProcessorMetaSupplier> updateMetaSupplierFn
-    ) {
-        if (!metaSupplierReplaced) {
-            metaSupplierReplaced = true;
-            metaSupplier = updateMetaSupplierFn.apply(metaSupplier);
-        }
+        return adaptingMetaSupplier(metaSupplier, shouldAdaptOrdinal);
     }
 
     @Override

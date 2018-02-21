@@ -23,6 +23,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -31,13 +32,13 @@ import com.hazelcast.jet.function.DistributedTriFunction;
 import com.hazelcast.jet.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.function.WindowResultFunction;
 import com.hazelcast.jet.impl.aggregate.AggregateOperationImpl;
-import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.impl.processor.ProcessorWrapper;
 import com.hazelcast.jet.impl.util.WrappingProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.JoinClause;
 
 import javax.annotation.Nonnull;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.pipeline.JetEventImpl.jetEvent;
@@ -97,7 +98,63 @@ public class FunctionAdapter {
         return keyedWindowResultFn;
     }
 
-    <T> void adaptMetaSupplier(SinkTransform<T> sinkTransform) {
+    @Nonnull
+    public static ProcessorMetaSupplier adaptingMetaSupplier(ProcessorMetaSupplier metaSup, BitSet adaptedOrdinals) {
+        return new WrappingProcessorMetaSupplier(metaSup, p -> new AdaptingProcessor(p, adaptedOrdinals));
+    }
+
+    private static final class AdaptingProcessor extends ProcessorWrapper {
+        private final AdaptingInbox adaptingInbox = new AdaptingInbox();
+        private final BitSet shouldAdaptOrdinal;
+
+        AdaptingProcessor(Processor wrapped, BitSet shouldAdaptOrdinal) {
+            super(wrapped);
+            this.shouldAdaptOrdinal = shouldAdaptOrdinal;
+        }
+
+        @Override
+        public void process(int ordinal, @Nonnull Inbox inbox) {
+            Inbox inboxToUse;
+            if (shouldAdaptOrdinal.get(ordinal)) {
+                inboxToUse = adaptingInbox;
+                adaptingInbox.setWrappedInbox(inbox);
+            } else {
+                inboxToUse = inbox;
+            }
+            super.process(ordinal, inboxToUse);
+        }
+    }
+
+    private static final class AdaptingInbox implements Inbox {
+        private Inbox wrapped;
+
+        void setWrappedInbox(@Nonnull Inbox wrapped) {
+            this.wrapped = wrapped;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return wrapped.isEmpty();
+        }
+
+        @Override
+        public Object peek() {
+            return unwrapPayload(wrapped.peek());
+        }
+
+        @Override
+        public Object poll() {
+            return unwrapPayload(wrapped.poll());
+        }
+
+        @Override
+        public void remove() {
+            wrapped.remove();
+        }
+
+        private static Object unwrapPayload(Object jetEvent) {
+            return jetEvent != null ? ((JetEvent) jetEvent).payload() : null;
+        }
     }
 }
 
@@ -171,11 +228,6 @@ class JetEventFunctionAdapter extends FunctionAdapter {
                 jetEvent(keyedWindowResultFn.apply(winStart, winEnd, key, windowResult), winEnd);
     }
 
-    <T> void adaptMetaSupplier(SinkTransform<T> sinkTransform) {
-        sinkTransform.replaceMetaSupplier(
-                metaSup -> new WrappingProcessorMetaSupplier(metaSup, AdaptingProcessor::new));
-    }
-
     @Nonnull
     @SuppressWarnings("unchecked")
     static AggregateOperation adaptAggregateOperation(@Nonnull AggregateOperation aggrOp) {
@@ -231,50 +283,5 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     ) {
         return (A acc, JetEvent<T> t) -> accumulateFn.accept(acc, t.payload());
     }
-
-    private static final class AdaptingProcessor extends ProcessorWrapper {
-        private final AdaptingInbox adaptingInbox = new AdaptingInbox();
-
-        AdaptingProcessor(Processor wrapped) {
-            super(wrapped);
-        }
-
-        @Override
-        public void process(int ordinal, @Nonnull Inbox inbox) {
-            adaptingInbox.setWrappedInbox(inbox);
-            super.process(ordinal, adaptingInbox);
-        }
-    }
-
-    private static final class AdaptingInbox implements Inbox {
-        private Inbox wrapped;
-
-        void setWrappedInbox(@Nonnull Inbox wrapped) {
-            this.wrapped = wrapped;
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return wrapped.isEmpty();
-        }
-
-        @Override
-        public Object peek() {
-            return unwrapPayload(wrapped.peek());
-        }
-
-        @Override
-        public Object poll() {
-            return unwrapPayload(wrapped.poll());
-        }
-
-        @Override
-        public void remove() {
-            wrapped.remove();
-        }
-
-        private static Object unwrapPayload(Object jetEvent) {
-            return jetEvent != null ? ((JetEvent) jetEvent).payload() : null;
-        }
-    }
 }
+

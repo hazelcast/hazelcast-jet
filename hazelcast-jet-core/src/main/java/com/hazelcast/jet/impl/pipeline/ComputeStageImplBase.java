@@ -86,7 +86,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     public StreamStage<T> setTimestampWithEventTime(
             DistributedToLongFunction<? super T> timestampFn, long allowedLatenessMs
     ) {
-        checkFalse(fnAdapter.equals(ADAPT_TO_JET_EVENT), "This stage already has timestamps assigned to it.");
+        checkFalse(hasJetEvents(), "This stage already has timestamps assigned to it.");
 
         WatermarkEmissionPolicy emissionPolicy = suppressDuplicates(); //TODO
         DistributedSupplier<WatermarkPolicy> wmPolicy = limitingLag(allowedLatenessMs);
@@ -175,8 +175,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @SuppressWarnings("unchecked")
     public SinkStage drainTo(@Nonnull Sink<? super T> sink) {
         SinkTransform<T> sinkTransform = (SinkTransform<T>) sink;
-        fnAdapter.adaptMetaSupplier(sinkTransform);
-        sinkTransform.addUpstream(transform);
+        sinkTransform.addUpstream(transform, hasJetEvents());
         SinkStageImpl output = new SinkStageImpl(sinkTransform, pipelineImpl);
         pipelineImpl.connect(transform, sinkTransform);
         return output;
@@ -184,6 +183,10 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
     @Nonnull
     abstract <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter);
+
+    private boolean hasJetEvents() {
+        return fnAdapter.equals(ADAPT_TO_JET_EVENT);
+    }
 
     static void ensureJetEvents(@Nonnull ComputeStageImplBase stage, @Nonnull String name) {
         if (stage.fnAdapter != ADAPT_TO_JET_EVENT) {
