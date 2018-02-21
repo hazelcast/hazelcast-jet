@@ -667,7 +667,8 @@ public final class Sources {
     public static BatchSource<String> files(
             @Nonnull String directory, @Nonnull Charset charset, @Nonnull String glob
     ) {
-        return batchFromProcessor("filesSource(" + new File(directory, glob) + ')', readFilesP(directory, charset, glob));
+        return batchFromProcessor("filesSource(" + new File(directory, glob) + ')',
+                readFilesP(directory, charset, glob, (file, line) -> line));
     }
 
     /**
@@ -732,7 +733,7 @@ public final class Sources {
             @Nonnull String watchedDirectory, @Nonnull Charset charset, @Nonnull String glob
     ) {
         return streamFromProcessor("fileWatcherSource(" + watchedDirectory + '/' + glob + ')',
-                 streamFilesP(watchedDirectory, charset, glob)
+                streamFilesP(watchedDirectory, charset, glob, (file, line) -> line)
         );
     }
 
