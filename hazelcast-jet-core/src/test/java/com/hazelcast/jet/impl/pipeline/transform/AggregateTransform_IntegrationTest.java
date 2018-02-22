@@ -21,7 +21,6 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JetTestSupport;
-import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -32,9 +31,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
-
-import java.util.Map.Entry;
-import java.util.Set;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
@@ -65,10 +61,9 @@ public class AggregateTransform_IntegrationTest extends JetTestSupport {
         map.put(1L, "bar");
 
         Pipeline p = Pipeline.create();
-        BatchStage<Set<Entry<Long, String>>> stage =
-                p.drawFrom(Sources.<Long, String>map("source"))
-                 .aggregate(toSet());
-        stage.drainTo(Sinks.list("sink"));
+        p.drawFrom(Sources.<Long, String>map("source"))
+         .aggregate(toSet())
+         .drainTo(Sinks.list("sink"));
 
         instance.newJob(p).join();
 

@@ -27,7 +27,6 @@ import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.spi.properties.GroupProperty;
 import com.hazelcast.test.HazelcastParallelClassRunner;
@@ -37,9 +36,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
@@ -73,12 +70,11 @@ public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
         map.put(10L, "flush-item");
 
         Pipeline p = Pipeline.create();
-        StreamStage<TimestampedItem<Set<Entry<Long, String>>>> stage =
-                p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST))
-                 .setTimestampWithEventTime(Map.Entry::getKey, 0)
-                 .window(WindowDefinition.tumbling(2))
-                 .aggregate(toSet());
-        stage.drainTo(Sinks.list("sink"));
+        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST))
+         .setTimestampWithEventTime(Entry::getKey, 0)
+         .window(WindowDefinition.tumbling(2))
+         .aggregate(toSet())
+         .drainTo(Sinks.list("sink"));
 
         instance.newJob(p);
         assertTrueEventually(() -> {
@@ -99,12 +95,11 @@ public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
         map.put(10L, "flush-item");
 
         Pipeline p = Pipeline.create();
-        StreamStage<WindowResult> stage =
-                p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST))
-                 .setTimestampWithEventTime(Entry::getKey, 0)
-                 .window(WindowDefinition.session(2))
-                 .aggregate(toSet(), (winStart, winEnd, result) -> new WindowResult<>(winStart, winEnd, "", result));
-        stage.drainTo(Sinks.list("sink"));
+        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST))
+         .setTimestampWithEventTime(Entry::getKey, 0)
+         .window(WindowDefinition.session(2))
+         .aggregate(toSet(), (winStart, winEnd, result) -> new WindowResult<>(winStart, winEnd, "", result))
+         .drainTo(Sinks.list("sink"));
 
         instance.newJob(p);
 

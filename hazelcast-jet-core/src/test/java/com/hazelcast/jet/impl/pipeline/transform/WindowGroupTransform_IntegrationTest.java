@@ -27,8 +27,8 @@ import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.WindowDefinition;
+import com.hazelcast.spi.properties.GroupProperty;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.Before;
@@ -38,7 +38,6 @@ import org.junit.runner.RunWith;
 
 import java.util.HashSet;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
@@ -56,19 +55,19 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
         JetConfig config = new JetConfig();
         config.getHazelcastConfig().addEventJournalConfig(
                 new EventJournalConfig().setMapName("source").setEnabled(true));
+        config.getHazelcastConfig().setProperty(GroupProperty.PARTITION_COUNT.getName(), "1");
         instance = createJetMember(config);
     }
 
     @Test
     public void testSliding_groupingFirst() {
         Pipeline p = Pipeline.create();
-        StreamStage<TimestampedEntry<Character, Set<Entry<Long, String>>>> stage =
-                p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST))
-                 .setTimestampWithEventTime(Entry::getKey, 0)
-                 .groupingKey(entry -> entry.getValue().charAt(0))
-                 .window(WindowDefinition.tumbling(2))
-                 .aggregate(toSet());
-        stage.drainTo(Sinks.list("sink"));
+        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST))
+         .setTimestampWithEventTime(Entry::getKey, 0)
+         .groupingKey(entry -> entry.getValue().charAt(0))
+         .window(WindowDefinition.tumbling(2))
+         .aggregate(toSet())
+         .drainTo(Sinks.list("sink"));
 
         testSliding(p);
     }
@@ -76,13 +75,12 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
     @Test
     public void testSliding_windowFirst() {
         Pipeline p = Pipeline.create();
-        StreamStage<TimestampedEntry<Character, Set<Entry<Long, String>>>> stage =
-                p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST))
-                 .setTimestampWithEventTime(Entry::getKey, 0)
-                 .window(WindowDefinition.tumbling(2))
-                 .groupingKey(entry -> entry.getValue().charAt(0))
-                 .aggregate(toSet());
-        stage.drainTo(Sinks.list("sink"));
+        p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST))
+         .setTimestampWithEventTime(Entry::getKey, 0)
+         .window(WindowDefinition.tumbling(2))
+         .groupingKey(entry -> entry.getValue().charAt(0))
+         .aggregate(toSet())
+         .drainTo(Sinks.list("sink"));
 
         testSliding(p);
     }
