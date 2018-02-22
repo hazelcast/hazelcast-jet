@@ -71,7 +71,7 @@ public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST))
-         .setTimestampWithEventTime(Entry::getKey, 0)
+         .addTimestamps(Entry::getKey, 0)
          .window(WindowDefinition.tumbling(2))
          .aggregate(toSet())
          .drainTo(Sinks.list("sink"));
@@ -96,7 +96,7 @@ public class WindowAggregateTransform_IntegrationTest extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST))
-         .setTimestampWithEventTime(Entry::getKey, 0)
+         .addTimestamps(Entry::getKey, 0)
          .window(WindowDefinition.session(2))
          .aggregate(toSet(), (winStart, winEnd, result) -> new WindowResult<>(winStart, winEnd, "", result))
          .drainTo(Sinks.list("sink"));

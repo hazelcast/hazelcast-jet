@@ -77,19 +77,19 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    public StreamStage<T> setTimestampWithSystemTime() {
-        return setTimestampWithEventTime(o -> System.currentTimeMillis(), 0);
+    public StreamStage<T> addTimestamps() {
+        return addTimestamps(o -> System.currentTimeMillis(), 0);
     }
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    public StreamStage<T> setTimestampWithEventTime(
-            DistributedToLongFunction<? super T> timestampFn, long allowedLatenessMs
+    public StreamStage<T> addTimestamps(
+            DistributedToLongFunction<? super T> timestampFn, long allowedLateness
     ) {
         checkFalse(hasJetEvents(), "This stage already has timestamps assigned to it.");
 
         WatermarkEmissionPolicy emissionPolicy = suppressDuplicates(); //TODO
-        DistributedSupplier<WatermarkPolicy> wmPolicy = limitingLag(allowedLatenessMs);
+        DistributedSupplier<WatermarkPolicy> wmPolicy = limitingLag(allowedLateness);
         WatermarkGenerationParams<T> wmParams = wmGenParams(
                 timestampFn, JetEventImpl::jetEvent, wmPolicy, emissionPolicy, DEFAULT_IDLE_TIMEOUT
         );
@@ -191,8 +191,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     static void ensureJetEvents(@Nonnull ComputeStageImplBase stage, @Nonnull String name) {
         if (stage.fnAdapter != ADAPT_TO_JET_EVENT) {
             throw new IllegalStateException(
-                    name + " is missing a timestamp and watermark definition. Call" +
-                            " one of the .timestampWith() methods on it before performing" +
+                    name + " is missing a timestamp definition. Call" +
+                            " one of the .addTimestamps() methods on it before performing" +
                             " the aggregation."
             );
         }

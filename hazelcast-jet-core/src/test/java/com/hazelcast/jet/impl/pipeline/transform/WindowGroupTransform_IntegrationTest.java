@@ -63,7 +63,7 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
     public void testSliding_groupingFirst() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST))
-         .setTimestampWithEventTime(Entry::getKey, 0)
+         .addTimestamps(Entry::getKey, 0)
          .groupingKey(entry -> entry.getValue().charAt(0))
          .window(WindowDefinition.tumbling(2))
          .aggregate(toSet())
@@ -76,7 +76,7 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
     public void testSliding_windowFirst() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST))
-         .setTimestampWithEventTime(Entry::getKey, 0)
+         .addTimestamps(Entry::getKey, 0)
          .window(WindowDefinition.tumbling(2))
          .groupingKey(entry -> entry.getValue().charAt(0))
          .aggregate(toSet())
@@ -112,7 +112,7 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
     public void testSession_windowFirst() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST))
-         .setTimestampWithEventTime(Entry::getKey, 0)
+         .addTimestamps(Entry::getKey, 0)
          .window(WindowDefinition.session(2))
          .groupingKey(entry -> entry.getValue().charAt(0))
          .aggregate(toSet(), WindowResult::new)
@@ -125,7 +125,7 @@ public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
     public void testSession_groupingFirst() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Long, String>mapJournal("source", JournalInitialPosition.START_FROM_OLDEST))
-         .setTimestampWithEventTime(Entry::getKey, 0)
+         .addTimestamps(Entry::getKey, 0)
          .groupingKey(entry -> entry.getValue().charAt(0))
          .window(WindowDefinition.session(2))
          .aggregate(toSet(), WindowResult::new)

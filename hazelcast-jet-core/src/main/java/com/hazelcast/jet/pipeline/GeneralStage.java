@@ -148,22 +148,32 @@ public interface GeneralStage<T> extends Stage {
     <K> GeneralStageWithGrouping<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);
 
     /**
-     * Javadoc pending
+     * Adds a timestamp to each item in the stream using current system time.
      *
-     * @return
+     * @throws IllegalArgumentException if stream already has timestamps assigned
      */
     @Nonnull
-    StreamStage<T> setTimestampWithSystemTime();
+    default StreamStage<T> addTimestamps() {
+        return addTimestamps(t -> System.currentTimeMillis(), 0);
+    }
 
     /**
-     * Javadoc pending
-     * @param timestampFn
-     * @param allowedLatenessMs
+     * Adds a timestamp to each item in the stream using the supplied function.
+     * A {@code allowedLag} value of greater than 0 can be used to allow
+     * generation of watermarks that lag behind the latest observed event.
      *
-     * @return
+     * For example, if a stream contains events with timestamps
+     * {@code [4,3,5,4,6,1]} in the given order and lag is configured as {@code 1},
+     * then the event with timestamp {@code 1} would be considered late and would
+     * not be included in windowing calculations.
+     *
+     * @param timestampFn a function that returns the timestamp for each item
+     * @param allowedLag the allowed lag from the top observed timestamp
+     *
+     * @throws IllegalArgumentException if stream already has timestamps assigned
      */
     @Nonnull
-    StreamStage<T> setTimestampWithEventTime(DistributedToLongFunction<? super T> timestampFn, long allowedLatenessMs);
+    StreamStage<T> addTimestamps(DistributedToLongFunction<? super T> timestampFn, long allowedLag);
 
     /**
      * Attaches to this pipeline a sink pipeline, one that accepts data but doesn't
