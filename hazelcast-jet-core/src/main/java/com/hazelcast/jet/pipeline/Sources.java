@@ -22,6 +22,7 @@ import com.hazelcast.jet.JournalInitialPosition;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
+import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
@@ -662,21 +663,28 @@ public final class Sources {
      * @param glob the globbing mask, see {@link
      *             java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()}.
      *             Use {@code "*"} for all files.
+     * @param mapOutputFn function to create output items. Parameters are
+     *                    {@code fileName} and {@code line}.
      */
     @Nonnull
-    public static BatchSource<String> files(
-            @Nonnull String directory, @Nonnull Charset charset, @Nonnull String glob
+    public static <R> BatchSource<R> files(
+            @Nonnull String directory,
+            @Nonnull Charset charset,
+            @Nonnull String glob,
+            @Nonnull DistributedBiFunction<String, String, ? extends R> mapOutputFn
     ) {
         return batchFromProcessor("filesSource(" + new File(directory, glob) + ')',
-                readFilesP(directory, charset, glob, (file, line) -> line));
+                readFilesP(directory, charset, glob, mapOutputFn));
     }
 
     /**
-     * Convenience for {@link #files(String, Charset, String) readFiles(directory, UTF_8, "*")}.
+     * Convenience for {@link #files(String, Charset, String, DistributedBiFunction)
+     * full version of readFiles}, using UTF-8 encoding, matching all files in
+     * the directory and emitting just the lines as Strings.
      */
     @Nonnull
     public static BatchSource<String> files(@Nonnull String directory) {
-        return files(directory, UTF_8, GLOB_WILDCARD);
+        return files(directory, UTF_8, GLOB_WILDCARD, (file, line) -> line);
     }
 
     /**
