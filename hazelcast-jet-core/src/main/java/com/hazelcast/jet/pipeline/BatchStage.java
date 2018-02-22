@@ -31,11 +31,12 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Represents a pipeline in a distributed computation {@link Pipeline
- * pipeline}. It accepts input from its upstream stages (if any) and passes
- * its output to its downstream stages.
+ * Represents a stage in a distributed computation {@link Pipeline
+ * pipeline} that will observe a finite amount of data (a batch). It
+ * accepts input from its upstream stages (if any) and passes its output
+ * to the downstream stages.
  *
- * @param <T> the type of items coming out of this pipeline
+ * @param <T> the type of items coming out of this stage
  */
 public interface BatchStage<T> extends GeneralStage<T> {
 

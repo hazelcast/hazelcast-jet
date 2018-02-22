@@ -19,15 +19,23 @@ package com.hazelcast.jet.pipeline;
 import javax.annotation.Nonnull;
 
 /**
- * The basic element of a Jet {@link Pipeline pipeline}.
- * To build a pipeline, start with {@link Pipeline#drawFrom(BatchSource)} to
- * get the initial {@link BatchStage} and then use its methods to attach
- * further downstream stages. Terminate the pipeline by calling {@link
- * BatchStage#drainTo(Sink)}, which will attach a {@link SinkStage}.
+ * The basic element of a Jet {@link Pipeline pipeline}, represents
+ * a computation step. It accepts input from its upstream stages (if any)
+ * and passes its output to its downstream stages (if any). Jet
+ * differentiates between {@link BatchStage batch stages} that represent
+ * finite data sets (batches) and {@link StreamStage stream stages} that
+ * represent infinite data streams. Some operations only make sense on a
+ * batch stage and vice versa.
+ * <p>
+ * To build a pipeline, start with {@link Pipeline#drawFrom pipeline.drawfrom()} to
+ * get the initial stage and then use its methods to attach further
+ * downstream stages. Terminate the pipeline by calling {@link
+ * GeneralStage#drainTo(Sink) stage.drainTo(sink)}, which will attach a
+ * {@link SinkStage}.
  */
 public interface Stage {
     /**
-     * Returns the {@link Pipeline} this pipeline belongs to.
+     * Returns the {@link Pipeline} this stage belongs to.
      */
     Pipeline getPipeline();
 

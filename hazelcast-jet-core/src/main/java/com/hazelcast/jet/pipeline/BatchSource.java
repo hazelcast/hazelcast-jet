@@ -16,13 +16,18 @@
 
 package com.hazelcast.jet.pipeline;
 
+import javax.annotation.Nonnull;
+
 /**
- * The source of data in a pipeline.
- * <p>
- * See {@link Sources} for possible choices.
+ * Represents a finite source of data for a Jet pipeline. Finite sources
+ * are the only kind that can be used to aggregate data without windowing.
  *
  * @param <T> the stream item type
  */
 public interface BatchSource<T> {
+    /**
+     * Returns a descriptive name of this source.
+     */
+    @Nonnull
     String name();
 }

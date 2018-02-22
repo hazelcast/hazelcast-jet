@@ -467,6 +467,15 @@ public class SinksTest extends PipelineTestSupport {
         job.join();
     }
 
+    @Test(expected = IllegalStateException.class)
+    public void when_usedTwice_then_throwException() {
+        BatchStage<Entry<Object, Object>> stage1 = pipeline.drawFrom(Sources.map(srcName));
+        BatchStage<Entry<Object, Object>> stage2 = pipeline.drawFrom(Sources.map(srcName + '2'));
+        Sink<Object> sink = Sinks.list(sinkName);
+        stage1.drainTo(sink);
+        stage2.drainTo(sink);
+    }
+
     private static class IncrementEntryProcessor<K> extends AbstractEntryProcessor<K, Integer> {
 
         private Integer value;

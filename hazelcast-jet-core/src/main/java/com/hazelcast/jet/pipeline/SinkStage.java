@@ -29,5 +29,5 @@ public interface SinkStage extends Stage {
     SinkStage setLocalParallelism(int localParallelism);
 
     @Nonnull @Override
-    SinkStage setName(@Nullable String name);
+    SinkStage setName(@Nonnull String name);
 }

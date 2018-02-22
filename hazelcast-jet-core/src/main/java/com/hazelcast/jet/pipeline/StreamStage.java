@@ -28,10 +28,19 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Javadoc pending.
+ * Represents a stage in a distributed computation {@link Pipeline
+ * pipeline} that will observe unbounded amount of data (i.e., an event
+ * stream). It accepts input from its upstream stages (if any) and passes
+ * its output to the downstream stages.
+ *
+ * @param <T> the type of items coming out of this stage
  */
 public interface StreamStage<T> extends GeneralStage<T> {
 
+    /**
+     * Adds the given window definition to this stage. This is an intermediate
+     * step in the preparation for an aggregate operation.
+     */
     @Nonnull
     StageWithWindow<T> window(WindowDefinition wDef);
 
@@ -92,5 +101,5 @@ public interface StreamStage<T> extends GeneralStage<T> {
     StreamStage<T> setLocalParallelism(int localParallelism);
 
     @Nonnull @Override
-    StreamStage<T> setName(@Nullable String name);
+    StreamStage<T> setName(@Nonnull String name);
 }

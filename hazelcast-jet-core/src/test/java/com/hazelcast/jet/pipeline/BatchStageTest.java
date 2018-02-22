@@ -246,9 +246,9 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<Entry<Integer, Long>> coGrouped = stage0.aggregate2(stage1,
                 AggregateOperation
                         .withCreate(LongAccumulator::new)
-                        .andAccumulate0((count, item) -> count.add(1))
-                        .andAccumulate1((count, item) -> count.add(10))
-                        .andCombine(LongAccumulator::add)
+                        .andAccumulate0((count, item) -> count.addAllowingOverflow(1))
+                        .andAccumulate1((count, item) -> count.addAllowingOverflow(10))
+                        .andCombine(LongAccumulator::addAllowingOverflow)
                         .andFinish(LongAccumulator::get));
         coGrouped.drainTo(sink);
         execute();
@@ -281,10 +281,10 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<Entry<Integer, Long>> coGrouped = stage0.aggregate3(stage1, stage2,
                 AggregateOperation
                         .withCreate(LongAccumulator::new)
-                        .andAccumulate0((count, item) -> count.add(1))
-                        .andAccumulate1((count, item) -> count.add(10))
-                        .andAccumulate2((count, item) -> count.add(100))
-                        .andCombine(LongAccumulator::add)
+                        .andAccumulate0((count, item) -> count.addAllowingOverflow(1))
+                        .andAccumulate1((count, item) -> count.addAllowingOverflow(10))
+                        .andAccumulate2((count, item) -> count.addAllowingOverflow(100))
+                        .andCombine(LongAccumulator::addAllowingOverflow)
                         .andFinish(LongAccumulator::get));
         coGrouped.drainTo(sink);
         execute();
@@ -320,10 +320,10 @@ public class BatchStageTest extends PipelineTestSupport {
         Tag<Integer> tag2 = b.add(stage2);
         BatchStage<Entry<Integer, Long>> coGrouped = b.build(AggregateOperation
                 .withCreate(LongAccumulator::new)
-                .andAccumulate(tag0, (count, item) -> count.add(1))
-                .andAccumulate(tag1, (count, item) -> count.add(10))
-                .andAccumulate(tag2, (count, item) -> count.add(100))
-                .andCombine(LongAccumulator::add)
+                .andAccumulate(tag0, (count, item) -> count.addAllowingOverflow(1))
+                .andAccumulate(tag1, (count, item) -> count.addAllowingOverflow(10))
+                .andAccumulate(tag2, (count, item) -> count.addAllowingOverflow(100))
+                .andCombine(LongAccumulator::addAllowingOverflow)
                 .andFinish(LongAccumulator::get));
         coGrouped.drainTo(sink);
         execute();

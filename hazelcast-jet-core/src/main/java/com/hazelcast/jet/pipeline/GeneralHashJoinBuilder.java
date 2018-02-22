@@ -64,15 +64,15 @@ public abstract class GeneralHashJoinBuilder<T0> {
     }
 
     /**
-     * Adds another contributing pipeline pipeline to the hash-join operation.
+     * Adds another contributing pipeline stage to the hash-join operation.
      *
-     * @param stage the contributing pipeline
-     * @param joinClause specifies how to join the contributing pipeline
+     * @param stage the contributing stage
+     * @param joinClause specifies how to join the contributing stage
      * @param <K> the type of the join key
-     * @param <T1_IN> the type of the contributing pipeline's data
+     * @param <T1_IN> the type of the contributing stage's data
      * @param <T1> the type of result after applying the projecting transformation
-     *             to the contributing pipeline's data
-     * @return the tag that refers to the contributing pipeline
+     *             to the contributing stage's data
+     * @return the tag that refers to the contributing stage
      */
     public <K, T1_IN, T1> Tag<T1> add(BatchStage<T1_IN> stage, JoinClause<K, T0, T1_IN, T1> joinClause) {
         Tag<T1> tag = tag(clauses.size());
@@ -81,10 +81,10 @@ public abstract class GeneralHashJoinBuilder<T0> {
     }
 
     /**
-     * Builds a new pipeline pipeline that performs the hash-join operation. The
-     * pipeline is attached to all the contributing stages.
+     * Builds a new pipeline stage that performs the hash-join operation. The
+     * stage is attached to all the contributing stages.
      *
-     * @return the hash-join pipeline pipeline
+     * @return the hash-join pipeline stage
      */
     @SuppressWarnings("unchecked")
     <R> GeneralStage<R> build0(DistributedBiFunction<T0, ItemsByTag, R> mapToOutputFn) {
@@ -115,7 +115,7 @@ public abstract class GeneralHashJoinBuilder<T0> {
     @FunctionalInterface
     public interface CreateOutStageFn<T0> {
         <R> GeneralStage<R> get(
-                HashJoinTransform<T0, R> hashJoinTransform, FunctionAdapter fnAdapter, PipelineImpl pipeline);
+                HashJoinTransform<T0, R> hashJoinTransform, FunctionAdapter fnAdapter, PipelineImpl stage);
     }
 
     private static class TransformAndClause<K, E0, T1, T1_OUT> {

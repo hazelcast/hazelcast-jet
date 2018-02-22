@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.pipeline.SinkStage;
-import edu.umd.cs.findbugs.annotations.NonNull;
 
 import javax.annotation.Nonnull;
 
@@ -35,7 +34,7 @@ class SinkStageImpl extends AbstractStage implements SinkStage {
     }
 
     @Nonnull @Override
-    public SinkStage setName(@NonNull String name) {
+    public SinkStage setName(@Nonnull String name) {
         super.setName(name);
         return this;
     }

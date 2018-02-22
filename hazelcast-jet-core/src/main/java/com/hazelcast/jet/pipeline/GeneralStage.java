@@ -30,19 +30,19 @@ import javax.annotation.Nonnull;
 import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
 
 /**
- * Represents a pipeline in a distributed computation {@link Pipeline
- * pipeline}. It accepts input from its upstream stages (if any) and passes
- * its output to its downstream stages.
+ * Represents the common aspect of {@link BatchStage batch} and {@link
+ * StreamStage stream} pipeline stages, defining those operations that
+ * apply to both.
  * <p>
- * Unless specified otherwise, all functions passed to member methods must
- * be stateless.
+ * Unless specified otherwise, all functions passed to methods of this
+ * interface must be stateless.
  *
- * @param <T> the type of items coming out of this pipeline
+ * @param <T> the type of items coming out of this stage
  */
 public interface GeneralStage<T> extends Stage {
 
     /**
-     * Attaches to this pipeline a mapping pipeline, one which applies the supplied
+     * Attaches to this stage a mapping stage, one which applies the supplied
      * function to each input item independently and emits the function's
      * result as the output item. If the result is {@code null}, it emits
      * nothing. Therefore this stage can be used to implement filtering
@@ -50,23 +50,24 @@ public interface GeneralStage<T> extends Stage {
      *
      * @param mapFn a stateless mapping function
      * @param <R> the result type of the mapping function
-     * @return the newly attached pipeline
+     * @return the newly attached stage
      */
     @Nonnull
     <R> GeneralStage<R> map(@Nonnull DistributedFunction<? super T, ? extends R> mapFn);
 
     /**
-     * Attaches to this pipeline a filtering pipeline, one which applies the provided
+     * Attaches to this stage a filtering stage, one which applies the provided
      * predicate function to each input item to decide whether to pass the item
-     * to the output or to discard it. Returns the newly attached pipeline.
+     * to the output or to discard it. Returns the newly attached stage.
      *
      * @param filterFn a stateless filter predicate function
+     * @return the newly attached stage
      */
     @Nonnull
     GeneralStage<T> filter(@Nonnull DistributedPredicate<T> filterFn);
 
     /**
-     * Attaches to this pipeline a flat-mapping pipeline, one which applies the
+     * Attaches to this stage a flat-mapping stage, one which applies the
      * supplied function to each input item independently and emits all items
      * from the {@link Traverser} it returns as the output items.
      * <p>
@@ -77,7 +78,7 @@ public interface GeneralStage<T> extends Stage {
      * @param flatMapFn a stateless flatmapping function, whose result type is
      *                  Jet's {@link Traverser}
      * @param <R> the type of items in the result's traversers
-     * @return the newly attached pipeline
+     * @return the newly attached stage
      */
     @Nonnull
     <R> GeneralStage<R> flatMap(
@@ -85,18 +86,19 @@ public interface GeneralStage<T> extends Stage {
     );
 
     /**
-     * Attaches to both this and the supplied pipeline a hash-joining pipeline and
-     * returns it. This pipeline plays the role of the <em>primary pipeline</em> in
+     * Attaches to both this and the supplied stage a hash-joining stage and
+     * returns it. This stage plays the role of the <em>primary stage</em> in
      * the hash-join. Please refer to the {@link com.hazelcast.jet
      * package Javadoc} for a detailed description of the hash-join transform.
      *
-     * @param stage1        the pipeline to hash-join with this one
+     * @param stage1        the stage to hash-join with this one
      * @param joinClause1   specifies how to join the two streams
      * @param mapToOutputFn function to map the joined items to the output value
-     * @param <K>            the type of the join key
-     * @param <T1_IN>        the type of {@code stage1} items
-     * @param <T1>           the result type of projection on {@code stage1} items
-     * @param <R>            the resulting output type
+     * @param <K>           the type of the join key
+     * @param <T1_IN>       the type of {@code stage1} items
+     * @param <T1>          the result type of projection on {@code stage1} items
+     * @param <R>           the resulting output type
+     * @return the newly attached stage
      */
     @Nonnull
     <K, T1_IN, T1, R> GeneralStage<R> hashJoin(
@@ -106,23 +108,24 @@ public interface GeneralStage<T> extends Stage {
     );
 
     /**
-     * Attaches to this and the two supplied stages a hash-joining pipeline and
-     * returns it. This pipeline plays the role of the <em>primary pipeline</em> in
-     * the hash-join. Please refer to the {@link com.hazelcast.jet package
-     * Javadoc} for a detailed description of the hash-join transform.
+     * Attaches to this and the two supplied stages a hash-joining stage and
+     * returns it. This stage plays the role of the <em>primary stage</em> in
+     * the hash-join. Please refer to the {@link com.hazelcast.jet.pipeline
+     * package Javadoc} for a detailed description of the hash-join transform.
      *
-     * @param stage1        the first pipeline to join
+     * @param stage1        the first stage to join
      * @param joinClause1   specifies how to join with {@code stage1}
-     * @param stage2        the second pipeline to join
+     * @param stage2        the second stage to join
      * @param joinClause2   specifices how to join with {@code stage2}
      * @param mapToOutputFn function to map the joined items to the output value
-     * @param <K1>           the type of key for {@code stage1}
-     * @param <T1_IN>        the type of {@code stage1} items
-     * @param <T1>           the result type of projection of {@code stage1} items
-     * @param <K2>           the type of key for {@code stage2}
-     * @param <T2_IN>        the type of {@code stage2} items
-     * @param <T2>           the result type of projection of {@code stage2} items
-     * @param <R>            the resulting output type
+     * @param <K1>          the type of key for {@code stage1}
+     * @param <T1_IN>       the type of {@code stage1} items
+     * @param <T1>          the result type of projection of {@code stage1} items
+     * @param <K2>          the type of key for {@code stage2}
+     * @param <T2_IN>       the type of {@code stage2} items
+     * @param <T2>          the result type of projection of {@code stage2} items
+     * @param <R>           the resulting output type
+     * @return the newly attached stage
      */
     @Nonnull
     <K1, T1_IN, T1, K2, T2_IN, T2, R> GeneralStage<R> hashJoin2(
@@ -136,9 +139,9 @@ public interface GeneralStage<T> extends Stage {
     /**
      * Returns a fluent API builder object to construct a hash join operation
      * with any number of contributing stages. This object is mainly intended
-     * to build a hash-join of the primary pipeline with three or more
+     * to build a hash-join of the primary stage with three or more
      * contributing stages. For one or two stages the direct
-     * {@code pipeline.hashJoin(...)} calls should be preferred because they offer
+     * {@code stage.hashJoin(...)} calls should be preferred because they offer
      * more static type safety.
      */
     @Nonnull
@@ -176,26 +179,28 @@ public interface GeneralStage<T> extends Stage {
     StreamStage<T> addTimestamps(DistributedToLongFunction<? super T> timestampFn, long allowedLag);
 
     /**
-     * Attaches to this pipeline a sink pipeline, one that accepts data but doesn't
+     * Attaches to this stage a sink stage, one that accepts data but doesn't
      * emit any. The supplied argument specifies what to do with the received
      * data (typically push it to some outside resource).
+     *
+     * @return the newly attached sink stage
      */
     @Nonnull
     SinkStage drainTo(@Nonnull Sink<? super T> sink);
 
     /**
-     * Adds a peeking layer to this compute pipeline which logs its output. For
-     * each item the pipeline emits, it:
+     * Attaches a peeking stage which logs this stage's output and passes it
+     * through without transformation. For each item the stage emits, it:
      * <ol><li>
      *     uses the {@code shouldLogFn} predicate to see whether to log the item
      * </li><li>
-     *     if the item passed, uses {@code toStringFn} to get a string
-     *     representation of the item
+     *     if yes, uses then uses {@code toStringFn} to get the item's string
+     *     representation
      * </li><li>
      *     logs the string at the INFO level to the log category {@code
      *     com.hazelcast.jet.impl.processor.PeekWrappedP.<vertexName>#<processorIndex>}
      * </li></ol>
-     * The pipeline logs each item on whichever cluster member it happens to
+     * The stage logs each item on whichever cluster member it happens to
      * receive it. Its primary purpose is for development use, when running Jet
      * on a local machine.
      *
@@ -214,15 +219,15 @@ public interface GeneralStage<T> extends Stage {
     );
 
     /**
-     * Adds a peeking layer to this compute pipeline which logs its output. For
-     * each item the pipeline emits, it:
+     * Adds a peeking layer to this compute stage which logs its output. For
+     * each item the stage emits, it:
      * <ol><li>
      *     uses {@code toStringFn} to get a string representation of the item
      * </li><li>
      *     logs the string at the INFO level to the log category {@code
      *     com.hazelcast.jet.impl.processor.PeekWrappedP.<vertexName>#<processorIndex>}
      * </li></ol>
-     * The pipeline logs each item on whichever cluster member it happens to
+     * The stage logs each item on whichever cluster member it happens to
      * receive it. Its primary purpose is for development use, when running Jet
      * on a local machine.
      *
@@ -236,11 +241,11 @@ public interface GeneralStage<T> extends Stage {
     }
 
     /**
-     * Adds a peeking layer to this compute pipeline which logs its output. For
-     * each item the pipeline emits, it logs the result of its {@code toString()}
+     * Adds a peeking layer to this compute stage which logs its output. For
+     * each item the stage emits, it logs the result of its {@code toString()}
      * method at the INFO level to the log category {@code
      * com.hazelcast.jet.impl.processor.PeekWrappedP.<vertexName>#<processorIndex>}.
-     * The pipeline logs each item on whichever cluster member it happens to
+     * The stage logs each item on whichever cluster member it happens to
      * receive it. Its primary purpose is for development use, when running Jet
      * on a local machine.
      *
@@ -253,17 +258,17 @@ public interface GeneralStage<T> extends Stage {
     }
 
     /**
-     * Attaches to this pipeline a pipeline with a custom transform based on the
+     * Attaches to this stage a stage with a custom transform based on the
      * provided supplier of Core API {@link Processor}s. To be compatible with
-     * the rest of the pipeline, the processor must expect a single inbound
+     * the rest of the stage, the processor must expect a single inbound
      * edge and arbitrarily many outbound edges, and it must push the same data
      * to all outbound edges.
      * <p>
-     * Note that the returned pipeline's type parameter is inferred from the call
+     * Note that the returned stage's type parameter is inferred from the call
      * site and not propagated from the processor that will produce the result,
      * so there is no actual type safety provided.
      *
-     * @param stageName a human-readable name for the custom pipeline
+     * @param stageName a human-readable name for the custom stage
      * @param procSupplier the supplier of processors
      * @param <R> the type of the output items
      */

@@ -20,13 +20,13 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.Sink;
 
 import javax.annotation.Nonnull;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SinkImpl<T> implements Sink<T> {
 
-    @Nonnull
     private final String name;
-    @Nonnull
     private ProcessorMetaSupplier metaSupplier;
+    private final AtomicBoolean isAssignedToStage = new AtomicBoolean();
 
     public SinkImpl(@Nonnull String name, @Nonnull ProcessorMetaSupplier metaSupplier) {
         this.name = name;
@@ -41,5 +41,11 @@ public class SinkImpl<T> implements Sink<T> {
     @Override
     public String name() {
         return name;
+    }
+
+    void onAssignToStage() {
+        if (isAssignedToStage.getAndSet(true)) {
+            throw new IllegalStateException("Sink " + name + " was already assigned to a sink stage");
+        }
     }
 }

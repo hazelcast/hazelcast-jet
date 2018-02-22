@@ -19,14 +19,17 @@ package com.hazelcast.jet.pipeline;
 import javax.annotation.Nonnull;
 
 /**
- * Javadoc pending.
+ * Represents an infinite source of data for a Jet pipeline. To aggregate
+ * the data from an infinite source, you must specify how to {@link
+ * StreamStage#window window} it into finite subsets over which Jet will
+ * perform the aggregation.
+ *
+ * @param <T> the stream item type
  */
 public interface StreamSource<T> {
-
     /**
-     * Javadoc pending.
+     * Returns a descriptive name of this source.
      */
     @Nonnull
     String name();
-
 }

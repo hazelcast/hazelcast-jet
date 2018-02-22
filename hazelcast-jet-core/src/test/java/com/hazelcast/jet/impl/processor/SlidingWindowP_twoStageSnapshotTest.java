@@ -83,9 +83,9 @@ public class SlidingWindowP_twoStageSnapshotTest {
 
         AggregateOperation1<Entry<?, Long>, LongAccumulator, Long> aggrOp = AggregateOperation
                 .withCreate(LongAccumulator::new)
-                .andAccumulate((LongAccumulator acc, Entry<?, Long> item) -> acc.addExact(item.getValue()))
-                .andCombine(LongAccumulator::addExact)
-                .andDeduct(LongAccumulator::subtractExact)
+                .andAccumulate((LongAccumulator acc, Entry<?, Long> item) -> acc.add(item.getValue()))
+                .andCombine(LongAccumulator::add)
+                .andDeduct(LongAccumulator::subtract)
                 .andFinish(LongAccumulator::get);
 
         DistributedSupplier<Processor> procSupplier1 = Processors.accumulateByFrameP(

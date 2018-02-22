@@ -93,9 +93,9 @@ public class SlidingWindowPTest {
 
         AggregateOperation1<Entry<?, Long>, LongAccumulator, Long> operation = AggregateOperation
                 .withCreate(LongAccumulator::new)
-                .andAccumulate((LongAccumulator acc, Entry<?, Long> item) -> acc.addExact(item.getValue()))
-                .andCombine(LongAccumulator::addExact)
-                .andDeduct(hasDeduct ? LongAccumulator::subtractExact : null)
+                .andAccumulate((LongAccumulator acc, Entry<?, Long> item) -> acc.add(item.getValue()))
+                .andCombine(LongAccumulator::add)
+                .andDeduct(hasDeduct ? LongAccumulator::subtract : null)
                 .andFinish(LongAccumulator::get);
 
         DistributedFunction<?, Long> keyFn = t -> KEY;

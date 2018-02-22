@@ -69,8 +69,10 @@ public class PipelineImpl implements Pipeline {
                 .range(0, stages.length)
                 .filter(i -> ((ComputeStageImplBase) stages[i]).fnAdapter == ADAPT_TO_JET_EVENT)
                 .toArray();
-        SinkTransform sinkTransform = new SinkTransform((SinkImpl) sink, upstream, ordinalsToAdapt);
+        SinkImpl sinkImpl = (SinkImpl) sink;
+        SinkTransform sinkTransform = new SinkTransform(sinkImpl, upstream, ordinalsToAdapt);
         SinkStageImpl sinkStage = new SinkStageImpl(sinkTransform, this);
+        sinkImpl.onAssignToStage();
         connect(upstream, sinkTransform);
         return sinkStage;
     }

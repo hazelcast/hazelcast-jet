@@ -69,9 +69,9 @@ public final class AggregateOperations {
     public static <T> AggregateOperation1<T, LongAccumulator, Long> counting() {
         return AggregateOperation
                 .withCreate(LongAccumulator::new)
-                .andAccumulate((LongAccumulator a, T item) -> a.addExact(1))
-                .andCombine(LongAccumulator::addExact)
-                .andDeduct(LongAccumulator::subtract)
+                .andAccumulate((LongAccumulator a, T item) -> a.add(1))
+                .andCombine(LongAccumulator::add)
+                .andDeduct(LongAccumulator::subtractAllowingOverflow)
                 .andFinish(LongAccumulator::get);
     }
 
@@ -87,9 +87,9 @@ public final class AggregateOperations {
     ) {
         return AggregateOperation
                 .withCreate(LongAccumulator::new)
-                .andAccumulate((LongAccumulator a, T item) -> a.addExact(getLongValueFn.applyAsLong(item)))
-                .andCombine(LongAccumulator::addExact)
-                .andDeduct(LongAccumulator::subtractExact)
+                .andAccumulate((LongAccumulator a, T item) -> a.add(getLongValueFn.applyAsLong(item)))
+                .andCombine(LongAccumulator::add)
+                .andDeduct(LongAccumulator::subtract)
                 .andFinish(LongAccumulator::get);
     }
 
@@ -105,10 +105,10 @@ public final class AggregateOperations {
     ) {
         return AggregateOperation
                 .withCreate(DoubleAccumulator::new)
-                .andAccumulate((DoubleAccumulator a, T item) -> a.add(getDoubleValueFn.applyAsDouble(item)))
-                .andCombine(DoubleAccumulator::add)
-                .andDeduct(DoubleAccumulator::subtract)
-                .andFinish(DoubleAccumulator::get);
+                .andAccumulate((DoubleAccumulator a, T item) -> a.accumulate(getDoubleValueFn.applyAsDouble(item)))
+                .andCombine(DoubleAccumulator::combine)
+                .andDeduct(DoubleAccumulator::deduct)
+                .andFinish(DoubleAccumulator::finish);
     }
 
     /**
@@ -172,21 +172,21 @@ public final class AggregateOperations {
                 .withCreate(LongLongAccumulator::new)
                 .andAccumulate((LongLongAccumulator a, T i) -> {
                     // a bit faster check than in addExact, specialized for increment
-                    if (a.getValue1() == Long.MAX_VALUE) {
+                    if (a.get1() == Long.MAX_VALUE) {
                         throw new ArithmeticException("Counter overflow");
                     }
-                    a.setValue1(a.getValue1() + 1);
-                    a.setValue2(Math.addExact(a.getValue2(), getLongValueFn.applyAsLong(i)));
+                    a.set1(a.get1() + 1);
+                    a.set2(Math.addExact(a.get2(), getLongValueFn.applyAsLong(i)));
                 })
                 .andCombine((a1, a2) -> {
-                    a1.setValue1(Math.addExact(a1.getValue1(), a2.getValue1()));
-                    a1.setValue2(Math.addExact(a1.getValue2(), a2.getValue2()));
+                    a1.set1(Math.addExact(a1.get1(), a2.get1()));
+                    a1.set2(Math.addExact(a1.get2(), a2.get2()));
                 })
                 .andDeduct((a1, a2) -> {
-                    a1.setValue1(Math.subtractExact(a1.getValue1(), a2.getValue1()));
-                    a1.setValue2(Math.subtractExact(a1.getValue2(), a2.getValue2()));
+                    a1.set1(Math.subtractExact(a1.get1(), a2.get1()));
+                    a1.set2(Math.subtractExact(a1.get2(), a2.get2()));
                 })
-                .andFinish(a -> (double) a.getValue2() / a.getValue1());
+                .andFinish(a -> (double) a.get2() / a.get1());
     }
 
     /**
@@ -206,21 +206,21 @@ public final class AggregateOperations {
                 .withCreate(LongDoubleAccumulator::new)
                 .andAccumulate((LongDoubleAccumulator a, T item) -> {
                     // a bit faster check than in addExact, specialized for increment
-                    if (a.getValue1() == Long.MAX_VALUE) {
+                    if (a.getLong() == Long.MAX_VALUE) {
                         throw new ArithmeticException("Counter overflow");
                     }
-                    a.setValue1(a.getValue1() + 1);
-                    a.setValue2(a.getValue2() + getDoubleValueFn.applyAsDouble(item));
+                    a.setLong(a.getLong() + 1);
+                    a.setDouble(a.getDouble() + getDoubleValueFn.applyAsDouble(item));
                 })
                 .andCombine((a1, a2) -> {
-                    a1.setValue1(Math.addExact(a1.getValue1(), a2.getValue1()));
-                    a1.setValue2(a1.getValue2() + a2.getValue2());
+                    a1.setLong(Math.addExact(a1.getLong(), a2.getLong()));
+                    a1.setDouble(a1.getDouble() + a2.getDouble());
                 })
                 .andDeduct((a1, a2) -> {
-                    a1.setValue1(Math.subtractExact(a1.getValue1(), a2.getValue1()));
-                    a1.setValue2(a1.getValue2() - a2.getValue2());
+                    a1.setLong(Math.subtractExact(a1.getLong(), a2.getLong()));
+                    a1.setDouble(a1.getDouble() - a2.getDouble());
                 })
-                .andFinish(a -> a.getValue2() / a.getValue1());
+                .andFinish(a -> a.getDouble() / a.getLong());
     }
 
     /**

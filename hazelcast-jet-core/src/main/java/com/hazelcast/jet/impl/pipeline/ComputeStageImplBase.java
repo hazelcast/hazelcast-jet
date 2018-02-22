@@ -174,9 +174,11 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @Nonnull
     @SuppressWarnings("unchecked")
     public SinkStage drainTo(@Nonnull Sink<? super T> sink) {
+        SinkImpl sinkImpl = (SinkImpl) sink;
         SinkTransform<T> sinkTransform = new SinkTransform(
-                (SinkImpl) sink, transform, fnAdapter == ADAPT_TO_JET_EVENT);
+                sinkImpl, transform, fnAdapter == ADAPT_TO_JET_EVENT);
         SinkStageImpl output = new SinkStageImpl(sinkTransform, pipelineImpl);
+        sinkImpl.onAssignToStage();
         pipelineImpl.connect(transform, sinkTransform);
         return output;
     }
