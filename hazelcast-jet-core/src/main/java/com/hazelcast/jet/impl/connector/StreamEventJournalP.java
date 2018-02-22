@@ -292,7 +292,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     }
 
     private ICompletableFuture<ReadResultSet<T>> readFromJournal(int partition, long offset) {
-        logFine(getLogger(), "Reading from partition %d and offset %d", partition, offset);
+        logFinest(getLogger(), "Reading from partition %d and offset %d", partition, offset);
         return eventJournalReader.readFromEventJournal(offset,
                 1, MAX_FETCH_SIZE, partition, predicate, projection);
     }
