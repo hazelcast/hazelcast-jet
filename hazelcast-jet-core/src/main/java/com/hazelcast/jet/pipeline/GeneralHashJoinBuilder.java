@@ -99,7 +99,6 @@ public abstract class GeneralHashJoinBuilder<T0> {
         // A probable javac bug forced us to extract this variable
         Stream<JoinClause<?, T0, ?, ?>> joinClauses = orderedClauses
                 .stream()
-                .skip(1)
                 .map(e -> e.getValue().clause())
                 .map(fnAdapter::adaptJoinClause);
         HashJoinTransform<T0, R> hashJoinTransform = new HashJoinTransform<>(
