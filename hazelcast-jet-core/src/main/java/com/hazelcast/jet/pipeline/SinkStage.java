@@ -17,7 +17,6 @@
 package com.hazelcast.jet.pipeline;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * A pipeline stage that doesn't allow any downstream stages to be attached
