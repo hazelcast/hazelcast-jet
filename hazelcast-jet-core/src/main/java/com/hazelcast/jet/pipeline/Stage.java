@@ -17,7 +17,6 @@
 package com.hazelcast.jet.pipeline;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * The basic element of a Jet {@link Pipeline pipeline}.

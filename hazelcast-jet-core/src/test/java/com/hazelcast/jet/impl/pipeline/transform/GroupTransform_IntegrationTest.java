@@ -31,7 +31,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized.Parameters;
 
 import java.util.HashSet;
 import java.util.Map.Entry;
@@ -47,11 +46,6 @@ import static org.junit.Assert.assertEquals;
 public class GroupTransform_IntegrationTest extends JetTestSupport {
 
     private JetInstance instance;
-
-    @Parameters(name = "singleStage={0}")
-    public static Object[] parameters() {
-        return new Object[]{true, false};
-    }
 
     @Before
     public void before() {

@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.config.EventJournalConfig;
-import com.hazelcast.core.HazelcastTest;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JournalInitialPosition;
@@ -31,16 +30,11 @@ import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
-import org.junit.runners.Parameterized.UseParametersRunnerFactory;
 
 import java.util.HashSet;
 import java.util.Map.Entry;
@@ -56,11 +50,6 @@ import static org.junit.Assert.assertEquals;
 public class WindowGroupTransform_IntegrationTest extends JetTestSupport {
 
     private JetInstance instance;
-
-    @Parameters(name = "singleStage={0}")
-    public static Object[] parameters() {
-        return new Object[]{true, false};
-    }
 
     @Before
     public void before() {

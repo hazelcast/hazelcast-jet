@@ -32,8 +32,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
 
 import java.util.Map.Entry;
 import java.util.Set;
@@ -49,15 +47,7 @@ import static org.junit.Assert.assertEquals;
 @RunWith(HazelcastParallelClassRunner.class)
 public class AggregateTransform_IntegrationTest extends JetTestSupport {
 
-    @Parameter
-    public boolean singleStage;
-
     private JetInstance instance;
-
-    @Parameters(name = "singleStage={0}")
-    public static Object[] parameters() {
-        return new Object[]{true, false};
-    }
 
     @Before
     public void before() {
