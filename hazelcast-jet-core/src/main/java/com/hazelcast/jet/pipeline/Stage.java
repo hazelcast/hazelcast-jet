@@ -62,5 +62,6 @@ public interface Stage {
     /**
      * Returns the display name of this stage. It's used in diagnostic output.
      */
+    @Nonnull
     String name();
 }

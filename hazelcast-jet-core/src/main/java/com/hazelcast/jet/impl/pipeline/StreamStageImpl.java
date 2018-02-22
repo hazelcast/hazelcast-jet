@@ -33,7 +33,6 @@ import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * Javadoc pending.
@@ -125,7 +124,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     }
 
     @Nonnull @Override
-    public StreamStage<T> setName(@Nullable String name) {
+    public StreamStage<T> setName(@Nonnull String name) {
         super.setName(name);
         return this;
     }

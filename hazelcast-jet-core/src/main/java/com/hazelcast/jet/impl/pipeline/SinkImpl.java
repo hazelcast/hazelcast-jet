@@ -17,17 +17,9 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
-import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
-import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.Sink;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
-import java.util.BitSet;
-
-import static com.hazelcast.jet.impl.pipeline.FunctionAdapter.adaptingMetaSupplier;
-
 
 public class SinkImpl<T> implements Sink<T> {
 

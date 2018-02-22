@@ -22,7 +22,6 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Stage;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 
 import static java.util.Collections.emptyList;
@@ -54,12 +53,12 @@ public abstract class AbstractStage implements Stage {
     }
 
     @Nonnull @Override
-    public Stage setName(@Nullable String name) {
+    public Stage setName(@Nonnull String name) {
         transform.setName(name);
         return this;
     }
 
-    @Override
+    @Nonnull @Override
     public String name() {
         return transform.name();
     }

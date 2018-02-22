@@ -34,7 +34,6 @@ import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.StageWithGrouping;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -149,7 +148,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    public BatchStage<T> setName(@Nullable String name) {
+    public BatchStage<T> setName(@Nonnull String name) {
         super.setName(name);
         return this;
     }
