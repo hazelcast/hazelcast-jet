@@ -134,7 +134,19 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         readOffsets = new long[partitionIds.length];
 
         watermarkSourceUtil = new WatermarkSourceUtil<>(wmGenParams);
-        watermarkSourceUtil.increasePartitionCount(assignedPartitions.size());
+
+        // Do not coalesce partition WMs because the number of partitions
+        // is far larger than the number of consumers by default and it is
+        // not configurable on a per journal basis. This creates
+        // excessive latency when the number of events are relatively low
+        // where we have to wait for all partitions to advance before
+        // advancing the watermark.
+        // The side effect of not coalescing is that when the job is
+        // restarted and catching up, there might be dropped late events due to
+        // several events being read from one partition before the rest and
+        // the partition advancing ahead of others.
+        // This might be changed in the future and/or made optional.
+        watermarkSourceUtil.increasePartitionCount(1);
     }
 
     @Override
@@ -169,7 +181,9 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         while (resultSetPosition < resultSet.size()) {
             T event = resultSet.get(resultSetPosition);
             if (event != null) {
-                traverser = watermarkSourceUtil.handleEvent(event, currentPartitionIndex);
+                // Always use partition index of 0, treating all the partitions the
+                // same for coalescing purposes.
+                traverser = watermarkSourceUtil.handleEvent(event, 0);
                 if (!emitFromTraverser(traverser, this::afterEmit)) {
                     return;
                 }
