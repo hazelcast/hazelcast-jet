@@ -211,7 +211,9 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             snapshotTraverser = traverseStream(IntStream.range(0, partitionIds.length)
                     .mapToObj(pIdx -> entry(
                             broadcastKey(partitionIds[pIdx]),
-                            new long[] {emitOffsets[pIdx], watermarkSourceUtil.getWatermark(pIdx)})));
+                            // Always use partition index of 0, treating all the partitions the
+                            // same for coalescing purposes.
+                            new long[] {emitOffsets[pIdx], watermarkSourceUtil.getWatermark(0)})));
         }
         boolean done = emitFromTraverserToSnapshot(snapshotTraverser);
         if (done) {
@@ -230,7 +232,9 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         if (partitionIndex >= 0) {
             readOffsets[partitionIndex] = offset;
             emitOffsets[partitionIndex] = offset;
-            watermarkSourceUtil.restoreWatermark(partitionIndex, wm);
+            // Always use partition index of 0, treating all the partitions the
+            // same for coalescing purposes.
+            watermarkSourceUtil.restoreWatermark(0, wm);
         }
     }
 

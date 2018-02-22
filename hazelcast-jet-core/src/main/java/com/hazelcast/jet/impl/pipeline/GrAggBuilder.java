@@ -99,8 +99,7 @@ public class GrAggBuilder<K> {
             @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
         List<Transform> upstreamTransforms = upstreamStages.stream().map(s -> s.transform).collect(toList());
-        AggregateOperation adaptedAggrOp = adaptAggregateOperation(aggrOp);
-        Transform transform = new GroupTransform<>(upstreamTransforms, keyFns, adaptedAggrOp, mapToOutputFn);
+        Transform transform = new GroupTransform<>(upstreamTransforms, keyFns, aggrOp, mapToOutputFn);
         pipelineImpl.connect(upstreamTransforms, transform);
         return new BatchStageImpl<>(transform, pipelineImpl);
     }

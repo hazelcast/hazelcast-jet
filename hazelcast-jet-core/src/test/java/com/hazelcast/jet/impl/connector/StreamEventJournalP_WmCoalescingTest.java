@@ -90,7 +90,7 @@ public class StreamEventJournalP_WmCoalescingTest extends JetTestSupport {
                    .disableProgressAssertion()
                    .disableRunUntilCompleted(1000)
                    .disableSnapshots()
-                   .expectOutput(asList(10, wm(10), 10));
+                   .expectOutput(asList(wm(10), 10, 10));
     }
 
     @Test

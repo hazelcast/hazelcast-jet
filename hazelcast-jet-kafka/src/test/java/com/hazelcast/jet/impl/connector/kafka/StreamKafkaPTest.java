@@ -34,7 +34,6 @@ import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
-import com.hazelcast.jet.impl.pipeline.JetEvent;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
@@ -72,7 +71,6 @@ import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.processor.KafkaProcessors.streamKafkaP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
-import static com.hazelcast.jet.impl.pipeline.JetEventImpl.jetEvent;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -146,8 +144,8 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         assertTrueEventually(() -> {
             assertEquals(messageCount * 2, list.size());
             for (int i = 0; i < messageCount; i++) {
-                JetEvent<Entry<Integer, String>> entry1 = jetEvent(createEntry(i), Long.MIN_VALUE);
-                JetEvent<Entry<Integer, String>> entry2 = jetEvent(createEntry(i - messageCount), Long.MIN_VALUE);
+                Entry<Integer, String> entry1 = createEntry(i);
+                Entry<Integer, String> entry2 = createEntry(i - messageCount);
                 assertTrue("missing entry: " + entry1, list.contains(entry1));
                 assertTrue("missing entry: " + entry2, list.contains(entry2));
             }
