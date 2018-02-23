@@ -105,7 +105,7 @@ public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform {
                         aggrOp,
                         mapToOutputFn
                 ));
-        p.addEdges(this, pv.v, (e, ord) -> e.partitioned(keyFns.get(ord)));
+        p.addEdges(this, pv.v, (e, ord) -> e.distributed().partitioned(keyFns.get(ord)));
     }
 
     //              ---------       ---------
@@ -150,6 +150,6 @@ public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform {
                         aggrOp,
                         mapToOutputFn
                 ));
-        p.addEdges(this, pv.v, (e, ord) -> e.partitioned(keyFns.get(ord)));
+        p.addEdges(this, pv.v, (e, ord) -> e.distributed().partitioned(keyFns.get(ord)));
     }
 }

@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
@@ -146,6 +145,6 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
                         nCopies(aggrOp.arity(), constantKey()),
                         aggrOp,
                         mapToOutputFn.toKeyedWindowResultFn()));
-        p.addEdges(this, pv.v, Edge::allToOne);
+        p.addEdges(this, pv.v, edge -> edge.distributed().allToOne());
     }
 }
