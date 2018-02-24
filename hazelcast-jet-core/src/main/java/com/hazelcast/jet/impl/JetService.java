@@ -114,7 +114,7 @@ public class JetService
                 "\to---o o---o   o   o-o   |     o     o---o o---o   |          | o-o     |  \n" +
                 "\t|   | |   |  /    |     |     |     |   |     |   |      \\   | |       |  \n" +
                 "\to   o o   o o---o o---o o---o o---o o   o o---o   o       o--o o---o   o   ");
-        logger.info("Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.");
+        logger.info("Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.");
     }
 
     @Override
