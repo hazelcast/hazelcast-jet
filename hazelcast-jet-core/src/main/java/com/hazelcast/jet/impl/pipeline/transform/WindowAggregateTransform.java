@@ -137,6 +137,18 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
         p.dag.edge(between(v1, pv2.v).distributed().allToOne());
     }
 
+    //               ---------       ---------
+    //              | source0 | ... | sourceN |
+    //               ---------       ---------
+    //                   |              |
+    //              distributed    distributed
+    //              all-to-one      all-to-one
+    //                   \              /
+    //                    ---\    /-----
+    //                        v  v
+    //             ---------------------------
+    //            | aggregateToSessionWindowP | local parallelism = 1
+    //             ---------------------------
     private void addSessionWindow(Planner p, SessionWindowDef wDef) {
         PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), localParallelism(),
                 aggregateToSessionWindowP(

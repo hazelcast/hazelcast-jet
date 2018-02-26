@@ -141,6 +141,18 @@ public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform {
         p.dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }
 
+    //               ---------       ---------
+    //              | source0 | ... | sourceN |
+    //               ---------       ---------
+    //                   |              |
+    //              distributed    distributed
+    //              partitioned    partitioned
+    //                   \              /
+    //                    ---\    /-----
+    //                        v  v
+    //             ---------------------------
+    //            | aggregateToSessionWindowP |
+    //             ---------------------------
     private void addSessionWindow(Planner p, SessionWindowDef wDef) {
         PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), localParallelism(),
                 aggregateToSessionWindowP(
