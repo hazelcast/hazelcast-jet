@@ -422,7 +422,10 @@ public interface DistributedStream<T> extends Stream<T> {
     DistributedStream<T> configure(JobConfig jobConfig);
 
     /**
-     * Wrapper class to hide runtime dependency on javax.cache
+     * Wrapper class that avoids the runtime dependency of {@code
+     * DistributedStream} on {@code javax.cache}. With this approach the
+     * {@code javax.cache} classes will be required only when calling
+     * {@link #fromCache(ICacheJet)}.
      */
     final class Cache {
 
@@ -430,9 +433,9 @@ public interface DistributedStream<T> extends Stream<T> {
         }
 
         /**
-         * Returns a {@link DistributedStream} with this cache as its source.
+         * Returns a {@link DistributedStream} with the supplied cache as its source.
          * <p>
-         * If the underlying cache is is being concurrently modified, there are no
+         * If the cache is is being concurrently modified, there are no
          * guarantees given with respect to missing or duplicate items in a
          * stream operation.
          */
