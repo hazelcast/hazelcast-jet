@@ -18,7 +18,10 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.function.DistributedBiPredicate;
+import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -56,6 +59,60 @@ public interface GeneralStage<T> extends Stage {
     <R> GeneralStage<R> map(@Nonnull DistributedFunction<? super T, ? extends R> mapFn);
 
     /**
+     * Attaches to this stage a mapping stage, one which applies the supplied
+     * function to each input item independently and emits the function's
+     * result as the output item. The mapping function can use a context
+     * object, which is created separately for each processor instance.
+     * <p>
+     * If the mapping result is {@code null}, it emits nothing. Therefore this
+     * stage can be used to implement filtering semantics as well.
+     * <p>
+     * Even though you can use the context object to store runtime state, it
+     * won't be saved to state snapshot. It might be useful in batch or
+     * non-snapshotted jobs.
+     *
+     * @param createContextFn a function to create context based on
+     *                        {@link Processor.Context}
+     * @param mapFn a stateless mapping function
+     * @param <C> type of context object
+     * @param <R> the result type of the mapping function
+     * @return the newly attached stage
+     */
+    @Nonnull
+    <C, R> GeneralStage<R> mapWithContext(
+            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiFunction<C, ? super T, R> mapFn
+    );
+
+    /**
+     * Attaches to this stage a mapping stage, one which applies the supplied
+     * function to each input item independently and emits the function's
+     * result as the output item. The mapping function can use a context
+     * object, which is created separately for each processor instance.
+     * <p>
+     * If the mapping result is {@code null}, it emits nothing. Therefore this
+     * stage can be used to implement filtering semantics as well.
+     * <p>
+     * Even though you can use the context object to store runtime state, it
+     * won't be saved to state snapshot. It might be useful in batch or
+     * non-snapshotted jobs.
+     *
+     * @param createContextFn a function to create context based on
+     *                        {@link Processor.Context}
+     * @param mapFn a stateless mapping function
+     * @param destroyContextFn a function to destroy the context
+     * @param <C> type of context object
+     * @param <R> the result type of the mapping function
+     * @return the newly attached stage
+     */
+    @Nonnull
+    <C, R> GeneralStage<R> mapWithContext(
+            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiFunction<C, ? super T, R> mapFn,
+            @Nonnull DistributedConsumer<? super C> destroyContextFn
+    );
+
+    /**
      * Attaches to this stage a filtering stage, one which applies the provided
      * predicate function to each input item to decide whether to pass the item
      * to the output or to discard it. Returns the newly attached stage.
@@ -65,6 +122,52 @@ public interface GeneralStage<T> extends Stage {
      */
     @Nonnull
     GeneralStage<T> filter(@Nonnull DistributedPredicate<T> filterFn);
+
+    /**
+     * Attaches to this stage a filtering stage, one which applies the provided
+     * predicate function to each input item to decide whether to pass the item
+     * to the output or to discard it. The predicate function can use a context
+     * object, which is created separately for each processor instance.
+     * <p>
+     * Even though you can use the context object to store runtime state, it
+     * won't be saved to state snapshot. It might be useful in batch or
+     * non-snapshotted jobs.
+     *
+     * @param createContextFn a function to create context based on
+     *                        {@link Processor.Context}
+     * @param filterFn a stateless filter predicate function
+     * @param <C> type of context object
+     * @return the newly attached stage
+     */
+    @Nonnull
+    <C> GeneralStage<T> filterWithContext(
+            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiPredicate<C, T> filterFn
+    );
+
+    /**
+     * Attaches to this stage a filtering stage, one which applies the provided
+     * predicate function to each input item to decide whether to pass the item
+     * to the output or to discard it. The predicate function can use a context
+     * object, which is created separately for each processor instance.
+     * <p>
+     * Even though you can use the context object to store runtime state, it
+     * won't be saved to state snapshot. It might be useful in batch or
+     * non-snapshotted jobs.
+     *
+     * @param createContextFn a function to create context based on
+     *                        {@link Processor.Context}
+     * @param filterFn a stateless filter predicate function
+     * @param destroyContextFn a function to destroy the context
+     * @param <C> type of context object
+     * @return the newly attached stage
+     */
+    @Nonnull
+    <C> GeneralStage<T> filterWithContext(
+            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiPredicate<C, T> filterFn,
+            @Nonnull DistributedConsumer<? super C> destroyContextFn
+    );
 
     /**
      * Attaches to this stage a flat-mapping stage, one which applies the
@@ -80,6 +183,66 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     <R> GeneralStage<R> flatMap(
             @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
+    );
+
+    /**
+     * Attaches to this stage a flat-mapping stage, one which applies the
+     * supplied function to each input item independently and emits all items
+     * from the {@link Traverser} it returns as the output items. The mapping
+     * function can use a context object, which is created separately for each
+     * processor instance.
+     * <p>
+     * Even though you can use the context object to store runtime state, it
+     * won't be saved to state snapshot. It might be useful in batch or
+     * non-snapshotted jobs.
+     * <p>
+     * The traverser returned from the {@code flatMapFn} must be finite. That
+     * is, this operation will not attempt to emit any items after the first
+     * {@code null} item.
+     *
+     * @param createContextFn a function to create context based on
+     *                        {@link Processor.Context}
+     * @param flatMapFn a stateless flatmapping function, whose result type is
+     *                  Jet's {@link Traverser}
+     * @param <C> type of context object
+     * @param <R> the type of items in the result's traversers
+     * @return the newly attached stage
+     */
+    @Nonnull
+    <C, R> GeneralStage<R> flatMapWithContext(
+            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn
+    );
+
+    /**
+     * Attaches to this stage a flat-mapping stage, one which applies the
+     * supplied function to each input item independently and emits all items
+     * from the {@link Traverser} it returns as the output items. The mapping
+     * function can use a context object, which is created separately for each
+     * processor instance.
+     * <p>
+     * Even though you can use the context object to store runtime state, it
+     * won't be saved to state snapshot. It might be useful in batch or
+     * non-snapshotted jobs.
+     * <p>
+     * The traverser returned from the {@code flatMapFn} must be finite. That
+     * is, this operation will not attempt to emit any items after the first
+     * {@code null} item.
+     *
+     * @param createContextFn a function to create context based on
+     *                        {@link Processor.Context}
+     * @param flatMapFn a stateless flatmapping function, whose result type is
+     *                  Jet's {@link Traverser}
+     * @param destroyContextFn a function to destroy the context
+     * @param <C> type of context object
+     * @param <R> the type of items in the result's traversers
+     * @return the newly attached stage
+     */
+    @Nonnull
+    <C, R> GeneralStage<R> flatMapWithContext(
+            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn,
+            @Nonnull DistributedConsumer<? super C> destroyContextFn
     );
 
     /**

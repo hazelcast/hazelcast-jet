@@ -18,7 +18,10 @@ package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.function.DistributedBiPredicate;
+import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -60,8 +63,27 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     }
 
     @Nonnull @Override
+    public <C, R> StreamStage<R> mapWithContext(
+            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiFunction<C, ? super T, R> mapFn,
+            @Nonnull DistributedConsumer<? super C> destroyContextFn
+    ) {
+        return attachMapWithContext(createContextFn, mapFn, destroyContextFn);
+    }
+
+
+    @Nonnull @Override
     public StreamStage<T> filter(@Nonnull DistributedPredicate<T> filterFn) {
         return attachFilter(filterFn);
+    }
+
+    @Nonnull @Override
+    public <C> StreamStage<T> filterWithContext(
+            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiPredicate<C, T> filterFn,
+            @Nonnull DistributedConsumer<? super C> destroyContextFn
+    ) {
+        return attachFilterWithContext(createContextFn, filterFn, destroyContextFn);
     }
 
     @Nonnull @Override
@@ -69,6 +91,15 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
             @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         return attachFlatMap(flatMapFn);
+    }
+
+    @Nonnull @Override
+    public <C, R> StreamStage<R> flatMapWithContext(
+            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn,
+            @Nonnull DistributedConsumer<? super C> destroyContextFn
+    ) {
+        return attachFlatMapWithContext(createContextFn, flatMapFn, destroyContextFn);
     }
 
     @Nonnull @Override

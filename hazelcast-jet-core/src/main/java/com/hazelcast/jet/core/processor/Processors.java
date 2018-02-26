@@ -21,8 +21,10 @@ import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.core.CloseableProcessorSupplier;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
@@ -31,6 +33,8 @@ import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.function.DistributedBiPredicate;
+import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -41,6 +45,7 @@ import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
 import com.hazelcast.jet.impl.processor.TransformP;
+import com.hazelcast.jet.impl.processor.TransformWithContextP;
 import com.hazelcast.jet.impl.util.WrappingProcessorMetaSupplier;
 import com.hazelcast.jet.impl.util.WrappingProcessorSupplier;
 import java.util.List;
@@ -676,23 +681,91 @@ public final class Processors {
     }
 
     /**
+     * Returns a supplier of processors for a vertex which, for each received
+     * item, emits the result of applying the given mapping function to it. The
+     * mapping function can use a context object, which is created separately
+     * for each processor instance.
+     * <p>
+     * If the mapping result is {@code null}, it emits nothing. Therefore this
+     * vertex can be used to implement filtering semantics as well.
+     * <p>
+     * Even though you can use the context object to store runtime state, it
+     * won't be saved to state snapshot. It might be useful in batch or
+     * non-snapshotted jobs.
+     *
+     * @param createContextFn a function to create context based on
+     *                        {@link Processor.Context}
+     * @param mapFn a stateless mapping function
+     * @param destroyContextFn a function to destroy the context
+     * @param <C> type of context object
+     * @param <T> type of received item
+     * @param <R> type of emitted item
+     */
+    @Nonnull
+    public static <C, T, R> ProcessorSupplier mapWithContextP(
+            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiFunction<C, ? super T, R> mapFn,
+            @Nonnull DistributedConsumer<? super C> destroyContextFn
+    ) {
+        return new CloseableProcessorSupplier<>(() -> {
+            final ResettableSingletonTraverser<R> trav = new ResettableSingletonTraverser<>();
+            return new TransformWithContextP<C, T, R>(createContextFn, (context, item) -> {
+                trav.accept(mapFn.apply(context, item));
+                return trav;
+            }, destroyContextFn);
+        });
+    }
+
+    /**
      * Returns a supplier of processors for a vertex that emits the same items
      * it receives, but only those that pass the given predicate.
      * <p>
      * This processor is stateless.
      *
-     * @param predicate a stateless predicate to test each received item against
+     * @param filterFn a stateless predicate to test each received item against
      * @param <T> type of received item
      */
     @Nonnull
-    public static <T> DistributedSupplier<Processor> filterP(@Nonnull DistributedPredicate<T> predicate) {
+    public static <T> DistributedSupplier<Processor> filterP(@Nonnull DistributedPredicate<T> filterFn) {
         return () -> {
             final ResettableSingletonTraverser<T> trav = new ResettableSingletonTraverser<>();
             return new TransformP<T, T>(item -> {
-                trav.accept(predicate.test(item) ? item : null);
+                trav.accept(filterFn.test(item) ? item : null);
                 return trav;
             });
         };
+    }
+
+    /**
+     * Returns a supplier of processors for a vertex that emits the same items
+     * it receives, but only those that pass the given predicate. The predicate
+     * function can use a context object, which is created separately for each
+     * processor instance.
+     * <p>
+     * Even though you can use the context object to store runtime state, it
+     * won't be saved to state snapshot. It might be useful in batch or
+     * non-snapshotted jobs.
+     *
+     * @param createContextFn a function to create context based on
+     *                        {@link Processor.Context}
+     * @param filterFn a stateless predicate to test each received item against
+     * @param destroyContextFn a function to destroy the context
+     * @param <C> type of context object
+     * @param <T> type of received item
+     */
+    @Nonnull
+    public static <C, T> ProcessorSupplier filterWithContextP(
+            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiPredicate<C, T> filterFn,
+            @Nonnull DistributedConsumer<? super C> destroyContextFn
+    ) {
+        return new CloseableProcessorSupplier<>(() -> {
+            final ResettableSingletonTraverser<T> trav = new ResettableSingletonTraverser<>();
+            return new TransformWithContextP<C, T, T>(createContextFn, (context, item) -> {
+                trav.accept(filterFn.test(context, item) ? item : null);
+                return trav;
+            }, destroyContextFn);
+        });
     }
 
     /**
@@ -715,6 +788,38 @@ public final class Processors {
             @Nonnull DistributedFunction<T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         return () -> new TransformP<>(flatMapFn);
+    }
+
+    /**
+     * Returns a supplier of processors for a vertex that applies the provided
+     * item-to-traverser mapping function to each received item and emits all
+     * the items from the resulting traverser. The mapping function can use a
+     * context object, which is created separately for each processor instance.
+     * <p>
+     * The traverser returned from the {@code flatMapFn} must be finite. That
+     * is, this operation will not attempt to emit any items after the first
+     * {@code null} item.
+     * <p>
+     * Even though you can use the context object to store runtime state, it
+     * won't be saved to state snapshot. It might be useful in batch or
+     * non-snapshotted jobs.
+     *
+     * @param createContextFn a function to create context based on
+     *                        {@link Processor.Context}
+     * @param flatMapFn a stateless function that maps the received item to a traverser over output items
+     * @param destroyContextFn a function to destroy the context
+     * @param <C> type of context object
+     * @param <T> received item type
+     * @param <R> emitted item type
+     */
+    @Nonnull
+    public static <C, T, R> ProcessorSupplier flatMapWithContextP(
+            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn,
+            @Nonnull DistributedConsumer<? super C> destroyContextFn
+    ) {
+        return new CloseableProcessorSupplier<>(
+                () -> new TransformWithContextP<>(createContextFn, flatMapFn, destroyContextFn));
     }
 
     /**
