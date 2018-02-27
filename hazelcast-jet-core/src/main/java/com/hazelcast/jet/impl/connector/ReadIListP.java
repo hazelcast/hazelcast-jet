@@ -44,7 +44,6 @@ public final class ReadIListP extends AbstractProcessor implements Closeable {
     private HazelcastInstance client;
 
     ReadIListP(String name, SerializableClientConfig clientConfig) {
-
         this.name = name;
         this.clientConfig = clientConfig;
     }
@@ -59,10 +58,11 @@ public final class ReadIListP extends AbstractProcessor implements Closeable {
         }
         IList<Object> list = instance.getList(name);
         final int size = list.size();
-        traverser = size <= FETCH_SIZE
-                ? traverseIterable(list)
-                : traverseStream(rangeClosed(0, size / FETCH_SIZE).mapToObj(chunkIndex -> chunkIndex * FETCH_SIZE))
-                .flatMap(start -> traverseIterable(list.subList(start, min(start + FETCH_SIZE, size))));
+        traverser = size <= FETCH_SIZE ?
+                traverseIterable(list)
+                :
+                traverseStream(rangeClosed(0, size / FETCH_SIZE).mapToObj(chunkIndex -> chunkIndex * FETCH_SIZE))
+                        .flatMap(start -> traverseIterable(list.subList(start, min(start + FETCH_SIZE, size))));
     }
 
     @Override

@@ -17,7 +17,6 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.logging.ILogger;
@@ -211,10 +210,9 @@ public interface ProcessorMetaSupplier extends Serializable {
     }
 
     /**
-     * Factory method that wraps the given {@code Supplier<Processor>}
-     * and uses it as the supplier of all {@code Processor} instances.
-     * Specifically, returns a meta-supplier that will always return the
-     * result of calling {@link ProcessorSupplier#of(DistributedSupplier)}.
+     * Variant of {@link #preferLocalParallelismOne(ProcessorSupplier)} where
+     * the supplied {@code DistributedSupplier<Processor>} will be
+     * wrapped into a {@link ProcessorSupplier}.
      */
     @Nonnull
     static ProcessorMetaSupplier preferLocalParallelismOne(
@@ -222,7 +220,6 @@ public interface ProcessorMetaSupplier extends Serializable {
     ) {
         return of(ProcessorSupplier.of(procSupplier), 1);
     }
-
 
     /**
      * Variant of {@link #forceTotalParallelismOne(ProcessorSupplier, String)} where the node
@@ -238,8 +235,10 @@ public interface ProcessorMetaSupplier extends Serializable {
      * The node will be chosen according to the {@code partitionKey} supplied.
      * This is mainly provided as a convenience for implementing
      * non-distributed sources where data can't be read in parallel by multiple
-     * consumers.
-     *
+     * consumers. When used as a sink or intermediate vertex, the DAG should ensure
+     * that only the processor instance on the designated node receives any data,
+     * otherwise an {@code IllegalStateException} will be thrown.
+     * <p>
      * The vertex containing the {@code ProcessorMetaSupplier} must have a local
      * parallelism setting of 1, otherwise {code IllegalArgumentException} is thrown.
      *
@@ -272,8 +271,17 @@ public interface ProcessorMetaSupplier extends Serializable {
                 return addr -> addr.equals(ownerAddress) ?
                         supplier
                         :
-                        // empty producer on all other nodes
-                        count -> singletonList(Processors.noopP().get());
+                        count -> singletonList(new AbstractProcessor() {
+                            @Override
+                            protected boolean tryProcess(int ordinal, @Nonnull Object item) {
+                                throw new IllegalStateException(
+                                        "This vertex has a total parallelism of one and as such only"
+                                                + " expects input on one node. Edge configuration must be adjusted to"
+                                                + " make sure that only the expected node receives any input."
+                                                + " Unexpected input received from ordinal " + ordinal + ": " + item
+                                );
+                            }
+                        });
             }
 
             @Override
