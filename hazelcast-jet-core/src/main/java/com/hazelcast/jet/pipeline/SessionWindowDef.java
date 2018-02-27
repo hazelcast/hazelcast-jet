@@ -28,8 +28,8 @@ import static com.hazelcast.jet.pipeline.WindowDefinition.WindowKind.SESSION;
  * @param <T> type of the stream item
  */
 public class SessionWindowDef<T> implements WindowDefinition {
-    public static final int MAX_FRAME_RATE = 100;
-    public static final int MIN_WMS_PER_SESSION = 100;
+    private static final int MAX_FRAME_RATE = 100;
+    private static final int MIN_WMS_PER_SESSION = 100;
     private final long sessionTimeout;
 
     SessionWindowDef(long sessionTimeout) {

@@ -61,6 +61,9 @@ public interface WindowDefinition {
     @Nonnull
     <W extends WindowDefinition> W downcast();
 
+    /**
+     * Returns the frameLength and offset this window definition needs.
+     */
     @Nonnull
     long[] watermarkFrameDef();
 

@@ -82,7 +82,8 @@ public class PlannerTest {
                     frames.stream().map(Arrays::toString).collect(joining(", ", "[", "]"))));
 
             if (result[0] == 0) {
-                assertTrue("all frames should have been {0, 0} for result {0, x}", frames.stream().allMatch(f -> f[0] == 0));
+                assertTrue("all frames should have been {0, 0} for result {0, x}",
+                        frames.stream().allMatch(f -> f[0] == 0));
             } else {
                 for (long[] frame : frames) {
                     assertEquals(
