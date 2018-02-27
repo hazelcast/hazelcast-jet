@@ -17,7 +17,6 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.logging.ILogger;
 
@@ -234,13 +233,7 @@ public interface Processor {
      * Context passed to the processor in the
      * {@link #init(Outbox, Context) init()} call.
      */
-    interface Context {
-
-        /**
-         * Returns the current Jet instance
-         */
-        @Nonnull
-        JetInstance jetInstance();
+    interface Context extends ProcessorSupplier.Context {
 
         /**
          *  Return a logger for the processor
@@ -253,12 +246,6 @@ public interface Processor {
          * this vertex on all nodes: its unique cluster-wide index.
          */
         int globalProcessorIndex();
-
-        /***
-         * Returns the name of the vertex associated with this processor.
-         */
-        @Nonnull
-        String vertexName();
 
         /**
          * Returns true, if snapshots will be saved for this job.
