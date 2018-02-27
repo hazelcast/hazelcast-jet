@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.tumblingWinPolicy;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByMinStep;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
+import static com.hazelcast.jet.core.WatermarkEmissionPolicy.noThrottling;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
@@ -71,7 +71,7 @@ public class InsertWatermarksPTest {
     private List<Object> resultToCheck = new ArrayList<>();
     private Context context;
     private DistributedSupplier<WatermarkPolicy> wmPolicy = limitingLag(LAG);
-    private WatermarkEmissionPolicy wmEmissionPolicy = suppressDuplicates();
+    private WatermarkEmissionPolicy wmEmissionPolicy = noThrottling();
 
     @Parameters(name = "outboxCapacity={0}")
     public static Collection<Object> parameters() {

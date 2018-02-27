@@ -36,18 +36,15 @@ public interface WatermarkEmissionPolicy extends Serializable {
     long throttleWm(long currentWm, long lastEmittedWm);
 
     /**
-     * Returns a policy that ensures that each emitted watermark has a higher
-     * timestamp than the last one. This protects the basic invariant of
-     * watermark items (that their timestamps are strictly increasing), but
-     * doesn't perform any throttling. Since the timestamps are typically quite
-     * dense (in milliseconds), this emission policy will pass through many
-     * watermark items that have no useful effect in terms of updating the
-     * state of accumulating vertices. It is useful primarily in testing
-     * scenarios or some specific cases where it is known that no watermark
-     * throttling is needed.
+     * Returns a policy that does no throttling: emits each watermark. Since the
+     * timestamps are typically quite dense (in milliseconds), this emission
+     * policy will pass through many watermark items that have no useful effect
+     * in terms of updating the state of accumulating vertices. It is useful
+     * primarily in testing scenarios or some specific cases where it is known
+     * that no watermark throttling is needed.
      */
     @Nonnull
-    static WatermarkEmissionPolicy suppressDuplicates() {
+    static WatermarkEmissionPolicy noThrottling() {
         return (currentWm, lastEmittedWm) -> currentWm;
     }
 
