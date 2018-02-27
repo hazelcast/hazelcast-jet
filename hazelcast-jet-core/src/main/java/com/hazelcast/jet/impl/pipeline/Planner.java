@@ -21,8 +21,11 @@ import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.WatermarkEmissionPolicy;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
+import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
+import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 
 import javax.annotation.Nonnull;
@@ -34,8 +37,12 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.stream.LongStream;
 
 import static com.hazelcast.jet.core.Edge.from;
+import static com.hazelcast.jet.core.SlidingWindowPolicy.tumblingWinPolicy;
+import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
+import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
 import static java.util.stream.Collectors.toList;
 
@@ -55,11 +62,67 @@ public class Planner {
     DAG createDag() {
         Map<Transform, List<Transform>> adjacencyMap = pipeline.adjacencyMap();
         validateNoLeakage(adjacencyMap);
+
+        // Calculate greatest common denominator of frame lengths from all transforms in the pipeline
+        long[] gcdFrame = calculateGcd(adjacencyMap.keySet().stream()
+                                                .map(Transform::watermarkFrameDef)
+                                                .filter(frame -> frame[0] > 0)
+                                                .collect(toList()));
+        WatermarkEmissionPolicy emitPolicy = gcdFrame[0] > 0
+                ? emitByFrame(tumblingWinPolicy(gcdFrame[0]).withOffset(gcdFrame[1]))
+                : suppressDuplicates();
+        // Replace emission policy
+        for (Transform transform : adjacencyMap.keySet()) {
+            if (transform instanceof StreamSourceTransform) {
+                StreamSourceTransform t = (StreamSourceTransform) transform;
+                if (t.getWmParams() != null) {
+                    t.setWmGenerationParams(t.getWmParams().withEmitPolicy(emitPolicy));
+                }
+            } else if (transform instanceof TimestampTransform) {
+                TimestampTransform t = (TimestampTransform) transform;
+                t.setWmGenerationParams(t.getWmGenParams().withEmitPolicy(emitPolicy));
+            }
+        }
+
         Iterable<Transform> sorted = topologicalSort(adjacencyMap, Object::toString);
         for (Transform transform : sorted) {
             transform.addToDag(this);
         }
         return dag;
+    }
+
+    // package-visible for tests
+    static long[] calculateGcd(List<long[]> frameDefs) {
+        if (frameDefs.isEmpty()) {
+            return new long[2];
+        }
+        // if all frameDefs have equal offset, calculate without offset and use original offset
+        if (frameDefs.stream().allMatch(f -> f[1] == frameDefs.get(0)[1])) {
+            return new long[] {
+                    calculateGcd(frameDefs.stream().map(f -> f[0]).mapToLong(i -> i).toArray()),
+                    frameDefs.get(0)[1]
+            };
+        }
+        // offsets are different, calculate the GCD from both frame lengths and offsets
+        return new long[]{
+                calculateGcd(frameDefs.stream().flatMapToLong(LongStream::of).toArray()),
+                0
+        };
+    }
+
+    private static long calculateGcd(long[] values) {
+        long res = 0;
+        for (long value : values) {
+            res = gcd(res, value);
+        }
+        return res;
+    }
+
+    private static long gcd(long a, long b) {
+        if (b == 0) {
+            return a;
+        }
+        return gcd(b, a % b);
     }
 
     private static void validateNoLeakage(Map<Transform, List<Transform>> adjacencyMap) {

@@ -167,4 +167,12 @@ public final class WatermarkGenerationParams<T> implements Serializable {
     public DistributedObjLongBiFunction<? super T, ?> wrapFn() {
         return wrapFn;
     }
+
+    /**
+     * Returns new instance with emit policy replaced with the given argument.
+     */
+    @Nonnull
+    public WatermarkGenerationParams<T> withEmitPolicy(WatermarkEmissionPolicy emitPolicy) {
+        return wmGenParams(timestampFn, wrapFn, newWmPolicyFn, emitPolicy, idleTimeoutMillis);
+    }
 }

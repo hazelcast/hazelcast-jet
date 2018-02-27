@@ -73,6 +73,11 @@ public class WindowGroupTransform<K, A, R, OUT> extends AbstractTransform {
     }
 
     @Override
+    public long[] watermarkFrameDef() {
+        return wDef.watermarkFrameDef();
+    }
+
+    @Override
     public void addToDag(Planner p) {
         if (wDef.kind() == SESSION) {
             addSessionWindow(p, wDef.downcast());
