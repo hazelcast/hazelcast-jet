@@ -40,7 +40,7 @@ public class FlatMapWithContextTransform<C, T, R> extends AbstractTransform {
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {
-        super("flat-map", upstream);
+        super("flat-map-with-context", upstream);
         this.createContextFn = createContextFn;
         this.flatMapFn = flatMapFn;
         this.destroyContextFn = destroyContextFn;

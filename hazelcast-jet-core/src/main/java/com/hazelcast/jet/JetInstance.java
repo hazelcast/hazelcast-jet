@@ -18,6 +18,7 @@ package com.hazelcast.jet;
 
 import com.hazelcast.core.Cluster;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.ReplicatedMap;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
@@ -131,6 +132,17 @@ public interface JetInstance {
      */
     @Nonnull
     <K, V> IMapJet<K, V> getMap(@Nonnull String name);
+
+    /**
+     * Returns the replicated map instance with the specified name.
+     *
+     * @param name name of the replicated map
+     * @return replicated map instance with the specified name
+     */
+    @Nonnull
+    default <K, V> ReplicatedMap<K, V> getReplicatedMap(@Nonnull String name) {
+        return getHazelcastInstance().getReplicatedMap(name);
+    }
 
     /**
      * Returns the distributed list instance with the specified name.

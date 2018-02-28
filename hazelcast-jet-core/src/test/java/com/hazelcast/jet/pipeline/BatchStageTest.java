@@ -96,7 +96,7 @@ public class BatchStageTest extends PipelineTestSupport {
         List<Integer> input = sequence(ITEM_COUNT);
         putToSrcMap(input);
         String transformMapName = randomMapName();
-        ReplicatedMap<Integer, String> transformMap = jet().getHazelcastInstance().getReplicatedMap(transformMapName);
+        ReplicatedMap<Integer, String> transformMap = jet().getReplicatedMap(transformMapName);
         List<String> expected = input.stream()
                                      .peek(i -> transformMap.put(i, String.valueOf(i)))
                                      .map(String::valueOf)
@@ -105,7 +105,7 @@ public class BatchStageTest extends PipelineTestSupport {
         // When
         srcStage
                 .useContext(
-                        contextFactory(jet -> jet.getHazelcastInstance().<Integer, String>getReplicatedMap(transformMapName))
+                        contextFactory(jet -> jet.<Integer, String>getReplicatedMap(transformMapName))
                                 .withDestroyFn(ReplicatedMap::destroy))
                 .map(ReplicatedMap::get)
                 .drainTo(sink);
@@ -139,7 +139,7 @@ public class BatchStageTest extends PipelineTestSupport {
         List<Integer> input = sequence(ITEM_COUNT);
         putToSrcMap(input);
         String filteringMapName = randomMapName();
-        ReplicatedMap<Integer, Integer> filteringMap = jet().getHazelcastInstance().getReplicatedMap(filteringMapName);
+        ReplicatedMap<Integer, Integer> filteringMap = jet().getReplicatedMap(filteringMapName);
         filteringMap.put(1, 1);
         filteringMap.put(3, 3);
         List<Integer> expected = input.stream()
@@ -147,13 +147,13 @@ public class BatchStageTest extends PipelineTestSupport {
                                      .collect(toList());
 
         // When
-srcStage
-        .useContext(
-                contextFactory(jet -> jet.getHazelcastInstance().<Integer, Integer>getReplicatedMap(filteringMapName))
-                        .withDestroyFn(ReplicatedMap::destroy))
-        .filter(ReplicatedMap::containsKey)
-        .drainTo(sink);
-        execute();
+        srcStage
+                .useContext(
+                        contextFactory(jet -> jet.<Integer, Integer>getReplicatedMap(filteringMapName))
+                                .withDestroyFn(ReplicatedMap::destroy))
+                .filter(ReplicatedMap::containsKey)
+                .drainTo(sink);
+                execute();
 
         // Then
         assertEquals(toBag(expected), sinkToBag());

@@ -55,6 +55,14 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     <R> GeneralStage<R> map(@Nonnull DistributedFunction<? super T, ? extends R> mapFn);
 
+    /**
+     * Specifies the context factory that will provide context in the associated
+     * pipeline stage, as first step in the construction of a
+     * transform-with-context stage.
+     *
+     * @param contextFactory to create, use static methods in {@link ContextFactory}
+     * @param <C> the context object type
+     */
     @Nonnull
     <C> GeneralStageWithContext<T, C> useContext(@Nonnull ContextFactory<C> contextFactory);
 
@@ -147,7 +155,7 @@ public interface GeneralStage<T> extends Stage {
     GeneralHashJoinBuilder<T> hashJoinBuilder();
 
     /**
-     * Specifes the function that will extract the grouping key from the items
+     * Specifies the function that will extract the grouping key from the items
      * in the associated pipeline stage, as first step in the construction of a
      * group-and-aggregate stage.
      *

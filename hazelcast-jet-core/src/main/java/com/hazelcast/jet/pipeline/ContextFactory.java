@@ -19,14 +19,16 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedSupplier;
 
 import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 
 /**
- * TODO add javadoc
+ * Factory to create and destroy context used in {@link
+ * GeneralStage#useContext}.
+ * <p>
+ * Create new instances with static method {@link #contextFactory}.
  *
  * @param <C> context object type
  */
@@ -43,13 +45,18 @@ public final class ContextFactory<C> {
         this.destroyFn = destroyFn;
     }
 
-    @Nonnull
-    public static <C> ContextFactory<C> contextFactory(
-            @Nonnull DistributedSupplier<? extends C> createContextFn
-    ) {
-        return new ContextFactory<>(procCtx -> createContextFn.get(), noopConsumer());
-    }
-
+    /**
+     * Creates an immutable instance of {@link ContextFactory} that will create
+     * contexts with the given {@code createContextFn}. If you need to clean-up
+     * the context when the job shuts down, use {@link #withDestroyFn}.
+     *
+     * @param createContextFn function to create context object, given a {@link JetInstance}.
+     *                        One context will be created for each parallel processor instance. The
+     *                        returned context object will be used only in single thread, it doesn't
+     *                        have to be thread-safe.
+     * @param <C> context object type
+     * @return the context factory
+     */
     @Nonnull
     public static <C> ContextFactory<C> contextFactory(
             @Nonnull DistributedFunction<? super JetInstance, ? extends C> createContextFn
@@ -57,16 +64,28 @@ public final class ContextFactory<C> {
         return new ContextFactory<>(createContextFn, noopConsumer());
     }
 
+    /**
+     * Returns a copy of this context factory with the destroy function replaced.
+     *
+     * @param destroyFn function to destroy the context instance. Will be called
+     *                  when the job ends.
+     */
     @Nonnull
     public ContextFactory<C> withDestroyFn(@Nonnull DistributedConsumer<? super C> destroyFn) {
         return new ContextFactory<>(createFn, destroyFn);
     }
 
+    /**
+     * Returns the function to create context.
+     */
     @Nonnull
     public DistributedFunction<? super JetInstance, ? extends C> getCreateFn() {
         return createFn;
     }
 
+    /**
+     * Returns the function to destroy the context.
+     */
     @Nonnull
     public DistributedConsumer<? super C> getDestroyFn() {
         return destroyFn;

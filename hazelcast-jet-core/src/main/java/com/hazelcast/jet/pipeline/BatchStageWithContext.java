@@ -22,6 +22,15 @@ import com.hazelcast.jet.function.DistributedBiPredicate;
 
 import javax.annotation.Nonnull;
 
+/**
+ * Represents an intermediate step while constructing a transform-with-context
+ * batch pipeline stage. It captures the {@link ContextFactory} key and offers
+ * the methods to finalize the construction by specifying the transformation
+ * step (map, filter or flatMap).
+ *
+ * @param <T> type of the input item
+ * @param <C> type of the context object
+ */
 public interface BatchStageWithContext<T, C> extends GeneralStageWithContext<T, C> {
 
     @Nonnull @Override

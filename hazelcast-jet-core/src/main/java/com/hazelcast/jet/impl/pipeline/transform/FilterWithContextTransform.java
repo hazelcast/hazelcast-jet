@@ -38,7 +38,7 @@ public class FilterWithContextTransform<C, T> extends AbstractTransform {
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {
-        super("filter", upstream);
+        super("filter-with-context", upstream);
         this.createContextFn = createContextFn;
         this.filterFn = filterFn;
         this.destroyContextFn = destroyContextFn;

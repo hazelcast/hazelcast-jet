@@ -38,7 +38,7 @@ public class MapWithContextTransform<C, T, R> extends AbstractTransform {
             @Nonnull DistributedBiFunction<C, ? super T, R> mapFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {
-        super("map", upstream);
+        super("map-with-context", upstream);
         this.createContextFn = createContextFn;
         this.mapFn = mapFn;
         this.destroyContextFn = destroyContextFn;
