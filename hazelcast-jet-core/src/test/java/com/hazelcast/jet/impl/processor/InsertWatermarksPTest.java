@@ -185,12 +185,12 @@ public class InsertWatermarksPTest {
                         item(13)
                 ),
                 asList(
-                        wm(7), // corresponds to frame(6)
+                        wm(6),
                         item(10),
-                        wm(8), // corresponds to frame(8)
+                        wm(8),
                         item(11),
                         item(12),
-                        wm(10), // corresponds to frame(10)
+                        wm(10),
                         item(13)
                 )
         );
@@ -227,10 +227,10 @@ public class InsertWatermarksPTest {
                         item(24)
                 ),
                 asList(
-                        wm(11),
+                        wm(10),
                         item(14),
                         item(15),
-                        wm(21),
+                        wm(20),
                         item(24)
                 )
         );

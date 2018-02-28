@@ -55,7 +55,7 @@ public class SlidingWindowDef implements WindowDefinition {
 
     @Nonnull @Override
     public long[] watermarkFrameDef() {
-        return new long[]{slideBy, slideBy};
+        return new long[]{slideBy, 0};
     }
 
     /**
