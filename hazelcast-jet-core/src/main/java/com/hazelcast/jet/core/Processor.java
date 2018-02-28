@@ -244,6 +244,8 @@ public interface Processor {
         /**
          * Returns the index of the processor among all the processors created for
          * this vertex on all nodes: its unique cluster-wide index.
+         * <p>
+         * The index values will be in the range of {@code [0...totalParallelism-1]}.
          */
         int globalProcessorIndex();
 
