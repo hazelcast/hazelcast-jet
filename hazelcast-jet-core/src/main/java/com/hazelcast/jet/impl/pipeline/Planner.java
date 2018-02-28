@@ -27,6 +27,7 @@ import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
+import com.hazelcast.jet.impl.util.Util;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -99,30 +100,15 @@ public class Planner {
         // if all frameDefs have equal offset, calculate without offset and use original offset
         if (frameDefs.stream().allMatch(f -> f[1] == frameDefs.get(0)[1])) {
             return new long[] {
-                    calculateGcd(frameDefs.stream().map(f -> f[0]).mapToLong(i -> i).toArray()),
+                    Util.gcd(frameDefs.stream().map(f -> f[0]).mapToLong(i -> i).toArray()),
                     frameDefs.get(0)[1]
             };
         }
         // offsets are different, calculate the GCD from both frame lengths and offsets
         return new long[]{
-                calculateGcd(frameDefs.stream().flatMapToLong(LongStream::of).toArray()),
+                Util.gcd(frameDefs.stream().flatMapToLong(LongStream::of).toArray()),
                 0
         };
-    }
-
-    private static long calculateGcd(long[] values) {
-        long res = 0;
-        for (long value : values) {
-            res = gcd(res, value);
-        }
-        return res;
-    }
-
-    private static long gcd(long a, long b) {
-        if (b == 0) {
-            return a;
-        }
-        return gcd(b, a % b);
     }
 
     private static void validateNoLeakage(Map<Transform, List<Transform>> adjacencyMap) {
