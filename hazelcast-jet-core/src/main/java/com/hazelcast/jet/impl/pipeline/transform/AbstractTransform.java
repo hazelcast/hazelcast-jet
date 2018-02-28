@@ -81,8 +81,8 @@ public abstract class AbstractTransform implements Transform {
     }
 
     @Override
-    public long[] watermarkFrameDef() {
-        return new long[2];
+    public long watermarkFrameSize() {
+        return 0;
     }
 
     public enum Optimization {

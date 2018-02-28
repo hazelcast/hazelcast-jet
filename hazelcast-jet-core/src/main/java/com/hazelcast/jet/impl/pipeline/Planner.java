@@ -38,7 +38,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.stream.LongStream;
 
 import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.tumblingWinPolicy;
@@ -65,12 +64,13 @@ public class Planner {
         validateNoLeakage(adjacencyMap);
 
         // Calculate greatest common denominator of frame lengths from all transforms in the pipeline
-        long[] gcdFrame = calculateGcd(adjacencyMap.keySet().stream()
-                                                .map(Transform::watermarkFrameDef)
-                                                .filter(frame -> frame[0] > 0)
-                                                .collect(toList()));
-        WatermarkEmissionPolicy emitPolicy = gcdFrame[0] > 0
-                ? emitByFrame(tumblingWinPolicy(gcdFrame[0]).withOffset(gcdFrame[1]))
+        long frameSizeGcd = Util.gcd(adjacencyMap.keySet().stream()
+                                                 .map(Transform::watermarkFrameSize)
+                                                 .filter(frameSize -> frameSize > 0)
+                                                 .mapToLong(i -> i)
+                                                 .toArray());
+        WatermarkEmissionPolicy emitPolicy = frameSizeGcd > 0
+                ? emitByFrame(tumblingWinPolicy(frameSizeGcd))
                 : noThrottling();
         // Replace emission policy
         for (Transform transform : adjacencyMap.keySet()) {
@@ -90,25 +90,6 @@ public class Planner {
             transform.addToDag(this);
         }
         return dag;
-    }
-
-    // package-visible for tests
-    static long[] calculateGcd(List<long[]> frameDefs) {
-        if (frameDefs.isEmpty()) {
-            return new long[2];
-        }
-        // if all frameDefs have equal offset, calculate without offset and use original offset
-        if (frameDefs.stream().allMatch(f -> f[1] == frameDefs.get(0)[1])) {
-            return new long[] {
-                    Util.gcd(frameDefs.stream().map(f -> f[0]).mapToLong(i -> i).toArray()),
-                    frameDefs.get(0)[1]
-            };
-        }
-        // offsets are different, calculate the GCD from both frame lengths and offsets
-        return new long[]{
-                Util.gcd(frameDefs.stream().flatMapToLong(LongStream::of).toArray()),
-                0
-        };
     }
 
     private static void validateNoLeakage(Map<Transform, List<Transform>> adjacencyMap) {

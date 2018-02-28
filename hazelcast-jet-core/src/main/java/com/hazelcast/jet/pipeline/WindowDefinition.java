@@ -64,8 +64,7 @@ public interface WindowDefinition {
     /**
      * Returns the frameLength and offset this window definition needs.
      */
-    @Nonnull
-    long[] watermarkFrameDef();
+    long watermarkFrameSize();
 
     /**
      * Returns a {@link WindowKind#SLIDING sliding} window definition with the

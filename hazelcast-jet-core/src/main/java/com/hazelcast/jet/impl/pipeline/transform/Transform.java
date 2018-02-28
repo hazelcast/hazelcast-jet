@@ -52,10 +52,8 @@ public interface Transform extends Serializable {
     void addToDag(Planner p);
 
     /**
-     * Returns the frame length and offset for which this transform needs
-     * watermarks. It is specified as a tuple {@code {frameLength,
-     * frameOffset}}. If {@code frameLength == 0}, this transform doesn't need
-     * watermarks.
+     * Returns the frame length for which this transform needs watermarks. If
+     * {@code frameLength == 0}, this transform doesn't need watermarks.
      */
-    long[] watermarkFrameDef();
+    long watermarkFrameSize();
 }

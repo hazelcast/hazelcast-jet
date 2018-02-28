@@ -66,8 +66,8 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
     }
 
     @Override
-    public long[] watermarkFrameDef() {
-        return wDef.watermarkFrameDef();
+    public long watermarkFrameSize() {
+        return wDef.watermarkFrameSize();
     }
 
     @Override
