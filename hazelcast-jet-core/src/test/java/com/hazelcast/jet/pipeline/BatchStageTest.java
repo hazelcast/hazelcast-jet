@@ -105,7 +105,7 @@ public class BatchStageTest extends PipelineTestSupport {
         // When
         srcStage
                 .useContext(
-                        contextFactory(context -> context.jetInstance().getHazelcastInstance().<Integer, String>getReplicatedMap(transformMapName))
+                        contextFactory(jet -> jet.getHazelcastInstance().<Integer, String>getReplicatedMap(transformMapName))
                                 .withDestroyFn(ReplicatedMap::destroy))
                 .map(ReplicatedMap::get)
                 .drainTo(sink);
@@ -149,7 +149,7 @@ public class BatchStageTest extends PipelineTestSupport {
         // When
 srcStage
         .useContext(
-                contextFactory(context -> context.jetInstance().getHazelcastInstance().<Integer, Integer>getReplicatedMap(filteringMapName))
+                contextFactory(jet -> jet.getHazelcastInstance().<Integer, Integer>getReplicatedMap(filteringMapName))
                         .withDestroyFn(ReplicatedMap::destroy))
         .filter(ReplicatedMap::containsKey)
         .drainTo(sink);

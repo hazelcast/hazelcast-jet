@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -29,14 +29,14 @@ import javax.annotation.Nonnull;
 import static com.hazelcast.jet.core.processor.Processors.flatMapWithContextP;
 
 public class FlatMapWithContextTransform<C, T, R> extends AbstractTransform {
-    @Nonnull private final DistributedFunction<? super Context, ? extends C> createContextFn;
+    @Nonnull private final DistributedFunction<? super JetInstance, ? extends C> createContextFn;
     @Nonnull
     private DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn;
     @Nonnull private final DistributedConsumer<? super C> destroyContextFn;
 
     public FlatMapWithContextTransform(
             @Nonnull Transform upstream,
-            @Nonnull DistributedFunction<? super Context, ? extends C> createContextFn,
+            @Nonnull DistributedFunction<? super JetInstance, ? extends C> createContextFn,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {

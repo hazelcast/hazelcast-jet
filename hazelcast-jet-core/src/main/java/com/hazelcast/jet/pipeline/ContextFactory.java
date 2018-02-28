@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -32,11 +32,11 @@ import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
  */
 public final class ContextFactory<C> {
 
-    private final DistributedFunction<? super Processor.Context, ? extends C> createFn;
+    private final DistributedFunction<? super JetInstance, ? extends C> createFn;
     private final DistributedConsumer<? super C> destroyFn;
 
     private ContextFactory(
-            DistributedFunction<? super Processor.Context, ? extends C> createFn,
+            DistributedFunction<? super JetInstance, ? extends C> createFn,
             DistributedConsumer<? super C> destroyFn
     ) {
         this.createFn = createFn;
@@ -52,7 +52,7 @@ public final class ContextFactory<C> {
 
     @Nonnull
     public static <C> ContextFactory<C> contextFactory(
-            @Nonnull DistributedFunction<? super Processor.Context, ? extends C> createContextFn
+            @Nonnull DistributedFunction<? super JetInstance, ? extends C> createContextFn
     ) {
         return new ContextFactory<>(createContextFn, noopConsumer());
     }
@@ -63,7 +63,7 @@ public final class ContextFactory<C> {
     }
 
     @Nonnull
-    public DistributedFunction<? super Processor.Context, ? extends C> getCreateFn() {
+    public DistributedFunction<? super JetInstance, ? extends C> getCreateFn() {
         return createFn;
     }
 
