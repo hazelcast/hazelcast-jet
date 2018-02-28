@@ -24,7 +24,6 @@ import com.hazelcast.jet.function.DistributedFunction;
 
 import javax.annotation.Nonnull;
 import java.io.Closeable;
-import java.io.IOException;
 
 /**
  * Processor which, for each received item, emits all the items from the
@@ -37,8 +36,8 @@ import java.io.IOException;
  */
 public class TransformWithContextP<C, T, R> extends AbstractProcessor implements Closeable {
 
-    private final DistributedFunction<Context, ? extends C> createContextFn;
-    private final DistributedBiFunction<? super C, T, ? extends Traverser<? extends R>> flatMapFn;
+    private final DistributedFunction<? super Context, ? extends C> createContextFn;
+    private final DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn;
     private final DistributedConsumer<? super C> destroyContextFn;
 
     private C contextObject;
@@ -48,8 +47,8 @@ public class TransformWithContextP<C, T, R> extends AbstractProcessor implements
      * Constructs a processor with the given mapping function.
      */
     public TransformWithContextP(
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
-            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn,
+            @Nonnull DistributedFunction<? super Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {
         this.createContextFn = createContextFn;
@@ -75,7 +74,7 @@ public class TransformWithContextP<C, T, R> extends AbstractProcessor implements
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         destroyContextFn.accept(contextObject);
         contextObject = null;
     }

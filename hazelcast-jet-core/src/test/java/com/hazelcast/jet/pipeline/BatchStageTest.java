@@ -42,6 +42,7 @@ import static com.hazelcast.jet.datamodel.ItemsByTag.itemsByTag;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
+import static com.hazelcast.jet.pipeline.ContextFactory.contextFactory;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
@@ -102,12 +103,12 @@ public class BatchStageTest extends PipelineTestSupport {
                                      .collect(toList());
 
         // When
-        BatchStage<String> mapped = srcStage.mapWithContext(
-                context -> context.jetInstance().getHazelcastInstance()
-                        .<Integer, String>getReplicatedMap(transformMapName),
-                ReplicatedMap::get,
-                ReplicatedMap::destroy);
-        mapped.drainTo(sink);
+        srcStage
+                .useContext(
+                        contextFactory(context -> context.jetInstance().getHazelcastInstance().<Integer, String>getReplicatedMap(transformMapName))
+                                .withDestroyFn(ReplicatedMap::destroy))
+                .map(ReplicatedMap::get)
+                .drainTo(sink);
         execute();
 
         // Then
@@ -146,12 +147,12 @@ public class BatchStageTest extends PipelineTestSupport {
                                      .collect(toList());
 
         // When
-        BatchStage<Integer> mapped = srcStage.filterWithContext(
-                context -> context.jetInstance().getHazelcastInstance()
-                        .<Integer, Integer>getReplicatedMap(filteringMapName),
-                ReplicatedMap::containsKey,
-                ReplicatedMap::destroy);
-        mapped.drainTo(sink);
+srcStage
+        .useContext(
+                contextFactory(context -> context.jetInstance().getHazelcastInstance().<Integer, Integer>getReplicatedMap(filteringMapName))
+                        .withDestroyFn(ReplicatedMap::destroy))
+        .filter(ReplicatedMap::containsKey)
+        .drainTo(sink);
         execute();
 
         // Then
@@ -183,10 +184,10 @@ public class BatchStageTest extends PipelineTestSupport {
         putToSrcMap(input);
 
         // When
-        BatchStage<String> flatMapped = srcStage.flatMapWithContext(
-                procCtx -> asList("A", "B"),
-                (ctx, o) -> traverseIterable(asList(o + ctx.get(0), o + ctx.get(1))));
-        flatMapped.drainTo(sink);
+        srcStage
+                .useContext(contextFactory(procCtx -> asList("A", "B")))
+                .flatMap((ctx, o) -> traverseIterable(asList(o + ctx.get(0), o + ctx.get(1))))
+                .drainTo(sink);
         execute();
 
         // Then

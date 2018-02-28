@@ -28,14 +28,14 @@ import javax.annotation.Nonnull;
 import static com.hazelcast.jet.core.processor.Processors.filterWithContextP;
 
 public class FilterWithContextTransform<C, T> extends AbstractTransform {
-    private final DistributedFunction<Context, ? extends C> createContextFn;
-    private final DistributedBiPredicate<C, T> filterFn;
+    private final DistributedFunction<? super Context, ? extends C> createContextFn;
+    private final DistributedBiPredicate<? super C, ? super T> filterFn;
     private final DistributedConsumer<? super C> destroyContextFn;
 
     public FilterWithContextTransform(
             @Nonnull Transform upstream,
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
-            @Nonnull DistributedBiPredicate<C, T> filterFn,
+            @Nonnull DistributedFunction<? super Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {
         super("filter", upstream);

@@ -29,15 +29,15 @@ import javax.annotation.Nonnull;
 import static com.hazelcast.jet.core.processor.Processors.flatMapWithContextP;
 
 public class FlatMapWithContextTransform<C, T, R> extends AbstractTransform {
-    @Nonnull private final DistributedFunction<Context, ? extends C> createContextFn;
+    @Nonnull private final DistributedFunction<? super Context, ? extends C> createContextFn;
     @Nonnull
-    private DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn;
+    private DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn;
     @Nonnull private final DistributedConsumer<? super C> destroyContextFn;
 
     public FlatMapWithContextTransform(
             @Nonnull Transform upstream,
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
-            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn,
+            @Nonnull DistributedFunction<? super Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {
         super("flat-map", upstream);

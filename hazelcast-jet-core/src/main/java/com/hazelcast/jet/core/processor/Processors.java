@@ -755,8 +755,8 @@ public final class Processors {
      */
     @Nonnull
     public static <C, T> ProcessorSupplier filterWithContextP(
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
-            @Nonnull DistributedBiPredicate<C, T> filterFn,
+            @Nonnull DistributedFunction<? super Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {
         return new CloseableProcessorSupplier<>(() -> {
@@ -814,8 +814,8 @@ public final class Processors {
      */
     @Nonnull
     public static <C, T, R> ProcessorSupplier flatMapWithContextP(
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
-            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn,
+            @Nonnull DistributedFunction<? super Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {
         return new CloseableProcessorSupplier<>(

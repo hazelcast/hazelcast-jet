@@ -18,13 +18,11 @@ package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.WatermarkEmissionPolicy;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBiPredicate;
-import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -45,6 +43,7 @@ import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkStage;
@@ -118,12 +117,11 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @Nonnull
     @SuppressWarnings("unchecked")
     <C, R, RET> RET attachMapWithContext(
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
-            @Nonnull DistributedBiFunction<C, ? super T, R> mapFn,
-            @Nonnull DistributedConsumer<? super C> destroyContextFn
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedBiFunction<? super C, ? super T, R> mapFn
     ) {
-        return (RET) attach(new MapWithContextTransform(this.transform, createContextFn,
-                fnAdapter.adaptMapWithContextFn(mapFn), destroyContextFn), fnAdapter);
+        return (RET) attach(new MapWithContextTransform(this.transform, contextFactory.getCreateFn(),
+                fnAdapter.adaptMapWithContextFn(mapFn), contextFactory.getDestroyFn()), fnAdapter);
     }
 
     @Nonnull
@@ -135,12 +133,11 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @Nonnull
     @SuppressWarnings("unchecked")
     <C, RET> RET attachFilterWithContext(
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
-            @Nonnull DistributedBiPredicate<C, T> filterFn,
-            @Nonnull DistributedConsumer<? super C> destroyContextFn
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     ) {
-        return (RET) attach(new FilterWithContextTransform<>(transform, createContextFn,
-                fnAdapter.adaptFilterWithContextFn(filterFn), destroyContextFn), fnAdapter);
+        return (RET) attach(new FilterWithContextTransform<>(transform, contextFactory.getCreateFn(),
+                fnAdapter.adaptFilterWithContextFn(filterFn), contextFactory.getDestroyFn()), fnAdapter);
     }
 
     @Nonnull
@@ -152,12 +149,11 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
     @Nonnull
     <C, R, RET> RET attachFlatMapWithContext(
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
-            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn,
-            @Nonnull DistributedConsumer<? super C> destroyContextFn
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return attach(new FlatMapWithContextTransform<>(transform, createContextFn,
-                fnAdapter.adaptFlatMapWithContextFn(flatMapFn), destroyContextFn), fnAdapter);
+        return attach(new FlatMapWithContextTransform<C, T, R>(transform, contextFactory.getCreateFn(),
+                fnAdapter.adaptFlatMapWithContextFn(flatMapFn), contextFactory.getDestroyFn()), fnAdapter);
     }
 
     @Nonnull

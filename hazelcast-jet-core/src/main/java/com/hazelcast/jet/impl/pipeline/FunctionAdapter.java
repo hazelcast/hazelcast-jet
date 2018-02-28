@@ -75,18 +75,18 @@ public class FunctionAdapter {
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    <R, T> DistributedFunction<? super Object, ? extends Traverser<?>> adaptFlatMapFn(
+    <R, T> DistributedFunction<Object, ? extends Traverser<?>> adaptFlatMapFn(
             @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return (DistributedFunction<? super Object, ? extends Traverser<?>>) flatMapFn;
+        return (DistributedFunction<Object, ? extends Traverser<?>>) flatMapFn;
     }
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    <C, R, T> DistributedBiFunction<C, ? super Object, ? extends Traverser<?>> adaptFlatMapWithContextFn(
-            @Nonnull DistributedBiFunction<C, ? super T, ? extends Traverser<? extends R>> flatMapFn
+    <C, R, T> DistributedBiFunction<? super C, Object, ? extends Traverser<? extends R>> adaptFlatMapWithContextFn(
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return (DistributedBiFunction<C, ? super Object, ? extends Traverser<?>>) flatMapFn;
+        return (DistributedBiFunction<C, ? super Object, ? extends Traverser<? extends R>>) flatMapFn;
     }
 
     @Nonnull
@@ -224,8 +224,8 @@ class JetEventFunctionAdapter extends FunctionAdapter {
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    <C, R, T> DistributedBiFunction<C, ? super Object, ? extends Traverser<?>> adaptFlatMapWithContextFn(
-            @Nonnull DistributedBiFunction<C, ? super T, ? extends Traverser<? extends R>> flatMapFn
+    <C, R, T> DistributedBiFunction<C, Object, ? extends Traverser<? extends R>> adaptFlatMapWithContextFn(
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         DistributedBiFunction<C, Object, Traverser> fn =
                 (DistributedBiFunction<C, Object, Traverser>) (BiFunction) flatMapFn;
