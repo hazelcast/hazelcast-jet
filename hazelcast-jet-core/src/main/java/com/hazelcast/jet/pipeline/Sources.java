@@ -96,9 +96,13 @@ public final class Sources {
      * Returns an unbounded (event stream) source that will use the supplied
      * function to create processor meta-suppliers as required by the Core API.
      * Jet will call the function you supply with the watermark generation
-     * paramters and it must return a meta-supplier of processors that will
+     * parameters and it must return a meta-supplier of processors that will
      * act according to these parameters and emit the watermark items as they
      * specify.
+     * <p>
+     * If you are implementing a custom source processor, be sure to check out
+     * the {@link com.hazelcast.jet.core.WatermarkSourceUtil} class that will
+     * help you correctly implement watermark item emission.
      *
      * @param sourceName user-friendly source name
      * @param metaSupplierFn factory of processor meta-suppliers
