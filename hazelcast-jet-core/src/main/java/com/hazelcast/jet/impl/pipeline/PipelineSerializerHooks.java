@@ -25,6 +25,8 @@ import com.hazelcast.nio.serialization.StreamSerializer;
 
 import java.io.IOException;
 
+import static com.hazelcast.jet.impl.pipeline.JetEvent.jetEvent;
+
 /**
  * Hazelcast serializer hooks for the classes in the {@code
  * com.hazelcast.jet.impl.pipeline} package. This is not a public API.
@@ -51,12 +53,12 @@ public class PipelineSerializerHooks {
                 public JetEvent read(ObjectDataInput in) throws IOException {
                     Object payload = in.readObject();
                     long timestamp = in.readLong();
-                    return (JetEvent) JetEvent.jetEvent(payload, timestamp);
+                    return jetEvent(payload, timestamp);
                 }
 
                 @Override
                 public int getTypeId() {
-                    return SerializerHookConstants.JET_EVENT_IMPL;
+                    return SerializerHookConstants.JET_EVENT;
                 }
 
                 @Override

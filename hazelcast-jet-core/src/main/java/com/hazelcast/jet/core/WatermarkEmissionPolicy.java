@@ -19,7 +19,6 @@ package com.hazelcast.jet.core;
 import javax.annotation.Nonnull;
 import java.io.Serializable;
 
-import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.util.Preconditions.checkPositive;
 
 /**
