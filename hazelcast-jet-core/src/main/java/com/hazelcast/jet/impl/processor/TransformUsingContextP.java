@@ -16,12 +16,10 @@
 
 package com.hazelcast.jet.impl.processor;
 
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.function.DistributedBiFunction;
-import com.hazelcast.jet.function.DistributedConsumer;
-import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.TransformContext;
 
 import javax.annotation.Nonnull;
 import java.io.Closeable;
@@ -38,9 +36,8 @@ import java.io.IOException;
  */
 public class TransformUsingContextP<C, T, R> extends AbstractProcessor implements Closeable {
 
-    private final DistributedFunction<JetInstance, ? extends C> createContextFn;
+    private final TransformContext<C> transformContext;
     private final DistributedBiFunction<? super C, T, ? extends Traverser<? extends R>> flatMapFn;
-    private final DistributedConsumer<? super C> destroyContextFn;
 
     private C contextObject;
     private Traverser<? extends R> outputTraverser;
@@ -49,18 +46,16 @@ public class TransformUsingContextP<C, T, R> extends AbstractProcessor implement
      * Constructs a processor with the given mapping function.
      */
     public TransformUsingContextP(
-            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
-            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn,
-            @Nonnull DistributedConsumer<? super C> destroyContextFn
+            @Nonnull TransformContext<C> transformContext,
+            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        this.createContextFn = createContextFn;
+        this.transformContext = transformContext;
         this.flatMapFn = flatMapFn;
-        this.destroyContextFn = destroyContextFn;
     }
 
     @Override
     protected void init(@Nonnull Context context) {
-        contextObject = createContextFn.apply(context.jetInstance());
+        contextObject = transformContext.getCreateFn().apply(context.jetInstance());
     }
 
     @Override
@@ -77,7 +72,7 @@ public class TransformUsingContextP<C, T, R> extends AbstractProcessor implement
 
     @Override
     public void close() throws IOException {
-        destroyContextFn.accept(contextObject);
+        transformContext.getDestroyFn().accept(contextObject);
         contextObject = null;
     }
 }

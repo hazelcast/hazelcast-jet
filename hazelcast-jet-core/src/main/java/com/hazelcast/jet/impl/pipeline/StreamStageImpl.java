@@ -16,12 +16,10 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBiPredicate;
-import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -33,6 +31,7 @@ import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.StageWithWindow;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
+import com.hazelcast.jet.pipeline.TransformContext;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
@@ -64,11 +63,10 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
 
     @Nonnull @Override
     public <C, R> StreamStage<R> mapUsingContext(
-            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
-            @Nonnull DistributedBiFunction<C, ? super T, R> mapFn,
-            @Nonnull DistributedConsumer<? super C> destroyContextFn
+            @Nonnull TransformContext<C> transformContext,
+            @Nonnull DistributedBiFunction<C, ? super T, R> mapFn
     ) {
-        return attachMapUsingContext(createContextFn, mapFn, destroyContextFn);
+        return attachMapUsingContext(transformContext, mapFn);
     }
 
 
@@ -79,11 +77,10 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
 
     @Nonnull @Override
     public <C> StreamStage<T> filterUsingContext(
-            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
-            @Nonnull DistributedBiPredicate<C, T> filterFn,
-            @Nonnull DistributedConsumer<? super C> destroyContextFn
+            @Nonnull TransformContext<C> transformContext,
+            @Nonnull DistributedBiPredicate<C, T> filterFn
     ) {
-        return attachFilterUsingContext(createContextFn, filterFn, destroyContextFn);
+        return attachFilterUsingContext(transformContext, filterFn);
     }
 
     @Nonnull @Override
@@ -95,11 +92,10 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
 
     @Nonnull @Override
     public <C, R> StreamStage<R> flatMapUsingContext(
-            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
-            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn,
-            @Nonnull DistributedConsumer<? super C> destroyContextFn
+            @Nonnull TransformContext<C> transformContext,
+            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return attachFlatMapUsingContext(createContextFn, flatMapFn, destroyContextFn);
+        return attachFlatMapUsingContext(transformContext, flatMapFn);
     }
 
     @Nonnull @Override

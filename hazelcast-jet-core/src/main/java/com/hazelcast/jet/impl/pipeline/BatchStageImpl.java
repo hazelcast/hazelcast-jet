@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
@@ -24,7 +23,6 @@ import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBiPredicate;
-import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -35,6 +33,7 @@ import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.StageWithGrouping;
+import com.hazelcast.jet.pipeline.TransformContext;
 
 import javax.annotation.Nonnull;
 
@@ -67,11 +66,10 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
 
     @Nonnull @Override
     public <C, R> BatchStage<R> mapUsingContext(
-            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
-            @Nonnull DistributedBiFunction<C, ? super T, R> mapFn,
-            @Nonnull DistributedConsumer<? super C> destroyContextFn
+            @Nonnull TransformContext<C> transformContext,
+            @Nonnull DistributedBiFunction<C, ? super T, R> mapFn
     ) {
-        return attachMapUsingContext(createContextFn, mapFn, destroyContextFn);
+        return attachMapUsingContext(transformContext, mapFn);
     }
 
     @Nonnull @Override
@@ -81,11 +79,10 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
 
     @Nonnull @Override
     public <C> BatchStage<T> filterUsingContext(
-            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
-            @Nonnull DistributedBiPredicate<C, T> filterFn,
-            @Nonnull DistributedConsumer<? super C> destroyContextFn
+            @Nonnull TransformContext<C> transformContext,
+            @Nonnull DistributedBiPredicate<C, T> filterFn
     ) {
-        return attachFilterUsingContext(createContextFn, filterFn, destroyContextFn);
+        return attachFilterUsingContext(transformContext, filterFn);
     }
 
     @Nonnull @Override
@@ -97,11 +94,10 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
 
     @Nonnull @Override
     public <C, R> BatchStage<R> flatMapUsingContext(
-            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
-            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn,
-            @Nonnull DistributedConsumer<? super C> destroyContextFn
+            @Nonnull TransformContext<C> transformContext,
+            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return attachFlatMapUsingContext(createContextFn, flatMapFn, destroyContextFn);
+        return attachFlatMapUsingContext(transformContext, flatMapFn);
     }
 
     @Nonnull @Override

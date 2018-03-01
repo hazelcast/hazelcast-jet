@@ -17,38 +17,35 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.function.DistributedBiPredicate;
 import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.jet.pipeline.TransformContext;
 
 import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.core.processor.Processors.filterUsingContextP;
 
 public class FilterUsingContextTransform<C, T> extends AbstractTransform {
-    private final DistributedFunction<JetInstance, ? extends C> createContextFn;
+    private final TransformContext<C> transformContext;
     private final DistributedBiPredicate<C, T> filterFn;
-    private final DistributedConsumer<? super C> destroyContextFn;
 
     public FilterUsingContextTransform(
             @Nonnull Transform upstream,
-            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
-            @Nonnull DistributedBiPredicate<C, T> filterFn,
-            @Nonnull DistributedConsumer<? super C> destroyContextFn
+            @Nonnull TransformContext<C> transformContext,
+            @Nonnull DistributedBiPredicate<C, T> filterFn
     ) {
         super("filter", upstream);
-        this.createContextFn = createContextFn;
+        this.transformContext = transformContext;
         this.filterFn = filterFn;
-        this.destroyContextFn = destroyContextFn;
     }
 
     @Override
     public void addToDag(Planner p) {
         PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), localParallelism(),
-                filterUsingContextP(createContextFn, filterFn, destroyContextFn));
+                filterUsingContextP(transformContext, filterFn));
         p.addEdges(this, pv.v);
     }
 }

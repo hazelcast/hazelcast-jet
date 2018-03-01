@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.core.processor;
 
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation;
@@ -34,7 +33,6 @@ import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBiPredicate;
-import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -48,9 +46,11 @@ import com.hazelcast.jet.impl.processor.TransformP;
 import com.hazelcast.jet.impl.processor.TransformUsingContextP;
 import com.hazelcast.jet.impl.util.WrappingProcessorMetaSupplier;
 import com.hazelcast.jet.impl.util.WrappingProcessorSupplier;
+import com.hazelcast.jet.pipeline.TransformContext;
+
+import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Map.Entry;
-import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.core.TimestampKind.EVENT;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
@@ -703,16 +703,15 @@ public final class Processors {
      */
     @Nonnull
     public static <C, T, R> ProcessorSupplier mapUsingContextP(
-            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
-            @Nonnull DistributedBiFunction<C, ? super T, R> mapFn,
-            @Nonnull DistributedConsumer<? super C> destroyContextFn
+            @Nonnull TransformContext<C> transformContext,
+            @Nonnull DistributedBiFunction<C, ? super T, R> mapFn
     ) {
         return new CloseableProcessorSupplier<>(() -> {
             final ResettableSingletonTraverser<R> trav = new ResettableSingletonTraverser<>();
-            return new TransformUsingContextP<C, T, R>(createContextFn, (context, item) -> {
+            return new TransformUsingContextP<C, T, R>(transformContext, (context, item) -> {
                 trav.accept(mapFn.apply(context, item));
                 return trav;
-            }, destroyContextFn);
+            });
         });
     }
 
@@ -755,16 +754,15 @@ public final class Processors {
      */
     @Nonnull
     public static <C, T> ProcessorSupplier filterUsingContextP(
-            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
-            @Nonnull DistributedBiPredicate<C, T> filterFn,
-            @Nonnull DistributedConsumer<? super C> destroyContextFn
+            @Nonnull TransformContext<C> transformContext,
+            @Nonnull DistributedBiPredicate<C, T> filterFn
     ) {
         return new CloseableProcessorSupplier<>(() -> {
             final ResettableSingletonTraverser<T> trav = new ResettableSingletonTraverser<>();
-            return new TransformUsingContextP<C, T, T>(createContextFn, (context, item) -> {
+            return new TransformUsingContextP<C, T, T>(transformContext, (context, item) -> {
                 trav.accept(filterFn.test(context, item) ? item : null);
                 return trav;
-            }, destroyContextFn);
+            });
         });
     }
 
@@ -814,12 +812,11 @@ public final class Processors {
      */
     @Nonnull
     public static <C, T, R> ProcessorSupplier flatMapUsingContextP(
-            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
-            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn,
-            @Nonnull DistributedConsumer<? super C> destroyContextFn
+            @Nonnull TransformContext<C> transformContext,
+            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         return new CloseableProcessorSupplier<>(
-                () -> new TransformUsingContextP<>(createContextFn, flatMapFn, destroyContextFn));
+                () -> new TransformUsingContextP<>(transformContext, flatMapFn));
     }
 
     /**

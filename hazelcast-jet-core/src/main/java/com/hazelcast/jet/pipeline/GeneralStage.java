@@ -80,36 +80,8 @@ public interface GeneralStage<T> extends Stage {
      */
     @Nonnull
     <C, R> GeneralStage<R> mapUsingContext(
-            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
+            @Nonnull TransformContext<C> transformContext,
             @Nonnull DistributedBiFunction<C, ? super T, R> mapFn
-    );
-
-    /**
-     * Attaches to this stage a mapping stage, one which applies the supplied
-     * function to each input item independently and emits the function's
-     * result as the output item. The mapping function can use a context
-     * object, which is created separately for each processor instance.
-     * <p>
-     * If the mapping result is {@code null}, it emits nothing. Therefore this
-     * stage can be used to implement filtering semantics as well.
-     * <p>
-     * Even though you can use the context object to store runtime state, it
-     * won't be saved to state snapshot. It might be useful in batch or
-     * non-snapshotted jobs.
-     *
-     * @param <C> type of context object
-     * @param <R> the result type of the mapping function
-     * @param createContextFn a function to create context based on a
-     *                        {@link JetInstance}
-     * @param mapFn a stateless mapping function
-     * @param destroyContextFn a function to destroy the context
-     * @return the newly attached stage
-     */
-    @Nonnull
-    <C, R> GeneralStage<R> mapUsingContext(
-            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
-            @Nonnull DistributedBiFunction<C, ? super T, R> mapFn,
-            @Nonnull DistributedConsumer<? super C> destroyContextFn
     );
 
     /**
@@ -134,39 +106,14 @@ public interface GeneralStage<T> extends Stage {
      * non-snapshotted jobs.
      *
      * @param <C> type of context object
-     * @param createContextFn a function to create context based on a
-     *                        {@link JetInstance}
+     * @param transformContext TODO
      * @param filterFn a stateless filter predicate function
      * @return the newly attached stage
      */
     @Nonnull
     <C> GeneralStage<T> filterUsingContext(
-            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
+            @Nonnull TransformContext<C> transformContext,
             @Nonnull DistributedBiPredicate<C, T> filterFn
-    );
-
-    /**
-     * Attaches to this stage a filtering stage, one which applies the provided
-     * predicate function to each input item to decide whether to pass the item
-     * to the output or to discard it. The predicate function can use a context
-     * object, which is created separately for each processor instance.
-     * <p>
-     * Even though you can use the context object to store runtime state, it
-     * won't be saved to state snapshot. It might be useful in batch or
-     * non-snapshotted jobs.
-     *
-     * @param <C> type of context object
-     * @param createContextFn a function to create context based on a
-     *                        {@link JetInstance}
-     * @param filterFn a stateless filter predicate function
-     * @param destroyContextFn a function to destroy the context
-     * @return the newly attached stage
-     */
-    @Nonnull
-    <C> GeneralStage<T> filterUsingContext(
-            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
-            @Nonnull DistributedBiPredicate<C, T> filterFn,
-            @Nonnull DistributedConsumer<? super C> destroyContextFn
     );
 
     /**
@@ -210,39 +157,8 @@ public interface GeneralStage<T> extends Stage {
      */
     @Nonnull
     <C, R> GeneralStage<R> flatMapUsingContext(
-            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
+            @Nonnull TransformContext<C> transformContext,
             @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn
-    );
-
-    /**
-     * Attaches to this stage a flat-mapping stage, one which applies the
-     * supplied function to each input item independently and emits all items
-     * from the {@link Traverser} it returns as the output items. The mapping
-     * function can use a context object, which is created separately for each
-     * processor instance.
-     * <p>
-     * Even though you can use the context object to store runtime state, it
-     * won't be saved to state snapshot. It might be useful in batch or
-     * non-snapshotted jobs.
-     * <p>
-     * The traverser returned from the {@code flatMapFn} must be finite. That
-     * is, this operation will not attempt to emit any items after the first
-     * {@code null} item.
-     *
-     * @param <C> type of context object
-     * @param <R> the type of items in the result's traversers
-     * @param createContextFn a function to create context based on a
-     *                        {@link JetInstance}
-     * @param flatMapFn a stateless flatmapping function, whose result type is
-     *                  Jet's {@link Traverser}
-     * @param destroyContextFn a function to destroy the context
-     * @return the newly attached stage
-     */
-    @Nonnull
-    <C, R> GeneralStage<R> flatMapUsingContext(
-            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
-            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn,
-            @Nonnull DistributedConsumer<? super C> destroyContextFn
     );
 
     /**

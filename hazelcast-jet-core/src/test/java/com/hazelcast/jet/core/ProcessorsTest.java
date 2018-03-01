@@ -24,6 +24,7 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.pipeline.TransformContext;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -68,9 +69,9 @@ public class ProcessorsTest {
     public void mapUsingContext() {
         TestSupport
                 .verifyProcessor(mapUsingContextP(
-                        context -> new int[1],
-                        (int[] context, Integer item) -> context[0] += item,
-                        context -> assertEquals(6, context[0])))
+                        TransformContext.withCreate(context -> new int[1])
+                                        .withDestroy(context -> assertEquals(6, context[0])),
+                        (int[] context, Integer item) -> context[0] += item))
                 .disableSnapshots()
                 .input(asList(1, 2, 3))
                 .expectOutput(asList(1, 3, 6));
@@ -88,15 +89,15 @@ public class ProcessorsTest {
     public void filteringWithMapUsingContext() {
         TestSupport
                 .verifyProcessor(mapUsingContextP(
-                        context -> new int[1],
+                        TransformContext.withCreate(context -> new int[1])
+                                        .withDestroy(context -> assertEquals(3, context[0])),
                         (int[] context, Integer item) -> {
                             try {
                                 return context[0] % 2 == 0 ? item : null;
                             } finally {
                                 context[0] = item;
                             }
-                        },
-                        context -> assertEquals(3, context[0])))
+                        }))
                 .disableSnapshots()
                 .input(asList(1, 2, 3))
                 .expectOutput(asList(1, 3));
@@ -113,14 +114,17 @@ public class ProcessorsTest {
     @Test
     public void filterUsingContext() {
         TestSupport
-                .verifyProcessor(filterUsingContextP(context -> new int[1], (int[] context, Integer item) -> {
-                    try {
-                        // will pass if greater than the previous item
-                        return item > context[0];
-                    } finally {
-                        context[0] = item;
-                    }
-                }, context -> assertEquals(2, context[0])))
+                .verifyProcessor(filterUsingContextP(
+                        TransformContext.withCreate(context -> new int[1])
+                                        .withDestroy(context -> assertEquals(2, context[0])),
+                        (int[] context, Integer item) -> {
+                            try {
+                                // will pass if greater than the previous item
+                                return item > context[0];
+                            } finally {
+                                context[0] = item;
+                            }
+                        }))
                 .input(asList(1, 2, 1, 2))
                 .disableSnapshots()
                 .expectOutput(asList(1, 2, 2));
@@ -140,9 +144,9 @@ public class ProcessorsTest {
 
         TestSupport
                 .verifyProcessor(flatMapUsingContextP(
-                        procContext -> context,
-                        (int[] c, Integer item) -> Traverser.over(item, c[0] += item),
-                        c -> c[0]++))
+                        TransformContext.withCreate(procContext -> context)
+                                        .withDestroy(c -> c[0]++),
+                        (int[] c, Integer item) -> Traverser.over(item, c[0] += item)))
                 .disableSnapshots()
                 .input(asList(1, 2, 3))
                 .expectOutput(asList(1, 1, 2, 3, 3, 6));

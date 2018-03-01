@@ -43,6 +43,7 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
+import static com.hazelcast.jet.pipeline.TransformContexts.replicatedMapContext;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
@@ -103,10 +104,8 @@ public class BatchStageTest extends PipelineTestSupport {
 
         // When
         BatchStage<String> mapped = srcStage.mapUsingContext(
-                jet -> jet.getHazelcastInstance()
-                        .<Integer, String>getReplicatedMap(transformMapName),
-                ReplicatedMap::get,
-                ReplicatedMap::destroy);
+                TransformContexts.<Integer, String>replicatedMapContext(transformMapName),
+                ReplicatedMap::get);
         mapped.drainTo(sink);
         execute();
 
@@ -147,10 +146,8 @@ public class BatchStageTest extends PipelineTestSupport {
 
         // When
         BatchStage<Integer> mapped = srcStage.filterUsingContext(
-                jet -> jet.getHazelcastInstance()
-                        .<Integer, Integer>getReplicatedMap(filteringMapName),
-                ReplicatedMap::containsKey,
-                ReplicatedMap::destroy);
+                replicatedMapContext(filteringMapName),
+                ReplicatedMap::containsKey);
         mapped.drainTo(sink);
         execute();
 
@@ -184,7 +181,7 @@ public class BatchStageTest extends PipelineTestSupport {
 
         // When
         BatchStage<String> flatMapped = srcStage.flatMapUsingContext(
-                procCtx -> asList("A", "B"),
+                TransformContext.withCreate(procCtx -> asList("A", "B")),
                 (ctx, o) -> traverseIterable(asList(o + ctx.get(0), o + ctx.get(1))));
         flatMapped.drainTo(sink);
         execute();

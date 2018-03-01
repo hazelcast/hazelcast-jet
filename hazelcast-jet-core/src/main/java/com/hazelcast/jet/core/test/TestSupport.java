@@ -731,8 +731,10 @@ public final class TestSupport {
 
     private void initProcessor(Processor processor, TestOutbox outbox) {
         TestProcessorContext context = new TestProcessorContext()
-                .setJetInstance(jetInstance)
                 .setLogger(getLogger(processor.getClass().getName()));
+        if (jetInstance != null) {
+            context.setJetInstance(jetInstance);
+        }
         processor.init(outbox, context);
     }
 
