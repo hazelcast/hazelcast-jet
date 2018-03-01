@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.core.processor;
 
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation;
@@ -25,6 +24,7 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.CloseableProcessorSupplier;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
@@ -45,7 +45,7 @@ import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
 import com.hazelcast.jet.impl.processor.TransformP;
-import com.hazelcast.jet.impl.processor.TransformWithContextP;
+import com.hazelcast.jet.impl.processor.TransformUsingContextP;
 import com.hazelcast.jet.impl.util.WrappingProcessorMetaSupplier;
 import com.hazelcast.jet.impl.util.WrappingProcessorSupplier;
 import java.util.List;
@@ -702,14 +702,14 @@ public final class Processors {
      * @param <R> type of emitted item
      */
     @Nonnull
-    public static <C, T, R> ProcessorSupplier mapWithContextP(
-            @Nonnull DistributedFunction<? super JetInstance, ? extends C> createContextFn,
+    public static <C, T, R> ProcessorSupplier mapUsingContextP(
+            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
             @Nonnull DistributedBiFunction<C, ? super T, R> mapFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {
         return new CloseableProcessorSupplier<>(() -> {
             final ResettableSingletonTraverser<R> trav = new ResettableSingletonTraverser<>();
-            return new TransformWithContextP<C, T, R>(createContextFn, (context, item) -> {
+            return new TransformUsingContextP<C, T, R>(createContextFn, (context, item) -> {
                 trav.accept(mapFn.apply(context, item));
                 return trav;
             }, destroyContextFn);
@@ -754,14 +754,14 @@ public final class Processors {
      * @param <T> type of received item
      */
     @Nonnull
-    public static <C, T> ProcessorSupplier filterWithContextP(
-            @Nonnull DistributedFunction<? super JetInstance, ? extends C> createContextFn,
-            @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn,
+    public static <C, T> ProcessorSupplier filterUsingContextP(
+            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiPredicate<C, T> filterFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {
         return new CloseableProcessorSupplier<>(() -> {
             final ResettableSingletonTraverser<T> trav = new ResettableSingletonTraverser<>();
-            return new TransformWithContextP<C, T, T>(createContextFn, (context, item) -> {
+            return new TransformUsingContextP<C, T, T>(createContextFn, (context, item) -> {
                 trav.accept(filterFn.test(context, item) ? item : null);
                 return trav;
             }, destroyContextFn);
@@ -813,13 +813,13 @@ public final class Processors {
      * @param <R> emitted item type
      */
     @Nonnull
-    public static <C, T, R> ProcessorSupplier flatMapWithContextP(
-            @Nonnull DistributedFunction<? super JetInstance, ? extends C> createContextFn,
-            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn,
+    public static <C, T, R> ProcessorSupplier flatMapUsingContextP(
+            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {
         return new CloseableProcessorSupplier<>(
-                () -> new TransformWithContextP<>(createContextFn, flatMapFn, destroyContextFn));
+                () -> new TransformUsingContextP<>(createContextFn, flatMapFn, destroyContextFn));
     }
 
     /**

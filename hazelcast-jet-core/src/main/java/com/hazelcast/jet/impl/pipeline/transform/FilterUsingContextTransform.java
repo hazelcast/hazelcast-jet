@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.core.Processor.Context;
+import com.hazelcast.jet.function.DistributedBiPredicate;
 import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.pipeline.Planner;
@@ -25,29 +25,29 @@ import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.core.processor.Processors.mapWithContextP;
+import static com.hazelcast.jet.core.processor.Processors.filterUsingContextP;
 
-public class MapWithContextTransform<C, T, R> extends AbstractTransform {
-    private final DistributedFunction<? super JetInstance, ? extends C> createContextFn;
-    private final DistributedBiFunction<C, ? super T, R> mapFn;
+public class FilterUsingContextTransform<C, T> extends AbstractTransform {
+    private final DistributedFunction<Context, ? extends C> createContextFn;
+    private final DistributedBiPredicate<C, T> filterFn;
     private final DistributedConsumer<? super C> destroyContextFn;
 
-    public MapWithContextTransform(
+    public FilterUsingContextTransform(
             @Nonnull Transform upstream,
-            @Nonnull DistributedFunction<? super JetInstance, ? extends C> createContextFn,
-            @Nonnull DistributedBiFunction<C, ? super T, R> mapFn,
+            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiPredicate<C, T> filterFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {
-        super("map-with-context", upstream);
+        super("filter", upstream);
         this.createContextFn = createContextFn;
-        this.mapFn = mapFn;
+        this.filterFn = filterFn;
         this.destroyContextFn = destroyContextFn;
     }
 
     @Override
     public void addToDag(Planner p) {
         PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), localParallelism(),
-                mapWithContextP(createContextFn, mapFn, destroyContextFn));
+                filterUsingContextP(createContextFn, filterFn, destroyContextFn));
         p.addEdges(this, pv.v);
     }
 }

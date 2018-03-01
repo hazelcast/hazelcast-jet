@@ -38,11 +38,11 @@ import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineP;
 import static com.hazelcast.jet.core.processor.Processors.filterP;
-import static com.hazelcast.jet.core.processor.Processors.filterWithContextP;
+import static com.hazelcast.jet.core.processor.Processors.filterUsingContextP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapP;
-import static com.hazelcast.jet.core.processor.Processors.flatMapWithContextP;
+import static com.hazelcast.jet.core.processor.Processors.flatMapUsingContextP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
-import static com.hazelcast.jet.core.processor.Processors.mapWithContextP;
+import static com.hazelcast.jet.core.processor.Processors.mapUsingContextP;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
 import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
 import static java.util.Arrays.asList;
@@ -65,9 +65,9 @@ public class ProcessorsTest {
     }
 
     @Test
-    public void mapWithContext() {
+    public void mapUsingContext() {
         TestSupport
-                .verifyProcessor(mapWithContextP(
+                .verifyProcessor(mapUsingContextP(
                         context -> new int[1],
                         (int[] context, Integer item) -> context[0] += item,
                         context -> assertEquals(6, context[0])))
@@ -85,9 +85,9 @@ public class ProcessorsTest {
     }
 
     @Test
-    public void filteringWithMapWithContext() {
+    public void filteringWithMapUsingContext() {
         TestSupport
-                .verifyProcessor(mapWithContextP(
+                .verifyProcessor(mapUsingContextP(
                         context -> new int[1],
                         (int[] context, Integer item) -> {
                             try {
@@ -111,9 +111,9 @@ public class ProcessorsTest {
     }
 
     @Test
-    public void filterWithContext() {
+    public void filterUsingContext() {
         TestSupport
-                .verifyProcessor(filterWithContextP(context -> new int[1], (int[] context, Integer item) -> {
+                .verifyProcessor(filterUsingContextP(context -> new int[1], (int[] context, Integer item) -> {
                     try {
                         // will pass if greater than the previous item
                         return item > context[0];
@@ -135,11 +135,11 @@ public class ProcessorsTest {
     }
 
     @Test
-    public void flatMapWithContext() {
+    public void flatMapUsingContext() {
         int[] context = {0};
 
         TestSupport
-                .verifyProcessor(flatMapWithContextP(
+                .verifyProcessor(flatMapUsingContextP(
                         procContext -> context,
                         (int[] c, Integer item) -> Traverser.over(item, c[0] += item),
                         c -> c[0]++))

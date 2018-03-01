@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -26,21 +26,21 @@ import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.core.processor.Processors.flatMapWithContextP;
+import static com.hazelcast.jet.core.processor.Processors.flatMapUsingContextP;
 
-public class FlatMapWithContextTransform<C, T, R> extends AbstractTransform {
-    @Nonnull private final DistributedFunction<? super JetInstance, ? extends C> createContextFn;
+public class FlatMapUsingContextTransform<C, T, R> extends AbstractTransform {
+    @Nonnull private final DistributedFunction<Context, ? extends C> createContextFn;
     @Nonnull
-    private DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn;
+    private DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn;
     @Nonnull private final DistributedConsumer<? super C> destroyContextFn;
 
-    public FlatMapWithContextTransform(
+    public FlatMapUsingContextTransform(
             @Nonnull Transform upstream,
-            @Nonnull DistributedFunction<? super JetInstance, ? extends C> createContextFn,
-            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn,
+            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {
-        super("flat-map-with-context", upstream);
+        super("flat-map", upstream);
         this.createContextFn = createContextFn;
         this.flatMapFn = flatMapFn;
         this.destroyContextFn = destroyContextFn;
@@ -49,7 +49,7 @@ public class FlatMapWithContextTransform<C, T, R> extends AbstractTransform {
     @Override
     public void addToDag(Planner p) {
         PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), localParallelism(),
-                flatMapWithContextP(createContextFn, flatMapFn, destroyContextFn));
+                flatMapUsingContextP(createContextFn, flatMapFn, destroyContextFn));
         p.addEdges(this, pv.v);
     }
 }

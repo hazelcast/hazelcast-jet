@@ -42,7 +42,6 @@ import static com.hazelcast.jet.datamodel.ItemsByTag.itemsByTag;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
-import static com.hazelcast.jet.pipeline.ContextFactory.contextFactory;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
@@ -91,24 +90,24 @@ public class BatchStageTest extends PipelineTestSupport {
     }
 
     @Test
-    public void mapWithContext() {
+    public void mapUsingContext() {
         // Given
         List<Integer> input = sequence(ITEM_COUNT);
         putToSrcMap(input);
         String transformMapName = randomMapName();
-        ReplicatedMap<Integer, String> transformMap = jet().getReplicatedMap(transformMapName);
+        ReplicatedMap<Integer, String> transformMap = jet().getHazelcastInstance().getReplicatedMap(transformMapName);
         List<String> expected = input.stream()
                                      .peek(i -> transformMap.put(i, String.valueOf(i)))
                                      .map(String::valueOf)
                                      .collect(toList());
 
         // When
-        srcStage
-                .useContext(
-                        contextFactory(jet -> jet.<Integer, String>getReplicatedMap(transformMapName))
-                                .withDestroyFn(ReplicatedMap::destroy))
-                .map(ReplicatedMap::get)
-                .drainTo(sink);
+        BatchStage<String> mapped = srcStage.mapUsingContext(
+                context -> context.jetInstance().getHazelcastInstance()
+                        .<Integer, String>getReplicatedMap(transformMapName),
+                ReplicatedMap::get,
+                ReplicatedMap::destroy);
+        mapped.drainTo(sink);
         execute();
 
         // Then
@@ -134,12 +133,12 @@ public class BatchStageTest extends PipelineTestSupport {
     }
 
     @Test
-    public void filterWithContext() {
+    public void filterUsingContext() {
         // Given
         List<Integer> input = sequence(ITEM_COUNT);
         putToSrcMap(input);
         String filteringMapName = randomMapName();
-        ReplicatedMap<Integer, Integer> filteringMap = jet().getReplicatedMap(filteringMapName);
+        ReplicatedMap<Integer, Integer> filteringMap = jet().getHazelcastInstance().getReplicatedMap(filteringMapName);
         filteringMap.put(1, 1);
         filteringMap.put(3, 3);
         List<Integer> expected = input.stream()
@@ -147,13 +146,13 @@ public class BatchStageTest extends PipelineTestSupport {
                                      .collect(toList());
 
         // When
-        srcStage
-                .useContext(
-                        contextFactory(jet -> jet.<Integer, Integer>getReplicatedMap(filteringMapName))
-                                .withDestroyFn(ReplicatedMap::destroy))
-                .filter(ReplicatedMap::containsKey)
-                .drainTo(sink);
-                execute();
+        BatchStage<Integer> mapped = srcStage.filterUsingContext(
+                context -> context.jetInstance().getHazelcastInstance()
+                        .<Integer, Integer>getReplicatedMap(filteringMapName),
+                ReplicatedMap::containsKey,
+                ReplicatedMap::destroy);
+        mapped.drainTo(sink);
+        execute();
 
         // Then
         assertEquals(toBag(expected), sinkToBag());
@@ -178,16 +177,16 @@ public class BatchStageTest extends PipelineTestSupport {
     }
 
     @Test
-    public void flatMapWithContext() {
+    public void flatMapUsingContext() {
         // Given
         List<Integer> input = sequence(ITEM_COUNT);
         putToSrcMap(input);
 
         // When
-        srcStage
-                .useContext(contextFactory(procCtx -> asList("A", "B")))
-                .flatMap((ctx, o) -> traverseIterable(asList(o + ctx.get(0), o + ctx.get(1))))
-                .drainTo(sink);
+        BatchStage<String> flatMapped = srcStage.flatMapUsingContext(
+                procCtx -> asList("A", "B"),
+                (ctx, o) -> traverseIterable(asList(o + ctx.get(0), o + ctx.get(1))));
+        flatMapped.drainTo(sink);
         execute();
 
         // Then
