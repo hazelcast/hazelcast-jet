@@ -103,7 +103,7 @@ public class BatchStageTest extends PipelineTestSupport {
 
         // When
         BatchStage<String> mapped = srcStage.mapUsingContext(
-                context -> context.jetInstance().getHazelcastInstance()
+                jet -> jet.getHazelcastInstance()
                         .<Integer, String>getReplicatedMap(transformMapName),
                 ReplicatedMap::get,
                 ReplicatedMap::destroy);
@@ -147,7 +147,7 @@ public class BatchStageTest extends PipelineTestSupport {
 
         // When
         BatchStage<Integer> mapped = srcStage.filterUsingContext(
-                context -> context.jetInstance().getHazelcastInstance()
+                jet -> jet.getHazelcastInstance()
                         .<Integer, Integer>getReplicatedMap(filteringMapName),
                 ReplicatedMap::containsKey,
                 ReplicatedMap::destroy);

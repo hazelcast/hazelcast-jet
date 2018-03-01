@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.function.DistributedBiPredicate;
 import com.hazelcast.jet.function.DistributedConsumer;
@@ -28,13 +29,13 @@ import javax.annotation.Nonnull;
 import static com.hazelcast.jet.core.processor.Processors.filterUsingContextP;
 
 public class FilterUsingContextTransform<C, T> extends AbstractTransform {
-    private final DistributedFunction<Context, ? extends C> createContextFn;
+    private final DistributedFunction<JetInstance, ? extends C> createContextFn;
     private final DistributedBiPredicate<C, T> filterFn;
     private final DistributedConsumer<? super C> destroyContextFn;
 
     public FilterUsingContextTransform(
             @Nonnull Transform upstream,
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
             @Nonnull DistributedBiPredicate<C, T> filterFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {

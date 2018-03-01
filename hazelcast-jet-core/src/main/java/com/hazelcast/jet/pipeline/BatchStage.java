@@ -16,12 +16,12 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBiPredicate;
 import com.hazelcast.jet.function.DistributedConsumer;
@@ -56,14 +56,14 @@ public interface BatchStage<T> extends GeneralStage<T> {
 
     @Nonnull @Override
     <C, R> BatchStage<R> mapUsingContext(
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
             @Nonnull DistributedBiFunction<C, ? super T, R> mapFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     );
 
     @Nonnull @Override
     default <C, R> BatchStage<R> mapUsingContext(
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
             @Nonnull DistributedBiFunction<C, ? super T, R> mapFn
     ) {
         return mapUsingContext(createContextFn, mapFn, noopConsumer());
@@ -74,14 +74,14 @@ public interface BatchStage<T> extends GeneralStage<T> {
 
     @Nonnull @Override
     <C> BatchStage<T> filterUsingContext(
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
             @Nonnull DistributedBiPredicate<C, T> filterFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     );
 
     @Nonnull @Override
     default <C> BatchStage<T> filterUsingContext(
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
             @Nonnull DistributedBiPredicate<C, T> filterFn
     ) {
         return filterUsingContext(createContextFn, filterFn, noopConsumer());
@@ -92,14 +92,14 @@ public interface BatchStage<T> extends GeneralStage<T> {
 
     @Nonnull @Override
     <C, R> BatchStage<R> flatMapUsingContext(
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
             @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     );
 
     @Nonnull @Override
     default <C, R> BatchStage<R> flatMapUsingContext(
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
             @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         return flatMapUsingContext(createContextFn, flatMapFn, noopConsumer());

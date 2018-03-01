@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.core.processor;
 
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation;
@@ -24,7 +25,6 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.CloseableProcessorSupplier;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
@@ -703,7 +703,7 @@ public final class Processors {
      */
     @Nonnull
     public static <C, T, R> ProcessorSupplier mapUsingContextP(
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
             @Nonnull DistributedBiFunction<C, ? super T, R> mapFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {
@@ -755,7 +755,7 @@ public final class Processors {
      */
     @Nonnull
     public static <C, T> ProcessorSupplier filterUsingContextP(
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
             @Nonnull DistributedBiPredicate<C, T> filterFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {
@@ -814,7 +814,7 @@ public final class Processors {
      */
     @Nonnull
     public static <C, T, R> ProcessorSupplier flatMapUsingContextP(
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
             @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {

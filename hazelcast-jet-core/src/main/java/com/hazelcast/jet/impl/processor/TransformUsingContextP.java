@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.function.DistributedBiFunction;
@@ -37,7 +38,7 @@ import java.io.IOException;
  */
 public class TransformUsingContextP<C, T, R> extends AbstractProcessor implements Closeable {
 
-    private final DistributedFunction<Context, ? extends C> createContextFn;
+    private final DistributedFunction<JetInstance, ? extends C> createContextFn;
     private final DistributedBiFunction<? super C, T, ? extends Traverser<? extends R>> flatMapFn;
     private final DistributedConsumer<? super C> destroyContextFn;
 
@@ -48,7 +49,7 @@ public class TransformUsingContextP<C, T, R> extends AbstractProcessor implement
      * Constructs a processor with the given mapping function.
      */
     public TransformUsingContextP(
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
             @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {
@@ -59,7 +60,7 @@ public class TransformUsingContextP<C, T, R> extends AbstractProcessor implement
 
     @Override
     protected void init(@Nonnull Context context) {
-        contextObject = createContextFn.apply(context);
+        contextObject = createContextFn.apply(context.jetInstance());
     }
 
     @Override

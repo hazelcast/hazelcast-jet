@@ -16,9 +16,9 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.WatermarkEmissionPolicy;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.WatermarkPolicy;
@@ -118,7 +118,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @Nonnull
     @SuppressWarnings("unchecked")
     <C, R, RET> RET attachMapUsingContext(
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
             @Nonnull DistributedBiFunction<C, ? super T, R> mapFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {
@@ -135,7 +135,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @Nonnull
     @SuppressWarnings("unchecked")
     <C, RET> RET attachFilterUsingContext(
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
             @Nonnull DistributedBiPredicate<C, T> filterFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {
@@ -152,7 +152,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
     @Nonnull
     <C, R, RET> RET attachFlatMapUsingContext(
-            @Nonnull DistributedFunction<Context, ? extends C> createContextFn,
+            @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn,
             @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn,
             @Nonnull DistributedConsumer<? super C> destroyContextFn
     ) {
