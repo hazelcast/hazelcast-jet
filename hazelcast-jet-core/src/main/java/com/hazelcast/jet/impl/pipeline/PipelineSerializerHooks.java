@@ -31,27 +31,27 @@ import java.io.IOException;
  */
 public class PipelineSerializerHooks {
 
-    public static final class JetEventImplHook implements SerializerHook<JetEventImpl> {
+    public static final class JetEventImplHook implements SerializerHook<JetEvent> {
 
         @Override
-        public Class<JetEventImpl> getSerializationType() {
-            return JetEventImpl.class;
+        public Class<JetEvent> getSerializationType() {
+            return JetEvent.class;
         }
 
         @Override
         public Serializer createSerializer() {
-            return new StreamSerializer<JetEventImpl>() {
+            return new StreamSerializer<JetEvent>() {
                 @Override
-                public void write(ObjectDataOutput out, JetEventImpl object) throws IOException {
+                public void write(ObjectDataOutput out, JetEvent object) throws IOException {
                     out.writeObject(object.payload());
                     out.writeLong(object.timestamp());
                 }
 
                 @Override
-                public JetEventImpl read(ObjectDataInput in) throws IOException {
+                public JetEvent read(ObjectDataInput in) throws IOException {
                     Object payload = in.readObject();
                     long timestamp = in.readLong();
-                    return (JetEventImpl) JetEventImpl.jetEvent(payload, timestamp);
+                    return (JetEvent) JetEvent.jetEvent(payload, timestamp);
                 }
 
                 @Override
