@@ -88,8 +88,8 @@ public final class TransformUsingContextP<C, T, R> extends AbstractProcessor imp
 
     @Override
     public void close() {
-        // close() might be called even if init() was not called
-        // Only destroy the context if is not shared, if it is our own
+        // close() might be called even if init() was not called.
+        // Only destroy the context if is not shared (i.e. it is our own).
         if (contextObject != null && !contextFactory.isSharedLocally()) {
             contextFactory.destroyFn().accept(contextObject);
         }
@@ -97,6 +97,8 @@ public final class TransformUsingContextP<C, T, R> extends AbstractProcessor imp
     }
 
     private static final class Supplier<C, T, R> extends CloseableProcessorSupplier {
+
+        static final long serialVersionUID = 1L;
 
         private final ContextFactory<C> contextFactory;
         private final DistributedTriFunction<ResettableSingletonTraverser<R>, ? super C, ? super T,
@@ -130,6 +132,10 @@ public final class TransformUsingContextP<C, T, R> extends AbstractProcessor imp
         }
     }
 
+    /**
+     * The {@link ResettableSingletonTraverser} is passed as a first argument to
+     * {@code flatMapFn}, it can be used if needed.
+     */
     public static <C, T, R> ProcessorSupplier supplier(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedTriFunction<ResettableSingletonTraverser<R>, ? super C, ? super T,

@@ -58,16 +58,16 @@ public interface GeneralStage<T> extends Stage {
 
     /**
      * Attaches to this stage a mapping stage, one which applies the supplied
-     * function to each input item independently and emits the function's
-     * result as the output item. The mapping function can use a context
-     * object, which is created separately for each processor instance.
+     * function to each input item independently and emits the function's result
+     * as the output item. The mapping function can use a context object which
+     * is created using the context factory.
      * <p>
      * If the mapping result is {@code null}, it emits nothing. Therefore this
      * stage can be used to implement filtering semantics as well.
      * <p>
      * Even though you can use the context object to store runtime state, it
-     * won't be saved to state snapshot. It might be useful in batch or
-     * non-snapshotted jobs.
+     * won't be saved to state snapshot. Using it to store state might be useful
+     * in batch or non-snapshotted jobs.
      *
      * @param <C> type of context object
      * @param <R> the result type of the mapping function
@@ -96,11 +96,11 @@ public interface GeneralStage<T> extends Stage {
      * Attaches to this stage a filtering stage, one which applies the provided
      * predicate function to each input item to decide whether to pass the item
      * to the output or to discard it. The predicate function can use a context
-     * object, which is created separately for each processor instance.
+     * object which is created using the context factory.
      * <p>
      * Even though you can use the context object to store runtime state, it
-     * won't be saved to state snapshot. It might be useful in batch or
-     * non-snapshotted jobs.
+     * won't be saved to state snapshot. Using it to store state might be useful
+     * in batch or non-snapshotted jobs.
      *
      * @param <C> type of context object
      * @param contextFactory the context factory
@@ -133,12 +133,12 @@ public interface GeneralStage<T> extends Stage {
      * Attaches to this stage a flat-mapping stage, one which applies the
      * supplied function to each input item independently and emits all items
      * from the {@link Traverser} it returns as the output items. The mapping
-     * function can use a context object, which is created separately for each
-     * processor instance.
+     * function can use a context object which is created using the context
+     * factory.
      * <p>
      * Even though you can use the context object to store runtime state, it
-     * won't be saved to state snapshot. It might be useful in batch or
-     * non-snapshotted jobs.
+     * won't be saved to state snapshot. Using it to store state might be useful
+     * in batch or non-snapshotted jobs.
      * <p>
      * The traverser returned from the {@code flatMapFn} must be finite. That
      * is, this operation will not attempt to emit any items after the first

@@ -22,8 +22,8 @@ import com.hazelcast.jet.IMapJet;
 import javax.annotation.Nonnull;
 
 /**
- * Utility class with factory methods for several useful context factories, see
- * {@link ContextFactory}.
+ * Utility class with factory methods for several useful {@link ContextFactory
+ * context factories}.
  */
 public final class ContextFactories {
 
@@ -32,9 +32,12 @@ public final class ContextFactories {
     /**
      * Returns context factory to use a {@link ReplicatedMap} with the given
      * {@code mapName} as a transformation context. It is useful for enrichment
-     * based on data stored in the replicated map. Using a replicated map to
+     * based on data stored in a replicated map. Using a replicated map to
      * enrich is particularly useful in streaming jobs because it can be mutated
-     * in parallel. In contrast to using {@link #iMapContext}
+     * in parallel.
+     * <p>
+     * If you want to destroy the map after the job finishes, call {@code
+     * destroyFn(ReplicatedMap::destroy)} on the returned object.
      * <p>
      * Example:
      *
@@ -52,19 +55,20 @@ public final class ContextFactories {
     @Nonnull
     public static <K, V> ContextFactory<ReplicatedMap<K, V>> replicatedMapContext(@Nonnull String mapName) {
         return ContextFactory
-                .withCreate(jet -> jet.getHazelcastInstance().getReplicatedMap(mapName));
+                .withCreateFn(jet -> jet.getHazelcastInstance().getReplicatedMap(mapName));
     }
 
     /**
-     * Returns context factory to use an {@link IMapJet} with the given {@code
-     * mapName} as a transformation context. It is useful for enrichment based
-     * on data stored in the IMap. Using a map to enrich is particularly useful
-     * in streaming jobs because it can be mutated in parallel.
+     * Returns context factory to use an {@link com.hazelcast.core.IMap} with
+     * the given {@code mapName} as a transformation context. It is useful for
+     * enrichment based on data stored in an IMap. Using a map to enrich is
+     * particularly useful in streaming jobs because it can be mutated in
+     * parallel.
      * <p>
      * Keep in mind that the processor uses synchronous {@link IMapJet#get get}
      * method, which might involve network IO, so it's only appropriate for
      * low-traffic streams. You can use {@link #replicatedMapContext} instead or
-     * configure near-cache.
+     * configure the near-cache.
      * <p>
      * If you want to destroy the map after the job finishes, call {@code
      * destroyFn(IMap::destroy)} on the returned object.
@@ -85,7 +89,7 @@ public final class ContextFactories {
     @Nonnull
     public static <K, V> ContextFactory<IMapJet<K, V>> iMapContext(@Nonnull String mapName) {
         return ContextFactory
-                .withCreate(jet -> jet.<K, V>getMap(mapName))
+                .withCreateFn(jet -> jet.<K, V>getMap(mapName))
                 .shareLocally()
                 .nonCooperative();
     }

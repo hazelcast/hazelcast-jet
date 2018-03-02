@@ -27,14 +27,15 @@ import java.io.Serializable;
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 
 /**
- * Holder of functions to create and destroy context for transform functions. See:<ul>
+ * Holder of functions to create and destroy context for transform functions.
+ * See:<ul>
  *     <li>{@link GeneralStage#mapUsingContext}
  *     <li>{@link GeneralStage#filterUsingContext}
  *     <li>{@link GeneralStage#flatMapUsingContext}
  * </ul>
  *
- * Create new instances using {@link #withCreate} or choose predefined instances
- * in {@link ContextFactories}. Objects are immutable.
+ * Create new instances using {@link #withCreateFn} or choose one of the
+ * predefined instances in {@link ContextFactories}. Instances are immutable.
  *
  * @param <C> the user-defined context object type
  */
@@ -59,15 +60,14 @@ public final class ContextFactory<C> implements Serializable {
     }
 
     /**
-     * Creates new {@link ContextFactory} with given create function and no-op
-     * destroy function.
+     * Creates new {@link ContextFactory} with given create function.
      *
      * @param createContextFn the function to create new context object, given a JetInstance
      * @param <C> the user-defined context object type
      * @return a new instance
      */
     @Nonnull
-    public static <C> ContextFactory<C> withCreate(
+    public static <C> ContextFactory<C> withCreateFn(
             @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn
     ) {
         return new ContextFactory<>(createContextFn, noopConsumer(), COOPERATIVE_DEFAULT, SHARE_LOCALLY_DEFAULT);
@@ -82,17 +82,19 @@ public final class ContextFactory<C> implements Serializable {
      * @return a new instance with destroy function replaced
      */
     @Nonnull
-    public ContextFactory<C> withDestroy(@Nonnull DistributedConsumer<? super C> destroyFn) {
+    public ContextFactory<C> withDestroyFn(@Nonnull DistributedConsumer<? super C> destroyFn) {
         return new ContextFactory<>(createFn, destroyFn, cooperative, shareLocally);
     }
 
     /**
      * Returns a copy of this {@link ContextFactory} with <em>cooperative</em>
      * flag set to {@code false}. Context factory is cooperative by default.
-     * Call this method if the calls to context are non-cooperative. The
-     * cooperative contract is described {@link Processor#isCooperative() here}.
+     * Call this method if the calls to context are non-cooperative.
+     * <p>
+     * The contract of <em>cooperative processing</em> is described {@link
+     * Processor#isCooperative() here}.
      *
-     * @return a new instance with destroy function replaced
+     * @return a new instance with <em>cooperative</em> flag un-set.
      */
     @Nonnull
     public ContextFactory<C> nonCooperative() {
@@ -101,15 +103,13 @@ public final class ContextFactory<C> implements Serializable {
 
     /**
      * Returns a copy of this {@link ContextFactory} with <em>share-locally</em>
-     * flag set to {@code true}. By default, context is not shared locally, each
+     * flag set to {@code true}. By default, context object is not shared, each
      * parallel processor gets its own instance. If the context object is large
-     * or takes long to initialize and <u>is thread-safe</u>, it might be better
-     * to share it locally.
-     * <p>
-     * The cooperative contract is described {@link Processor#isCooperative()
-     * here}.
+     * or takes long to initialize, it might be better to share it. If you
+     * enable sharing, the context object will be used from multiple threads -
+     * make sure that it is  <u>thread-safe</u>.
      *
-     * @return a new instance with destroy function replaced
+     * @return a new instance with <em>share-locally</em> flag set.
      */
     @Nonnull
     public ContextFactory<C> shareLocally() {
@@ -133,7 +133,7 @@ public final class ContextFactory<C> implements Serializable {
     }
 
     /**
-     * Returs the cooperative flag.
+     * Returns the cooperative flag.
      */
     public boolean isCooperative() {
         return cooperative;

@@ -44,7 +44,7 @@ public class ManagedContextTest extends JetTestSupport {
     }
 
     @Test
-    public void when_managedContextSet_then_processorsInitUsingContext() {
+    public void when_managedContextSet_then_processorsInitWithContext() {
         // Given
         DAG dag = new DAG();
         Vertex p = dag.newVertex("p", TestProcessor::new).localParallelism(1);

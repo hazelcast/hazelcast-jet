@@ -181,7 +181,7 @@ public class BatchStageTest extends PipelineTestSupport {
 
         // When
         BatchStage<String> flatMapped = srcStage.flatMapUsingContext(
-                ContextFactory.withCreate(procCtx -> asList("A", "B")),
+                ContextFactory.withCreateFn(procCtx -> asList("A", "B")),
                 (ctx, o) -> traverseIterable(asList(o + ctx.get(0), o + ctx.get(1))));
         flatMapped.drainTo(sink);
         execute();

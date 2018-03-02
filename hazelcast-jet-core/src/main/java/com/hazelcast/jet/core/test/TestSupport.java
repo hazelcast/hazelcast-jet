@@ -84,6 +84,10 @@ import static java.util.stream.Collectors.toMap;
  *     method returned {@code false} and made a progress
  * </ul>
  *
+ * The {@code init()} and {@code complete()} methods of {@link
+ * ProcessorSupplier} and {@link ProcessorMetaSupplier} are called if you call
+ * the {@link #verifyProcessor} using one of these.
+ *
  * <h3>Snapshot &amp; restore</h3>
  * The {@link #disableSnapshots() optional} snapshot+restore test procedure:
  * <ul>

@@ -69,8 +69,8 @@ public class ProcessorsTest {
     public void mapUsingContext() {
         TestSupport
                 .verifyProcessor(mapUsingContextP(
-                        ContextFactory.withCreate(context -> new int[1])
-                                      .withDestroy(context -> assertEquals(6, context[0])),
+                        ContextFactory.withCreateFn(context -> new int[1])
+                                      .withDestroyFn(context -> assertEquals(6, context[0])),
                         (int[] context, Integer item) -> context[0] += item))
                 .disableSnapshots()
                 .input(asList(1, 2, 3))
@@ -89,8 +89,8 @@ public class ProcessorsTest {
     public void filteringWithMapUsingContext() {
         TestSupport
                 .verifyProcessor(mapUsingContextP(
-                        ContextFactory.withCreate(context -> new int[1])
-                                      .withDestroy(context -> assertEquals(3, context[0])),
+                        ContextFactory.withCreateFn(context -> new int[1])
+                                      .withDestroyFn(context -> assertEquals(3, context[0])),
                         (int[] context, Integer item) -> {
                             try {
                                 return context[0] % 2 == 0 ? item : null;
@@ -115,8 +115,8 @@ public class ProcessorsTest {
     public void filterUsingContext() {
         TestSupport
                 .verifyProcessor(filterUsingContextP(
-                        ContextFactory.withCreate(context -> new int[1])
-                                      .withDestroy(context -> assertEquals(2, context[0])),
+                        ContextFactory.withCreateFn(context -> new int[1])
+                                      .withDestroyFn(context -> assertEquals(2, context[0])),
                         (int[] context, Integer item) -> {
                             try {
                                 // will pass if greater than the previous item
@@ -144,8 +144,8 @@ public class ProcessorsTest {
 
         TestSupport
                 .verifyProcessor(flatMapUsingContextP(
-                        ContextFactory.withCreate(procContext -> context)
-                                      .withDestroy(c -> c[0]++),
+                        ContextFactory.withCreateFn(procContext -> context)
+                                      .withDestroyFn(c -> c[0]++),
                         (int[] c, Integer item) -> Traverser.over(item, c[0] += item)))
                 .disableSnapshots()
                 .input(asList(1, 2, 3))
