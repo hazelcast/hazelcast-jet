@@ -16,10 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.function.DistributedBiFunction;
-import com.hazelcast.jet.function.DistributedConsumer;
-import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.pipeline.TransformContext;
@@ -30,12 +27,12 @@ import static com.hazelcast.jet.core.processor.Processors.mapUsingContextP;
 
 public class MapUsingContextTransform<C, T, R> extends AbstractTransform {
     private final TransformContext<C> transformContext;
-    private final DistributedBiFunction<C, ? super T, R> mapFn;
+    private final DistributedBiFunction<C, T, R> mapFn;
 
     public MapUsingContextTransform(
             @Nonnull Transform upstream,
             @Nonnull TransformContext<C> transformContext,
-            @Nonnull DistributedBiFunction<C, ? super T, R> mapFn
+            @Nonnull DistributedBiFunction<C, T, R> mapFn
     ) {
         super("map", upstream);
         this.transformContext = transformContext;

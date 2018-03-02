@@ -16,10 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.function.DistributedBiPredicate;
-import com.hazelcast.jet.function.DistributedConsumer;
-import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.pipeline.TransformContext;
@@ -30,12 +27,12 @@ import static com.hazelcast.jet.core.processor.Processors.filterUsingContextP;
 
 public class FilterUsingContextTransform<C, T> extends AbstractTransform {
     private final TransformContext<C> transformContext;
-    private final DistributedBiPredicate<C, T> filterFn;
+    private final DistributedBiPredicate<? super C, ? super T> filterFn;
 
     public FilterUsingContextTransform(
             @Nonnull Transform upstream,
             @Nonnull TransformContext<C> transformContext,
-            @Nonnull DistributedBiPredicate<C, T> filterFn
+            @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     ) {
         super("filter", upstream);
         this.transformContext = transformContext;

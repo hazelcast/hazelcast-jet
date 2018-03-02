@@ -57,12 +57,12 @@ public final class TransformContext<C> implements Serializable {
     }
 
     @Nonnull
-    public DistributedFunction<JetInstance, ? extends C> getCreateFn() {
+    public DistributedFunction<JetInstance, ? extends C> createFn() {
         return createFn;
     }
 
     @Nonnull
-    public DistributedConsumer<? super C> getDestroyFn() {
+    public DistributedConsumer<? super C> destroyFn() {
         return destroyFn;
     }
 }

@@ -37,7 +37,7 @@ import java.io.IOException;
 public class TransformUsingContextP<C, T, R> extends AbstractProcessor implements Closeable {
 
     private final TransformContext<C> transformContext;
-    private final DistributedBiFunction<? super C, T, ? extends Traverser<? extends R>> flatMapFn;
+    private final DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn;
 
     private C contextObject;
     private Traverser<? extends R> outputTraverser;
@@ -47,7 +47,7 @@ public class TransformUsingContextP<C, T, R> extends AbstractProcessor implement
      */
     public TransformUsingContextP(
             @Nonnull TransformContext<C> transformContext,
-            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         this.transformContext = transformContext;
         this.flatMapFn = flatMapFn;
@@ -55,7 +55,7 @@ public class TransformUsingContextP<C, T, R> extends AbstractProcessor implement
 
     @Override
     protected void init(@Nonnull Context context) {
-        contextObject = transformContext.getCreateFn().apply(context.jetInstance());
+        contextObject = transformContext.createFn().apply(context.jetInstance());
     }
 
     @Override
@@ -72,7 +72,7 @@ public class TransformUsingContextP<C, T, R> extends AbstractProcessor implement
 
     @Override
     public void close() throws IOException {
-        transformContext.getDestroyFn().accept(contextObject);
+        transformContext.destroyFn().accept(contextObject);
         contextObject = null;
     }
 }

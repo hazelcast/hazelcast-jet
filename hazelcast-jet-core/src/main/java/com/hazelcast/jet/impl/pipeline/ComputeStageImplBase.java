@@ -118,7 +118,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @SuppressWarnings("unchecked")
     <C, R, RET> RET attachMapUsingContext(
             @Nonnull TransformContext<C> transformContext,
-            @Nonnull DistributedBiFunction<C, ? super T, R> mapFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
     ) {
         return (RET) attach(new MapUsingContextTransform(this.transform, transformContext,
                 fnAdapter.adaptMapUsingContextFn(mapFn)), fnAdapter);
@@ -134,7 +134,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @SuppressWarnings("unchecked")
     <C, RET> RET attachFilterUsingContext(
             @Nonnull TransformContext<C> transformContext,
-            @Nonnull DistributedBiPredicate<C, T> filterFn
+            @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     ) {
         return (RET) attach(new FilterUsingContextTransform<>(transform, transformContext,
                 fnAdapter.adaptFilterUsingContextFn(filterFn)), fnAdapter);
@@ -150,7 +150,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @Nonnull
     <C, R, RET> RET attachFlatMapUsingContext(
             @Nonnull TransformContext<C> transformContext,
-            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         return attach(new FlatMapUsingContextTransform<>(transform, transformContext,
                 fnAdapter.adaptFlatMapUsingContextFn(flatMapFn)), fnAdapter);

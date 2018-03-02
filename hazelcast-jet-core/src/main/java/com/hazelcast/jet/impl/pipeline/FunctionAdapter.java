@@ -32,7 +32,6 @@ import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedTriFunction;
 import com.hazelcast.jet.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.function.WindowResultFunction;
-import com.hazelcast.jet.impl.aggregate.AggregateOperationImpl;
 import com.hazelcast.jet.impl.processor.ProcessorWrapper;
 import com.hazelcast.jet.impl.util.WrappingProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.JoinClause;
@@ -75,7 +74,7 @@ public class FunctionAdapter {
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    <R, T> DistributedFunction<? super Object, ? extends Traverser<?>> adaptFlatMapFn(
+    <R, T> DistributedFunction<Object, ? extends Traverser<?>> adaptFlatMapFn(
             @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         return (DistributedFunction<? super Object, ? extends Traverser<?>>) flatMapFn;
@@ -83,10 +82,10 @@ public class FunctionAdapter {
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    <C, R, T> DistributedBiFunction<C, ? super Object, ? extends Traverser<?>> adaptFlatMapUsingContextFn(
-            @Nonnull DistributedBiFunction<C, ? super T, ? extends Traverser<? extends R>> flatMapFn
+    <C, R, T> DistributedBiFunction<? super C, Object, ? extends Traverser<?>> adaptFlatMapUsingContextFn(
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return (DistributedBiFunction<C, ? super Object, ? extends Traverser<?>>) flatMapFn;
+        return (DistributedBiFunction<? super C, ? super Object, ? extends Traverser<?>>) flatMapFn;
     }
 
     @Nonnull
@@ -224,8 +223,8 @@ class JetEventFunctionAdapter extends FunctionAdapter {
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    <C, R, T> DistributedBiFunction<C, ? super Object, ? extends Traverser<?>> adaptFlatMapUsingContextFn(
-            @Nonnull DistributedBiFunction<C, ? super T, ? extends Traverser<? extends R>> flatMapFn
+    <C, R, T> DistributedBiFunction<? super C, Object, ? extends Traverser<?>> adaptFlatMapUsingContextFn(
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         DistributedBiFunction<C, Object, Traverser> fn =
                 (DistributedBiFunction<C, Object, Traverser>) (BiFunction) flatMapFn;
@@ -290,7 +289,7 @@ class JetEventFunctionAdapter extends FunctionAdapter {
         } else {
             DistributedBiConsumer[] adaptedAccFns = new DistributedBiConsumer[aggrOp.arity()];
             Arrays.setAll(adaptedAccFns, i -> adaptAccumulateFn(aggrOp.accumulateFn(i)));
-            return ((AggregateOperationImpl) aggrOp).withAccumulateFns(adaptedAccFns);
+            return aggrOp.withAccumulateFns(adaptedAccFns);
         }
     }
 

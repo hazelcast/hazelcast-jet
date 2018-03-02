@@ -755,7 +755,7 @@ public final class Processors {
     @Nonnull
     public static <C, T> ProcessorSupplier filterUsingContextP(
             @Nonnull TransformContext<C> transformContext,
-            @Nonnull DistributedBiPredicate<C, T> filterFn
+            @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     ) {
         return new CloseableProcessorSupplier<>(() -> {
             final ResettableSingletonTraverser<T> trav = new ResettableSingletonTraverser<>();
@@ -813,7 +813,7 @@ public final class Processors {
     @Nonnull
     public static <C, T, R> ProcessorSupplier flatMapUsingContextP(
             @Nonnull TransformContext<C> transformContext,
-            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         return new CloseableProcessorSupplier<>(
                 () -> new TransformUsingContextP<>(transformContext, flatMapFn));

@@ -53,7 +53,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
     @Nonnull @Override
     <C, R> BatchStage<R> mapUsingContext(
             @Nonnull TransformContext<C> transformContext,
-            @Nonnull DistributedBiFunction<C, ? super T, R> mapFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
     );
 
     @Nonnull @Override
@@ -62,7 +62,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
     @Nonnull @Override
     <C> BatchStage<T> filterUsingContext(
             @Nonnull TransformContext<C> transformContext,
-            @Nonnull DistributedBiPredicate<C, T> filterFn
+            @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     );
 
     @Nonnull @Override
@@ -71,7 +71,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
     @Nonnull @Override
     <C, R> BatchStage<R> flatMapUsingContext(
             @Nonnull TransformContext<C> transformContext,
-            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     );
 
     @Nonnull @Override

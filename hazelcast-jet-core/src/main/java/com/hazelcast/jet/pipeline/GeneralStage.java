@@ -21,7 +21,6 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBiPredicate;
-import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -81,7 +80,7 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     <C, R> GeneralStage<R> mapUsingContext(
             @Nonnull TransformContext<C> transformContext,
-            @Nonnull DistributedBiFunction<C, ? super T, R> mapFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
     );
 
     /**
@@ -113,7 +112,7 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     <C> GeneralStage<T> filterUsingContext(
             @Nonnull TransformContext<C> transformContext,
-            @Nonnull DistributedBiPredicate<C, T> filterFn
+            @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     );
 
     /**
@@ -158,7 +157,7 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     <C, R> GeneralStage<R> flatMapUsingContext(
             @Nonnull TransformContext<C> transformContext,
-            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     );
 
     /**

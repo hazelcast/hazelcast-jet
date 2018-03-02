@@ -28,12 +28,12 @@ import static com.hazelcast.jet.core.processor.Processors.flatMapUsingContextP;
 
 public class FlatMapUsingContextTransform<C, T, R> extends AbstractTransform {
     private final TransformContext<C> transformContext;
-    private DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn;
+    private DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn;
 
     public FlatMapUsingContextTransform(
             @Nonnull Transform upstream,
             @Nonnull TransformContext<C> transformContext,
-            @Nonnull DistributedBiFunction<C, T, ? extends Traverser<? extends R>> flatMapFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         super("flat-map", upstream);
         this.transformContext = transformContext;
