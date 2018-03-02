@@ -109,6 +109,9 @@ public class CloseableProcessorSupplier<E extends Processor & Closeable> impleme
         }
     }
 
+    /**
+     * Create {@link CloseableProcessorSupplier} from a simple supplier.
+     */
     public static <E extends Processor & Closeable> CloseableProcessorSupplier<E> of(
             DistributedSupplier<E> simpleSupplier
     ) {
@@ -121,6 +124,10 @@ public class CloseableProcessorSupplier<E extends Processor & Closeable> impleme
         };
     }
 
+    /**
+     * Create {@link CloseableProcessorSupplier} from a count-to-processors
+     * function.
+     */
     public static <E extends Processor & Closeable> CloseableProcessorSupplier<E> of(
             DistributedIntFunction<Collection<E>> supplier
     ) {
