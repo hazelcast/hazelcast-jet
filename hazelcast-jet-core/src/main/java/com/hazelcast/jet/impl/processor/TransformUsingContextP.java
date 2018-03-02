@@ -128,8 +128,8 @@ public final class TransformUsingContextP<C, T, R> extends AbstractProcessor imp
                 contextObject = contextFactory.createFn().apply(context.jetInstance());
             }
             setSupplier(count -> IntStream.range(0, count)
-                                          .mapToObj(i -> new TransformUsingContextP<>(contextFactory, flatMapFn, contextObject))
-                                          .collect(toList()));
+                    .mapToObj(i -> new TransformUsingContextP<>(contextFactory, flatMapFn, contextObject))
+                    .collect(toList()));
         }
 
         @Override
