@@ -27,9 +27,6 @@ import com.hazelcast.jet.pipeline.ContextFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.util.stream.IntStream;
-
-import static java.util.stream.Collectors.toList;
 
 /**
  * Processor which, for each received item, emits all the items from the
@@ -127,9 +124,7 @@ public final class TransformUsingContextP<C, T, R> extends AbstractProcessor imp
             if (contextFactory.isSharedLocally()) {
                 contextObject = contextFactory.createFn().apply(context.jetInstance());
             }
-            setSupplier(count -> IntStream.range(0, count)
-                    .mapToObj(i -> new TransformUsingContextP<>(contextFactory, flatMapFn, contextObject))
-                    .collect(toList()));
+            setSupplier(() -> new TransformUsingContextP<>(contextFactory, flatMapFn, contextObject));
         }
 
         @Override

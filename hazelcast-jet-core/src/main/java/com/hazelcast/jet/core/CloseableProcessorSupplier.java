@@ -23,10 +23,10 @@ import com.hazelcast.logging.ILogger;
 import javax.annotation.Nonnull;
 import java.io.Closeable;
 import java.util.Collection;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static java.util.stream.Collectors.toList;
 
 /**
  * A {@link ProcessorSupplier} which closes the processor instances it
@@ -54,24 +54,14 @@ public class CloseableProcessorSupplier<E extends Processor & Closeable> impleme
     }
 
     /**
-     * Constructs an instance which will wrap all the processors the provided
-     * {@code simpleSupplier} returns.
+     * Initializes this object with the given supplier. May only be invoked if
+     * the supplier property hasn't been initialized yet.
      */
-    public CloseableProcessorSupplier(DistributedSupplier<E> simpleSupplier) {
-        this(count -> IntStream.range(0, count)
-                               .mapToObj(i -> simpleSupplier.get())
-                               .collect(toList()));
-    }
-
-    /**
-     * Constructs an instance which will wrap all the processors the provided
-     * {@code supplier} returns.
-     *
-     * @param supplier supplier of processors. The {@code int} parameter passed to it is the
-     *                 number of processors that should be in the returned collection.
-     */
-    public CloseableProcessorSupplier(DistributedIntFunction<Collection<E>> supplier) {
-        this.supplier = supplier;
+    public void setSupplier(DistributedSupplier<E> simpleSupplier) {
+        setSupplier(
+            count -> IntStream.range(0, count)
+                              .mapToObj(i -> simpleSupplier.get())
+                              .collect(Collectors.toList()));
     }
 
     /**
@@ -117,5 +107,29 @@ public class CloseableProcessorSupplier<E extends Processor & Closeable> impleme
         if (firstError != null) {
             throw sneakyThrow(firstError);
         }
+    }
+
+    public static <E extends Processor & Closeable> CloseableProcessorSupplier<E> of(
+            DistributedSupplier<E> simpleSupplier
+    ) {
+        return new CloseableProcessorSupplier<E>() {
+            @Override
+            public void init(@Nonnull Context context) {
+                setSupplier(simpleSupplier);
+                super.init(context);
+            }
+        };
+    }
+
+    public static <E extends Processor & Closeable> CloseableProcessorSupplier<E> of(
+            DistributedIntFunction<Collection<E>> supplier
+    ) {
+        return new CloseableProcessorSupplier<E>() {
+            @Override
+            public void init(@Nonnull Context context) {
+                setSupplier(supplier);
+                super.init(context);
+            }
+        };
     }
 }
