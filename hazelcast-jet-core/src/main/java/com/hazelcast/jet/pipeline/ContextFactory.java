@@ -26,15 +26,22 @@ import java.io.Serializable;
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 
 /**
- * Holder of functions to create and destroy context for transform functions.
- * See:<ul>
+ * A holder of functions needed to create and destroy a context object that
+ * can be used in the Pipeline API to give the transforming functions (map,
+ * filter, flatMap) access to the local {@code JetInstance}. Among others,
+ * this gives them the ability to interact with IMDG data structures such
+ * as {@code IMap} and {@code ReplicatedMap}.
+ * <p>
+ * These are the components:
+ * <ul>
  *     <li>{@link GeneralStage#mapUsingContext}
  *     <li>{@link GeneralStage#filterUsingContext}
  *     <li>{@link GeneralStage#flatMapUsingContext}
  * </ul>
- *
- * Create new instances using {@link #withCreateFn} or choose one of the
- * predefined instances in {@link ContextFactories}. Instances are immutable.
+ * To get a context factory, choose one of the predefined factories in
+ * {@link ContextFactories} or create your own using the builder you get
+ * by calling {@link #withCreateFn}. The factory instances must be
+ * immutable.
  *
  * @param <C> the user-defined context object type
  */

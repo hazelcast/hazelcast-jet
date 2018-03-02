@@ -86,15 +86,17 @@ public interface GeneralStage<T> extends Stage {
     /**
      * Attaches to this stage a mapping stage, one which applies the supplied
      * function to each input item independently and emits the function's result
-     * as the output item. The mapping function can use a context object which
-     * is created using the context factory.
+     * as the output item. The mapping function receives another parameter, the
+     * context object which Jet will create using the supplied {@code
+     * contextFactory}.
      * <p>
      * If the mapping result is {@code null}, it emits nothing. Therefore this
      * stage can be used to implement filtering semantics as well.
      * <p>
-     * Even though you can use the context object to store runtime state, it
-     * won't be saved to state snapshot. Using it to store state might be useful
-     * in batch or non-snapshotted jobs.
+     * If you store some state locally in the context object, it won't be saved
+     * to the snapshot and will misbehave in a fault-tolerant stream processing
+     * job. This doesn't apply to the state you store in a Hazelcast data
+     * structure the context object gives you access to.
      *
      * @param <C> type of context object
      * @param <R> the result type of the mapping function
@@ -111,12 +113,14 @@ public interface GeneralStage<T> extends Stage {
     /**
      * Attaches to this stage a filtering stage, one which applies the provided
      * predicate function to each input item to decide whether to pass the item
-     * to the output or to discard it. The predicate function can use a context
-     * object which is created using the context factory.
+     * to the output or to discard it. The predicate function receives another
+     * parameter, the context object which Jet will create using the supplied
+     * {@code contextFactory}.
      * <p>
-     * Even though you can use the context object to store runtime state, it
-     * won't be saved to state snapshot. Using it to store state might be useful
-     * in batch or non-snapshotted jobs.
+     * If you store some state locally in the context object, it won't be saved
+     * to the snapshot and will misbehave in a fault-tolerant stream processing
+     * job. This doesn't apply to the state you store in a Hazelcast data
+     * structure the context object gives you access to.
      *
      * @param <C> type of context object
      * @param contextFactory the context factory
@@ -132,17 +136,15 @@ public interface GeneralStage<T> extends Stage {
     /**
      * Attaches to this stage a flat-mapping stage, one which applies the
      * supplied function to each input item independently and emits all items
-     * from the {@link Traverser} it returns as the output items. The mapping
-     * function can use a context object which is created using the context
-     * factory.
+     * from the {@link Traverser} it returns as the output items. The traverser
+     * must be <em>null-terminated</em>. The mapping function receives another
+     * parameter, the context object which Jet will create using the supplied
+     * {@code contextFactory}.
      * <p>
-     * Even though you can use the context object to store runtime state, it
-     * won't be saved to state snapshot. Using it to store state might be useful
-     * in batch or non-snapshotted jobs.
-     * <p>
-     * The traverser returned from the {@code flatMapFn} must be finite. That
-     * is, this operation will not attempt to emit any items after the first
-     * {@code null} item.
+     * If you store some state locally in the context object, it won't be saved
+     * to the snapshot and will misbehave in a fault-tolerant stream processing
+     * job. This doesn't apply to the state you store in a Hazelcast data
+     * structure the context object gives you access to.
      *
      * @param <C> type of context object
      * @param <R> the type of items in the result's traversers

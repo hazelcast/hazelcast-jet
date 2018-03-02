@@ -22,35 +22,37 @@ import com.hazelcast.jet.IMapJet;
 import javax.annotation.Nonnull;
 
 /**
- * Utility class with factory methods for several useful {@link ContextFactory
- * context factories}.
+ * Utility class with methods that create several useful kinds of {@link
+ * ContextFactory context factories}.
  */
 public final class ContextFactories {
 
     private ContextFactories() { }
 
     /**
-     * Returns context factory to use a {@link ReplicatedMap} with the given
-     * {@code mapName} as a transformation context. It is useful for enrichment
-     * based on data stored in a replicated map. Using a replicated map to
-     * enrich is particularly useful in streaming jobs because it can be mutated
-     * in parallel.
+     * Returns a factory that provides a {@link ReplicatedMap} as the context
+     * object. A replicated map is a particularly good choice if you are
+     * enriching an event stream with the data stored in the Hazelcast Jet
+     * cluster. Unlike {@code IMap}, all the data is local so you won't do any
+     * blocking calls using it (important for performance). Unlike in {@code
+     * hashJoin}, the data in the map can change while the job is running so
+     * you can keep the enriching dataset up-to-date.
      * <p>
-     * If you want to destroy the map after the job finishes, call {@code
-     * destroyFn(ReplicatedMap::destroy)} on the returned object.
+     * If you want to destroy the map after the job finishes, call
+     * {@code factory.destroyFn(ReplicatedMap::destroy)} on the object you get
+     * from this method.
      * <p>
-     * Example:
-     *
+     * Example usage (without destroyFn):
      * <pre>
-     *     p.drawFrom( /* a batch or streaming source &#42;/ )
-     *      .mapUsingContext(replicatedMapContext("fooMapName"),
-     *          (map, item) -> tuple2(item, map.get(item.getKey())));
+     * p.drawFrom( /* a batch or streaming source &#42;/ )
+     *  .mapUsingContext(replicatedMapContext("fooMapName"),
+     *      (map, item) -> tuple2(item, map.get(item.getKey())))
+     *  .destroyFn(ReplicatedMap::destroy);
      * </pre>
      *
-     * @param mapName name of the {@link ReplicatedMap} used as context
-     * @param <K> key type
-     * @param <V> value type
-     * @return the context factory
+     * @param mapName name of the {@link ReplicatedMap} to use as the context
+     * @param <K> type of the map key
+     * @param <V> type of the map value
      */
     @Nonnull
     public static <K, V> ContextFactory<ReplicatedMap<K, V>> replicatedMapContext(@Nonnull String mapName) {
@@ -59,26 +61,29 @@ public final class ContextFactories {
     }
 
     /**
-     * Returns context factory to use an {@link com.hazelcast.core.IMap} with
-     * the given {@code mapName} as a transformation context. It is useful for
-     * enrichment based on data stored in an IMap. Using a map to enrich is
-     * particularly useful in streaming jobs because it can be mutated in
-     * parallel.
+     * Returns a factory that provides an {@link IMapJet} as the context. This
+     * is useful if you are enriching an event stream with the data stored in
+     * the Hazelcast Jet cluster. Unlike in a {@code hashJoin} transformation,
+     * the data in the map can change while the job is running so you can keep
+     * the enriching dataset up-to-date.
      * <p>
-     * Keep in mind that the processor uses synchronous {@link IMapJet#get get}
-     * method, which might involve network IO, so it's only appropriate for
-     * low-traffic streams. You can use {@link #replicatedMapContext} instead or
-     * configure the near-cache.
+     * The downside of accessing an {@code IMap} in a Jet job is that it's a
+     * partitioned data structure, so you'll be accessing remote data and
+     * causing blocking in the stream processing pipeline. This will
+     * significantly reduce the maximum throughput of the job. If you need more
+     * throughput, consider using a {@link #replicatedMapContext(String)
+     * ReplicatedMap} as the context or, alternatively, enable the near-cache on
+     * the {@code IMap}.
      * <p>
      * If you want to destroy the map after the job finishes, call {@code
-     * destroyFn(IMap::destroy)} on the returned object.
+     * factory.destroyFn(IMap::destroy)} on the object you get from this
+     * method.
      * <p>
-     * Example:
-     *
+     * Example usage (without destroyFn):
      * <pre>
-     *     p.drawFrom( /* a batch or streaming source &#42;/ )
-     *      .mapUsingContext(iMapContext("fooMapName"),
-     *          (map, item) -> tuple2(item, map.get(item.getKey())));
+     * p.drawFrom( /* a batch or streaming source &#42;/ )
+     *  .mapUsingContext(iMapContext("fooMapName"),
+     *      (map, item) -> tuple2(item, map.get(item.getKey())));
      * </pre>
      *
      * @param mapName name of the map used as context
