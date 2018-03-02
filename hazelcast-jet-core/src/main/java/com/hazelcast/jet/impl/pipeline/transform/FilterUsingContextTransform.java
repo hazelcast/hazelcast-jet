@@ -19,30 +19,30 @@ package com.hazelcast.jet.impl.pipeline.transform;
 import com.hazelcast.jet.function.DistributedBiPredicate;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
-import com.hazelcast.jet.pipeline.TransformContext;
+import com.hazelcast.jet.pipeline.ContextFactory;
 
 import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.core.processor.Processors.filterUsingContextP;
 
 public class FilterUsingContextTransform<C, T> extends AbstractTransform {
-    private final TransformContext<C> transformContext;
+    private final ContextFactory<C> contextFactory;
     private final DistributedBiPredicate<? super C, ? super T> filterFn;
 
     public FilterUsingContextTransform(
             @Nonnull Transform upstream,
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     ) {
         super("filter", upstream);
-        this.transformContext = transformContext;
+        this.contextFactory = contextFactory;
         this.filterFn = filterFn;
     }
 
     @Override
     public void addToDag(Planner p) {
         PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), localParallelism(),
-                filterUsingContextP(transformContext, filterFn));
+                filterUsingContextP(contextFactory, filterFn));
         p.addEdges(this, pv.v);
     }
 }

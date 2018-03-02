@@ -43,11 +43,11 @@ import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkStage;
 import com.hazelcast.jet.pipeline.StreamStage;
-import com.hazelcast.jet.pipeline.TransformContext;
 
 import javax.annotation.Nonnull;
 
@@ -117,10 +117,10 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @Nonnull
     @SuppressWarnings("unchecked")
     <C, R, RET> RET attachMapUsingContext(
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
     ) {
-        return (RET) attach(new MapUsingContextTransform(this.transform, transformContext,
+        return (RET) attach(new MapUsingContextTransform(this.transform, contextFactory,
                 fnAdapter.adaptMapUsingContextFn(mapFn)), fnAdapter);
     }
 
@@ -133,10 +133,10 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @Nonnull
     @SuppressWarnings("unchecked")
     <C, RET> RET attachFilterUsingContext(
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     ) {
-        return (RET) attach(new FilterUsingContextTransform<>(transform, transformContext,
+        return (RET) attach(new FilterUsingContextTransform<>(transform, contextFactory,
                 fnAdapter.adaptFilterUsingContextFn(filterFn)), fnAdapter);
     }
 
@@ -149,10 +149,10 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
     @Nonnull
     <C, R, RET> RET attachFlatMapUsingContext(
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return attach(new FlatMapUsingContextTransform<>(transform, transformContext,
+        return attach(new FlatMapUsingContextTransform<>(transform, contextFactory,
                 fnAdapter.adaptFlatMapUsingContextFn(flatMapFn)), fnAdapter);
     }
 

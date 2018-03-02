@@ -43,7 +43,7 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
-import static com.hazelcast.jet.pipeline.TransformContexts.replicatedMapContext;
+import static com.hazelcast.jet.pipeline.ContextFactories.replicatedMapContext;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
@@ -104,7 +104,7 @@ public class BatchStageTest extends PipelineTestSupport {
 
         // When
         BatchStage<String> mapped = srcStage.mapUsingContext(
-                TransformContexts.<Integer, String>replicatedMapContext(transformMapName),
+                ContextFactories.<Integer, String>replicatedMapContext(transformMapName),
                 ReplicatedMap::get);
         mapped.drainTo(sink);
         execute();
@@ -181,7 +181,7 @@ public class BatchStageTest extends PipelineTestSupport {
 
         // When
         BatchStage<String> flatMapped = srcStage.flatMapUsingContext(
-                TransformContext.withCreate(procCtx -> asList("A", "B")),
+                ContextFactory.withCreate(procCtx -> asList("A", "B")),
                 (ctx, o) -> traverseIterable(asList(o + ctx.get(0), o + ctx.get(1))));
         flatMapped.drainTo(sink);
         execute();

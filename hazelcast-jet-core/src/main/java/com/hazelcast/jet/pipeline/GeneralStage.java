@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.DistributedBiFunction;
@@ -72,14 +71,13 @@ public interface GeneralStage<T> extends Stage {
      *
      * @param <C> type of context object
      * @param <R> the result type of the mapping function
-     * @param createContextFn a function to create context based on a
-     *                        {@link JetInstance}
+     * @param contextFactory the context factory
      * @param mapFn a stateless mapping function
      * @return the newly attached stage
      */
     @Nonnull
     <C, R> GeneralStage<R> mapUsingContext(
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
     );
 
@@ -105,13 +103,13 @@ public interface GeneralStage<T> extends Stage {
      * non-snapshotted jobs.
      *
      * @param <C> type of context object
-     * @param transformContext TODO
+     * @param contextFactory the context factory
      * @param filterFn a stateless filter predicate function
      * @return the newly attached stage
      */
     @Nonnull
     <C> GeneralStage<T> filterUsingContext(
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     );
 
@@ -148,15 +146,14 @@ public interface GeneralStage<T> extends Stage {
      *
      * @param <C> type of context object
      * @param <R> the type of items in the result's traversers
-     * @param createContextFn a function to create context based on a
-     *                        {@link JetInstance}
+     * @param contextFactory the context factory
      * @param flatMapFn a stateless flatmapping function, whose result type is
      *                  Jet's {@link Traverser}
      * @return the newly attached stage
      */
     @Nonnull
     <C, R> GeneralStage<R> flatMapUsingContext(
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     );
 

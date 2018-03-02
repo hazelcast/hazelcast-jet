@@ -27,11 +27,11 @@ import com.hazelcast.jet.function.DistributedTriFunction;
 import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.StageWithWindow;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
-import com.hazelcast.jet.pipeline.TransformContext;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
@@ -63,10 +63,10 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
 
     @Nonnull @Override
     public <C, R> StreamStage<R> mapUsingContext(
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
     ) {
-        return attachMapUsingContext(transformContext, mapFn);
+        return attachMapUsingContext(contextFactory, mapFn);
     }
 
 
@@ -77,10 +77,10 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
 
     @Nonnull @Override
     public <C> StreamStage<T> filterUsingContext(
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     ) {
-        return attachFilterUsingContext(transformContext, filterFn);
+        return attachFilterUsingContext(contextFactory, filterFn);
     }
 
     @Nonnull @Override
@@ -92,10 +92,10 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
 
     @Nonnull @Override
     public <C, R> StreamStage<R> flatMapUsingContext(
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return attachFlatMapUsingContext(transformContext, flatMapFn);
+        return attachFlatMapUsingContext(contextFactory, flatMapFn);
     }
 
     @Nonnull @Override

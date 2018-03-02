@@ -52,7 +52,7 @@ public interface StreamStage<T> extends GeneralStage<T> {
 
     @Nonnull @Override
     <C, R> StreamStage<R> mapUsingContext(
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
     );
 
@@ -61,7 +61,7 @@ public interface StreamStage<T> extends GeneralStage<T> {
 
     @Nonnull @Override
     <C> StreamStage<T> filterUsingContext(
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     );
 
@@ -70,7 +70,7 @@ public interface StreamStage<T> extends GeneralStage<T> {
 
     @Nonnull @Override
     <C, R> StreamStage<R> flatMapUsingContext(
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     );
 

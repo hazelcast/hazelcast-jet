@@ -19,30 +19,30 @@ package com.hazelcast.jet.impl.pipeline.transform;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
-import com.hazelcast.jet.pipeline.TransformContext;
+import com.hazelcast.jet.pipeline.ContextFactory;
 
 import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.core.processor.Processors.mapUsingContextP;
 
 public class MapUsingContextTransform<C, T, R> extends AbstractTransform {
-    private final TransformContext<C> transformContext;
+    private final ContextFactory<C> contextFactory;
     private final DistributedBiFunction<C, T, R> mapFn;
 
     public MapUsingContextTransform(
             @Nonnull Transform upstream,
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<C, T, R> mapFn
     ) {
         super("map", upstream);
-        this.transformContext = transformContext;
+        this.contextFactory = contextFactory;
         this.mapFn = mapFn;
     }
 
     @Override
     public void addToDag(Planner p) {
         PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), localParallelism(),
-                mapUsingContextP(transformContext, mapFn));
+                mapUsingContextP(contextFactory, mapFn));
         p.addEdges(this, pv.v);
     }
 }

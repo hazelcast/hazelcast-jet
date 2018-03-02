@@ -21,7 +21,6 @@ import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.core.CloseableProcessorSupplier;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -46,7 +45,7 @@ import com.hazelcast.jet.impl.processor.TransformP;
 import com.hazelcast.jet.impl.processor.TransformUsingContextP;
 import com.hazelcast.jet.impl.util.WrappingProcessorMetaSupplier;
 import com.hazelcast.jet.impl.util.WrappingProcessorSupplier;
-import com.hazelcast.jet.pipeline.TransformContext;
+import com.hazelcast.jet.pipeline.ContextFactory;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -693,25 +692,20 @@ public final class Processors {
      * won't be saved to state snapshot. It might be useful in batch or
      * non-snapshotted jobs.
      *
-     * @param createContextFn a function to create context based on
-     *                        {@link Processor.Context}
+     * @param contextFactory the context factory
      * @param mapFn a stateless mapping function
-     * @param destroyContextFn a function to destroy the context
      * @param <C> type of context object
      * @param <T> type of received item
      * @param <R> type of emitted item
      */
     @Nonnull
     public static <C, T, R> ProcessorSupplier mapUsingContextP(
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<C, ? super T, R> mapFn
     ) {
-        return new CloseableProcessorSupplier<>(() -> {
-            final ResettableSingletonTraverser<R> trav = new ResettableSingletonTraverser<>();
-            return new TransformUsingContextP<C, T, R>(transformContext, (context, item) -> {
-                trav.accept(mapFn.apply(context, item));
-                return trav;
-            });
+        return TransformUsingContextP.<C, T, R>supplier(contextFactory, (singletonTraverser, context, item) -> {
+            singletonTraverser.accept(mapFn.apply(context, item));
+            return singletonTraverser;
         });
     }
 
@@ -745,24 +739,19 @@ public final class Processors {
      * won't be saved to state snapshot. It might be useful in batch or
      * non-snapshotted jobs.
      *
-     * @param createContextFn a function to create context based on
-     *                        {@link Processor.Context}
+     * @param contextFactory the context factory
      * @param filterFn a stateless predicate to test each received item against
-     * @param destroyContextFn a function to destroy the context
      * @param <C> type of context object
      * @param <T> type of received item
      */
     @Nonnull
     public static <C, T> ProcessorSupplier filterUsingContextP(
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     ) {
-        return new CloseableProcessorSupplier<>(() -> {
-            final ResettableSingletonTraverser<T> trav = new ResettableSingletonTraverser<>();
-            return new TransformUsingContextP<C, T, T>(transformContext, (context, item) -> {
-                trav.accept(filterFn.test(context, item) ? item : null);
-                return trav;
-            });
+        return TransformUsingContextP.<C, T, T>supplier(contextFactory, (singletonTraverser, context, item) -> {
+            singletonTraverser.accept(filterFn.test(context, item) ? item : null);
+            return singletonTraverser;
         });
     }
 
@@ -802,21 +791,19 @@ public final class Processors {
      * won't be saved to state snapshot. It might be useful in batch or
      * non-snapshotted jobs.
      *
-     * @param createContextFn a function to create context based on
-     *                        {@link Processor.Context}
+     * @param contextFactory the context factory
      * @param flatMapFn a stateless function that maps the received item to a traverser over output items
-     * @param destroyContextFn a function to destroy the context
      * @param <C> type of context object
      * @param <T> received item type
      * @param <R> emitted item type
      */
     @Nonnull
     public static <C, T, R> ProcessorSupplier flatMapUsingContextP(
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return new CloseableProcessorSupplier<>(
-                () -> new TransformUsingContextP<>(transformContext, flatMapFn));
+        return TransformUsingContextP.<C, T, R>supplier(contextFactory,
+                (singletonTraverser, context, item) -> flatMapFn.apply(context, item));
     }
 
     /**

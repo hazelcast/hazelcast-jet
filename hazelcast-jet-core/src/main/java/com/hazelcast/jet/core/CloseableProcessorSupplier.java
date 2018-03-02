@@ -42,10 +42,17 @@ public class CloseableProcessorSupplier<E extends Processor & Closeable> impleme
 
     static final long serialVersionUID = 1L;
 
-    private final DistributedIntFunction<Collection<E>> supplier;
+    private DistributedIntFunction<Collection<E>> supplier;
 
     private transient ILogger logger;
     private transient Collection<E> processors;
+
+    /**
+     * Create instance without a {@code supplier}, the supplier must be set
+     * later using {@link #setSupplier}.
+     */
+    public CloseableProcessorSupplier() {
+    }
 
     /**
      * @param simpleSupplier Supplier to create processor instances.
@@ -62,6 +69,16 @@ public class CloseableProcessorSupplier<E extends Processor & Closeable> impleme
      */
     public CloseableProcessorSupplier(DistributedIntFunction<Collection<E>>  supplier) {
         this.supplier = supplier;
+    }
+
+    /**
+     * Sets the supplier.
+     */
+    public void setSupplier(DistributedIntFunction<Collection<E>> newSupplier) {
+        if (supplier != null) {
+            throw new IllegalStateException("supplier already assigned");
+        }
+        supplier = newSupplier;
     }
 
     @Override

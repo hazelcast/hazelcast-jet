@@ -31,9 +31,9 @@ import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.StageWithGrouping;
-import com.hazelcast.jet.pipeline.TransformContext;
 
 import javax.annotation.Nonnull;
 
@@ -66,10 +66,10 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
 
     @Nonnull @Override
     public <C, R> BatchStage<R> mapUsingContext(
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
     ) {
-        return attachMapUsingContext(transformContext, mapFn);
+        return attachMapUsingContext(contextFactory, mapFn);
     }
 
     @Nonnull @Override
@@ -79,10 +79,10 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
 
     @Nonnull @Override
     public <C> BatchStage<T> filterUsingContext(
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     ) {
-        return attachFilterUsingContext(transformContext, filterFn);
+        return attachFilterUsingContext(contextFactory, filterFn);
     }
 
     @Nonnull @Override
@@ -94,10 +94,10 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
 
     @Nonnull @Override
     public <C, R> BatchStage<R> flatMapUsingContext(
-            @Nonnull TransformContext<C> transformContext,
+            @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return attachFlatMapUsingContext(transformContext, flatMapFn);
+        return attachFlatMapUsingContext(contextFactory, flatMapFn);
     }
 
     @Nonnull @Override
