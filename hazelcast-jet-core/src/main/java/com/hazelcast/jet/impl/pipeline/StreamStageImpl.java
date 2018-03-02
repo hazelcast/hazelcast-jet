@@ -68,7 +68,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     ) {
         return attachMapUsingContext(contextFactory, mapFn);
     }
-    
+
     @Nonnull @Override
     public StreamStage<T> filter(@Nonnull DistributedPredicate<T> filterFn) {
         return attachFilter(filterFn);

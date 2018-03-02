@@ -17,7 +17,6 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 
@@ -92,7 +91,7 @@ public final class ContextFactory<C> implements Serializable {
      * Call this method if the calls to context are non-cooperative.
      * <p>
      * The contract of <em>cooperative processing</em> is described {@link
-     * Processor#isCooperative() here}.
+     * com.hazelcast.jet.core.Processor#isCooperative() here}.
      *
      * @return a new instance with <em>cooperative</em> flag un-set.
      */

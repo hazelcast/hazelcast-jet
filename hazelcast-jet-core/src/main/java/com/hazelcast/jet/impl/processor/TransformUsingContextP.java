@@ -27,6 +27,9 @@ import com.hazelcast.jet.pipeline.ContextFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.util.stream.IntStream;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * Processor which, for each received item, emits all the items from the
@@ -39,11 +42,13 @@ import java.io.Closeable;
  */
 public final class TransformUsingContextP<C, T, R> extends AbstractProcessor implements Closeable {
 
+    // package-visible for test
+    C contextObject;
+
     private final ContextFactory<C> contextFactory;
     private final DistributedTriFunction<ResettableSingletonTraverser<R>, ? super C, ? super T,
             ? extends Traverser<? extends R>> flatMapFn;
 
-    private C contextObject;
     private Traverser<? extends R> outputTraverser;
     private final ResettableSingletonTraverser<R> singletonTraverser = new ResettableSingletonTraverser<>();
 
@@ -66,7 +71,10 @@ public final class TransformUsingContextP<C, T, R> extends AbstractProcessor imp
 
     @Override
     protected void init(@Nonnull Context context) {
-        contextObject = contextFactory.createFn().apply(context.jetInstance());
+        if (!contextFactory.isSharedLocally()) {
+            assert contextObject == null : "contextObject is not null: " + contextObject;
+            contextObject = contextFactory.createFn().apply(context.jetInstance());
+        }
     }
 
     @Override
@@ -119,7 +127,9 @@ public final class TransformUsingContextP<C, T, R> extends AbstractProcessor imp
             if (contextFactory.isSharedLocally()) {
                 contextObject = contextFactory.createFn().apply(context.jetInstance());
             }
-            setSupplier(i -> new TransformUsingContextP<>(contextFactory, flatMapFn, contextObject));
+            setSupplier(count -> IntStream.range(0, count)
+                                          .mapToObj(i -> new TransformUsingContextP<>(contextFactory, flatMapFn, contextObject))
+                                          .collect(toList()));
         }
 
         @Override
