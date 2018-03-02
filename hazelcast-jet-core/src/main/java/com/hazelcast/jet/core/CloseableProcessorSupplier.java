@@ -42,10 +42,9 @@ public class CloseableProcessorSupplier<E extends Processor & Closeable> impleme
 
     static final long serialVersionUID = 1L;
 
-    private DistributedIntFunction<Collection<E>> supplier;
-
     private transient ILogger logger;
     private transient Collection<E> processors;
+    private transient DistributedIntFunction<Collection<E>> supplier;
 
     /**
      * Constructs an instance without a wrapped processor supplier. It must be
@@ -71,13 +70,13 @@ public class CloseableProcessorSupplier<E extends Processor & Closeable> impleme
      * @param supplier supplier of processors. The {@code int} parameter passed to it is the
      *                 number of processors that should be in the returned collection.
      */
-    public CloseableProcessorSupplier(DistributedIntFunction<Collection<E>>  supplier) {
+    public CloseableProcessorSupplier(DistributedIntFunction<Collection<E>> supplier) {
         this.supplier = supplier;
     }
 
     /**
      * Initializes this object with the given supplier. May only be invoked if
-     * the supplier property hasn't been enitialized yet.
+     * the supplier property hasn't been initialized yet.
      */
     public void setSupplier(DistributedIntFunction<Collection<E>> newSupplier) {
         if (supplier != null) {
