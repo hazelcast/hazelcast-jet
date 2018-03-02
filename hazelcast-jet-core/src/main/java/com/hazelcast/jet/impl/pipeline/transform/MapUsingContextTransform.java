@@ -27,12 +27,12 @@ import static com.hazelcast.jet.core.processor.Processors.mapUsingContextP;
 
 public class MapUsingContextTransform<C, T, R> extends AbstractTransform {
     private final ContextFactory<C> contextFactory;
-    private final DistributedBiFunction<C, T, R> mapFn;
+    private final DistributedBiFunction<? super C, ? super T, ? extends R> mapFn;
 
     public MapUsingContextTransform(
             @Nonnull Transform upstream,
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<C, T, R> mapFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
     ) {
         super("map", upstream);
         this.contextFactory = contextFactory;

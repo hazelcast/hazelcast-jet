@@ -682,15 +682,15 @@ public final class Processors {
     /**
      * Returns a supplier of processors for a vertex which, for each received
      * item, emits the result of applying the given mapping function to it. The
-     * mapping function can use a context object which is created using the
-     * context factory.
+     * mapping function receives another parameter, the context object which
+     * Jet will create using the supplied {@code contextFactory}.
      * <p>
-     * If the mapping result is {@code null}, it emits nothing. Therefore this
-     * vertex can be used to implement filtering semantics as well.
+     * If the mapping result is {@code null}, the vertex emits nothing.
+     * Therefore it can be used to implement filtering semantics as well.
      * <p>
-     * Even though you can use the context object to store runtime state, it
-     * won't be saved to state snapshot. Using it to store state might be useful
-     * in batch or non-snapshotted jobs.
+     * While it's allowed to store state in the context object, it won't be
+     * saved to the snapshot and will misbehave in a fault-tolerant stream
+     * processing job.
      *
      * @param contextFactory the context factory
      * @param mapFn a stateless mapping function
@@ -701,7 +701,7 @@ public final class Processors {
     @Nonnull
     public static <C, T, R> ProcessorSupplier mapUsingContextP(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<C, ? super T, R> mapFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
     ) {
         return TransformUsingContextP.<C, T, R>supplier(contextFactory, (singletonTraverser, context, item) -> {
             singletonTraverser.accept(mapFn.apply(context, item));
@@ -732,12 +732,12 @@ public final class Processors {
     /**
      * Returns a supplier of processors for a vertex that emits the same items
      * it receives, but only those that pass the given predicate. The predicate
-     * function can use a context object which is created using the context
-     * factory.
+     * function receives another parameter, the context object which Jet will
+     * create using the supplied {@code contextFactory}.
      * <p>
-     * Even though you can use the context object to store runtime state, it
-     * won't be saved to state snapshot. Using it to store state might be useful
-     * in batch or non-snapshotted jobs.
+     * While it's allowed to store state in the context object, it won't be
+     * saved to the snapshot and will misbehave in a fault-tolerant stream
+     * processing job.
      *
      * @param contextFactory the context factory
      * @param filterFn a stateless predicate to test each received item against
@@ -758,11 +758,8 @@ public final class Processors {
     /**
      * Returns a supplier of processors for a vertex that applies the provided
      * item-to-traverser mapping function to each received item and emits all
-     * the items from the resulting traverser.
-     * <p>
-     * The traverser returned from the {@code flatMapFn} must be finite. That
-     * is, this operation will not attempt to emit any items after the first
-     * {@code null} item.
+     * the items from the resulting traverser. The traverser must be
+     * <em>null-terminated</em>.
      * <p>
      * This processor is stateless.
      *
@@ -780,19 +777,18 @@ public final class Processors {
     /**
      * Returns a supplier of processors for a vertex that applies the provided
      * item-to-traverser mapping function to each received item and emits all
-     * the items from the resulting traverser. The mapping function can use a
-     * context object which is created using the context factory.
+     * the items from the resulting traverser. The traverser must be
+     * <em>null-terminated</em>. The mapping function receives another parameter,
+     * the context object which Jet will create using the supplied {@code
+     * contextFactory}.
      * <p>
-     * The traverser returned from the {@code flatMapFn} must be finite. That
-     * is, this operation will not attempt to emit any items after the first
-     * {@code null} item.
-     * <p>
-     * Even though you can use the context object to store runtime state, it
-     * won't be saved to state snapshot. Using it to store state might be useful
-     * in batch or non-snapshotted jobs.
+     * While it's allowed to store state in the context object, it won't be
+     * saved to the snapshot and will misbehave in a fault-tolerant stream
+     * processing job.
      *
      * @param contextFactory the context factory
-     * @param flatMapFn a stateless function that maps the received item to a traverser over output items
+     * @param flatMapFn a stateless function that maps the received item to a traverser over
+     *                  the output items
      * @param <C> type of context object
      * @param <T> received item type
      * @param <R> emitted item type

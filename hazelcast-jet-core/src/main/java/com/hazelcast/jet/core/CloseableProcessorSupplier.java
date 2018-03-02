@@ -29,14 +29,14 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.util.stream.Collectors.toList;
 
 /**
- * A {@link ProcessorSupplier} which closes created processor instances when
- * the job is complete. Class is useful to close external resources such as
- * connections or files.
+ * A {@link ProcessorSupplier} which closes the processor instances it
+ * created when the job is complete. Useful when the processor uses
+ * external resources such as connections or files.
  * <p>
- * The {@code close()} method is called after all other calls on any local
- * processor have returned.
+ * The processors must implement {@link Closeable}. The call to {@code
+ * close()} will be the very last call on the processor.
  *
- * @param <E> Processor type
+ * @param <E> the processor type
  */
 public class CloseableProcessorSupplier<E extends Processor & Closeable> implements ProcessorSupplier {
 
@@ -48,14 +48,15 @@ public class CloseableProcessorSupplier<E extends Processor & Closeable> impleme
     private transient Collection<E> processors;
 
     /**
-     * Create instance without a {@code supplier}, the supplier must be set
-     * later using {@link #setSupplier}.
+     * Constructs an instance without a wrapped processor supplier. It must be
+     * set later using {@link #setSupplier}.
      */
     public CloseableProcessorSupplier() {
     }
 
     /**
-     * @param simpleSupplier Supplier to create processor instances.
+     * Constructs an instance which will wrap all the processors the provided
+     * {@code simpleSupplier} returns.
      */
     public CloseableProcessorSupplier(DistributedSupplier<E> simpleSupplier) {
         this(count -> IntStream.range(0, count)
@@ -64,15 +65,19 @@ public class CloseableProcessorSupplier<E extends Processor & Closeable> impleme
     }
 
     /**
-     * @param supplier Supplier to create processor instances.
-     *                 Parameter is the number of processors that should be in the collection.
+     * Constructs an instance which will wrap all the processors the provided
+     * {@code supplier} returns.
+     *
+     * @param supplier supplier of processors. The {@code int} parameter passed to it is the
+     *                 number of processors that should be in the returned collection.
      */
     public CloseableProcessorSupplier(DistributedIntFunction<Collection<E>>  supplier) {
         this.supplier = supplier;
     }
 
     /**
-     * Sets the supplier.
+     * Initializes this object with the given supplier. May only be invoked if
+     * the supplier property hasn't been enitialized yet.
      */
     public void setSupplier(DistributedIntFunction<Collection<E>> newSupplier) {
         if (supplier != null) {
