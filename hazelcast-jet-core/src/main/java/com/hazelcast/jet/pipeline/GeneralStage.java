@@ -57,6 +57,33 @@ public interface GeneralStage<T> extends Stage {
     <R> GeneralStage<R> map(@Nonnull DistributedFunction<? super T, ? extends R> mapFn);
 
     /**
+     * Attaches to this stage a filtering stage, one which applies the provided
+     * predicate function to each input item to decide whether to pass the item
+     * to the output or to discard it. Returns the newly attached stage.
+     *
+     * @param filterFn a stateless filter predicate function
+     * @return the newly attached stage
+     */
+    @Nonnull
+    GeneralStage<T> filter(@Nonnull DistributedPredicate<T> filterFn);
+
+    /**
+     * Attaches to this stage a flat-mapping stage, one which applies the
+     * supplied function to each input item independently and emits all the
+     * items from the {@link Traverser} it returns. The traverser must be
+     * <em>null-terminated</em>.
+     *
+     * @param flatMapFn a stateless flatmapping function, whose result type is
+     *                  Jet's {@link Traverser}
+     * @param <R> the type of items in the result's traversers
+     * @return the newly attached stage
+     */
+    @Nonnull
+    <R> GeneralStage<R> flatMap(
+            @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
+    );
+
+    /**
      * Attaches to this stage a mapping stage, one which applies the supplied
      * function to each input item independently and emits the function's result
      * as the output item. The mapping function can use a context object which
@@ -84,17 +111,6 @@ public interface GeneralStage<T> extends Stage {
     /**
      * Attaches to this stage a filtering stage, one which applies the provided
      * predicate function to each input item to decide whether to pass the item
-     * to the output or to discard it. Returns the newly attached stage.
-     *
-     * @param filterFn a stateless filter predicate function
-     * @return the newly attached stage
-     */
-    @Nonnull
-    GeneralStage<T> filter(@Nonnull DistributedPredicate<T> filterFn);
-
-    /**
-     * Attaches to this stage a filtering stage, one which applies the provided
-     * predicate function to each input item to decide whether to pass the item
      * to the output or to discard it. The predicate function can use a context
      * object which is created using the context factory.
      * <p>
@@ -111,22 +127,6 @@ public interface GeneralStage<T> extends Stage {
     <C> GeneralStage<T> filterUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
-    );
-
-    /**
-     * Attaches to this stage a flat-mapping stage, one which applies the
-     * supplied function to each input item independently and emits all the
-     * items from the {@link Traverser} it returns. The traverser must be
-     * <em>null-terminated</em>.
-     *
-     * @param flatMapFn a stateless flatmapping function, whose result type is
-     *                  Jet's {@link Traverser}
-     * @param <R> the type of items in the result's traversers
-     * @return the newly attached stage
-     */
-    @Nonnull
-    <R> GeneralStage<R> flatMap(
-            @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
     );
 
     /**

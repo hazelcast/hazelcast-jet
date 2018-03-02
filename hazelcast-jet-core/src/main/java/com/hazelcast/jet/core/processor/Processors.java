@@ -680,36 +680,6 @@ public final class Processors {
     }
 
     /**
-     * Returns a supplier of processors for a vertex which, for each received
-     * item, emits the result of applying the given mapping function to it. The
-     * mapping function receives another parameter, the context object which
-     * Jet will create using the supplied {@code contextFactory}.
-     * <p>
-     * If the mapping result is {@code null}, the vertex emits nothing.
-     * Therefore it can be used to implement filtering semantics as well.
-     * <p>
-     * While it's allowed to store state in the context object, it won't be
-     * saved to the snapshot and will misbehave in a fault-tolerant stream
-     * processing job.
-     *
-     * @param contextFactory the context factory
-     * @param mapFn a stateless mapping function
-     * @param <C> type of context object
-     * @param <T> type of received item
-     * @param <R> type of emitted item
-     */
-    @Nonnull
-    public static <C, T, R> ProcessorSupplier mapUsingContextP(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
-    ) {
-        return TransformUsingContextP.<C, T, R>supplier(contextFactory, (singletonTraverser, context, item) -> {
-            singletonTraverser.accept(mapFn.apply(context, item));
-            return singletonTraverser;
-        });
-    }
-
-    /**
      * Returns a supplier of processors for a vertex that emits the same items
      * it receives, but only those that pass the given predicate.
      * <p>
@@ -727,32 +697,6 @@ public final class Processors {
                 return trav;
             });
         };
-    }
-
-    /**
-     * Returns a supplier of processors for a vertex that emits the same items
-     * it receives, but only those that pass the given predicate. The predicate
-     * function receives another parameter, the context object which Jet will
-     * create using the supplied {@code contextFactory}.
-     * <p>
-     * While it's allowed to store state in the context object, it won't be
-     * saved to the snapshot and will misbehave in a fault-tolerant stream
-     * processing job.
-     *
-     * @param contextFactory the context factory
-     * @param filterFn a stateless predicate to test each received item against
-     * @param <C> type of context object
-     * @param <T> type of received item
-     */
-    @Nonnull
-    public static <C, T> ProcessorSupplier filterUsingContextP(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
-    ) {
-        return TransformUsingContextP.<C, T, T>supplier(contextFactory, (singletonTraverser, context, item) -> {
-            singletonTraverser.accept(filterFn.test(context, item) ? item : null);
-            return singletonTraverser;
-        });
     }
 
     /**
@@ -775,6 +719,62 @@ public final class Processors {
     }
 
     /**
+     * Returns a supplier of processors for a vertex which, for each received
+     * item, emits the result of applying the given mapping function to it. The
+     * mapping function receives another parameter, the context object which
+     * Jet will create using the supplied {@code contextFactory}.
+     * <p>
+     * If the mapping result is {@code null}, the vertex emits nothing.
+     * Therefore it can be used to implement filtering semantics as well.
+     * <p>
+     * While it's allowed to store some local state in the context object, it
+     * won't be saved to the snapshot and will misbehave in a fault-tolerant
+     * stream processing job.
+     *
+     * @param contextFactory the context factory
+     * @param mapFn a stateless mapping function
+     * @param <C> type of context object
+     * @param <T> type of received item
+     * @param <R> type of emitted item
+     */
+    @Nonnull
+    public static <C, T, R> ProcessorSupplier mapUsingContextP(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
+    ) {
+        return TransformUsingContextP.<C, T, R>supplier(contextFactory, (singletonTraverser, context, item) -> {
+            singletonTraverser.accept(mapFn.apply(context, item));
+            return singletonTraverser;
+        });
+    }
+
+    /**
+     * Returns a supplier of processors for a vertex that emits the same items
+     * it receives, but only those that pass the given predicate. The predicate
+     * function receives another parameter, the context object which Jet will
+     * create using the supplied {@code contextFactory}.
+     * <p>
+     * While it's allowed to store some local state in the context object, it
+     * won't be saved to the snapshot and will misbehave in a fault-tolerant
+     * stream processing job.
+     *
+     * @param contextFactory the context factory
+     * @param filterFn a stateless predicate to test each received item against
+     * @param <C> type of context object
+     * @param <T> type of received item
+     */
+    @Nonnull
+    public static <C, T> ProcessorSupplier filterUsingContextP(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
+    ) {
+        return TransformUsingContextP.<C, T, T>supplier(contextFactory, (singletonTraverser, context, item) -> {
+            singletonTraverser.accept(filterFn.test(context, item) ? item : null);
+            return singletonTraverser;
+        });
+    }
+
+    /**
      * Returns a supplier of processors for a vertex that applies the provided
      * item-to-traverser mapping function to each received item and emits all
      * the items from the resulting traverser. The traverser must be
@@ -782,9 +782,9 @@ public final class Processors {
      * the context object which Jet will create using the supplied {@code
      * contextFactory}.
      * <p>
-     * While it's allowed to store state in the context object, it won't be
-     * saved to the snapshot and will misbehave in a fault-tolerant stream
-     * processing job.
+     * While it's allowed to store some local state in the context object, it
+     * won't be saved to the snapshot and will misbehave in a fault-tolerant
+     * stream processing job.
      *
      * @param contextFactory the context factory
      * @param flatMapFn a stateless function that maps the received item to a traverser over

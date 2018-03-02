@@ -51,22 +51,22 @@ public interface StreamStage<T> extends GeneralStage<T> {
     <R> StreamStage<R> map(@Nonnull DistributedFunction<? super T, ? extends R> mapFn);
 
     @Nonnull @Override
+    StreamStage<T> filter(@Nonnull DistributedPredicate<T> filterFn);
+
+    @Nonnull @Override
+    <R> StreamStage<R> flatMap(@Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn);
+
+    @Nonnull @Override
     <C, R> StreamStage<R> mapUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
     );
 
     @Nonnull @Override
-    StreamStage<T> filter(@Nonnull DistributedPredicate<T> filterFn);
-
-    @Nonnull @Override
     <C> StreamStage<T> filterUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     );
-
-    @Nonnull @Override
-    <R> StreamStage<R> flatMap(@Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn);
 
     @Nonnull @Override
     <C, R> StreamStage<R> flatMapUsingContext(

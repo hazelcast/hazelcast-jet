@@ -62,6 +62,18 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     }
 
     @Nonnull @Override
+    public StreamStage<T> filter(@Nonnull DistributedPredicate<T> filterFn) {
+        return attachFilter(filterFn);
+    }
+
+    @Nonnull @Override
+    public <R> StreamStage<R> flatMap(
+            @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
+    ) {
+        return attachFlatMap(flatMapFn);
+    }
+
+    @Nonnull @Override
     public <C, R> StreamStage<R> mapUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
@@ -70,23 +82,11 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     }
 
     @Nonnull @Override
-    public StreamStage<T> filter(@Nonnull DistributedPredicate<T> filterFn) {
-        return attachFilter(filterFn);
-    }
-
-    @Nonnull @Override
     public <C> StreamStage<T> filterUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     ) {
         return attachFilterUsingContext(contextFactory, filterFn);
-    }
-
-    @Nonnull @Override
-    public <R> StreamStage<R> flatMap(
-            @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
-    ) {
-        return attachFlatMap(flatMapFn);
     }
 
     @Nonnull @Override

@@ -65,6 +65,18 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
+    public BatchStage<T> filter(@Nonnull DistributedPredicate<T> filterFn) {
+        return attachFilter(filterFn);
+    }
+
+    @Nonnull @Override
+    public <R> BatchStage<R> flatMap(
+            @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
+    ) {
+        return attachFlatMap(flatMapFn);
+    }
+
+    @Nonnull @Override
     public <C, R> BatchStage<R> mapUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
@@ -73,23 +85,11 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    public BatchStage<T> filter(@Nonnull DistributedPredicate<T> filterFn) {
-        return attachFilter(filterFn);
-    }
-
-    @Nonnull @Override
     public <C> BatchStage<T> filterUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     ) {
         return attachFilterUsingContext(contextFactory, filterFn);
-    }
-
-    @Nonnull @Override
-    public <R> BatchStage<R> flatMap(
-            @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
-    ) {
-        return attachFlatMap(flatMapFn);
     }
 
     @Nonnull @Override
