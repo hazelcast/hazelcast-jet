@@ -33,10 +33,10 @@ public final class ContextFactories {
      * Returns a factory that provides a {@link ReplicatedMap} as the context
      * object. A replicated map is a particularly good choice if you are
      * enriching an event stream with the data stored in the Hazelcast Jet
-     * cluster. Unlike {@code IMap}, all the data is local so you won't do any
-     * blocking calls using it (important for performance). Unlike in {@code
-     * hashJoin}, the data in the map can change while the job is running so
-     * you can keep the enriching dataset up-to-date.
+     * cluster. Unlike in a {@code hashJoin} transformation, the data in the
+     * map can change while the job is running so you can keep the enriching
+     * dataset up-to-date. Unlike {@code IMap}, the data you access is local so
+     * you won't do any blocking calls using it (important for performance).
      * <p>
      * If you want to destroy the map after the job finishes, call
      * {@code factory.destroyFn(ReplicatedMap::destroy)} on the object you get
