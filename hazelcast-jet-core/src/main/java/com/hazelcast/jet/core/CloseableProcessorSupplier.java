@@ -38,7 +38,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
  *
  * @param <E> the processor type
  */
-public class CloseableProcessorSupplier<E extends Processor & Closeable> implements ProcessorSupplier {
+public abstract class CloseableProcessorSupplier<E extends Processor & Closeable> implements ProcessorSupplier {
 
     static final long serialVersionUID = 1L;
 
@@ -50,15 +50,7 @@ public class CloseableProcessorSupplier<E extends Processor & Closeable> impleme
      * Constructs an instance without a wrapped processor supplier. It must be
      * set later using {@link #setSupplier}.
      */
-    public CloseableProcessorSupplier() {
-    }
-
-    /**
-     * Constructs an instance which will wrap all the processors the provided
-     * {@code simpleSupplier} returns.
-     */
-    public CloseableProcessorSupplier(DistributedSupplier<E> simpleSupplier) {
-        setSupplier(simpleSupplier);
+    protected CloseableProcessorSupplier() {
     }
 
     /**
@@ -126,5 +118,36 @@ public class CloseableProcessorSupplier<E extends Processor & Closeable> impleme
         if (firstError != null) {
             throw sneakyThrow(firstError);
         }
+    }
+
+    /**
+     * Create {@link CloseableProcessorSupplier} from a simple supplier.
+     */
+    public static <E extends Processor & Closeable> CloseableProcessorSupplier<E> of(
+            DistributedSupplier<E> simpleSupplier
+    ) {
+        return new CloseableProcessorSupplier<E>() {
+            @Override
+            public void init(@Nonnull Context context) {
+                setSupplier(simpleSupplier);
+                super.init(context);
+            }
+        };
+    }
+
+    /**
+     * Create {@link CloseableProcessorSupplier} from a count-to-processors
+     * function.
+     */
+    public static <E extends Processor & Closeable> CloseableProcessorSupplier<E> of(
+            DistributedIntFunction<Collection<E>> supplier
+    ) {
+        return new CloseableProcessorSupplier<E>() {
+            @Override
+            public void init(@Nonnull Context context) {
+                setSupplier(supplier);
+                super.init(context);
+            }
+        };
     }
 }
