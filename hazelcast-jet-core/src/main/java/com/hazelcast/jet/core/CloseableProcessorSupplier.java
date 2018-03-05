@@ -42,9 +42,9 @@ public class CloseableProcessorSupplier<E extends Processor & Closeable> impleme
 
     static final long serialVersionUID = 1L;
 
+    private DistributedIntFunction<Collection<E>> supplier;
     private transient ILogger logger;
     private transient Collection<E> processors;
-    private transient DistributedIntFunction<Collection<E>> supplier;
 
     /**
      * Constructs an instance without a wrapped processor supplier. It must be
@@ -54,10 +54,29 @@ public class CloseableProcessorSupplier<E extends Processor & Closeable> impleme
     }
 
     /**
+     * Constructs an instance which will wrap all the processors the provided
+     * {@code simpleSupplier} returns.
+     */
+    public CloseableProcessorSupplier(DistributedSupplier<E> simpleSupplier) {
+        setSupplier(simpleSupplier);
+    }
+
+    /**
+     * Constructs an instance which will wrap all the processors the provided
+     * {@code supplier} returns.
+     *
+     * @param supplier supplier of processors. The {@code int} parameter passed to it is the
+     *                 number of processors that should be in the returned collection.
+     */
+    public CloseableProcessorSupplier(DistributedIntFunction<Collection<E>> supplier) {
+        setSupplier(supplier);
+    }
+
+    /**
      * Initializes this object with the given supplier. May only be invoked if
      * the supplier property hasn't been initialized yet.
      */
-    public void setSupplier(DistributedSupplier<E> simpleSupplier) {
+    protected void setSupplier(DistributedSupplier<E> simpleSupplier) {
         setSupplier(
             count -> IntStream.range(0, count)
                               .mapToObj(i -> simpleSupplier.get())
@@ -107,36 +126,5 @@ public class CloseableProcessorSupplier<E extends Processor & Closeable> impleme
         if (firstError != null) {
             throw sneakyThrow(firstError);
         }
-    }
-
-    /**
-     * Create {@link CloseableProcessorSupplier} from a simple supplier.
-     */
-    public static <E extends Processor & Closeable> CloseableProcessorSupplier<E> of(
-            DistributedSupplier<E> simpleSupplier
-    ) {
-        return new CloseableProcessorSupplier<E>() {
-            @Override
-            public void init(@Nonnull Context context) {
-                setSupplier(simpleSupplier);
-                super.init(context);
-            }
-        };
-    }
-
-    /**
-     * Create {@link CloseableProcessorSupplier} from a count-to-processors
-     * function.
-     */
-    public static <E extends Processor & Closeable> CloseableProcessorSupplier<E> of(
-            DistributedIntFunction<Collection<E>> supplier
-    ) {
-        return new CloseableProcessorSupplier<E>() {
-            @Override
-            public void init(@Nonnull Context context) {
-                setSupplier(supplier);
-                super.init(context);
-            }
-        };
     }
 }

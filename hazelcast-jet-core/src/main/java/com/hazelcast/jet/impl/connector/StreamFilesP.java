@@ -355,7 +355,7 @@ public class StreamFilesP<R> extends AbstractProcessor implements Closeable {
             @Nonnull String glob,
             @Nonnull DistributedBiFunction<String, String, ?> mapOutputFn
     ) {
-        return ProcessorMetaSupplier.of(CloseableProcessorSupplier.of(
+        return ProcessorMetaSupplier.of(new CloseableProcessorSupplier<>(
                 count -> IntStream.range(0, count)
                         .mapToObj(i -> new StreamFilesP(watchedDirectory, Charset.forName(charset), glob, count, i,
                                 mapOutputFn))

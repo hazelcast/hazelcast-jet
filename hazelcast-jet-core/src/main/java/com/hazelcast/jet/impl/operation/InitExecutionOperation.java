@@ -30,7 +30,6 @@ import com.hazelcast.spi.ExceptionAction;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.function.Supplier;
 
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isTopologicalFailure;
@@ -42,7 +41,8 @@ public class InitExecutionOperation extends AbstractJobOperation {
     private long executionId;
     private int coordinatorMemberListVersion;
     private Set<MemberInfo> participants;
-    private Supplier<ExecutionPlan> planSupplier;
+    private transient ExecutionPlan plan;
+    private Data serializedPlan;
 
     public InitExecutionOperation() {
     }
@@ -53,17 +53,27 @@ public class InitExecutionOperation extends AbstractJobOperation {
         this.executionId = executionId;
         this.coordinatorMemberListVersion = coordinatorMemberListVersion;
         this.participants = participants;
-        this.planSupplier = () -> plan;
+        this.plan = plan; // we can't serialize the plan here because the nodeEngine is null atm.
     }
 
     @Override
-    public void run() throws Exception {
+    public void run() {
         ILogger logger = getLogger();
         JetService service = getService();
 
         Address caller = getCallerAddress();
         logger.fine("Initializing execution plan for " + jobAndExecutionId(jobId(), executionId) + " from " + caller);
-        ExecutionPlan plan = planSupplier.get();
+
+        // Enforce a plan serde: the plan is mutable (namely the
+        // ProcessorSupplier in its vertices can mutate state when PS.init() is
+        // called). It can happen that local InitExecutionOperation is executed
+        // before it is serialized for remote members: it this case, the remote
+        // members can receive a plan on which PS.init() appears to have been
+        // called.
+        if (serializedPlan == null) {
+            serializedPlan = getNodeEngine().getSerializationService().toData(plan);
+        }
+        ExecutionPlan plan = deserializePlan(serializedPlan);
         service.getJobExecutionService().initExecution(
                 jobId(), executionId, caller, coordinatorMemberListVersion, participants, plan
         );
@@ -89,8 +99,8 @@ public class InitExecutionOperation extends AbstractJobOperation {
         for (MemberInfo participant : participants) {
             participant.writeData(out);
         }
-        Data planBlob = getNodeEngine().getSerializationService().toData(planSupplier.get());
-        out.writeData(planBlob);
+        serializedPlan = getNodeEngine().getSerializationService().toData(plan);
+        out.writeData(serializedPlan);
     }
 
     @Override
@@ -106,12 +116,12 @@ public class InitExecutionOperation extends AbstractJobOperation {
             participant.readData(in);
             participants.add(participant);
         }
+        serializedPlan = in.readData();
+    }
 
-        final Data planBlob = in.readData();
-        planSupplier = () -> {
-            JetService service = getService();
-            ClassLoader cl = service.getClassLoader(jobId());
-            return deserializeWithCustomClassLoader(getNodeEngine().getSerializationService(), cl, planBlob);
-        };
+    private ExecutionPlan deserializePlan(Data planBlob) {
+        JetService service = getService();
+        ClassLoader cl = service.getClassLoader(jobId());
+        return deserializeWithCustomClassLoader(getNodeEngine().getSerializationService(), cl, planBlob);
     }
 }

@@ -273,7 +273,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor implements Cl
             @Nonnull DistributedFunction<ConsumerRecord<K, V>, T> projectionFn,
             @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
-        return CloseableProcessorSupplier.of(() -> new StreamKafkaP<>(
+        return new CloseableProcessorSupplier<>(() -> new StreamKafkaP<>(
                 properties, topics, projectionFn, wmGenParams
         ));
     }

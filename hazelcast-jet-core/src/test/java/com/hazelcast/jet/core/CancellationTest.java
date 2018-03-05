@@ -264,7 +264,7 @@ public class CancellationTest extends JetTestSupport {
     public void when_shutdown_then_jobFuturesCanceled() throws Exception {
         JetInstance jet = newInstance();
         DAG dag = new DAG();
-        dag.newVertex("blocking", CloseableProcessorSupplier.of(BlockingProcessor::new)).localParallelism(1);
+        dag.newVertex("blocking", new CloseableProcessorSupplier<>(BlockingProcessor::new)).localParallelism(1);
         jet.newJob(dag);
         assertTrueEventually(() -> assertTrue(BlockingProcessor.hasStarted), 3);
         jet.shutdown();
@@ -275,7 +275,7 @@ public class CancellationTest extends JetTestSupport {
     public void when_jobCanceled_then_jobFutureCanceled() {
         JetInstance jet = newInstance();
         DAG dag = new DAG();
-        dag.newVertex("blocking", CloseableProcessorSupplier.of(BlockingProcessor::new)).localParallelism(1);
+        dag.newVertex("blocking", new CloseableProcessorSupplier<>(BlockingProcessor::new)).localParallelism(1);
         Job job = jet.newJob(dag);
         assertTrueEventually(() -> assertTrue(BlockingProcessor.hasStarted), 3);
         job.cancel();
