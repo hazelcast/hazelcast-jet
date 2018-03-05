@@ -40,7 +40,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
  */
 public abstract class CloseableProcessorSupplier<E extends Processor & Closeable> implements ProcessorSupplier {
 
-    static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
     private DistributedIntFunction<Collection<E>> supplier;
     private transient ILogger logger;
@@ -51,17 +51,6 @@ public abstract class CloseableProcessorSupplier<E extends Processor & Closeable
      * set later using {@link #setSupplier}.
      */
     protected CloseableProcessorSupplier() {
-    }
-
-    /**
-     * Constructs an instance which will wrap all the processors the provided
-     * {@code supplier} returns.
-     *
-     * @param supplier supplier of processors. The {@code int} parameter passed to it is the
-     *                 number of processors that should be in the returned collection.
-     */
-    public CloseableProcessorSupplier(DistributedIntFunction<Collection<E>> supplier) {
-        setSupplier(supplier);
     }
 
     /**

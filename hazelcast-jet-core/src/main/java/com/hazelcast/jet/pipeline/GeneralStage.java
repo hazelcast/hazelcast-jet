@@ -368,4 +368,14 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     <R> GeneralStage<R> customTransform(
             @Nonnull String stageName, @Nonnull DistributedSupplier<Processor> procSupplier);
+
+    /**
+     * Offers a step-by-step fluent API to build your own {@link Sink} implementations.
+     *
+     * @param <S> type of the sink object
+     */
+    default <S> SinkBuilder<T, S> sinkBuilder() {
+        return new SinkBuilder<>();
+    }
+
 }
