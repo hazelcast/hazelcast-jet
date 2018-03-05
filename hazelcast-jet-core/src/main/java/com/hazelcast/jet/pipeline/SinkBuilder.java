@@ -18,12 +18,14 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.impl.connector.WriteBufferedP;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.util.Preconditions;
+
+import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
@@ -34,46 +36,32 @@ import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
  * @param <T> the type of the data the sink will receive
  * @param <S> the type of sink object
  */
-public class SinkBuilder<T, S> {
+public final class SinkBuilder<T, S> {
 
-    private DistributedFunction<JetInstance, S> createFn;
+    private final DistributedFunction<JetInstance, S> createFn;
     private DistributedBiConsumer<S, T> addItemFn;
-    private DistributedConsumer<S> flushFn;
-    private DistributedConsumer<S> destroyFn;
+    private DistributedConsumer<S> flushFn = noopConsumer();
+    private DistributedConsumer<S> destroyFn = noopConsumer();
 
-    SinkBuilder() {
+    SinkBuilder(@Nonnull DistributedFunction<JetInstance, S> createFn) {
+        this.createFn = createFn;
     }
 
     /**
      * Creates and returns a custom sink that consumes items from the pipeline
-     *
-     * @param <T> the type of the data the sink will receive
      */
-    public <T> Sink<T> build() {
-        Preconditions.checkNotNull(createFn, "createFn cannot be null");
-        Preconditions.checkNotNull(addItemFn, "addItemFn cannot be null");
-        if (flushFn == null) {
-            flushFn = noopConsumer();
-        }
-        if (destroyFn == null) {
-            destroyFn = noopConsumer();
-        }
+    public Sink<T> build() {
+        Preconditions.checkNotNull(addItemFn, "addItemFn must be set");
 
-        ProcessorSupplier supplier = WriteBufferedP.supplier(createFn, addItemFn, flushFn, destroyFn);
+        // local copy for serialization
+        final DistributedFunction<JetInstance, S> createFn = this.createFn;
+        ProcessorSupplier supplier = SinkProcessors.writeBufferedP(
+                ctx -> createFn.apply(ctx.jetInstance()),
+                addItemFn,
+                flushFn,
+                destroyFn
+        );
         return new SinkImpl<>("custom-sink", preferLocalParallelismOne(supplier));
-    }
-
-    /**
-     * Sets the sink object creation function
-     *
-     * @param createSinkFn a function that takes the {@link JetInstance}
-     *                     and creates the sink. The returned sink object will be
-     *                     passed to the following {@code addItemFn}, {@code flushFn}
-     *                     and {@code destroyFn} functions.
-     */
-    public SinkBuilder<T, S> createFn(DistributedFunction<JetInstance, S> createSinkFn) {
-        this.createFn = createSinkFn;
-        return this;
     }
 
     /**
@@ -83,7 +71,7 @@ public class SinkBuilder<T, S> {
      *                    taking sink object and an item from the pipeline.
      *                    The logic should consume the item by adding it to the sink.
      */
-    public SinkBuilder<T, S> addItemFn(DistributedBiConsumer<S, T> addToSinkFn) {
+    public SinkBuilder<T, S> addItemFn(@Nonnull DistributedBiConsumer<S, T> addToSinkFn) {
         this.addItemFn = addToSinkFn;
         return this;
     }
@@ -94,7 +82,7 @@ public class SinkBuilder<T, S> {
      * @param flushSinkFn An optional consumer that can be used to implement
      *                    flushing logic.
      */
-    public SinkBuilder<T, S> flushFn(DistributedConsumer<S> flushSinkFn) {
+    public SinkBuilder<T, S> flushFn(@Nonnull DistributedConsumer<S> flushSinkFn) {
         this.flushFn = flushSinkFn;
         return this;
     }
@@ -106,7 +94,7 @@ public class SinkBuilder<T, S> {
      *                      destroy logic to clean-up resources allocated when
      *                      creating the sink object.
      */
-    public SinkBuilder<T, S> destroyFn(DistributedConsumer<S> destroySinkFn) {
+    public SinkBuilder<T, S> destroyFn(@Nonnull DistributedConsumer<S> destroySinkFn) {
         this.destroyFn = destroySinkFn;
         return this;
     }

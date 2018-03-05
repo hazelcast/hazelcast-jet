@@ -18,6 +18,7 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.Offloadable;
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBinaryOperator;
@@ -551,7 +552,7 @@ public final class Sinks {
      * @param <T> stream item type
      */
     @Nonnull
-    public static <T> Sink<T> logger(DistributedFunction<T, String> toStringFn) {
+    public static <T> Sink<T> logger(@Nonnull DistributedFunction<T, String> toStringFn) {
         return fromProcessor("loggerSink", writeLoggerP(toStringFn));
     }
 
@@ -562,5 +563,17 @@ public final class Sinks {
     @Nonnull
     public static <T> Sink<T> logger() {
         return logger(Object::toString);
+    }
+
+    /**
+     * Create a custom sink using {@link SinkBuilder}
+     *
+     * @param createFn function that creates a new instance of the sink
+     * @param <T> type of input items
+     * @param <S> type of buffer used by sink
+     */
+    @Nonnull
+    public static <T, S> SinkBuilder<T, S> builder(@Nonnull DistributedFunction<JetInstance, S> createFn) {
+        return new SinkBuilder<>(createFn);
     }
 }

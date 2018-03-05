@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.CloseableProcessorSupplier;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
@@ -25,44 +24,25 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedIntFunction;
-import java.io.Closeable;
+
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import java.io.Closeable;
 
 public final class WriteBufferedP<B, T> implements Processor, Closeable {
 
-    private final DistributedIntFunction<B> newBufferFn;
+    private final DistributedFunction<Context, B> newBufferFn;
     private final DistributedBiConsumer<B, T> addToBufferFn;
     private final DistributedConsumer<B> flushBufferFn;
     private final DistributedConsumer<B> disposeBufferFn;
-    private final DistributedFunction<JetInstance, B> createBufferFn;
 
     private B buffer;
 
-    WriteBufferedP(DistributedIntFunction<B> newBufferFn,
-                   DistributedBiConsumer<B, T> addToBufferFn,
-                   DistributedConsumer<B> flushBufferFn,
-                   DistributedConsumer<B> disposeBufferFn
+    WriteBufferedP(
+            @Nonnull DistributedFunction<Context, B> newBufferFn,
+            @Nonnull DistributedBiConsumer<B, T> addToBufferFn,
+            @Nonnull DistributedConsumer<B> flushBufferFn,
+            @Nonnull DistributedConsumer<B> disposeBufferFn
     ) {
-        this(null, newBufferFn, addToBufferFn, flushBufferFn, disposeBufferFn);
-    }
-
-    WriteBufferedP(DistributedFunction<JetInstance, B> createBufferFn,
-                   DistributedBiConsumer<B, T> addToBufferFn,
-                   DistributedConsumer<B> flushBufferFn,
-                   DistributedConsumer<B> disposeBufferFn
-    ) {
-        this(createBufferFn, null, addToBufferFn, flushBufferFn, disposeBufferFn);
-    }
-
-    WriteBufferedP(@Nullable DistributedFunction<JetInstance, B> createBufferFn,
-                   @Nullable DistributedIntFunction<B> newBufferFn,
-                   DistributedBiConsumer<B, T> addToBufferFn,
-                   DistributedConsumer<B> flushBufferFn,
-                   DistributedConsumer<B> disposeBufferFn
-    ) {
-        this.createBufferFn = createBufferFn;
         this.newBufferFn = newBufferFn;
         this.addToBufferFn = addToBufferFn;
         this.flushBufferFn = flushBufferFn;
@@ -71,11 +51,7 @@ public final class WriteBufferedP<B, T> implements Processor, Closeable {
 
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
-        if (createBufferFn != null) {
-            this.buffer = createBufferFn.apply(context.jetInstance());
-        } else {
-            this.buffer = newBufferFn.apply(context.globalProcessorIndex());
-        }
+        buffer = newBufferFn.apply(context);
     }
 
     /**
@@ -85,36 +61,19 @@ public final class WriteBufferedP<B, T> implements Processor, Closeable {
      */
     @Nonnull
     public static <B, T> ProcessorSupplier supplier(
-            DistributedIntFunction<B> newBufferFn,
-            DistributedBiConsumer<B, T> addToBufferFn,
-            DistributedConsumer<B> flushBufferFn,
-            DistributedConsumer<B> disposeBufferFn
+            @Nonnull DistributedFunction<Context, B> newBufferFn,
+            @Nonnull DistributedBiConsumer<B, T> addToBufferFn,
+            @Nonnull DistributedConsumer<B> flushBufferFn,
+            @Nonnull DistributedConsumer<B> disposeBufferFn
     ) {
         return CloseableProcessorSupplier.of(
-                () -> new WriteBufferedP<>(newBufferFn, addToBufferFn, flushBufferFn, disposeBufferFn));
-    }
-
-    /**
-     * This is private API. Call
-     * {@link com.hazelcast.jet.core.processor.SinkProcessors#writeBufferedP
-     * SinkProcessors.writeBuffered()} instead.
-     */
-    @Nonnull
-    public static <B, T> ProcessorSupplier supplier(
-            DistributedFunction<JetInstance, B> createBufferFn,
-            DistributedBiConsumer<B, T> addToBufferFn,
-            DistributedConsumer<B> flushBufferFn,
-            DistributedConsumer<B> disposeBufferFn
-    ) {
-        return CloseableProcessorSupplier.of(
-                () -> new WriteBufferedP<>(createBufferFn, addToBufferFn, flushBufferFn, disposeBufferFn));
+                () -> new WriteBufferedP<>(newBufferFn, addToBufferFn, flushBufferFn, disposeBufferFn)
+        );
     }
 
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
-        inbox.drain(item -> {
-            addToBufferFn.accept(buffer, (T) item);
-        });
+        inbox.drain(item -> addToBufferFn.accept(buffer, (T) item));
         flushBufferFn.accept(buffer);
     }
 

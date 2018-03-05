@@ -17,6 +17,7 @@
 package com.hazelcast.jet.core.processor;
 
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.DistributedBiConsumer;
@@ -24,18 +25,18 @@ import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBinaryOperator;
 import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedIntFunction;
 import com.hazelcast.jet.impl.connector.HazelcastWriters;
 import com.hazelcast.jet.impl.connector.WriteBufferedP;
 import com.hazelcast.jet.impl.connector.WriteFileP;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.map.EntryProcessor;
+
+import javax.annotation.Nonnull;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.nio.charset.Charset;
-import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
@@ -268,13 +269,13 @@ public final class SinkProcessors {
      * @param <B>           type of buffer
      * @param <T>           type of received item
      * @param newBufferFn   supplies the buffer. The argument to this function
-     *                      is the global processor index.
+     *                      is the context for the given processor.
      * @param addToBufferFn adds an item to the buffer
      * @param flushBufferFn flushes the buffer
      */
     @Nonnull
     public static <B, T> ProcessorSupplier writeBufferedP(
-            @Nonnull DistributedIntFunction<B> newBufferFn,
+            @Nonnull DistributedFunction<Context, B> newBufferFn,
             @Nonnull DistributedBiConsumer<B, T> addToBufferFn,
             @Nonnull DistributedConsumer<B> flushBufferFn
     ) {
@@ -293,14 +294,14 @@ public final class SinkProcessors {
      * @param <B>             type of buffer
      * @param <T>             type of received item
      * @param newBufferFn     supplies the buffer. The argument to this function
-     *                        is the global processor index.
+     *                        is the context for the given processor.
      * @param addToBufferFn   adds item to buffer
      * @param flushBufferFn   flushes the buffer
      * @param disposeBufferFn disposes of the buffer
      */
     @Nonnull
     public static <B, T> ProcessorSupplier writeBufferedP(
-            @Nonnull DistributedIntFunction<B> newBufferFn,
+            @Nonnull DistributedFunction<Context, B> newBufferFn,
             @Nonnull DistributedBiConsumer<B, T> addToBufferFn,
             @Nonnull DistributedConsumer<B> flushBufferFn,
             @Nonnull DistributedConsumer<B> disposeBufferFn
