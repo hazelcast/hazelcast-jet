@@ -41,19 +41,18 @@ public class InitExecutionOperation extends AbstractJobOperation {
     private long executionId;
     private int coordinatorMemberListVersion;
     private Set<MemberInfo> participants;
-    private transient ExecutionPlan plan;
     private Data serializedPlan;
 
     public InitExecutionOperation() {
     }
 
     public InitExecutionOperation(long jobId, long executionId, int coordinatorMemberListVersion,
-                                  Set<MemberInfo> participants, ExecutionPlan plan) {
+                                  Set<MemberInfo> participants, Data serializedPlan) {
         super(jobId);
         this.executionId = executionId;
         this.coordinatorMemberListVersion = coordinatorMemberListVersion;
         this.participants = participants;
-        this.plan = plan; // we can't serialize the plan here because the nodeEngine is null atm.
+        this.serializedPlan = serializedPlan;
     }
 
     @Override
@@ -64,15 +63,6 @@ public class InitExecutionOperation extends AbstractJobOperation {
         Address caller = getCallerAddress();
         logger.fine("Initializing execution plan for " + jobAndExecutionId(jobId(), executionId) + " from " + caller);
 
-        // Enforce a plan serde: the plan is mutable (namely the
-        // ProcessorSupplier in its vertices can mutate state when PS.init() is
-        // called). It can happen that local InitExecutionOperation is executed
-        // before it is serialized for remote members: it this case, the remote
-        // members can receive a plan on which PS.init() appears to have been
-        // called.
-        if (serializedPlan == null) {
-            serializedPlan = getNodeEngine().getSerializationService().toData(plan);
-        }
         ExecutionPlan plan = deserializePlan(serializedPlan);
         service.getJobExecutionService().initExecution(
                 jobId(), executionId, caller, coordinatorMemberListVersion, participants, plan
@@ -99,7 +89,6 @@ public class InitExecutionOperation extends AbstractJobOperation {
         for (MemberInfo participant : participants) {
             participant.writeData(out);
         }
-        serializedPlan = getNodeEngine().getSerializationService().toData(plan);
         out.writeData(serializedPlan);
     }
 
