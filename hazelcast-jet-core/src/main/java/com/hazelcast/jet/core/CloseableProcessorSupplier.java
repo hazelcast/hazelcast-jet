@@ -87,7 +87,7 @@ public class CloseableProcessorSupplier<E extends Processor & Closeable> impleme
      * Initializes this object with the given supplier. May only be invoked if
      * the supplier property hasn't been initialized yet.
      */
-    public void setSupplier(DistributedIntFunction<Collection<E>> newSupplier) {
+    protected void setSupplier(DistributedIntFunction<Collection<E>> newSupplier) {
         if (supplier != null) {
             throw new IllegalStateException("supplier already assigned");
         }
