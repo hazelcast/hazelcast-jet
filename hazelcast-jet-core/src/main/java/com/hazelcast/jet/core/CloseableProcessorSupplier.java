@@ -54,8 +54,8 @@ public abstract class CloseableProcessorSupplier<E extends Processor & Closeable
     }
 
     /**
-     * Initializes this object with the given supplier. May only be invoked if
-     * the supplier property hasn't been initialized yet.
+     * Initializes this object with the given supplier. Must be invoked exactly
+     * once.
      */
     protected void setSupplier(DistributedSupplier<E> simpleSupplier) {
         setSupplier(
@@ -65,8 +65,8 @@ public abstract class CloseableProcessorSupplier<E extends Processor & Closeable
     }
 
     /**
-     * Initializes this object with the given supplier. May only be invoked if
-     * the supplier property hasn't been initialized yet.
+     * Initializes this object with the given supplier. Must be invoked exactly
+     * once.
      */
     protected void setSupplier(DistributedIntFunction<Collection<E>> newSupplier) {
         if (supplier != null) {
@@ -110,7 +110,7 @@ public abstract class CloseableProcessorSupplier<E extends Processor & Closeable
     }
 
     /**
-     * Create {@link CloseableProcessorSupplier} from a simple supplier.
+     * Creates a {@link CloseableProcessorSupplier} from a simple supplier.
      */
     public static <E extends Processor & Closeable> CloseableProcessorSupplier<E> of(
             DistributedSupplier<E> simpleSupplier
@@ -125,8 +125,9 @@ public abstract class CloseableProcessorSupplier<E extends Processor & Closeable
     }
 
     /**
-     * Create {@link CloseableProcessorSupplier} from a count-to-processors
-     * function.
+     * Creates a {@link CloseableProcessorSupplier} from a count-to-processors
+     * function. The function must return as many processor suppliers as its
+     * argument requests.
      */
     public static <E extends Processor & Closeable> CloseableProcessorSupplier<E> of(
             DistributedIntFunction<Collection<E>> supplier

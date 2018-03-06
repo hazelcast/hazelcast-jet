@@ -31,72 +31,96 @@ import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelis
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 
 /**
- * Convenience for building custom {@link Sink} implementations on Pipeline API.
+ * Offers a step-by-step fluent API to build a custom {@link Sink} for the
+ * Pipeline API. It allows you to keep a single-threaded, stateful writer
+ * object in each instance of a Jet worker dedicated to driving the sink.
+ * Its primary intended purpose is to serve as the holder of references to
+ * external resources and optional buffers. These are the callback
+ * functions you can provide to implement the sink's behavior:
+ * <ol><li>
+ *     {@code createFn} creates the writer. Gets the local Jet instance as
+ *     argument. This component is required.
+ * </li><li>
+ *     {@code onReceiveFn} gets notified of each item the sink receives and
+ *     (typically) passes it to the writer. This component is required.
+ * </li><li>
+ *     {@code flushFn} flushes the writer. This component is optional.
+ * </li><li>
+ *     {@code destroyFn} destroys the writer. This component is optional.
+ * </li></ol>
  *
- * @param <T> the type of the data the sink will receive
- * @param <S> the type of sink object
+ * @param <W> type of the writer object
+ * @param <T> type of the items the sink will accept
  */
-public final class SinkBuilder<T, S> {
+public final class SinkBuilder<W, T> {
 
-    private final DistributedFunction<JetInstance, S> createFn;
-    private DistributedBiConsumer<S, T> addItemFn;
-    private DistributedConsumer<S> flushFn = noopConsumer();
-    private DistributedConsumer<S> destroyFn = noopConsumer();
+    private final DistributedFunction<? super JetInstance, ? extends W> createFn;
+    private DistributedBiConsumer<? super W, ? super T> onReceiveFn;
+    private DistributedConsumer<? super W> flushFn = noopConsumer();
+    private DistributedConsumer<? super W> destroyFn = noopConsumer();
 
-    SinkBuilder(@Nonnull DistributedFunction<JetInstance, S> createFn) {
+    SinkBuilder(@Nonnull DistributedFunction<? super JetInstance, ? extends W> createFn) {
         this.createFn = createFn;
     }
 
     /**
-     * Creates and returns a custom sink that consumes items from the pipeline
+     * Sets the function Jet will call upon receiving an item. The function
+     * receives two arguments: the writer object (as provided by the {@link
+     * #createFn} and the received item. Its job is to push the item to the
+     * writer.
+     *
+     * @param onReceiveFn the "add item to the writer" function
+     */
+    public SinkBuilder<W, T> onReceiveFn(@Nonnull DistributedBiConsumer<? super W, ? super T> onReceiveFn) {
+        this.onReceiveFn = onReceiveFn;
+        return this;
+    }
+
+    /**
+     * Sets the function that implements the sink's flushing behavior. If your
+     * writer is buffered, instead of relying on some automatic flushing policy
+     * you can provide this function so Jet can choose the best moment to
+     * flush.
+     * <p>
+     * You are not required to provide this function in case your implementation
+     * doesn't need it.
+     *
+     * @param flushFn the optional "flush the writer" function
+     */
+    public SinkBuilder<W, T> flushFn(@Nonnull DistributedConsumer<? super W> flushFn) {
+        this.flushFn = flushFn;
+        return this;
+    }
+
+    /**
+     * Sets the function that will destroy the writer. Use it to flush any leftover
+     * buffered data and release all the resources.
+     * <p>
+     * You are not required to provide this function in case your implementation
+     * doesn't need it.
+     *
+     * @param destroyFn the optional "destroy the writer" function
+     */
+    public SinkBuilder<W, T> destroyFn(@Nonnull DistributedConsumer<? super W> destroyFn) {
+        this.destroyFn = destroyFn;
+        return this;
+    }
+
+    /**
+     * Creates and returns the {@link Sink} with the components you supplied to
+     * this builder.
      */
     public Sink<T> build() {
-        Preconditions.checkNotNull(addItemFn, "addItemFn must be set");
+        Preconditions.checkNotNull(onReceiveFn, "onReceiveFn must be set");
 
         // local copy for serialization
-        final DistributedFunction<JetInstance, S> createFn = this.createFn;
+        DistributedFunction<? super JetInstance, ? extends W> createFn = this.createFn;
         ProcessorSupplier supplier = SinkProcessors.writeBufferedP(
                 ctx -> createFn.apply(ctx.jetInstance()),
-                addItemFn,
+                onReceiveFn,
                 flushFn,
                 destroyFn
         );
         return new SinkImpl<>("custom-sink", preferLocalParallelismOne(supplier));
     }
-
-    /**
-     * Sets the item addition to sink function
-     *
-     * @param addToSinkFn A bi-consumer that should implement the sink logic by
-     *                    taking sink object and an item from the pipeline.
-     *                    The logic should consume the item by adding it to the sink.
-     */
-    public SinkBuilder<T, S> addItemFn(@Nonnull DistributedBiConsumer<S, T> addToSinkFn) {
-        this.addItemFn = addToSinkFn;
-        return this;
-    }
-
-    /**
-     * Sets the sink flush function
-     *
-     * @param flushSinkFn An optional consumer that can be used to implement
-     *                    flushing logic.
-     */
-    public SinkBuilder<T, S> flushFn(@Nonnull DistributedConsumer<S> flushSinkFn) {
-        this.flushFn = flushSinkFn;
-        return this;
-    }
-
-    /**
-     * Sets the sink destroy function
-     *
-     * @param destroySinkFn An optional consumer that can be used to implement
-     *                      destroy logic to clean-up resources allocated when
-     *                      creating the sink object.
-     */
-    public SinkBuilder<T, S> destroyFn(@Nonnull DistributedConsumer<S> destroySinkFn) {
-        this.destroyFn = destroySinkFn;
-        return this;
-    }
-
 }

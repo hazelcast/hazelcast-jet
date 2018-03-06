@@ -566,14 +566,18 @@ public final class Sinks {
     }
 
     /**
-     * Create a custom sink using {@link SinkBuilder}
+     * Returns a builder object that offers a step-by-step fluent API to build a
+     * custom sink. The argument is a factory function for the writer object the
+     * sink will delegate to for all operations.
      *
-     * @param createFn function that creates a new instance of the sink
-     * @param <T> type of input items
-     * @param <S> type of buffer used by sink
+     * @param createFn function that creates the internal writer object
+     * @param <W> type of the writer object
+     * @param <T> type of the items the sink will accept
      */
     @Nonnull
-    public static <T, S> SinkBuilder<T, S> builder(@Nonnull DistributedFunction<JetInstance, S> createFn) {
+    public static <W, T> SinkBuilder<W, T> builder(
+            @Nonnull DistributedFunction<? super JetInstance, ? extends W> createFn
+    ) {
         return new SinkBuilder<>(createFn);
     }
 }

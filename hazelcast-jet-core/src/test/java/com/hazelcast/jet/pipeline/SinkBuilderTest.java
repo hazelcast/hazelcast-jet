@@ -109,7 +109,7 @@ public class SinkBuilderTest extends PipelineTestSupport {
                     instance.getList(listName).add(directory.toPath().toString());
                     return file;
                 }))
-                .addItemFn((sink, item) -> uncheckRun(() -> {
+                .onReceiveFn((sink, item) -> uncheckRun(() -> {
                     appendToFile(sink, item.toString());
                 })).build();
     }
@@ -117,7 +117,7 @@ public class SinkBuilderTest extends PipelineTestSupport {
     private Sink<Integer> buildSocketSink(int localPort) {
         return Sinks.<Integer, BufferedWriter>builder(
                 (jetInstance) -> uncheckCall(() -> getSocketWriter(localPort))
-        ).addItemFn((s, item) -> uncheckRun(() -> s.append((char) item.intValue()).append('\n')))
+        ).onReceiveFn((s, item) -> uncheckRun(() -> s.append((char) item.intValue()).append('\n')))
          .flushFn(s -> uncheckRun(s::flush))
          .destroyFn(s -> uncheckRun(s::close))
          .build();
