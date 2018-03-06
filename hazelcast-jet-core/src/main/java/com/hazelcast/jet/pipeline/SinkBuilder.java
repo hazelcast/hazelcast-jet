@@ -71,6 +71,7 @@ public final class SinkBuilder<W, T> {
      *
      * @param onReceiveFn the "add item to the writer" function
      */
+    @Nonnull
     public SinkBuilder<W, T> onReceiveFn(@Nonnull DistributedBiConsumer<? super W, ? super T> onReceiveFn) {
         this.onReceiveFn = onReceiveFn;
         return this;
@@ -87,20 +88,24 @@ public final class SinkBuilder<W, T> {
      *
      * @param flushFn the optional "flush the writer" function
      */
+    @Nonnull
     public SinkBuilder<W, T> flushFn(@Nonnull DistributedConsumer<? super W> flushFn) {
         this.flushFn = flushFn;
         return this;
     }
 
     /**
-     * Sets the function that will destroy the writer. Use it to flush any leftover
-     * buffered data and release all the resources.
+     * Sets the function that will destroy the writer and perform any cleanup. The
+     * function is called when the job has been completed or cancelled. Jet guarantees
+     * that no new items will be received in between the last call to {@code flushFn}
+     * and the call to {@code destroyFn}.
      * <p>
      * You are not required to provide this function in case your implementation
      * doesn't need it.
      *
      * @param destroyFn the optional "destroy the writer" function
      */
+    @Nonnull
     public SinkBuilder<W, T> destroyFn(@Nonnull DistributedConsumer<? super W> destroyFn) {
         this.destroyFn = destroyFn;
         return this;
@@ -110,6 +115,7 @@ public final class SinkBuilder<W, T> {
      * Creates and returns the {@link Sink} with the components you supplied to
      * this builder.
      */
+    @Nonnull
     public Sink<T> build() {
         Preconditions.checkNotNull(onReceiveFn, "onReceiveFn must be set");
 

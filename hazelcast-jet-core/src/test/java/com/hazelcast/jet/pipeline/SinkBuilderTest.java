@@ -42,7 +42,7 @@ import static org.junit.Assert.assertTrue;
 public class SinkBuilderTest extends PipelineTestSupport {
 
     @Test
-    public void test_sink_builder_file_sink() {
+    public void fileSink() {
         // Given
         List<Integer> input = sequence(ITEM_COUNT);
         addToSrcList(input);
@@ -67,7 +67,7 @@ public class SinkBuilderTest extends PipelineTestSupport {
 
 
     @Test
-    public void test_sink_builder_socket_sink() throws IOException {
+    public void socketSink() throws IOException {
         // Given
         List<Integer> input = sequence(ITEM_COUNT);
         addToSrcList(input);
@@ -101,7 +101,7 @@ public class SinkBuilderTest extends PipelineTestSupport {
     }
 
     private Sink<Integer> buildRandomFileSink(String listName) {
-        return Sinks.<Integer, File>builder((instance) ->
+        return Sinks.<File, Integer>builder((instance) ->
                 uncheckCall(() -> {
                     File directory = createTempDirectory();
                     File file = new File(directory, randomName());
@@ -115,7 +115,7 @@ public class SinkBuilderTest extends PipelineTestSupport {
     }
 
     private Sink<Integer> buildSocketSink(int localPort) {
-        return Sinks.<Integer, BufferedWriter>builder(
+        return Sinks.<BufferedWriter, Integer>builder(
                 (jetInstance) -> uncheckCall(() -> getSocketWriter(localPort))
         ).onReceiveFn((s, item) -> uncheckRun(() -> s.append((char) item.intValue()).append('\n')))
          .flushFn(s -> uncheckRun(s::flush))
