@@ -109,33 +109,12 @@
                             <instructions>
                                 <Embed-Dependency>hazelcast-jet-core;inline=true</Embed-Dependency>
                                 <Embed-Transitive>true</Embed-Transitive>
-                                <Implementation-Title>${project.name}</Implementation-Title>
-                                <Implementation-Version>${project.version}</Implementation-Version>
-                                <Implementation-Vendor-Id>${project.groupId}</Implementation-Vendor-Id>
-                                <Implementation-Vendor>${project.organization.name}</Implementation-Vendor>
-                                <Implementation-URL>${project.url}</Implementation-URL>
-                                <Specification-Title>${project.name}</Specification-Title>
-                                <Specification-Version>${project.artifact.selectedVersion.majorVersion}.${project.artifact.selectedVersion.minorVersion}</Specification-Version>
-                                <Specification-Vendor>${project.organization.name}</Specification-Vendor>
-                                <Bundle-Activator>com.hazelcast.osgi.impl.Activator</Bundle-Activator>
                                 <Main-Class>com.hazelcast.jet.server.StartServer</Main-Class>
                                 <Automatic-Module-Name>com.hazelcast.jet</Automatic-Module-Name>
                                 <Export-Package>
-                                    com.hazelcast.*
+                                    *
                                 </Export-Package>
                                 <Import-Package>
-                                    !org.junit,
-                                    !com.hazelcast.*,
-                                    !com.eclipsesource.json,
-                                    sun.misc;resolution:=optional,
-                                    javax.cache;resolution:=optional,
-                                    javax.cache.*;resolution:=optional,
-                                    org.apache.log4j;resolution:=optional,
-                                    org.apache.logging.log4j;resolution:=optional,
-                                    org.apache.logging.log4j.*;resolution:=optional,
-                                    org.slf4j;resolution:=optional,
-                                    org.codehaus.groovy.jsr223;resolution:=optional,
-                                    org.jruby.embed.jsr223;resolution:=optional,
                                     *
                                 </Import-Package>
                             </instructions>
