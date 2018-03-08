@@ -45,6 +45,7 @@ public class JobConfig implements Serializable {
     private final List<ResourceConfig> resourceConfigs = new ArrayList<>();
     private boolean autoRestartEnabled = true;
     private int maxWatermarkRetainMillis = -1;
+    private JobClassLoaderFactory classLoaderFactory;
 
     /**
      * Returns the name of the job or {@code null} if no name was given.
@@ -391,4 +392,19 @@ public class JobConfig implements Serializable {
         return urlFile.substring(urlFile.lastIndexOf('/') + 1, urlFile.length());
     }
 
+    /**
+     * TODO javadoc
+     */
+    public JobConfig setClassLoaderFactory(@Nullable JobClassLoaderFactory classLoaderFactory) {
+        this.classLoaderFactory = classLoaderFactory;
+        return this;
+    }
+
+    /**
+     * TODO javadoc
+     */
+    @Nullable
+    public JobClassLoaderFactory getClassLoaderFactory() {
+        return classLoaderFactory;
+    }
 }

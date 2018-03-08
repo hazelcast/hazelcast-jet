@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.deployment;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.nio.IOUtil;
 
+import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,8 +40,8 @@ public class JetClassLoader extends ClassLoader {
 
     private final Map<String, byte[]> resources;
 
-    public JetClassLoader(Map<String, byte[]> resources) {
-        super(JetClassLoader.class.getClassLoader());
+    public JetClassLoader(@Nullable ClassLoader parent, Map<String, byte[]> resources) {
+        super(parent == null ? JetClassLoader.class.getClassLoader() : parent);
         this.resources = resources;
     }
 

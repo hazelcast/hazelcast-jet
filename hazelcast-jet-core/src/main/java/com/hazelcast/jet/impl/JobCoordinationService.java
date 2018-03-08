@@ -101,7 +101,13 @@ public class JobCoordinationService {
     }
 
     public ClassLoader getClassLoader(long jobId) {
-        PrivilegedAction<JetClassLoader> action = () -> new JetClassLoader(jobRepository.getJobResources(jobId));
+        PrivilegedAction<JetClassLoader> action = () -> {
+            JobConfig jobConfig = getJobConfig(jobId);
+            ClassLoader parent = jobConfig.getClassLoaderFactory() != null
+                    ? jobConfig.getClassLoaderFactory().getJobClassLoader()
+                    : null;
+            return new JetClassLoader(parent, jobRepository.getJobResources(jobId));
+        };
         return jobExecutionService.getClassLoader(jobId, action);
     }
 
