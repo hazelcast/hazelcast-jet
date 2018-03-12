@@ -19,10 +19,20 @@ package com.hazelcast.jet.config;
 import java.io.Serializable;
 
 /**
- * TODO javadoc
+ * An interface that can be implemented to provide custom class loader for Jet
+ * job.
+ * <p>
+ * The classloader must be serializable: it is set in the {@link
+ * JobConfig#setClassLoaderFactory config} and sent to members in a serialized
+ * form.
+ * <p>
+ * It is useful in custom class-loading environments, for example in OSGi.
  */
 public interface JobClassLoaderFactory extends Serializable {
 
+    /**
+     * Return the class loader instance.
+     */
     ClassLoader getJobClassLoader();
 
 }
