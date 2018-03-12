@@ -387,11 +387,6 @@ public class JobCoordinationService {
      * if the requested job is not found.
      */
     public JobConfig getJobConfig(long jobId) {
-        if (!isMaster()) {
-            throw new JetException("Cannot query config of Job " + idToString(jobId) + ". Master address: "
-                    + nodeEngine.getClusterService().getMasterAddress());
-        }
-
         JobRecord jobRecord = jobRepository.getJobRecord(jobId);
         if (jobRecord != null) {
             return jobRecord.getConfig();
