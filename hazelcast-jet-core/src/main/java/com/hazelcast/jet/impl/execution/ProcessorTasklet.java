@@ -353,7 +353,8 @@ public class ProcessorTasklet implements Tasklet {
      * otherwise to PROCESS_INBOX.
      */
     private ProcessorState initialProcessingState() {
-        return instreamCursor == null ? COMPLETE : PROCESS_INBOX;
+        return pendingWatermark != null ? PROCESS_WATERMARK
+                : instreamCursor == null ? COMPLETE : PROCESS_INBOX;
     }
 
     /**
