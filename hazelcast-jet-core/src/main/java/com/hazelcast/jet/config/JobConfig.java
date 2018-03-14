@@ -393,7 +393,10 @@ public class JobConfig implements Serializable {
     }
 
     /**
-     * TODO javadoc
+     * Sets a custom {@link JobClassLoaderFactory} that will be used to load
+     * job classes and resources on Jet members.
+     *
+     * @return {@code this} instance for fluent API
      */
     public JobConfig setClassLoaderFactory(@Nullable JobClassLoaderFactory classLoaderFactory) {
         this.classLoaderFactory = classLoaderFactory;
@@ -401,7 +404,7 @@ public class JobConfig implements Serializable {
     }
 
     /**
-     * TODO javadoc
+     * Returns the configured {@link JobClassLoaderFactory}.
      */
     @Nullable
     public JobClassLoaderFactory getClassLoaderFactory() {

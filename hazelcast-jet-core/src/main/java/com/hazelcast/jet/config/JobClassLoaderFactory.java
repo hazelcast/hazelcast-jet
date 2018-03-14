@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.config;
 
+import javax.annotation.Nonnull;
 import java.io.Serializable;
 
 /**
@@ -33,6 +34,7 @@ public interface JobClassLoaderFactory extends Serializable {
     /**
      * Return the class loader instance.
      */
+    @Nonnull
     ClassLoader getJobClassLoader();
 
 }
