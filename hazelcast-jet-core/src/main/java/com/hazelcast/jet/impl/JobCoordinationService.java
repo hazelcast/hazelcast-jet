@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
+import com.hazelcast.core.IMap;
 import com.hazelcast.instance.Node;
 import com.hazelcast.internal.cluster.ClusterService;
 import com.hazelcast.internal.partition.impl.InternalPartitionServiceImpl;
@@ -28,6 +29,8 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.impl.deployment.JetClassLoader;
 import com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus;
+import com.hazelcast.jet.impl.util.ExceptionUtil;
+import com.hazelcast.jet.spi.JobClassLoaderFactory;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
@@ -35,6 +38,7 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.executionservice.InternalExecutionService;
 import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.util.Clock;
+import com.hazelcast.util.ServiceLoader;
 
 import java.security.PrivilegedAction;
 import java.util.Collection;
@@ -101,7 +105,25 @@ public class JobCoordinationService {
     }
 
     public ClassLoader getClassLoader(long jobId) {
-        PrivilegedAction<JetClassLoader> action = () -> new JetClassLoader(jobRepository.getJobResources(jobId));
+        PrivilegedAction<ClassLoader> action = () -> {
+            ClassLoader jobClassLoader = null;
+            IMap<String, byte[]> resources = jobRepository.getJobResources(jobId);
+            try {
+                ClassLoader configClassLoader = this.nodeEngine.getConfigClassLoader();
+                JobClassLoaderFactory jobClassLoaderFactory = ServiceLoader.load(JobClassLoaderFactory.class,
+                            JobClassLoaderFactory.class.getName(),
+                            configClassLoader);
+                if (jobClassLoaderFactory != null) {
+                     jobClassLoader = jobClassLoaderFactory.getJobClassLoader(
+                             jobId,
+                             this.nodeEngine.getHazelcastInstance(),
+                             resources);
+                }
+            } catch (Exception e) {
+                throw ExceptionUtil.sneakyThrow(e);
+            }
+            return new JetClassLoader(jobClassLoader, resources);
+        };
         return jobExecutionService.getClassLoader(jobId, action);
     }
 

@@ -40,7 +40,11 @@ public class JetClassLoader extends ClassLoader {
     private final Map<String, byte[]> resources;
 
     public JetClassLoader(Map<String, byte[]> resources) {
-        super(JetClassLoader.class.getClassLoader());
+        this(null, resources);
+    }
+
+    public JetClassLoader(ClassLoader classLoader, Map<String, byte[]> resources) {
+        super(classLoader != null ? classLoader : JetClassLoader.class.getClassLoader());
         this.resources = resources;
     }
 
