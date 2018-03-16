@@ -25,7 +25,6 @@ import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.Partition;
 import com.hazelcast.internal.journal.EventJournalInitialSubscriberState;
 import com.hazelcast.internal.journal.EventJournalReader;
-import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -40,6 +39,7 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
+import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.nio.Address;
 import com.hazelcast.projection.Projection;
@@ -59,8 +59,6 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.client.HazelcastClient.newHazelcastClient;
-import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
-import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
@@ -69,6 +67,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.arrayIndexOf;
 import static com.hazelcast.jet.impl.util.Util.processorToPartitions;
+import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
@@ -309,7 +308,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     }
 
     private ICompletableFuture<ReadResultSet<T>> readFromJournal(int partition, long offset) {
-        logFine(getLogger(), "Reading from partition %d and offset %d", partition, offset);
+        logFinest(getLogger(), "Reading from partition %d and offset %d", partition, offset);
         return eventJournalReader.readFromEventJournal(offset,
                 1, MAX_FETCH_SIZE, partition, predicate, projection);
     }

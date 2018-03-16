@@ -56,8 +56,8 @@ import static org.junit.Assert.assertTrue;
 public class StreamEventJournalPTest extends JetTestSupport {
 
     private static final int NUM_PARTITIONS = 2;
-    private static final int JOURNAL_CAPACITY = 10;
-    private static final int CAPACITY_PER_PARTITION = JOURNAL_CAPACITY / NUM_PARTITIONS;
+    private static final int CAPACITY_PER_PARTITION = 5;
+    private static final int JOURNAL_CAPACITY = NUM_PARTITIONS * CAPACITY_PER_PARTITION;
 
     private MapProxyImpl<String, Integer> map;
     private DistributedSupplier<Processor> supplier;
@@ -141,7 +141,7 @@ public class StreamEventJournalPTest extends JetTestSupport {
         Processor p = supplier.get();
         p.init(outbox, new TestProcessorContext());
 
-        // overflow journal
+        // overflow the journal
         fillJournal(CAPACITY_PER_PARTITION + 1);
 
         // fill and consume
