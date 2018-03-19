@@ -251,7 +251,8 @@ public class TaskletExecutionService {
                     if (logger.isFinestEnabled()) {
                         long elapsedMs = NANOSECONDS.toMillis((System.nanoTime() - start));
                         if (elapsedMs > COOPERATIVE_LOGGING_THRESHOLD) {
-                            logger.info("time=" + elapsedMs + ", t=" + t);
+                            logger.finest("Cooperative tasklet call of '" + t.tasklet + "' took more than "
+                                    + COOPERATIVE_LOGGING_THRESHOLD + " ms: " + elapsedMs + "ms");
                         }
                     }
                 }
