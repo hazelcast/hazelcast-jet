@@ -209,7 +209,7 @@ public class MasterContext {
             executionPlanMap = createExecutionPlans(nodeEngine, membersView, dag, getJobConfig(), lastSnapshotId);
         } catch (Exception e) {
             logger.severe("Exception creating execution plan for " + jobIdString(), e);
-            onCompleteStepCompleted(e);
+            finalizeJob(e);
             return;
         } finally {
             Thread.currentThread().setContextClassLoader(previousCL);
@@ -262,7 +262,7 @@ public class MasterContext {
 
         if (cancellationToken.isCompleted()) {
             logger.fine("Skipping init job " + idToString(jobId) + ": is already cancelled.");
-            onCompleteStepCompleted(new CancellationException());
+            finalizeJob(new CancellationException());
             return false;
         }
 
@@ -536,11 +536,11 @@ public class MasterContext {
         }
 
         Function<ExecutionPlan, Operation> operationCtor = plan -> new CompleteExecutionOperation(executionId, finalError);
-        invoke(operationCtor, responses -> onCompleteStepCompleted(error), null);
+        invoke(operationCtor, responses -> finalizeJob(error), null);
     }
 
     // Called as callback when all CompleteOperation invocations are done
-    private void onCompleteStepCompleted(@Nullable Throwable failure) {
+    private void finalizeJob(@Nullable Throwable failure) {
         if (assertJobNotAlreadyDone(failure)) {
             return;
         }
@@ -559,10 +559,6 @@ public class MasterContext {
             logger.warning(String.format("Execution of %s failed after %,d ms", jobIdString(), elapsed), failure);
         }
 
-        finalizeJob(failure);
-    }
-
-    private void finalizeJob(@Nullable Throwable failure) {
         try {
             coordinationService.completeJob(this, executionId, System.currentTimeMillis(), failure);
         } catch (RuntimeException e) {
