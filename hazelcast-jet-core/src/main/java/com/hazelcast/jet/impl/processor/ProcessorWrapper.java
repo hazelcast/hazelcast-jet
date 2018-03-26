@@ -83,4 +83,9 @@ public class ProcessorWrapper implements Processor {
     public boolean finishSnapshotRestore() {
         return wrapped.finishSnapshotRestore();
     }
+
+    @Override
+    public void close() throws Exception {
+        wrapped.close();
+    }
 }

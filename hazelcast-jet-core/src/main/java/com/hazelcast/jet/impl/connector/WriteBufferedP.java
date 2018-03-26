@@ -16,19 +16,17 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.jet.core.CloseableProcessorSupplier;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedSupplier;
 
 import javax.annotation.Nonnull;
-import java.io.Closeable;
 
-public final class WriteBufferedP<B, T> implements Processor, Closeable {
+public final class WriteBufferedP<B, T> implements Processor {
 
     private final DistributedFunction<? super Context, B> createFn;
     private final DistributedBiConsumer<? super B, ? super T> onReceiveFn;
@@ -60,15 +58,13 @@ public final class WriteBufferedP<B, T> implements Processor, Closeable {
      * SinkProcessors.writeBuffered()} instead.
      */
     @Nonnull
-    public static <B, T> ProcessorSupplier supplier(
+    public static <B, T> DistributedSupplier<Processor> supplier(
             @Nonnull DistributedFunction<? super Context, ? extends B> createFn,
             @Nonnull DistributedBiConsumer<? super B, ? super T> onReceiveFn,
             @Nonnull DistributedConsumer<? super B> flushFn,
             @Nonnull DistributedConsumer<? super B> destroyFn
     ) {
-        return CloseableProcessorSupplier.of(
-                () -> new WriteBufferedP<>(createFn, onReceiveFn, flushFn, destroyFn)
-        );
+        return () -> new WriteBufferedP<>(createFn, onReceiveFn, flushFn, destroyFn);
     }
 
     @Override
@@ -83,6 +79,7 @@ public final class WriteBufferedP<B, T> implements Processor, Closeable {
         return true;
     }
 
+    @Override
     public void close() {
         destroyFn.accept(buffer);
     }
