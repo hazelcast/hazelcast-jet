@@ -334,7 +334,7 @@ public final class TestSupport {
             supplier.init(new TestProcessorSupplierContext());
             this.expectedOutputs = expectedOutputs;
             runTest(doSnapshots, doSnapshots ? 1 : 0);
-            supplier.complete(null);
+            supplier.close(null);
         } catch (Exception e) {
             throw sneakyThrow(e);
         }

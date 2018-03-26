@@ -137,7 +137,7 @@ public final class TransformUsingContextP<C, T, R> extends AbstractProcessor {
         }
 
         @Override
-        public void complete(Throwable error) {
+        public void close(Throwable error) {
             if (contextObject != null) {
                 contextFactory.destroyFn().accept(contextObject);
             }

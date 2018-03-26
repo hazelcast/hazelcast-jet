@@ -74,7 +74,7 @@ public class TransformUsingContextPTest {
         assertEquals(share ? 0 : 1, destroyCounter[0]);
         processors[1].close();
         assertEquals(share ? 0 : 2, destroyCounter[0]);
-        supplier.complete(null);
+        supplier.close(null);
         assertEquals(share ? 1 : 2, destroyCounter[0]);
     }
 

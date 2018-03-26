@@ -132,7 +132,7 @@ public class TestProcessors {
         }
 
         @Override
-        public void complete(Throwable error) {
+        public void close(Throwable error) {
             throw new ExpectedRuntimeException();
         }
     }
@@ -156,7 +156,7 @@ public class TestProcessors {
         }
 
         @Override
-        public void complete(Throwable error) {
+        public void close(Throwable error) {
             throw new ExpectedRuntimeException();
         }
     }
@@ -195,7 +195,7 @@ public class TestProcessors {
         }
 
         @Override
-        public void complete(Throwable error) {
+        public void close(Throwable error) {
             assertEquals("all PS that have been init should have been completed at this point",
                     MockPS.initCount.get(), MockPS.completeCount.get());
             assertTrue("Complete called without calling init()", initCalled.get());
@@ -246,7 +246,7 @@ public class TestProcessors {
         }
 
         @Override
-        public void complete(Throwable error) {
+        public void close(Throwable error) {
             if (error != null) {
                 completeErrors.add(error);
             }

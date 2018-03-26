@@ -124,7 +124,7 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
         }
 
         @Override
-        public void complete(Throwable error) {
+        public void close(Throwable error) {
             if (outputCommitter != null && jobContext != null) {
                 uncheckRun(() -> outputCommitter.commitJob(jobContext));
             }

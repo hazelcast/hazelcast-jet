@@ -146,7 +146,7 @@ public class ExecutionContext {
 
         for (ProcessorSupplier s : procSuppliers) {
             try {
-                s.complete(error);
+                s.close(error);
             } catch (Throwable e) {
                 logger.severe(jobAndExecutionId(jobId, executionId)
                         + " encountered an exception in ProcessorSupplier.complete(), ignoring it", e);

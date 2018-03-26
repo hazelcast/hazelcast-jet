@@ -45,7 +45,7 @@ import javax.annotation.Nonnull;
  * See the {@link #isCooperative()} for important restrictions to how the
  * processor should work.
  */
-public interface Processor {
+public interface Processor extends AutoCloseable {
 
     /**
      * Tells whether this processor is able to participate in cooperative
@@ -231,10 +231,10 @@ public interface Processor {
 
     /**
      * Called after the execution has finished on all members - successfully or
-     * not, before {@link ProcessorSupplier#complete} is called. If the
-     * execution was <em>aborted</em> due to a member leaving the cluster it is
-     * called immediately. Int this case, it can happen that the job is still
-     * running on some other member (but not on this member).
+     * not, before {@link ProcessorSupplier#close} is called. If the execution
+     * was <em>aborted</em> due to a member leaving the cluster it is called
+     * immediately. Int this case, it can happen that the job is still running
+     * on some other member (but not on this member).
      * <p>
      * After this method no other methods are called.
      * <p>
