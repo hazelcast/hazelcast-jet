@@ -173,7 +173,7 @@ public class MasterContext {
         DAG dag;
         try {
             dag = deserializeDAG();
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
             logger.warning("DAG deserialization failed", e);
             finalizeJob(e);
             return;

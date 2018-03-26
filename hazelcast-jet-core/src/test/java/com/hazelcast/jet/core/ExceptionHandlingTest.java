@@ -163,9 +163,17 @@ public class ExceptionHandlingTest extends JetTestSupport {
     }
 
     @Test
-    public void when_deserializationOnMembersFails_then_jobSubmissionFails() throws Throwable {
-        instance = createJetMember();
+    public void when_deserializationOnMembersFails_then_jobSubmissionFails__member() throws Throwable {
+        when_deserializationOnMembersFails_then_jobSubmissionFails(createJetMember());
+    }
 
+    @Test
+    public void when_deserializationOnMembersFails_then_jobSubmissionFails__client() throws Throwable {
+        createJetMember();
+        when_deserializationOnMembersFails_then_jobSubmissionFails(createJetClient());
+    }
+
+    public void when_deserializationOnMembersFails_then_jobSubmissionFails(JetInstance instance) throws Throwable {
         // Given
         DAG dag = new DAG();
         // this is designed to fail when member deserializes the execution plan while executing
@@ -181,9 +189,17 @@ public class ExceptionHandlingTest extends JetTestSupport {
     }
 
     @Test
-    public void when_deserializationOnMasterFails_then_jobSubmissionFails() throws Throwable {
-        instance = createJetMember();
+    public void when_deserializationOnMasterFails_then_jobSubmissionFails_member() throws Throwable {
+        when_deserializationOnMasterFails_then_jobSubmissionFails(createJetMember());
+    }
 
+    @Test
+    public void when_deserializationOnMasterFails_then_jobSubmissionFails_client() throws Throwable {
+        createJetMember();
+        when_deserializationOnMasterFails_then_jobSubmissionFails(createJetClient());
+    }
+
+    public void when_deserializationOnMasterFails_then_jobSubmissionFails(JetInstance instance) throws Throwable {
         // Given
         DAG dag = new DAG();
         // this is designed to fail when the master member deserializes the DAG
