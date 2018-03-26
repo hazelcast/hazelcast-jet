@@ -21,6 +21,7 @@ import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * When Jet executes a DAG, it creates one or more instances of {@code
@@ -45,7 +46,7 @@ import javax.annotation.Nonnull;
  * See the {@link #isCooperative()} for important restrictions to how the
  * processor should work.
  */
-public interface Processor extends AutoCloseable {
+public interface Processor {
 
     /**
      * Tells whether this processor is able to participate in cooperative
@@ -243,8 +244,11 @@ public interface Processor extends AutoCloseable {
      * <p>
      * Note: this method can be called even if {@link #init} method was not
      * called yet in case the job fails during the init phase.
+
+     * @param error the exception (if any) that caused the job to fail;
+     *              {@code null} in the case of successful job completion
      */
-    default void close() throws Exception {
+    default void close(@Nullable Throwable error) throws Exception {
     }
 
     /**

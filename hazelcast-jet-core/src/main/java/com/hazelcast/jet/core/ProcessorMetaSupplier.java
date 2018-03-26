@@ -24,6 +24,7 @@ import com.hazelcast.nio.Address;
 import com.hazelcast.partition.strategy.StringPartitioningStrategy;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.List;
 import java.util.function.Function;
@@ -108,7 +109,7 @@ public interface ProcessorMetaSupplier extends Serializable {
      * @param error the exception (if any) that caused the job to fail;
      *              {@code null} in the case of successful job completion
      */
-    default void close(Throwable error) {
+    default void close(@Nullable Throwable error) {
     }
 
     /**

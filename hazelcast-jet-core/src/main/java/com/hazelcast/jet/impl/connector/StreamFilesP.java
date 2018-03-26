@@ -25,6 +25,7 @@ import com.hazelcast.jet.impl.util.ReflectionUtils;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -137,7 +138,7 @@ public class StreamFilesP<R> extends AbstractProcessor {
     }
 
     @Override
-    public void close() {
+    public void close(@Nullable Throwable error) {
         try {
             closeCurrentFile();
             if (isClosed()) {
@@ -168,7 +169,7 @@ public class StreamFilesP<R> extends AbstractProcessor {
             }
             return false;
         } catch (InterruptedException e) {
-            close();
+            close(e);
             return true;
         }
     }
@@ -182,7 +183,7 @@ public class StreamFilesP<R> extends AbstractProcessor {
         if (key == null) {
             if (!Files.exists(watchedDirectory)) {
                 logger.info("Directory " + watchedDirectory + " does not exist, stopped watching");
-                close();
+                close(null);
             }
             return;
         }
@@ -206,7 +207,7 @@ public class StreamFilesP<R> extends AbstractProcessor {
         }
         if (!key.reset()) {
             logger.info("Watch key is invalid. Stopping watcher.");
-            close();
+            close(null);
         }
     }
 
@@ -238,7 +239,7 @@ public class StreamFilesP<R> extends AbstractProcessor {
                 }
             }
         } catch (IOException e) {
-            close();
+            close(e);
             throw sneakyThrow(e);
         }
     }

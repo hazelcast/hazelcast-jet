@@ -21,6 +21,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -140,7 +141,7 @@ public final class StreamSocketP extends AbstractProcessor {
     }
 
     @Override
-    public void close() throws IOException {
+    public void close(@Nullable Throwable error) throws IOException {
         if (socketChannel != null) {
             getLogger().info("Closing socket " + hostAndPort());
             socketChannel.close();

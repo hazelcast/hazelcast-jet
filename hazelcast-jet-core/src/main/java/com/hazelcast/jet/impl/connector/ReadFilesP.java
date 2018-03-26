@@ -25,6 +25,7 @@ import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.function.DistributedBiFunction;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.DirectoryStream;
@@ -80,7 +81,7 @@ public final class ReadFilesP<R> extends AbstractProcessor {
                                     .filter(this::shouldProcessEvent)
                                     .flatMap(this::processFile)
                                     .onFirstNull(() -> {
-                                        uncheckRun(this::close);
+                                        uncheckRun(() -> close(null));
                                         directoryStream = null;
                                     });
     }
@@ -118,7 +119,7 @@ public final class ReadFilesP<R> extends AbstractProcessor {
     }
 
     @Override
-    public void close() throws IOException {
+    public void close(@Nullable Throwable error) throws IOException {
         IOException ex = null;
         if (directoryStream != null) {
             try {

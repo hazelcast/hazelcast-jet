@@ -95,7 +95,7 @@ public final class TransformUsingContextP<C, T, R> extends AbstractProcessor {
     }
 
     @Override
-    public void close() {
+    public void close(@Nullable Throwable error) {
         // close() might be called even if init() was not called.
         // Only destroy the context if is not shared (i.e. it is our own).
         if (contextObject != null && !contextFactory.isSharedLocally()) {

@@ -137,7 +137,7 @@ public class ExecutionContext {
 
         for (Processor processor : processors) {
             try {
-                processor.close();
+                processor.close(error);
             } catch (Throwable e) {
                 logger.severe(jobAndExecutionId(jobId, executionId)
                         + " encountered an exception in Processor.close(), ignoring it", e);
