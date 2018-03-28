@@ -87,6 +87,7 @@ public class ReceiverTasklet implements Tasklet {
 
     // read by a task scheduler thread, written by a tasklet execution thread
     private volatile long ackedSeq;
+    volatile int numWaitingInInbox;
 
     // read and written by updateAndGetSendSeqLimitCompressed(), which is invoked sequentially by a task scheduler
     private int receiveWindowCompressed;
@@ -110,6 +111,7 @@ public class ReceiverTasklet implements Tasklet {
         tracker.reset();
         tracker.notDone();
         tryFillInbox();
+        int localNumWaitingInInbox = 0;
         for (ObjWithPtionIdAndSize o; (o = inbox.peek()) != null; ) {
             final Object item = o.getItem();
             if (item == DONE_ITEM) {
@@ -123,12 +125,14 @@ public class ReceiverTasklet implements Tasklet {
                     : collector.offer(item, o.getPartitionId());
             if (!outcome.isDone()) {
                 tracker.madeProgress(outcome.isMadeProgress());
+                localNumWaitingInInbox = inbox.size();
                 break;
             }
             tracker.madeProgress();
             inbox.remove();
             ackItem(o.estimatedMemoryFootprint);
         }
+        numWaitingInInbox = localNumWaitingInInbox;
         return tracker.toProgressState();
     }
 
@@ -188,7 +192,13 @@ public class ReceiverTasklet implements Tasklet {
         if (hadPrevStats) {
             final double ackedSeqsPerAckPeriod = flowControlPeriodNs * ackedSeqCompressedDelta / ackTimeDelta;
             final int targetRwin = rwinMultiplier * (int) ceil(ackedSeqsPerAckPeriod);
-            final int rwinDiff = targetRwin - receiveWindowCompressed;
+            int rwinDiff = targetRwin - receiveWindowCompressed;
+            int numWaitingInInbox = this.numWaitingInInbox;
+            // if nothing is waiting in the inbox it means that we are in a lull - we avoid shrinking of the rwin
+            // in this case.
+            if (numWaitingInInbox == 0 && rwinDiff < 0) {
+                rwinDiff = 0;
+            }
             receiveWindowCompressed += rwinDiff / 2;
             LoggingUtil.logFinest(LOG, "receiveWindowCompressed=%d", receiveWindowCompressed);
         }
@@ -196,10 +206,7 @@ public class ReceiverTasklet implements Tasklet {
     }
 
     long ackItem(long itemWeight) {
-        final long seqNow = ackedSeq;
-        final long seqToBe = seqNow + itemWeight;
-        ackedSeq = seqToBe;
-        return seqToBe;
+        return ackedSeq += itemWeight;
     }
 
     @Override

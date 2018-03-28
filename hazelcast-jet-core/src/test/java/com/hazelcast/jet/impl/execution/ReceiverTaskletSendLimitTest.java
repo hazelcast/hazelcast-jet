@@ -47,11 +47,11 @@ public class ReceiverTaskletSendLimitTest {
     }
 
     @Test
-    public void when_noData_then_rwinHalvedEachTime() throws Exception {
+    public void when_noData_then_rwinRemainsUnchanged() throws Exception {
         double expectedSeq = INITIAL_RECEIVE_WINDOW_COMPRESSED;
         for (int i = 0; i < 10; i++) {
             assertEquals((long) expectedSeq, tasklet.updateAndGetSendSeqLimitCompressed(START + i * ACK_PERIOD));
-            expectedSeq = ceil(expectedSeq / 2);
+            expectedSeq = ceil(expectedSeq);
         }
     }
 
@@ -92,6 +92,7 @@ public class ReceiverTaskletSendLimitTest {
 
         // When
         long seqLimit = 0;
+        tasklet.numWaitingInInbox = 1;
         for (int i = 0; i < hiccupIters; i++, iter++) {
             seqLimit = tasklet.updateAndGetSendSeqLimitCompressed(START + iter * ACK_PERIOD);
         }
@@ -99,7 +100,7 @@ public class ReceiverTaskletSendLimitTest {
         // Then
         final long ackedSeqCompressed = (warmupIters * ackedSeqsPerIter) >> COMPRESSED_SEQ_UNIT_LOG2;
         final long rwin = seqLimit - ackedSeqCompressed;
-        assertTrue(rwin == 0 || rwin == 1);
+        assertTrue("rwin=" + rwin, rwin == 0 || rwin == 1);
     }
 
     @Test
