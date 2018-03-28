@@ -204,7 +204,7 @@ public class ReceiverTasklet implements Tasklet {
         return ackedSeqCompressed + receiveWindowCompressed;
     }
 
-    // The calls to this method are always ordered by happens-before
+    // Only one thread writes to ackedSeq
     @SuppressWarnings("NonAtomicOperationOnVolatileField")
     long ackItem(long itemWeight) {
         return ackedSeq += itemWeight;
