@@ -91,8 +91,8 @@ public class ReceiverTaskletSendLimitTest {
         }
 
         // When
+        tasklet.setNumWaitingInInbox(1);
         long seqLimit = 0;
-        tasklet.numWaitingInInbox = 1;
         for (int i = 0; i < hiccupIters; i++, iter++) {
             seqLimit = tasklet.updateAndGetSendSeqLimitCompressed(START + iter * ACK_PERIOD);
         }

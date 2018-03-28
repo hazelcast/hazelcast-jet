@@ -87,7 +87,7 @@ public class ReceiverTasklet implements Tasklet {
 
     // read by a task scheduler thread, written by a tasklet execution thread
     private volatile long ackedSeq;
-    volatile int numWaitingInInbox;
+    private volatile int numWaitingInInbox;
 
     // read and written by updateAndGetSendSeqLimitCompressed(), which is invoked sequentially by a task scheduler
     private int receiveWindowCompressed;
@@ -111,7 +111,6 @@ public class ReceiverTasklet implements Tasklet {
         tracker.reset();
         tracker.notDone();
         tryFillInbox();
-        int localNumWaitingInInbox = 0;
         for (ObjWithPtionIdAndSize o; (o = inbox.peek()) != null; ) {
             final Object item = o.getItem();
             if (item == DONE_ITEM) {
@@ -125,14 +124,13 @@ public class ReceiverTasklet implements Tasklet {
                     : collector.offer(item, o.getPartitionId());
             if (!outcome.isDone()) {
                 tracker.madeProgress(outcome.isMadeProgress());
-                localNumWaitingInInbox = inbox.size();
                 break;
             }
             tracker.madeProgress();
             inbox.remove();
             ackItem(o.estimatedMemoryFootprint);
         }
-        numWaitingInInbox = localNumWaitingInInbox;
+        numWaitingInInbox = inbox.size();
         return tracker.toProgressState();
     }
 
@@ -194,8 +192,9 @@ public class ReceiverTasklet implements Tasklet {
             final int targetRwin = rwinMultiplier * (int) ceil(ackedSeqsPerAckPeriod);
             int rwinDiff = targetRwin - receiveWindowCompressed;
             int numWaitingInInbox = this.numWaitingInInbox;
-            // if nothing is waiting in the inbox it means that we are in a lull - we avoid shrinking of the rwin
-            // in this case.
+            // If nothing is waiting in the inbox, our processing speed isn't the cause
+            // for less traffic through the processor, it's the sender who's not
+            // sending enough data. Don't shrink the RWIN in this case.
             if (numWaitingInInbox == 0 && rwinDiff < 0) {
                 rwinDiff = 0;
             }
@@ -205,8 +204,17 @@ public class ReceiverTasklet implements Tasklet {
         return ackedSeqCompressed + receiveWindowCompressed;
     }
 
+    // The calls to this method are always ordered by happens-before
+    @SuppressWarnings("NonAtomicOperationOnVolatileField")
     long ackItem(long itemWeight) {
         return ackedSeq += itemWeight;
+    }
+
+    /**
+     * To be called only from testing code.
+     */
+    void setNumWaitingInInbox(int value) {
+        this.numWaitingInInbox = value;
     }
 
     @Override
