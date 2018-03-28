@@ -246,7 +246,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
     @Override
     public boolean isCooperative() {
-        return false;
+        return true;
     }
 
     private void initialRead() {
