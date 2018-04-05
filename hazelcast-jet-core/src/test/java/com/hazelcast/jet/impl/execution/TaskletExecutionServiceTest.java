@@ -22,6 +22,7 @@ import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import com.hazelcast.test.annotation.Repeat;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -37,6 +38,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Stream;
 
@@ -57,6 +59,8 @@ import static org.mockito.Mockito.mock;
 @RunWith(HazelcastSerialClassRunner.class)
 public class TaskletExecutionServiceTest extends JetTestSupport {
 
+    private static final int THREAD_COUNT = 4;
+
     @Rule
     public final ExpectedException exceptionRule = ExpectedException.none();
 
@@ -73,7 +77,7 @@ public class TaskletExecutionServiceTest extends JetTestSupport {
         Mockito.when(hzMock.getName()).thenReturn("test-hz-instance");
         Mockito.when(hzMock.getLoggingService()).thenReturn(loggingService);
         Mockito.when(loggingService.getLogger(Mockito.<Class>any())).thenReturn(mockLogger);
-        es = new TaskletExecutionService(hzMock, 4);
+        es = new TaskletExecutionService(hzMock, THREAD_COUNT);
         classLoaderMock = mock(ClassLoader.class);
     }
 
@@ -332,6 +336,50 @@ public class TaskletExecutionServiceTest extends JetTestSupport {
             f.join();
         } catch (CompletionException e) {
             throw peel(e);
+        }
+    }
+
+    @Test
+    @Repeat(100)
+    public void workStealing_stressTest() throws InterruptedException {
+        // create THREAD_COUNT + 1 tasklets: first worker will have 2 tasklets, other workers just 1 tasklet.
+        final List<SynchronizationTestTasklet> tasklets =
+                Stream.generate(SynchronizationTestTasklet::new).limit(THREAD_COUNT + 1).collect(toList());
+
+        es.beginExecute(tasklets, cancellationFuture, classLoaderMock);
+        Thread.sleep(50);
+        tasklets.get(1).terminated = true;
+        assertTrueEventually(() -> assertTrue(tasklets.get(0).sawDifferentThread), 10);
+    }
+
+    /**
+     * A tasklet that has a properly synchronized and a non-synchronized
+     * counter. If tasklet is externally synchronized properly, both counters
+     * should have same value all the time.
+     */
+    private static final class SynchronizationTestTasklet implements Tasklet {
+
+        private final AtomicInteger counter1 = new AtomicInteger();
+        private int counter2;
+        private volatile boolean terminated;
+        private boolean sawDifferentThread;
+        private long lastThreadId = -1;
+
+        @Nonnull
+        @Override
+        public ProgressState call() {
+            long currentThreadId = Thread.currentThread().getId();
+            sawDifferentThread |= currentThreadId != lastThreadId;
+            lastThreadId = currentThreadId;
+            int v1 = counter1.incrementAndGet();
+            int v2 = counter2++;
+            assertEquals(v1, v2);
+            return terminated ? ProgressState.DONE : ProgressState.MADE_PROGRESS;
+        }
+
+        @Override
+        public boolean isCooperative() {
+            return true;
         }
     }
 
