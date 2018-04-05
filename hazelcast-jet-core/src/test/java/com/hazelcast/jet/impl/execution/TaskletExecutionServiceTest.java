@@ -19,7 +19,7 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.impl.util.ProgressState;
-import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.Logger;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.Repeat;
@@ -40,6 +40,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
@@ -73,10 +74,10 @@ public class TaskletExecutionServiceTest extends JetTestSupport {
     public void before() {
         HazelcastInstance hzMock = mock(HazelcastInstance.class);
         LoggingService loggingService = mock(LoggingService.class);
-        ILogger mockLogger = mock(ILogger.class);
         Mockito.when(hzMock.getName()).thenReturn("test-hz-instance");
         Mockito.when(hzMock.getLoggingService()).thenReturn(loggingService);
-        Mockito.when(loggingService.getLogger(Mockito.<Class>any())).thenReturn(mockLogger);
+        Mockito.when(loggingService.getLogger(TaskletExecutionService.class))
+               .thenReturn(Logger.getLogger(TaskletExecutionService.class));
         es = new TaskletExecutionService(hzMock, THREAD_COUNT);
         classLoaderMock = mock(ClassLoader.class);
     }
@@ -99,7 +100,7 @@ public class TaskletExecutionServiceTest extends JetTestSupport {
     }
 
     @Test
-    public void when_nonblockingTask_then_executed() {
+    public void when_nonBlockingTask_then_executed() {
         // Given
         final MockTasklet t = new MockTasklet();
 
@@ -111,7 +112,7 @@ public class TaskletExecutionServiceTest extends JetTestSupport {
     }
 
     @Test(expected = CompletionException.class)
-    public void when_nonblockingAndInitFails_then_futureFails() {
+    public void when_nonBlockingAndInitFails_then_futureFails() {
         // Given
         final MockTasklet t = new MockTasklet().initFails();
 
@@ -132,7 +133,7 @@ public class TaskletExecutionServiceTest extends JetTestSupport {
     }
 
     @Test(expected = CompletionException.class)
-    public void when_nonblockingAndCallFails_then_futureFails() {
+    public void when_nonBlockingAndCallFails_then_futureFails() {
         // Given
         final MockTasklet t = new MockTasklet().callFails();
 
@@ -341,15 +342,20 @@ public class TaskletExecutionServiceTest extends JetTestSupport {
 
     @Test
     @Repeat(100)
-    public void workStealing_stressTest() throws InterruptedException {
+    public void workStealing_stressTest() throws Exception {
         // create THREAD_COUNT + 1 tasklets: first worker will have 2 tasklets, other workers just 1 tasklet.
         final List<SynchronizationTestTasklet> tasklets =
-                Stream.generate(SynchronizationTestTasklet::new).limit(THREAD_COUNT + 1).collect(toList());
+                IntStream.range(0, THREAD_COUNT + 1)
+                .mapToObj(SynchronizationTestTasklet::new)
+                .collect(toList());
 
-        es.beginExecute(tasklets, cancellationFuture, classLoaderMock);
+        CompletableFuture<Void> f = es.beginExecute(tasklets, cancellationFuture, classLoaderMock);
         Thread.sleep(50);
         tasklets.get(1).terminated = true;
         assertTrueEventually(() -> assertTrue(tasklets.get(0).sawDifferentThread), 10);
+        tasklets.forEach(t -> t.terminated = true);
+        // get the future to see eventual exception in the tasklet
+        f.get();
     }
 
     /**
@@ -360,18 +366,25 @@ public class TaskletExecutionServiceTest extends JetTestSupport {
     private static final class SynchronizationTestTasklet implements Tasklet {
 
         private final AtomicInteger counter1 = new AtomicInteger();
+        private final int index;
         private int counter2;
         private volatile boolean terminated;
         private boolean sawDifferentThread;
         private long lastThreadId = -1;
 
+        SynchronizationTestTasklet(int index) {
+            this.index = index;
+        }
+
         @Nonnull
         @Override
         public ProgressState call() {
             long currentThreadId = Thread.currentThread().getId();
-            sawDifferentThread |= currentThreadId != lastThreadId;
+            if (lastThreadId != -1) {
+                sawDifferentThread |= currentThreadId != lastThreadId;
+            }
             lastThreadId = currentThreadId;
-            int v1 = counter1.incrementAndGet();
+            int v1 = counter1.getAndIncrement();
             int v2 = counter2++;
             assertEquals(v1, v2);
             return terminated ? ProgressState.DONE : ProgressState.MADE_PROGRESS;
@@ -380,6 +393,11 @@ public class TaskletExecutionServiceTest extends JetTestSupport {
         @Override
         public boolean isCooperative() {
             return true;
+        }
+
+        @Override
+        public String toString() {
+            return "SynchronizationTestTasklet-" + index;
         }
     }
 
