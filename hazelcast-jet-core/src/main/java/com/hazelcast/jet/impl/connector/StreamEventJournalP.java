@@ -275,11 +275,11 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 long prevSequence = readOffsets[currentPartitionIndex];
                 long lostCount = resultSet.getNextSequenceToReadFrom() - resultSet.readCount() - prevSequence;
                 if (lostCount > 0) {
-                    getLogger().warning(lostCount +  " events lost for partition " +
-                            partitionId + " due to journal overflow when reading from event journal." +
-                            " Increase journal size to avoid this error. "
-                            + "getNextSequenceToReadFrom=" + resultSet.getNextSequenceToReadFrom() +
-                            "readCount=" + resultSet.readCount() + " prevSeq=" + prevSequence);
+                    getLogger().warning(lostCount +  " events lost for partition "
+                            + partitionId + " due to journal overflow when reading from event journal."
+                            + " Increase journal size to avoid this error. nextSequenceToReadFrom="
+                            + resultSet.getNextSequenceToReadFrom() + ", readCount=" + resultSet.readCount()
+                            + ", prevSeq=" + prevSequence);
                 }
                 readOffsets[currentPartitionIndex] = resultSet.getNextSequenceToReadFrom();
             }
