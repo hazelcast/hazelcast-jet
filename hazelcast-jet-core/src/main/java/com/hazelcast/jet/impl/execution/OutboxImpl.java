@@ -138,8 +138,8 @@ public class OutboxImpl implements Outbox {
         } else {
             numRemainingInBatch = -1;
             unfinishedItem = item;
-            // we defensively copy the array as it can be mutated. Don't worry of the overhead, we
-            // only do it when the outbox is full AND assertions are enabled.
+            // Defensively copy the array as it can be mutated.
+            // We intentionally only do it when assertions are enabled to reduce the overhead.
             //noinspection ConstantConditions,AssertWithSideEffects
             assert (unfinishedItemOrdinals = Arrays.copyOf(ordinals, ordinals.length)) != null;
         }
