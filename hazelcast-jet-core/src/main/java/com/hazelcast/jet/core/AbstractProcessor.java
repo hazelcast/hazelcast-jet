@@ -22,6 +22,7 @@ import com.hazelcast.logging.ILogger;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
@@ -508,7 +509,7 @@ public abstract class AbstractProcessor implements Processor {
     protected final <T, R> FlatMapper<T, R> flatMapper(
             @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper
     ) {
-        return flatMapper(null, mapper);
+        return new FlatMapper<>(null, mapper);
     }
 
     /**
@@ -555,7 +556,8 @@ public abstract class AbstractProcessor implements Processor {
         private final Function<? super T, ? extends Traverser<? extends R>> mapper;
         private Traverser<? extends R> outputTraverser;
 
-        FlatMapper(@Nonnull int[] outputOrdinals, @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper) {
+        private FlatMapper(@Nullable int[] outputOrdinals, @Nonnull Function<? super T, ? extends Traverser<? extends
+                R>> mapper) {
             this.outputOrdinals = outputOrdinals;
             this.mapper = mapper;
         }

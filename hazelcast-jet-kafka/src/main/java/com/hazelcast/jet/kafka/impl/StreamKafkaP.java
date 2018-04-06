@@ -217,7 +217,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
 
     @Override
     public boolean saveToSnapshot() {
-        if (!emitFromTraverser(traverser)) {
+        if (traverser != null && !emitFromTraverser(traverser)) {
             return false;
         }
 
