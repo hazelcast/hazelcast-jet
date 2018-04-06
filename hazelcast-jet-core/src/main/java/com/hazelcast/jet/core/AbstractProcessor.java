@@ -343,7 +343,7 @@ public abstract class AbstractProcessor implements Processor {
      * returned, the call must be retried later with the same (or equal) item.
      */
     @CheckReturnValue
-    protected final boolean tryEmit(int[] ordinals, @Nonnull Object item) {
+    protected final boolean tryEmit(@Nonnull int[] ordinals, @Nonnull Object item) {
         return outbox.offer(ordinals, item);
     }
 
@@ -517,7 +517,7 @@ public abstract class AbstractProcessor implements Processor {
      */
     @Nonnull
     protected final <T, R> FlatMapper<T, R> flatMapper(
-            int[] ordinals, @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper
+            @Nonnull int[] ordinals, @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper
     ) {
         return new FlatMapper<>(ordinals, mapper);
     }
@@ -555,7 +555,7 @@ public abstract class AbstractProcessor implements Processor {
         private final Function<? super T, ? extends Traverser<? extends R>> mapper;
         private Traverser<? extends R> outputTraverser;
 
-        FlatMapper(int[] outputOrdinals, @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper) {
+        FlatMapper(@Nonnull int[] outputOrdinals, @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper) {
             this.outputOrdinals = outputOrdinals;
             this.mapper = mapper;
         }

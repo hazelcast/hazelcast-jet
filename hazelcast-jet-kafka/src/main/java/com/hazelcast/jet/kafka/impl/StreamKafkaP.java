@@ -84,7 +84,6 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
     private Traverser<Entry<BroadcastKey<TopicPartition>, long[]>> snapshotTraverser;
     private int processorIndex;
     private Traverser<Object> traverser;
-    private ConsumerRecord<K, V> lastEmittedItem;
 
     StreamKafkaP(
             @Nonnull Properties properties,
