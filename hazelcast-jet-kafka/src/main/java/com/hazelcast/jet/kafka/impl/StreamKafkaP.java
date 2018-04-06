@@ -83,7 +83,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
     private final Map<String, long[]> offsets = new HashMap<>();
     private Traverser<Entry<BroadcastKey<TopicPartition>, long[]>> snapshotTraverser;
     private int processorIndex;
-    private Traverser<Object> traverser;
+    private Traverser<Object> traverser = Traversers.empty();
 
     StreamKafkaP(
             @Nonnull Properties properties,
@@ -217,7 +217,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
 
     @Override
     public boolean saveToSnapshot() {
-        if (traverser != null && !emitFromTraverser(traverser)) {
+        if (!emitFromTraverser(traverser)) {
             return false;
         }
 

@@ -556,8 +556,8 @@ public abstract class AbstractProcessor implements Processor {
         private final Function<? super T, ? extends Traverser<? extends R>> mapper;
         private Traverser<? extends R> outputTraverser;
 
-        private FlatMapper(@Nullable int[] outputOrdinals, @Nonnull Function<? super T, ? extends Traverser<? extends
-                R>> mapper) {
+        private FlatMapper(@Nullable int[] outputOrdinals,
+                           @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper) {
             this.outputOrdinals = outputOrdinals;
             this.mapper = mapper;
         }
