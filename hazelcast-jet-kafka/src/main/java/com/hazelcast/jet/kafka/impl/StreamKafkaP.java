@@ -21,7 +21,6 @@ import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.WatermarkSourceUtil;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -181,27 +180,22 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
                 traverser = watermarkSourceUtil.handleNoEvent();
             } else {
                 traverser = traverseIterable(records)
-                        .flatMap(r -> {
-                            lastEmittedItem = r;
-                            T projectedRecord = projectionFn.apply(r);
+                        .flatMap(record -> {
+                            offsets.get(record.topic())[record.partition()] = record.offset();
+                            T projectedRecord = projectionFn.apply(record);
                             if (projectedRecord == null) {
                                 return Traversers.empty();
                             }
-                            TopicPartition topicPartition = new TopicPartition(lastEmittedItem.topic(),
-                                    lastEmittedItem.partition());
-                            return watermarkSourceUtil.handleEvent(projectedRecord, currentAssignment.get(topicPartition));
+                            TopicPartition topicPartition = new TopicPartition(record.topic(), record.partition());
+                            return watermarkSourceUtil.handleEvent(
+                                    projectedRecord, currentAssignment.get(topicPartition)
+                            );
                         });
             }
-
             traverser = traverser.onFirstNull(() -> traverser = null);
         }
 
-        emitFromTraverser(traverser,
-                e -> {
-                    if (!(e instanceof Watermark)) {
-                        offsets.get(lastEmittedItem.topic())[lastEmittedItem.partition()] = lastEmittedItem.offset();
-                    }
-                });
+        emitFromTraverser(traverser);
 
         if (!snapshottingEnabled) {
             consumer.commitSync();
@@ -224,6 +218,10 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
 
     @Override
     public boolean saveToSnapshot() {
+        if (!emitFromTraverser(traverser)) {
+            return false;
+        }
+
         if (snapshotTraverser == null) {
             Stream<Entry<BroadcastKey<TopicPartition>, long[]>> snapshotStream =
                     offsets.entrySet().stream()
