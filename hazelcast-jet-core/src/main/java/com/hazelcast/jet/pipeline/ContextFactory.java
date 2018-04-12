@@ -155,4 +155,19 @@ public final class ContextFactory<C> implements Serializable {
     public boolean isSharedLocally() {
         return isSharedLocally;
     }
+
+    public enum Mode {
+
+        /**
+         * The transform function satisfies the conditions for {@linkplain
+         * Processor#isCooperative() cooperative processor}.
+         */
+        COOPERATIVE,
+
+        /**
+         * The transform function returns
+         */
+        ASYNC,
+        NON_COOPERATIVE
+    }
 }

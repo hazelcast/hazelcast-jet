@@ -30,6 +30,7 @@ import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.function.DistributedTriFunction;
 
 import javax.annotation.Nonnull;
+import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.function.DistributedPredicate.alwaysTrue;
 
@@ -110,6 +111,45 @@ public interface GeneralStage<T> extends Stage {
     <C, R> GeneralStage<R> mapUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
+    );
+
+    /**
+     * Attaches to this stage a filtering stage, one which applies the provided
+     * predicate function to each input item to decide whether to pass the item
+     * to the output or to discard it. The predicate function receives another
+     * parameter, the context object which Jet will create using the supplied
+     * {@code contextFactory}.
+     * <p>
+     * <strong>NOTE:</strong> any state you maintain in the context object does
+     * not automatically become a part of a fault-tolerant snapshot. If Jet must
+     * restore from a snapshot, your state will either be lost (if it was just
+     * local state) or not rewound to the checkpoint (if it was stored in some
+     * durable storage).
+     * Attaches to this stage a mapping stage, one which applies the supplied
+     * function to each input item independently and emits the function's result
+     * as the output item. The mapping function receives another parameter, the
+     * context object which Jet will create using the supplied {@code
+     * contextFactory}.
+     * <p>
+     * If the mapping result is {@code null}, it emits nothing. Therefore this
+     * stage can be used to implement filtering semantics as well.
+     * <p>
+     * <strong>NOTE:</strong> any state you maintain in the context object does
+     * not automatically become a part of a fault-tolerant snapshot. If Jet must
+     * restore from a snapshot, your state will either be lost (if it was just
+     * local state) or not rewound to the checkpoint (if it was stored in some
+     * durable storage).
+     *
+     * @param <C> type of context object
+     * @param <R> the result type of the mapping function
+     * @param contextFactory the context factory
+     * @param mapFn a stateless mapping function
+     * @return the newly attached stage
+     */
+    @Nonnull
+    <C, R> GeneralStage<R> mapUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<? extends R>> mapFn
     );
 
     /**
