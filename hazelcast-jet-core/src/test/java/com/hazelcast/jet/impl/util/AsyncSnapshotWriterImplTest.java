@@ -30,6 +30,7 @@ import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl.CustomByteArrayOutputStream;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl.SnapshotDataKey;
 import com.hazelcast.nio.BufferObjectDataInput;
+import com.hazelcast.nio.IOUtil;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.test.HazelcastParallelClassRunner;
@@ -268,7 +269,8 @@ public class AsyncSnapshotWriterImplTest extends JetTestSupport {
         int partitionKey = writer.partitionKey(partitionService.getPartitionId(key));
         SnapshotDataKey mapKey = new SnapshotDataKey(partitionKey, sequence);
         int entryLengthWithTerminator = entryLength + writer.valueTerminator.length;
-        assertTrueEventually(() -> assertEquals(entryLengthWithTerminator, map.get(mapKey).length), 3);
+        assertTrueEventually(() ->
+                assertEquals(entryLengthWithTerminator, IOUtil.decompress(map.get(mapKey)).length), 3);
     }
 
     private int serializedLength(Entry<Data, Data> entry) {

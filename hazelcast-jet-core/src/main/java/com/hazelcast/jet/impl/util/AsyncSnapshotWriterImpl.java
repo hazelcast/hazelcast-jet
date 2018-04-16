@@ -35,6 +35,7 @@ import com.hazelcast.spi.partition.IPartitionService;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteOrder;
@@ -43,6 +44,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 
@@ -58,6 +61,7 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
     private final IPartitionService partitionService;
 
     private final CustomByteArrayOutputStream[] buffers;
+    private final CustomByteArrayOutputStream compressionBuffer = new CustomByteArrayOutputStream(Integer.MAX_VALUE);
     private final int[] partitionKeys;
     private final int[] partitionSequences;
     private final ILogger logger;
@@ -134,20 +138,21 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
         // since it will grow beyond maximum capacity and never shrink again.
         if (length > usableChunkSize) {
             return putAsyncToMap(partitionId, () -> {
-                byte[] data = new byte[serializedByteArrayHeader.length + length + valueTerminator.length];
-                int offset = 0;
-                System.arraycopy(serializedByteArrayHeader, 0, data, offset, serializedByteArrayHeader.length);
-                offset += serializedByteArrayHeader.length - Bits.INT_SIZE_IN_BYTES;
+                // 40% reduction by compression is a defensive estimate - to avoid reallocation
+                ByteArrayOutputStream baos = new ByteArrayOutputStream(length / 5 * 2);
+                baos.write(serializedByteArrayHeader, 0, serializedByteArrayHeader.length);
+                DeflaterOutputStream dos = new DeflaterOutputStream(baos);
+                writeWithoutHeader(entry.getKey(), dos);
+                writeWithoutHeader(entry.getValue(), dos);
+                try {
+                    dos.write(valueTerminator);
+                    dos.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e); // should never happen
+                }
 
-                Bits.writeInt(data, offset, length + valueTerminator.length, useBigEndian);
-                offset += Bits.INT_SIZE_IN_BYTES;
-
-                copyWithoutHeader(entry.getKey(), data, offset);
-                offset += entry.getKey().totalSize() - HeapData.TYPE_OFFSET;
-
-                copyWithoutHeader(entry.getValue(), data, offset);
-                System.arraycopy(valueTerminator, 0, data, length, valueTerminator.length);
-
+                byte[] data = baos.toByteArray();
+                updateSerializedBytesLength(data);
                 return new HeapData(data);
             });
         }
@@ -163,14 +168,13 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
         return true;
     }
 
-    private void copyWithoutHeader(Data src, byte[] dst, int dstOffset) {
+    private void writeWithoutHeader(Data src, OutputStream dst) {
         byte[] bytes = src.toByteArray();
-        System.arraycopy(bytes, HeapData.TYPE_OFFSET, dst, dstOffset, bytes.length - HeapData.TYPE_OFFSET);
-    }
-
-    private void writeWithoutHeader(Data src, CustomByteArrayOutputStream dst) {
-        byte[] bytes = src.toByteArray();
-        dst.write(bytes, HeapData.TYPE_OFFSET, bytes.length - HeapData.TYPE_OFFSET);
+        try {
+            dst.write(bytes, HeapData.TYPE_OFFSET, bytes.length - HeapData.TYPE_OFFSET);
+        } catch (IOException e) {
+            throw new RuntimeException(e); // should never happen
+        }
     }
 
     @CheckReturnValue
@@ -185,28 +189,40 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
 
     private Data getBufferContentsAndClear(CustomByteArrayOutputStream buffer) {
         buffer.write(valueTerminator, 0, valueTerminator.length);
-        // update the array length at the beginning of the buffer
-        int serializedEntriesLength = buffer.size() - serializedByteArrayHeader.length;
-        assert serializedEntriesLength > 0;
-        Bits.writeInt(buffer.getInternalArray(), 2 * Bits.INT_SIZE_IN_BYTES, serializedEntriesLength, useBigEndian);
 
-        try {
-            return new HeapData(buffer.toByteArray());
-        } finally {
-            buffer.reset();
-            buffer.write(serializedByteArrayHeader, 0, serializedByteArrayHeader.length);
+        final byte[] data;
+        // we compress only the buffer payload (including the terminator)
+        compressionBuffer.write(serializedByteArrayHeader, 0, serializedByteArrayHeader.length);
+        Deflater compressor = new Deflater(Deflater.BEST_SPEED);
+        compressor.setInput(buffer.getInternalArray(), serializedByteArrayHeader.length, buffer.size() - serializedByteArrayHeader.length);
+        compressor.finish();
+        byte[] buf = new byte[4096];
+        while (!compressor.finished()) {
+            int count = compressor.deflate(buf);
+            compressionBuffer.write(buf, 0, count);
         }
+
+        data = Arrays.copyOf(compressionBuffer.getInternalArray(), compressionBuffer.size());
+        compressionBuffer.reset();
+
+        updateSerializedBytesLength(data);
+
+        buffer.reset();
+        buffer.write(serializedByteArrayHeader, 0, serializedByteArrayHeader.length);
+        return new HeapData(data);
+    }
+
+    private void updateSerializedBytesLength(byte[] data) {
+        // update the array length at the beginning of the buffer
+        // the length is the third int value in the serialized data
+        Bits.writeInt(data, 2 * Bits.INT_SIZE_IN_BYTES, data.length - serializedByteArrayHeader.length, useBigEndian);
     }
 
     @CheckReturnValue
     private boolean putAsyncToMap(int partitionId, Supplier<Data> dataSupplier) {
-        int prev;
-        do {
-            prev = numConcurrentAsyncOps.get();
-            if (prev >= JetService.MAX_PARALLEL_ASYNC_OPS) {
-                return false;
-            }
-        } while (!numConcurrentAsyncOps.compareAndSet(prev, prev + 1));
+        if (!Util.tryIncrement(numConcurrentAsyncOps, 1, JetService.MAX_PARALLEL_ASYNC_OPS)) {
+            return false;
+        }
 
         // we put a Data instance to the map directly to avoid the serialization of the byte array
         ICompletableFuture<Void> future = ((IMap) currentMap).setAsync(
@@ -228,7 +244,7 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
     }
 
     @Override
-    public boolean hasPendingFlushes() throws Exception {
+    public boolean hasPendingFlushes() {
         int numFlushes = numActiveFlushes.get();
         if (numFlushes == 0) {
             Throwable error = lastError.get();
@@ -312,11 +328,11 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
         }
 
         @Override
-        public void writeData(ObjectDataOutput out) throws IOException {
+        public void writeData(ObjectDataOutput out) {
         }
 
         @Override
-        public void readData(ObjectDataInput in) throws IOException {
+        public void readData(ObjectDataInput in) {
         }
     }
 
@@ -325,6 +341,8 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
      */
     static class CustomByteArrayOutputStream extends OutputStream {
 
+        private static final byte[] EMPTY_BYTE_ARRAY = {};
+
         private byte[] data;
         private int size;
         private int capacityLimit;
@@ -332,8 +350,8 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
         CustomByteArrayOutputStream(int capacityLimit) {
             this.capacityLimit = capacityLimit;
             // initial capacity is 0. It will take several reallocations to reach typical capacity,
-            // but it's also common to remain at 0.
-            data = new byte[0];
+            // but it's also common to remain at 0 - for partitions not assigned to us.
+            data = EMPTY_BYTE_ARRAY;
         }
 
         @Override
@@ -372,11 +390,6 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
         @Nonnull
         byte[] getInternalArray() {
             return data;
-        }
-
-        @Nonnull
-        byte[] toByteArray() {
-            return Arrays.copyOf(data, size);
         }
 
         int size() {

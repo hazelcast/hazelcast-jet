@@ -24,8 +24,10 @@ import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.impl.execution.BroadcastEntry;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl.SnapshotDataValueTerminator;
 import com.hazelcast.nio.BufferObjectDataInput;
+import com.hazelcast.nio.IOUtil;
 
 import javax.annotation.Nonnull;
+import java.io.IOException;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
@@ -37,13 +39,18 @@ public class ExplodeSnapshotP extends AbstractProcessor {
     private InternalSerializationService serializationService;
 
     @Override
-    protected void init(@Nonnull Context context) throws Exception {
+    protected void init(@Nonnull Context context) {
         serializationService =
                 ((HazelcastInstanceImpl) context.jetInstance().getHazelcastInstance()).getSerializationService();
     }
 
     private Traverser<Object> traverser(byte[] data) {
-        BufferObjectDataInput in = serializationService.createObjectDataInput(data);
+        BufferObjectDataInput in;
+        try {
+            in = serializationService.createObjectDataInput(IOUtil.decompress(data));
+        } catch (IOException e) {
+            throw new RuntimeException(e); // should never happen
+        }
 
         return () -> uncheckCall(() -> {
             Object key = in.readObject();
