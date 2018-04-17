@@ -35,6 +35,7 @@ import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
+import org.hamcrest.CoreMatchers;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -56,7 +57,7 @@ import static java.util.stream.Stream.generate;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertThat;
 
 @Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
@@ -233,14 +234,8 @@ public class AsyncSnapshotWriterImplTest extends JetTestSupport {
         assertTrue(writer.flush());
 
         // Then
-        assertTrueEventually(() -> {
-            try {
-                writer.hasPendingAsyncOps();
-                fail("didn't get the expected failure");
-            } catch (Exception e) {
-                assertEquals("Always failing store", e.getMessage());
-            }
-        }, 2);
+        assertTrueEventually(() ->
+                assertThat(String.valueOf(writer.getError()), CoreMatchers.containsString("Always failing store")), 2);
     }
 
     @Test
