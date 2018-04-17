@@ -93,8 +93,8 @@ public class AsyncSnapshotWriterImplTest extends JetTestSupport {
 
     @After
     public void after() {
-        assertTrue(writer.flushRemaining());
-        assertTrueEventually(() -> assertFalse(uncheckCall(() -> writer.hasPendingFlushes())));
+        assertTrue(writer.flush());
+        assertTrueEventually(() -> assertFalse(uncheckCall(() -> writer.hasPendingAsyncOps())));
         assertTrue(writer.isEmpty());
 
         shutdownFactory();
@@ -107,7 +107,7 @@ public class AsyncSnapshotWriterImplTest extends JetTestSupport {
         assertTrue(writer.offer(entry));
         assertTrueAllTheTime(() -> assertTrue(map.isEmpty()), 1);
         assertFalse(writer.isEmpty());
-        assertTrue(writer.flushRemaining());
+        assertTrue(writer.flush());
 
         // Then
         assertTargetMapEntry("k", 0, serializedLength(entry));
@@ -156,7 +156,7 @@ public class AsyncSnapshotWriterImplTest extends JetTestSupport {
         Entry<Data, Data> entry2 = entry(serialize("kk"), serialize("vv"));
         assertTrue(writer.offer(entry1));
         assertTrue(writer.offer(entry2));
-        assertTrue(writer.flushRemaining());
+        assertTrue(writer.flush());
 
         // Then
         assertTargetMapEntry("k", 0, serializedLength(entry1));
@@ -205,20 +205,20 @@ public class AsyncSnapshotWriterImplTest extends JetTestSupport {
         assertTrue(writer.offer(entry2));
 
         // Then
-        assertFalse(writer.flushRemaining());
+        assertFalse(writer.flush());
         assertTrueAllTheTime(() -> assertTrue(map.isEmpty()), 1);
 
         // When - release one parallel op - we should be able to flush one buffer, but not the other
         writer.numConcurrentAsyncOps.decrementAndGet();
         // Then
-        assertFalse(writer.flushRemaining());
+        assertFalse(writer.flush());
         assertTrueEventually(() -> assertEquals(1, map.size()), 1);
         assertTrueAllTheTime(() -> assertEquals(1, map.size()), 1);
 
         // When - release another parallel op - we should be able to flush the remaining buffer
         writer.numConcurrentAsyncOps.decrementAndGet();
         // Then
-        assertTrue(writer.flushRemaining());
+        assertTrue(writer.flush());
 
         assertTargetMapEntry("k", 0, serializedLength(entry1));
         assertTargetMapEntry("kk", 0, serializedLength(entry2));
@@ -230,12 +230,12 @@ public class AsyncSnapshotWriterImplTest extends JetTestSupport {
         writer.setCurrentMap(ALWAYS_FAILING_MAP);
         Entry<Data, Data> entry = entry(serialize("k"), serialize("v"));
         assertTrue(writer.offer(entry));
-        assertTrue(writer.flushRemaining());
+        assertTrue(writer.flush());
 
         // Then
         assertTrueEventually(() -> {
             try {
-                writer.hasPendingFlushes();
+                writer.hasPendingAsyncOps();
                 fail("didn't get the expected failure");
             } catch (Exception e) {
                 assertEquals("Always failing store", e.getMessage());

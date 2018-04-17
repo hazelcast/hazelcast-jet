@@ -27,6 +27,7 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.impl.execution.TaskletExecutionService;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.Packet;
@@ -44,6 +45,7 @@ import com.hazelcast.spi.impl.PacketHandler;
 import java.io.IOException;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 public class JetService
         implements ManagedService, ConfigurableService<JetConfig>, PacketHandler, MembershipAwareService,
@@ -68,8 +70,7 @@ public class JetService
 
     private final AtomicInteger numConcurrentAsyncOps = new AtomicInteger();
 
-    /** At index i there's a key, that we know will go to partition i */
-    private volatile int[] sharedPartitionKeys;
+    private volatile Supplier<int[]> sharedPartitionKeys = Util.memoizeConcurrent(this::computeSharedPartitionKeys);
 
     public JetService(NodeEngine nodeEngine) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
@@ -189,25 +190,25 @@ public class JetService
         liveOperationRegistry.populate(liveOperations);
     }
 
+    /**
+     * Returns an array of pre-generated keys, one for each partition. At index
+     * <em>i</em> there's a key, that we know will go to partition <em>i</em>.
+     */
     public int[] getSharedPartitionKeys() {
-        if (sharedPartitionKeys == null) {
-            synchronized (this) {
-                if (sharedPartitionKeys == null) {
-                    InternalPartitionService partitionService = nodeEngine.getPartitionService();
-                    int[] keys = new int[partitionService.getPartitionCount()];
-                    int remainingCount = partitionService.getPartitionCount();
-                    for (int i = 1; remainingCount > 0; i++) {
-                        int partitionId = partitionService.getPartitionId(i);
-                        if (keys[partitionId] == 0) {
-                            keys[partitionId] = i;
-                            remainingCount--;
-                        }
-                    }
-                    sharedPartitionKeys = keys;
-                }
+        return sharedPartitionKeys.get();
+    }
+
+    private int[] computeSharedPartitionKeys() {
+        InternalPartitionService partitionService = nodeEngine.getPartitionService();
+        int[] keys = new int[partitionService.getPartitionCount()];
+        int remainingCount = partitionService.getPartitionCount();
+        for (int i = 1; remainingCount > 0; i++) {
+            int partitionId = partitionService.getPartitionId(i);
+            if (keys[partitionId] == 0) {
+                keys[partitionId] = i;
+                remainingCount--;
             }
         }
-
-        return sharedPartitionKeys;
+        return keys;
     }
 }

@@ -47,11 +47,11 @@ import java.util.function.Supplier;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 
-import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-
 public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
 
     private static final int MAX_CHUNK_SIZE = 128 * 1024;
+    private static final int COMPRESSION_BUFFER_SIZE = 4096;
+    private static final float COMPRESSION_FACTOR_LOWER_BOUND = 0.4f;
 
     final int usableChunkSize; // this includes the serialization header for byte[], but not the terminator
     final byte[] serializedByteArrayHeader = new byte[3 * Bits.INT_SIZE_IN_BYTES];
@@ -139,7 +139,7 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
         if (length > usableChunkSize) {
             return putAsyncToMap(partitionId, () -> {
                 // 40% reduction by compression is a defensive estimate - to avoid reallocation
-                ByteArrayOutputStream baos = new ByteArrayOutputStream(length / 5 * 2);
+                ByteArrayOutputStream baos = new ByteArrayOutputStream((int) (length * COMPRESSION_FACTOR_LOWER_BOUND));
                 baos.write(serializedByteArrayHeader, 0, serializedByteArrayHeader.length);
                 DeflaterOutputStream dos = new DeflaterOutputStream(baos);
                 writeWithoutHeader(entry.getKey(), dos);
@@ -194,9 +194,10 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
         // we compress only the buffer payload (including the terminator)
         compressionBuffer.write(serializedByteArrayHeader, 0, serializedByteArrayHeader.length);
         Deflater compressor = new Deflater(Deflater.BEST_SPEED);
-        compressor.setInput(buffer.getInternalArray(), serializedByteArrayHeader.length, buffer.size() - serializedByteArrayHeader.length);
+        compressor.setInput(buffer.getInternalArray(), serializedByteArrayHeader.length,
+                buffer.size() - serializedByteArrayHeader.length);
         compressor.finish();
-        byte[] buf = new byte[4096];
+        byte[] buf = new byte[COMPRESSION_BUFFER_SIZE];
         while (!compressor.finished()) {
             int count = compressor.deflate(buf);
             compressionBuffer.write(buf, 0, count);
@@ -234,7 +235,7 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
 
     @Override
     @CheckReturnValue
-    public boolean flushRemaining() {
+    public boolean flush() {
         for (int i = 0; i < buffers.length; i++) {
             if (!flush(i)) {
                 return false;
@@ -244,16 +245,13 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
     }
 
     @Override
-    public boolean hasPendingFlushes() {
-        int numFlushes = numActiveFlushes.get();
-        if (numFlushes == 0) {
-            Throwable error = lastError.get();
-            if (error != null) {
-                lastError.set(null);
-                throw sneakyThrow(error);
-            }
-        }
-        return numFlushes > 0;
+    public boolean hasPendingAsyncOps() {
+        return numActiveFlushes.get() > 0;
+    }
+
+    @Override
+    public Throwable getError() {
+        return lastError.getAndSet(null);
     }
 
     @Override

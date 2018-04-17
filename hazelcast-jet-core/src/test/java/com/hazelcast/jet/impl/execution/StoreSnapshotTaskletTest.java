@@ -37,6 +37,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
+import static com.hazelcast.jet.impl.util.ProgressState.DONE;
 import static com.hazelcast.jet.impl.util.ProgressState.MADE_PROGRESS;
 import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static java.util.Arrays.asList;
@@ -82,8 +83,7 @@ public class StoreSnapshotTaskletTest extends JetTestSupport {
         init(singletonList(DONE_ITEM));
 
         // Then
-        assertEquals(MADE_PROGRESS, sst.call());
-        assertTrue(sst.call().isDone());
+        assertEquals(DONE, sst.call());
     }
 
     @Test

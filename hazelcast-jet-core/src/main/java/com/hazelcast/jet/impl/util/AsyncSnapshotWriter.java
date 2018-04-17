@@ -28,13 +28,16 @@ public interface AsyncSnapshotWriter {
     boolean offer(Entry<? extends Data, ? extends Data> entry);
 
     @CheckReturnValue
-    boolean flushRemaining();
+    boolean flush();
+
+    boolean hasPendingAsyncOps();
 
     /**
-     * @throws Throwable Any error occurred during writing to underlying map.
-     * Error is reported only once, next call will say whether the pending flushes are done.
+     * @return any error occurred during writing to underlying map. Error is
+     * reported only once, next call will return {@code null} unless another
+     * error happens.
      */
-    boolean hasPendingFlushes() throws Throwable;
+    Throwable getError();
 
     boolean isEmpty();
 }

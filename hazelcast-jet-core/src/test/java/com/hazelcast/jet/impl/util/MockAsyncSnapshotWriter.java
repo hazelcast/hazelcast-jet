@@ -47,7 +47,7 @@ public class MockAsyncSnapshotWriter implements AsyncSnapshotWriter {
     }
 
     @Override
-    public boolean flushRemaining() {
+    public boolean flush() {
         if (ableToFlushRemaining) {
             hasPendingFlushes = !isFlushed;
             isFlushed = true;
@@ -56,15 +56,17 @@ public class MockAsyncSnapshotWriter implements AsyncSnapshotWriter {
     }
 
     @Override
-    public boolean hasPendingFlushes() throws Throwable {
-        if (failure != null) {
-            try {
-                throw failure;
-            } finally {
-                failure = null;
-            }
-        }
+    public boolean hasPendingAsyncOps() {
         return hasPendingFlushes;
+    }
+
+    @Override
+    public Throwable getError() {
+        try {
+            return failure;
+        } finally {
+            failure = null;
+        }
     }
 
     @Override

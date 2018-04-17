@@ -29,7 +29,7 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.impl.execution.StoreSnapshotTasklet.State.DONE;
 import static com.hazelcast.jet.impl.execution.StoreSnapshotTasklet.State.DRAIN;
-import static com.hazelcast.jet.impl.execution.StoreSnapshotTasklet.State.FLUSH_REMAINING;
+import static com.hazelcast.jet.impl.execution.StoreSnapshotTasklet.State.FLUSH;
 import static com.hazelcast.jet.impl.execution.StoreSnapshotTasklet.State.REACHED_BARRIER;
 
 public class StoreSnapshotTasklet implements Tasklet {
@@ -47,7 +47,6 @@ public class StoreSnapshotTasklet implements Tasklet {
     private final ProgressTracker progTracker = new ProgressTracker();
     private State state = DRAIN;
     private boolean hasReachedBarrier;
-    private boolean inputIsDone;
     private Entry<Data, Data> pendingEntry;
 
     public StoreSnapshotTasklet(
@@ -105,49 +104,44 @@ public class StoreSnapshotTasklet implements Tasklet {
                     return true;
                 });
                 if (result.isDone()) {
-                    state = REACHED_BARRIER;
                     assert ssWriter.isEmpty() : "input is done, but we had some entries and not the barrier";
-                    inputIsDone = true;
+                    snapshotContext.taskletDone(pendingSnapshotId - 1, isHigherPrioritySource);
+                    state = DONE;
+                    progTracker.reset();
                 }
                 progTracker.madeProgress(result.isMadeProgress());
                 if (hasReachedBarrier) {
-                    state = FLUSH_REMAINING;
+                    state = FLUSH;
                     stateMachineStep();
                 }
                 return;
 
-            case FLUSH_REMAINING:
+            case FLUSH:
                 progTracker.notDone();
-                if (ssWriter.flushRemaining()) {
+                if (ssWriter.flush()) {
                     progTracker.madeProgress();
                     state = REACHED_BARRIER;
                 }
                 return;
 
             case REACHED_BARRIER:
-                boolean success = false;
-                try {
-                    success = ssWriter.hasPendingFlushes();
-                } catch (Throwable e) {
-                    logger.severe("Error writing to snapshot map '" + currMapName() + "'", e);
-                    snapshotContext.reportError(e);
-                }
-                if (success) {
+                if (ssWriter.hasPendingAsyncOps()) {
                     progTracker.notDone();
-                } else {
-                    progTracker.madeProgress();
-                    snapshotContext.snapshotDoneForTasklet();
-                    pendingSnapshotId++;
-                    resetCurrentMap();
-                    hasReachedBarrier = false;
-                    if (inputIsDone) {
-                        state = DONE;
-                        snapshotContext.taskletDone(pendingSnapshotId - 1, isHigherPrioritySource);
-                    } else {
-                        state = DRAIN;
-                        progTracker.notDone();
-                    }
+                    return;
                 }
+                // check for writing error
+                Throwable error = ssWriter.getError();
+                if (error != null) {
+                    logger.severe("Error writing to snapshot map '" + currMapName() + "'", error);
+                    snapshotContext.reportError(error);
+                }
+                progTracker.madeProgress();
+                snapshotContext.snapshotDoneForTasklet();
+                pendingSnapshotId++;
+                resetCurrentMap();
+                hasReachedBarrier = false;
+                state = DRAIN;
+                progTracker.notDone();
                 return;
 
             default:
@@ -173,7 +167,7 @@ public class StoreSnapshotTasklet implements Tasklet {
         /** Draining the queue, flushing as necessary. */
         DRAIN,
         /** Wait until we are able to flush remaining buffers. */
-        FLUSH_REMAINING,
+        FLUSH,
         /** Wait for flushes to complete, then go to {@link #DRAIN} again. */
         REACHED_BARRIER,
         /** Input is done, terminal state. */

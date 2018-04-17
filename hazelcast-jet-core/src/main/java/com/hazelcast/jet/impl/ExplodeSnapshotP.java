@@ -27,7 +27,6 @@ import com.hazelcast.nio.BufferObjectDataInput;
 import com.hazelcast.nio.IOUtil;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
@@ -46,11 +45,8 @@ public class ExplodeSnapshotP extends AbstractProcessor {
 
     private Traverser<Object> traverser(byte[] data) {
         BufferObjectDataInput in;
-        try {
-            in = serializationService.createObjectDataInput(IOUtil.decompress(data));
-        } catch (IOException e) {
-            throw new RuntimeException(e); // should never happen
-        }
+        byte[] decompressed = uncheckCall(() -> IOUtil.decompress(data));
+        in = serializationService.createObjectDataInput(decompressed);
 
         return () -> uncheckCall(() -> {
             Object key = in.readObject();
