@@ -47,6 +47,8 @@ import java.util.function.Supplier;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
+
 public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
 
     private static final int MAX_CHUNK_SIZE = 128 * 1024;
@@ -70,6 +72,13 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
     private IMap<SnapshotDataKey, byte[]> currentMap;
     private final AtomicReference<Throwable> lastError = new AtomicReference<>();
     private final AtomicInteger numActiveFlushes = new AtomicInteger();
+
+    // stats
+    private long totalKeys;
+    private long totalChunks;
+    private long totalPayloadBytes;
+    private long totalCompressedPayloadBytes;
+    private long totalCompressionNanos;
 
     private final ExecutionCallback<Void> callback = new ExecutionCallback<Void>() {
         @Override
@@ -125,7 +134,17 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
     @Override
     public void setCurrentMap(String mapName) {
         assert isEmpty() : "writer not empty";
+
+        if (currentMap != null) {
+            logger.info(String.format("Stats for %s: keys=%,d, chunks=%,d, bytes=%,d, compressedBytes=%,d, " +
+                            "compressionTime=%,d ms", currentMap.getName(), totalKeys, totalChunks, totalPayloadBytes,
+                    totalCompressedPayloadBytes, NANOSECONDS.toMillis(totalCompressionNanos)));
+        }
+
         currentMap = nodeEngine.getHazelcastInstance().getMap(mapName);
+
+        // reset stats
+        totalCompressedPayloadBytes = totalKeys = totalChunks = totalPayloadBytes = totalCompressionNanos = 0;
     }
 
     @Override
@@ -141,7 +160,8 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
                 // 40% reduction by compression is a defensive estimate - to avoid reallocation
                 ByteArrayOutputStream baos = new ByteArrayOutputStream((int) (length * COMPRESSION_FACTOR_LOWER_BOUND));
                 baos.write(serializedByteArrayHeader, 0, serializedByteArrayHeader.length);
-                DeflaterOutputStream dos = new DeflaterOutputStream(baos);
+                totalCompressionNanos -= System.nanoTime();
+                DeflaterOutputStream dos = new DeflaterOutputStream(baos, new Deflater(Deflater.BEST_SPEED));
                 writeWithoutHeader(entry.getKey(), dos);
                 writeWithoutHeader(entry.getValue(), dos);
                 try {
@@ -150,9 +170,14 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
                 } catch (IOException e) {
                     throw new RuntimeException(e); // should never happen
                 }
+                totalCompressionNanos += System.nanoTime();
 
                 byte[] data = baos.toByteArray();
                 updateSerializedBytesLength(data);
+                totalKeys++;
+                totalChunks++;
+                totalPayloadBytes += length;
+                totalCompressedPayloadBytes += data.length;
                 return new HeapData(data);
             });
         }
@@ -165,6 +190,7 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
         // append to buffer
         writeWithoutHeader(entry.getKey(), buffers[partitionId]);
         writeWithoutHeader(entry.getValue(), buffers[partitionId]);
+        totalKeys++;
         return true;
     }
 
@@ -198,15 +224,20 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
                 buffer.size() - serializedByteArrayHeader.length);
         compressor.finish();
         byte[] buf = new byte[COMPRESSION_BUFFER_SIZE];
+        totalCompressionNanos -= System.nanoTime();
         while (!compressor.finished()) {
             int count = compressor.deflate(buf);
             compressionBuffer.write(buf, 0, count);
         }
+        totalCompressionNanos += System.nanoTime();
 
         data = Arrays.copyOf(compressionBuffer.getInternalArray(), compressionBuffer.size());
         compressionBuffer.reset();
 
         updateSerializedBytesLength(data);
+        totalPayloadBytes += buffer.size;
+        totalChunks++;
+        totalCompressedPayloadBytes += data.length;
 
         buffer.reset();
         buffer.write(serializedByteArrayHeader, 0, serializedByteArrayHeader.length);
@@ -233,6 +264,12 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
         return true;
     }
 
+    /**
+     * Flush all partitions.
+     *
+     * @return {@code true} on success, {@code false} if we weren't able to
+     * flush some partitions due to the limit on number of parallel async ops.
+     */
     @Override
     @CheckReturnValue
     public boolean flush() {
