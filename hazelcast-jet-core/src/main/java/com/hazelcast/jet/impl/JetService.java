@@ -64,13 +64,12 @@ public class JetService
     private Networking networking;
     private TaskletExecutionService taskletExecutionService;
     private JobRepository jobRepository;
-    private SnapshotRepository snapshotRepository;
     private JobCoordinationService jobCoordinationService;
     private JobExecutionService jobExecutionService;
 
     private final AtomicInteger numConcurrentAsyncOps = new AtomicInteger();
 
-    private volatile Supplier<int[]> sharedPartitionKeys = Util.memoizeConcurrent(this::computeSharedPartitionKeys);
+    private final Supplier<int[]> sharedPartitionKeys = Util.memoizeConcurrent(this::computeSharedPartitionKeys);
 
     public JetService(NodeEngine nodeEngine) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
@@ -96,7 +95,7 @@ public class JetService
         taskletExecutionService = new TaskletExecutionService(nodeEngine.getHazelcastInstance(),
                 config.getInstanceConfig().getCooperativeThreadCount());
 
-        snapshotRepository = new SnapshotRepository(jetInstance);
+        SnapshotRepository snapshotRepository = new SnapshotRepository(jetInstance);
         jobRepository = new JobRepository(jetInstance, snapshotRepository);
 
         jobExecutionService = new JobExecutionService(nodeEngine, taskletExecutionService);
