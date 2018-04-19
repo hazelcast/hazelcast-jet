@@ -56,8 +56,11 @@ public interface Job {
     }
 
     /**
-     * Returns the time (as obtained from {@code System.currentTimeMillis()}
-     * when the job was submitted to the cluster.
+     * Returns the time when the job was submitted to the cluster.
+     * <p>
+     * The time is assigned by reading {@code System.currentTimeMillis()} of
+     * the master member that executes the job for the first time. It doesn't
+     * change on restart.
      */
     long getSubmissionTime();
 

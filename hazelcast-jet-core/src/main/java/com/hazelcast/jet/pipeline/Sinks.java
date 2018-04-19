@@ -588,7 +588,7 @@ public final class Sinks {
      *     {@code destroyFn} destroys the writer. This component is optional.
      * </li></ol>
      * The returned sink will be non-cooperative and will have preferred local
-     * parallelism of 1. It also cannot participate in state snapshot saving
+     * parallelism of 2. It also cannot participate in state snapshot saving
      * (fault-tolerance): it will behave as an at-least-once sink.
      *
      * @param <W> type of the writer object

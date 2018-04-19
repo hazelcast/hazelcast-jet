@@ -18,6 +18,7 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedConsumer;
@@ -28,7 +29,6 @@ import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 
 /**
@@ -44,6 +44,9 @@ public final class SinkBuilder<W, T> {
     private DistributedConsumer<? super W> flushFn = noopConsumer();
     private DistributedConsumer<? super W> destroyFn = noopConsumer();
 
+    /**
+     * Use {@link Sinks#builder(DistributedFunction)}.
+     */
     SinkBuilder(@Nonnull DistributedFunction<? super JetInstance, ? extends W> createFn) {
         this.createFn = createFn;
     }
@@ -112,6 +115,6 @@ public final class SinkBuilder<W, T> {
                 flushFn,
                 destroyFn
         );
-        return new SinkImpl<>("custom-sink", preferLocalParallelismOne(supplier));
+        return new SinkImpl<>("custom-sink", ProcessorMetaSupplier.of(supplier, 2));
     }
 }
