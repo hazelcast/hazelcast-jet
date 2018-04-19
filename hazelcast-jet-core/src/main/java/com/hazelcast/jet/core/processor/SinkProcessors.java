@@ -262,36 +262,32 @@ public final class SinkProcessors {
     }
 
     /**
-     * Returns a supplier of processors for a vertex that drains all the items
-     * from its inbox to an intermediate buffer and then flushes the buffer.
-     * This is a useful building block to implement sinks with explicit control
-     * over buffering and flushing.
-     *
-     * @param <B>           type of buffer
-     * @param <T>           type of received item
-     * @param newBufferFn   supplies the buffer. The argument to this function
-     *                      is the context for the given processor.
-     * @param addToBufferFn adds an item to the buffer
-     * @param flushBufferFn flushes the buffer
+     * Shortcut for {@link #writeBufferedP(DistributedFunction,
+     * DistributedBiConsumer, DistributedConsumer, DistributedConsumer)} with
+     * no-op {@code destroyFn}.
      */
     @Nonnull
     public static <B, T> DistributedSupplier<Processor> writeBufferedP(
-            @Nonnull DistributedFunction<Context, B> newBufferFn,
-            @Nonnull DistributedBiConsumer<B, T> addToBufferFn,
-            @Nonnull DistributedConsumer<B> flushBufferFn
+            @Nonnull DistributedFunction<Context, B> createFn,
+            @Nonnull DistributedBiConsumer<B, T> onReceiveFn,
+            @Nonnull DistributedConsumer<B> flushFn
     ) {
-        return writeBufferedP(newBufferFn, addToBufferFn, flushBufferFn, noopConsumer());
+        return writeBufferedP(createFn, onReceiveFn, flushFn, noopConsumer());
     }
 
     /**
      * Returns a supplier of processors for a vertex that drains all the items
-     * from the inbox to an internal buffered writer object. As each processor
-     * completes, it will dispose of its writer by calling {@code destroyFn}.
+     * from the inbox to an internal writer object and then does a flush. As
+     * each processor completes, it will dispose off its writer by calling
+     * {@code destroyFn}.
      * <p>
      * This is a useful building block to implement sinks with explicit control
      * over resource management, buffering and flushing.
+     * <p>
+     * The returned processor will have preferred local parallelism of 1. It
+     * will not participate in state saving.
      *
-     * @param createFn     supplies the buffer. The argument to this function
+     * @param createFn     supplies the writer. The argument to this function
      *                     is the context for the given processor.
      * @param onReceiveFn function that Jet calls upon receiving each item for the sink
      * @param flushFn     function that flushes the writer

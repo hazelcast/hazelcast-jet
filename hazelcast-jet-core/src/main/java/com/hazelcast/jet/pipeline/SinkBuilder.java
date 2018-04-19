@@ -32,23 +32,7 @@ import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelis
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 
 /**
- * Offers a step-by-step fluent API to build a custom {@link Sink} for the
- * Pipeline API. It allows you to keep a single-threaded, stateful writer
- * object in each instance of a Jet worker dedicated to driving the sink.
- * Its primary intended purpose is to serve as the holder of references to
- * external resources and optional buffers. These are the callback
- * functions you can provide to implement the sink's behavior:
- * <ol><li>
- *     {@code createFn} creates the writer. Gets the local Jet instance as
- *     argument. This component is required.
- * </li><li>
- *     {@code onReceiveFn} gets notified of each item the sink receives and
- *     (typically) passes it to the writer. This component is required.
- * </li><li>
- *     {@code flushFn} flushes the writer. This component is optional.
- * </li><li>
- *     {@code destroyFn} destroys the writer. This component is optional.
- * </li></ol>
+ * See {@link Sinks#builder(DistributedFunction)}.
  *
  * @param <W> type of the writer object
  * @param <T> type of the items the sink will accept

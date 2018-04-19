@@ -565,11 +565,34 @@ public final class Sinks {
     }
 
     /**
-     * Returns a builder object that offers a step-by-step fluent API to build a
-     * custom sink. The argument is a factory function for the writer object the
-     * sink will delegate to for all operations.
+     * Returns a builder object that offers a step-by-step fluent API to build
+     * a custom {@link Sink} for the Pipeline API. It allows you to keep a
+     * single-threaded, stateful writer object in each instance of a Jet worker
+     * dedicated to driving the sink. Its primary intended purpose is to serve
+     * as the holder of references to external resources and optional buffers.
+     * These are the callback functions you can provide to implement the sink's
+     * behavior:
+     * <ol><li>
+     *     {@code createFn} creates the writer. Gets the local Jet instance as
+     *     argument. It will be called once for each worker thread. This
+     *     component is required.
+     * </li><li>
+     *     {@code onReceiveFn} gets notified of each item the sink receives and
+     *     (typically) passes it to the writer. This component is required.
+     * </li><li>
+     *     {@code flushFn} flushes the writer. This component is optional.
+     * </li><li>
+     *     {@code destroyFn} destroys the writer. This component is optional.
+     * </li></ol>
      *
-     * @param createFn function that creates the internal writer object
+     * <p>
+     * The functions have to be stateless, they should keep all the state in
+     * the writer object.
+     * <p>
+     * The returned sink will be non-cooperative and will have preferred local
+     * parallelism of 1. It also cannot participate in state snapshot saving
+     * (fault-tolerance): it will behave as an at-least-once sink.
+     *
      * @param <W> type of the writer object
      * @param <T> type of the items the sink will accept
      */
