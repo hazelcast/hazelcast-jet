@@ -570,6 +570,9 @@ public final class Sinks {
      * single-threaded, stateful writer object in each instance of a Jet worker
      * dedicated to driving the sink. Its primary intended purpose is to serve
      * as the holder of references to external resources and optional buffers.
+     * Keep in mind that only the writer object may be stateful; the functions
+     * you provide must hold no mutable state of their own.
+     * <p>
      * These are the callback functions you can provide to implement the sink's
      * behavior:
      * <ol><li>
@@ -584,11 +587,6 @@ public final class Sinks {
      * </li><li>
      *     {@code destroyFn} destroys the writer. This component is optional.
      * </li></ol>
-     *
-     * <p>
-     * The functions have to be stateless, they should keep all the state in
-     * the writer object.
-     * <p>
      * The returned sink will be non-cooperative and will have preferred local
      * parallelism of 1. It also cannot participate in state snapshot saving
      * (fault-tolerance): it will behave as an at-least-once sink.

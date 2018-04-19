@@ -56,7 +56,8 @@ public interface Job {
     }
 
     /**
-     * Returns the time when the job was submitted to the cluster.
+     * Returns the time (as obtained from {@code System.currentTimeMillis()}
+     * when the job was submitted to the cluster.
      */
     long getSubmissionTime();
 

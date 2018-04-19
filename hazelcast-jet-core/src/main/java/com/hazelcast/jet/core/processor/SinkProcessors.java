@@ -253,8 +253,7 @@ public final class SinkProcessors {
     }
 
     /**
-     * Returns a supplier of processors for
-     * {@link Sinks#files(String)}.
+     * Returns a supplier of processors for {@link Sinks#files(String)}.
      */
     @Nonnull
     public static ProcessorMetaSupplier writeFileP(@Nonnull String directoryName) {
@@ -264,13 +263,13 @@ public final class SinkProcessors {
     /**
      * Shortcut for {@link #writeBufferedP(DistributedFunction,
      * DistributedBiConsumer, DistributedConsumer, DistributedConsumer)} with
-     * no-op {@code destroyFn}.
+     * a no-op {@code destroyFn}.
      */
     @Nonnull
-    public static <B, T> DistributedSupplier<Processor> writeBufferedP(
-            @Nonnull DistributedFunction<Context, B> createFn,
-            @Nonnull DistributedBiConsumer<B, T> onReceiveFn,
-            @Nonnull DistributedConsumer<B> flushFn
+    public static <W, T> DistributedSupplier<Processor> writeBufferedP(
+            @Nonnull DistributedFunction<Context, W> createFn,
+            @Nonnull DistributedBiConsumer<W, T> onReceiveFn,
+            @Nonnull DistributedConsumer<W> flushFn
     ) {
         return writeBufferedP(createFn, onReceiveFn, flushFn, noopConsumer());
     }
@@ -278,14 +277,14 @@ public final class SinkProcessors {
     /**
      * Returns a supplier of processors for a vertex that drains all the items
      * from the inbox to an internal writer object and then does a flush. As
-     * each processor completes, it will dispose off its writer by calling
-     * {@code destroyFn}.
+     * each processor completes, it disposes of its writer by calling {@code
+     * destroyFn}.
      * <p>
      * This is a useful building block to implement sinks with explicit control
      * over resource management, buffering and flushing.
      * <p>
      * The returned processor will have preferred local parallelism of 1. It
-     * will not participate in state saving.
+     * will not participate in state saving for fault tolerance.
      *
      * @param createFn     supplies the writer. The argument to this function
      *                     is the context for the given processor.
