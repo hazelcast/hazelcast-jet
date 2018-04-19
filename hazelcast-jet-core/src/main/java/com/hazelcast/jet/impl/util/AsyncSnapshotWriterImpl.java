@@ -40,6 +40,7 @@ import java.io.OutputStream;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -310,6 +311,24 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
         public void readData(ObjectDataInput in) throws IOException {
             partitionKey = in.readInt();
             sequence = in.readInt();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            SnapshotDataKey that = (SnapshotDataKey) o;
+            return partitionKey == that.partitionKey &&
+                    sequence == that.sequence;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(partitionKey, sequence);
         }
     }
 

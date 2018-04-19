@@ -43,12 +43,12 @@ public class ExplodeSnapshotP extends AbstractProcessor {
     }
 
     private Traverser<Object> traverser(byte[] data) {
-        BufferObjectDataInput in;
-        in = serializationService.createObjectDataInput(data);
+        BufferObjectDataInput in = serializationService.createObjectDataInput(data);
 
         return () -> uncheckCall(() -> {
             Object key = in.readObject();
             if (key == SnapshotDataValueTerminator.INSTANCE) {
+                in.close();
                 return null;
             }
             Object value = in.readObject();
