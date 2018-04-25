@@ -453,6 +453,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
 
         @Override
         public void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
+            getLogger().info("Asked to restore key=" + key + ", value=" + value);
             BroadcastKey<Integer> bKey = (BroadcastKey<Integer>) key;
             int partitionIndex = arrayIndexOf(bKey.key(), assignedPtions);
             // restore offset, if assigned to us. Ignore it otherwise
