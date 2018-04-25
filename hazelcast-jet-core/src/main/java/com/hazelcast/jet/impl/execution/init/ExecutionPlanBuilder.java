@@ -86,7 +86,7 @@ public final class ExecutionPlanBuilder {
             final ILogger logger = nodeEngine.getLogger(String.format("%s.%s#ProcessorMetaSupplier",
                     metaSupplier.getClass().getName(), vertex.getName()));
             metaSupplier.init(new MetaSupplierCtx(instance, logger, vertex.getName(),
-                    localParallelism, totalParallelism));
+                    localParallelism, totalParallelism, clusterSize));
 
             Function<Address, ProcessorSupplier> procSupplierFn = metaSupplier.get(addresses);
             for (Entry<MemberInfo, ExecutionPlan> e : plans.entrySet()) {

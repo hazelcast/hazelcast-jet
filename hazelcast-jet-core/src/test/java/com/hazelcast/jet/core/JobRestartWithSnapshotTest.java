@@ -349,9 +349,10 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
     }
 
     private void waitForFirstSnapshot(IMapJet<Long, Object> snapshotsMap, int timeout) {
-        assertTrueEventually(() -> assertTrue("No snapshot produced", snapshotsMap.entrySet().stream()
-                                                                                  .anyMatch(en -> en.getValue() instanceof SnapshotRecord
-                                                                                          && ((SnapshotRecord) en.getValue()).isSuccessful())), timeout);
+        assertTrueEventually(() -> assertTrue("No snapshot produced",
+                snapshotsMap.entrySet().stream()
+                            .anyMatch(en -> en.getValue() instanceof SnapshotRecord
+                                    && ((SnapshotRecord) en.getValue()).isSuccessful())), timeout);
     }
 
     private void waitForNextSnapshot(IMapJet<Long, Object> snapshotsMap, int timeoutSeconds) {
@@ -446,8 +447,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
             if (traverser == null) {
                 traverser = Traversers
                         .traverseStream(IntStream.range(0, ITEMS_TO_SAVE)
-                                                 .boxed()
-                                                 .map(i -> entry(broadcastKey(i), i)));
+                                                 .mapToObj(i -> entry(broadcastKey(i), i)));
             }
             return emitFromTraverserToSnapshot(traverser);
         }

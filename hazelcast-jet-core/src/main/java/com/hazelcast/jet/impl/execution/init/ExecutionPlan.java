@@ -160,7 +160,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                         vertex.name(),
                         globalProcessorIndex,
                         jobConfig.getProcessingGuarantee(),
-                        vertex.localParallelism(), memberCount * vertex.localParallelism()
+                        vertex.localParallelism(),
+                        memberCount * vertex.localParallelism(),
+                        memberIndex,
+                        memberCount
                 );
 
                  String probePrefix = String.format("jet.job.%s.%s#%d", idToString(executionId), vertex.name(),
@@ -270,7 +273,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                     logger,
                     vertex.name(),
                     vertex.localParallelism(),
-                    vertex.localParallelism() * memberCount
+                    vertex.localParallelism() * memberCount,
+                    memberIndex,
+                    memberCount
             ));
         }
     }
