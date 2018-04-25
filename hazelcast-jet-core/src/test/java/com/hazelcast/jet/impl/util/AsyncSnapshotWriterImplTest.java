@@ -85,7 +85,7 @@ public class AsyncSnapshotWriterImplTest extends JetTestSupport {
         NodeEngineImpl nodeEngine = ((HazelcastInstanceImpl) instance.getHazelcastInstance()).node.nodeEngine;
         serializationService = ((HazelcastInstanceImpl) instance.getHazelcastInstance()).getSerializationService();
         partitionService = nodeEngine.getPartitionService();
-        writer = new AsyncSnapshotWriterImpl(128, nodeEngine);
+        writer = new AsyncSnapshotWriterImpl(128, nodeEngine, 0, 1);
         writer.setCurrentMap("map1");
         map = instance.getHazelcastInstance().getMap("map1");
         assertTrue(writer.usableChunkSize > 0);
