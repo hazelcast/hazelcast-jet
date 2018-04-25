@@ -160,7 +160,7 @@ public class AsyncSnapshotWriterImplTest extends JetTestSupport {
 
         // Then
         assertTargetMapEntry("k", 0, serializedLength(entry1));
-        assertTargetMapEntry("kk", 0, serializedLength(entry2));
+        assertTargetMapEntry("kk", 1, serializedLength(entry2));
     }
 
     @Test
@@ -221,7 +221,7 @@ public class AsyncSnapshotWriterImplTest extends JetTestSupport {
         assertTrue(writer.flush());
 
         assertTargetMapEntry("k", 0, serializedLength(entry1));
-        assertTargetMapEntry("kk", 0, serializedLength(entry2));
+        assertTargetMapEntry("kk", 1, serializedLength(entry2));
     }
 
     @Test
