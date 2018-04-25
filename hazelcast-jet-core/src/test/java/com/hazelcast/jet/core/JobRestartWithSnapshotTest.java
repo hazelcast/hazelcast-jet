@@ -41,6 +41,7 @@ import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.Address;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import com.hazelcast.test.annotation.Repeat;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -107,6 +108,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
     }
 
     @Test
+    @Repeat(30)
     public void when_nodeDown_then_jobRestartsFromSnapshot_singleStage() throws Exception {
         when_nodeDown_then_jobRestartsFromSnapshot(false);
     }
@@ -149,7 +151,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         IMap<List<Long>, Long> result = instance1.getMap("result");
         result.clear();
 
-        SequencesInPartitionsMetaSupplier sup = new SequencesInPartitionsMetaSupplier(3, 180);
+        SequencesInPartitionsMetaSupplier sup = new SequencesInPartitionsMetaSupplier(3, 140);
         Vertex generator = dag.newVertex("generator", throttle(sup, 30))
                               .localParallelism(1);
         Vertex insWm = dag.newVertex("insWm", insertWatermarksP(wmGenParams(

@@ -26,6 +26,7 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.query.Predicate;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map.Entry;
 
@@ -201,9 +202,22 @@ public class SnapshotRepository {
     private void deleteSnapshotData(SnapshotRecord record) {
         for (String vertexName : record.vertices()) {
             String mapName = snapshotDataMapName(record.jobId(), record.snapshotId(), vertexName);
-            instance.getMap(mapName).destroy();
+            IMapJet<Object, byte[]> map = instance.getMap(mapName);
+            dumpMap(map);
+            map.destroy();
             logFine(logger, "Deleted snapshot data for snapshot %d for job %s and vertex '%s'",
                     record.snapshotId(), idToString(record.jobId()), vertexName);
         }
+    }
+
+    private void dumpMap(IMapJet<Object,byte[]> map) {
+        if (!map.getName().contains("generator")) {
+            return;
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("Dumping map " + map.getName() + ", size=" + map.size() + ", entries=\n");
+        map.forEach((k, v) -> sb.append(k + "=" + Arrays.toString(v) + "\n"));
+        sb.append("--end");
+        logger.info(sb.toString());
     }
 }
