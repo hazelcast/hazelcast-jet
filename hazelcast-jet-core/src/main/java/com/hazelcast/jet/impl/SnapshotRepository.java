@@ -210,7 +210,7 @@ public class SnapshotRepository {
         }
     }
 
-    private void dumpMap(IMapJet<Object,byte[]> map) {
+    private void dumpMap(IMapJet<Object, byte[]> map) {
         if (!map.getName().contains("generator")) {
             return;
         }
