@@ -20,65 +20,28 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.net.URL;
 import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 
 public class JetConfigTest_loadFromClassPath {
 
     private static final String TEST_XML_JET = "hazelcast-jet-test.xml";
     private static final String TEST_XML_JET_WITH_VARIABLES = "hazelcast-jet-with-variables.xml";
-    private static final String TEST_XML_MEMBER = "hazelcast-jet-member-test.xml";
 
     @Rule
     public ExpectedException exception = ExpectedException.none();
 
     @Test
-    public void when_bothNull_then_default() {
-        JetConfig config = JetConfig.loadFromClassPath(null, null);
-        assertNotNull(config);
-    }
-
-    @Test
     public void when_botNonNull_then_loaded() {
-        JetConfig config = JetConfig.loadFromClassPath(TEST_XML_JET, TEST_XML_MEMBER);
-        assertEquals("imdg", config.getHazelcastConfig().getGroupConfig().getName());
+        JetConfig config = JetConfig.loadFromClasspath(TEST_XML_JET);
         assertEquals(55, config.getInstanceConfig().getCooperativeThreadCount());
-    }
-
-    @Test
-    public void when_jetConfigOnly_then_loaded() {
-        JetConfig config = JetConfig.loadFromClassPath(TEST_XML_JET, null);
-        assertEquals(55, config.getInstanceConfig().getCooperativeThreadCount());
-    }
-
-    @Test
-    public void when_memberConfigOnly_then_loaded() {
-        JetConfig config = JetConfig.loadFromClassPath(null, TEST_XML_MEMBER);
-        assertEquals("imdg", config.getHazelcastConfig().getGroupConfig().getName());
     }
 
     @Test
     public void when_wrongName_then_fail() {
         exception.expect(IllegalArgumentException.class);
-        JetConfig.loadFromClassPath("foobar", "foobar");
-    }
-
-    @Test
-    public void when_customClassLoader_then_used() {
-        ClassLoader testCL = new ClassLoader() {
-            @Override
-            protected URL findResource(String name) {
-                if ("member".equals(name)) {
-                    return Thread.currentThread().getContextClassLoader().getResource(TEST_XML_MEMBER);
-                }
-                return super.findResource(name);
-            }
-        };
-
-        JetConfig.loadFromClassPath(testCL, null, "member");
+        JetConfig.loadFromClasspath("foobar");
     }
 
     @Test
@@ -88,7 +51,7 @@ public class JetConfigTest_loadFromClassPath {
         properties.setProperty("flow.control.period", "456");
         properties.setProperty("backup.count", "6");
 
-        JetConfig config = JetConfig.loadFromClassPath(TEST_XML_JET_WITH_VARIABLES, null, properties);
+        JetConfig config = JetConfig.loadFromClasspath(TEST_XML_JET_WITH_VARIABLES, properties);
         assertEquals(123, config.getInstanceConfig().getCooperativeThreadCount());
         assertEquals(456, config.getInstanceConfig().getFlowControlPeriodMs());
         assertEquals(6, config.getInstanceConfig().getBackupCount());

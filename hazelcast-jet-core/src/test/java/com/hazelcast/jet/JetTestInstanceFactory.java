@@ -37,7 +37,7 @@ public class JetTestInstanceFactory {
     private final TestHazelcastFactory factory = new TestHazelcastFactory();
 
     public JetInstance newMember() {
-        return newMember(loadConfig());
+        return newMember(loadConfig(null, null));
     }
 
     public JetInstance newMember(JetConfig config) {

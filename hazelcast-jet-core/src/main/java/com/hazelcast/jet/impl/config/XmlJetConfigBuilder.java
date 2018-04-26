@@ -79,21 +79,16 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
         }
     }
 
-    public static JetConfig loadConfig(
-            Properties properties,
-            @Nullable InputStream jetConfigStream,
-            @Nullable InputStream memberConfigStream
-    ) {
-        if (jetConfigStream == null) {
-            jetConfigStream = getJetConfigStream(properties);
+    public static JetConfig loadConfig(@Nullable InputStream stream, @Nullable Properties properties) {
+        if (properties == null) {
+            properties = System.getProperties();
         }
-        JetConfig cfg = new XmlJetConfigBuilder(properties, jetConfigStream).jetConfig;
-        cfg.setHazelcastConfig(getMemberConfig(properties, memberConfigStream));
+        if (stream == null) {
+            stream = getJetConfigStream(properties);
+        }
+        JetConfig cfg = new XmlJetConfigBuilder(properties, stream).jetConfig;
+        cfg.setHazelcastConfig(getMemberConfig(properties));
         return cfg;
-    }
-
-    public static JetConfig loadConfig() {
-        return loadConfig(System.getProperties(), null, null);
     }
 
     public static ClientConfig getClientConfig() {
@@ -104,11 +99,8 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
         return new XmlClientConfigBuilder(getClientConfigStream(properties)).build();
     }
 
-    public static Config getMemberConfig(Properties properties, @Nullable InputStream memberConfigStream) {
-        if (memberConfigStream == null) {
-            memberConfigStream = getMemberConfigStream(properties);
-        }
-        return new XmlConfigBuilder(memberConfigStream).build();
+    public static Config getMemberConfig(Properties properties) {
+        return new XmlConfigBuilder(getMemberConfigStream(properties)).build();
     }
 
     @Override
