@@ -38,6 +38,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -266,6 +267,18 @@ public final class ReadHdfsP<K, V, R> extends AbstractProcessor {
                 return Arrays.stream(split.getLocations())
                         .flatMap(loc -> Arrays.stream(uncheckCall(() -> InetAddress.getAllByName(loc))))
                         .anyMatch(inetAddr::equals);
+            } catch (IOException e) {
+                if (e instanceof UnknownHostException) {
+                    return isSplitLocalForMember(split, memberAddr.getScopedHost());
+                }
+                throw sneakyThrow(e);
+            }
+        }
+
+        private static boolean isSplitLocalForMember(InputSplit split, String hostName) {
+            try {
+                return Arrays.stream(split.getLocations())
+                             .anyMatch(hostName::equalsIgnoreCase);
             } catch (IOException e) {
                 throw sneakyThrow(e);
             }
