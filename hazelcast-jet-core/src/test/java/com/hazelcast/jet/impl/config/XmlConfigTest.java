@@ -49,8 +49,7 @@ public class XmlConfigTest {
     @Test
     public void when_noConfigSpecified_usesDefaultConfig() {
         // When
-        JetConfig jetConfig = new JetConfig();
-        XmlJetConfigBuilder.loadConfig(new Properties(), null, null, jetConfig);
+        JetConfig jetConfig = XmlJetConfigBuilder.loadConfig(new Properties(), null, null);
 
         // Then
         assertEquals(Runtime.getRuntime().availableProcessors(),
@@ -72,8 +71,7 @@ public class XmlConfigTest {
         properties.put(XmlJetConfigLocator.HAZELCAST_JET_CONFIG_PROPERTY, tempFile.getAbsolutePath());
 
         // When
-        JetConfig jetConfig = new JetConfig();
-        XmlJetConfigBuilder.loadConfig(properties, null, null, jetConfig);
+        JetConfig jetConfig = XmlJetConfigBuilder.loadConfig(properties, null, null);
 
         // Then
         assertConfig(jetConfig);
@@ -93,8 +91,7 @@ public class XmlConfigTest {
         properties.put(XmlJetConfigLocator.HAZELCAST_MEMBER_CONFIG_PROPERTY, tempFile.getAbsolutePath());
 
         // When
-        JetConfig jetConfig = new JetConfig();
-        XmlJetConfigBuilder.loadConfig(properties, null, null, jetConfig);
+        JetConfig jetConfig = XmlJetConfigBuilder.loadConfig(properties, null, null);
 
         // Then
         assertXmlMemberConfig(jetConfig.getHazelcastConfig());
@@ -107,8 +104,7 @@ public class XmlConfigTest {
         properties.put(XmlJetConfigLocator.HAZELCAST_JET_CONFIG_PROPERTY, "classpath:" + TEST_XML_1);
 
         // When
-        JetConfig jetConfig = new JetConfig();
-        XmlJetConfigBuilder.loadConfig(properties, null, null, jetConfig);
+        JetConfig jetConfig = XmlJetConfigBuilder.loadConfig(properties, null, null);
 
         // Then
         assertConfig(jetConfig);
@@ -122,8 +118,7 @@ public class XmlConfigTest {
         properties.put(XmlJetConfigLocator.HAZELCAST_MEMBER_CONFIG_PROPERTY, "classpath:" + TEST_XML_2);
 
         // When
-        JetConfig jetConfig = new JetConfig();
-        XmlJetConfigBuilder.loadConfig(properties, null, null, jetConfig);
+        JetConfig jetConfig = XmlJetConfigBuilder.loadConfig(properties, null, null);
 
         // Then
         assertXmlMemberConfig(jetConfig.getHazelcastConfig());
@@ -140,8 +135,7 @@ public class XmlConfigTest {
         properties.put("backup.count", "2");
 
         // When
-        JetConfig jetConfig = new JetConfig();
-        XmlJetConfigBuilder.loadConfig(properties, null, null, jetConfig);
+        JetConfig jetConfig = XmlJetConfigBuilder.loadConfig(properties, null, null);
 
         // Then
         assertConfig(jetConfig);
@@ -157,8 +151,7 @@ public class XmlConfigTest {
         properties.put("imdg.instance.name", INSTANCE_NAME);
 
         // When
-        JetConfig jetConfig = new JetConfig();
-        XmlJetConfigBuilder.loadConfig(properties, null, null, jetConfig);
+        JetConfig jetConfig = XmlJetConfigBuilder.loadConfig(properties, null, null);
 
         // Then
         assertXmlMemberConfig(jetConfig.getHazelcastConfig());
@@ -172,8 +165,7 @@ public class XmlConfigTest {
         properties.put(XmlJetConfigLocator.HAZELCAST_JET_CONFIG_PROPERTY, "classpath:" + TEST_XML_1);
 
         // When
-        JetConfig jetConfig = new JetConfig();
-        XmlJetConfigBuilder.loadConfig(properties, null, null, jetConfig);
+        JetConfig jetConfig = XmlJetConfigBuilder.loadConfig(properties, null, null);
 
         // Then
         EdgeConfig edgeConfig = jetConfig.getDefaultEdgeConfig();

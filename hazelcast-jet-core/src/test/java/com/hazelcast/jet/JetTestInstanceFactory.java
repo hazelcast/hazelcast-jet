@@ -30,14 +30,14 @@ import java.util.Arrays;
 
 import static com.hazelcast.jet.Jet.getJetClientInstance;
 import static com.hazelcast.jet.impl.config.XmlJetConfigBuilder.getClientConfig;
-import static com.hazelcast.jet.impl.config.XmlJetConfigBuilder.getConfig;
+import static com.hazelcast.jet.impl.config.XmlJetConfigBuilder.loadConfig;
 
 public class JetTestInstanceFactory {
 
     private final TestHazelcastFactory factory = new TestHazelcastFactory();
 
     public JetInstance newMember() {
-        return newMember(getConfig());
+        return newMember(loadConfig());
     }
 
     public JetInstance newMember(JetConfig config) {

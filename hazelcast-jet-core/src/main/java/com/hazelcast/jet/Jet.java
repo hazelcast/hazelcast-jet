@@ -60,10 +60,11 @@ public final class Jet {
     }
 
     /**
-     * Creates a member of the Jet cluster with the default configuration.
+     * Creates a member of the Jet cluster with the configuration loaded from
+     * default location.
      */
     public static JetInstance newJetInstance() {
-        JetConfig config = XmlJetConfigBuilder.getConfig();
+        JetConfig config = XmlJetConfigBuilder.loadConfig();
         return newJetInstance(config);
     }
 

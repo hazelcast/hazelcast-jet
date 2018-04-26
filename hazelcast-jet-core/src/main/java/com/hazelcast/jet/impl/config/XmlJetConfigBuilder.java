@@ -35,7 +35,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -57,7 +56,7 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
 
     private final Properties properties;
 
-    private final JetConfig jetConfig;
+    private final JetConfig jetConfig = new JetConfig();
 
     /**
      * Loads the jet config using the following resolution mechanism:
@@ -69,9 +68,8 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
      * <li>it loads the hazelcast-jet-default.xml</li>
      * </ol>
      */
-    private XmlJetConfigBuilder(Properties properties, InputStream in, JetConfig jetConfig) {
+    private XmlJetConfigBuilder(Properties properties, InputStream in) {
         this.properties = properties;
-        this.jetConfig = jetConfig;
         try {
             parseAndBuildConfig(in);
         } catch (Exception e) {
@@ -81,24 +79,21 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
         }
     }
 
-    public static void loadConfig(
+    public static JetConfig loadConfig(
             Properties properties,
             @Nullable InputStream jetConfigStream,
-            @Nullable InputStream memberConfigStream,
-            @Nonnull JetConfig jetConfig
+            @Nullable InputStream memberConfigStream
     ) {
         if (jetConfigStream == null) {
             jetConfigStream = getJetConfigStream(properties);
         }
-        new XmlJetConfigBuilder(properties, jetConfigStream, jetConfig);
-        jetConfig.setHazelcastConfig(getMemberConfig(properties, memberConfigStream));
+        JetConfig cfg = new XmlJetConfigBuilder(properties, jetConfigStream).jetConfig;
+        cfg.setHazelcastConfig(getMemberConfig(properties, memberConfigStream));
+        return cfg;
     }
 
-    public static JetConfig getConfig() {
-        Properties properties = System.getProperties();
-        JetConfig jetConfig = new JetConfig();
-        loadConfig(properties, null, null, jetConfig);
-        return jetConfig;
+    public static JetConfig loadConfig() {
+        return loadConfig(System.getProperties(), null, null);
     }
 
     public static ClientConfig getClientConfig() {
