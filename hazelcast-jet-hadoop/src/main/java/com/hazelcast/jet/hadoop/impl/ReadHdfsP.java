@@ -276,6 +276,9 @@ public final class ReadHdfsP<K, V, R> extends AbstractProcessor {
         }
 
         private static boolean isSplitLocalForMember(InputSplit split, String hostName) {
+            if (hostName == null) {
+                return false;
+            }
             try {
                 return Arrays.stream(split.getLocations())
                              .anyMatch(hostName::equalsIgnoreCase);
