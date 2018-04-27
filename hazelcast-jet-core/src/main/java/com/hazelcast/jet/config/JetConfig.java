@@ -56,6 +56,10 @@ public class JetConfig {
      * {@linkplain #getHazelcastConfig() Hazelcast config} from its default
      * location. It will use {@code System.getProperties()} to resolve the
      * variables in the XML.
+     * <p>
+     * Default location is <a
+     * href='http://docs.hazelcast.org/docs/jet/0.6/manual/#declarative-configuration'>described
+     * here</a>.
      */
     public static JetConfig loadDefault() {
         return XmlJetConfigBuilder.loadConfig(null, null);
@@ -66,15 +70,19 @@ public class JetConfig {
      * {@linkplain #getHazelcastConfig() Hazelcast config} from its default
      * location. It will use the given {@code properties} to resolve the
      * variables in the XML.
+     * <p>
+     * Default location is <a
+     * href='http://docs.hazelcast.org/docs/jet/0.6/manual/#declarative-configuration'>described
+     * here</a>.
      */
     public static JetConfig loadDefault(@Nonnull Properties properties) {
         return XmlJetConfigBuilder.loadConfig(null, properties);
     }
 
     /**
-     * Loads JetConfig from the classpath resource named by the argument.
-     * Uses the thread's context class loader. Uses {@code
-     * System.getProperties()} to resolve the variables in the XML.
+     * Loads JetConfig from the classpath resource named by the argument. Uses
+     * the thread's context class loader. Uses {@code System.getProperties()}
+     * to resolve the variables in the XML.
      * <p>
      * This method loads the nested {@linkplain #getHazelcastConfig() Hazelcast
      * config} from its default location, but you can replace it by calling
@@ -92,15 +100,15 @@ public class JetConfig {
     }
 
     /**
-     * Creates a JetConfig which is loaded from classpath resource using the
-     * thread's context class loader. It will use the given {@code properties}
-     * to resolve variables in the XML.
+     * Loads JetConfig from the classpath resource named by the argument. Uses
+     * the thread's context class loader. Uses given {@code properties} to
+     * resolve the variables in the XML.
      * <p>
-     * The returned JetConfig will refer to {@linkplain #getHazelcastConfig()
-     * Hazelcast config} that will be loaded from the default location. You can
-     * replace it by calling {@link #setHazelcastConfig} using, for example,
-     * {@link com.hazelcast.config.ClasspathXmlConfig} or {@link
-     * com.hazelcast.config.FileSystemXmlConfig}.
+     * This method loads the nested {@linkplain #getHazelcastConfig() Hazelcast
+     * config} from its default location, but you can replace it by calling
+     * {@link #setHazelcastConfig setHazelcastConfig()} using, for example,
+     * {@link com.hazelcast.config.ClasspathXmlConfig ClasspathXmlConfig} or
+     * {@link com.hazelcast.config.FileSystemXmlConfig FileSystemXmlConfig}.
      *
      * @param resource the classpath resource, an XML configuration file on the
      *      classpath
@@ -118,15 +126,15 @@ public class JetConfig {
     }
 
     /**
-     * Creates a JetConfig by reading the supplied stream. It will use {@code
-     * System.properties} to resolve variables in the XML.
+     * Loads JetConfig from the given stream. Uses the thread's context class
+     * loader. Uses {@code System.getProperties()} to resolve the variables in
+     * the XML.
      * <p>
-     * The returned JetConfig will refer to {@linkplain #getHazelcastConfig()
-     * Hazelcast config} that will be loaded from the default location. You can
-     * replace it by calling {@link #setHazelcastConfig} using, for example,
-     * {@link com.hazelcast.config.ClasspathXmlConfig} or {@link
-     * com.hazelcast.config.FileSystemXmlConfig}.
-
+     * This method loads the nested {@linkplain #getHazelcastConfig() Hazelcast
+     * config} from its default location, but you can replace it by calling
+     * {@link #setHazelcastConfig setHazelcastConfig()} using, for example,
+     * {@link com.hazelcast.config.ClasspathXmlConfig ClasspathXmlConfig} or
+     * {@link com.hazelcast.config.FileSystemXmlConfig FileSystemXmlConfig}.
      *
      * @param configStream the InputStream to load the config from
      *
@@ -138,15 +146,15 @@ public class JetConfig {
     }
 
     /**
-     * Creates a JetConfig by reading the supplied stream. It will use the
-     * given {@code properties} to resolve variables in the XML.
+     * Loads JetConfig from the given stream. Uses the thread's context class
+     * loader. Uses given {@code properties} to resolve the variables in the
+     * XML.
      * <p>
-     * The returned JetConfig will refer to {@linkplain #getHazelcastConfig()
-     * Hazelcast config} that will be loaded from the default location. You can
-     * replace it by calling {@link #setHazelcastConfig} using, for example,
-     * {@link com.hazelcast.config.ClasspathXmlConfig} or {@link
-     * com.hazelcast.config.FileSystemXmlConfig}.
-
+     * This method loads the nested {@linkplain #getHazelcastConfig() Hazelcast
+     * config} from its default location, but you can replace it by calling
+     * {@link #setHazelcastConfig setHazelcastConfig()} using, for example,
+     * {@link com.hazelcast.config.ClasspathXmlConfig ClasspathXmlConfig} or
+     * {@link com.hazelcast.config.FileSystemXmlConfig FileSystemXmlConfig}.
      *
      * @param configStream the InputStream to load the config from
      * @param properties the properties to resolve variables in the XML
