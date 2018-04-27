@@ -261,7 +261,7 @@ public final class ReadHdfsP<K, V, R> extends AbstractProcessor {
                     ).collect(joining("\n")));
         }
 
-        private static boolean isSplitLocalForMember(InputSplit split, Address memberAddr) {
+        private boolean isSplitLocalForMember(InputSplit split, Address memberAddr) {
             try {
                 final InetAddress inetAddr = memberAddr.getInetAddress();
                 return Arrays.stream(split.getLocations())
@@ -269,6 +269,8 @@ public final class ReadHdfsP<K, V, R> extends AbstractProcessor {
                         .anyMatch(inetAddr::equals);
             } catch (IOException e) {
                 if (e instanceof UnknownHostException) {
+                    logger.warning("Failed to resolve host name for the split, " +
+                            "will use host name equality to determine data locality", e);
                     return isSplitLocalForMember(split, memberAddr.getScopedHost());
                 }
                 throw sneakyThrow(e);
