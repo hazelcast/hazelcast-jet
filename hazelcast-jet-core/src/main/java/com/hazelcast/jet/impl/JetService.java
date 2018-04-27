@@ -25,7 +25,9 @@ import com.hazelcast.internal.partition.InternalPartitionService;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.TopologyChangedException;
+import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.impl.execution.TaskletExecutionService;
+import com.hazelcast.jet.impl.util.CompressingProbeRenderer;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
@@ -44,8 +46,13 @@ import com.hazelcast.spi.impl.PacketHandler;
 
 import java.io.IOException;
 import java.util.Properties;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
+
+import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
 public class JetService
         implements ManagedService, ConfigurableService<JetConfig>, PacketHandler, MembershipAwareService,
@@ -70,6 +77,9 @@ public class JetService
     private final AtomicInteger numConcurrentAsyncOps = new AtomicInteger();
 
     private final Supplier<int[]> sharedPartitionKeys = Util.memoizeConcurrent(this::computeSharedPartitionKeys);
+
+    // TODO [viliam] make the length configurable
+    private final BlockingQueue<Tuple2<Long, byte[]>> metricsBlobs = new ArrayBlockingQueue<>(120);
 
     public JetService(NodeEngine nodeEngine) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
@@ -121,6 +131,11 @@ public class JetService
                 "\t|   | |   |  /    |     |     |     |   |     |   |      \\   | |       |  \n" +
                 "\to   o o   o o---o o---o o---o o---o o   o o---o   o       o--o o---o   o   ");
         logger.info("Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.");
+
+        nodeEngine.getExecutionService().scheduleWithRepetition("MetricsForMcCollection", () -> {
+            CompressingProbeRenderer renderer = new CompressingProbeRenderer(1024); // TODO [viliam] use last * 1.1
+            metricsBlobs.add(tuple2(System.currentTimeMillis(), renderer.getRenderedBlob()));
+        }, 1, 1, TimeUnit.SECONDS);
     }
 
     @Override

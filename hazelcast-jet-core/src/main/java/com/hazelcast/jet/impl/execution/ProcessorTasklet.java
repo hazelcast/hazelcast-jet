@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
@@ -36,6 +37,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.ProcessorState.COMPLETE;
@@ -57,6 +59,10 @@ import static java.util.stream.Collectors.toCollection;
 public class ProcessorTasklet implements Tasklet {
 
     private static final int OUTBOX_BATCH_SIZE = 2048;
+
+    private static final AtomicLongFieldUpdater<ProcessorTasklet> RECEIVED_COUNT_UPDATER =
+            AtomicLongFieldUpdater.newUpdater(ProcessorTasklet.class, "receivedCount");
+
     private final ProgressTracker progTracker = new ProgressTracker();
     private final OutboundEdgeStream[] outstreams;
     private final OutboxImpl outbox;
@@ -76,6 +82,9 @@ public class ProcessorTasklet implements Tasklet {
     private ProcessorState state;
     private long pendingSnapshotId;
     private Watermark pendingWatermark;
+
+    @Probe
+    private volatile long receivedCount;
 
     public ProcessorTasklet(@Nonnull ProcCtx context,
                             @Nonnull Processor processor,
@@ -272,6 +281,12 @@ public class ProcessorTasklet implements Tasklet {
 
     private void fillInbox(long now) {
         assert inbox.isEmpty() : "inbox is not empty";
+        fillInbox1(now);
+        // we are the only updating thread, no need for addAndGet
+        RECEIVED_COUNT_UPDATER.lazySet(this, receivedCount + inbox.size());
+    }
+
+    private void fillInbox1(long now) {
         assert pendingWatermark == null : "null wm expected, but was " + pendingWatermark;
 
         if (instreamCursor == null) {

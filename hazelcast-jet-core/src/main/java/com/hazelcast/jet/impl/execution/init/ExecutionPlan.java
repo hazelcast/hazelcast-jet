@@ -180,6 +180,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 ProcessorTasklet processorTasklet = new ProcessorTasklet(context, p, inboundStreams, outboundStreams,
                         snapshotContext, snapshotCollector, jobConfig.getMaxWatermarkRetainMillis());
                 tasklets.add(processorTasklet);
+                ((NodeEngineImpl) nodeEngine).getMetricsRegistry().scanAndRegister(processorTasklet, probePrefix);
                 this.processors.add(p);
                 localProcessorIdx++;
             }
