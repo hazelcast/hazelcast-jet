@@ -99,7 +99,7 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
         return new XmlClientConfigBuilder(getClientConfigStream(properties)).build();
     }
 
-    public static Config getMemberConfig(Properties properties) {
+    private static Config getMemberConfig(Properties properties) {
         return new XmlConfigBuilder(getMemberConfigStream(properties)).build();
     }
 
@@ -156,7 +156,7 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
         handleConfig(root);
     }
 
-    private void handleConfig(Element docElement) throws Exception {
+    private void handleConfig(Element docElement) {
         for (Node node : childElements(docElement)) {
             String name = cleanNodeName(node);
             switch (name) {
@@ -198,7 +198,7 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
         }
     }
 
-    private EdgeConfig parseEdgeDefaults(Node edgeNode) {
+    private void parseEdgeDefaults(Node edgeNode) {
         EdgeConfig config = jetConfig.getDefaultEdgeConfig();
         for (Node child : childElements(edgeNode)) {
             String name = cleanNodeName(child);
@@ -216,7 +216,6 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
                     throw new AssertionError("Unrecognized XML element: " + name);
             }
         }
-        return config;
     }
 
     private int intValue(Node node) {
