@@ -45,6 +45,13 @@ public class JetConfig {
     private Properties properties = new Properties();
 
     /**
+     * Creates new JetConfig with default configuration. Doesn't load anything
+     * from files in default locations.
+     */
+    public JetConfig() {
+    }
+
+    /**
      * Loads JetConfig from default location. The nested {@linkplain
      * #getHazelcastConfig() Hazelcast config} will also be loaded from default
      * location. It will use {@code System.properties} to resolve variables in
