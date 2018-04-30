@@ -5,6 +5,28 @@ issues at https://github.com/hazelcast/hazelcast-jet/issues/<issue number>.
 
 The label in the brackets refer to the respective module.
 
+** Hazelcast Jet 0.6.1 **
+
+1. New Features
+
+[core] Add support for configuring a custom classloader per job [770]
+
+2. Enhancements
+
+[pipeline-api] Add a noop sink [827]
+[core] Optimize in memory layout of snapshot data, reducing memory usage by up to 75% [822]
+[core] Update Hazelcast to 3.10-GA [833]
+[core] Idle CPU usage improvements when there's a large number of non-cooperative processors [816]
+[core] Utility methods to load JetConfig from XML file or resource directly [856]
+
+3. Fixes
+
+[pipeline-api] Fix generic output type for aggregate operations with a custom mapToOutputFn [823]
+[pipeline-api] SinkBuilder shouldn't call destroyFn if createFn wasn't called [826]
+[core] Don't shrink receive window during lulls which can lead to reduced throughput [798]
+[kafka] Kafka source should handle InterruptException in all cases
+[hadoop] When matching HDFS hostnames against member hostnames, use alternative ways than just reverse DNS [858]
+
 ** Hazelcast Jet 0.6 **
 
 1. New Features

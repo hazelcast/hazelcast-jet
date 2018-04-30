@@ -1,3 +1,9 @@
+** Hazelcast Jet 0.6.1 **
+
+* Optimize in memory layout of snapshot data, reducing memory usage by up to 75%
+* Add support for configuring a custom classloader per job
+* Update Hazelcast version to final released version (3.10)
+
 ** Hazelcast Jet 0.6 **
 
 * Pipeline API has been extended with support for windowing operations
