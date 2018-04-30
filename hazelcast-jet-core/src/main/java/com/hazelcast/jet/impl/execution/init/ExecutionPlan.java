@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.execution.init;
 
+import com.hazelcast.internal.metrics.MetricsRegistry;
 import com.hazelcast.internal.util.concurrent.ConcurrentConveyor;
 import com.hazelcast.internal.util.concurrent.OneToOneConcurrentArrayQueue;
 import com.hazelcast.internal.util.concurrent.QueuedPipe;
@@ -168,7 +169,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
                  String probePrefix = String.format("jet.job.%s.%s#%d", idToString(executionId), vertex.name(),
                          localProcessorIdx);
-                 ((NodeEngineImpl) nodeEngine).getMetricsRegistry().scanAndRegister(p, probePrefix);
+                MetricsRegistry metricsRegistry = ((NodeEngineImpl) nodeEngine).getMetricsRegistry();
+                metricsRegistry.scanAndRegister(p, probePrefix);
 
                 // createOutboundEdgeStreams() populates localConveyorMap and edgeSenderConveyorMap.
                 // Also populates instance fields: senderMap, receiverMap, tasklets.
@@ -179,8 +181,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
                 ProcessorTasklet processorTasklet = new ProcessorTasklet(context, p, inboundStreams, outboundStreams,
                         snapshotContext, snapshotCollector, jobConfig.getMaxWatermarkRetainMillis());
+                processorTasklet.registerMetrics(metricsRegistry, probePrefix);
                 tasklets.add(processorTasklet);
-                ((NodeEngineImpl) nodeEngine).getMetricsRegistry().scanAndRegister(processorTasklet, probePrefix);
                 this.processors.add(p);
                 localProcessorIdx++;
             }

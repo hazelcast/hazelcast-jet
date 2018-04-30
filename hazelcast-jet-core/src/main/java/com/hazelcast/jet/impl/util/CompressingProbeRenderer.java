@@ -19,7 +19,9 @@ package com.hazelcast.jet.impl.util;
 import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
 import com.hazelcast.nio.Bits;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
@@ -95,6 +97,28 @@ public class CompressingProbeRenderer implements ProbeRenderer {
         } finally {
             dos = null;
             baos = null;
+        }
+    }
+
+    public static void decompress(byte[] data, ProbeRenderer renderer) {
+        DataInputStream dis = new DataInputStream(new ByteArrayInputStream(data));
+        String lastName = "";
+        try {
+            while (dis.available() > 0) {
+                int equalPrefixLen = dis.readUnsignedShort();
+                lastName = lastName.substring(0, equalPrefixLen)
+                        + dis.readUTF();
+                int type = dis.readByte();
+                if (type == TYPE_LONG) {
+                    renderer.renderLong(lastName, dis.readLong());
+                } else if (type == TYPE_DOUBLE) {
+                    renderer.renderDouble(lastName, dis.readDouble());
+                } else {
+                    throw new RuntimeException("Unexpected type");
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e); // can be thrown with unexpected EOFException
         }
     }
 }

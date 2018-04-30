@@ -29,14 +29,9 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.util.CompressingProbeRenderer;
 import org.junit.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.IOException;
-
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
-import static com.hazelcast.jet.impl.util.CompressingProbeRenderer.TYPE_DOUBLE;
-import static com.hazelcast.jet.impl.util.CompressingProbeRenderer.TYPE_LONG;
+import static com.hazelcast.jet.impl.util.CompressingProbeRenderer.decompress;
 
 public class MetricsTest extends JetTestSupport {
 
@@ -93,28 +88,6 @@ public class MetricsTest extends JetTestSupport {
             }
             tryEmit(seq++);
             return false;
-        }
-    }
-
-    public static void decompress(byte[] data, ProbeRenderer renderer) {
-        DataInputStream dis = new DataInputStream(new ByteArrayInputStream(data));
-        String lastName = "";
-        try {
-            while (dis.available() > 0) {
-                int equalPrefixLen = dis.readUnsignedShort();
-                lastName = lastName.substring(0, equalPrefixLen)
-                        + dis.readUTF();
-                int type = dis.readByte();
-                if (type == TYPE_LONG) {
-                    renderer.renderLong(lastName, dis.readLong());
-                } else if (type == TYPE_DOUBLE) {
-                    renderer.renderDouble(lastName, dis.readDouble());
-                } else {
-                    throw new RuntimeException("Unexpected type");
-                }
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e); // can be thrown with unexpected EOFException
         }
     }
 }

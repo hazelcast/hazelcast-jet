@@ -21,6 +21,8 @@ import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.instance.BuildInfoProvider;
 import com.hazelcast.instance.HazelcastInstanceImpl;
 import com.hazelcast.instance.JetBuildInfo;
+import com.hazelcast.internal.metrics.MetricsRegistry;
+import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
 import com.hazelcast.internal.partition.InternalPartitionService;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
@@ -28,6 +30,7 @@ import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.impl.execution.TaskletExecutionService;
 import com.hazelcast.jet.impl.util.CompressingProbeRenderer;
+import com.hazelcast.jet.impl.util.ConcurrentArrayRingbuffer;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
@@ -46,13 +49,12 @@ import com.hazelcast.spi.impl.PacketHandler;
 
 import java.io.IOException;
 import java.util.Properties;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 public class JetService
         implements ManagedService, ConfigurableService<JetConfig>, PacketHandler, MembershipAwareService,
@@ -79,7 +81,7 @@ public class JetService
     private final Supplier<int[]> sharedPartitionKeys = Util.memoizeConcurrent(this::computeSharedPartitionKeys);
 
     // TODO [viliam] make the length configurable
-    private final BlockingQueue<Tuple2<Long, byte[]>> metricsBlobs = new ArrayBlockingQueue<>(120);
+    private final ConcurrentArrayRingbuffer<Tuple2<Long, byte[]>> metricsBlobs = new ConcurrentArrayRingbuffer<>(120);
 
     public JetService(NodeEngine nodeEngine) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
@@ -91,7 +93,6 @@ public class JetService
     public void configure(JetConfig config) {
         this.config = config;
     }
-
 
     // ManagedService
 
@@ -132,9 +133,44 @@ public class JetService
                 "\to   o o   o o---o o---o o---o o---o o   o o---o   o       o--o o---o   o   ");
         logger.info("Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.");
 
+        MetricsRegistry metricsRegistry = nodeEngine.getMetricsRegistry();
         nodeEngine.getExecutionService().scheduleWithRepetition("MetricsForMcCollection", () -> {
-            CompressingProbeRenderer renderer = new CompressingProbeRenderer(1024); // TODO [viliam] use last * 1.1
-            metricsBlobs.add(tuple2(System.currentTimeMillis(), renderer.getRenderedBlob()));
+            CompressingProbeRenderer renderer = new CompressingProbeRenderer(24_000); // TODO [viliam] use last * 1.1
+            int[] count = {0};
+            long start = System.nanoTime();
+            metricsRegistry.render(new ProbeRenderer() {
+                @Override
+                public void renderLong(String name, long value) {
+                    if (name.startsWith("jet.job")) {
+                        logger.info(name + "=" + value);
+                    }
+                    count[0]++;
+                }
+
+                @Override
+                public void renderDouble(String name, double value) {
+                    if (name.startsWith("jet.job")) {
+                        logger.info(name + "=" + value);
+                    }
+                    count[0]++;
+                }
+
+                @Override
+                public void renderException(String name, Exception e) {
+
+                }
+
+                @Override
+                public void renderNoValue(String name) {
+
+                }
+            });
+            logger.info("aaa, " + NANOSECONDS.toMillis(System.nanoTime() - start));
+            metricsRegistry.render(renderer);
+            byte[] blob = renderer.getRenderedBlob();
+            logger.info("bbb, count=" + count[0]);
+            metricsBlobs.add(tuple2(System.currentTimeMillis(), blob));
+            logger.severe("Collected metrics, " + blob.length + " bytes");
         }, 1, 1, TimeUnit.SECONDS);
     }
 

@@ -16,7 +16,9 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.internal.metrics.Probe;
+import com.hazelcast.internal.metrics.LongProbeFunction;
+import com.hazelcast.internal.metrics.MetricsRegistry;
+import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
@@ -37,7 +39,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import java.util.concurrent.atomic.AtomicLongArray;
 
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.ProcessorState.COMPLETE;
@@ -60,9 +62,6 @@ public class ProcessorTasklet implements Tasklet {
 
     private static final int OUTBOX_BATCH_SIZE = 2048;
 
-    private static final AtomicLongFieldUpdater<ProcessorTasklet> RECEIVED_COUNT_UPDATER =
-            AtomicLongFieldUpdater.newUpdater(ProcessorTasklet.class, "receivedCount");
-
     private final ProgressTracker progTracker = new ProgressTracker();
     private final OutboundEdgeStream[] outstreams;
     private final OutboxImpl outbox;
@@ -83,8 +82,8 @@ public class ProcessorTasklet implements Tasklet {
     private long pendingSnapshotId;
     private Watermark pendingWatermark;
 
-    @Probe
-    private volatile long receivedCount;
+    private final AtomicLongArray receivedCounts;
+    private final AtomicLongArray emittedCounts;
 
     public ProcessorTasklet(@Nonnull ProcCtx context,
                             @Nonnull Processor processor,
@@ -111,12 +110,34 @@ public class ProcessorTasklet implements Tasklet {
 
         instreamCursor = popInstreamGroup();
         currInstream = instreamCursor != null ? instreamCursor.value() : null;
+        receivedCounts = new AtomicLongArray(instreams.size());
+        emittedCounts = new AtomicLongArray(outstreams.size() + (ssCollector != null ? 1 : 0));
         outbox = createOutbox(ssCollector);
         receivedBarriers = new BitSet(instreams.size());
         state = initialProcessingState();
         pendingSnapshotId = ssContext.lastSnapshotId() + 1;
 
         watermarkCoalescer = WatermarkCoalescer.create(maxWatermarkRetainMillis, instreams.size());
+    }
+
+    public void registerMetrics(MetricsRegistry metricsRegistry, String namePrefix) {
+        for (int i = 0; i < receivedCounts.length(); i++) {
+            int finalI = i;
+            String name = namePrefix + ".receivedCount" + (receivedCounts.length() == 1 ? "" : "-" + i);
+            metricsRegistry.register(this, name, ProbeLevel.INFO,
+                    (LongProbeFunction<ProcessorTasklet>) t -> t.receivedCounts.get(finalI));
+        }
+        for (int i = 0; i < emittedCounts.length(); i++) {
+            int finalI = i;
+            String name = namePrefix + ".emittedCount";
+            if (i == emittedCounts.length() - 1) {
+                name += "-snapshot";
+            } else if (emittedCounts.length() != 1) {
+                name += "-" + i;
+            }
+            metricsRegistry.register(this, name, ProbeLevel.INFO,
+                    (LongProbeFunction<ProcessorTasklet>) t -> t.emittedCounts.get(finalI));
+        }
     }
 
     private OutboxImpl createOutbox(OutboundCollector ssCollector) {
@@ -128,7 +149,7 @@ public class ProcessorTasklet implements Tasklet {
             collectors[outstreams.length] = ssCollector;
         }
         return new OutboxImpl(collectors, ssCollector != null, progTracker,
-                context.getSerializationService(), OUTBOX_BATCH_SIZE);
+                context.getSerializationService(), OUTBOX_BATCH_SIZE, emittedCounts);
     }
 
     @Override
@@ -283,7 +304,7 @@ public class ProcessorTasklet implements Tasklet {
         assert inbox.isEmpty() : "inbox is not empty";
         fillInbox1(now);
         // we are the only updating thread, no need for addAndGet
-        RECEIVED_COUNT_UPDATER.lazySet(this, receivedCount + inbox.size());
+        receivedCounts.lazySet(currInstream.ordinal(), receivedCounts.get(currInstream.ordinal()) + inbox.size());
     }
 
     private void fillInbox1(long now) {
