@@ -30,6 +30,7 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
@@ -81,6 +82,9 @@ public class ReceiverTasklet implements Tasklet {
     private final OutboundCollector collector;
 
     private boolean receptionDone;
+
+    private final AtomicLong itemsOutCounter = new AtomicLong();
+    private final AtomicLong bytesOutCounter = new AtomicLong();
 
     //                    FLOW-CONTROL STATE
     //            All arrays are indexed by sender ID.
@@ -241,6 +245,8 @@ public class ReceiverTasklet implements Tasklet {
 
     private void tryFillInbox() {
         try {
+            long totalBytes = 0;
+            long totalItems = 0;
             for (BufferObjectDataInput received; (received = incoming.poll()) != null; ) {
                 final int itemCount = received.readInt();
                 for (int i = 0; i < itemCount; i++) {
@@ -249,9 +255,13 @@ public class ReceiverTasklet implements Tasklet {
                     final int itemSize = received.position() - mark;
                     inbox.add(new ObjWithPtionIdAndSize(item, received.readInt(), itemSize));
                 }
+                totalItems += itemCount;
+                totalBytes += received.position();
                 received.close();
                 tracker.madeProgress();
             }
+            bytesOutCounter.lazySet(bytesOutCounter.get() + totalBytes);
+            itemsOutCounter.lazySet(itemsOutCounter.get() + totalItems);
         } catch (IOException e) {
             throw rethrow(e);
         }
@@ -264,5 +274,13 @@ public class ReceiverTasklet implements Tasklet {
             super(item, partitionId);
             this.estimatedMemoryFootprint = estimatedMemoryFootprint(itemBlobSize);
         }
+    }
+
+    public AtomicLong getItemsOutCounter() {
+        return itemsOutCounter;
+    }
+
+    public AtomicLong getBytesOutCounter() {
+        return bytesOutCounter;
     }
 }
