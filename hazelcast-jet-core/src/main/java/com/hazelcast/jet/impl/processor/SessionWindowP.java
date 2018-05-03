@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
@@ -44,6 +45,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.StringJoiner;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.ToLongFunction;
@@ -54,6 +56,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
+import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
 import static com.hazelcast.jet.impl.util.Util.logLateEvent;
 import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
 import static com.hazelcast.util.Preconditions.checkTrue;
@@ -94,6 +97,9 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
     private final FlatMapper<Watermark, OUT> closedWindowFlatmapper;
     private ProcessingGuarantee processingGuarantee;
 
+    @Probe
+    private AtomicLong lateEventsDropped = new AtomicLong();
+
     private Traverser snapshotTraverser;
     private long minRestoredCurrentWatermark = Long.MAX_VALUE;
 
@@ -127,6 +133,7 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
         final long timestamp = timestampFns.get(ordinal).applyAsLong(item);
         if (timestamp < currentWatermark) {
             logLateEvent(getLogger(), currentWatermark, item);
+            lazyIncrement(lateEventsDropped);
             return true;
         }
         K key = keyFns.get(ordinal).apply(item);

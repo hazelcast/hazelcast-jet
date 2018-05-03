@@ -170,7 +170,7 @@ public class JetService
             byte[] blob = renderer.getRenderedBlob();
             logger.info("bbb, count=" + count[0]);
             metricsBlobs.add(tuple2(System.currentTimeMillis(), blob));
-            logger.severe("Collected metrics, " + blob.length + " bytes");
+            logger.info("Collected metrics, " + blob.length + " bytes");
         }, 1, 1, TimeUnit.SECONDS);
     }
 

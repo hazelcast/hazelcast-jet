@@ -62,6 +62,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -374,6 +375,9 @@ public final class Util {
         return future;
     }
 
+    /**
+     * Logs a late event that was dropped.
+     */
     public static void logLateEvent(ILogger logger, long currentWm, @Nonnull Object item) {
         if (!logger.isInfoEnabled()) {
             return;
@@ -414,5 +418,17 @@ public final class Util {
             return a;
         }
         return gcd(b, a % b);
+    }
+
+    public static void lazyIncrement(AtomicLong counter) {
+        lazyAdd(counter, 1);
+    }
+
+    /**
+     * Adds {@code addend} to the counter, using {@code lazySet}. Useful for
+     * incrementing {@linkplain com.hazelcast.internal.metrics.Probe probes}.
+     */
+    public static void lazyAdd(AtomicLong counter, int addend) {
+        counter.lazySet(counter.get() + addend);
     }
 }
