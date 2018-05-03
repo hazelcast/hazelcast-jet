@@ -21,6 +21,7 @@ import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.impl.util.TimestampHistory;
 
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static com.hazelcast.util.Preconditions.checkNotNegative;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -86,6 +87,11 @@ public abstract class WatermarkCoalescer {
     public abstract long checkWmHistory(long systemTime);
 
     /**
+     * Returns the last emitted watermark.
+     */
+    public abstract long lastEmittedWm();
+
+    /**
      * Returns {@code System.nanoTime()} or a dummy value, if it is not needed,
      * because the call is expensive in hot loop.
      */
@@ -133,6 +139,11 @@ public abstract class WatermarkCoalescer {
         }
 
         @Override
+        public long lastEmittedWm() {
+            return Long.MIN_VALUE;
+        }
+
+        @Override
         public long getTime() {
             return -1;
         }
@@ -146,7 +157,7 @@ public abstract class WatermarkCoalescer {
         private final TimestampHistory watermarkHistory;
         private final long[] queueWms;
         private final boolean[] isIdle;
-        private long lastEmittedWm = Long.MIN_VALUE;
+        private AtomicLong lastEmittedWm = new AtomicLong(Long.MIN_VALUE);
         private long topObservedWm = Long.MIN_VALUE;
         private boolean allInputsAreIdle;
         private boolean idleMessagePending;
@@ -229,9 +240,10 @@ public abstract class WatermarkCoalescer {
                 //      Then message from Q1 is received. Without this condition WM would stay at wm(1). With it,
                 //      wm(2) is forwarded.
                 allInputsAreIdle = true;
-                if (topObservedWm > lastEmittedWm) {
+                if (topObservedWm > lastEmittedWm.get()) {
                     idleMessagePending = notDoneInputCount != 0;
-                    return lastEmittedWm = topObservedWm;
+                    lastEmittedWm.lazySet(topObservedWm);
+                    return topObservedWm;
                 }
                 return notDoneInputCount != 0
                         ? IDLE_MESSAGE.timestamp()
@@ -239,8 +251,8 @@ public abstract class WatermarkCoalescer {
             }
 
             // if the new lowest observed wm is larger than already emitted, emit it
-            if (min > lastEmittedWm) {
-                lastEmittedWm = min;
+            if (min > lastEmittedWm.get()) {
+                lastEmittedWm.lazySet(min);
                 return min;
             }
 
@@ -257,11 +269,16 @@ public abstract class WatermarkCoalescer {
                 return NO_NEW_WM;
             }
             long historicWm = watermarkHistory.sample(systemTime, topObservedWm);
-            if (historicWm > lastEmittedWm) {
-                lastEmittedWm = historicWm;
+            if (historicWm > lastEmittedWm.get()) {
+                lastEmittedWm.lazySet(historicWm);
                 return historicWm;
             }
             return NO_NEW_WM;
+        }
+
+        @Override
+        public long lastEmittedWm() {
+            return lastEmittedWm.get();
         }
 
         @Override

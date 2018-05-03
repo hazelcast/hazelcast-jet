@@ -154,6 +154,7 @@ public class ExecutionContext {
         }
         MetricsRegistry metricsRegistry = ((NodeEngineImpl) nodeEngine).getMetricsRegistry();
         processors.forEach(metricsRegistry::deregister);
+        tasklets.forEach(metricsRegistry::deregister);
     }
 
     /**

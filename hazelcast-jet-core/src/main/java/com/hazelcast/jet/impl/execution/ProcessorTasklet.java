@@ -83,6 +83,7 @@ public class ProcessorTasklet implements Tasklet {
     private Watermark pendingWatermark;
 
     private final AtomicLongArray receivedCounts;
+    private final AtomicLongArray receivedBatches;
     private final AtomicLongArray emittedCounts;
 
     public ProcessorTasklet(@Nonnull ProcCtx context,
@@ -111,6 +112,7 @@ public class ProcessorTasklet implements Tasklet {
         instreamCursor = popInstreamGroup();
         currInstream = instreamCursor != null ? instreamCursor.value() : null;
         receivedCounts = new AtomicLongArray(instreams.size());
+        receivedBatches = new AtomicLongArray(instreams.size());
         emittedCounts = new AtomicLongArray(outstreams.size() + (ssCollector != null ? 1 : 0));
         outbox = createOutbox(ssCollector);
         receivedBarriers = new BitSet(instreams.size());
@@ -120,12 +122,15 @@ public class ProcessorTasklet implements Tasklet {
         watermarkCoalescer = WatermarkCoalescer.create(maxWatermarkRetainMillis, instreams.size());
     }
 
-    public void registerMetrics(MetricsRegistry metricsRegistry, String namePrefix) {
+    public void registerMetrics(MetricsRegistry metricsRegistry, final String namePrefix) {
         for (int i = 0; i < receivedCounts.length(); i++) {
             int finalI = i;
             String name = namePrefix + ".receivedCount" + (receivedCounts.length() == 1 ? "" : "-" + i);
             metricsRegistry.register(this, name, ProbeLevel.INFO,
                     (LongProbeFunction<ProcessorTasklet>) t -> t.receivedCounts.get(finalI));
+            name = namePrefix + ".receivedBatches" + (receivedCounts.length() == 1 ? "" : "-" + i);
+            metricsRegistry.register(this, name, ProbeLevel.INFO,
+                    (LongProbeFunction<ProcessorTasklet>) t -> t.receivedBatches.get(finalI));
         }
         for (int i = 0; i < emittedCounts.length(); i++) {
             int finalI = i;
@@ -138,6 +143,8 @@ public class ProcessorTasklet implements Tasklet {
             metricsRegistry.register(this, name, ProbeLevel.INFO,
                     (LongProbeFunction<ProcessorTasklet>) t -> t.emittedCounts.get(finalI));
         }
+        metricsRegistry.register(this, namePrefix + ".lastReceivedWm", ProbeLevel.INFO,
+                (LongProbeFunction<ProcessorTasklet>) t -> t.watermarkCoalescer.lastEmittedWm());
     }
 
     private OutboxImpl createOutbox(OutboundCollector ssCollector) {
@@ -305,6 +312,7 @@ public class ProcessorTasklet implements Tasklet {
         fillInbox1(now);
         // we are the only updating thread, no need for addAndGet
         receivedCounts.lazySet(currInstream.ordinal(), receivedCounts.get(currInstream.ordinal()) + inbox.size());
+        receivedBatches.lazySet(currInstream.ordinal(), receivedBatches.get(currInstream.ordinal()) + 1);
     }
 
     private void fillInbox1(long now) {

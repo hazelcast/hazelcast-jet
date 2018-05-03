@@ -340,6 +340,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             final Map<Address, ConcurrentConveyor<Object>> addrToConveyor = new HashMap<>();
             List<AtomicLong> bytesCounters = new ArrayList<>();
             List<AtomicLong> itemsCounters = new ArrayList<>();
+            Tasklet firstTasklet = null;
             for (Address destAddr : remoteMembers.get()) {
                 final ConcurrentConveyor<Object> conveyor = createConveyorArray(
                         1, edge.sourceVertex().localParallelism(), edge.getConfig().getQueueSize())[0];
@@ -349,6 +350,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 final int destVertexId = edge.destVertex().vertexId();
                 final SenderTasklet t = new SenderTasklet(inboundEdgeStream, nodeEngine,
                         destAddr, executionId, destVertexId, edge.getConfig().getPacketSizeLimit());
+                if (firstTasklet == null) {
+                    firstTasklet = t;
+                }
                 bytesCounters.add(t.getBytesOutCounter());
                 itemsCounters.add(t.getItemsOutCounter());
                 senderMap.computeIfAbsent(destVertexId, xx -> new HashMap<>())
@@ -358,15 +362,20 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 addrToConveyor.put(destAddr, conveyor);
             }
 
-            this.nodeEngine.getMetricsRegistry().register("dummy", probePrefix + ".distributedBytesOut", ProbeLevel.INFO,
-                    addCountersProbeFunction(bytesCounters));
-            this.nodeEngine.getMetricsRegistry().register("dummy", probePrefix + ".distributedItemsOut", ProbeLevel.INFO,
-                    addCountersProbeFunction(itemsCounters));
+            // We register the metrics to the first tasklet. The metrics itself aggregate counters from all tasklets
+            // and don't use the reference to source, but we use the source to deregister the metrics when the job
+            // finishes.
+            if (firstTasklet != null) {
+                this.nodeEngine.getMetricsRegistry().register(firstTasklet, probePrefix + ".distributedBytesOut",
+                        ProbeLevel.INFO, addCountersProbeFunction(bytesCounters));
+                this.nodeEngine.getMetricsRegistry().register(firstTasklet, probePrefix + ".distributedItemsOut",
+                        ProbeLevel.INFO, addCountersProbeFunction(itemsCounters));
+            }
             return addrToConveyor;
         });
     }
 
-    private static LongProbeFunction<String> addCountersProbeFunction(List<AtomicLong> counters) {
+    private static <T> LongProbeFunction<T> addCountersProbeFunction(List<AtomicLong> counters) {
         AtomicLong[] countersArray = counters.toArray(new AtomicLong[0]);
         return source -> {
             long total = 0;
@@ -480,6 +489,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                        int offset = 0;
                        List<AtomicLong> itemCounters = new ArrayList<>();
                        List<AtomicLong> bytesCounters = new ArrayList<>();
+                       Tasklet firstTasklet = null;
                        for (Address addr : ptionArrgmt.remotePartitionAssignment.get().keySet()) {
                            final OutboundCollector[] collectors = new OutboundCollector[ptionsPerProcessor.length];
                            // assign the queues starting from end
@@ -492,13 +502,21 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                                    collector, edge.getConfig().getReceiveWindowMultiplier(),
                                    getConfig().getInstanceConfig().getFlowControlPeriodMs());
                            addrToTasklet.put(addr, receiverTasklet);
+                           if (firstTasklet == null) {
+                               firstTasklet = receiverTasklet;
+                           }
                            itemCounters.add(receiverTasklet.getItemsOutCounter());
                            bytesCounters.add(receiverTasklet.getBytesOutCounter());
                        }
-                       nodeEngine.getMetricsRegistry().register("source", probePrefix + ".distributedItemsIn",
-                               ProbeLevel.INFO, addCountersProbeFunction(itemCounters));
-                       nodeEngine.getMetricsRegistry().register("source", probePrefix + ".distributedBytesIn",
-                               ProbeLevel.INFO, addCountersProbeFunction(bytesCounters));
+                       if (firstTasklet != null) {
+                           // We register the metrics to the first tasklet. The metrics itself aggregate counters from
+                           // all tasklets and don't use the reference to source, but we use the source to deregister
+                           // the metrics when the job finishes.
+                           nodeEngine.getMetricsRegistry().register(firstTasklet, probePrefix + ".distributedItemsIn",
+                                   ProbeLevel.INFO, addCountersProbeFunction(itemCounters));
+                           nodeEngine.getMetricsRegistry().register(firstTasklet, probePrefix + ".distributedBytesIn",
+                                   ProbeLevel.INFO, addCountersProbeFunction(bytesCounters));
+                       }
                        return addrToTasklet;
                    });
     }
