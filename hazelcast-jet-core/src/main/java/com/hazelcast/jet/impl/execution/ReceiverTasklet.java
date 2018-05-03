@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static com.hazelcast.jet.impl.util.Util.lazyAdd;
 import static java.lang.Math.ceil;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -260,8 +261,8 @@ public class ReceiverTasklet implements Tasklet {
                 received.close();
                 tracker.madeProgress();
             }
-            bytesOutCounter.lazySet(bytesOutCounter.get() + totalBytes);
-            itemsOutCounter.lazySet(itemsOutCounter.get() + totalItems);
+            lazyAdd(bytesOutCounter, totalBytes);
+            lazyAdd(itemsOutCounter, totalItems);
         } catch (IOException e) {
             throw rethrow(e);
         }

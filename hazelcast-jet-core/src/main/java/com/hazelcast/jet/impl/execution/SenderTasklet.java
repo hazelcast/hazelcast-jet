@@ -39,6 +39,7 @@ import static com.hazelcast.jet.impl.execution.ReceiverTasklet.estimatedMemoryFo
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.Util.createObjectDataOutput;
 import static com.hazelcast.jet.impl.util.Util.getMemberConnection;
+import static com.hazelcast.jet.impl.util.Util.lazyAdd;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 
 public class SenderTasklet implements Tasklet {
@@ -122,9 +123,9 @@ public class SenderTasklet implements Tasklet {
                 outputBuffer.writeInt(itemWithPId.getPartitionId());
 
             }
-            bytesOutCounter.lazySet(bytesOutCounter.get() + outputBuffer.position());
-            itemsOutCounter.lazySet(itemsOutCounter.get() + writtenCount);
             outputBuffer.writeInt(bufPosPastHeader, writtenCount);
+            lazyAdd(bytesOutCounter, outputBuffer.position());
+            lazyAdd(itemsOutCounter, writtenCount);
             return writtenCount > 0;
         } catch (IOException e) {
             throw rethrow(e);

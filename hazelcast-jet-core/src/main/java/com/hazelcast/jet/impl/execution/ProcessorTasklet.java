@@ -54,6 +54,8 @@ import static com.hazelcast.jet.impl.execution.ProcessorState.SAVE_SNAPSHOT;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.NO_NEW_WM;
 import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
+import static com.hazelcast.jet.impl.util.Util.lazyAdd;
+import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toCollection;
@@ -311,8 +313,8 @@ public class ProcessorTasklet implements Tasklet {
         assert inbox.isEmpty() : "inbox is not empty";
         fillInbox1(now);
         // we are the only updating thread, no need for addAndGet
-        receivedCounts.lazySet(currInstream.ordinal(), receivedCounts.get(currInstream.ordinal()) + inbox.size());
-        receivedBatches.lazySet(currInstream.ordinal(), receivedBatches.get(currInstream.ordinal()) + 1);
+        lazyAdd(receivedCounts, currInstream.ordinal(), inbox.size());
+        lazyIncrement(receivedBatches, currInstream.ordinal());
     }
 
     private void fillInbox1(long now) {

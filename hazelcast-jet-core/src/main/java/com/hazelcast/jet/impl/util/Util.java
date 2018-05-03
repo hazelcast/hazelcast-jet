@@ -63,6 +63,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -424,11 +425,23 @@ public final class Util {
         lazyAdd(counter, 1);
     }
 
+    public static void lazyIncrement(AtomicLongArray counter, int index) {
+        lazyAdd(counter, index, 1);
+    }
+
     /**
      * Adds {@code addend} to the counter, using {@code lazySet}. Useful for
      * incrementing {@linkplain com.hazelcast.internal.metrics.Probe probes}.
      */
-    public static void lazyAdd(AtomicLong counter, int addend) {
+    public static void lazyAdd(AtomicLong counter, long addend) {
         counter.lazySet(counter.get() + addend);
+    }
+
+    /**
+     * Adds {@code addend} to the counter, using {@code lazySet}. Useful for
+     * incrementing {@linkplain com.hazelcast.internal.metrics.Probe probes}.
+     */
+    public static void lazyAdd(AtomicLongArray counter, int index, long addend) {
+        counter.lazySet(index, counter.get(index) + addend);
     }
 }
