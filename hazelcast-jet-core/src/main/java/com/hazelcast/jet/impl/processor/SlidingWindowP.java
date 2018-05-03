@@ -327,6 +327,9 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
                 patchSlidingWindow(aggrOp.deductFn(), evictedFrame);
             }
         }
+        assert tsToKeyToAcc.values().stream().mapToInt(Map::size).sum() == totalKeysInFrames.get()
+                : "totalKeysInFrames mismatch, expected=" + tsToKeyToAcc.values().stream().mapToInt(Map::size).sum()
+                + ", actual=" + totalKeysInFrames.get();
     }
 
     private boolean flushBuffers() {
