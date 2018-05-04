@@ -16,11 +16,13 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.internal.metrics.MetricsRegistry;
+import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.impl.util.NonCompletableFuture;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.util.concurrent.BackoffIdleStrategy;
 import com.hazelcast.util.concurrent.IdleStrategy;
 
@@ -66,14 +68,16 @@ public class TaskletExecutionService {
     private final String hzInstanceName;
     private final ILogger logger;
     private final AtomicInteger cooperativeThreadIndex = new AtomicInteger();
+    private final MetricsRegistry metricsRegistry;
 
     private volatile boolean isShutdown;
 
-    public TaskletExecutionService(HazelcastInstance hz, int threadCount) {
-        this.hzInstanceName = hz.getName();
+    public TaskletExecutionService(NodeEngineImpl nodeEngine, int threadCount) {
+        this.hzInstanceName = nodeEngine.getHazelcastInstance().getName();
         this.cooperativeWorkers = new CooperativeWorker[threadCount];
         this.cooperativeThreadPool = new Thread[threadCount];
-        this.logger = hz.getLoggingService().getLogger(TaskletExecutionService.class);
+        this.logger = nodeEngine.getLoggingService().getLogger(TaskletExecutionService.class);
+        this.metricsRegistry = nodeEngine.getMetricsRegistry();
     }
 
     /**
@@ -156,6 +160,9 @@ public class TaskletExecutionService {
         Arrays.setAll(cooperativeThreadPool, i -> new Thread(cooperativeWorkers[i],
                 String.format("hz.%s.jet.cooperative.thread-%d", hzInstanceName, i)));
         Arrays.stream(cooperativeThreadPool).forEach(Thread::start);
+        for (int i = 0; i < cooperativeWorkers.length; i++) {
+            metricsRegistry.scanAndRegister(cooperativeWorkers[i], "jet.cooperativeWorker-" + i);
+        }
     }
 
     private String trackersToString() {
@@ -219,6 +226,7 @@ public class TaskletExecutionService {
     private final class CooperativeWorker implements Runnable {
         private static final int COOPERATIVE_LOGGING_THRESHOLD = 5;
 
+        @Probe(name = "taskletCount")
         private final List<TaskletTracker> trackers;
         private final CooperativeWorker[] colleagues;
 

@@ -103,7 +103,7 @@ public class JetService
         }
 
         jetInstance = new JetInstanceImpl((HazelcastInstanceImpl) engine.getHazelcastInstance(), config);
-        taskletExecutionService = new TaskletExecutionService(nodeEngine.getHazelcastInstance(),
+        taskletExecutionService = new TaskletExecutionService(nodeEngine,
                 config.getInstanceConfig().getCooperativeThreadCount());
 
         SnapshotRepository snapshotRepository = new SnapshotRepository(jetInstance);
@@ -141,7 +141,7 @@ public class JetService
             metricsRegistry.render(new ProbeRenderer() {
                 @Override
                 public void renderLong(String name, long value) {
-                    if (name.startsWith("jet.job")) {
+                    if (name.startsWith("jet.")) {
                         logger.info(name + "=" + value);
                     }
                     count[0]++;
@@ -149,7 +149,7 @@ public class JetService
 
                 @Override
                 public void renderDouble(String name, double value) {
-                    if (name.startsWith("jet.job")) {
+                    if (name.startsWith("jet.")) {
                         logger.info(name + "=" + value);
                     }
                     count[0]++;

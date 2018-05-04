@@ -17,10 +17,12 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.internal.metrics.MetricsRegistry;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.logging.LoggingService;
+import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.After;
 import org.junit.Before;
@@ -73,13 +75,16 @@ public class TaskletExecutionServiceTest extends JetTestSupport {
 
     @Before
     public void before() {
+        NodeEngineImpl neMock = mock(NodeEngineImpl.class);
         HazelcastInstance hzMock = mock(HazelcastInstance.class);
         LoggingService loggingService = mock(LoggingService.class);
         Mockito.when(hzMock.getName()).thenReturn("test-hz-instance");
-        Mockito.when(hzMock.getLoggingService()).thenReturn(loggingService);
+        Mockito.when(neMock.getLoggingService()).thenReturn(loggingService);
+        Mockito.when(neMock.getHazelcastInstance()).thenReturn(hzMock);
+        Mockito.when(neMock.getMetricsRegistry()).thenReturn(mock(MetricsRegistry.class));
         Mockito.when(loggingService.getLogger(TaskletExecutionService.class))
                .thenReturn(Logger.getLogger(TaskletExecutionService.class));
-        es = new TaskletExecutionService(hzMock, THREAD_COUNT);
+        es = new TaskletExecutionService(neMock, THREAD_COUNT);
         classLoaderMock = mock(ClassLoader.class);
     }
 
