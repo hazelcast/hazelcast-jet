@@ -39,6 +39,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
@@ -56,6 +57,7 @@ import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.NO_NEW_WM;
 import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static com.hazelcast.jet.impl.util.Util.lazyAdd;
 import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
+import static com.hazelcast.jet.impl.util.Util.sum;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toCollection;
@@ -87,6 +89,8 @@ public class ProcessorTasklet implements Tasklet {
     private final AtomicLongArray receivedCounts;
     private final AtomicLongArray receivedBatches;
     private final AtomicLongArray emittedCounts;
+    private final AtomicLong queuesSize = new AtomicLong();
+    private final AtomicLong queuesCapacity = new AtomicLong();
 
     public ProcessorTasklet(@Nonnull ProcCtx context,
                             @Nonnull Processor processor,
@@ -134,6 +138,7 @@ public class ProcessorTasklet implements Tasklet {
             metricsRegistry.register(this, name, ProbeLevel.INFO,
                     (LongProbeFunction<ProcessorTasklet>) t -> t.receivedBatches.get(finalI));
         }
+
         for (int i = 0; i < emittedCounts.length(); i++) {
             int finalI = i;
             String name = namePrefix + ".emittedCount";
@@ -145,8 +150,13 @@ public class ProcessorTasklet implements Tasklet {
             metricsRegistry.register(this, name, ProbeLevel.INFO,
                     (LongProbeFunction<ProcessorTasklet>) t -> t.emittedCounts.get(finalI));
         }
+
         metricsRegistry.register(this, namePrefix + ".lastReceivedWm", ProbeLevel.INFO,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.watermarkCoalescer.lastEmittedWm());
+        metricsRegistry.register(this, namePrefix + ".queuesSize", ProbeLevel.INFO,
+                (LongProbeFunction<ProcessorTasklet>) t -> t.queuesSize.get());
+        metricsRegistry.register(this, namePrefix + ".queuesCapacity", ProbeLevel.INFO,
+                (LongProbeFunction<ProcessorTasklet>) t -> t.queuesCapacity.get());
     }
 
     private OutboxImpl createOutbox(OutboundCollector ssCollector) {
@@ -311,13 +321,6 @@ public class ProcessorTasklet implements Tasklet {
 
     private void fillInbox(long now) {
         assert inbox.isEmpty() : "inbox is not empty";
-        fillInbox1(now);
-        // we are the only updating thread, no need for addAndGet
-        lazyAdd(receivedCounts, currInstream.ordinal(), inbox.size());
-        lazyIncrement(receivedBatches, currInstream.ordinal());
-    }
-
-    private void fillInbox1(long now) {
         assert pendingWatermark == null : "null wm expected, but was " + pendingWatermark;
 
         if (instreamCursor == null) {
@@ -370,9 +373,15 @@ public class ProcessorTasklet implements Tasklet {
             // pop current priority group
             if (!instreamCursor.advance()) {
                 instreamCursor = popInstreamGroup();
-                return;
+                break;
             }
         } while (!result.isMadeProgress() && instreamCursor.value() != first);
+
+        // we are the only updating thread, no need for CAS operations
+        lazyAdd(receivedCounts, currInstream.ordinal(), inbox.size());
+        lazyIncrement(receivedBatches, currInstream.ordinal());
+        queuesCapacity.lazySet(sum(instreamCursor.getList(), InboundEdgeStream::capacities));
+        queuesSize.lazySet(sum(instreamCursor.getList(), InboundEdgeStream::sizes));
     }
 
     private CircularListCursor<InboundEdgeStream> popInstreamGroup() {

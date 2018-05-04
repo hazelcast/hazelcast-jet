@@ -56,6 +56,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -66,6 +67,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.function.ToIntFunction;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
@@ -443,5 +445,19 @@ public final class Util {
      */
     public static void lazyAdd(AtomicLongArray counter, int index, long addend) {
         counter.lazySet(index, counter.get(index) + addend);
+    }
+
+    /**
+     * Adds items of the collection. Faster than {@code
+     * collection.stream().mapToInt(toIntF).sum()} and equal to plain old loop
+     * in performance. Crates no GC litter (if you use non-capturing lambda for
+     * {@code toIntF}, else new lambda instance is created for each call).
+     */
+    public static <E> int sum(Collection<E> collection, ToIntFunction<E> toIntF) {
+        int sum = 0;
+        for (E e : collection) {
+            sum += toIntF.applyAsInt(e);
+        }
+        return sum;
     }
 }
