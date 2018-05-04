@@ -39,11 +39,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
+import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.lang.Thread.currentThread;
 import static java.util.concurrent.Executors.newCachedThreadPool;
@@ -229,6 +231,8 @@ public class TaskletExecutionService {
         @Probe(name = "taskletCount")
         private final List<TaskletTracker> trackers;
         private final CooperativeWorker[] colleagues;
+        @Probe
+        private final AtomicLong iterationCount = new AtomicLong();
 
         CooperativeWorker(CooperativeWorker[] colleagues) {
             this.colleagues = colleagues;
@@ -279,6 +283,7 @@ public class TaskletExecutionService {
                         }
                     }
                 }
+                lazyIncrement(iterationCount);
                 if (madeProgress) {
                     idleCount = 0;
                 } else {
