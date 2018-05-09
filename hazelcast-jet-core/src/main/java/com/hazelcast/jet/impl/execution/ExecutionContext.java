@@ -21,6 +21,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
+import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.BufferObjectDataInput;
@@ -175,7 +176,7 @@ public class ExecutionContext {
     /**
      * Starts a new snapshot by incrementing the current snapshot id
      */
-    public CompletionStage<Void> beginSnapshot(long snapshotId) {
+    public CompletionStage<SnapshotOperationResult> beginSnapshot(long snapshotId) {
         synchronized (executionLock) {
             if (cancellationFuture.isDone() || executionFuture != null && executionFuture.isDone()) {
                 throw new CancellationException();

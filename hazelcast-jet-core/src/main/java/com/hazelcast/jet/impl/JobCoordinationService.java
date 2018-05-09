@@ -513,14 +513,17 @@ public class JobCoordinationService {
         }
     }
 
-    void completeSnapshot(long jobId, long executionId, long snapshotId, boolean isSuccess) {
+    void completeSnapshot(long jobId, long executionId, long snapshotId, boolean isSuccess,
+                          long numBytes, long numKeys, long numChunks) {
         MasterContext masterContext = masterContexts.get(jobId);
         if (masterContext != null) {
             try {
                 SnapshotStatus status = isSuccess ? SUCCESSFUL : FAILED;
-                long elapsed = snapshotRepository.setSnapshotStatus(jobId, snapshotId, status);
-                logger.info(String.format("Snapshot %s for job %s completed with status %s in %dms", snapshotId,
-                        idToString(jobId), status, elapsed));
+                long elapsed = snapshotRepository.setSnapshotComplete(jobId, snapshotId, status, numBytes, numKeys,
+                        numChunks);
+                logger.info(String.format("Snapshot %s for job %s completed with status %s in %dms, " +
+                                "%,d bytes, %,d keys in %,d chunks", snapshotId, idToString(jobId), status, elapsed,
+                                numBytes, numKeys, numChunks));
             } catch (Exception e) {
                 logger.warning("Cannot update snapshot status for " + jobAndExecutionId(jobId, executionId) + " snapshot "
                         + snapshotId + " isSuccess: " + isSuccess);

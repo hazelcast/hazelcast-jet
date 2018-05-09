@@ -46,6 +46,15 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
     private long jobId;
     private long snapshotId;
     private long startTime = System.currentTimeMillis();
+    private long endTime = Long.MIN_VALUE;
+
+    /** Net number of bytes in primary copy. Doesn't include IMap overhead and backup copies. */
+    private long numBytes;
+    /** Number of snapshot keys (after exploding chunks). */
+    private long numKeys;
+    /** Number of chunks the snapshot is stored in. One chunk is one IMap entry. */
+    private long numChunks;
+
     private SnapshotStatus status = ONGOING;
     private Collection<String> vertices;
 
@@ -72,6 +81,14 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
 
     public SnapshotStatus status() {
         return status;
+    }
+
+    public void snapshotComplete(SnapshotStatus status, long numBytes, long numKeys, long numChunks) {
+        setStatus(status);
+        this.numBytes = numBytes;
+        this.numKeys = numKeys;
+        this.numChunks = numChunks;
+        this.endTime = System.currentTimeMillis();
     }
 
     public void setStatus(SnapshotStatus newStatus) {
