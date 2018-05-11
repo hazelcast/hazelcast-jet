@@ -23,6 +23,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBiPredicate;
+import com.hazelcast.jet.function.DistributedComparator;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -30,6 +31,8 @@ import com.hazelcast.jet.function.DistributedTriFunction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
+import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 
 /**
  * Represents a stage in a distributed computation {@link Pipeline
@@ -74,6 +77,26 @@ public interface BatchStage<T> extends GeneralStage<T> {
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     );
 
+    /**
+     * Javadoc pending.
+     *
+     * @param keyFn
+     * @param <K>
+     */
+    @Nonnull
+    <K> BatchStage<T> distinctBy(DistributedFunction<? super T, ? extends K> keyFn);
+
+    /**
+     * Javadoc pending.
+     */
+    @Nonnull
+    default BatchStage<T> distinct() {
+        return distinctBy(wholeItem());
+    }
+
+    @Nonnull
+    BatchStage<T> merge(@Nonnull BatchStage<? extends T> other);
+
     @Nonnull @Override
     <K, T1_IN, T1, R> BatchStage<R> hashJoin(
             @Nonnull BatchStage<T1_IN> stage1,
@@ -94,26 +117,6 @@ public interface BatchStage<T> extends GeneralStage<T> {
     default HashJoinBuilder<T> hashJoinBuilder() {
         return new HashJoinBuilder<>(this);
     }
-
-    @Nonnull @Override
-    default BatchStage<T> peek() {
-        return (BatchStage<T>) GeneralStage.super.peek();
-    }
-
-    @Nonnull @Override
-    BatchStage<T> peek(
-            @Nonnull DistributedPredicate<? super T> shouldLogFn,
-            @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn
-    );
-
-    @Nonnull @Override
-    default BatchStage<T> peek(@Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn) {
-        return (BatchStage<T>) GeneralStage.super.peek(toStringFn);
-    }
-
-    @Nonnull @Override
-    <R> BatchStage<R> customTransform(
-            @Nonnull String stageName, @Nonnull DistributedSupplier<Processor> procSupplier);
 
     /**
      * Attaches to this stage a stage that performs the given aggregate operation
@@ -183,6 +186,26 @@ public interface BatchStage<T> extends GeneralStage<T> {
     default AggregateBuilder<T> aggregateBuilder() {
         return new AggregateBuilder<>(this);
     }
+
+    @Nonnull @Override
+    default BatchStage<T> peek() {
+        return (BatchStage<T>) GeneralStage.super.peek();
+    }
+
+    @Nonnull @Override
+    BatchStage<T> peek(
+            @Nonnull DistributedPredicate<? super T> shouldLogFn,
+            @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn
+    );
+
+    @Nonnull @Override
+    default BatchStage<T> peek(@Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn) {
+        return (BatchStage<T>) GeneralStage.super.peek(toStringFn);
+    }
+
+    @Nonnull @Override
+    <R> BatchStage<R> customTransform(
+            @Nonnull String stageName, @Nonnull DistributedSupplier<Processor> procSupplier);
 
     @Nonnull @Override
     BatchStage<T> setLocalParallelism(int localParallelism);

@@ -52,6 +52,7 @@ public class MergeP<T, K, V> extends AbstractProcessor {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
         Map.Entry<K, V> entry;
         if (keyMapper == null || valueMapper == null) {

@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.pipeline;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
+import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.WindowResultFunction;
 import com.hazelcast.jet.impl.pipeline.transform.WindowAggregateTransform;
@@ -29,6 +30,7 @@ import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
 
+import static com.hazelcast.jet.aggregate.AggregateOperations.pickAny;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
 import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptAggregateOperation;
@@ -63,6 +65,15 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
             @Nonnull DistributedFunction<? super T, ? extends K> keyFn
     ) {
         return new StageWithGroupingAndWindowImpl<>(streamStage, keyFn, wDef);
+    }
+
+    @Nonnull
+    public <K, R> StreamStage<R> distinctBy(
+            DistributedFunction<? super T, ? extends K> keyFn,
+            WindowResultFunction<? super T, ? extends R> mapToOutputFn
+    ) {
+        return groupingKey(keyFn).aggregate(pickAny(),
+                (start, end, key, item) -> mapToOutputFn.apply(start, end, item));
     }
 
     @Nonnull @Override

@@ -25,6 +25,8 @@ import com.hazelcast.jet.function.WindowResultFunction;
 
 import javax.annotation.Nonnull;
 
+import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
+
 /**
  * Represents an intermediate step in the construction of a pipeline stage
  * that performs a windowed aggregate operation. You can perform a global
@@ -62,6 +64,39 @@ public interface StageWithWindow<T> {
     <K> StageWithGroupingAndWindow<T, K> groupingKey(
             @Nonnull DistributedFunction<? super T, ? extends K> keyFn
     );
+
+    /**
+     * Javadoc pending.
+     *
+     * @param keyFn
+     * @param mapToOutputFn
+     * @param <K>
+     * @param <R>
+     */
+    @Nonnull
+    <K, R> StreamStage<R> distinctBy(
+            DistributedFunction<? super T, ? extends K> keyFn,
+            WindowResultFunction<? super T, ? extends R> mapToOutputFn
+    );
+
+    /**
+     * Javadoc pending.
+     *
+     * @param keyFn
+     * @param <K>
+     */
+    @Nonnull
+    default <K> StreamStage<TimestampedItem<T>> distinctBy(DistributedFunction<? super T, ? extends K> keyFn) {
+        return distinctBy(keyFn, TimestampedItem::new);
+    }
+
+    /**
+     * Javadoc pending.
+     */
+    @Nonnull
+    default StreamStage<TimestampedItem<T>> distinct() {
+        return distinctBy(wholeItem(), TimestampedItem::new);
+    }
 
     /**
      * Attaches to this stage a stage that performs the given aggregate operation

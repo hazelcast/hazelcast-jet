@@ -38,15 +38,14 @@ import java.util.function.Supplier;
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 public abstract class TestInClusterSupport extends JetTestSupport {
 
-    public static final String JOURNALED_MAP_PREFIX = "journaledMap.";
-    public static final String JOURNALED_CACHE_PREFIX = "journaledCache.";
-
-    private static final int MEMBER_COUNT = 2;
+    protected static final int MEMBER_COUNT = 2;
+    protected static final String JOURNALED_MAP_PREFIX = "journaledMap.";
+    protected static final String JOURNALED_CACHE_PREFIX = "journaledCache.";
 
     private static JetTestInstanceFactory factory = new JetTestInstanceFactory();
     private static JetInstance[] allJetInstances;
 
-    private static JetInstance member;
+    protected static JetInstance member;
     private static JetInstance client;
 
     private static final TestMode MEMBER_TEST_MODE = new TestMode("member", () -> member);
@@ -66,6 +65,7 @@ public abstract class TestInClusterSupport extends JetTestSupport {
         JetConfig config = new JetConfig();
         config.getInstanceConfig().setCooperativeThreadCount(parallelism <= 2 ? 2 : parallelism);
         Config hzConfig = config.getHazelcastConfig();
+        hzConfig.getProperties().setProperty("hazelcast.partition.count", "" + parallelism * MEMBER_COUNT);
         hzConfig.addCacheConfig(new CacheSimpleConfig().setName("*"));
         hzConfig.getMapEventJournalConfig(JOURNALED_MAP_PREFIX + '*').setEnabled(true);
         hzConfig.getCacheEventJournalConfig(JOURNALED_CACHE_PREFIX + '*').setEnabled(true);

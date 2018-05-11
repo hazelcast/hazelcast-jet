@@ -62,6 +62,23 @@ public final class AggregateOperations {
     }
 
     /**
+     * Returns an aggregate operation whose result is an arbitrary item it
+     * observed, or {@code null} if it observed no items. If you use it in a
+     * group-and-aggregate operation, the result will be a set of distinct
+     * items (one for each grouping key).
+     */
+    @Nonnull
+    public static <T> AggregateOperation1<T, MutableReference<T>, T> pickAny() {
+        return AggregateOperation
+                .withCreate(MutableReference<T>::new)
+                // Result would be correct even without the acc.isNull() check, but that
+                // can cause more GC churn due to medium-lived objects.
+                .<T>andAccumulate((acc, item) -> { if (acc.isNull()) acc.set(item); })
+                .andCombine((acc1, acc2) -> { if (acc1.isNull()) acc1.set(acc2.get()); })
+                .andFinish(MutableReference::get);
+    }
+
+    /**
      * Returns an aggregate operation that computes the number of items.
      */
     @Nonnull
@@ -142,12 +159,12 @@ public final class AggregateOperations {
         return AggregateOperation
                 .withCreate(MutableReference<T>::new)
                 .andAccumulate((MutableReference<T> a, T i) -> {
-                    if (!a.isPresent() || comparator.compare(i, a.get()) > 0) {
+                    if (a.isNull() || comparator.compare(i, a.get()) > 0) {
                         a.set(i);
                     }
                 })
                 .andCombine((a1, a2) -> {
-                    if (!a1.isPresent() || comparator.compare(a1.get(), a2.get()) < 0) {
+                    if (a1.isNull() || comparator.compare(a1.get(), a2.get()) < 0) {
                         a1.set(a2.get());
                     }
                 })
@@ -248,9 +265,9 @@ public final class AggregateOperations {
      * DistributedBiFunction)} with identity finish.
      */
     @Nonnull
-    public static <T, A1, A2, R1, R2> AggregateOperation1<T, Tuple2<A1, A2>, Tuple2<R1, R2>> allOf(
-            @Nonnull AggregateOperation1<? super T, A1, R1> op1,
-            @Nonnull AggregateOperation1<? super T, A2, R2> op2
+    public static <T, A0, A1, R0, R1> AggregateOperation1<T, Tuple2<A0, A1>, Tuple2<R0, R1>> allOf(
+            @Nonnull AggregateOperation1<? super T, A0, R0> op1,
+            @Nonnull AggregateOperation1<? super T, A1, R1> op2
     ) {
         return allOf(op1, op2, Tuple2::tuple2);
     }
@@ -259,42 +276,46 @@ public final class AggregateOperations {
      * Returns composite aggregate operation from 2 other aggregate operations.
      * It allows you to calculate multiple aggregations over the same items at once.
      *
-     * @param op1 1st operation
-     * @param op2 2nd operation
+     * @param op0 1st operation
+     * @param op1 2nd operation
      * @param finishFn a function combining 2 results into single target instance
      *
      * @param <T> type of input items
-     * @param <A1> 1st accumulator type
-     * @param <A2> 2nd accumulator type
-     * @param <R1> 1st result type
-     * @param <R2> 2nd result type
+     * @param <A0> 1st accumulator type
+     * @param <A1> 2nd accumulator type
+     * @param <R0> 1st result type
+     * @param <R1> 2nd result type
      * @param <R> final result type
      *
      * @return the composite operation
      */
     @Nonnull
-    public static <T, A1, A2, R1, R2, R> AggregateOperation1<T, Tuple2<A1, A2>, R> allOf(
+    public static <T, A0, A1, R0, R1, R> AggregateOperation1<T, Tuple2<A0, A1>, R> allOf(
+            @Nonnull AggregateOperation1<? super T, A0, R0> op0,
             @Nonnull AggregateOperation1<? super T, A1, R1> op1,
-            @Nonnull AggregateOperation1<? super T, A2, R2> op2,
-            @Nonnull DistributedBiFunction<? super R1, ? super R2, R> finishFn
+            @Nonnull DistributedBiFunction<? super R0, ? super R1, R> finishFn
     ) {
+        DistributedBiConsumer<? super A0, ? super A0> combine0 = op0.combineFn();
+        DistributedBiConsumer<? super A1, ? super A1> combine1 = op1.combineFn();
+        DistributedBiConsumer<? super A0, ? super A0> deduct0 = op0.deductFn();
+        DistributedBiConsumer<? super A1, ? super A1> deduct1 = op1.deductFn();
         return AggregateOperation
-                .withCreate(() -> tuple2(op1.createFn().get(), op2.createFn().get()))
+                .withCreate(() -> tuple2(op0.createFn().get(), op1.createFn().get()))
                 .<T>andAccumulate((acc, item) -> {
-                    op1.accumulateFn().accept(acc.f0(), item);
-                    op2.accumulateFn().accept(acc.f1(), item);
+                    op0.accumulateFn().accept(acc.f0(), item);
+                    op1.accumulateFn().accept(acc.f1(), item);
                 })
-                .andCombine(op1.combineFn() == null || op2.combineFn() == null ? null :
+                .andCombine(combine0 == null || combine1 == null ? null :
                         (acc1, acc2) -> {
-                            op1.combineFn().accept(acc1.f0(), acc2.f0());
-                            op2.combineFn().accept(acc1.f1(), acc2.f1());
+                            combine0.accept(acc1.f0(), acc2.f0());
+                            combine1.accept(acc1.f1(), acc2.f1());
                         })
-                .andDeduct(op1.deductFn() == null || op2.deductFn() == null ? null :
+                .andDeduct(deduct0 == null || deduct1 == null ? null :
                         (acc1, acc2) -> {
-                            op1.deductFn().accept(acc1.f0(), acc2.f0());
-                            op2.deductFn().accept(acc1.f1(), acc2.f1());
+                            deduct0.accept(acc1.f0(), acc2.f0());
+                            deduct1.accept(acc1.f1(), acc2.f1());
                         })
-                .andFinish(acc -> finishFn.apply(op1.finishFn().apply(acc.f0()), op2.finishFn().apply(acc.f1())));
+                .andFinish(acc -> finishFn.apply(op0.finishFn().apply(acc.f0()), op1.finishFn().apply(acc.f1())));
     }
 
     /**
@@ -302,10 +323,10 @@ public final class AggregateOperations {
      * AggregateOperation1, DistributedTriFunction)} with identity finisher.
      */
     @Nonnull
-    public static <T, A1, A2, A3, R1, R2, R3> AggregateOperation1<T, Tuple3<A1, A2, A3>, Tuple3<R1, R2, R3>> allOf(
-            @Nonnull AggregateOperation1<? super T, A1, R1> op1,
-            @Nonnull AggregateOperation1<? super T, A2, R2> op2,
-            @Nonnull AggregateOperation1<? super T, A3, R3> op3
+    public static <T, A0, A1, A2, R0, R1, R2> AggregateOperation1<T, Tuple3<A0, A1, A2>, Tuple3<R0, R1, R2>> allOf(
+            @Nonnull AggregateOperation1<? super T, A0, R0> op1,
+            @Nonnull AggregateOperation1<? super T, A1, R1> op2,
+            @Nonnull AggregateOperation1<? super T, A2, R2> op3
     ) {
         return allOf(op1, op2, op3, Tuple3::tuple3);
     }
@@ -314,52 +335,58 @@ public final class AggregateOperations {
      * Returns composite aggregate operation from 3 other aggregate operations.
      * It allows you to calculate multiple aggregations over the same items at once.
      *
-     * @param op1 1st operation
+     * @param op0 1st operation
      * @param op2 2nd operation
      * @param op3 3rd operation
      * @param finishFn a function combining 3 results into single target instance
      *
      * @param <T> type of input items
-     * @param <A1> 1st accumulator type
-     * @param <A2> 2nd accumulator type
-     * @param <A3> 3rd accumulator type
-     * @param <R1> 1st result type
-     * @param <R2> 2nd result type
-     * @param <R3> 3rd result type
+     * @param <A0> 1st accumulator type
+     * @param <A1> 2nd accumulator type
+     * @param <A2> 3rd accumulator type
+     * @param <R0> 1st result type
+     * @param <R1> 2nd result type
+     * @param <R2> 3rd result type
      * @param <R> final result type
      *
      * @return the composite operation
      */
     @Nonnull
-    public static <T, A1, A2, A3, R1, R2, R3, R> AggregateOperation1<T, Tuple3<A1, A2, A3>, R> allOf(
+    public static <T, A0, A1, A2, R0, R1, R2, R> AggregateOperation1<T, Tuple3<A0, A1, A2>, R> allOf(
+            @Nonnull AggregateOperation1<? super T, A0, R0> op0,
             @Nonnull AggregateOperation1<? super T, A1, R1> op1,
             @Nonnull AggregateOperation1<? super T, A2, R2> op2,
-            @Nonnull AggregateOperation1<? super T, A3, R3> op3,
-            @Nonnull DistributedTriFunction<? super R1, ? super R2, ? super R3, R> finishFn
+            @Nonnull DistributedTriFunction<? super R0, ? super R1, ? super R2, R> finishFn
     ) {
+        DistributedBiConsumer<? super A0, ? super A0> combine0 = op0.combineFn();
+        DistributedBiConsumer<? super A1, ? super A1> combine1 = op1.combineFn();
+        DistributedBiConsumer<? super A2, ? super A2> combine2 = op2.combineFn();
+        DistributedBiConsumer<? super A0, ? super A0> deduct0 = op0.deductFn();
+        DistributedBiConsumer<? super A1, ? super A1> deduct1 = op1.deductFn();
+        DistributedBiConsumer<? super A2, ? super A2> deduct2 = op2.deductFn();
         return AggregateOperation
-                .withCreate(() -> tuple3(op1.createFn().get(), op2.createFn().get(), op3.createFn().get()))
+                .withCreate(() -> tuple3(op0.createFn().get(), op1.createFn().get(), op2.createFn().get()))
                 .<T>andAccumulate((acc, item) -> {
-                    op1.accumulateFn().accept(acc.f0(), item);
-                    op2.accumulateFn().accept(acc.f1(), item);
-                    op3.accumulateFn().accept(acc.f2(), item);
+                    op0.accumulateFn().accept(acc.f0(), item);
+                    op1.accumulateFn().accept(acc.f1(), item);
+                    op2.accumulateFn().accept(acc.f2(), item);
                 })
-                .andCombine(op1.combineFn() == null || op2.combineFn() == null ? null :
+                .andCombine(combine0 == null || combine1 == null || combine2 == null ? null :
                         (acc1, acc2) -> {
-                            op1.combineFn().accept(acc1.f0(), acc2.f0());
-                            op2.combineFn().accept(acc1.f1(), acc2.f1());
-                            op3.combineFn().accept(acc1.f2(), acc2.f2());
+                            combine0.accept(acc1.f0(), acc2.f0());
+                            combine1.accept(acc1.f1(), acc2.f1());
+                            combine2.accept(acc1.f2(), acc2.f2());
                         })
-                .andDeduct(op1.deductFn() == null || op2.deductFn() == null ? null :
+                .andDeduct(deduct0 == null || deduct1 == null || deduct2 == null ? null :
                         (acc1, acc2) -> {
-                            op1.deductFn().accept(acc1.f0(), acc2.f0());
-                            op2.deductFn().accept(acc1.f1(), acc2.f1());
-                            op3.deductFn().accept(acc1.f2(), acc2.f2());
+                            deduct0.accept(acc1.f0(), acc2.f0());
+                            deduct1.accept(acc1.f1(), acc2.f1());
+                            deduct2.accept(acc1.f2(), acc2.f2());
                         })
                 .andFinish(acc -> finishFn.apply(
-                        op1.finishFn().apply(acc.f0()),
-                        op2.finishFn().apply(acc.f1()),
-                        op3.finishFn().apply(acc.f2())));
+                        op0.finishFn().apply(acc.f0()),
+                        op1.finishFn().apply(acc.f1()),
+                        op2.finishFn().apply(acc.f2())));
     }
 
     /**
@@ -398,6 +425,68 @@ public final class AggregateOperations {
     @Nonnull
     public static <T> AllOfAggregationBuilder<T> allOfBuilder() {
         return new AllOfAggregationBuilder<>();
+    }
+
+    public static <T0, A0, R0, T1, A1, R1, R> AggregateOperation2<T0, T1, Tuple2<A0, A1>, R> coAggregate2(
+            @Nonnull AggregateOperation1<T0, A0, R0> op0,
+            @Nonnull AggregateOperation1<T1, A1, R1> op1,
+            @Nonnull DistributedBiFunction<? super R0, ? super R1, R> finishFn
+    ) {
+        DistributedBiConsumer<? super A0, ? super A0> combine0 = op0.combineFn();
+        DistributedBiConsumer<? super A1, ? super A1> combine1 = op1.combineFn();
+        DistributedBiConsumer<? super A0, ? super A0> deduct0 = op0.deductFn();
+        DistributedBiConsumer<? super A1, ? super A1> deduct1 = op1.deductFn();
+        return AggregateOperation
+                .withCreate(() -> tuple2(op0.createFn().get(), op1.createFn().get()))
+                .<T0>andAccumulate0((acc, item) -> op0.accumulateFn().accept(acc.f0(), item))
+                .<T1>andAccumulate1((acc, item) -> op1.accumulateFn().accept(acc.f1(), item))
+                .andCombine(combine0 == null || combine1 == null ? null :
+                        (acc1, acc2) -> {
+                            combine0.accept(acc1.f0(), acc2.f0());
+                            combine1.accept(acc1.f1(), acc2.f1());
+                        })
+                .andDeduct(deduct0 == null || deduct1 == null ? null :
+                        (acc1, acc2) -> {
+                            deduct0.accept(acc1.f0(), acc2.f0());
+                            deduct1.accept(acc1.f1(), acc2.f1());
+                        })
+                .andFinish(acc -> finishFn.apply(op0.finishFn().apply(acc.f0()), op1.finishFn().apply(acc.f1())));
+    }
+
+    public static <T0, A0, R0, T1, A1, R1, T2, A2, R2, R>
+    AggregateOperation3<T0, T1, T2, Tuple3<A0, A1, A2>, R> coAggregate3(
+            @Nonnull AggregateOperation1<T0, A0, R0> op0,
+            @Nonnull AggregateOperation1<T1, A1, R1> op1,
+            @Nonnull AggregateOperation1<T2, A2, R2> op2,
+            @Nonnull DistributedTriFunction<? super R0, ? super R1, ? super R2, R> finishFn
+    ) {
+        DistributedBiConsumer<? super A0, ? super A0> combine0 = op0.combineFn();
+        DistributedBiConsumer<? super A1, ? super A1> combine1 = op1.combineFn();
+        DistributedBiConsumer<? super A2, ? super A2> combine2 = op2.combineFn();
+        DistributedBiConsumer<? super A0, ? super A0> deduct0 = op0.deductFn();
+        DistributedBiConsumer<? super A1, ? super A1> deduct1 = op1.deductFn();
+        DistributedBiConsumer<? super A2, ? super A2> deduct2 = op2.deductFn();
+        return AggregateOperation
+                .withCreate(() -> tuple3(op0.createFn().get(), op1.createFn().get(), op2.createFn().get()))
+                .<T0>andAccumulate0((acc, item) -> op0.accumulateFn().accept(acc.f0(), item))
+                .<T1>andAccumulate1((acc, item) -> op1.accumulateFn().accept(acc.f1(), item))
+                .<T2>andAccumulate2((acc, item) -> op2.accumulateFn().accept(acc.f2(), item))
+                .andCombine(combine0 == null || combine1 == null || combine2 == null ? null :
+                        (acc1, acc2) -> {
+                            combine0.accept(acc1.f0(), acc2.f0());
+                            combine1.accept(acc1.f1(), acc2.f1());
+                            combine2.accept(acc1.f2(), acc2.f2());
+                        })
+                .andDeduct(deduct0 == null || deduct1 == null || deduct2 == null ? null :
+                        (acc1, acc2) -> {
+                            deduct0.accept(acc1.f0(), acc2.f0());
+                            deduct1.accept(acc1.f1(), acc2.f1());
+                            deduct2.accept(acc1.f2(), acc2.f2());
+                        })
+                .andFinish(acc -> finishFn.apply(
+                        op0.finishFn().apply(acc.f0()),
+                        op1.finishFn().apply(acc.f1()),
+                        op2.finishFn().apply(acc.f2())));
     }
 
     /**
@@ -768,6 +857,7 @@ public final class AggregateOperations {
      * @see #groupingBy(DistributedFunction)
      * @see #groupingBy(DistributedFunction, AggregateOperation1)
      */
+    @SuppressWarnings("unchecked")
     public static <T, K, R, A, M extends Map<K, R>> AggregateOperation1<T, Map<K, A>, M> groupingBy(
             DistributedFunction<? super T, ? extends K> toKeyFn,
             DistributedSupplier<M> createMapFn,
@@ -842,5 +932,18 @@ public final class AggregateOperations {
                         ? (a, b) -> a.set(deductFn.apply(a.get(), b.get()))
                         : null)
                 .andFinish(MutableReference::get);
+    }
+
+    public static <T> AggregateOperation1<T, ArrayList<T>, List<T>> sorting(
+            DistributedComparator<? super T> comparator
+    ) {
+        return AggregateOperation
+                .withCreate(ArrayList<T>::new)
+                .<T>andAccumulate(ArrayList::add)
+                .andCombine(ArrayList::addAll)
+                .andFinish(list -> {
+                    list.sort(comparator);
+                    return list;
+                });
     }
 }

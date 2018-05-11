@@ -29,6 +29,7 @@ import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedTriFunction;
 import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
+import com.hazelcast.jet.impl.pipeline.transform.DistinctTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.ContextFactory;
@@ -37,6 +38,7 @@ import com.hazelcast.jet.pipeline.StageWithGrouping;
 
 import javax.annotation.Nonnull;
 
+import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
@@ -77,6 +79,11 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
+    public <K> BatchStage<T> distinctBy(DistributedFunction<? super T, ? extends K> keyFn) {
+        return attach(new DistinctTransform<>(transform, keyFn), DONT_ADAPT);
+    }
+
+    @Nonnull @Override
     public <C, R> BatchStage<R> mapUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
@@ -98,6 +105,11 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         return attachFlatMapUsingContext(contextFactory, flatMapFn);
+    }
+
+    @Nonnull @Override
+    public BatchStage<T> merge(@Nonnull BatchStage<? extends T> other) {
+        return attachMerge(other);
     }
 
     @Nonnull @Override

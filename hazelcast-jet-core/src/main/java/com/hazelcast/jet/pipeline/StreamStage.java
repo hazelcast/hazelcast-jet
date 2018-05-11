@@ -46,6 +46,9 @@ public interface StreamStage<T> extends GeneralStage<T> {
     @Nonnull
     StageWithWindow<T> window(WindowDefinition wDef);
 
+    @Nonnull
+    StreamStage<T> merge(@Nonnull StreamStage<? extends T> other);
+
     @Nonnull @Override
     <K> StreamStageWithGrouping<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);
 

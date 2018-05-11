@@ -44,7 +44,7 @@ public class SinkBuilderTest extends PipelineTestSupport {
     @Test
     public void fileSink() {
         // Given
-        List<Integer> input = sequence(ITEM_COUNT);
+        List<Integer> input = sequence(itemCount);
         addToSrcList(input);
         String listName = randomName();
 
@@ -61,7 +61,7 @@ public class SinkBuilderTest extends PipelineTestSupport {
                               .flatMap(path -> uncheckCall(() -> Files.list(path)))
                               .flatMap(path -> uncheckCall(() -> Files.readAllLines(path).stream()))
                               .count();
-            assertEquals(ITEM_COUNT, count);
+            assertEquals(itemCount, count);
         });
     }
 
@@ -69,7 +69,7 @@ public class SinkBuilderTest extends PipelineTestSupport {
     @Test
     public void socketSink() throws IOException {
         // Given
-        List<Integer> input = sequence(ITEM_COUNT);
+        List<Integer> input = sequence(itemCount);
         addToSrcList(input);
 
         AtomicInteger counter = new AtomicInteger();
@@ -96,7 +96,7 @@ public class SinkBuilderTest extends PipelineTestSupport {
             execute();
 
             //Then
-            assertTrueEventually(() -> assertEquals(ITEM_COUNT, counter.get()));
+            assertTrueEventually(() -> assertEquals(itemCount, counter.get()));
         }
     }
 

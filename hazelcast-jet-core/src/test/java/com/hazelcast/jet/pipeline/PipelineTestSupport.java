@@ -42,18 +42,18 @@ import static java.util.stream.Collectors.toList;
 
 public abstract class PipelineTestSupport extends TestInClusterSupport {
 
-    static final char ITEM_COUNT = 10;
-    final String srcName = randomName();
+    int itemCount = 10;
+    final String srcName = journaledMapName();
     final String sinkName = randomName();
 
     Pipeline p;
-    BatchStage<Integer> srcStage;
     Sink<Object> sink;
 
     IMap<String, Integer> srcMap;
-    ICache<String, Integer> srcCache;
     IList<Object> srcList;
     IList<Object> sinkList;
+
+    private ICache<String, Integer> srcCache;
 
     @Before
     public void beforePipelineTestSupport() {
@@ -65,32 +65,6 @@ public abstract class PipelineTestSupport extends TestInClusterSupport {
         sinkList = jet().getList(sinkName);
     }
 
-    void addToSrcList(List<Integer> data) {
-        srcList.addAll(data);
-    }
-
-    void addToList(List<Integer> dest, List<Integer> data) {
-        dest.addAll(data);
-    }
-
-    void putToSrcMap(List<Integer> data) {
-        putToMap(srcMap, data);
-    }
-
-    void putToSrcCache(List<Integer> data) {
-        putToCache(srcCache, data);
-    }
-
-    static void putToMap(Map<String, Integer> dest, List<Integer> data) {
-        int[] key = {0};
-        data.forEach(i -> dest.put(String.valueOf(key[0]++), i));
-    }
-
-    static void putToCache(Cache<String, Integer> dest, List<Integer> data) {
-        int[] key = {0};
-        data.forEach(i -> dest.put(String.valueOf(key[0]++), i));
-    }
-
     JetInstance jet() {
         return testMode.getJet();
     }
@@ -99,8 +73,35 @@ public abstract class PipelineTestSupport extends TestInClusterSupport {
         jet().newJob(p).join();
     }
 
-    Map<Object, Integer> sinkToBag() {
-        return toBag(this.sinkList);
+    static String journaledMapName() {
+        return randomMapName(JOURNALED_MAP_PREFIX);
+    }
+
+    void addToSrcList(Collection<Integer> data) {
+        srcList.addAll(data);
+    }
+
+    void putToBatchSrcMap(Collection<Integer> data) {
+        putToMap(srcMap, data);
+    }
+
+    void putToBatchSrcCache(Collection<Integer> data) {
+        putToCache(srcCache, data);
+    }
+
+    static void putToMap(Map<String, Integer> dest, Collection<Integer> data) {
+        int[] key = {0};
+        data.forEach(i -> dest.put(String.valueOf(key[0]++), i));
+    }
+
+    static void putToCache(Cache<String, Integer> dest, Collection<Integer> data) {
+        int[] key = {0};
+        data.forEach(i -> dest.put(String.valueOf(key[0]++), i));
+    }
+
+    @SuppressWarnings("unchecked")
+    <T> Map<T, Integer> sinkToBag() {
+        return toBag((List<T>) this.sinkList);
     }
 
     static BatchSource<Integer> mapValuesSource(String srcName) {
@@ -126,10 +127,6 @@ public abstract class PipelineTestSupport extends TestInClusterSupport {
             instances.add(Hazelcast.newHazelcastInstance(config));
         }
         return instances;
-    }
-
-    static List<HazelcastInstance> createRemoteCluster(int size) {
-        return createRemoteCluster(new Config(), size);
     }
 
     static ClientConfig getClientConfigForRemoteCluster(HazelcastInstance instance) {

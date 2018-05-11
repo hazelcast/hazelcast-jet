@@ -37,6 +37,7 @@ import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.function.KeyedWindowResultFunction;
+import com.hazelcast.jet.impl.processor.DistinctP;
 import com.hazelcast.jet.impl.processor.GroupP;
 import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
@@ -800,6 +801,20 @@ public final class Processors {
     ) {
         return TransformUsingContextP.<C, T, R>supplier(contextFactory,
                 (singletonTraverser, context, item) -> flatMapFn.apply(context, item));
+    }
+
+    /**
+     * Returns a supplier of processors for a vertex that emits the distinct
+     * items it observes. Items are distinct if they have non-equal keys as
+     * returned from the supplied {@code keyFn}.
+     *
+     * @param keyFn function that extracts the discriminating key from each item
+     * @param <T> the type of the input item
+     * @param <K> the type of the key
+     */
+    @Nonnull
+    public static <T, K> DistributedSupplier<Processor> distinctP(DistributedFunction<? super T, ? extends K> keyFn) {
+        return () -> new DistinctP<>(keyFn);
     }
 
     /**
