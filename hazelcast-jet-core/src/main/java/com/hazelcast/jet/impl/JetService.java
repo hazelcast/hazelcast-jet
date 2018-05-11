@@ -134,44 +134,47 @@ public class JetService
         logger.info("Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.");
 
         MetricsRegistry metricsRegistry = nodeEngine.getMetricsRegistry();
-        nodeEngine.getExecutionService().scheduleWithRepetition("MetricsForMcCollection", () -> {
-            CompressingProbeRenderer renderer = new CompressingProbeRenderer(24_000); // TODO [viliam] use last * 1.1
-            int[] count = {0};
-            long start = System.nanoTime();
-            metricsRegistry.render(new ProbeRenderer() {
-                @Override
-                public void renderLong(String name, long value) {
-                    if (name.startsWith("jet.")) {
-                        logger.info(name + "=" + value);
+        // if capacity is 0, metric collection is disabled
+        if (metricsBlobs.getCapacity() > 0) {
+            nodeEngine.getExecutionService().scheduleWithRepetition("MetricsForMcCollection", () -> {
+                CompressingProbeRenderer renderer = new CompressingProbeRenderer(24_000); // TODO [viliam] use last * 1.1
+                int[] count = {0};
+                long start = System.nanoTime();
+                metricsRegistry.render(new ProbeRenderer() {
+                    @Override
+                    public void renderLong(String name, long value) {
+                        if (name.startsWith("jet.")) {
+                            logger.info(name + "=" + value);
+                        }
+                        count[0]++;
                     }
-                    count[0]++;
-                }
 
-                @Override
-                public void renderDouble(String name, double value) {
-                    if (name.startsWith("jet.")) {
-                        logger.info(name + "=" + value);
+                    @Override
+                    public void renderDouble(String name, double value) {
+                        if (name.startsWith("jet.")) {
+                            logger.info(name + "=" + value);
+                        }
+                        count[0]++;
                     }
-                    count[0]++;
-                }
 
-                @Override
-                public void renderException(String name, Exception e) {
+                    @Override
+                    public void renderException(String name, Exception e) {
 
-                }
+                    }
 
-                @Override
-                public void renderNoValue(String name) {
+                    @Override
+                    public void renderNoValue(String name) {
 
-                }
-            });
-            logger.info("aaa, " + NANOSECONDS.toMillis(System.nanoTime() - start));
-            metricsRegistry.render(renderer);
-            byte[] blob = renderer.getRenderedBlob();
-            logger.info("bbb, count=" + count[0]);
-            metricsBlobs.add(tuple2(System.currentTimeMillis(), blob));
-            logger.info("Collected metrics, " + blob.length + " bytes");
-        }, 1, 1, TimeUnit.SECONDS);
+                    }
+                });
+                logger.info("aaa, " + NANOSECONDS.toMillis(System.nanoTime() - start));
+                metricsRegistry.render(renderer);
+                byte[] blob = renderer.getRenderedBlob();
+                logger.info("bbb, count=" + count[0]);
+                metricsBlobs.add(tuple2(System.currentTimeMillis(), blob));
+                logger.info("Collected metrics, " + blob.length + " bytes");
+            }, 1, 1, TimeUnit.SECONDS);
+        }
     }
 
     @Override
