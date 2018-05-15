@@ -16,14 +16,17 @@
 
 package com.hazelcast.jet.impl.util;
 
-import com.hazelcast.jet.impl.util.ConcurrentArrayRingbuffer.RingbufferCopy;
+import com.hazelcast.jet.impl.util.ConcurrentArrayRingbuffer.RingbufferSlice;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.stream.IntStream;
 
-import static org.junit.Assert.assertArrayEquals;
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -39,21 +42,21 @@ public class ConcurrentArrayRingbufferTest {
     public void test() {
         assertEquals(0, rb.size());
         assertTrue(rb.isEmpty());
-        assertArrayEquals(new Integer[]{}, rb.copyFrom(0).elements());
+        assertEquals(emptyList(), rb.copyFrom(0).elements());
         rb.add(1);
         assertEquals(1, rb.size());
         assertFalse(rb.isEmpty());
-        assertArrayEquals(new Integer[]{1}, rb.copyFrom(0).elements());
+        assertEquals(singletonList(1), rb.copyFrom(0).elements());
         rb.add(2);
         assertEquals(2, rb.size());
-        assertArrayEquals(new Integer[]{1, 2}, rb.copyFrom(0).elements());
+        assertEquals(asList(1, 2), rb.copyFrom(0).elements());
         rb.add(3);
         assertEquals(3, rb.size());
-        assertArrayEquals(new Integer[]{1, 2, 3}, rb.copyFrom(0).elements());
+        assertEquals(asList(1, 2, 3), rb.copyFrom(0).elements());
         rb.add(4);
         assertEquals(3, rb.size());
         for (int i = 5; i < 8; i++) {
-            assertArrayEquals(IntStream.range(i - rb.getCapacity(), i).boxed().toArray(Integer[]::new),
+            assertEquals(IntStream.range(i - rb.getCapacity(), i).boxed().collect(toList()),
                     rb.copyFrom(0).elements());
             rb.add(i);
             assertEquals(3, rb.size());
@@ -100,9 +103,9 @@ public class ConcurrentArrayRingbufferTest {
     public void test_copyFromSequence() {
         rb.add(1);
         rb.add(2);
-        RingbufferCopy result = rb.copyFrom(0);
+        RingbufferSlice result = rb.copyFrom(0);
         rb.add(3);
-        result = rb.copyFrom(result.tail());
-        assertArrayEquals(new Integer[]{3}, result.elements());
+        result = rb.copyFrom(result.tailSequence());
+        assertEquals(singletonList(3), result.elements());
     }
 }

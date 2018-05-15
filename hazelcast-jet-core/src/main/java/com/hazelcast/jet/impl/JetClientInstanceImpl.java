@@ -16,17 +16,24 @@
 
 package com.hazelcast.jet.impl;
 
+import com.hazelcast.client.impl.ClientMessageDecoder;
 import com.hazelcast.client.impl.HazelcastClientInstanceImpl;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobIdsByNameCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobIdsCodec;
+import com.hazelcast.client.impl.protocol.codec.JetGetMetricBlobsCodec;
 import com.hazelcast.client.spi.impl.ClientInvocation;
+import com.hazelcast.client.spi.impl.ClientInvocationFuture;
+import com.hazelcast.client.util.ClientDelegatingFuture;
 import com.hazelcast.core.Cluster;
+import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobNotFoundException;
+import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.impl.util.ConcurrentArrayRingbuffer.RingbufferSlice;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.serialization.SerializationService;
@@ -43,6 +50,14 @@ import static java.util.stream.Collectors.toList;
  * Client-side {@code JetInstance} implementation
  */
 public class JetClientInstanceImpl extends AbstractJetInstance {
+
+    @SuppressWarnings("unchecked")
+    private static final ClientMessageDecoder GET_METRICS_BLOBS_RESPONSE_DECODER = new ClientMessageDecoder() {
+        @Override
+        public <T> T decodeClientMessage(ClientMessage clientMessage) {
+            return (T) JetGetMetricBlobsCodec.decodeResponse(clientMessage).response;
+        }
+    };
 
     private final HazelcastClientInstanceImpl client;
     private SerializationService serializationService;
@@ -98,6 +113,18 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         return getJobIdsByName(name).stream().map(jobId -> new ClientJobProxy(client, jobId)).collect(toList());
     }
 
+    @Nonnull
+    public ICompletableFuture<RingbufferSlice<Tuple2<Long, byte[]>>> getMetricBlobsAsync(
+            long startSequence, Address memberAddress
+    ) {
+        ClientInvocation invocation = new ClientInvocation(
+                client, JetGetMetricBlobsCodec.encodeRequest(startSequence), null, memberAddress);
+        return uncheckCall(() -> {
+            ClientInvocationFuture future = invocation.invoke();
+            return new ClientDelegatingFuture<>(future, serializationService, GET_METRICS_BLOBS_RESPONSE_DECODER);
+        });
+    }
+
     private List<Long> getJobIdsByName(String name) {
         ClientInvocation invocation = new ClientInvocation(
                 client, JetGetJobIdsByNameCodec.encodeRequest(name), null, masterAddress(client.getCluster())
@@ -105,8 +132,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
 
         return uncheckCall(() -> {
             ClientMessage response = invocation.invoke().get();
-            List<Long> jobs = serializationService.toObject(JetGetJobIdsByNameCodec.decodeResponse(response).response);
-            return jobs;
+            return serializationService.toObject(JetGetJobIdsByNameCodec.decodeResponse(response).response);
         });
     }
 

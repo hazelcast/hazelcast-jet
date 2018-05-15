@@ -18,11 +18,11 @@ package com.hazelcast.jet.impl.execution.init;
 
 import com.hazelcast.internal.serialization.DataSerializerHook;
 import com.hazelcast.internal.serialization.impl.FactoryIdHelper;
-import com.hazelcast.jet.impl.JobRepository.FilterJobResultByNamePredicate;
 import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.JobRepository.FilterExecutionIdByJobIdPredicate;
 import com.hazelcast.jet.impl.JobRepository.FilterJobIdPredicate;
 import com.hazelcast.jet.impl.JobRepository.FilterJobRecordByNamePredicate;
+import com.hazelcast.jet.impl.JobRepository.FilterJobResultByNamePredicate;
 import com.hazelcast.jet.impl.JobRepository.UpdateJobRecordQuorumEntryBackupProcessor;
 import com.hazelcast.jet.impl.JobRepository.UpdateJobRecordQuorumEntryProcessor;
 import com.hazelcast.jet.impl.JobResult;
@@ -32,19 +32,20 @@ import com.hazelcast.jet.impl.operation.CancelJobOperation;
 import com.hazelcast.jet.impl.operation.CompleteExecutionOperation;
 import com.hazelcast.jet.impl.operation.GetJobConfigOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsByNameOperation;
-import com.hazelcast.jet.impl.operation.GetJobSubmissionTimeOperation;
-import com.hazelcast.jet.impl.operation.RestartJobOperation;
-import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
-import com.hazelcast.jet.impl.operation.StartExecutionOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsOperation;
 import com.hazelcast.jet.impl.operation.GetJobStatusOperation;
+import com.hazelcast.jet.impl.operation.GetJobSubmissionTimeOperation;
 import com.hazelcast.jet.impl.operation.InitExecutionOperation;
 import com.hazelcast.jet.impl.operation.JoinSubmittedJobOperation;
+import com.hazelcast.jet.impl.operation.RestartJobOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
+import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
+import com.hazelcast.jet.impl.operation.StartExecutionOperation;
 import com.hazelcast.jet.impl.operation.SubmitJobOperation;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SnapshotKey;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl;
+import com.hazelcast.jet.impl.util.ConcurrentArrayRingbuffer;
 import com.hazelcast.nio.serialization.DataSerializableFactory;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
@@ -84,6 +85,7 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
     public static final int ASYNC_SNAPSHOT_WRITER_SNAPSHOT_DATA_KEY = 28;
     public static final int ASYNC_SNAPSHOT_WRITER_SNAPSHOT_DATA_VALUE_TERMINATOR = 29;
     public static final int SNAPSHOT_OPERATION_RESULT = 30;
+    public static final int RINGBUFFER_SLICE = 31;
 
     public static final int FACTORY_ID = FactoryIdHelper.getFactoryId(JET_IMPL_DS_FACTORY, JET_IMPL_DS_FACTORY_ID);
 
@@ -165,6 +167,8 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
                     return AsyncSnapshotWriterImpl.SnapshotDataValueTerminator.INSTANCE;
                 case SNAPSHOT_OPERATION_RESULT:
                     return new SnapshotOperationResult();
+                case RINGBUFFER_SLICE:
+                    return new ConcurrentArrayRingbuffer.RingbufferSlice<>();
                 default:
                     throw new IllegalArgumentException("Unknown type id " + typeId);
             }

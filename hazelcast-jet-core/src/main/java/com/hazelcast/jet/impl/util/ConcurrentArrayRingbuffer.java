@@ -16,7 +16,15 @@
 
 package com.hazelcast.jet.impl.util;
 
+import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
+
+import java.io.IOException;
+import java.io.Serializable;
 import java.util.Arrays;
+import java.util.List;
 
 import static java.lang.System.arraycopy;
 
@@ -65,10 +73,10 @@ public class ConcurrentArrayRingbuffer<E> {
      *
      * @throws IllegalArgumentException If the sequence is in the future.
      */
-    public synchronized RingbufferCopy copyFrom(long sequence) {
+    public synchronized RingbufferSlice copyFrom(long sequence) {
         sequence = Math.max(sequence, head);
         if (sequence == tail) {
-            return new RingbufferCopy(EMPTY_ARRAY, tail);
+            return new RingbufferSlice(EMPTY_ARRAY, tail);
         }
         checkSequence(sequence);
         E[] result = (E[]) new Object[(int) (tail - sequence)];
@@ -80,7 +88,7 @@ public class ConcurrentArrayRingbuffer<E> {
         } else {
             arraycopy(ringItems, startPoint, result, 0, endPoint - startPoint);
         }
-        return new RingbufferCopy(result, tail);
+        return new RingbufferSlice(result, tail);
     }
 
     public synchronized int getCapacity() {
@@ -112,27 +120,53 @@ public class ConcurrentArrayRingbuffer<E> {
         return (int) (sequence % ringItems.length);
     }
 
-    public static final class RingbufferCopy<E> {
-        private final E[] elements;
+    public static final class RingbufferSlice<E> implements Serializable, IdentifiedDataSerializable {
+        private Object[] elements;
 
         /**
          * The tail, this is the sequence where next call to {@link
          * com.hazelcast.jet.impl.util.ConcurrentArrayRingbuffer#copyFrom}
          * should start.
          */
-        private final long tail;
+        private long tailSequence;
 
-        public RingbufferCopy(E[] elements, long tail) {
+        // for deserialization
+        public RingbufferSlice() {
+        }
+
+        public RingbufferSlice(E[] elements, long tailSequence) {
             this.elements = elements;
-            this.tail = tail;
+            this.tailSequence = tailSequence;
         }
 
-        public E[] elements() {
-            return elements;
+        public List<E> elements() {
+            return (List<E>) Arrays.asList(elements);
         }
 
-        public long tail() {
-            return tail;
+        public long tailSequence() {
+            return tailSequence;
+        }
+
+        @Override
+        public int getFactoryId() {
+            return JetInitDataSerializerHook.FACTORY_ID;
+        }
+
+        @Override
+        public int getId() {
+            return JetInitDataSerializerHook.RINGBUFFER_SLICE;
+        }
+
+        @Override
+        public void writeData(ObjectDataOutput out) throws IOException {
+            out.writeObject(elements);
+            out.writeLong(tailSequence);
+        }
+
+        @Override
+        public void readData(ObjectDataInput in) throws IOException {
+            elements = in.readObject();
+            tailSequence = in.readLong();
         }
     }
 }

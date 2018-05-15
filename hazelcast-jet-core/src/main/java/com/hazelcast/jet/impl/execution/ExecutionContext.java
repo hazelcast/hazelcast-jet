@@ -65,7 +65,7 @@ public class ExecutionContext {
     private List<ProcessorSupplier> procSuppliers = emptyList();
     private List<Processor> processors = emptyList();
 
-    private List<Tasklet> tasklets;
+    private List<Tasklet> tasklets = emptyList();
 
     // future which is completed only after all tasklets are completed and contains execution result
     private volatile CompletableFuture<Void> executionFuture;
