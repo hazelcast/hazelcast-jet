@@ -23,13 +23,13 @@ import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
 import com.hazelcast.jet.impl.pipeline.BatchStageImpl;
 
 /**
- * Offers a step-by-step fluent API to build a pipeline stage that
- * co-aggregates the data from several input stages. To obtain it, call
- * {@link BatchStage#aggregateBuilder()} on one of the stages to
- * co-aggregate, then add the other stages by calling {@link
- * #add add(stage)} on the builder. Collect all the tags returned from
- * {@code add()} and use them when building the aggregate operation.
- * Retrieve the tag of the first stage (from which you obtained the
+ * Offers a step-by-step API to build a pipeline stage that co-aggregates
+ * the data from several input stages. To obtain it, call {@link
+ * BatchStage#aggregateBuilder()} on one of the stages to co-aggregate,
+ * then add the other stages by calling {@link #add add(stage)} on the
+ * builder. Collect all the tags returned from {@code add()} and use them
+ * when building the aggregate operation. Retrieve the tag of the first
+ * stage (from which you obtained the
  * builder) by calling {@link #tag0()}.
  * <p>
  * This object is mainly intended to build a co-aggregation of four or more
