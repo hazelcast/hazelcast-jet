@@ -34,7 +34,7 @@ public abstract class PipelineStreamTestSupport extends PipelineTestSupport {
         inputKeys = IntStream.range(0, partitionCount)
                              .mapToObj(i -> generateKeyForPartition(hz, i))
                              .collect(toList());
-        closingItems = nCopies(inputKeys.size(), Integer.MAX_VALUE);
+        closingItems = nCopies(inputKeys.size(), 16 * itemCount);
         srcMap = jet().getMap(journaledSrcMapName);
         mapJournalSrcStage = drawEventJournalValues(journaledSrcMapName);
     }
