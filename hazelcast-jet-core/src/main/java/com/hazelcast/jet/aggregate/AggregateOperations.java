@@ -37,6 +37,7 @@ import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToDoubleFunction;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.function.DistributedTriFunction;
+import com.hazelcast.jet.pipeline.StageWithWindow;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -324,11 +325,11 @@ public final class AggregateOperations {
      */
     @Nonnull
     public static <T, A0, A1, A2, R0, R1, R2> AggregateOperation1<T, Tuple3<A0, A1, A2>, Tuple3<R0, R1, R2>> allOf(
-            @Nonnull AggregateOperation1<? super T, A0, R0> op1,
-            @Nonnull AggregateOperation1<? super T, A1, R1> op2,
-            @Nonnull AggregateOperation1<? super T, A2, R2> op3
+            @Nonnull AggregateOperation1<? super T, A0, R0> op0,
+            @Nonnull AggregateOperation1<? super T, A1, R1> op1,
+            @Nonnull AggregateOperation1<? super T, A2, R2> op2
     ) {
-        return allOf(op1, op2, op3, Tuple3::tuple3);
+        return allOf(op0, op1, op2, Tuple3::tuple3);
     }
 
     /**
@@ -336,8 +337,8 @@ public final class AggregateOperations {
      * It allows you to calculate multiple aggregations over the same items at once.
      *
      * @param op0 1st operation
-     * @param op2 2nd operation
-     * @param op3 3rd operation
+     * @param op1 2nd operation
+     * @param op2 3rd operation
      * @param finishFn a function combining 3 results into single target instance
      *
      * @param <T> type of input items
@@ -390,11 +391,11 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns a fluent API builder object that helps you create a composite
-     * of multiple aggregate operations. The resulting aggregate operation will
-     * perform all of the constituent operations at the same time and you can
-     * retrieve each result from the {@link com.hazelcast.jet.datamodel.ItemsByTag}
-     * object you'll get in the output.
+     * Returns a builder object that helps you create a composite of multiple
+     * aggregate operations. The resulting aggregate operation will perform all
+     * of the constituent operations at the same time and you can retrieve each
+     * result from the {@link com.hazelcast.jet.datamodel.ItemsByTag} object
+     * you'll get in the output.
      * <p>
      * The builder object is primarily intended to build a composite of four or more
      * aggregate operations. For up to three operations, prefer the explicit, more
@@ -427,7 +428,33 @@ public final class AggregateOperations {
         return new AllOfAggregationBuilder<>();
     }
 
-    public static <T0, A0, R0, T1, A1, R1, R> AggregateOperation2<T0, T1, Tuple2<A0, A1>, R> coAggregate2(
+    /**
+     * Returns an aggregate operation that is a composite of two independent
+     * aggregate operations, each one accepting its own input. You need this
+     * kind of operation for a two-way co-aggregating pipeline stage:
+     * {@link com.hazelcast.jet.pipeline.StageWithWindow#aggregate2
+     * stage.aggregate2()}.
+     * <p>
+     * This method is suitable when you can express your computation as two
+     * independent aggregate operations where you combine only their final
+     * results. If you need a more general operation that combines the two
+     * inputs, you can create an aggregate operation by specifying each
+     * primitive using the {@linkplain AggregateOperation#withCreate aggregate
+     * operation builder}.
+     *
+     * @param op0 the aggregate operation that will receive the first stage's input
+     * @param op1 the aggregate operation that will receive the second stage's input
+     * @param finishFn the function that transforms the individual aggregate results into the
+     *                 overall result that the co-aggregating stage emits
+     * @param <T0> type of items in the first stage
+     * @param <A0> type of the first aggregate operation's accumulator
+     * @param <R0> type of the first aggregate operation's result
+     * @param <T1> type of items in the second stage
+     * @param <A1> type of the second aggregate operation's accumulator
+     * @param <R1> type of the second aggregate operation's result
+     * @param <R> type of the result
+     */
+    public static <T0, A0, R0, T1, A1, R1, R> AggregateOperation2<T0, T1, Tuple2<A0, A1>, R> aggregateOperation2(
             @Nonnull AggregateOperation1<T0, A0, R0> op0,
             @Nonnull AggregateOperation1<T1, A1, R1> op1,
             @Nonnull DistributedBiFunction<? super R0, ? super R1, R> finishFn
@@ -453,8 +480,38 @@ public final class AggregateOperations {
                 .andFinish(acc -> finishFn.apply(op0.finishFn().apply(acc.f0()), op1.finishFn().apply(acc.f1())));
     }
 
+    /**
+     * Returns an aggregate operation that is a composite of three independent
+     * aggregate operations, each one accepting its own input. You need this
+     * kind of operation for a three-way co-aggregating pipeline stage:
+     * {@link com.hazelcast.jet.pipeline.StageWithWindow#aggregate3
+     * stage.aggregate3()}.
+     * <p>
+     * This method is suitable when you can express your computation as three
+     * independent aggregate operations where you combine only their final
+     * results. If you need a more general operation that combines the three
+     * inputs, you can create an aggregate operation by specifying each
+     * primitive using the {@linkplain AggregateOperation#withCreate aggregate
+     * operation builder}.
+     *
+     * @param op0 the aggregate operation that will receive the first stage's input
+     * @param op1 the aggregate operation that will receive the second stage's input
+     * @param op2 the aggregate operation that will receive the third stage's input
+     * @param finishFn the function that transforms the individual aggregate results into the
+     *                 overall result that the co-aggregating stage emits
+     * @param <T0> type of items in the first stage
+     * @param <A0> type of the first aggregate operation's accumulator
+     * @param <R0> type of the first aggregate operation's result
+     * @param <T1> type of items in the second stage
+     * @param <A1> type of the second aggregate operation's accumulator
+     * @param <R1> type of the second aggregate operation's result
+     * @param <T2> type of items in the third stage
+     * @param <A2> type of the third aggregate operation's accumulator
+     * @param <R2> type of the third aggregate operation's result
+     * @param <R> type of the result
+     */
     public static <T0, A0, R0, T1, A1, R1, T2, A2, R2, R>
-    AggregateOperation3<T0, T1, T2, Tuple3<A0, A1, A2>, R> coAggregate3(
+    AggregateOperation3<T0, T1, T2, Tuple3<A0, A1, A2>, R> aggregateOperation3(
             @Nonnull AggregateOperation1<T0, A0, R0> op0,
             @Nonnull AggregateOperation1<T1, A1, R1> op1,
             @Nonnull AggregateOperation1<T2, A2, R2> op2,
@@ -488,6 +545,28 @@ public final class AggregateOperations {
                         op1.finishFn().apply(acc.f1()),
                         op2.finishFn().apply(acc.f2())));
     }
+
+    /**
+     * Returns a builder object that offers a step-by-step fluent API to create
+     * an aggregate operation that accepts multiple inputs. You must supply
+     * this kind of operation to a co-aggregating pipeline stage. Most typically
+     * you'll need this builder if you're using the {@link
+     * StageWithWindow#aggregateBuilder()}. For two-way or three-way
+     * co-aggregation you can use {@link AggregateOperations#aggregateOperation2} and
+     * {@link AggregateOperations#aggregateOperation3}.
+     * <p>
+     * This builder is suitable when you can express your computation as
+     * independent aggregate operations on each input where you combine only
+     * their final results. If you need a more general operation that combines
+     * the inputs, you can create an aggregate operation by specifying each
+     * primitive using the {@linkplain AggregateOperation#withCreate aggregate
+     * operation builder}.
+     */
+    @Nonnull
+    public static CoAggregateOperationBuilder coAggregateOperationBuilder() {
+        return new CoAggregateOperationBuilder();
+    }
+
 
     /**
      * Returns an aggregate operation that concatenates the input items into a
