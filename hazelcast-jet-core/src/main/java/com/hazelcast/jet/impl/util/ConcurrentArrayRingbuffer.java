@@ -121,6 +121,8 @@ public class ConcurrentArrayRingbuffer<E> {
     }
 
     public static final class RingbufferSlice<E> implements Serializable, IdentifiedDataSerializable {
+        // we use Object[] (instead of E[]) because jet contains only serializer for Object[], not for
+        // subtypes.
         private Object[] elements;
 
         /**
