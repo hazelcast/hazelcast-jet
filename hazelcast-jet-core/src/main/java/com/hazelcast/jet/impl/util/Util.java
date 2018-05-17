@@ -460,4 +460,92 @@ public final class Util {
         }
         return sum;
     }
+
+    /**
+     * Escapes a user-supplied string value that is to be used as metrics key
+     * tag or value.
+     * <p>
+     * Prefixes comma ({@code ","}), equals sign ({@code "="}) and backslash
+     * ({@code "\"}) with another backslash.
+     */
+    @Nonnull
+    public static String escapeMetricKeyPart(@Nonnull String s) {
+        int i = 0;
+        int l = s.length();
+        while (i < l) {
+            char ch = s.charAt(i);
+            if (ch == ',' || ch == '=' || ch == '\\') {
+                break;
+            }
+            i++;
+        }
+        if (i == l) {
+            return s;
+        }
+        StringBuilder sb = new StringBuilder(s.length() + 3);
+        sb.append(s, 0, i);
+        while (i < l) {
+            char ch = s.charAt(i++);
+            if (ch == ',' || ch == '=' || ch == '\\') {
+                sb.append('\\');
+            }
+            sb.append(ch);
+        }
+        return sb.toString();
+    }
+
+    @Nonnull
+    public static List<Entry<String, String>> parseMetricKey(String metricKey) {
+        assert metricKey.charAt(0) == '[' && metricKey.charAt(metricKey.length() - 1) == ']' :
+                "key not enclosed in []: " + metricKey;
+
+        StringBuilder sb = new StringBuilder();
+        List<Entry<String, String>> result = new ArrayList<>();
+        int l = metricKey.length() - 1;
+        String tag = null;
+        boolean inTag = true;
+        for (int i = 1; i < l; i++) {
+            char ch = metricKey.charAt(i);
+            switch (ch) {
+                case '=':
+                    if (!inTag) {
+                        throw new IllegalArgumentException("equals sign not after tag: " + metricKey);
+                    }
+                    tag = sb.toString();
+                    if (tag.length() == 0) {
+                        throw new IllegalArgumentException("empty tag name: " + metricKey);
+                    }
+                    sb.setLength(0);
+                    inTag = false;
+                    continue;
+
+                case ',':
+                    if (inTag) {
+                        throw new IllegalArgumentException("comma in tag: " + metricKey);
+                    }
+                    result.add(entry(tag, sb.toString()));
+                    sb.setLength(0);
+                    inTag = true;
+                    tag = null;
+                    continue;
+
+                default:
+                    if (ch == '\\') {
+                        // the next character will be treated literally
+                        ch = metricKey.charAt(++i);
+                    }
+                    if (i == l) {
+                        throw new IllegalArgumentException("backslash at the end: " + metricKey);
+                    }
+                    sb.append(ch);
+            }
+        }
+        // final entry
+        if (tag != null) {
+            result.add(entry(tag, sb.toString()));
+        } else if (sb.length() > 0) {
+            throw new IllegalArgumentException("unfinished tag at the end: " + metricKey);
+        }
+        return result;
+    }
 }

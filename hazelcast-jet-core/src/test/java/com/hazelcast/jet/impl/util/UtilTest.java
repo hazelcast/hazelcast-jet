@@ -17,7 +17,9 @@
 package com.hazelcast.jet.impl.util;
 
 import com.hazelcast.test.HazelcastParallelClassRunner;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import java.util.List;
@@ -25,15 +27,25 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.impl.util.Util.addClamped;
+import static com.hazelcast.jet.impl.util.Util.escapeMetricKeyPart;
 import static com.hazelcast.jet.impl.util.Util.gcd;
 import static com.hazelcast.jet.impl.util.Util.memoizeConcurrent;
+import static com.hazelcast.jet.impl.util.Util.parseMetricKey;
 import static com.hazelcast.jet.impl.util.Util.subtractClamped;
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastParallelClassRunner.class)
 public class UtilTest {
+
+    @Rule
+    public ExpectedException exception = ExpectedException.none();
 
     @Test
     public void when_addClamped_then_doesntOverflow() {
@@ -120,5 +132,72 @@ public class UtilTest {
         assertEquals(4, gcd(4, 4, 4));
         assertEquals(4, gcd(4, 8, 12));
         assertEquals(1, gcd(4, 8, 13));
+    }
+
+    @Test
+    public void test_escapeMetricKeyPart() {
+        assertSame("", escapeMetricKeyPart(""));
+        assertSame("aaa", escapeMetricKeyPart("aaa"));
+        assertEquals("\\=", escapeMetricKeyPart("="));
+        assertEquals("\\,", escapeMetricKeyPart(","));
+        assertEquals("\\\\", escapeMetricKeyPart("\\"));
+        assertEquals("a\\=b", escapeMetricKeyPart("a=b"));
+        assertEquals("\\=b", escapeMetricKeyPart("=b"));
+        assertEquals("a\\=", escapeMetricKeyPart("a="));
+    }
+
+    @Test
+    public void test_parseMetricKey() {
+        // empty list
+        assertEquals(emptyList(), parseMetricKey("[]"));
+        // normal single tag
+        assertEquals(singletonList(entry("tag", "value")), parseMetricKey("[tag=value]"));
+        // normal multiple tags
+        assertEquals(asList(entry("tag1", "value1"), entry("tag2", "value2")),
+                parseMetricKey("[tag1=value1,tag2=value2]"));
+        // empty value
+        assertEquals(singletonList(entry("tag=", "value,")), parseMetricKey("[tag\\==value\\,]"));
+    }
+
+    @Test
+    public void test_parseMetricKey_fail_keyNotEnclosed() {
+        exception.expectMessage("key not enclosed in []");
+        parseMetricKey("tag=value");
+    }
+
+    @Test
+    public void test_parseMetricKey_fail_emptyTagName() {
+        exception.expectMessage("empty tag name");
+        parseMetricKey("[=value]");
+    }
+
+    @Test
+    public void test_parseMetricKey_fail_equalsSignAfterValue() {
+        exception.expectMessage("equals sign not after tag");
+        parseMetricKey("[tag=value=]");
+    }
+
+    @Test
+    public void test_parseMetricKey_fail_commaInTag1() {
+        exception.expectMessage("comma in tag");
+        parseMetricKey("[,]");
+    }
+
+    @Test
+    public void test_parseMetricKey_fail_backslashAtTheEnd1() {
+        exception.expectMessage("backslash at the end");
+        parseMetricKey("[\\]");
+    }
+
+    @Test
+    public void test_parseMetricKey_fail_backslashAtTheEnd2() {
+        exception.expectMessage("backslash at the end");
+        parseMetricKey("[tag=value\\]");
+    }
+
+    @Test
+    public void test_parseMetricKey_fail_unfinishedTagAtTheEnd() {
+        exception.expectMessage("unfinished tag at the end");
+        parseMetricKey("[tag=value,tag2]");
     }
 }

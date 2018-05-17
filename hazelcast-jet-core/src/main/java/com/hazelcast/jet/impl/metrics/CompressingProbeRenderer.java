@@ -23,7 +23,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-class CompressingProbeRenderer implements ProbeRenderer {
+import static com.hazelcast.jet.impl.util.Util.escapeMetricKeyPart;
+
+public class CompressingProbeRenderer implements ProbeRenderer {
 
     public static final int TYPE_LONG = 0;
     public static final int TYPE_DOUBLE = 1;
@@ -62,6 +64,12 @@ class CompressingProbeRenderer implements ProbeRenderer {
     }
 
     private void writeName(String name) throws IOException {
+        // Metric name should have the form "[tag1=value1,tag2=value2,...]". If it is not
+        // enclosed in "[]", we convert it to "[metric=originalName]".
+        if (!name.startsWith("[") || !name.endsWith("]")) {
+            name = "[metric=" + escapeMetricKeyPart(name) + ']';
+        }
+
         if (name.length() >= 1 << SHORT_BITS) {
             throw new RuntimeException("metric name too long: " + name);
         }
