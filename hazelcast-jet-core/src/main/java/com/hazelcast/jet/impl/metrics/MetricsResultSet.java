@@ -32,12 +32,12 @@ import static com.hazelcast.jet.impl.util.CompressingProbeRenderer.TYPE_LONG;
 
 public class MetricsResultSet  {
 
-    private long nextSequence;
-    private List<MetricsCollection> iterators;
+    private final long nextSequence;
+    private final List<MetricsCollection> collections;
 
     public MetricsResultSet(ConcurrentArrayRingbuffer.RingbufferSlice<Map.Entry<Long, byte[]>> slice) {
         this.nextSequence = slice.tailSequence();
-        this.iterators =  slice.elements()
+        this.collections =  slice.elements()
                 .stream()
                 .map(e -> new MetricsCollection(e.getKey(), e.getValue())).collect(Collectors.toList());
     }
@@ -50,7 +50,7 @@ public class MetricsResultSet  {
     }
 
     public List<MetricsCollection> collections() {
-        return iterators;
+        return collections;
     }
 
     /**
