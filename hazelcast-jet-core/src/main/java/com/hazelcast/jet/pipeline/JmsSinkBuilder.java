@@ -79,28 +79,28 @@ public final class JmsSinkBuilder<T> {
      *     component is required.
      * </li><li>
      *     {@code connectionFn} creates the connection. This component is
-     *     optional, if not provided builder creates a functions which uses
+     *     optional; if not provided, the builder creates a function which uses
      *     {@code ConnectionFactory#createConnection(username, password)} to
      *     create the connection. See {@link #connectionParams(String, String)}.
      * </li><li>
-     *     {@code sessionFn} creates the session. This component is optional,
-     *     if not provided builder creates a function which uses {@code
+     *     {@code sessionFn} creates the session. This component is optional;
+     *     if not provided, the builder creates a function which uses {@code
      *     Connection#createSession(boolean transacted, int acknowledgeMode)}
      *     to create the session. See {@link #sessionParams(boolean, int)}.
      * </li><li>
-     *     {@code messageFn} creates the message for the item. This component is
-     *     optional, if not provided builder creates a function wraps {@code
-     *     item.toString()} into a {@link javax.jms.TextMessage}
+     *     {@code messageFn} creates the message from the item. This component is
+     *     optional; if not provided, the builder creates a function that wraps {@code
+     *     item.toString()} into a {@link javax.jms.TextMessage}.
      * </li><li>
      *     {@code sendFn} sends the message via message producer. This component
-     *     is optional, if not provided builder creates a function which sends
-     *     the message via {@code MessageProducer#send(Message message)}
+     *     is optional; if not provided, the builder creates a function which sends
+     *     the message using {@code MessageProducer#send(Message message)}.
      * </li><li>
-     *     {@code flushFn} flushes the session. This component is optional, if
-     *     not provided builder creates an empty consumer.
+     *     {@code flushFn} flushes the session. This component is optional; if
+     *     not provided, the builder creates a no-op consumer.
      * </li><li>
-     *     {@code topic} sets if the destination is a topic. This component is
-     *     optional, if not set builder sets the destination as a queue
+     *     {@code topic} sets that the destination is a topic. This call is
+     *     optional; if not called, the builder treats the destination as a queue.
      * </li></ol>
      *
      * @param <T> type of the items the source emits
@@ -110,7 +110,7 @@ public final class JmsSinkBuilder<T> {
     }
 
     /**
-     * Sets the connection parameters. If {@code connectionFn} is provided these
+     * Sets the connection parameters. If {@code connectionFn} is provided, these
      * parameters are ignored.
      *
      * @param username   the username, Default value is {@code null}
@@ -125,7 +125,7 @@ public final class JmsSinkBuilder<T> {
     /**
      * Sets the function which creates the connection from connection factory.
      * <p>
-     * If not provided builder creates a function which uses {@code
+     * If not provided, the builder creates a function which uses {@code
      * ConnectionFactory#createConnection(username, password)} to create the
      * connection. See {@link #connectionParams(String, String)}.
      */
@@ -135,10 +135,10 @@ public final class JmsSinkBuilder<T> {
     }
 
     /**
-     * Sets the session parameters. If {@code sessionFn} is provided these
+     * Sets the session parameters. If {@code sessionFn} is provided, these
      * parameters are ignored.
      *
-     * @param transacted       if true marks the session as transacted false otherwise,
+     * @param transacted       if true, marks the session as transacted.
      *                         Default value is false.
      * @param acknowledgeMode  sets the acknowledge mode of the session,
      *                         Default value is {@code Session.AUTO_ACKNOWLEDGE}
@@ -150,9 +150,9 @@ public final class JmsSinkBuilder<T> {
     }
 
     /**
-     * Sets the function which creates the session from connection.
+     * Sets the function which creates a session from a connection.
      * <p>
-     * If not provided builder creates a function which uses {@code
+     * If not provided, the builder creates a function which uses {@code
      * Connection#createSession(boolean transacted, int acknowledgeMode)} to
      * create the session. See {@link #sessionParams(boolean, int)}.
      */
@@ -170,7 +170,8 @@ public final class JmsSinkBuilder<T> {
     }
 
     /**
-     * Sets if the destination is topic. If not set destination will be a queue.
+     * Sets that the destination is a topic. If not called, the destination
+     * will be treated as a queue.
      */
     public JmsSinkBuilder<T> topic() {
         this.isTopic = true;
@@ -178,10 +179,10 @@ public final class JmsSinkBuilder<T> {
     }
 
     /**
-     * Sets the function which creates the message for the item.
+     * Sets the function which creates the message from the item.
      * <p>
-     * If not provided builder creates a function which wraps {@code
-     * item.toString()} into a {@link javax.jms.TextMessage}
+     * If not provided, the builder creates a function which wraps {@code
+     * item.toString()} into a {@link javax.jms.TextMessage}.
      */
     public JmsSinkBuilder<T> messageFn(DistributedBiFunction<Session, T, Message> messageFn) {
         this.messageFn = messageFn;
@@ -191,8 +192,8 @@ public final class JmsSinkBuilder<T> {
     /**
      * Sets the function which sends the message via message producer.
      * <p>
-     * If not provided builder creates a function which sends the message via
-     * {@code MessageProducer#send(Message message)}
+     * If not provided, the builder creates a function which sends the message via
+     * {@code MessageProducer#send(Message message)}.
      */
     public JmsSinkBuilder<T> sendFn(DistributedBiConsumer<MessageProducer, Message> sendFn) {
         this.sendFn = sendFn;
@@ -200,9 +201,10 @@ public final class JmsSinkBuilder<T> {
     }
 
     /**
-     * Sets the function which flushes the session after each message sent
+     * Sets the function which flushes the session after a batch of messages is
+     * sent.
      * <p>
-     * If not provided builder creates an empty consumer
+     * If not provided, the builder creates a no-op consumer.
      */
     public JmsSinkBuilder<T> flushFn(DistributedConsumer<Session> flushFn) {
         this.flushFn = flushFn;
@@ -210,8 +212,7 @@ public final class JmsSinkBuilder<T> {
     }
 
     /**
-     * Creates and returns the JMS {@link Sink} with the supplied
-     * components
+     * Creates and returns the JMS {@link Sink} with the supplied components.
      */
     public Sink<T> build() {
         String usernameLocal = username;

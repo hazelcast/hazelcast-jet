@@ -62,7 +62,8 @@ public final class WriteJmsP {
             DistributedBiFunction<Session, T, Message> messageFn,
             DistributedBiConsumer<MessageProducer, Message> sendFn,
             DistributedConsumer<Session> flushFn,
-            String name, boolean isTopic
+            String name,
+            boolean isTopic
     ) {
         return ProcessorMetaSupplier.of(
                 new Supplier<>(connectionSupplier, sessionF, messageFn, sendFn, flushFn, name, isTopic));
@@ -104,7 +105,8 @@ public final class WriteJmsP {
                          DistributedBiFunction<Session, T, Message> messageFn,
                          DistributedBiConsumer<MessageProducer, Message> sendFn,
                          DistributedConsumer<Session> flushFn,
-                         String name, boolean isTopic
+                         String name,
+                         boolean isTopic
         ) {
             this.connectionSupplier = connectionSupplier;
             this.sessionF = sessionF;

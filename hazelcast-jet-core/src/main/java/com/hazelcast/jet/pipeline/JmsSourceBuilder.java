@@ -37,7 +37,7 @@ import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
- * See {@link JmsSourceBuilder#builder(DistributedSupplier)}
+ * See {@link JmsSourceBuilder#builder(DistributedSupplier)}.
  *
  * @param <T> type of the items the source emits
  */
@@ -67,7 +67,7 @@ public final class JmsSourceBuilder<T> {
 
     /**
      * Returns a builder object that offers a step-by-step fluent API to build
-     * a custom JMS {@link Sink} for the Pipeline API.
+     * a custom JMS {@link StreamSource} for the Pipeline API.
      * <p>
      * These are the callback functions you can provide to implement the
      * sources's behavior:
@@ -76,27 +76,27 @@ public final class JmsSourceBuilder<T> {
      *     component is required.
      * </li><li>
      *     {@code connectionFn} creates the connection. This component is
-     *     optional, if not provided builder creates a function which uses
+     *     optional; if not provided, the builder creates a function which uses
      *     {@code ConnectionFactory#createConnection(username, password)} to
      *     create the connection. See {@link #connectionParams(String, String)}.
      * </li><li>
-     *     {@code sessionFn} creates the session. This component is optional,
-     *     if not provided builder creates a function which uses {@code
+     *     {@code sessionFn} creates the session. This component is optional;
+     *     if not provided, the builder creates a function which uses {@code
      *     Connection#createSession(boolean transacted, int acknowledgeMode)}
      *     to create the session. See {@link #sessionParams(boolean, int)}.
      * </li><li>
      *     {@code consumerFn} creates the message consumer. This component is
-     *     optional, if not provided builder creates a function which uses
+     *     optional; if not provided, the builder creates a function which uses
      *     {@code Session#createConsumer(Destination destination)} to create the
      *     consumer. Either {@code consumerFn} or {@code destinationName} should
-     *     be set. See {@link #destinationName(String)} and {@link #topic()}
+     *     be set. See {@link #destinationName(String)} and {@link #topic()}.
      * </li><li>
-     *     {@code projectionFn} creates the output object from {@code Message}.
-     *     This component is optional, If not provided identity function is
+     *     {@code projectionFn} creates the output object from a {@code Message}.
+     *     This component is optional; if not provided, identity function is
      *     used instead.
      * </li><li>
-     *     {@code flushFn} flushes the session. This component is optional, if
-     *     not provided builder creates an empty consumer.
+     *     {@code flushFn} flushes the session. This component is optional; if
+     *     not provided builder creates a no-op consumer.
      * </li></ol>
      *
      * @param <T> type of the items the source emits
@@ -121,7 +121,7 @@ public final class JmsSourceBuilder<T> {
     /**
      * Sets the function which creates the connection from connection factory.
      * <p>
-     * If not provided builder creates a function which uses {@code
+     * If not provided, the builder creates a function which uses {@code
      * ConnectionFactory#createConnection(username, password)} to create the
      * connection. See {@link #connectionParams(String, String)}.
      */
@@ -148,7 +148,7 @@ public final class JmsSourceBuilder<T> {
     /**
      * Sets the function which creates the session from connection.
      * <p>
-     * If not provided builder creates a function which uses {@code
+     * If not provided, the builder creates a function which uses {@code
      * Connection#createSession(boolean transacted, int acknowledgeMode)} to
      * create the session. See {@link #sessionParams(boolean, int)}.
      */
@@ -167,8 +167,9 @@ public final class JmsSourceBuilder<T> {
     }
 
     /**
-     * Sets if the destination is topic. If not set destination is a queue.
-     * If {@code consumerFn} is provided this parameter is ignored.
+     * Sets that the destination is a topic. If not called, the destination is
+     * treated as a queue. If {@code consumerFn} is provided this parameter is
+     * ignored.
      */
     public JmsSourceBuilder<T> topic() {
         this.isTopic = true;
@@ -178,10 +179,10 @@ public final class JmsSourceBuilder<T> {
     /**
      * Sets the function which creates the message consumer from session.
      * <p>
-     * If not provided builder creates a function which uses {@code
+     * If not provided, the builder creates a function which uses {@code
      * Session#createConsumer(Destination destination)} to create the consumer.
      * Either {@code consumerFn} or {@code destinationName} should be set. See
-     * {@link #destinationName(String)} and {@link #topic()}
+     * {@link #destinationName(String)} and {@link #topic()}.
      */
     public JmsSourceBuilder<T> consumerFn(@Nonnull DistributedFunction<Session, MessageConsumer> consumerFn) {
         this.consumerFn = consumerFn;
@@ -191,7 +192,7 @@ public final class JmsSourceBuilder<T> {
     /**
      * Sets the function which creates output object from {@code Message}.
      * <p>
-     * If not provided builder creates an identity function
+     * If not provided, the builder creates an identity function.
      */
     public JmsSourceBuilder<T> projectionFn(DistributedFunction<Message, T> projectionFn) {
         this.projectionFn = projectionFn;
@@ -199,10 +200,9 @@ public final class JmsSourceBuilder<T> {
     }
 
     /**
-     * Sets the function which flushes the session after each message
-     * consumption
+     * Sets the function which commits the session after consuming each message.
      * <p>
-     * If not provided builder creates an empty consumer.
+     * If not provided, the builder creates a no-op consumer.
      */
     public JmsSourceBuilder<T> flushFn(DistributedConsumer<Session> flushFn) {
         this.flushFn = flushFn;
@@ -211,7 +211,7 @@ public final class JmsSourceBuilder<T> {
 
     /**
      * Creates and returns the JMS {@link StreamSource} with the supplied
-     * components
+     * components.
      */
     public StreamSource<T> build() {
         String usernameLocal = username;
