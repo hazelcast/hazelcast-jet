@@ -16,11 +16,10 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
-import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.impl.util.CompressingProbeRenderer;
 import com.hazelcast.jet.impl.util.ConcurrentArrayRingbuffer;
 import com.hazelcast.jet.impl.util.ConcurrentArrayRingbuffer.RingbufferSlice;
+import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.ManagedService;
 import com.hazelcast.spi.NodeEngine;
@@ -34,13 +33,18 @@ import static com.hazelcast.jet.Util.entry;
 
 public class JetMetricsService implements ManagedService {
 
+    public static final String SERVICE_NAME = "hz:impl:jetMetricsService";
+
+    private static final int INITIAL_BUFFER_SIZE = 2 << 16;
+    private static final int SIZE_FACTOR_NUMERATOR = 11;
+    private static final int SIZE_FACTOR_DENOMINATOR = 10;
+
     private final NodeEngineImpl nodeEngine;
     private final ILogger logger;
     // TODO [viliam] make the length configurable
     private final ConcurrentArrayRingbuffer<Map.Entry<Long, byte[]>> metricsBlobs =
             new ConcurrentArrayRingbuffer<>(120);
 
-    public static final String SERVICE_NAME = "hz:impl:jetMetricsService";
 
     public JetMetricsService(NodeEngine nodeEngine) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
@@ -51,36 +55,15 @@ public class JetMetricsService implements ManagedService {
     public void init(NodeEngine nodeEngine, Properties properties) {
         // if capacity is 0, metric collection is disabled
         if (metricsBlobs.getCapacity() > 0) {
-            int[] lastSize = {2 << 16};
+            int[] lastSize = {INITIAL_BUFFER_SIZE};
             nodeEngine.getExecutionService().scheduleWithRepetition("MetricsForMcCollection", () -> {
-                CompressingProbeRenderer renderer = new CompressingProbeRenderer(lastSize[0] * 11 / 10);
-                int[] count = {0};
-                this.nodeEngine.getMetricsRegistry().render(new ProbeRenderer() {
-                    @Override
-                    public void renderLong(String name, long value) {
-                        count[0]++;
-                    }
-
-                    @Override
-                    public void renderDouble(String name, double value) {
-                        count[0]++;
-                    }
-
-                    @Override
-                    public void renderException(String name, Exception e) {
-
-                    }
-
-                    @Override
-                    public void renderNoValue(String name) {
-
-                    }
-                });
+                CompressingProbeRenderer renderer = new CompressingProbeRenderer(
+                        lastSize[0] * SIZE_FACTOR_NUMERATOR / SIZE_FACTOR_DENOMINATOR);
                 this.nodeEngine.getMetricsRegistry().render(renderer);
                 byte[] blob = renderer.getRenderedBlob();
                 lastSize[0] = blob.length;
                 metricsBlobs.add(entry(System.currentTimeMillis(), blob));
-                logger.info("Collected metrics, " + blob.length + " bytes");
+                LoggingUtil.logFine(logger, "Collected %,d metrics, %,d bytes", renderer.getCount(), blob.length);
             }, 1, 1, TimeUnit.SECONDS);
         }
     }

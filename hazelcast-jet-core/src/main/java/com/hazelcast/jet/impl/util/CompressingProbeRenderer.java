@@ -34,6 +34,7 @@ public class CompressingProbeRenderer implements ProbeRenderer {
     private DataOutputStream dos;
     private ByteArrayOutputStream baos;
     private String lastName = "";
+    private int count;
 
     public CompressingProbeRenderer(int estimatedBytes) {
         baos = new ByteArrayOutputStream(estimatedBytes);
@@ -76,6 +77,7 @@ public class CompressingProbeRenderer implements ProbeRenderer {
         dos.writeShort(equalPrefixLength);
         dos.writeUTF(name.substring(equalPrefixLength));
         lastName = name;
+        count++;
     }
 
     @Override
@@ -86,6 +88,10 @@ public class CompressingProbeRenderer implements ProbeRenderer {
     @Override
     public void renderNoValue(String name) {
         // ignore
+    }
+
+    public int getCount() {
+        return count;
     }
 
     public byte[] getRenderedBlob() {
