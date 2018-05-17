@@ -105,7 +105,7 @@ public class ConcurrentArrayRingbufferTest {
         rb.add(2);
         RingbufferSlice result = rb.copyFrom(0);
         rb.add(3);
-        result = rb.copyFrom(result.tailSequence());
+        result = rb.copyFrom(result.nextSequence());
         assertEquals(singletonList(3), result.elements());
     }
 }

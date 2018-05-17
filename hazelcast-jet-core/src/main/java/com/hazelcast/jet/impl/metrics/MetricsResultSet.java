@@ -36,14 +36,14 @@ public class MetricsResultSet  {
     private final List<MetricsCollection> collections;
 
     public MetricsResultSet(ConcurrentArrayRingbuffer.RingbufferSlice<Map.Entry<Long, byte[]>> slice) {
-        this.nextSequence = slice.tailSequence();
+        this.nextSequence = slice.nextSequence();
         this.collections =  slice.elements()
                 .stream()
                 .map(e -> new MetricsCollection(e.getKey(), e.getValue())).collect(Collectors.toList());
     }
 
     /**
-     * Next sequence to read from
+     * The next sequence to read from.
      */
     public long nextSequence() {
         return nextSequence;
@@ -61,7 +61,7 @@ public class MetricsResultSet  {
         private long timestamp;
         private byte[] bytes;
 
-        MetricsCollection(long timestamp, byte[] bytes) {
+        public MetricsCollection(long timestamp, byte[] bytes) {
             this.timestamp = timestamp;
             this.bytes = bytes;
         }

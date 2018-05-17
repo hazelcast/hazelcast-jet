@@ -125,28 +125,28 @@ public class ConcurrentArrayRingbuffer<E> {
         // subtypes.
         private Object[] elements;
 
-        /**
-         * The tail, this is the sequence where next call to {@link
-         * com.hazelcast.jet.impl.util.ConcurrentArrayRingbuffer#copyFrom}
-         * should start.
-         */
-        private long tailSequence;
+        private long nextSequence;
 
         // for deserialization
         public RingbufferSlice() {
         }
 
-        public RingbufferSlice(E[] elements, long tailSequence) {
+        public RingbufferSlice(E[] elements, long nextSequence) {
             this.elements = elements;
-            this.tailSequence = tailSequence;
+            this.nextSequence = nextSequence;
         }
 
         public List<E> elements() {
             return (List<E>) Arrays.asList(elements);
         }
 
-        public long tailSequence() {
-            return tailSequence;
+        /**
+         * The tail, this is the sequence where next call to {@link
+         * com.hazelcast.jet.impl.util.ConcurrentArrayRingbuffer#copyFrom}
+         * should start.
+         */
+        public long nextSequence() {
+            return nextSequence;
         }
 
         @Override
@@ -162,13 +162,13 @@ public class ConcurrentArrayRingbuffer<E> {
         @Override
         public void writeData(ObjectDataOutput out) throws IOException {
             out.writeObject(elements);
-            out.writeLong(tailSequence);
+            out.writeLong(nextSequence);
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
             elements = in.readObject();
-            tailSequence = in.readLong();
+            nextSequence = in.readLong();
         }
     }
 }
