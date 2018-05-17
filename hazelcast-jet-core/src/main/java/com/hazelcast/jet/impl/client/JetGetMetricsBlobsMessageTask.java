@@ -21,6 +21,7 @@ import com.hazelcast.client.impl.protocol.codec.JetGetMetricBlobsCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetMetricBlobsCodec.RequestParameters;
 import com.hazelcast.client.impl.protocol.task.AbstractMessageTask;
 import com.hazelcast.instance.Node;
+import com.hazelcast.jet.impl.JetMetricsService;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.nio.Connection;
 
@@ -34,8 +35,8 @@ public class JetGetMetricsBlobsMessageTask extends AbstractMessageTask<RequestPa
 
     @Override
     protected void processMessage() {
-        JetService jetService = getService(getServiceName());
-        sendResponse(jetService.getJetMetricsService().getMetricBlobs(parameters.fromSequence));
+        JetMetricsService jetMetricsService = getService(JetMetricsService.SERVICE_NAME);
+        sendResponse(jetMetricsService.getMetricBlobs(parameters.fromSequence));
     }
 
     @Override

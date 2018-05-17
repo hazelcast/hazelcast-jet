@@ -21,6 +21,7 @@ import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.impl.HazelcastClientProxy;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.ServiceConfig;
+import com.hazelcast.config.ServicesConfig;
 import com.hazelcast.config.matcher.MatchingPointConfigPatternMatcher;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
@@ -29,6 +30,7 @@ import com.hazelcast.instance.HazelcastInstanceProxy;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JetInstanceImpl;
+import com.hazelcast.jet.impl.JetMetricsService;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.map.merge.IgnoreMergingEntryMapMergePolicy;
 
@@ -98,11 +100,17 @@ public final class Jet {
             throw new UnsupportedOperationException("Custom config pattern matcher is not supported in Jet");
         }
 
-        jetConfig.getHazelcastConfig().getServicesConfig()
+        ServicesConfig servicesConfig = jetConfig.getHazelcastConfig().getServicesConfig();
+        servicesConfig
                  .addServiceConfig(new ServiceConfig().setEnabled(true)
                                                       .setName(JetService.SERVICE_NAME)
                                                       .setClassName(JetService.class.getName())
                                                       .setConfigObject(jetConfig));
+
+        servicesConfig
+                .addServiceConfig(new ServiceConfig().setEnabled(true)
+                        .setName(JetMetricsService.SERVICE_NAME)
+                        .setClassName(JetMetricsService.class.getName()));
 
         jetConfig.getHazelcastConfig().addMapConfig(new MapConfig(INTERNAL_JET_OBJECTS_PREFIX + "*")
                  .setBackupCount(jetConfig.getInstanceConfig().getBackupCount())

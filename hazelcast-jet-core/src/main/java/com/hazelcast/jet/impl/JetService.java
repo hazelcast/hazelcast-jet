@@ -66,7 +66,6 @@ public class JetService
     private JobRepository jobRepository;
     private JobCoordinationService jobCoordinationService;
     private JobExecutionService jobExecutionService;
-    private JetMetricsService jetMetricsService;
 
     private final AtomicInteger numConcurrentAsyncOps = new AtomicInteger();
 
@@ -121,8 +120,6 @@ public class JetService
                 "\t|   | |   |  /    |     |     |     |   |     |   |      \\   | |       |  \n" +
                 "\to   o o   o o---o o---o o---o o---o o   o o---o   o       o--o o---o   o   ");
         logger.info("Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.");
-
-        jetMetricsService = new JetMetricsService(nodeEngine);
     }
 
     @Override
@@ -211,9 +208,5 @@ public class JetService
             }
         }
         return keys;
-    }
-
-    public JetMetricsService getJetMetricsService() {
-        return jetMetricsService;
     }
 }

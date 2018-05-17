@@ -31,25 +31,17 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobNotFoundException;
-import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.impl.metrics.MetricsResultSet;
 import com.hazelcast.jet.impl.util.ConcurrentArrayRingbuffer.RingbufferSlice;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.serialization.SerializationService;
 
 import javax.annotation.Nonnull;
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Set;
 
-import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
-import static com.hazelcast.jet.impl.util.CompressingProbeRenderer.TYPE_DOUBLE;
-import static com.hazelcast.jet.impl.util.CompressingProbeRenderer.TYPE_LONG;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.stream.Collectors.toList;
@@ -60,7 +52,16 @@ import static java.util.stream.Collectors.toList;
 public class JetClientInstanceImpl extends AbstractJetInstance {
 
     private final HazelcastClientInstanceImpl client;
-    private SerializationService serializationService;
+    private final SerializationService serializationService;
+
+    private final ClientMessageDecoder decodeMetricsResponse = new ClientMessageDecoder() {
+        @Override
+        public <T> T decodeClientMessage(ClientMessage msg) {
+            RingbufferSlice<Map.Entry<Long, byte[]>> deserialized =
+                    serializationService.toObject(JetGetMetricBlobsCodec.decodeResponse(msg).response);
+            return (T) new MetricsResultSet(deserialized);
+        }
+    };
 
     public JetClientInstanceImpl(HazelcastClientInstanceImpl hazelcastInstance) {
         super(hazelcastInstance);
@@ -114,72 +115,12 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     }
 
     @Nonnull
-    public ICompletableFuture<RingbufferSlice<Tuple2<Long, Iterator<Entry<String, Number>>>>> getMetricBlobsAsync(
-            long startSequence, Address memberAddress
-    ) {
+    public ICompletableFuture<MetricsResultSet> getMetricsAsync(long startSequence, Address address) {
         ClientInvocation invocation = new ClientInvocation(
-                client, JetGetMetricBlobsCodec.encodeRequest(startSequence), null, memberAddress);
-        ClientMessageDecoder decoder = new ClientMessageDecoder() {
-            @Override
-            public <T> T decodeClientMessage(ClientMessage msg) {
-                RingbufferSlice<Tuple2<Long, byte[]>> deserialized =
-                        serializationService.toObject(JetGetMetricBlobsCodec.decodeResponse(msg).response);
-                return (T) new RingbufferSlice<Tuple2<Long, Iterator<Entry<String, Number>>>>(
-                        deserialized.elements()
-                                    .stream()
-                                    .map(t -> tuple2(t.f0(), JetClientInstanceImpl.this.decompressMetrics(t.f1())))
-                                    .toArray(Tuple2[]::new),
-                        deserialized.tailSequence());
-            }
-        };
-        return new ClientDelegatingFuture<>(invocation.invoke(), serializationService, decoder, false);
-    }
-
-    private Iterator<Entry<String, Number>> decompressMetrics(byte[] bytes) {
-        return new Iterator<Entry<String, Number>>() {
-            DataInputStream dis = new DataInputStream(new ByteArrayInputStream(bytes));
-            String lastName = "";
-            Entry<String, Number> next;
-
-            {
-                moveNext();
-            }
-
-            private void moveNext() {
-                try {
-                    if (dis.available() > 0) {
-                        int equalPrefixLen = dis.readUnsignedShort();
-                        lastName = lastName.substring(0, equalPrefixLen) + dis.readUTF();
-                        int type = dis.readByte();
-                        if (type == TYPE_LONG) {
-                            next = entry(lastName, dis.readLong());
-                        } else if (type == TYPE_DOUBLE) {
-                            next = entry(lastName, dis.readDouble());
-                        } else {
-                            throw new RuntimeException("Unexpected type");
-                        }
-                    } else {
-                        next = null;
-                    }
-                } catch (IOException e) {
-                    throw new RuntimeException(e); // unexpected EOFException can occur here
-                }
-            }
-
-            @Override
-            public boolean hasNext() {
-                return next != null;
-            }
-
-            @Override
-            public Entry<String, Number> next() {
-                try {
-                    return next;
-                } finally {
-                    moveNext();
-                }
-            }
-        };
+                client, JetGetMetricBlobsCodec.encodeRequest(startSequence), null, address);
+        return new ClientDelegatingFuture<>(
+                invocation.invoke(), serializationService, decodeMetricsResponse, false
+        );
     }
 
     private List<Long> getJobIdsByName(String name) {
