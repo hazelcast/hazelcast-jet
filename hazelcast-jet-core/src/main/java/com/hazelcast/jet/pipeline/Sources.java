@@ -22,8 +22,10 @@ import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.map.journal.EventJournalMapEvent;
@@ -32,6 +34,11 @@ import com.hazelcast.projection.Projections;
 import com.hazelcast.query.Predicate;
 
 import javax.annotation.Nonnull;
+import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
+import javax.jms.Message;
+import javax.jms.MessageConsumer;
+import javax.jms.Session;
 import java.io.File;
 import java.nio.charset.Charset;
 import java.util.Map;
@@ -51,6 +58,8 @@ import static com.hazelcast.jet.core.processor.SourceProcessors.readRemoteListP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readRemoteMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamCacheP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamFilesP;
+import static com.hazelcast.jet.core.processor.SourceProcessors.streamJmsQueueP;
+import static com.hazelcast.jet.core.processor.SourceProcessors.streamJmsTopicP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamRemoteCacheP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamRemoteMapP;
@@ -841,5 +850,115 @@ public final class Sources {
     @Nonnull
     public static StreamSource<String> fileWatcher(@Nonnull String watchedDirectory) {
         return fileWatcher(watchedDirectory, UTF_8, GLOB_WILDCARD);
+    }
+
+    /**
+     * Returns a source which connects to a JMS provider and consumes messages
+     * from the JMS Queue using given message consumer. The source emits output
+     * objects created by given {@code projectionFn}.
+     * <p>
+     * The source creates a single connection for each member using the given
+     * {@code connectionSupplier} and then creates a session and consumer for
+     * each {@link com.hazelcast.jet.core.Processor processor} using the given
+     * {@code sessionFn} and {@code consumerFn}.
+     * <p>
+     * One may create a consumer for a topic instead of a queue in {@code
+     * consumerFn}. In that case each processor consumes the same message and
+     * there will be duplications. {@linkplain #jmsTopic jmsTopic(...)} should
+     * be used instead to avoid duplication.
+     * <p>
+     * After consuming each message, sink flushes the session with the given
+     * {@code flushFn}.
+     *
+     * @param connectionSupplier supplier to obtain connection to the JMS provider
+     * @param sessionFn          function to create session from the JMS connection
+     * @param consumerFn         function to create consumer from the JMS session
+     * @param flushFn            function to commit the session for transacted sessions
+     * @param projectionFn       function to create output objects from the JMS message
+     *                           If the projection returns a {@code null} for a message,
+     *                           that message will be filtered out.
+     */
+    @Nonnull
+    public static <T> StreamSource<T> jmsQueue(
+            @Nonnull DistributedSupplier<Connection> connectionSupplier,
+            @Nonnull DistributedFunction<Connection, Session> sessionFn,
+            @Nonnull DistributedFunction<Session, MessageConsumer> consumerFn,
+            @Nonnull DistributedConsumer<Session> flushFn,
+            @Nonnull DistributedFunction<Message, T> projectionFn
+    ) {
+        return streamFromProcessor("jmsQueue",
+                streamJmsQueueP(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn));
+    }
+
+    /**
+     * Convenience for {@link #jmsQueue(DistributedSupplier,
+     * DistributedFunction, DistributedFunction, DistributedConsumer,
+     * DistributedFunction)}. Sink creates a connection without any
+     * authentication parameters and non-transacted sessions with {@code
+     * Session.AUTO_ACKNOWLEDGE} acknowledge mode. Sink emits the {@link
+     * Message} objects to downstream.
+     *
+     * @param factorySupplier supplier to obtain JMS connection factory
+     * @param name            the name of the queue
+     */
+    @Nonnull
+    public static StreamSource<Message> jmsQueue(
+            @Nonnull DistributedSupplier<ConnectionFactory> factorySupplier,
+            @Nonnull String name
+    ) {
+        return streamFromProcessor("jmsQueue(" + name + ")", streamJmsQueueP(factorySupplier, name));
+    }
+
+    /**
+     * Returns a source which connects to a JMS provider and consumes messages
+     * from the JMS Topic using given message consumer. The source emits output
+     * objects created by given {@code projectionFn}.
+     * <p>
+     * Topic is a non-distributed source, messages cannot be consumed by
+     * multiple consumers due to duplication. Therefore the source operates on
+     * a single member and {@link com.hazelcast.jet.core.Processor processor}.
+     * Setting local parallelism to a value other than 1 causes {@code
+     * IllegalArgumentException}
+     * <p>
+     * After consuming each message, sink flushes the session with the given
+     * {@code flushFn}.
+     *
+     * @param connectionSupplier supplier to obtain connection to the JMS provider
+     * @param sessionFn          function to create session from the JMS connection
+     * @param consumerFn         function to create consumer from the JMS session
+     * @param flushFn            function to commit the session for transacted sessions
+     * @param projectionFn       function to create output objects from the JMS message
+     *                           If the projection returns a {@code null} for a message,
+     *                           that message will be filtered out.
+     */
+    @Nonnull
+    public static <T> StreamSource<T> jmsTopic(
+            @Nonnull DistributedSupplier<Connection> connectionSupplier,
+            @Nonnull DistributedFunction<Connection, Session> sessionFn,
+            @Nonnull DistributedFunction<Session, MessageConsumer> consumerFn,
+            @Nonnull DistributedConsumer<Session> flushFn,
+            @Nonnull DistributedFunction<Message, T> projectionFn
+    ) {
+        return streamFromProcessor("jmsTopic",
+                streamJmsTopicP(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn));
+    }
+
+    /**
+     * Convenience for {@link #jmsTopic(DistributedSupplier,
+     * DistributedFunction, DistributedFunction, DistributedConsumer,
+     * DistributedFunction)}. Sink creates a connection without any
+     * authentication parameters and non-transacted sessions with {@code
+     * Session.AUTO_ACKNOWLEDGE} acknowledge mode. Sink emits the {@link
+     * Message} objects to downstream.
+     *
+     * @param factorySupplier supplier to obtain JMS connection factory
+     * @param name            the name of the topic
+     */
+    @Nonnull
+    public static StreamSource<Message> jmsTopic(
+            @Nonnull DistributedSupplier<ConnectionFactory> factorySupplier,
+            @Nonnull String name
+    ) {
+        return streamFromProcessor("jmsTopic(" + name + ")", streamJmsTopicP(factorySupplier, name));
     }
 }
