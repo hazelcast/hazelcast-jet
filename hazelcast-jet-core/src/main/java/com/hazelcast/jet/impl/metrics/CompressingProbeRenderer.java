@@ -23,7 +23,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import static com.hazelcast.jet.impl.util.Util.escapeMetricKeyPart;
+import static com.hazelcast.jet.impl.metrics.MetricsUtil.escapeMetricKeyPart;
 
 public class CompressingProbeRenderer implements ProbeRenderer {
 
