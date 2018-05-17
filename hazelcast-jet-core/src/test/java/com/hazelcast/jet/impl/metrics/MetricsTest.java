@@ -48,7 +48,8 @@ public class MetricsTest extends JetTestSupport {
 
 
         while (true) {
-            MetricsRegistry mr = ((HazelcastInstanceImpl) inst.getHazelcastInstance()).node.nodeEngine.getMetricsRegistry();
+            MetricsRegistry mr =
+                    ((HazelcastInstanceImpl) inst.getHazelcastInstance()).node.nodeEngine.getMetricsRegistry();
             CompressingProbeRenderer renderer = new CompressingProbeRenderer(1024);
             mr.render(renderer);
             MetricsResultSet.MetricsCollection collection =

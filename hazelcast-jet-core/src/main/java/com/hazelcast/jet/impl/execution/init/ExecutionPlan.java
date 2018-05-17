@@ -406,7 +406,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             String probePrefix
     ) {
         final int totalPtionCount = nodeEngine.getPartitionService().getPartitionCount();
-        OutboundCollector[] outboundCollectors = createOutboundCollectors(edge, processorIndex, senderConveyorMap, probePrefix);
+        OutboundCollector[] outboundCollectors = createOutboundCollectors(
+                edge, processorIndex, senderConveyorMap, probePrefix
+        );
         OutboundCollector compositeCollector = compositeCollector(outboundCollectors, edge, totalPtionCount);
         return new OutboundEdgeStream(edge.sourceOrdinal(), compositeCollector);
     }
