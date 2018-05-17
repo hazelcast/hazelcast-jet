@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.util;
+package com.hazelcast.jet.impl.metrics;
 
-import com.hazelcast.jet.impl.util.ConcurrentArrayRingbuffer.RingbufferSlice;
+import com.hazelcast.jet.impl.metrics.ConcurrentArrayRingbuffer.RingbufferSlice;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;

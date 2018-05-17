@@ -16,8 +16,6 @@
 
 package com.hazelcast.jet.impl.metrics;
 
-import com.hazelcast.jet.impl.util.ConcurrentArrayRingbuffer;
-
 import javax.annotation.Nonnull;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -27,8 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.hazelcast.jet.impl.util.CompressingProbeRenderer.TYPE_DOUBLE;
-import static com.hazelcast.jet.impl.util.CompressingProbeRenderer.TYPE_LONG;
+import static com.hazelcast.jet.impl.metrics.CompressingProbeRenderer.TYPE_DOUBLE;
+import static com.hazelcast.jet.impl.metrics.CompressingProbeRenderer.TYPE_LONG;
 
 public class MetricsResultSet  {
 

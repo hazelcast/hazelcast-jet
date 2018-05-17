@@ -30,7 +30,7 @@ import com.hazelcast.instance.HazelcastInstanceProxy;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JetInstanceImpl;
-import com.hazelcast.jet.impl.JetMetricsService;
+import com.hazelcast.jet.impl.metrics.JetMetricsService;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.map.merge.IgnoreMergingEntryMapMergePolicy;
 

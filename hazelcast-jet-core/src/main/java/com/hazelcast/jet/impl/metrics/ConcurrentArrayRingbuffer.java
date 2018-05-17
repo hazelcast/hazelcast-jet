@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.util;
+package com.hazelcast.jet.impl.metrics;
 
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
@@ -73,7 +73,7 @@ public class ConcurrentArrayRingbuffer<E> {
      *
      * @throws IllegalArgumentException If the sequence is in the future.
      */
-    public synchronized RingbufferSlice copyFrom(long sequence) {
+    public synchronized RingbufferSlice<E> copyFrom(long sequence) {
         sequence = Math.max(sequence, head);
         if (sequence == tail) {
             return new RingbufferSlice(EMPTY_ARRAY, tail);
@@ -88,7 +88,7 @@ public class ConcurrentArrayRingbuffer<E> {
         } else {
             arraycopy(ringItems, startPoint, result, 0, endPoint - startPoint);
         }
-        return new RingbufferSlice(result, tail);
+        return new RingbufferSlice<>(result, tail);
     }
 
     public synchronized int getCapacity() {
@@ -142,7 +142,7 @@ public class ConcurrentArrayRingbuffer<E> {
 
         /**
          * The tail, this is the sequence where next call to {@link
-         * com.hazelcast.jet.impl.util.ConcurrentArrayRingbuffer#copyFrom}
+         * ConcurrentArrayRingbuffer#copyFrom}
          * should start.
          */
         public long nextSequence() {

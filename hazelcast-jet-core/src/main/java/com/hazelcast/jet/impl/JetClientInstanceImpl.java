@@ -32,7 +32,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.impl.metrics.MetricsResultSet;
-import com.hazelcast.jet.impl.util.ConcurrentArrayRingbuffer.RingbufferSlice;
+import com.hazelcast.jet.impl.metrics.ConcurrentArrayRingbuffer.RingbufferSlice;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.serialization.SerializationService;

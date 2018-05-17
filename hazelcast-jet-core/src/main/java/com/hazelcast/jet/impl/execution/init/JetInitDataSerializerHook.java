@@ -45,7 +45,7 @@ import com.hazelcast.jet.impl.operation.SubmitJobOperation;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SnapshotKey;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl;
-import com.hazelcast.jet.impl.util.ConcurrentArrayRingbuffer;
+import com.hazelcast.jet.impl.metrics.ConcurrentArrayRingbuffer;
 import com.hazelcast.nio.serialization.DataSerializableFactory;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 

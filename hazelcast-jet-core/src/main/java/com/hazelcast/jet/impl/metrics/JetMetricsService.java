@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl;
+package com.hazelcast.jet.impl.metrics;
 
-import com.hazelcast.jet.impl.util.CompressingProbeRenderer;
-import com.hazelcast.jet.impl.util.ConcurrentArrayRingbuffer;
-import com.hazelcast.jet.impl.util.ConcurrentArrayRingbuffer.RingbufferSlice;
+import com.hazelcast.jet.impl.metrics.ConcurrentArrayRingbuffer.RingbufferSlice;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.ManagedService;

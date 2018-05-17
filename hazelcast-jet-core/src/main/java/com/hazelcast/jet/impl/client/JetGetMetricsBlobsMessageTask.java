@@ -21,7 +21,7 @@ import com.hazelcast.client.impl.protocol.codec.JetGetMetricBlobsCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetMetricBlobsCodec.RequestParameters;
 import com.hazelcast.client.impl.protocol.task.AbstractMessageTask;
 import com.hazelcast.instance.Node;
-import com.hazelcast.jet.impl.JetMetricsService;
+import com.hazelcast.jet.impl.metrics.JetMetricsService;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.nio.Connection;
 

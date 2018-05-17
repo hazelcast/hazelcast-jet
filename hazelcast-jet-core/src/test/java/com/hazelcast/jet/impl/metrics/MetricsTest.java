@@ -14,24 +14,22 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet;
+package com.hazelcast.jet.impl.metrics;
 
 import com.hazelcast.instance.HazelcastInstanceImpl;
 import com.hazelcast.internal.diagnostics.Diagnostics;
 import com.hazelcast.internal.diagnostics.MetricsPlugin;
 import com.hazelcast.internal.metrics.MetricsRegistry;
 import com.hazelcast.internal.metrics.ProbeLevel;
-import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.impl.util.CompressingProbeRenderer;
 import org.junit.Test;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
-import static com.hazelcast.jet.impl.util.CompressingProbeRenderer.decompress;
 
 public class MetricsTest extends JetTestSupport {
 
@@ -48,32 +46,21 @@ public class MetricsTest extends JetTestSupport {
         dag.edge(between(source, sink));
         inst.newJob(dag);
 
-        MetricsRegistry mr = ((HazelcastInstanceImpl) inst.getHazelcastInstance()).node.nodeEngine.getMetricsRegistry();
-        CompressingProbeRenderer renderer = new CompressingProbeRenderer(1024);
-        mr.render(renderer);
-        decompress(renderer.getRenderedBlob(), new ProbeRenderer() {
-            @Override
-            public void renderLong(String name, long value) {
-                System.out.println("long, " + name + ": " + value);
+
+        while (true) {
+            MetricsRegistry mr = ((HazelcastInstanceImpl) inst.getHazelcastInstance()).node.nodeEngine.getMetricsRegistry();
+            CompressingProbeRenderer renderer = new CompressingProbeRenderer(1024);
+            mr.render(renderer);
+            MetricsResultSet.MetricsCollection collection =
+                    new MetricsResultSet.MetricsCollection(0, renderer.getRenderedBlob());
+
+            for (MetricsResultSet.Metric metric : collection) {
+                System.out.println(metric);
             }
+            Thread.sleep(1000);
+        }
 
-            @Override
-            public void renderDouble(String name, double value) {
-                System.out.println("long, " + name + ": " + value);
-            }
-
-            @Override
-            public void renderException(String name, Exception e) {
-
-            }
-
-            @Override
-            public void renderNoValue(String name) {
-
-            }
-        });
-
-        Thread.sleep(30000);
+//        Thread.sleep(30000);
     }
 
     public static class Generator extends AbstractProcessor {
@@ -90,4 +77,5 @@ public class MetricsTest extends JetTestSupport {
             return false;
         }
     }
+
 }
