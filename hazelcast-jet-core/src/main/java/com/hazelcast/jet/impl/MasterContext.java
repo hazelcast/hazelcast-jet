@@ -553,10 +553,13 @@ public class MasterContext {
             logger.warning(String.format("Execution of %s failed after %,d ms", jobIdString(), elapsed), failure);
         }
 
+        JobStatus status = isSuccess(failure) ? COMPLETED : FAILED;
+        jobStatus.set(status);
+
         try {
             coordinationService.completeJob(this, executionId, System.currentTimeMillis(), failure);
         } catch (RuntimeException e) {
-            logger.warning("Completion of " + jobIdString() + " failed", failure);
+            logger.warning("Completion of " + jobIdString() + " failed", e);
         } finally {
             setFinalResult(failure);
         }
@@ -595,8 +598,6 @@ public class MasterContext {
     }
 
     void setFinalResult(Throwable failure) {
-        JobStatus status = isSuccess(failure) ? COMPLETED : FAILED;
-        jobStatus.set(status);
         if (failure == null) {
             completionFuture.internalComplete();
         } else {
