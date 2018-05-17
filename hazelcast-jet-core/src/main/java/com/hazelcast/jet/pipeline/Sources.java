@@ -854,7 +854,7 @@ public final class Sources {
 
     /**
      * Returns a source which connects to a JMS provider and consumes messages
-     * from the JMS Queue using given message consumer. The source emits output
+     * from the JMS queue using given message consumer. The source emits output
      * objects created by given {@code projectionFn}.
      * <p>
      * The source creates a single connection for each member using the given
@@ -863,12 +863,12 @@ public final class Sources {
      * {@code sessionFn} and {@code consumerFn}.
      * <p>
      * One may create a consumer for a topic instead of a queue in {@code
-     * consumerFn}. In that case each processor consumes the same message and
-     * there will be duplications. {@linkplain #jmsTopic jmsTopic(...)} should
-     * be used instead to avoid duplication.
+     * consumerFn}. In that case each processor consumes the same messages and
+     * there will be duplicates. {@link #jmsTopic jmsTopic(...)} should be used
+     * instead.
      * <p>
-     * After consuming each message, sink flushes the session with the given
-     * {@code flushFn}.
+     * After consuming each message, {@code flushFn} is called to commit the
+     * session.
      *
      * @param connectionSupplier supplier to obtain connection to the JMS provider
      * @param sessionFn          function to create session from the JMS connection
@@ -893,10 +893,10 @@ public final class Sources {
     /**
      * Convenience for {@link #jmsQueue(DistributedSupplier,
      * DistributedFunction, DistributedFunction, DistributedConsumer,
-     * DistributedFunction)}. Sink creates a connection without any
-     * authentication parameters and non-transacted sessions with {@code
-     * Session.AUTO_ACKNOWLEDGE} acknowledge mode. Sink emits the {@link
-     * Message} objects to downstream.
+     * DistributedFunction)}. This version creates a connection without any
+     * authentication parameters and uses non-transacted sessions with {@code
+     * Session.AUTO_ACKNOWLEDGE} mode. JMS {@link Message} objects are emitted
+     * to downstream.
      *
      * @param factorySupplier supplier to obtain JMS connection factory
      * @param name            the name of the queue
@@ -911,17 +911,17 @@ public final class Sources {
 
     /**
      * Returns a source which connects to a JMS provider and consumes messages
-     * from the JMS Topic using given message consumer. The source emits output
+     * from the JMS topic using given message consumer. The source emits output
      * objects created by given {@code projectionFn}.
      * <p>
-     * Topic is a non-distributed source, messages cannot be consumed by
-     * multiple consumers due to duplication. Therefore the source operates on
-     * a single member and {@link com.hazelcast.jet.core.Processor processor}.
-     * Setting local parallelism to a value other than 1 causes {@code
-     * IllegalArgumentException}
+     * Topic is a non-distributed source, if messages are consumed by multiple
+     * consumers, all of them will get the same messages. Therefore the source
+     * operates on a single member and with local parallelism of 1. Setting
+     * local parallelism to a value other than 1 causes {@code
+     * IllegalArgumentException}.
      * <p>
-     * After consuming each message, sink flushes the session with the given
-     * {@code flushFn}.
+     * After consuming each message, {@code flushFn} is called to commit the
+     * session.
      *
      * @param connectionSupplier supplier to obtain connection to the JMS provider
      * @param sessionFn          function to create session from the JMS connection
@@ -946,10 +946,10 @@ public final class Sources {
     /**
      * Convenience for {@link #jmsTopic(DistributedSupplier,
      * DistributedFunction, DistributedFunction, DistributedConsumer,
-     * DistributedFunction)}. Sink creates a connection without any
-     * authentication parameters and non-transacted sessions with {@code
-     * Session.AUTO_ACKNOWLEDGE} acknowledge mode. Sink emits the {@link
-     * Message} objects to downstream.
+     * DistributedFunction)}. This version creates a connection without any
+     * authentication parameters and uses non-transacted sessions with {@code
+     * Session.AUTO_ACKNOWLEDGE} mode. JMS {@link Message} objects are emitted
+     * to downstream.
      *
      * @param factorySupplier supplier to obtain JMS connection factory
      * @param name            the name of the topic

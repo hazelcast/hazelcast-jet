@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
@@ -45,8 +46,8 @@ import static java.util.stream.IntStream.range;
  * com.hazelcast.jet.core.processor.SourceProcessors#streamJmsQueueP} or
  * {@link com.hazelcast.jet.core.processor.SourceProcessors#streamJmsTopicP}
  * <p>
- * Since we use a non-blocking version of JMS consume API
- * the processor is marked as cooperative.
+ * Since we use a non-blocking version of JMS consumer API, the processor is
+ * marked as cooperative.
  */
 public class StreamJmsP<T> extends AbstractProcessor {
 
@@ -58,7 +59,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
     private Session session;
     private MessageConsumer consumer;
-    private T pendingItem;
+    private Traverser<T> traverser;
 
     StreamJmsP(Connection connection,
                DistributedFunction<Connection, Session> sessionFn,
@@ -99,7 +100,9 @@ public class StreamJmsP<T> extends AbstractProcessor {
     @Nonnull
     public static ProcessorSupplier supplier(
             @Nonnull DistributedSupplier<ConnectionFactory> factorySupplier,
-            @Nonnull String name, boolean isQueue) {
+            @Nonnull String name,
+            boolean isQueue
+    ) {
         return supplier(
                 () -> uncheckCall(() -> factorySupplier.get().createConnection()),
                 connection -> uncheckCall(() -> connection.createSession(false, Session.AUTO_ACKNOWLEDGE)),
@@ -115,44 +118,14 @@ public class StreamJmsP<T> extends AbstractProcessor {
     protected void init(@Nonnull Context context) {
         session = sessionFn.apply(connection);
         consumer = consumerFn.apply(session);
+        traverser = ((Traverser<Message>) () -> uncheckCall(() -> consumer.receiveNoWait()))
+                .map(projectionFn)
+                .peek(item -> flushFn.accept(session));
     }
 
     @Override
     public boolean complete() {
-        if (!emitPendingItem()) {
-            return false;
-        }
-        Message message = uncheckCall(() -> consumer.receiveNoWait());
-        if (message == null) {
-            return false;
-        }
-
-        T item = projectionFn.apply(message);
-        if (item == null) {
-            return false;
-        }
-
-        if (tryEmit(item)) {
-            flushFn.accept(session);
-        } else {
-            pendingItem = item;
-        }
-        return false;
-    }
-
-    /**
-     * @return {@code true} if emitting pending item is successful
-     * {@code false} otherwise
-     */
-    private boolean emitPendingItem() {
-        if (pendingItem == null) {
-            return true;
-        }
-        if (tryEmit(pendingItem)) {
-            pendingItem = null;
-            flushFn.accept(session);
-            return true;
-        }
+        emitFromTraverser(traverser);
         return false;
     }
 

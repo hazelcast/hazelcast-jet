@@ -61,6 +61,7 @@ public class StreamJmsPTest extends JmsTestSupport {
 
         processor.complete();
         assertEquals(message1, queue.peek());
+        outbox.reset();
         processor.complete();
         assertEquals(message1, queue.poll());
         outbox.reset();

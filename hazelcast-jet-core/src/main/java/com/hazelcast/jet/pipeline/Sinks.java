@@ -624,7 +624,7 @@ public final class Sinks {
 
     /**
      * Returns a sink which connects to a JMS provider and sends messages to the
-     * specified JMS Queue.
+     * specified JMS queue.
      * <p>
      * Sink creates a single connection for each member using the given {@code
      * connectionSupplier} and then creates a session and producer for each
@@ -633,8 +633,8 @@ public final class Sinks {
      * <p>
      * Sink converts an item to a {@link Message} using the given {@code
      * messageFn} and sends this message using the given {@code sendFn}. After
-     * each message sent, sink will flush the session using the given {@code
-     * flushFn}
+     * a batch of messages is sent, sink flushes the session using the given
+     * {@code flushFn}.
      *
      * @param connectionSupplier supplier to obtain connection to the JMS provider
      * @param sessionF           function to create session from the JMS connection
@@ -660,9 +660,9 @@ public final class Sinks {
      * Convenience for {@link #jmsQueue(DistributedSupplier,
      * DistributedFunction, DistributedBiFunction, DistributedBiConsumer,
      * DistributedConsumer, String)}. Sink creates a connection without any
-     * authentication parameters and non-transacted sessions with {@code
-     * Session.AUTO_ACKNOWLEDGE} acknowledge mode. Sink wraps {@code
-     * item.toString()} into a {@link javax.jms.TextMessage}
+     * authentication parameters and uses non-transacted sessions with {@code
+     * Session.AUTO_ACKNOWLEDGE} mode. Sink wraps {@code item.toString()} into
+     * a {@link javax.jms.TextMessage}
      *
      * @param factorySupplier supplier to obtain JMS connection factory
      * @param name            the name of the queue
@@ -677,7 +677,7 @@ public final class Sinks {
 
     /**
      * Returns a sink which connects to a JMS provider and sends messages to the
-     * specified JMS Topic.
+     * specified JMS topic.
      * <p>
      * Sink creates a single connection for each member using the given {@code
      * connectionSupplier} and then creates a session and producer for each
@@ -686,8 +686,8 @@ public final class Sinks {
      * <p>
      * Sink converts an item to a {@link Message} using the given {@code
      * messageFn} and sends this message using the given {@code sendFn}. After
-     * each message sent, sink flushes the session using the given {@code
-     * flushFn}
+     * a batch of messages is sent, sink flushes the session using the given
+     * {@code flushFn}.
      *
      * @param connectionSupplier supplier to obtain connection to the JMS provider
      * @param sessionF           function to create session from the JMS connection
@@ -713,9 +713,9 @@ public final class Sinks {
      * Convenience for {@link #jmsTopic(DistributedSupplier,
      * DistributedFunction, DistributedBiFunction, DistributedBiConsumer,
      * DistributedConsumer, String)}. Sink creates a connection without any
-     * authentication parameters and non-transacted sessions with {@code
-     * Session.AUTO_ACKNOWLEDGE} acknowledge mode. Sink wraps {@code
-     * item.toString()} into a {@link javax.jms.TextMessage}
+     * authentication parameters and uses non-transacted sessions with {@code
+     * Session.AUTO_ACKNOWLEDGE} mode. Sink wraps {@code item.toString()} into
+     * a {@link javax.jms.TextMessage}
      *
      * @param factorySupplier supplier to obtain JMS connection factory
      * @param name            the name of the queue
