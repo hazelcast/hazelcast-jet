@@ -18,17 +18,12 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
-import com.hazelcast.jet.aggregate.CoAggregateOperationBuilder;
-import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.impl.pipeline.GrAggBuilder;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
-
-import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperationBuilder;
 
 /**
  * Offers a step-by-step fluent API to build a pipeline stage that
@@ -44,19 +39,14 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperati
  * contributing stages. For up to three stages, prefer the direct {@code
  * stage.aggregateN(...)} calls because they offer more static type safety.
  *
+ * @param <T0> type of the stream-0 item
  * @param <K> type of the grouping key
- * @param <R0> type of the aggregation result for stream-0
  */
-public class GroupAggregateBuilder<K, R0> {
-    private final GrAggBuilder<K> grAggBuilder;
-    private final CoAggregateOperationBuilder aggropBuilder = coAggregateOperationBuilder();
+public class GroupAggregateBuilder<T0, K> {
+    private final GrAggBuilder<K> graggBuilder;
 
-    <T0> GroupAggregateBuilder(
-            StageWithGrouping<T0, K> stage0,
-            AggregateOperation1<? super T0, ?, ? extends R0> aggrOp0
-    ) {
-        grAggBuilder = new GrAggBuilder<>(stage0);
-        aggropBuilder.add(Tag.tag0(), aggrOp0);
+    GroupAggregateBuilder(StageWithGrouping<T0, K> s) {
+        graggBuilder = new GrAggBuilder<>(s);
     }
 
     /**
@@ -65,7 +55,7 @@ public class GroupAggregateBuilder<K, R0> {
      * the {@code AggregateOperation} that you'll pass to {@link #build
      * build(aggrOp)}.
      */
-    public Tag<R0> tag0() {
+    public Tag<T0> tag0() {
         return Tag.tag0();
     }
 
@@ -75,12 +65,9 @@ public class GroupAggregateBuilder<K, R0> {
      * stage when building the {@code AggregateOperation} that you'll pass to
      * {@link #build build()}.
      */
-    public <T, R> Tag<R> add(
-            StageWithGrouping<T, K> stage,
-            AggregateOperation1<? super T, ?, ? extends R> aggrOp
-    ) {
-        Tag<T> tag = grAggBuilder.add(stage);
-        return aggropBuilder.add(tag, aggrOp);
+    @SuppressWarnings("unchecked")
+    public <T> Tag<T> add(StageWithGrouping<T, K> stage) {
+        return graggBuilder.add(stage);
     }
 
     /**
@@ -111,23 +98,30 @@ public class GroupAggregateBuilder<K, R0> {
      * );
      * }</pre>
      *
-     * @param <OUT> the output item type
+     * @param aggrOp the aggregate operation to perform
+     * @param <A> the type of items on the stage this builder was obtained from
+     * @param <R> the type of the output item
      * @return a new stage representing the co-aggregation
      */
-    public <OUT> BatchStage<OUT> build(
-            @Nonnull DistributedBiFunction<? super K, ItemsByTag, OUT> mapToOutputFn
+    public <A, R, OUT> BatchStage<OUT> build(
+            @Nonnull AggregateOperation<A, R> aggrOp,
+            @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        AggregateOperation<Object[], ItemsByTag> aggrOp = aggropBuilder.build();
-        return grAggBuilder.buildBatch(aggrOp, mapToOutputFn);
+        return graggBuilder.buildBatch(aggrOp, mapToOutputFn);
     }
 
     /**
-     * Convenience for {@link #build(DistributedBiFunction)
-     * build(mapToOutputFn)} which emits {@code Map.Entry}s as output.
+     * Convenience for {@link #build(AggregateOperation, DistributedBiFunction)
+     * build(aggrOp, mapToOutputFn)} which emits {@code Map.Entry}s as output.
      *
+     * @param aggrOp the aggregate operation to perform.
+     * @param <A> the type of items in the pipeline stage this builder was obtained from
+     * @param <R> the type of the aggregation result
      * @return a new stage representing the co-group-and-aggregate operation
      */
-    public BatchStage<Entry<K, ItemsByTag>> build() {
-        return build(Util::entry);
+    public <A, R> BatchStage<Entry<K, R>> build(
+            @Nonnull AggregateOperation<A, R> aggrOp
+    ) {
+        return graggBuilder.buildBatch(aggrOp, Util::entry);
     }
 }

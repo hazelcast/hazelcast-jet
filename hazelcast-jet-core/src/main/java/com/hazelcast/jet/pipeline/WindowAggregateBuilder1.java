@@ -17,9 +17,6 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
-import com.hazelcast.jet.aggregate.CoAggregateOperationBuilder;
-import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.function.WindowResultFunction;
@@ -28,8 +25,6 @@ import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
 import com.hazelcast.jet.impl.pipeline.StreamStageImpl;
 
 import javax.annotation.Nonnull;
-
-import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperationBuilder;
 
 /**
  * Offers a step-by-step fluent API to build a pipeline stage that
@@ -45,19 +40,14 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperati
  * contributing stages. For up to three stages, prefer the direct {@code
  * stage.aggregateN(...)} calls because they offer more static type safety.
  *
- * @param <R0> type of the aggregated result for stream-0
+ * @param <T0> the type of the stream-0 item
  */
-public class WindowAggregateBuilder<R0> {
+public class WindowAggregateBuilder<T0> {
+    @Nonnull
     private final AggBuilder aggBuilder;
-    private final CoAggregateOperationBuilder aggropBuilder = coAggregateOperationBuilder();
 
-    <T0> WindowAggregateBuilder(
-            @Nonnull StreamStage<T0> s,
-            @Nonnull AggregateOperation1<? super T0, ?, ? extends R0> aggrOp0,
-            @Nonnull WindowDefinition wDef
-    ) {
-        aggBuilder = new AggBuilder(s, wDef);
-        aggropBuilder.add(Tag.tag0(), aggrOp0);
+    WindowAggregateBuilder(@Nonnull StreamStage<T0> s, @Nonnull WindowDefinition wDef) {
+        this.aggBuilder = new AggBuilder(s, wDef);
     }
 
     /**
@@ -66,7 +56,7 @@ public class WindowAggregateBuilder<R0> {
      * the {@code AggregateOperation} that you'll pass to {@link #build
      * build(aggrOp)}.
      */
-    public Tag<R0> tag0() {
+    public Tag<T0> tag0() {
         return Tag.tag0();
     }
 
@@ -76,12 +66,8 @@ public class WindowAggregateBuilder<R0> {
      * stage when building the {@code AggregateOperation} that you'll pass to
      * {@link #build build()}.
      */
-    public <T, R> Tag<R> add(
-            StreamStage<T> stage,
-            AggregateOperation1<? super T, ?, ? extends R> aggrOp
-    ) {
-        Tag<T> tag = aggBuilder.add(stage);
-        return aggropBuilder.add(tag, aggrOp);
+    public <E> Tag<E> add(StreamStage<E> stage) {
+        return aggBuilder.add(stage);
     }
 
     /**
@@ -110,26 +96,32 @@ public class WindowAggregateBuilder<R0> {
      *         .andFinish(MyAccumulator::finish));
      * }</pre>
      *
+     * @param aggrOp        the aggregate operation to perform
      * @param mapToOutputFn a function that creates the output item from the aggregation result
-     * @param <R>           the type of the output item
+     * @param <A>           the type of items in the pipeline stage this builder was obtained from
+     * @param <R>           the type of the aggregation result
+     * @param <OUT>         the type of the output item
      * @return a new stage representing the co-aggregation
      */
-    public <R> StreamStage<R> build(
-            @Nonnull WindowResultFunction<? super ItemsByTag, ? extends R> mapToOutputFn
+    public <A, R, OUT> StreamStage<OUT> build(
+            @Nonnull AggregateOperation<A, R> aggrOp,
+            @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
     ) {
-        AggregateOperation<Object[], ItemsByTag> aggrOp = aggropBuilder.build();
-        CreateOutStageFn<R, StreamStage<R>> createOutStageFn = StreamStageImpl::new;
+        CreateOutStageFn<OUT, StreamStage<OUT>> createOutStageFn = StreamStageImpl::new;
         return aggBuilder.build(aggrOp, createOutStageFn, mapToOutputFn);
     }
 
     /**
-     * Convenience for {@link #build(WindowResultFunction) build(aggrOp,
-     * mapToOutputFn)} which emits {@code TimestampedItem}s as output.
+     * Convenience for {@link #build(AggregateOperation, WindowResultFunction)
+     * build(aggrOp, mapToOutputFn)} which emits {@code TimestampedItem}s as output.
      * The timestamp corresponds to the window's end.
      *
-     * @return a new stage representing the cogroup-and-aggregate operation
+     * @param aggrOp the aggregate operation to perform.
+     * @param <A>    the type of items in the pipeline stage this builder was obtained from
+     * @param <R>    the type of the aggregation result
+     * @return a new stage representing the co-group-and-aggregate operation
      */
-    public StreamStage<TimestampedItem<ItemsByTag>> build() {
-        return build(TimestampedItem::new);
+    public <A, R> StreamStage<TimestampedItem<R>> build(@Nonnull AggregateOperation<A, R> aggrOp) {
+        return build(aggrOp, TimestampedItem::new);
     }
 }

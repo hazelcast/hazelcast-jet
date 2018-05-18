@@ -17,9 +17,6 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
-import com.hazelcast.jet.aggregate.CoAggregateOperationBuilder;
-import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.KeyedWindowResultFunction;
@@ -27,36 +24,28 @@ import com.hazelcast.jet.impl.pipeline.GrAggBuilder;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperationBuilder;
-
 /**
  * Offers a step-by-step API to build a pipeline stage that performs a
- * windowed co-grouping and aggregation of the data from several
- * input stages. To obtain it, call {@link
- * StageWithGroupingAndWindow#aggregateBuilder()} on one of the stages to
- * co-aggregate, then add the other stages by calling {@link #add
- * add(stage)} on the builder. Collect all the tags returned from {@code
- * add()} and use them when building the aggregate operation. Retrieve the
- * tag of the first stage (from which you obtained the builder) by calling
- * {@link #tag0()}.
+ * windowed co-grouping and aggregation of the data from several input
+ * stages. To obtain it, call {@link StageWithGroupingAndWindow#aggregateBuilder()}
+ * on one of the stages to co-aggregate, then add the other stages by
+ * calling {@link #add add(stage)} on the builder. Collect all the tags
+ * returned from {@code add()} and use them when building the aggregate
+ * operation. Retrieve the tag of the first stage (from which you obtained
+ * the builder) by calling {@link #tag0()}.
  * <p>
  * This object is mainly intended to build a co-aggregation of four or more
  * contributing stages. For up to three stages, prefer the direct {@code
  * stage.aggregateN(...)} calls because they offer more static type safety.
  *
+ * @param <T0> the type of the stream-0 item
  * @param <K> type of the key
- * @param <R0> type of the aggregation result for stream-0
  */
-public class WindowGroupAggregateBuilder<K, R0> {
+public class WindowGroupAggregateBuilder1<T0, K> {
     private final GrAggBuilder<K> grAggBuilder;
-    private final CoAggregateOperationBuilder aggropBuilder = coAggregateOperationBuilder();
 
-    <T0> WindowGroupAggregateBuilder(
-            StageWithGroupingAndWindow<T0, K> stage0,
-            AggregateOperation1<? super T0, ?, ? extends R0> aggrOp0
-    ) {
-        grAggBuilder = new GrAggBuilder<>(stage0);
-        aggropBuilder.add(Tag.tag0(), aggrOp0);
+    WindowGroupAggregateBuilder1(StageWithGroupingAndWindow<T0, K> s) {
+        grAggBuilder = new GrAggBuilder<>(s);
     }
 
     /**
@@ -65,7 +54,7 @@ public class WindowGroupAggregateBuilder<K, R0> {
      * the {@code AggregateOperation} that you'll pass to {@link #build
      * build(aggrOp)}.
      */
-    public Tag<R0> tag0() {
+    public Tag<T0> tag0() {
         return Tag.tag0();
     }
 
@@ -75,12 +64,8 @@ public class WindowGroupAggregateBuilder<K, R0> {
      * to refer to this stage when building the {@code AggregateOperation} that
      * you'll pass to {@link #build build()}.
      */
-    public <T, R> Tag<R> add(
-            StreamStageWithGrouping<T, K> stage,
-            AggregateOperation1<? super T, ?, ? extends R> aggrOp
-    ) {
-        Tag<T> tag = grAggBuilder.add(stage);
-        return aggropBuilder.add(tag, aggrOp);
+    public <T> Tag<T> add(StreamStageWithGrouping<T, K> stage) {
+        return grAggBuilder.add(stage);
     }
 
     /**
@@ -114,23 +99,28 @@ public class WindowGroupAggregateBuilder<K, R0> {
      * }</pre>
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
+     * @param aggrOp        the aggregate operation to perform
      * @param mapToOutputFn a function that creates the output item from the aggregation result
+     * @param <A>           the type of items in the pipeline stage this builder was obtained from
+     * @param <R>           the type of the aggregation result
      * @param <OUT>         the type of the output item
      * @return a new stage representing the co-aggregation
      */
-    public <OUT> StreamStage<OUT> build(
-            @Nonnull KeyedWindowResultFunction<? super K, ItemsByTag, OUT> mapToOutputFn
+    public <A, R, OUT> StreamStage<OUT> build(
+            @Nonnull AggregateOperation<A, R> aggrOp,
+            @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        AggregateOperation<Object[], ItemsByTag> aggrOp = aggropBuilder.build();
         return grAggBuilder.buildStream(aggrOp, mapToOutputFn);
     }
 
     /**
-     * Convenience for {@link #build(KeyedWindowResultFunction)}
+     * Convenience for {@link #build(AggregateOperation, KeyedWindowResultFunction)}
      * which results in a stage that emits {@link TimestampedEntry}s. The timestamp
      * of the entry corresponds to the timestamp of the window's end.
      */
-    public StreamStage<TimestampedEntry<K, ItemsByTag>> build() {
-        return build(TimestampedEntry::new);
+    public <A, R> StreamStage<TimestampedEntry<K, R>> build(
+            @Nonnull AggregateOperation<A, R> aggrOp
+    ) {
+        return grAggBuilder.buildStream(aggrOp, TimestampedEntry::new);
     }
 }
