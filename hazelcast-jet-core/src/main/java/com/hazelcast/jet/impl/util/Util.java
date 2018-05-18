@@ -37,9 +37,6 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
-
-import javax.annotation.CheckReturnValue;
-import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -48,6 +45,7 @@ import java.io.NotSerializableException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -68,6 +66,8 @@ import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
@@ -336,6 +336,14 @@ public final class Util {
             }
         }
         return new String(buf);
+    }
+
+    public static long idFromString(String str) {
+        if (str == null || str.length() != ID_TEMPLATE.length) {
+            return -1;
+        }
+        str = str.replaceAll("-","");
+        return new BigInteger(str, 16).longValue();
     }
 
     public static <K, V> EntryProcessor<K, V> entryProcessor(
