@@ -380,8 +380,8 @@ public class ProcessorTasklet implements Tasklet {
         // we are the only updating thread, no need for CAS operations
         lazyAdd(receivedCounts, currInstream.ordinal(), inbox.size());
         lazyIncrement(receivedBatches, currInstream.ordinal());
-        queuesCapacity.lazySet(sum(instreamCursor.getList(), InboundEdgeStream::capacities));
-        queuesSize.lazySet(sum(instreamCursor.getList(), InboundEdgeStream::sizes));
+        queuesCapacity.lazySet(instreamCursor == null ? 0 : sum(instreamCursor.getList(), InboundEdgeStream::capacities));
+        queuesSize.lazySet(instreamCursor == null ? 0 : sum(instreamCursor.getList(), InboundEdgeStream::sizes));
     }
 
     private CircularListCursor<InboundEdgeStream> popInstreamGroup() {

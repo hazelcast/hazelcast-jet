@@ -19,24 +19,27 @@ package com.hazelcast.jet.impl.metrics;
 import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
 import com.hazelcast.nio.Bits;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.Iterator;
 
 import static com.hazelcast.jet.impl.metrics.MetricsUtil.escapeMetricKeyPart;
 
-public class CompressingProbeRenderer implements ProbeRenderer {
+class CompressingProbeRenderer implements ProbeRenderer {
 
-    public static final int TYPE_LONG = 0;
-    public static final int TYPE_DOUBLE = 1;
+
     private static final short SHORT_BITS = 8 * Bits.SHORT_SIZE_IN_BYTES;
+    private static final int CONVERSION_PRECISION = 4;
 
     private DataOutputStream dos;
     private ByteArrayOutputStream baos;
     private String lastName = "";
     private int count;
 
-    public CompressingProbeRenderer(int estimatedBytes) {
+    CompressingProbeRenderer(int estimatedBytes) {
         baos = new ByteArrayOutputStream(estimatedBytes);
         dos = new DataOutputStream(baos);
     }
@@ -45,7 +48,6 @@ public class CompressingProbeRenderer implements ProbeRenderer {
     public void renderLong(String name, long value) {
         try {
             writeName(name);
-            dos.writeByte(TYPE_LONG);
             dos.writeLong(value);
         } catch (IOException e) {
             throw new RuntimeException(e); // should never be thrown
@@ -56,8 +58,8 @@ public class CompressingProbeRenderer implements ProbeRenderer {
     public void renderDouble(String name, double value) {
         try {
             writeName(name);
-            dos.writeByte(TYPE_DOUBLE);
-            dos.writeDouble(value);
+            // convert to long with specified precision
+            dos.writeLong(Math.round(value * Math.pow(10, CONVERSION_PRECISION)));
         } catch (IOException e) {
             throw new RuntimeException(e); // should never be thrown
         }
@@ -100,7 +102,7 @@ public class CompressingProbeRenderer implements ProbeRenderer {
         return count;
     }
 
-    public byte[] getRenderedBlob() {
+    byte[] getRenderedBlob() {
         try {
             dos.flush();
             return baos.toByteArray();
@@ -110,5 +112,45 @@ public class CompressingProbeRenderer implements ProbeRenderer {
             dos = null;
             baos = null;
         }
+    }
+
+    static Iterator<Metric> decompressingIterator(byte[] bytes) {
+        DataInputStream dis = new DataInputStream(new ByteArrayInputStream(bytes));
+        return new Iterator<Metric>() {
+            String lastName = "";
+            Metric next;
+            {
+                moveNext();
+            }
+
+            @Override
+            public boolean hasNext() {
+                return next != null;
+            }
+
+            @Override
+            public Metric next() {
+                try {
+                    return next;
+                } finally {
+                    moveNext();
+                }
+            }
+
+            private void moveNext() {
+                try {
+                    if (dis.available() > 0) {
+                        int equalPrefixLen = dis.readUnsignedShort();
+                        lastName = lastName.substring(0, equalPrefixLen) + dis.readUTF();
+                        next = new Metric(lastName, dis.readLong());
+                    } else {
+                        next = null;
+                        dis.close();
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e); // unexpected EOFException can occur here
+                }
+            }
+        };
     }
 }

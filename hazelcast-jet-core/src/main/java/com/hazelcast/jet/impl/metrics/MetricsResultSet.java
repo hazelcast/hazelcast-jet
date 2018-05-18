@@ -17,16 +17,12 @@
 package com.hazelcast.jet.impl.metrics;
 
 import javax.annotation.Nonnull;
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.hazelcast.jet.impl.metrics.CompressingProbeRenderer.TYPE_DOUBLE;
-import static com.hazelcast.jet.impl.metrics.CompressingProbeRenderer.TYPE_LONG;
+import static com.hazelcast.jet.impl.metrics.CompressingProbeRenderer.decompressingIterator;
 
 public class MetricsResultSet  {
 
@@ -71,75 +67,9 @@ public class MetricsResultSet  {
         @Nonnull
         @Override
         public Iterator<Metric> iterator() {
-            DataInputStream dis = new DataInputStream(new ByteArrayInputStream(bytes));
-            return new Iterator<Metric>() {
-                String lastName = "";
-                Metric next;
-                {
-                    moveNext();
-                }
-
-                @Override
-                public boolean hasNext() {
-                    return next != null;
-                }
-
-                @Override
-                public Metric next() {
-                    try {
-                        return next;
-                    } finally {
-                        moveNext();
-                    }
-                }
-
-                private void moveNext() {
-                    try {
-                        if (dis.available() > 0) {
-                            int equalPrefixLen = dis.readUnsignedShort();
-                            lastName = lastName.substring(0, equalPrefixLen) + dis.readUTF();
-                            int type = dis.readByte();
-                            if (type == TYPE_LONG) {
-                                next = new Metric(lastName, dis.readLong());
-                            } else if (type == TYPE_DOUBLE) {
-                                next = new Metric(lastName, dis.readDouble());
-                            } else {
-                                throw new RuntimeException("Unexpected type");
-                            }
-                        } else {
-                            next = null;
-                            dis.close();
-                        }
-                    } catch (IOException e) {
-                        throw new RuntimeException(e); // unexpected EOFException can occur here
-                    }
-                }
-            };
+            return decompressingIterator(bytes);
         }
     }
 
-    public static class Metric {
-
-        private String key;
-        private Number value;
-
-        Metric(String key, Number value) {
-            this.key = key;
-            this.value = value;
-        }
-
-        public String key() {
-            return key;
-        }
-
-        public Number value() {
-            return value;
-        }
-
-        @Override
-        public String toString() {
-            return key + "=" + value;
-        }
-    }
 }
 

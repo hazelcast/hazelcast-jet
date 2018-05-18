@@ -17,34 +17,25 @@
 package com.hazelcast.jet.impl.metrics;
 
 import com.hazelcast.instance.HazelcastInstanceImpl;
-import com.hazelcast.internal.diagnostics.Diagnostics;
-import com.hazelcast.internal.diagnostics.MetricsPlugin;
 import com.hazelcast.internal.metrics.MetricsRegistry;
-import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetTestSupport;
-import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Sources;
 import org.junit.Test;
-
-import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.processor.Processors.noopP;
 
 public class MetricsTest extends JetTestSupport {
 
     @Test
     public void test() throws InterruptedException {
-        System.setProperty(Diagnostics.ENABLED.getName(), "true");
-        System.setProperty(Diagnostics.METRICS_LEVEL.getName(), ProbeLevel.INFO.name());
-        System.setProperty(MetricsPlugin.PERIOD_SECONDS.getName(), "1");
-
         JetInstance inst = createJetMember();
-        DAG dag = new DAG();
-        Vertex source = dag.newVertex("source", Generator::new).localParallelism(1);
-        Vertex sink = dag.newVertex("sink", noopP()).localParallelism(1);
-        dag.edge(between(source, sink));
-        inst.newJob(dag);
+        Pipeline p = Pipeline.create();
+        p.drawFrom(Sources.map("source"))
+                .drainTo(Sinks.map("sink"));
+        inst.newJob(p, new JobConfig().setName("my first job ")).join();
 
 
         while (true) {
@@ -55,7 +46,7 @@ public class MetricsTest extends JetTestSupport {
             MetricsResultSet.MetricsCollection collection =
                     new MetricsResultSet.MetricsCollection(0, renderer.getRenderedBlob());
 
-            for (MetricsResultSet.Metric metric : collection) {
+            for (Metric metric : collection) {
                 System.out.println(metric);
             }
             Thread.sleep(1000);
