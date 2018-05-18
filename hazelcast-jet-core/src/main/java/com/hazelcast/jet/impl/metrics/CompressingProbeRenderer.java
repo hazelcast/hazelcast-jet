@@ -28,7 +28,7 @@ import java.util.Iterator;
 
 import static com.hazelcast.jet.impl.metrics.MetricsUtil.escapeMetricKeyPart;
 
-class CompressingProbeRenderer implements ProbeRenderer {
+public class CompressingProbeRenderer implements ProbeRenderer {
 
 
     private static final short SHORT_BITS = 8 * Bits.SHORT_SIZE_IN_BYTES;
@@ -39,7 +39,7 @@ class CompressingProbeRenderer implements ProbeRenderer {
     private String lastName = "";
     private int count;
 
-    CompressingProbeRenderer(int estimatedBytes) {
+    public CompressingProbeRenderer(int estimatedBytes) {
         baos = new ByteArrayOutputStream(estimatedBytes);
         dos = new DataOutputStream(baos);
     }
@@ -102,7 +102,7 @@ class CompressingProbeRenderer implements ProbeRenderer {
         return count;
     }
 
-    byte[] getRenderedBlob() {
+    public byte[] getRenderedBlob() {
         try {
             dos.flush();
             return baos.toByteArray();
