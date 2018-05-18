@@ -33,15 +33,23 @@ public class JetMetricsService implements ManagedService {
 
     public static final String SERVICE_NAME = "hz:impl:jetMetricsService";
 
+    public static final int COLLECTION_INTERVAL_SECONDS = 1;
+    public static final int METRICS_JOURNAL_CAPACITY = 120;
+
     private static final int INITIAL_BUFFER_SIZE = 2 << 16;
     private static final int SIZE_FACTOR_NUMERATOR = 11;
     private static final int SIZE_FACTOR_DENOMINATOR = 10;
 
     private final NodeEngineImpl nodeEngine;
     private final ILogger logger;
+    /**
+     * Ringbuffer which stores a bounded history of metrics. For each round of collection,
+     * the metrics are compressed into a blob and stored along with the timestamp,
+     * with the format (timestamp, byte[])
+     */
     // TODO [viliam] make the length configurable
-    private final ConcurrentArrayRingbuffer<Map.Entry<Long, byte[]>> metricsBlobs =
-            new ConcurrentArrayRingbuffer<>(120);
+    private final ConcurrentArrayRingbuffer<Map.Entry<Long, byte[]>> metricsJournal =
+            new ConcurrentArrayRingbuffer<>(METRICS_JOURNAL_CAPACITY);
 
 
     public JetMetricsService(NodeEngine nodeEngine) {
@@ -52,7 +60,7 @@ public class JetMetricsService implements ManagedService {
     @Override
     public void init(NodeEngine nodeEngine, Properties properties) {
         // if capacity is 0, metric collection is disabled
-        if (metricsBlobs.getCapacity() > 0) {
+        if (metricsJournal.getCapacity() > 0) {
             int[] lastSize = {INITIAL_BUFFER_SIZE};
             nodeEngine.getExecutionService().scheduleWithRepetition("MetricsForMcCollection", () -> {
                 CompressingProbeRenderer renderer = new CompressingProbeRenderer(
@@ -60,14 +68,14 @@ public class JetMetricsService implements ManagedService {
                 this.nodeEngine.getMetricsRegistry().render(renderer);
                 byte[] blob = renderer.getRenderedBlob();
                 lastSize[0] = blob.length;
-                metricsBlobs.add(entry(System.currentTimeMillis(), blob));
+                metricsJournal.add(entry(System.currentTimeMillis(), blob));
                 LoggingUtil.logFine(logger, "Collected %,d metrics, %,d bytes", renderer.getCount(), blob.length);
-            }, 1, 1, TimeUnit.SECONDS);
+            }, COLLECTION_INTERVAL_SECONDS, COLLECTION_INTERVAL_SECONDS, TimeUnit.SECONDS);
         }
     }
 
     public RingbufferSlice<Map.Entry<Long, byte[]>> getMetricBlobs(long startSequence) {
-        return metricsBlobs.copyFrom(startSequence);
+        return metricsJournal.copyFrom(startSequence);
     }
 
 

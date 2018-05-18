@@ -19,7 +19,9 @@ package com.hazelcast.jet;
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.impl.HazelcastClientProxy;
+import com.hazelcast.config.Config;
 import com.hazelcast.config.MapConfig;
+import com.hazelcast.config.MergePolicyConfig;
 import com.hazelcast.config.ServiceConfig;
 import com.hazelcast.config.ServicesConfig;
 import com.hazelcast.config.matcher.MatchingPointConfigPatternMatcher;
@@ -27,6 +29,8 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.instance.HazelcastInstanceImpl;
 import com.hazelcast.instance.HazelcastInstanceProxy;
+import com.hazelcast.internal.diagnostics.Diagnostics;
+import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JetInstanceImpl;
@@ -96,25 +100,30 @@ public final class Jet {
     }
 
     static void configureJetService(JetConfig jetConfig) {
-        if (!(jetConfig.getHazelcastConfig().getConfigPatternMatcher() instanceof MatchingPointConfigPatternMatcher)) {
+        Config hzConfig = jetConfig.getHazelcastConfig();
+        if (!(hzConfig.getConfigPatternMatcher() instanceof MatchingPointConfigPatternMatcher)) {
             throw new UnsupportedOperationException("Custom config pattern matcher is not supported in Jet");
         }
 
-        ServicesConfig servicesConfig = jetConfig.getHazelcastConfig().getServicesConfig();
+        ServicesConfig servicesConfig = hzConfig.getServicesConfig();
         servicesConfig
-                 .addServiceConfig(new ServiceConfig().setEnabled(true)
-                                                      .setName(JetService.SERVICE_NAME)
-                                                      .setClassName(JetService.class.getName())
-                                                      .setConfigObject(jetConfig));
+                .addServiceConfig(new ServiceConfig().setEnabled(true)
+                        .setName(JetService.SERVICE_NAME)
+                        .setClassName(JetService.class.getName())
+                        .setConfigObject(jetConfig));
 
         servicesConfig
                 .addServiceConfig(new ServiceConfig().setEnabled(true)
                         .setName(JetMetricsService.SERVICE_NAME)
                         .setClassName(JetMetricsService.class.getName()));
 
-        jetConfig.getHazelcastConfig().addMapConfig(new MapConfig(INTERNAL_JET_OBJECTS_PREFIX + "*")
-                 .setBackupCount(jetConfig.getInstanceConfig().getBackupCount())
-                 .setStatisticsEnabled(false)
-                 .setMergePolicy(IgnoreMergingEntryMapMergePolicy.class.getName()));
+        hzConfig
+                .addMapConfig(new MapConfig(INTERNAL_JET_OBJECTS_PREFIX + "*")
+                        .setBackupCount(jetConfig.getInstanceConfig().getBackupCount())
+                        .setStatisticsEnabled(false)
+                        .setMergePolicyConfig(
+                                new MergePolicyConfig().setPolicy(IgnoreMergingEntryMapMergePolicy.class.getName()))
+                )
+                .setProperty(Diagnostics.METRICS_LEVEL.getName(), ProbeLevel.INFO.name());
     }
 }
