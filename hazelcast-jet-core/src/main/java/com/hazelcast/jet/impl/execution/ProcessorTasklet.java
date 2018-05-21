@@ -131,31 +131,27 @@ public class ProcessorTasklet implements Tasklet {
     public void registerMetrics(MetricsRegistry metricsRegistry, final String namePrefix) {
         for (int i = 0; i < receivedCounts.length(); i++) {
             int finalI = i;
-            String name = namePrefix + ".receivedCount" + (receivedCounts.length() == 1 ? "" : "-" + i);
+            String name = namePrefix + ",ordinal=" + i + ",metric=receivedCount]";
             metricsRegistry.register(this, name, ProbeLevel.INFO,
                     (LongProbeFunction<ProcessorTasklet>) t -> t.receivedCounts.get(finalI));
-            name = namePrefix + ".receivedBatches" + (receivedCounts.length() == 1 ? "" : "-" + i);
+            name = namePrefix + ",ordinal=" + i + ",metric=receivedBatches]";
             metricsRegistry.register(this, name, ProbeLevel.INFO,
                     (LongProbeFunction<ProcessorTasklet>) t -> t.receivedBatches.get(finalI));
         }
 
         for (int i = 0; i < emittedCounts.length(); i++) {
             int finalI = i;
-            String name = namePrefix + ".emittedCount";
-            if (i == emittedCounts.length() - 1) {
-                name += "-snapshot";
-            } else if (emittedCounts.length() != 1) {
-                name += "-" + i;
-            }
+            String name = namePrefix + ",ordinal=" + (i == emittedCounts.length() ? "snapshot" : i)
+                    + ",metric=emittedCount]";
             metricsRegistry.register(this, name, ProbeLevel.INFO,
                     (LongProbeFunction<ProcessorTasklet>) t -> t.emittedCounts.get(finalI));
         }
 
-        metricsRegistry.register(this, namePrefix + ".lastReceivedWm", ProbeLevel.INFO,
+        metricsRegistry.register(this, namePrefix + ",metric=lastReceivedWm]", ProbeLevel.INFO,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.watermarkCoalescer.lastEmittedWm());
-        metricsRegistry.register(this, namePrefix + ".queuesSize", ProbeLevel.INFO,
+        metricsRegistry.register(this, namePrefix + ",metric=queuesSize]", ProbeLevel.INFO,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.queuesSize.get());
-        metricsRegistry.register(this, namePrefix + ".queuesCapacity", ProbeLevel.INFO,
+        metricsRegistry.register(this, namePrefix + ",metric=queuesCapacity]", ProbeLevel.INFO,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.queuesCapacity.get());
     }
 

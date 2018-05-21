@@ -163,7 +163,7 @@ public class TaskletExecutionService {
                 String.format("hz.%s.jet.cooperative.thread-%d", hzInstanceName, i)));
         Arrays.stream(cooperativeThreadPool).forEach(Thread::start);
         for (int i = 0; i < cooperativeWorkers.length; i++) {
-            metricsRegistry.scanAndRegister(cooperativeWorkers[i], "jet.cooperativeWorker-" + i);
+            metricsRegistry.scanAndRegister(cooperativeWorkers[i], "[module=jet,cooperativeWorker=" + i + ",metric=", "]");
         }
     }
 

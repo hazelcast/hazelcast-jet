@@ -71,6 +71,7 @@ import java.util.stream.IntStream;
 import static com.hazelcast.internal.util.concurrent.ConcurrentConveyor.concurrentConveyor;
 import static com.hazelcast.jet.config.EdgeConfig.DEFAULT_QUEUE_SIZE;
 import static com.hazelcast.jet.impl.execution.OutboundCollector.compositeCollector;
+import static com.hazelcast.jet.impl.metrics.MetricsUtil.escapeMetricKeyPart;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 import static com.hazelcast.jet.impl.util.Util.idToString;
 import static com.hazelcast.jet.impl.util.Util.memoize;
@@ -169,9 +170,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                         memberCount
                 );
 
-                String probePrefix = "jet.job." + idToString(jobId);
-                String vertexProbePrefix = probePrefix + "." + vertex.name() + "#" + globalProcessorIndex;
-                this.nodeEngine.getMetricsRegistry().scanAndRegister(p, vertexProbePrefix);
+                String probePrefix = "[module=jet,job=" + idToString(jobId) + ",vertex=" + escapeMetricKeyPart(vertex.name());
+                String vertexProbePrefix = probePrefix + ",proc=" + globalProcessorIndex;
+                this.nodeEngine.getMetricsRegistry().scanAndRegister(p,
+                        vertexProbePrefix + ",procType=" + escapeMetricKeyPart(p.getClass().getSimpleName()) + ",metric=", "]");
 
                 // createOutboundEdgeStreams() populates localConveyorMap and edgeSenderConveyorMap.
                 // Also populates instance fields: senderMap, receiverMap, tasklets.
@@ -322,10 +324,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             Map<Address, ConcurrentConveyor<Object>> memberToSenderConveyorMap = null;
             if (edge.isDistributed()) {
                 memberToSenderConveyorMap = memberToSenderConveyorMap(edgeSenderConveyorMap, edge,
-                        probePrefix + "." + edge.sourceVertex().name() + "-" + edge.sourceOrdinal());
+                        probePrefix + ",ordinal=" + edge.sourceOrdinal());
             }
             outboundStreams.add(createOutboundEdgeStream(edge, processorIdx, memberToSenderConveyorMap,
-                    probePrefix + "." + edge.destVertex().name() + "-" + edge.sourceOrdinal()));
+                    probePrefix + ",ordinal=" + edge.sourceOrdinal()));
         }
         return outboundStreams;
     }
@@ -370,9 +372,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             // and don't use the reference to source, but we use the source to deregister the metrics when the job
             // finishes.
             if (firstTasklet != null) {
-                this.nodeEngine.getMetricsRegistry().register(firstTasklet, probePrefix + ".distributedBytesOut",
+                this.nodeEngine.getMetricsRegistry().register(firstTasklet, probePrefix + ",metric=distributedBytesOut]",
                         ProbeLevel.INFO, addCountersProbeFunction(bytesCounters));
-                this.nodeEngine.getMetricsRegistry().register(firstTasklet, probePrefix + ".distributedItemsOut",
+                this.nodeEngine.getMetricsRegistry().register(firstTasklet, probePrefix + ",metric=distributedItemsOut]",
                         ProbeLevel.INFO, addCountersProbeFunction(itemsCounters));
             }
             return addrToConveyor;
@@ -518,9 +520,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                            // We register the metrics to the first tasklet. The metrics itself aggregate counters from
                            // all tasklets and don't use the reference to source, but we use the source to deregister
                            // the metrics when the job finishes.
-                           nodeEngine.getMetricsRegistry().register(firstTasklet, probePrefix + ".distributedItemsIn",
+                           nodeEngine.getMetricsRegistry().register(firstTasklet, probePrefix + ",metric=distributedItemsIn]",
                                    ProbeLevel.INFO, addCountersProbeFunction(itemCounters));
-                           nodeEngine.getMetricsRegistry().register(firstTasklet, probePrefix + ".distributedBytesIn",
+                           nodeEngine.getMetricsRegistry().register(firstTasklet, probePrefix + ",metric=distributedBytesIn]",
                                    ProbeLevel.INFO, addCountersProbeFunction(bytesCounters));
                        }
                        return addrToTasklet;
