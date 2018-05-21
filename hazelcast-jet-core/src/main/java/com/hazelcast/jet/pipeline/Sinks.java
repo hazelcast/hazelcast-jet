@@ -635,6 +635,17 @@ public final class Sinks {
      * messageFn} and sends this message using the given {@code sendFn}. After
      * a batch of messages is sent, sink flushes the session using the given
      * {@code flushFn}.
+     * <p>
+     * Behavior on job restart: the processor is stateless. If the job is
+     * restarted, duplicate events can occur. If you need exactly-once behavior,
+     * you must ensure idempotence on the application level.
+     * <p>
+     * IO failures are generally handled by JMS provider and do not cause the
+     * processor to fail. Most of the providers offers a configuration parameter
+     * to enable auto-connection, refer to provider documentation for details.
+     * <p>
+     * Default local parallelism for this processor is 2 (or less if less CPUs
+     * are available).
      *
      * @param connectionSupplier supplier to obtain connection to the JMS provider
      * @param sessionF           function to create session from the JMS connection
@@ -652,7 +663,7 @@ public final class Sinks {
             @Nonnull DistributedConsumer<Session> flushFn,
             @Nonnull String name
     ) {
-        return fromProcessor("writeJmsQueue(" + name + ")",
+        return fromProcessor("jmsQueueSource(" + name + ")",
                 SinkProcessors.writeJmsQueueP(connectionSupplier, sessionF, messageFn, sendFn, flushFn, name));
     }
 
@@ -672,7 +683,7 @@ public final class Sinks {
             @Nonnull DistributedSupplier<ConnectionFactory> factorySupplier,
             @Nonnull String name
     ) {
-        return fromProcessor("writeJmsQueue(" + name + ")", writeJmsQueueP(factorySupplier, name));
+        return fromProcessor("jmsQueueSource(" + name + ")", writeJmsQueueP(factorySupplier, name));
     }
 
     /**
@@ -688,6 +699,17 @@ public final class Sinks {
      * messageFn} and sends this message using the given {@code sendFn}. After
      * a batch of messages is sent, sink flushes the session using the given
      * {@code flushFn}.
+     * <p>
+     * Behavior on job restart: the processor is stateless. If the job is
+     * restarted, duplicate events can occur. If you need exactly-once behavior,
+     * you must ensure idempotence on the application level.
+     * <p>
+     * IO failures are generally handled by JMS provider and do not cause the
+     * processor to fail. Most of the providers offers a configuration parameter
+     * to enable auto-connection, refer to provider documentation for details.
+     * <p>
+     * Default local parallelism for this processor is 2 (or less if less CPUs
+     * are available).
      *
      * @param connectionSupplier supplier to obtain connection to the JMS provider
      * @param sessionF           function to create session from the JMS connection
@@ -705,7 +727,7 @@ public final class Sinks {
             @Nonnull DistributedConsumer<Session> flushFn,
             @Nonnull String name
     ) {
-        return fromProcessor("writeJmsTopic(" + name + ")",
+        return fromProcessor("jmsTopicSink(" + name + ")",
                 SinkProcessors.writeJmsTopicP(connectionSupplier, sessionF, messageFn, sendFn, flushFn, name));
     }
 
@@ -725,7 +747,7 @@ public final class Sinks {
             @Nonnull DistributedSupplier<ConnectionFactory> factorySupplier,
             @Nonnull String name
     ) {
-        return fromProcessor("writeJmsTopic(" + name + ")", writeJmsTopicP(factorySupplier, name));
+        return fromProcessor("jmsTopicSink(" + name + ")", writeJmsTopicP(factorySupplier, name));
     }
 
 }

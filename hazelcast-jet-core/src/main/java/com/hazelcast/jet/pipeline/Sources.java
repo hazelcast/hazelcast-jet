@@ -872,6 +872,13 @@ public final class Sources {
      * <p>
      * The source does not save any state to snapshot. The source starts
      * emitting items where it left from.
+     * <p>
+     * IO failures are generally handled by JMS provider and do not cause the
+     * processor to fail. Most of the providers offers a configuration parameter
+     * to enable auto-connection, refer to provider documentation for details.
+     * <p>
+     * Default local parallelism for this processor is 4 (or less if less CPUs
+     * are available).
      *
      * @param connectionSupplier supplier to obtain connection to the JMS provider
      * @param sessionFn          function to create session from the JMS connection
@@ -889,7 +896,7 @@ public final class Sources {
             @Nonnull DistributedConsumer<Session> flushFn,
             @Nonnull DistributedFunction<Message, T> projectionFn
     ) {
-        return streamFromProcessor("streamJmsQueue",
+        return streamFromProcessor("jmsQueueSource",
                 streamJmsQueueP(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn));
     }
 
@@ -909,7 +916,7 @@ public final class Sources {
             @Nonnull DistributedSupplier<ConnectionFactory> factorySupplier,
             @Nonnull String name
     ) {
-        return streamFromProcessor("streamJmsQueue(" + name + ")", streamJmsQueueP(factorySupplier, name));
+        return streamFromProcessor("jmsQueueSource(" + name + ")", streamJmsQueueP(factorySupplier, name));
     }
 
     /**
@@ -932,6 +939,10 @@ public final class Sources {
      * persists items during restart and the source starts where it left from.
      * If the consumer is non-durable then source emits the items published
      * after the restart.
+     * <p>
+     * IO failures are generally handled by JMS provider and do not cause the
+     * processor to fail. Most of the providers offer a configuration parameter
+     * to enable auto-connection, refer to provider documentation for details.
      *
      * @param connectionSupplier supplier to obtain connection to the JMS provider
      * @param sessionFn          function to create session from the JMS connection
@@ -949,7 +960,7 @@ public final class Sources {
             @Nonnull DistributedConsumer<Session> flushFn,
             @Nonnull DistributedFunction<Message, T> projectionFn
     ) {
-        return streamFromProcessor("streamJmsTopic",
+        return streamFromProcessor("jmsTopicSource",
                 streamJmsTopicP(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn));
     }
 
@@ -969,6 +980,6 @@ public final class Sources {
             @Nonnull DistributedSupplier<ConnectionFactory> factorySupplier,
             @Nonnull String name
     ) {
-        return streamFromProcessor("streamJmsTopic(" + name + ")", streamJmsTopicP(factorySupplier, name));
+        return streamFromProcessor("jmsTopicSource(" + name + ")", streamJmsTopicP(factorySupplier, name));
     }
 }

@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
@@ -23,14 +24,19 @@ import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.junit.EmbeddedActiveMQBroker;
 import org.junit.After;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import javax.jms.Connection;
 import javax.jms.Destination;
+import javax.jms.Message;
 import javax.jms.MessageConsumer;
+import javax.jms.MessageProducer;
 import javax.jms.Session;
+import javax.jms.TextMessage;
 import java.util.Queue;
 
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
@@ -38,7 +44,11 @@ import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastParallelClassRunner.class)
-public class StreamJmsPTest extends JmsTestSupport {
+public class StreamJmsPTest extends JetTestSupport {
+
+
+    @ClassRule
+    public static EmbeddedActiveMQBroker broker = new EmbeddedActiveMQBroker();
 
     private StreamJmsP processor;
     private TestOutbox outbox;
@@ -83,17 +93,36 @@ public class StreamJmsPTest extends JmsTestSupport {
     }
 
     private void initializeProcessor(String destinationName, boolean isQueue) throws Exception {
-        processorConnection = new ActiveMQConnectionFactory(BROKER_URL).createConnection();
+        processorConnection = broker.createConnectionFactory().createConnection();
         processorConnection.start();
 
-        DistributedFunction<Session, MessageConsumer> consumerF = s -> uncheckCall(() -> {
+        DistributedFunction<Connection, Session> sessionFn = c -> uncheckCall(() ->
+                c.createSession(false, Session.AUTO_ACKNOWLEDGE));
+        DistributedFunction<Session, MessageConsumer> consumerFn = s -> uncheckCall(() -> {
             Destination destination = isQueue ? s.createQueue(destinationName) : s.createTopic(destinationName);
             return s.createConsumer(destination);
         });
-        processor = new StreamJmsP<>(connection, SESSION_F, consumerF, noopConsumer(), TEXT_MESSAGE_F);
+        DistributedFunction<Message, String> textMessageFn = m -> uncheckCall(((TextMessage) m)::getText);
+        processor = new StreamJmsP<>(processorConnection, sessionFn, consumerFn, noopConsumer(), textMessageFn);
         outbox = new TestOutbox(1);
         Context ctx = new TestProcessorContext().setLogger(Logger.getLogger(StreamJmsP.class));
         processor.init(outbox, ctx);
+    }
+
+    private String sendMessage(String destinationName, boolean isQueue) throws Exception {
+        String message = randomString();
+
+        ActiveMQConnectionFactory connectionFactory = broker.createConnectionFactory();
+        Connection connection = connectionFactory.createConnection();
+        connection.start();
+
+        Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+        Destination destination = isQueue ? session.createQueue(destinationName) : session.createTopic(destinationName);
+        MessageProducer producer = session.createProducer(destination);
+        TextMessage textMessage = session.createTextMessage(message);
+        producer.send(textMessage);
+        session.close();
+        return message;
     }
 
 }

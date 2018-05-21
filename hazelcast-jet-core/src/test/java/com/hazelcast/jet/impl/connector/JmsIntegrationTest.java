@@ -20,7 +20,9 @@ import com.hazelcast.jet.IListJet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.JobStatus;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.pipeline.JmsSinkBuilder;
 import com.hazelcast.jet.pipeline.JmsSourceBuilder;
@@ -31,13 +33,18 @@ import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.junit.EmbeddedActiveMQBroker;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import javax.jms.Connection;
 import javax.jms.Destination;
 import javax.jms.JMSException;
+import javax.jms.Message;
 import javax.jms.MessageConsumer;
+import javax.jms.MessageProducer;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 import java.util.ArrayList;
@@ -49,9 +56,14 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
 @RunWith(HazelcastParallelClassRunner.class)
-public class JmsIntegrationTest extends JmsTestSupport {
+public class JmsIntegrationTest extends JetTestSupport {
+
+    @ClassRule
+    public static EmbeddedActiveMQBroker broker = new EmbeddedActiveMQBroker();
 
     private static final int MESSAGE_COUNT = 100;
+    private static final DistributedFunction<Message, String> TEXT_MESSAGE_FN = m ->
+            uncheckCall(((TextMessage) m)::getText);
 
     private JetInstance instance;
     private String destinationName = randomString();
@@ -66,8 +78,8 @@ public class JmsIntegrationTest extends JmsTestSupport {
     @Test
     public void sourceQueue() {
         Pipeline pipeline = Pipeline.create();
-        pipeline.drawFrom(Sources.jmsQueue(() -> new ActiveMQConnectionFactory(BROKER_URL), destinationName))
-                .map(TEXT_MESSAGE_F)
+        pipeline.drawFrom(Sources.jmsQueue(() -> broker.createConnectionFactory(), destinationName))
+                .map(TEXT_MESSAGE_FN)
                 .drainTo(Sinks.list(listName));
 
         Job job = instance.newJob(pipeline, jobConfig());
@@ -84,8 +96,8 @@ public class JmsIntegrationTest extends JmsTestSupport {
     @Test
     public void sourceTopic() {
         Pipeline pipeline = Pipeline.create();
-        pipeline.drawFrom(Sources.jmsTopic(() -> new ActiveMQConnectionFactory(BROKER_URL), destinationName))
-                .map(TEXT_MESSAGE_F)
+        pipeline.drawFrom(Sources.jmsTopic(() -> broker.createConnectionFactory(), destinationName))
+                .map(TEXT_MESSAGE_FN)
                 .drainTo(Sinks.list(listName));
 
         Job job = instance.newJob(pipeline, jobConfig());
@@ -106,7 +118,7 @@ public class JmsIntegrationTest extends JmsTestSupport {
 
         Pipeline pipeline = Pipeline.create();
         pipeline.drawFrom(Sources.list(listName))
-                .drainTo(Sinks.jmsQueue(() -> new ActiveMQConnectionFactory(BROKER_URL), destinationName));
+                .drainTo(Sinks.jmsQueue(() -> broker.createConnectionFactory(), destinationName));
 
         List<String> messages = consumeMessages(true);
         Job job = instance.newJob(pipeline, jobConfig());
@@ -123,7 +135,7 @@ public class JmsIntegrationTest extends JmsTestSupport {
 
         Pipeline pipeline = Pipeline.create();
         pipeline.drawFrom(Sources.list(listName))
-                .drainTo(Sinks.jmsTopic(() -> new ActiveMQConnectionFactory(BROKER_URL), destinationName));
+                .drainTo(Sinks.jmsTopic(() -> broker.createConnectionFactory(), destinationName));
 
         List<String> messages = consumeMessages(false);
         Job job = instance.newJob(pipeline, jobConfig());
@@ -136,9 +148,9 @@ public class JmsIntegrationTest extends JmsTestSupport {
 
     @Test
     public void sourceQueue_withBuilder() {
-        StreamSource<String> source = JmsSourceBuilder.<String>builder(() -> new ActiveMQConnectionFactory(BROKER_URL))
+        StreamSource<String> source = JmsSourceBuilder.<String>builder(() -> broker.createConnectionFactory())
                 .destinationName(destinationName)
-                .projectionFn(TEXT_MESSAGE_F)
+                .projectionFn(TEXT_MESSAGE_FN)
                 .build();
 
         Pipeline pipeline = Pipeline.create();
@@ -157,10 +169,10 @@ public class JmsIntegrationTest extends JmsTestSupport {
 
     @Test
     public void sourceTopic_withBuilder() {
-        StreamSource<String> source = JmsSourceBuilder.<String>builder(() -> new ActiveMQConnectionFactory(BROKER_URL))
+        StreamSource<String> source = JmsSourceBuilder.<String>builder(() -> broker.createConnectionFactory())
                 .destinationName(destinationName)
                 .topic()
-                .projectionFn(TEXT_MESSAGE_F)
+                .projectionFn(TEXT_MESSAGE_FN)
                 .build();
 
         Pipeline pipeline = Pipeline.create();
@@ -182,7 +194,7 @@ public class JmsIntegrationTest extends JmsTestSupport {
     public void sinkQueue_withBuilder() throws JMSException {
         populateList();
 
-        Sink<String> sink = JmsSinkBuilder.<String>builder(() -> new ActiveMQConnectionFactory(BROKER_URL))
+        Sink<String> sink = JmsSinkBuilder.<String>builder(() -> broker.createConnectionFactory())
                 .destinationName(destinationName)
                 .build();
 
@@ -203,7 +215,7 @@ public class JmsIntegrationTest extends JmsTestSupport {
     public void sinkTopic_withBuilder() throws JMSException {
         populateList();
 
-        Sink<String> sink = JmsSinkBuilder.<String>builder(() -> new ActiveMQConnectionFactory(BROKER_URL))
+        Sink<String> sink = JmsSinkBuilder.<String>builder(() -> broker.createConnectionFactory())
                 .destinationName(destinationName)
                 .topic()
                 .build();
@@ -222,10 +234,14 @@ public class JmsIntegrationTest extends JmsTestSupport {
     }
 
     private List<String> consumeMessages(boolean isQueue) throws JMSException {
+        ActiveMQConnectionFactory connectionFactory = broker.createConnectionFactory();
+        Connection connection = connectionFactory.createConnection();
+        connection.start();
+
         List<String> messages = synchronizedList(new ArrayList<>());
         spawn(() -> {
             try {
-                Session session = SESSION_F.apply(connection);
+                Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
                 Destination dest = isQueue ? session.createQueue(destinationName) : session.createTopic(destinationName);
                 MessageConsumer consumer = session.createConsumer(dest);
                 int count = 0;
@@ -262,6 +278,22 @@ public class JmsIntegrationTest extends JmsTestSupport {
         while (job.getStatus() != JobStatus.RUNNING) {
             sleepMillis(1);
         }
+    }
+
+    private String sendMessage(String destinationName, boolean isQueue) throws Exception {
+        String message = randomString();
+
+        ActiveMQConnectionFactory connectionFactory = broker.createConnectionFactory();
+        Connection connection = connectionFactory.createConnection();
+        connection.start();
+
+        Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+        Destination destination = isQueue ? session.createQueue(destinationName) : session.createTopic(destinationName);
+        MessageProducer producer = session.createProducer(destination);
+        TextMessage textMessage = session.createTextMessage(message);
+        producer.send(textMessage);
+        session.close();
+        return message;
     }
 
 }
