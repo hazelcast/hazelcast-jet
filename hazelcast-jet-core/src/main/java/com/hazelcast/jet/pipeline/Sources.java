@@ -869,6 +869,9 @@ public final class Sources {
      * <p>
      * After consuming each message, {@code flushFn} is called to commit the
      * session.
+     * <p>
+     * The source does not save any state to snapshot. The source starts
+     * emitting items where it left from.
      *
      * @param connectionSupplier supplier to obtain connection to the JMS provider
      * @param sessionFn          function to create session from the JMS connection
@@ -886,7 +889,7 @@ public final class Sources {
             @Nonnull DistributedConsumer<Session> flushFn,
             @Nonnull DistributedFunction<Message, T> projectionFn
     ) {
-        return streamFromProcessor("jmsQueue",
+        return streamFromProcessor("streamJmsQueue",
                 streamJmsQueueP(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn));
     }
 
@@ -906,7 +909,7 @@ public final class Sources {
             @Nonnull DistributedSupplier<ConnectionFactory> factorySupplier,
             @Nonnull String name
     ) {
-        return streamFromProcessor("jmsQueue(" + name + ")", streamJmsQueueP(factorySupplier, name));
+        return streamFromProcessor("streamJmsQueue(" + name + ")", streamJmsQueueP(factorySupplier, name));
     }
 
     /**
@@ -922,6 +925,13 @@ public final class Sources {
      * <p>
      * After consuming each message, {@code flushFn} is called to commit the
      * session.
+     * <p>
+     * The source does not save any state to snapshot. Behavior of job restart
+     * changes according to the consumer. If it is a durable consumer and a
+     * unique client identifier is set for the connection then JMS provider
+     * persists items during restart and the source starts where it left from.
+     * If the consumer is non-durable then source emits the items published
+     * after the restart.
      *
      * @param connectionSupplier supplier to obtain connection to the JMS provider
      * @param sessionFn          function to create session from the JMS connection
@@ -939,7 +949,7 @@ public final class Sources {
             @Nonnull DistributedConsumer<Session> flushFn,
             @Nonnull DistributedFunction<Message, T> projectionFn
     ) {
-        return streamFromProcessor("jmsTopic",
+        return streamFromProcessor("streamJmsTopic",
                 streamJmsTopicP(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn));
     }
 
@@ -959,6 +969,6 @@ public final class Sources {
             @Nonnull DistributedSupplier<ConnectionFactory> factorySupplier,
             @Nonnull String name
     ) {
-        return streamFromProcessor("jmsTopic(" + name + ")", streamJmsTopicP(factorySupplier, name));
+        return streamFromProcessor("streamJmsTopic(" + name + ")", streamJmsTopicP(factorySupplier, name));
     }
 }

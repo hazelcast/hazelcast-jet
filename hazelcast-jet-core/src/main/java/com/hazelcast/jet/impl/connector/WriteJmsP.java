@@ -125,19 +125,19 @@ public final class WriteJmsP {
 
         @Override
         public Collection<? extends Processor> get(int count) {
-            DistributedFunction<Processor.Context, JmsBuffer> createFn = jet -> {
+            DistributedFunction<Processor.Context, JmsContext> createFn = jet -> {
                 Session session = sessionF.apply(connection);
                 Destination destination =
                         uncheckCall(() -> isTopic ? session.createTopic(name) : session.createQueue(name));
                 MessageProducer producer = uncheckCall(() -> session.createProducer(destination));
-                return new JmsBuffer(session, producer);
+                return new JmsContext(session, producer);
             };
-            DistributedBiConsumer<JmsBuffer, T> onReceiveFn = (buffer, item) -> {
+            DistributedBiConsumer<JmsContext, T> onReceiveFn = (buffer, item) -> {
                 Message message = messageFn.apply(buffer.session, item);
                 sendFn.accept(buffer.producer, message);
             };
-            DistributedConsumer<JmsBuffer> flushF = buffer -> flushFn.accept(buffer.session);
-            DistributedConsumer<JmsBuffer> destroyFn = buffer -> {
+            DistributedConsumer<JmsContext> flushF = buffer -> flushFn.accept(buffer.session);
+            DistributedConsumer<JmsContext> destroyFn = buffer -> {
                 uncheckRun(buffer.producer::close);
                 uncheckRun(buffer.session::close);
             };
@@ -151,11 +151,11 @@ public final class WriteJmsP {
             uncheckRun(() -> connection.close());
         }
 
-        class JmsBuffer {
+        class JmsContext {
             private final Session session;
             private final MessageProducer producer;
 
-            JmsBuffer(Session session, MessageProducer producer) {
+            JmsContext(Session session, MessageProducer producer) {
                 this.session = session;
                 this.producer = producer;
             }

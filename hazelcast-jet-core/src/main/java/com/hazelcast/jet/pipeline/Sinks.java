@@ -652,7 +652,7 @@ public final class Sinks {
             @Nonnull DistributedConsumer<Session> flushFn,
             @Nonnull String name
     ) {
-        return fromProcessor("jmsQueue(" + name + ")",
+        return fromProcessor("writeJmsQueue(" + name + ")",
                 SinkProcessors.writeJmsQueueP(connectionSupplier, sessionF, messageFn, sendFn, flushFn, name));
     }
 
@@ -672,7 +672,7 @@ public final class Sinks {
             @Nonnull DistributedSupplier<ConnectionFactory> factorySupplier,
             @Nonnull String name
     ) {
-        return fromProcessor("jmsQueue(" + name + ")", writeJmsQueueP(factorySupplier, name));
+        return fromProcessor("writeJmsQueue(" + name + ")", writeJmsQueueP(factorySupplier, name));
     }
 
     /**
@@ -705,7 +705,7 @@ public final class Sinks {
             @Nonnull DistributedConsumer<Session> flushFn,
             @Nonnull String name
     ) {
-        return fromProcessor("jmsTopic(" + name + ")",
+        return fromProcessor("writeJmsTopic(" + name + ")",
                 SinkProcessors.writeJmsTopicP(connectionSupplier, sessionF, messageFn, sendFn, flushFn, name));
     }
 
@@ -725,7 +725,7 @@ public final class Sinks {
             @Nonnull DistributedSupplier<ConnectionFactory> factorySupplier,
             @Nonnull String name
     ) {
-        return fromProcessor("jmsTopic(" + name + ")", writeJmsTopicP(factorySupplier, name));
+        return fromProcessor("writeJmsTopic(" + name + ")", writeJmsTopicP(factorySupplier, name));
     }
 
 }

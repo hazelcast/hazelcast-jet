@@ -351,7 +351,8 @@ public final class SourceProcessors {
             @Nonnull DistributedFunction<Message, T> projectionFn
     ) {
         return ProcessorMetaSupplier.of(
-                StreamJmsP.supplier(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn));
+                StreamJmsP.supplier(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn),
+                StreamJmsP.PREFERRED_LOCAL_PARALLELISM);
     }
 
     /**
@@ -363,7 +364,9 @@ public final class SourceProcessors {
             @Nonnull DistributedSupplier<ConnectionFactory> factorySupplier,
             @Nonnull String name
     ) {
-        return ProcessorMetaSupplier.of(StreamJmsP.supplier(factorySupplier, name, true));
+        return ProcessorMetaSupplier.of(
+                StreamJmsP.supplier(factorySupplier, name, true),
+                StreamJmsP.PREFERRED_LOCAL_PARALLELISM);
     }
 
     /**

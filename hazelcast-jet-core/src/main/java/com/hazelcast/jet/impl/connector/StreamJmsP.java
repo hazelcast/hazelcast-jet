@@ -51,6 +51,8 @@ import static java.util.stream.IntStream.range;
  */
 public class StreamJmsP<T> extends AbstractProcessor {
 
+    public static final int PREFERRED_LOCAL_PARALLELISM = 4;
+
     private final Connection connection;
     private final DistributedFunction<Connection, Session> sessionFn;
     private final DistributedFunction<Session, MessageConsumer> consumerFn;
