@@ -122,6 +122,7 @@ public class StreamJmsPTest extends JetTestSupport {
         TextMessage textMessage = session.createTextMessage(message);
         producer.send(textMessage);
         session.close();
+        connection.close();
         return message;
     }
 

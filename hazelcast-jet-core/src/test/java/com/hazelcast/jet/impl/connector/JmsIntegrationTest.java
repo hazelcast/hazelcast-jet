@@ -251,6 +251,7 @@ public class JmsIntegrationTest extends JetTestSupport {
                 }
                 consumer.close();
                 session.close();
+                connection.close();
             } catch (Exception e) {
                 throw ExceptionUtil.rethrow(e);
             }
@@ -293,6 +294,7 @@ public class JmsIntegrationTest extends JetTestSupport {
         TextMessage textMessage = session.createTextMessage(message);
         producer.send(textMessage);
         session.close();
+        connection.close();
         return message;
     }
 
