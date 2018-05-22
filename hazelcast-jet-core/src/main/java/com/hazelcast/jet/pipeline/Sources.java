@@ -874,8 +874,8 @@ public final class Sources {
      * emitting items where it left from.
      * <p>
      * IO failures are generally handled by JMS provider and do not cause the
-     * processor to fail. Most of the providers offers a configuration parameter
-     * to enable auto-connection, refer to provider documentation for details.
+     * processor to fail. Most of the providers offer a configuration parameter
+     * to enable auto-reconnection, refer to provider documentation for details.
      * <p>
      * Default local parallelism for this processor is 4 (or less if less CPUs
      * are available).
@@ -942,7 +942,7 @@ public final class Sources {
      * <p>
      * IO failures are generally handled by JMS provider and do not cause the
      * processor to fail. Most of the providers offer a configuration parameter
-     * to enable auto-connection, refer to provider documentation for details.
+     * to enable auto-reconnection, refer to provider documentation for details.
      *
      * @param connectionSupplier supplier to obtain connection to the JMS provider
      * @param sessionFn          function to create session from the JMS connection

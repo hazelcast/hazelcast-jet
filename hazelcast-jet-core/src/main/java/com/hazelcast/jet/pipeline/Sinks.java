@@ -641,8 +641,8 @@ public final class Sinks {
      * you must ensure idempotence on the application level.
      * <p>
      * IO failures are generally handled by JMS provider and do not cause the
-     * processor to fail. Most of the providers offers a configuration parameter
-     * to enable auto-connection, refer to provider documentation for details.
+     * processor to fail. Most of the providers offer a configuration parameter
+     * to enable auto-reconnection, refer to provider documentation for details.
      * <p>
      * Default local parallelism for this processor is 2 (or less if less CPUs
      * are available).
@@ -663,7 +663,7 @@ public final class Sinks {
             @Nonnull DistributedConsumer<Session> flushFn,
             @Nonnull String name
     ) {
-        return fromProcessor("jmsQueueSource(" + name + ")",
+        return fromProcessor("jmsQueueSink(" + name + ")",
                 SinkProcessors.writeJmsQueueP(connectionSupplier, sessionF, messageFn, sendFn, flushFn, name));
     }
 
@@ -683,7 +683,7 @@ public final class Sinks {
             @Nonnull DistributedSupplier<ConnectionFactory> factorySupplier,
             @Nonnull String name
     ) {
-        return fromProcessor("jmsQueueSource(" + name + ")", writeJmsQueueP(factorySupplier, name));
+        return fromProcessor("jmsQueueSink(" + name + ")", writeJmsQueueP(factorySupplier, name));
     }
 
     /**
@@ -705,8 +705,8 @@ public final class Sinks {
      * you must ensure idempotence on the application level.
      * <p>
      * IO failures are generally handled by JMS provider and do not cause the
-     * processor to fail. Most of the providers offers a configuration parameter
-     * to enable auto-connection, refer to provider documentation for details.
+     * processor to fail. Most of the providers offer a configuration parameter
+     * to enable auto-reconnection, refer to provider documentation for details.
      * <p>
      * Default local parallelism for this processor is 2 (or less if less CPUs
      * are available).

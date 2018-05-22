@@ -47,6 +47,8 @@ import static java.util.stream.Collectors.toList;
  */
 public final class WriteJmsP {
 
+    private static final int PREFERRED_LOCAL_PARALLELISM = 4;
+
     private WriteJmsP() {
     }
 
@@ -66,7 +68,8 @@ public final class WriteJmsP {
             boolean isTopic
     ) {
         return ProcessorMetaSupplier.of(
-                new Supplier<>(connectionSupplier, sessionF, messageFn, sendFn, flushFn, name, isTopic));
+                new Supplier<>(connectionSupplier, sessionF, messageFn, sendFn, flushFn, name, isTopic),
+                PREFERRED_LOCAL_PARALLELISM);
     }
 
     /**
