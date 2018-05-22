@@ -46,7 +46,6 @@ import static org.junit.Assert.assertEquals;
 @RunWith(HazelcastParallelClassRunner.class)
 public class StreamJmsPTest extends JetTestSupport {
 
-
     @ClassRule
     public static EmbeddedActiveMQBroker broker = new EmbeddedActiveMQBroker();
 
@@ -69,9 +68,6 @@ public class StreamJmsPTest extends JetTestSupport {
 
         Queue<Object> queue = outbox.queue(0);
 
-        processor.complete();
-        assertEquals(message1, queue.peek());
-        outbox.reset();
         processor.complete();
         assertEquals(message1, queue.poll());
         outbox.reset();

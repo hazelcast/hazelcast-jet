@@ -32,7 +32,6 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import com.hazelcast.test.annotation.Repeat;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.junit.EmbeddedActiveMQBroker;
 import org.junit.After;
@@ -58,7 +57,6 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
 @RunWith(HazelcastParallelClassRunner.class)
-@Repeat(15)
 public class JmsIntegrationTest extends JetTestSupport {
 
     @ClassRule
