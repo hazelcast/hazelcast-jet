@@ -26,7 +26,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
 
-import static com.hazelcast.jet.impl.metrics.MetricsUtil.escapeMetricKeyPart;
+import static com.hazelcast.internal.metrics.MetricsUtil.escapeMetricKeyPart;
 
 /**
  * Probe renderer to serialize metrics to byte[] to be sent to ManCenter.
