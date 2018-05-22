@@ -32,8 +32,10 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.test.HazelcastParallelClassRunner;
+import com.hazelcast.test.annotation.Repeat;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.junit.EmbeddedActiveMQBroker;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -56,6 +58,7 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
 @RunWith(HazelcastParallelClassRunner.class)
+@Repeat(15)
 public class JmsIntegrationTest extends JetTestSupport {
 
     @ClassRule
@@ -68,11 +71,17 @@ public class JmsIntegrationTest extends JetTestSupport {
     private JetInstance instance;
     private String destinationName = randomString();
     private String listName = randomString();
+    private Job job;
 
     @Before
     public void setupInstance() {
         instance = createJetMember();
         createJetMember();
+    }
+
+    @After
+    public void cleanup() {
+        cancelJob();
     }
 
     @Test
@@ -82,15 +91,13 @@ public class JmsIntegrationTest extends JetTestSupport {
                 .map(TEXT_MESSAGE_FN)
                 .drainTo(Sinks.list(listName));
 
-        Job job = instance.newJob(pipeline, jobConfig());
+        startJob(pipeline);
 
         List<String> messages = sendMessages(true);
 
         IListJet<String> list = instance.getList(listName);
         assertEqualsEventually(list::size, messages.size());
         assertContainsAll(list, messages);
-
-        job.cancel();
     }
 
     @Test
@@ -100,16 +107,15 @@ public class JmsIntegrationTest extends JetTestSupport {
                 .map(TEXT_MESSAGE_FN)
                 .drainTo(Sinks.list(listName));
 
-        Job job = instance.newJob(pipeline, jobConfig());
-        waitForJobRunning(job);
+        startJob(pipeline);
+
+        sleepSeconds(1);
 
         List<String> messages = sendMessages(false);
 
         IListJet<String> list = instance.getList(listName);
         assertEqualsEventually(list::size, MESSAGE_COUNT);
         assertContainsAll(list, messages);
-
-        job.cancel();
     }
 
     @Test
@@ -121,12 +127,10 @@ public class JmsIntegrationTest extends JetTestSupport {
                 .drainTo(Sinks.jmsQueue(() -> broker.createConnectionFactory(), destinationName));
 
         List<String> messages = consumeMessages(true);
-        Job job = instance.newJob(pipeline, jobConfig());
+        startJob(pipeline);
 
         assertEqualsEventually(messages::size, MESSAGE_COUNT);
         assertContainsAll(instance.getList(listName), messages);
-
-        job.cancel();
     }
 
     @Test
@@ -138,12 +142,11 @@ public class JmsIntegrationTest extends JetTestSupport {
                 .drainTo(Sinks.jmsTopic(() -> broker.createConnectionFactory(), destinationName));
 
         List<String> messages = consumeMessages(false);
-        Job job = instance.newJob(pipeline, jobConfig());
+        sleepSeconds(1);
+        startJob(pipeline);
 
         assertEqualsEventually(messages::size, MESSAGE_COUNT);
         assertContainsAll(instance.getList(listName), messages);
-
-        job.cancel();
     }
 
     @Test
@@ -156,15 +159,13 @@ public class JmsIntegrationTest extends JetTestSupport {
         Pipeline pipeline = Pipeline.create();
         pipeline.drawFrom(source).drainTo(Sinks.list(listName));
 
-        Job job = instance.newJob(pipeline, jobConfig());
+        startJob(pipeline);
 
         List<String> messages = sendMessages(true);
 
         IListJet<String> list = instance.getList(listName);
         assertEqualsEventually(list::size, messages.size());
         assertContainsAll(list, messages);
-
-        job.cancel();
     }
 
     @Test
@@ -178,16 +179,14 @@ public class JmsIntegrationTest extends JetTestSupport {
         Pipeline pipeline = Pipeline.create();
         pipeline.drawFrom(source).drainTo(Sinks.list(listName));
 
-        Job job = instance.newJob(pipeline, jobConfig());
-        waitForJobRunning(job);
+        startJob(pipeline);
+        sleepSeconds(1);
 
         List<String> messages = sendMessages(false);
 
         IListJet<String> list = instance.getList(listName);
         assertEqualsEventually(list::size, messages.size());
         assertContainsAll(list, messages);
-
-        job.cancel();
     }
 
     @Test
@@ -203,12 +202,10 @@ public class JmsIntegrationTest extends JetTestSupport {
                 .drainTo(sink);
 
         List<String> messages = consumeMessages(true);
-        Job job = instance.newJob(pipeline, jobConfig());
+        startJob(pipeline);
 
         assertEqualsEventually(messages::size, MESSAGE_COUNT);
         assertContainsAll(instance.getList(listName), messages);
-
-        job.cancel();
     }
 
     @Test
@@ -225,12 +222,11 @@ public class JmsIntegrationTest extends JetTestSupport {
                 .drainTo(sink);
 
         List<String> messages = consumeMessages(false);
-        Job job = instance.newJob(pipeline, jobConfig());
+        sleepSeconds(1);
+        startJob(pipeline);
 
         assertEqualsEventually(messages::size, MESSAGE_COUNT);
         assertContainsAll(instance.getList(listName), messages);
-
-        job.cancel();
     }
 
     private List<String> consumeMessages(boolean isQueue) throws JMSException {
@@ -271,12 +267,19 @@ public class JmsIntegrationTest extends JetTestSupport {
         range(0, MESSAGE_COUNT).mapToObj(i -> randomString()).forEach(list::add);
     }
 
-    private JobConfig jobConfig() {
-        return new JobConfig().addClass(getClass());
+    private void startJob(Pipeline pipeline) {
+        job = instance.newJob(pipeline, new JobConfig().addClass(getClass()));
+        waitForJobStatus(JobStatus.RUNNING);
     }
 
-    private static void waitForJobRunning(Job job) {
-        while (job.getStatus() != JobStatus.RUNNING) {
+    private void cancelJob() {
+        job.cancel();
+        waitForJobStatus(JobStatus.COMPLETED);
+    }
+
+
+    private void waitForJobStatus(JobStatus status) {
+        while (job.getStatus() != status) {
             sleepMillis(1);
         }
     }
