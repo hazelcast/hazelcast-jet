@@ -36,7 +36,10 @@ public class CompressingProbeRenderer implements ProbeRenderer {
 
 
     private static final short SHORT_BITS = 8 * Bits.SHORT_SIZE_IN_BYTES;
+    // required precision after decimal for doubles
     private static final int CONVERSION_PRECISION = 4;
+    // coefficient for converting doubles to long
+    private static final double DOUBLE_TO_LONG = Math.pow(10, CONVERSION_PRECISION);
 
     private DataOutputStream dos;
     private ByteArrayOutputStream baos;
@@ -63,7 +66,7 @@ public class CompressingProbeRenderer implements ProbeRenderer {
         try {
             writeName(name);
             // convert to long with specified precision
-            dos.writeLong(Math.round(value * Math.pow(10, CONVERSION_PRECISION)));
+            dos.writeLong(Math.round(value * DOUBLE_TO_LONG));
         } catch (IOException e) {
             throw new RuntimeException(e); // should never be thrown
         }
@@ -123,6 +126,7 @@ public class CompressingProbeRenderer implements ProbeRenderer {
         return new Iterator<Metric>() {
             String lastName = "";
             Metric next;
+
             {
                 moveNext();
             }

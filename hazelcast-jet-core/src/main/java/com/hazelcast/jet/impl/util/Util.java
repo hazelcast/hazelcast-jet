@@ -338,11 +338,12 @@ public final class Util {
         return new String(buf);
     }
 
+    @SuppressWarnings("checkstyle:magicnumber")
     public static long idFromString(String str) {
         if (str == null || str.length() != ID_TEMPLATE.length) {
             return -1;
         }
-        str = str.replaceAll("-","");
+        str = str.replaceAll("-", "");
         return new BigInteger(str, 16).longValue();
     }
 
