@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.metrics.LongProbeFunction;
-import com.hazelcast.internal.metrics.MetricsRegistry;
+import com.hazelcast.internal.metrics.ProbeBuilder;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.ProcessingGuarantee;
@@ -128,30 +128,31 @@ public class ProcessorTasklet implements Tasklet {
         watermarkCoalescer = WatermarkCoalescer.create(maxWatermarkRetainMillis, instreams.size());
     }
 
-    public void registerMetrics(MetricsRegistry metricsRegistry, final String namePrefix) {
+    public void registerMetrics(final ProbeBuilder probeBuilder) {
         for (int i = 0; i < receivedCounts.length(); i++) {
             int finalI = i;
-            String name = namePrefix + ",ordinal=" + i + ",metric=receivedCount]";
-            metricsRegistry.register(this, name, ProbeLevel.INFO,
-                    (LongProbeFunction<ProcessorTasklet>) t -> t.receivedCounts.get(finalI));
-            name = namePrefix + ",ordinal=" + i + ",metric=receivedBatches]";
-            metricsRegistry.register(this, name, ProbeLevel.INFO,
-                    (LongProbeFunction<ProcessorTasklet>) t -> t.receivedBatches.get(finalI));
+            ProbeBuilder builderWithOrdinal = probeBuilder
+                    .withTag("ordinal", String.valueOf(i));
+            builderWithOrdinal.register(this, "receivedCount", ProbeLevel.INFO,
+                            (LongProbeFunction<ProcessorTasklet>) t -> t.receivedCounts.get(finalI));
+
+            builderWithOrdinal.register(this, "receivedBatches", ProbeLevel.INFO,
+                            (LongProbeFunction<ProcessorTasklet>) t -> t.receivedBatches.get(finalI));
         }
 
         for (int i = 0; i < emittedCounts.length(); i++) {
             int finalI = i;
-            String name = namePrefix + ",ordinal=" + (i == emittedCounts.length() ? "snapshot" : i)
-                    + ",metric=emittedCount]";
-            metricsRegistry.register(this, name, ProbeLevel.INFO,
-                    (LongProbeFunction<ProcessorTasklet>) t -> t.emittedCounts.get(finalI));
+            probeBuilder
+                    .withTag("ordinal", i == emittedCounts.length() ? "snapshot" : String.valueOf(i))
+                    .register(this, "emittedCount", ProbeLevel.INFO,
+                            (LongProbeFunction<ProcessorTasklet>) t -> t.emittedCounts.get(finalI));
         }
 
-        metricsRegistry.register(this, namePrefix + ",metric=lastReceivedWm]", ProbeLevel.INFO,
+        probeBuilder.register(this, "lastReceivedWm", ProbeLevel.INFO,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.watermarkCoalescer.lastEmittedWm());
-        metricsRegistry.register(this, namePrefix + ",metric=queuesSize]", ProbeLevel.INFO,
+        probeBuilder.register(this, "queuesSize", ProbeLevel.INFO,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.queuesSize.get());
-        metricsRegistry.register(this, namePrefix + ",metric=queuesCapacity]", ProbeLevel.INFO,
+        probeBuilder.register(this, "queuesCapacity", ProbeLevel.INFO,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.queuesCapacity.get());
     }
 

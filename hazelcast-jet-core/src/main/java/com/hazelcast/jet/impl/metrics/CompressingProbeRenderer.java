@@ -26,7 +26,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
 
-import static com.hazelcast.internal.metrics.MetricsUtil.escapeMetricKeyPart;
+import static com.hazelcast.internal.metrics.MetricsUtil.escapeMetricNamePart;
 
 /**
  * Probe renderer to serialize metrics to byte[] to be sent to ManCenter.
@@ -73,7 +73,7 @@ public class CompressingProbeRenderer implements ProbeRenderer {
         // Metric name should have the form "[tag1=value1,tag2=value2,...]". If it is not
         // enclosed in "[]", we convert it to "[metric=originalName]".
         if (!name.startsWith("[") || !name.endsWith("]")) {
-            name = "[metric=" + escapeMetricKeyPart(name) + ']';
+            name = "[metric=" + escapeMetricNamePart(name) + ']';
         }
 
         if (name.length() >= 1 << SHORT_BITS) {
