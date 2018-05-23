@@ -25,6 +25,9 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
+import java.util.zip.InflaterInputStream;
 
 import static com.hazelcast.internal.metrics.MetricsUtil.escapeMetricNamePart;
 
@@ -47,8 +50,10 @@ public class CompressingProbeRenderer implements ProbeRenderer {
     private int count;
 
     public CompressingProbeRenderer(int estimatedBytes) {
+        Deflater compressor = new Deflater();
+        compressor.setLevel(Deflater.BEST_SPEED);
         baos = new ByteArrayOutputStream(estimatedBytes);
-        dos = new DataOutputStream(baos);
+        dos = new DataOutputStream(new DeflaterOutputStream(baos, compressor));
     }
 
     @Override
@@ -111,7 +116,7 @@ public class CompressingProbeRenderer implements ProbeRenderer {
 
     public byte[] getRenderedBlob() {
         try {
-            dos.flush();
+            dos.close();
             return baos.toByteArray();
         } catch (IOException e) {
             throw new RuntimeException(e); // should never be thrown
@@ -122,7 +127,7 @@ public class CompressingProbeRenderer implements ProbeRenderer {
     }
 
     static Iterator<Metric> decompressingIterator(byte[] bytes) {
-        DataInputStream dis = new DataInputStream(new ByteArrayInputStream(bytes));
+        DataInputStream dis = new DataInputStream(new InflaterInputStream(new ByteArrayInputStream(bytes)));
         return new Iterator<Metric>() {
             String lastName = "";
             Metric next;

@@ -18,9 +18,7 @@ package com.hazelcast.jet.impl.metrics;
 
 import com.hazelcast.jet.impl.metrics.ConcurrentArrayRingbuffer.RingbufferSlice;
 import com.hazelcast.jet.impl.util.LoggingUtil;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.nio.IOUtil;
 import com.hazelcast.spi.ManagedService;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
@@ -68,7 +66,7 @@ public class JetMetricsService implements ManagedService {
                 CompressingProbeRenderer renderer = new CompressingProbeRenderer(
                         lastSize[0] * SIZE_FACTOR_NUMERATOR / SIZE_FACTOR_DENOMINATOR);
                 this.nodeEngine.getMetricsRegistry().render(renderer);
-                byte[] blob = Util.uncheckCall(() -> IOUtil.compress(renderer.getRenderedBlob()));
+                byte[] blob = renderer.getRenderedBlob();
                 lastSize[0] = blob.length;
                 metricsJournal.add(entry(System.currentTimeMillis(), blob));
                 LoggingUtil.logFine(logger, "Collected %,d metrics, %,d bytes", renderer.getCount(), blob.length);
