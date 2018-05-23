@@ -16,6 +16,9 @@
 
 package com.hazelcast.jet.impl.metrics;
 
+import com.hazelcast.jet.impl.util.Util;
+import com.hazelcast.nio.IOUtil;
+
 import javax.annotation.Nonnull;
 import java.util.Iterator;
 import java.util.List;
@@ -57,7 +60,7 @@ public class MetricsResultSet  {
 
         public MetricsCollection(long timestamp, byte[] bytes) {
             this.timestamp = timestamp;
-            this.bytes = bytes;
+            this.bytes = Util.uncheckCall(() -> IOUtil.decompress(bytes));
         }
 
         public long timestamp() {
