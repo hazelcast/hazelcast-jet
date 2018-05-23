@@ -644,7 +644,7 @@ public final class Sinks {
      * processor to fail. Most of the providers offer a configuration parameter
      * to enable auto-reconnection, refer to provider documentation for details.
      * <p>
-     * Default local parallelism for this processor is 2 (or less if less CPUs
+     * Default local parallelism for this processor is 4 (or less if less CPUs
      * are available).
      *
      * @param connectionSupplier supplier to obtain connection to the JMS provider
@@ -708,7 +708,7 @@ public final class Sinks {
      * processor to fail. Most of the providers offer a configuration parameter
      * to enable auto-reconnection, refer to provider documentation for details.
      * <p>
-     * Default local parallelism for this processor is 2 (or less if less CPUs
+     * Default local parallelism for this processor is 4 (or less if less CPUs
      * are available).
      *
      * @param connectionSupplier supplier to obtain connection to the JMS provider
