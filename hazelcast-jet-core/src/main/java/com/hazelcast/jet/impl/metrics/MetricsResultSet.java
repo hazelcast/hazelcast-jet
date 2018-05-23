@@ -64,6 +64,10 @@ public class MetricsResultSet  {
             return timestamp;
         }
 
+        public int sizeInBytes() {
+            return bytes.length;
+        }
+
         @Nonnull
         @Override
         public Iterator<Metric> iterator() {
