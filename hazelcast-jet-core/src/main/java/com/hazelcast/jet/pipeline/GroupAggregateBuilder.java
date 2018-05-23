@@ -34,15 +34,8 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperati
  * Offers a step-by-step fluent API to build a pipeline stage that
  * co-groups and aggregates the data from several input stages. To obtain
  * it, call {@link StageWithGrouping#aggregateBuilder()} on one of the
- * stages to co-group, then add the other stages by calling {@link #add
- * add(stage)} on the builder. Collect all the tags returned from {@code
- * add()} and use them when building the aggregate operation. Retrieve the
- * tag of the first stage (from which you obtained the builder) by calling
- * {@link #tag0()}.
- * <p>
- * This object is mainly intended to build a co-grouping of four or more
- * contributing stages. For up to three stages, prefer the direct {@code
- * stage.aggregateN(...)} calls because they offer more static type safety.
+ * stages to co-group and refer to that method's Javadoc for further
+ * details.
  *
  * @param <K> type of the grouping key
  * @param <R0> type of the aggregation result for stream-0
@@ -84,35 +77,16 @@ public class GroupAggregateBuilder<K, R0> {
     }
 
     /**
-     * Creates and returns a pipeline stage that performs the
-     * co-grouping and aggregation of pipeline stages registered with this
-     * builder object. The tags you register with the aggregate operation must
-     * match the tags you registered with this builder. For example,
-     * <pre>{@code
-     * StageWithGrouping<A, String> stage0 = batchStage0.groupingKey(A::key);
-     * StageWithGrouping<B, String> stage1 = batchStage1.groupingKey(B::key);
-     * StageWithGrouping<C, String> stage2 = batchStage2.groupingKey(C::key);
-     * StageWithGrouping<D, String> stage3 = batchStage3.groupingKey(D::key);
+     * Creates and returns a pipeline stage that performs the co-aggregation
+     * of the stages registered with this builder object. The composite
+     * aggregate operation places the results of the individual aggregate
+     * operations in an {@code ItemsByTag} and the {@code mapToOutputFn} you
+     * supply transforms it to the final result to emit. Use the tags you got
+     * from this builder in the implementation of {@code mapToOutputFn} to
+     * access the results.
      *
-     * AggregateBuilder<A> builder = stage0.aggregateBuilder();
-     * Tag<A> tagA = builder.tag0();
-     * Tag<B> tagB = builder.add(stage1, B::key);
-     * Tag<C> tagC = builder.add(stage2, C::key);
-     * Tag<D> tagD = builder.add(stage3, D::key);
-     * BatchStage<Result> resultStage = builder.build(AggregateOperation
-     *         .withCreate(MyAccumulator::new)
-     *         .andAccumulate(tagA, MyAccumulator::put)
-     *         .andAccumulate(tagB, MyAccumulator::put)
-     *         .andAccumulate(tagC, MyAccumulator::put)
-     *         .andAccumulate(tagD, MyAccumulator::put)
-     *         .andCombine(MyAccumulator::combine)
-     *         .andFinish(MyAccumulator::finish),
-     *     (String key, String result) -> Util.entry(key, result)
-     * );
-     * }</pre>
-     *
+     * @param finishFn the finishing function for the composite aggregate operation
      * @param <OUT> the output item type
-     * @return a new stage representing the co-aggregation
      */
     public <OUT> BatchStage<OUT> build(
             @Nonnull DistributedBiFunction<? super K, ItemsByTag, OUT> mapToOutputFn
@@ -122,10 +96,14 @@ public class GroupAggregateBuilder<K, R0> {
     }
 
     /**
-     * Convenience for {@link #build(DistributedBiFunction)
-     * build(mapToOutputFn)} which emits {@code Map.Entry}s as output.
+     * Creates and returns a pipeline stage that performs the co-aggregation
+     * of the stages registered with this builder object and emits a {@code
+     * Map.Entry(key, resultsByTag)} for each distinct key. The composite
+     * aggregate operation places the results of the individual aggregate
+     * operations in an {@code ItemsByTag}. Use the tags you got from this
+     * builder to access the results.
      *
-     * @return a new stage representing the co-group-and-aggregate operation
+     * @return a new stage representing the co-aggregation
      */
     public BatchStage<Entry<K, ItemsByTag>> build() {
         return build(Util::entry);

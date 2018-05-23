@@ -18,6 +18,8 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.datamodel.ItemsByTag;
+import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
@@ -34,6 +36,7 @@ import java.util.stream.Stream;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
+import static com.hazelcast.jet.datamodel.ItemsByTag.itemsByTag;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
@@ -285,8 +288,6 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
     public void aggregateBuilder() {
         // Given
         List<Integer> input = sequence(itemCount);
-        DistributedBiFunction<Long, Tuple2<Long, Long>, String> formatFn =
-                (timestamp, sums) -> String.format("(%03d: %03d, %03d)", timestamp, sums.f0(), sums.f1());
 
         addToSrcMapJournal(input);
         addToSrcMapJournal(closingItems);
@@ -302,10 +303,13 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         // When
         final int winSize = 4;
         AggregateOperation1<Integer, LongAccumulator, Long> aggrOp = summingLong(i -> i);
-        WindowAggregateBuilder<Integer> b = srcStage1.window(tumbling(winSize)).aggregateBuilder();
-        b.add(srcStage2);
-        StreamStage<String> aggregated = b.build(aggregateOperation2(aggrOp, aggrOp, Tuple2::tuple2),
-                (start, end, sums) -> formatFn.apply(end, sums));
+        WindowAggregateBuilder<Long> b = srcStage1.window(tumbling(winSize)).aggregateBuilder(aggrOp);
+        Tag<Long> tag0 = b.tag0();
+        Tag<Long> tag1 = b.add(srcStage2, aggrOp);
+        DistributedBiFunction<Long, ItemsByTag, String> formatFn =
+                (timestamp, sums) -> String.format("(%03d: %03d, %03d)", timestamp, sums.get(tag0), sums.get(tag1));
+
+        StreamStage<String> aggregated = b.build((start, end, sums) -> formatFn.apply(end, sums));
 
         // Then
         aggregated.drainTo(sink);
@@ -318,7 +322,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
                 .distinct()
                 .map(start -> {
                     long sum = expectedWindowSum.apply(start);
-                    return formatFn.apply((long) start + winSize, tuple2(sum, sum));
+                    return formatFn.apply((long) start + winSize, itemsByTag(tag0, sum, tag1, sum));
                 })
                 .collect(toList());
         Map<String, Integer> expectedBag = toBag(expected);

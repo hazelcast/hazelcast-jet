@@ -31,18 +31,10 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperati
 
 /**
  * Offers a step-by-step API to build a pipeline stage that performs a
- * windowed co-grouping and aggregation of the data from several
- * input stages. To obtain it, call {@link
+ * windowed co-grouping and aggregation of the data from several input
+ * stages. To obtain it, call {@link
  * StageWithGroupingAndWindow#aggregateBuilder()} on one of the stages to
- * co-aggregate, then add the other stages by calling {@link #add
- * add(stage)} on the builder. Collect all the tags returned from {@code
- * add()} and use them when building the aggregate operation. Retrieve the
- * tag of the first stage (from which you obtained the builder) by calling
- * {@link #tag0()}.
- * <p>
- * This object is mainly intended to build a co-aggregation of four or more
- * contributing stages. For up to three stages, prefer the direct {@code
- * stage.aggregateN(...)} calls because they offer more static type safety.
+ * co-aggregate and refer to that method's Javadoc for further details.
  *
  * @param <K> type of the key
  * @param <R0> type of the aggregation result for stream-0
@@ -85,38 +77,15 @@ public class WindowGroupAggregateBuilder<K, R0> {
 
     /**
      * Creates and returns a pipeline stage that performs a windowed
-     * cogroup-and-aggregate of the pipeline stages registered with this builder object.
-     * The tags you register with the aggregate operation must match the tags
-     * you registered with this builder. For example,
-     * <pre>{@code
-     * StageWithGroupingAndWindow<A> stage0 =
-     *         streamStage0.window(...).groupingKey(...);
-     * StreamStageWithGrouping<B> stage1 =
-     *         p.drawFrom(Sources.mapJournal("b", ...)).groupingKey(...);
-     * StreamStageWithGrouping<C> stage2 =
-     *         p.drawFrom(Sources.mapJournal("c", ...)).groupingKey(...);
-     * StreamStageWithGrouping<D> stage3 =
-     *         p.drawFrom(Sources.mapJournal("d", ...)).groupingKey(...);
+     * cogroup-and-aggregate operation on the stages registered with this
+     * builder object. The composite aggregate operation places the results of
+     * the individual aggregate operations in an {@code ItemsByTag} and the
+     * {@code mapToOutputFn} you supply transforms it to the final result to
+     * emit. Use the tags you got from this builder in the implementation of
+     * {@code mapToOutputFn} to access the results.
      *
-     * WindowGroupAggregateBuilder<A> builder = stage0.aggregateBuilder();
-     * Tag<A> tagA = builder.tag0();
-     * Tag<B> tagB = builder.add(stage1);
-     * Tag<C> tagC = builder.add(stage2);
-     * Tag<D> tagD = builder.add(stage3);
-     * StreamStage<TimestampedEntry<Result>> = builder.build(AggregateOperation
-     *         .withCreate(MyAccumulator::new)
-     *         .andAccumulate(tagA, MyAccumulator::put)
-     *         .andAccumulate(tagB, MyAccumulator::put)
-     *         .andAccumulate(tagC, MyAccumulator::put)
-     *         .andAccumulate(tagD, MyAccumulator::put)
-     *         .andCombine(MyAccumulator::combine)
-     *         .andFinish(MyAccumulator::finish));
-     * }</pre>
-     *
-     * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
-     * @param mapToOutputFn a function that creates the output item from the aggregation result
-     * @param <OUT>         the type of the output item
-     * @return a new stage representing the co-aggregation
+     * @param finishFn the finishing function for the composite aggregate operation
+     * @param <OUT> the output item type
      */
     public <OUT> StreamStage<OUT> build(
             @Nonnull KeyedWindowResultFunction<? super K, ItemsByTag, OUT> mapToOutputFn
@@ -126,9 +95,9 @@ public class WindowGroupAggregateBuilder<K, R0> {
     }
 
     /**
-     * Convenience for {@link #build(KeyedWindowResultFunction)}
-     * which results in a stage that emits {@link TimestampedEntry}s. The timestamp
-     * of the entry corresponds to the timestamp of the window's end.
+     * Convenience for {@link #build(KeyedWindowResultFunction)} which results
+     * in a stage that emits {@link TimestampedEntry}s. The timestamp of the
+     * entry corresponds to the timestamp of the window's end.
      */
     public StreamStage<TimestampedEntry<K, ItemsByTag>> build() {
         return build(TimestampedEntry::new);

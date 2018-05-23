@@ -29,23 +29,16 @@ import java.util.Map.Entry;
  * Offers a step-by-step fluent API to build a pipeline stage that
  * co-groups and aggregates the data from several input stages. To obtain
  * it, call {@link StageWithGrouping#aggregateBuilder()} on one of the
- * stages to co-group, then add the other stages by calling {@link #add
- * add(stage)} on the builder. Collect all the tags returned from {@code
- * add()} and use them when building the aggregate operation. Retrieve the
- * tag of the first stage (from which you obtained the builder) by calling
- * {@link #tag0()}.
- * <p>
- * This object is mainly intended to build a co-grouping of four or more
- * contributing stages. For up to three stages, prefer the direct {@code
- * stage.aggregateN(...)} calls because they offer more static type safety.
+ * stages to co-group and refer to that method's Javadoc for further
+ * details.
  *
  * @param <T0> type of the stream-0 item
  * @param <K> type of the grouping key
  */
-public class GroupAggregateBuilder<T0, K> {
+public class GroupAggregateBuilder1<T0, K> {
     private final GrAggBuilder<K> graggBuilder;
 
-    GroupAggregateBuilder(StageWithGrouping<T0, K> s) {
+    GroupAggregateBuilder1(StageWithGrouping<T0, K> s) {
         graggBuilder = new GrAggBuilder<>(s);
     }
 
@@ -74,29 +67,7 @@ public class GroupAggregateBuilder<T0, K> {
      * Creates and returns a pipeline stage that performs the
      * co-grouping and aggregation of pipeline stages registered with this
      * builder object. The tags you register with the aggregate operation must
-     * match the tags you registered with this builder. For example,
-     * <pre>{@code
-     * StageWithGrouping<A, String> stage0 = batchStage0.groupingKey(A::key);
-     * StageWithGrouping<B, String> stage1 = batchStage1.groupingKey(B::key);
-     * StageWithGrouping<C, String> stage2 = batchStage2.groupingKey(C::key);
-     * StageWithGrouping<D, String> stage3 = batchStage3.groupingKey(D::key);
-     *
-     * AggregateBuilder<A> builder = stage0.aggregateBuilder();
-     * Tag<A> tagA = builder.tag0();
-     * Tag<B> tagB = builder.add(stage1, B::key);
-     * Tag<C> tagC = builder.add(stage2, C::key);
-     * Tag<D> tagD = builder.add(stage3, D::key);
-     * BatchStage<Result> resultStage = builder.build(AggregateOperation
-     *         .withCreate(MyAccumulator::new)
-     *         .andAccumulate(tagA, MyAccumulator::put)
-     *         .andAccumulate(tagB, MyAccumulator::put)
-     *         .andAccumulate(tagC, MyAccumulator::put)
-     *         .andAccumulate(tagD, MyAccumulator::put)
-     *         .andCombine(MyAccumulator::combine)
-     *         .andFinish(MyAccumulator::finish),
-     *     (String key, String result) -> Util.entry(key, result)
-     * );
-     * }</pre>
+     * match the tags you registered with this builder.
      *
      * @param aggrOp the aggregate operation to perform
      * @param <A> the type of items on the stage this builder was obtained from

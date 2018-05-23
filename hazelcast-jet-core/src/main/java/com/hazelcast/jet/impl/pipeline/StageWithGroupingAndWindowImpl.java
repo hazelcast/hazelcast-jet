@@ -108,14 +108,6 @@ public class StageWithGroupingAndWindowImpl<T, K>
     }
 
     @Nonnull @Override
-    public <T1, A, R> StreamStage<TimestampedEntry<K, R>> aggregate2(
-            @Nonnull StreamStageWithGrouping<T1, ? extends K> stage1,
-            @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp
-    ) {
-        return aggregate2(stage1, aggrOp, TimestampedEntry::new);
-    }
-
-    @Nonnull @Override
     @SuppressWarnings("unchecked")
     public <T1, T2, A, R, OUT> StreamStage<OUT> aggregate3(
             @Nonnull StreamStageWithGrouping<T1, ? extends K> stage1,
@@ -139,15 +131,5 @@ public class StageWithGroupingAndWindowImpl<T, K>
                         adaptAggregateOperation3(aggrOp),
                         fnAdapter.adaptKeyedWindowResultFn(mapToOutputFn)
                 ), fnAdapter);
-    }
-
-    @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    public <T1, T2, A, R> StreamStage<TimestampedEntry<K, R>> aggregate3(
-            @Nonnull StreamStageWithGrouping<T1, ? extends K> stage1,
-            @Nonnull StreamStageWithGrouping<T2, ? extends K> stage2,
-            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp
-    ) {
-        return aggregate3(stage1, stage2, aggrOp, TimestampedEntry::new);
     }
 }

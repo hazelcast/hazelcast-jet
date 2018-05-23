@@ -72,31 +72,7 @@ public class WindowGroupAggregateBuilder1<T0, K> {
      * Creates and returns a pipeline stage that performs a windowed
      * cogroup-and-aggregate of the pipeline stages registered with this builder object.
      * The tags you register with the aggregate operation must match the tags
-     * you registered with this builder. For example,
-     * <pre>{@code
-     * StageWithGroupingAndWindow<A> stage0 =
-     *         streamStage0.window(...).groupingKey(...);
-     * StreamStageWithGrouping<B> stage1 =
-     *         p.drawFrom(Sources.mapJournal("b", ...)).groupingKey(...);
-     * StreamStageWithGrouping<C> stage2 =
-     *         p.drawFrom(Sources.mapJournal("c", ...)).groupingKey(...);
-     * StreamStageWithGrouping<D> stage3 =
-     *         p.drawFrom(Sources.mapJournal("d", ...)).groupingKey(...);
-     *
-     * WindowGroupAggregateBuilder<A> builder = stage0.aggregateBuilder();
-     * Tag<A> tagA = builder.tag0();
-     * Tag<B> tagB = builder.add(stage1);
-     * Tag<C> tagC = builder.add(stage2);
-     * Tag<D> tagD = builder.add(stage3);
-     * StreamStage<TimestampedEntry<Result>> = builder.build(AggregateOperation
-     *         .withCreate(MyAccumulator::new)
-     *         .andAccumulate(tagA, MyAccumulator::put)
-     *         .andAccumulate(tagB, MyAccumulator::put)
-     *         .andAccumulate(tagC, MyAccumulator::put)
-     *         .andAccumulate(tagD, MyAccumulator::put)
-     *         .andCombine(MyAccumulator::combine)
-     *         .andFinish(MyAccumulator::finish));
-     * }</pre>
+     * you registered with this builder.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      * @param aggrOp        the aggregate operation to perform

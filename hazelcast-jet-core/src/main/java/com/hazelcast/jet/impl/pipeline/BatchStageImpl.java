@@ -20,7 +20,9 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
+import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBiPredicate;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -38,6 +40,8 @@ import com.hazelcast.jet.pipeline.StageWithGrouping;
 
 import javax.annotation.Nonnull;
 
+import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
+import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -122,7 +126,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    public <K1, T1_IN, T1, K2, T2_IN, T2, R> BatchStage<R> hashJoin2(
+    public <K1, K2, T1_IN, T2_IN, T1, T2, R> BatchStage<R> hashJoin2(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
             @Nonnull BatchStage<T2_IN> stage2,
@@ -152,7 +156,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BatchStage<T2> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp
     ) {
-        return attach(new AggregateTransform<>(asList(transform, transformOf(stage1), transformOf(stage2)), aggrOp),
+        return attach(new AggregateTransform<>(
+                asList(transform, transformOf(stage1), transformOf(stage2)), aggrOp),
                 DONT_ADAPT);
     }
 

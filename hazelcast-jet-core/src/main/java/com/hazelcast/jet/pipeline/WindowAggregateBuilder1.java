@@ -42,11 +42,11 @@ import javax.annotation.Nonnull;
  *
  * @param <T0> the type of the stream-0 item
  */
-public class WindowAggregateBuilder<T0> {
+public class WindowAggregateBuilder1<T0> {
     @Nonnull
     private final AggBuilder aggBuilder;
 
-    WindowAggregateBuilder(@Nonnull StreamStage<T0> s, @Nonnull WindowDefinition wDef) {
+    WindowAggregateBuilder1(@Nonnull StreamStage<T0> s, @Nonnull WindowDefinition wDef) {
         this.aggBuilder = new AggBuilder(s, wDef);
     }
 
@@ -74,27 +74,7 @@ public class WindowAggregateBuilder<T0> {
      * Creates and returns a pipeline stage that performs a windowed
      * co-aggregation of the pipeline stages registered with this builder
      * object. The tags you register with the aggregate operation must match
-     * the tags you registered with this builder. For example,
-     * <pre>{@code
-     * StageWithWindow<A> stage0 = streamStage0.window(...);
-     * StreamStage<B> stage1 = p.drawFrom(Sources.mapJournal("b", ...));
-     * StreamStage<C> stage2 = p.drawFrom(Sources.mapJournal("c", ...));
-     * StreamStage<D> stage3 = p.drawFrom(Sources.mapJournal("d", ...));
-     *
-     * WindowAggregateBuilder<A> builder = stage0.aggregateBuilder();
-     * Tag<A> tagA = builder.tag0();
-     * Tag<B> tagB = builder.add(stage1);
-     * Tag<C> tagC = builder.add(stage2);
-     * Tag<D> tagD = builder.add(stage3);
-     * StreamStage<TimestampedItem<Result>> = builder.build(AggregateOperation
-     *         .withCreate(MyAccumulator::new)
-     *         .andAccumulate(tagA, MyAccumulator::put)
-     *         .andAccumulate(tagB, MyAccumulator::put)
-     *         .andAccumulate(tagC, MyAccumulator::put)
-     *         .andAccumulate(tagD, MyAccumulator::put)
-     *         .andCombine(MyAccumulator::combine)
-     *         .andFinish(MyAccumulator::finish));
-     * }</pre>
+     * the tags you registered with this builder.
      *
      * @param aggrOp        the aggregate operation to perform
      * @param mapToOutputFn a function that creates the output item from the aggregation result

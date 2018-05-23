@@ -35,15 +35,8 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperati
  * Offers a step-by-step fluent API to build a pipeline stage that
  * performs a windowed co-aggregation of the data from several input
  * stages. To obtain it, call {@link StageWithWindow#aggregateBuilder()} on
- * one of the stages to co-aggregate, then add the other stages by calling
- * {@link #add add(stage)} on the builder. Collect all the tags returned
- * from {@code add()} and use them when building the aggregate operation.
- * Retrieve the tag of the first stage (from which you obtained the
- * builder) by calling {@link #tag0()}.
- * <p>
- * This object is mainly intended to build a co-aggregation of four or more
- * contributing stages. For up to three stages, prefer the direct {@code
- * stage.aggregateN(...)} calls because they offer more static type safety.
+ * one of the stages to co-aggregate and refer to that method's Javadoc for
+ * further details.
  *
  * @param <R0> type of the aggregated result for stream-0
  */
@@ -86,46 +79,30 @@ public class WindowAggregateBuilder<R0> {
 
     /**
      * Creates and returns a pipeline stage that performs a windowed
-     * co-aggregation of the pipeline stages registered with this builder
-     * object. The tags you register with the aggregate operation must match
-     * the tags you registered with this builder. For example,
-     * <pre>{@code
-     * StageWithWindow<A> stage0 = streamStage0.window(...);
-     * StreamStage<B> stage1 = p.drawFrom(Sources.mapJournal("b", ...));
-     * StreamStage<C> stage2 = p.drawFrom(Sources.mapJournal("c", ...));
-     * StreamStage<D> stage3 = p.drawFrom(Sources.mapJournal("d", ...));
+     * co-aggregation of the stages registered with this builder object. The
+     * composite aggregate operation places the results of the individual
+     * aggregate operations in an {@code ItemsByTag} and the {@code
+     * mapToOutputFn} you supply transforms it to the final result to emit. Use
+     * the tags you got from this builder in the implementation of {@code
+     * mapToOutputFn} to access the results.
      *
-     * WindowAggregateBuilder<A> builder = stage0.aggregateBuilder();
-     * Tag<A> tagA = builder.tag0();
-     * Tag<B> tagB = builder.add(stage1);
-     * Tag<C> tagC = builder.add(stage2);
-     * Tag<D> tagD = builder.add(stage3);
-     * StreamStage<TimestampedItem<Result>> = builder.build(AggregateOperation
-     *         .withCreate(MyAccumulator::new)
-     *         .andAccumulate(tagA, MyAccumulator::put)
-     *         .andAccumulate(tagB, MyAccumulator::put)
-     *         .andAccumulate(tagC, MyAccumulator::put)
-     *         .andAccumulate(tagD, MyAccumulator::put)
-     *         .andCombine(MyAccumulator::combine)
-     *         .andFinish(MyAccumulator::finish));
-     * }</pre>
+     * @param mapToOutputFn the function that transforms the results into the output items
+     * @param <OUT> the output item type
      *
-     * @param mapToOutputFn a function that creates the output item from the aggregation result
-     * @param <R>           the type of the output item
      * @return a new stage representing the co-aggregation
      */
-    public <R> StreamStage<R> build(
-            @Nonnull WindowResultFunction<? super ItemsByTag, ? extends R> mapToOutputFn
+    public <OUT> StreamStage<OUT> build(
+            @Nonnull WindowResultFunction<? super ItemsByTag, ? extends OUT> mapToOutputFn
     ) {
         AggregateOperation<Object[], ItemsByTag> aggrOp = aggropBuilder.build();
-        CreateOutStageFn<R, StreamStage<R>> createOutStageFn = StreamStageImpl::new;
+        CreateOutStageFn<OUT, StreamStage<OUT>> createOutStageFn = StreamStageImpl::new;
         return aggBuilder.build(aggrOp, createOutStageFn, mapToOutputFn);
     }
 
     /**
-     * Convenience for {@link #build(WindowResultFunction) build(aggrOp,
-     * mapToOutputFn)} which emits {@code TimestampedItem}s as output.
-     * The timestamp corresponds to the window's end.
+     * Convenience for {@link #build(WindowResultFunction) build(mapToOutputFn)}
+     * which emits {@code TimestampedItem}s as output. The timestamp corresponds
+     * to the window's end.
      *
      * @return a new stage representing the cogroup-and-aggregate operation
      */

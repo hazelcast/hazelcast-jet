@@ -16,11 +16,10 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperations;
-import com.hazelcast.jet.aggregate.CoAggregateOperationBuilder;
-import com.hazelcast.jet.datamodel.BagsByTag;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.ThreeBags;
@@ -29,6 +28,7 @@ import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.datamodel.TwoBags;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.util.MutableLong;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -43,18 +43,16 @@ import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
-import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperationBuilder;
-import static com.hazelcast.jet.aggregate.AggregateOperations.toBagsByTag;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toThreeBags;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toTwoBags;
 import static com.hazelcast.jet.datamodel.ItemsByTag.itemsByTag;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
+import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -140,6 +138,7 @@ public class BatchAggregateTest extends PipelineTestSupport {
     }
 
     @Test
+    @SuppressWarnings("ConstantConditions")
     public void aggregateBuilder() {
         // Given
         List<Integer> input = sequence(itemCount);
@@ -154,22 +153,49 @@ public class BatchAggregateTest extends PipelineTestSupport {
         BatchStage<String> stage2 = p.drawFrom(mapValuesSource(src2Name)).map(mapFn2);
 
         // When
-        AggregateBuilder<Integer> b = srcStage.aggregateBuilder();
-        Tag<Integer> tag0 = b.tag0();
-        Tag<String> tag1 = b.add(stage1);
-        Tag<String> tag2 = b.add(stage2);
-        BatchStage<BagsByTag> aggregated = b.build(toBagsByTag(tag0, tag1, tag2));
+        AggregateBuilder<List<Integer>> b = srcStage.aggregateBuilder(AggregateOperations.toList());
+        Tag<List<Integer>> tag0 = b.tag0();
+        Tag<List<String>> tag1 = b.add(stage1, AggregateOperations.toList());
+        Tag<List<String>> tag2 = b.add(stage2, AggregateOperations.toList());
+        BatchStage<ItemsByTag> aggregated = b.build();
 
         //Then
         aggregated.drainTo(sink);
         execute();
         Iterator<?> sinkIter = sinkList.iterator();
         assertTrue(sinkIter.hasNext());
-        BagsByTag actual = (BagsByTag) sinkIter.next();
+        ItemsByTag actual = (ItemsByTag) sinkIter.next();
         assertFalse(sinkIter.hasNext());
-        assertEquals(toBag(input), toBag(actual.bag(tag0)));
-        assertEquals(toBag(input.stream().map(mapFn1).collect(toList())), toBag(actual.bag(tag1)));
-        assertEquals(toBag(input.stream().map(mapFn2).collect(toList())), toBag(actual.bag(tag2)));
+        assertEquals(toBag(input), toBag(actual.get(tag0)));
+        assertEquals(toBag(input.stream().map(mapFn1).collect(toList())), toBag(actual.get(tag1)));
+        assertEquals(toBag(input.stream().map(mapFn2).collect(toList())), toBag(actual.get(tag2)));
+    }
+
+
+    @Test
+    @SuppressWarnings("ConstantConditions")
+    public void xxxxxxx() {
+        BatchSource<Long> source0 = null;
+        BatchSource<Long> source1 = null;
+        BatchSource<Long> source2 = null;
+
+BatchStage<Long> stage0 = p.drawFrom(source0);
+BatchStage<Long> stage1 = p.drawFrom(source1);
+BatchStage<Long> stage2 = p.drawFrom(source2);
+
+AggregateBuilder<Long> b = stage0.aggregateBuilder(
+        AggregateOperations.counting());
+Tag<Long> tag0 = b.tag0();
+Tag<Long> tag1 = b.add(stage1,
+        AggregateOperations.summingLong(Number::longValue));
+Tag<Double> tag2 = b.add(stage2,
+        AggregateOperations.averagingLong(Number::longValue));
+
+BatchStage<ItemsByTag> aggregated = b.build();
+aggregated.map(ibt -> String.format(
+        "Count of stage0: %d, sum of stage1: %d, average of stage2: %f",
+        ibt.get(tag0), ibt.get(tag1), ibt.get(tag2))
+);
     }
 
     @Test
@@ -393,22 +419,17 @@ public class BatchAggregateTest extends PipelineTestSupport {
         StageWithGrouping<Integer, Integer> stage0 = srcStage.groupingKey(keyFn);
         StageWithGrouping<Integer, Integer> stage1 = srcStage1.groupingKey(keyFn);
         StageWithGrouping<Integer, Integer> stage2 = srcStage2.groupingKey(keyFn);
-        GroupAggregateBuilder<Integer, Integer> b = stage0.aggregateBuilder();
-        Tag<Integer> inTag0 = b.tag0();
-        Tag<Integer> inTag1 = b.add(stage1);
-        Tag<Integer> inTag2 = b.add(stage2);
-
-        CoAggregateOperationBuilder b2 = coAggregateOperationBuilder();
-        Tag<Long> outTag0 = b2.add(inTag0, aggrOp);
-        Tag<Long> outTag1 = b2.add(inTag1, aggrOp);
-        Tag<Long> outTag2 = b2.add(inTag2, aggrOp);
-        AggregateOperation<Object[], ItemsByTag> aggrOpN = b2.build();
+        GroupAggregateBuilder<Integer, Long> b = stage0.aggregateBuilder(aggrOp);
+        Tag<Long> tag0 = b.tag0();
+        Tag<Long> tag1 = b.add(stage1, aggrOp);
+        Tag<Long> tag2 = b.add(stage2, aggrOp);
 
         long a = 37;
         @SuppressWarnings("ConstantConditions")
         DistributedBiFunction<Integer, ItemsByTag, Long> outputFn = (k, v) ->
-                v.get(outTag2) + a * (v.get(outTag1) + a * (v.get(outTag0) + a * k));
-        BatchStage<Long> aggregated = b.build(aggrOpN, outputFn);
+                v.get(tag2) + a * (v.get(tag1) + a * (v.get(tag0) + a * k));
+
+        BatchStage<Long> aggregated = b.build(outputFn);
 
         //Then
         aggregated.drainTo(sink);
@@ -427,9 +448,9 @@ public class BatchAggregateTest extends PipelineTestSupport {
         List<Long> expectedOutput = keys
             .stream()
             .map(k -> outputFn.apply(k, itemsByTag(
-                    outTag0, expectedAggr0.getOrDefault(k, 0L),
-                    outTag1, expectedAggr1.getOrDefault(k, 0L),
-                    outTag2, expectedAggr2.getOrDefault(k, 0L)
+                    tag0, expectedAggr0.getOrDefault(k, 0L),
+                    tag1, expectedAggr1.getOrDefault(k, 0L),
+                    tag2, expectedAggr2.getOrDefault(k, 0L)
             )))
             .collect(toList());
         assertEquals(toBag(expectedOutput), sinkToBag());

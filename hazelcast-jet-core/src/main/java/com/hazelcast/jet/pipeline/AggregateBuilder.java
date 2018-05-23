@@ -21,6 +21,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.CoAggregateOperationBuilder;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.pipeline.AggBuilder;
 import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
 import com.hazelcast.jet.impl.pipeline.BatchStageImpl;
@@ -32,16 +33,8 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperati
 /**
  * Offers a step-by-step API to build a pipeline stage that co-aggregates
  * the data from several input stages. To obtain it, call {@link
- * BatchStage#aggregateBuilder()} on one of the stages to co-aggregate,
- * then add the other stages by calling {@link #add add(stage)} on the
- * builder. Collect all the tags returned from {@code add()} and use them
- * when building the aggregate operation. Retrieve the tag of the first
- * stage (from which you obtained the
- * builder) by calling {@link #tag0()}.
- * <p>
- * This object is mainly intended to build a co-aggregation of four or more
- * contributing stages. For up to three stages, prefer the direct {@code
- * stage.aggregateN(...)} calls because they offer more static type safety.
+ * BatchStage#aggregateBuilder()} on the first stage you are co-aggregating
+ * and refer to that method's Javadoc for further details.
  *
  * @param <R0> type of the aggregation result for stream-0
  */
@@ -82,31 +75,34 @@ public class AggregateBuilder<R0> {
 
     /**
      * Creates and returns a pipeline stage that performs the co-aggregation
-     * of pipeline stages registered with this builder object. The tags you
-     * register with the aggregate operation must match the tags you registered
-     * with this builder. For example,
-     * <pre>{@code
-     * BatchStage<A> stage0 = p.drawFrom(Sources.list("a"));
-     * BatchStage<B> stage1 = p.drawFrom(Sources.list("b"));
-     * BatchStage<C> stage2 = p.drawFrom(Sources.list("c"));
-     * BatchStage<D> stage3 = p.drawFrom(Sources.list("d"));
+     * of the stages registered with this builder object. The composite
+     * aggregate operation places the results of the individual aggregate
+     * operations in an {@code ItemsByTag} and the {@code finishFn} you supply
+     * transforms it to the final result to emit. Use the tags you got from
+     * this builder in the implementation of {@code finishFn} to access the
+     * results.
      *
-     * AggregateBuilder<A> builder = stage0.aggregateBuilder();
-     * Tag<A> tagA = builder.tag0();
-     * Tag<B> tagB = builder.add(stage1);
-     * Tag<C> tagC = builder.add(stage2);
-     * Tag<D> tagD = builder.add(stage3);
-     * BatchStage<Result> resultStage = builder.build(AggregateOperation
-     *         .withCreate(MyAccumulator::new)
-     *         .andAccumulate(tagA, MyAccumulator::put)
-     *         .andAccumulate(tagB, MyAccumulator::put)
-     *         .andAccumulate(tagC, MyAccumulator::put)
-     *         .andAccumulate(tagD, MyAccumulator::put)
-     *         .andCombine(MyAccumulator::combine)
-     *         .andFinish(MyAccumulator::finish));
-     * }</pre>
+     * @param finishFn the finishing function for the composite aggregate operation
+     * @param <R> the output item type
      *
-     * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
+     * @return a new stage representing the co-aggregation
+     */
+    @Nonnull
+    public <R> BatchStage<R> build(
+            @Nonnull DistributedFunction<? super ItemsByTag, ? extends R> finishFn
+    ) {
+        AggregateOperation<Object[], R> aggrOp = aggropBuilder.build(finishFn);
+        CreateOutStageFn<R, BatchStage<R>> createOutStageFn = BatchStageImpl::new;
+        return aggBuilder.build(aggrOp, createOutStageFn, null);
+    }
+
+    /**
+     * Creates and returns a pipeline stage that performs the co-aggregation
+     * of the stages registered with this builder object. The composite
+     * aggregate operation places the results of the individual aggregate
+     * operations in an {@code ItemsByTag}. Use the tags you got from
+     * this builder to access the results.
+     *
      * @return a new stage representing the co-aggregation
      */
     @Nonnull
