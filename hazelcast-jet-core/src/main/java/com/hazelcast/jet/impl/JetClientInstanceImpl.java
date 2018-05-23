@@ -26,6 +26,7 @@ import com.hazelcast.client.spi.impl.ClientInvocation;
 import com.hazelcast.client.util.ClientDelegatingFuture;
 import com.hazelcast.core.Cluster;
 import com.hazelcast.core.ICompletableFuture;
+import com.hazelcast.core.Member;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
@@ -35,6 +36,7 @@ import com.hazelcast.jet.impl.metrics.MetricsResultSet;
 import com.hazelcast.jet.impl.metrics.ConcurrentArrayRingbuffer.RingbufferSlice;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.nio.Address;
+import com.hazelcast.spi.exception.TargetNotMemberException;
 import com.hazelcast.spi.serialization.SerializationService;
 
 import javax.annotation.Nonnull;
@@ -114,10 +116,16 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         return getJobIdsByName(name).stream().map(jobId -> new ClientJobProxy(client, jobId)).collect(toList());
     }
 
+    /**
+     * Reads the metrics journal for a given number starting from a specific sequence.
+     */
     @Nonnull
-    public ICompletableFuture<MetricsResultSet> getMetricsAsync(long startSequence, Address address) {
-        ClientInvocation invocation = new ClientInvocation(
-                client, JetGetMetricBlobsCodec.encodeRequest(startSequence), null, address);
+    public ICompletableFuture<MetricsResultSet> readMetricsAsync(Member member, long startSequence) {
+        ClientMessage request = JetGetMetricBlobsCodec.encodeRequest(startSequence);
+        ClientInvocation invocation = new ClientInvocation(client, request, null, member.getAddress());
+        if (!client.getCluster().getMembers().contains(member)) {
+            throw new TargetNotMemberException(member + " is not a member of the cluster.");
+        }
         return new ClientDelegatingFuture<>(
                 invocation.invoke(), serializationService, decodeMetricsResponse, false
         );
