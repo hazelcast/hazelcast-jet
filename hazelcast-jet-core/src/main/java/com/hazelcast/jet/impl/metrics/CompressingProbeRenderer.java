@@ -23,6 +23,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.zip.Deflater;
@@ -37,9 +38,8 @@ import static com.hazelcast.internal.metrics.MetricsUtil.escapeMetricNamePart;
  */
 public class CompressingProbeRenderer implements ProbeRenderer {
 
-
     private static final short SHORT_BITS = 8 * Bits.SHORT_SIZE_IN_BYTES;
-    // required precision after decimal for doubles
+    // required precision after the decimal point for doubles
     private static final int CONVERSION_PRECISION = 4;
     // coefficient for converting doubles to long
     private static final double DOUBLE_TO_LONG = Math.pow(10, CONVERSION_PRECISION);
@@ -152,14 +152,16 @@ public class CompressingProbeRenderer implements ProbeRenderer {
 
             private void moveNext() {
                 try {
-                    if (dis.available() > 0) {
-                        int equalPrefixLen = dis.readUnsignedShort();
-                        lastName = lastName.substring(0, equalPrefixLen) + dis.readUTF();
-                        next = new Metric(lastName, dis.readLong());
-                    } else {
+                    int equalPrefixLen;
+                    try {
+                        equalPrefixLen = dis.readUnsignedShort();
+                    } catch (EOFException ignored) {
                         next = null;
                         dis.close();
+                        return;
                     }
+                    lastName = lastName.substring(0, equalPrefixLen) + dis.readUTF();
+                    next = new Metric(lastName, dis.readLong());
                 } catch (IOException e) {
                     throw new RuntimeException(e); // unexpected EOFException can occur here
                 }
