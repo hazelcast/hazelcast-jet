@@ -167,7 +167,7 @@ public class AggregateOperationsTest {
     @Test
     public void when_allOfWithoutDeduct_then_noDeduct() {
         validateOpWithoutDeduct(
-                allOf(counting(), AggregateOperations.<Long>maxBy(naturalOrder())),
+                allOf(counting(), AggregateOperations.maxBy(naturalOrder())),
                 identity(), 10L, 11L,
                 tuple2(longAcc(1), new MutableReference<>(10L)),
                 tuple2(longAcc(2), new MutableReference<>(11L)),

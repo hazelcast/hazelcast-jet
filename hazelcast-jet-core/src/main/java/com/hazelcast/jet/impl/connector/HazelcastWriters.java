@@ -333,7 +333,7 @@ public final class HazelcastWriters {
         }
 
         @Override
-        protected boolean tryProcess(int ordinal, @Nonnull Object object) throws Exception {
+        protected boolean tryProcess(int ordinal, @Nonnull Object object) {
             checkError();
             if (!tryIncrement(numConcurrentOps, 1, MAX_PARALLEL_ASYNC_OPS)) {
                 return false;

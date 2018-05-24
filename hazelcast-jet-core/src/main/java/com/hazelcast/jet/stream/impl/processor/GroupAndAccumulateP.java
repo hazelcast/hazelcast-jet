@@ -47,7 +47,7 @@ public class GroupAndAccumulateP<T, K, V, A, R> extends AbstractProcessor {
     }
 
     @Override
-    protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
+    protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         Map.Entry<K, V> entry = entry(classifier.apply((T) item), (V) item);
         A value = groups.computeIfAbsent(entry.getKey(), k -> collector.supplier().get());
         collector.accumulator().accept(value, entry.getValue());

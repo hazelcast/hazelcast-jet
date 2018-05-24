@@ -67,7 +67,7 @@ public class SlowSourceYieldTest {
         private int yieldedAt;
 
         @Override
-        protected void init(@Nonnull Context context) throws Exception {
+        protected void init(@Nonnull Context context) {
             // this should take about 5 seconds to emit
             traverser = traverseStream(IntStream.range(0, 5000)
                                                 .peek(i -> uncheckRun(() -> Thread.sleep(1)))

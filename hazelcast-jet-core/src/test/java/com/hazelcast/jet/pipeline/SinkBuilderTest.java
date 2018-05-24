@@ -56,7 +56,7 @@ public class SinkBuilderTest extends PipelineTestSupport {
 
         //then
         assertTrueEventually(() -> {
-            List<String> paths = new ArrayList<>(jet().<String>getList(listName));
+            List<String> paths = new ArrayList<>(jet().getList(listName));
             long count = paths.stream().map(Paths::get)
                               .flatMap(path -> uncheckCall(() -> Files.list(path)))
                               .flatMap(path -> uncheckCall(() -> Files.readAllLines(path).stream()))

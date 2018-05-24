@@ -142,7 +142,7 @@ public class AsyncMapWriterTest extends JetTestSupport {
     }
 
     @Test
-    public void when_tooManyConcurrentOps_then_refuseFlush() throws Exception {
+    public void when_tooManyConcurrentOps_then_refuseFlush() {
         // Given
         writer.put("key1", "value1");
         writer.put("key2", "value2");

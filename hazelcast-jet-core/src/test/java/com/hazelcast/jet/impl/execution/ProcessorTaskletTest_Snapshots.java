@@ -210,7 +210,7 @@ public class ProcessorTaskletTest_Snapshots {
     }
 
     private Object deserializeEntryValue(Entry e) {
-        return context.getSerializationService().toObject((Data) e.getValue());
+        return context.getSerializationService().toObject(e.getValue());
     }
 
     private static void callUntil(Tasklet tasklet, ProgressState expectedState) {
