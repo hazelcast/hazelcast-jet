@@ -33,7 +33,6 @@ import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToDoubleFunction;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.function.DistributedTriFunction;
-import com.hazelcast.jet.pipeline.StageWithWindow;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -64,6 +63,7 @@ public final class AggregateOperations {
      * items (one for each grouping key).
      */
     @Nonnull
+    @SuppressWarnings("checkstyle:needbraces")
     public static <T> AggregateOperation1<T, MutableReference<T>, T> pickAny() {
         return AggregateOperation
                 .withCreate(MutableReference<T>::new)
@@ -601,9 +601,9 @@ public final class AggregateOperations {
      * an aggregate operation that accepts multiple inputs. You must supply
      * this kind of operation to a co-aggregating pipeline stage. Most typically
      * you'll need this builder if you're using the {@link
-     * StageWithWindow#aggregateBuilder()}. For two-way or three-way
-     * co-aggregation you can use {@link AggregateOperations#aggregateOperation2} and
-     * {@link AggregateOperations#aggregateOperation3}.
+     * com.hazelcast.jet.pipeline.StageWithWindow#aggregateBuilder()}. For
+     * two-way or three-way co-aggregation you can use {@link
+     * AggregateOperations#aggregateOperation2} and {@link AggregateOperations#aggregateOperation3}.
      * <p>
      * This builder is suitable when you can express your computation as
      * independent aggregate operations on each input where you combine only
@@ -992,6 +992,13 @@ public final class AggregateOperations {
                 .andFinish(MutableReference::get);
     }
 
+    /**
+     * Returns an aggregate operation that accumulates all input items into an
+     * {@code ArrayList} and sorts it.
+     *
+     * @param comparator the comparator to use for sorting
+     * @param <T> the type of input items
+     */
     public static <T> AggregateOperation1<T, ArrayList<T>, List<T>> sorting(
             DistributedComparator<? super T> comparator
     ) {

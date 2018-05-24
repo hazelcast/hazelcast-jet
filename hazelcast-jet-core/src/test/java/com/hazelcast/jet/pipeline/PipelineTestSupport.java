@@ -27,6 +27,9 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.TestInClusterSupport;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.nio.Address;
+import org.junit.Before;
+
+import javax.cache.Cache;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -34,8 +37,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.IntStream;
-import javax.cache.Cache;
-import org.junit.Before;
 
 import static com.hazelcast.query.TruePredicate.truePredicate;
 import static java.util.stream.Collectors.toList;

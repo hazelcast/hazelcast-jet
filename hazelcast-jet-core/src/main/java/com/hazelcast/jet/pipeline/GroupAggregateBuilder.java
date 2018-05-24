@@ -85,7 +85,7 @@ public class GroupAggregateBuilder<K, R0> {
      * from this builder in the implementation of {@code mapToOutputFn} to
      * access the results.
      *
-     * @param finishFn the finishing function for the composite aggregate operation
+     * @param mapToOutputFn function that transforms the aggregation result into the output item
      * @param <OUT> the output item type
      */
     public <OUT> BatchStage<OUT> build(

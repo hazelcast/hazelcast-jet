@@ -46,6 +46,15 @@ public interface StreamStage<T> extends GeneralStage<T> {
     @Nonnull
     StageWithWindow<T> window(WindowDefinition wDef);
 
+    /**
+     * Attaches to this stage a stage that emits all the items from this
+     * stage as well as all the items from the supplied stage. The other
+     * stage's type parameter must be assignment-compatible with this stage's
+     * type parameter.
+     *
+     * @param other the other stage whose data to merge into this one
+     * @return the newly attached stage
+     */
     @Nonnull
     StreamStage<T> merge(@Nonnull StreamStage<? extends T> other);
 

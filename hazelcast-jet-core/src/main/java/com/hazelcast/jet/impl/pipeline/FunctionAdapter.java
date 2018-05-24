@@ -223,7 +223,7 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     <R, T> DistributedFunction<? super Object, ? extends Traverser<?>> adaptFlatMapFn(
             @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        DistributedFunction<Object, Traverser> fn = (DistributedFunction<Object, Traverser>) flatMapFn;
+        DistributedFunction<Object, Traverser> fn = (DistributedFunction<Object, Traverser>) (Function) flatMapFn;
         return e -> fn.apply(((JetEvent) e).payload()).map(r -> jetEvent(r, ((JetEvent) e).timestamp()));
     }
 
@@ -233,7 +233,7 @@ class JetEventFunctionAdapter extends FunctionAdapter {
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         DistributedBiFunction<C, Object, Traverser> fn =
-                (DistributedBiFunction<C, Object, Traverser>) flatMapFn;
+                (DistributedBiFunction<C, Object, Traverser>) (BiFunction) flatMapFn;
         return (context, e) -> fn.apply(context, ((JetEvent) e).payload())
                                  .map(r -> jetEvent(r, ((JetEvent) e).timestamp()));
     }

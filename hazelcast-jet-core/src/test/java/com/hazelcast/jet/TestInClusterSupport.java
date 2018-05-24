@@ -36,11 +36,12 @@ import java.util.function.Supplier;
 @RunWith(Parameterized.class)
 @Category(ParallelTest.class)
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
+@SuppressWarnings("checkstyle:declarationorder")
 public abstract class TestInClusterSupport extends JetTestSupport {
 
-    protected static final int MEMBER_COUNT = 2;
     protected static final String JOURNALED_MAP_PREFIX = "journaledMap.";
     protected static final String JOURNALED_CACHE_PREFIX = "journaledCache.";
+    private static final int MEMBER_COUNT = 2;
 
     private static JetTestInstanceFactory factory = new JetTestInstanceFactory();
     private static JetInstance[] allJetInstances;

@@ -18,11 +18,11 @@ package com.hazelcast.jet.impl.util;
 
 import com.hazelcast.client.map.helpers.AMapStore;
 import com.hazelcast.config.Config;
+import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.impl.JetService;
-import com.hazelcast.jet.IMapJet;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.properties.GroupProperty;

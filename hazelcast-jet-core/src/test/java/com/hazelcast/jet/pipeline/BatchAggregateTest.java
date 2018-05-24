@@ -280,7 +280,7 @@ aggregated.map(ibt -> String.format(
         Map<Integer, Long> expectedAggr1 = input.stream()
                                                 .map(mapFn1)
                                                 .collect(groupingBy(keyFn, collectOp));
-        HashSet<Integer> keys = new HashSet<>(expectedAggr0.keySet());
+        Set<Integer> keys = new HashSet<>(expectedAggr0.keySet());
         keys.addAll(expectedAggr1.keySet());
         List<Long> expectedOutput = keys
             .stream()
@@ -377,7 +377,7 @@ aggregated.map(ibt -> String.format(
         Map<Integer, Long> expectedAggr2 = input.stream()
                                                 .map(mapFn2)
                                                 .collect(groupingBy(keyFn, collectOp));
-        HashSet<Integer> keys = new HashSet<>(expectedAggr0.keySet());
+        Set<Integer> keys = new HashSet<>(expectedAggr0.keySet());
         keys.addAll(expectedAggr1.keySet());
         keys.addAll(expectedAggr2.keySet());
         List<Long> expectedOutput = keys
@@ -437,7 +437,7 @@ aggregated.map(ibt -> String.format(
         Map<Integer, Long> expectedAggr2 = input.stream()
                                                 .map(mapFn2)
                                                 .collect(groupingBy(keyFn, collectOp));
-        HashSet<Integer> keys = new HashSet<>(expectedAggr0.keySet());
+        Set<Integer> keys = new HashSet<>(expectedAggr0.keySet());
         keys.addAll(expectedAggr1.keySet());
         keys.addAll(expectedAggr2.keySet());
         List<Long> expectedOutput = keys

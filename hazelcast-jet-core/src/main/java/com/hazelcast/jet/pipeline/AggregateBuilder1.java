@@ -17,7 +17,6 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.impl.pipeline.AggBuilder;
 import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
@@ -28,6 +27,8 @@ import com.hazelcast.jet.impl.pipeline.BatchStageImpl;
  * the data from several input stages. To obtain it, call {@link
  * BatchStage#aggregateBuilder()} on the first stage you are co-aggregating.
  * Refer to the documentation of that method for more details.
+ *
+ * @param <T0> type of items in stage-0 (the one you obtained this builder from)
  */
 public class AggregateBuilder1<T0> {
     private final AggBuilder aggBuilder;
