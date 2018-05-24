@@ -20,32 +20,34 @@ import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.datamodel.ThreeBags;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
-import com.hazelcast.jet.datamodel.TwoBags;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.spi.properties.GroupProperty;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelTest;
-import java.util.HashSet;
-import java.util.Map.Entry;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
+import java.util.HashSet;
+import java.util.Map.Entry;
+
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
+import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
+import static com.hazelcast.jet.aggregate.AggregateOperations.toList;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
-import static com.hazelcast.jet.aggregate.AggregateOperations.toThreeBags;
-import static com.hazelcast.jet.aggregate.AggregateOperations.toTwoBags;
 import static com.hazelcast.jet.core.TestUtil.set;
 import static com.hazelcast.jet.core.test.TestSupport.listToString;
+import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
+import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 
 @Category(ParallelTest.class)
@@ -148,7 +150,7 @@ public class WindowGroupAggregateTest extends JetTestSupport {
          .addTimestamps(Entry::getKey, 0)
          .window(WindowDefinition.tumbling(2))
          .groupingKey(entry -> entry.getValue().charAt(0))
-         .aggregate2(stage1, toTwoBags())
+         .aggregate2(stage1, aggregateOperation2(toList(), toList()))
          .peek()
          .drainTo(Sinks.list("sink"));
 
@@ -156,13 +158,13 @@ public class WindowGroupAggregateTest extends JetTestSupport {
         assertTrueEventually(() -> {
             assertEquals(
                     listToString(asList(
-                            new TimestampedEntry<>(2, 'f', TwoBags.twoBags(
-                                    asList(entry(0L, "foo")),
-                                    asList(entry(0L, "faa"))
+                            new TimestampedEntry<>(2, 'f', tuple2(
+                                    singletonList(entry(0L, "foo")),
+                                    singletonList(entry(0L, "faa"))
                             )),
-                            new TimestampedEntry<>(4, 't', TwoBags.twoBags(
-                                    asList(entry(2L, "taz")),
-                                    asList(entry(2L, "tuu"))
+                            new TimestampedEntry<>(4, 't', tuple2(
+                                    singletonList(entry(2L, "taz")),
+                                    singletonList(entry(2L, "tuu"))
                             )))),
                     listToString(instance.getHazelcastInstance().getList("sink")));
         }, 5);
@@ -205,7 +207,7 @@ public class WindowGroupAggregateTest extends JetTestSupport {
          .addTimestamps(Entry::getKey, 0)
          .window(WindowDefinition.tumbling(2))
          .groupingKey(entry -> entry.getValue().charAt(0))
-         .aggregate3(stage1, stage2, toThreeBags())
+         .aggregate3(stage1, stage2, aggregateOperation3(toList(), toList(), toList()))
          .peek()
          .drainTo(Sinks.list("sink"));
 
@@ -213,15 +215,15 @@ public class WindowGroupAggregateTest extends JetTestSupport {
         assertTrueEventually(() -> {
             assertEquals(
                     listToString(asList(
-                            new TimestampedEntry<>(2, 'f', ThreeBags.threeBags(
-                                    asList(entry(0L, "foo")),
-                                    asList(entry(0L, "faa")),
-                                    asList(entry(0L, "fzz"))
+                            new TimestampedEntry<>(2, 'f', tuple3(
+                                    singletonList(entry(0L, "foo")),
+                                    singletonList(entry(0L, "faa")),
+                                    singletonList(entry(0L, "fzz"))
                             )),
-                            new TimestampedEntry<>(4, 't', ThreeBags.threeBags(
-                                    asList(entry(2L, "taz")),
-                                    asList(entry(2L, "tuu")),
-                                    asList(entry(2L, "tcc"))
+                            new TimestampedEntry<>(4, 't', tuple3(
+                                    singletonList(entry(2L, "taz")),
+                                    singletonList(entry(2L, "tuu")),
+                                    singletonList(entry(2L, "tcc"))
                             )))),
                     listToString(instance.getHazelcastInstance().getList("sink")));
         }, 5);
@@ -271,14 +273,7 @@ public class WindowGroupAggregateTest extends JetTestSupport {
         Tag<Entry<Long, String>> tag1 = b.add(stage1);
         Tag<Entry<Long, String>> tag2 = b.add(stage2);
 
-        b.build(AggregateOperation
-                .withCreate(ThreeBags::threeBags)
-                .andAccumulate(tag0, (acc, item0) -> acc.bag0().add(item0))
-                .andAccumulate(tag1, (acc, item1) -> acc.bag1().add(item1))
-                .andAccumulate(tag2, (acc, item2) -> acc.bag2().add(item2))
-                .andCombine(ThreeBags::combineWith)
-                .andDeduct(ThreeBags::deduct)
-                .andFinish(ThreeBags::finish))
+        b.build(aggregateOperation3(toList(), toList(), toList()))
          .peek()
          .drainTo(Sinks.list("sink"));
 
@@ -286,15 +281,15 @@ public class WindowGroupAggregateTest extends JetTestSupport {
         assertTrueEventually(() -> {
             assertEquals(
                     listToString(asList(
-                            new TimestampedEntry<>(2, 'f', ThreeBags.threeBags(
-                                    asList(entry(0L, "foo")),
-                                    asList(entry(0L, "faa")),
-                                    asList(entry(0L, "fzz"))
+                            new TimestampedEntry<>(2, 'f', tuple3(
+                                    singletonList(entry(0L, "foo")),
+                                    singletonList(entry(0L, "faa")),
+                                    singletonList(entry(0L, "fzz"))
                             )),
-                            new TimestampedEntry<>(4, 't', ThreeBags.threeBags(
-                                    asList(entry(2L, "taz")),
-                                    asList(entry(2L, "tuu")),
-                                    asList(entry(2L, "tcc"))
+                            new TimestampedEntry<>(4, 't', tuple3(
+                                    singletonList(entry(2L, "taz")),
+                                    singletonList(entry(2L, "tuu")),
+                                    singletonList(entry(2L, "tcc"))
                             )))),
                     listToString(instance.getHazelcastInstance().getList("sink")));
         }, 5);

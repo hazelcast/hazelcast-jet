@@ -16,19 +16,14 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.accumulator.LongAccumulator;
-import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.datamodel.ThreeBags;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
-import com.hazelcast.jet.datamodel.TwoBags;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.util.MutableLong;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -44,12 +39,9 @@ import java.util.stream.Collectors;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
-import static com.hazelcast.jet.aggregate.AggregateOperations.toThreeBags;
-import static com.hazelcast.jet.aggregate.AggregateOperations.toTwoBags;
 import static com.hazelcast.jet.datamodel.ItemsByTag.itemsByTag;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
-import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
@@ -92,7 +84,8 @@ public class BatchAggregateTest extends PipelineTestSupport {
         BatchStage<String> stage1 = p.drawFrom(mapValuesSource(src1Name)).map(mapFn);
 
         // When
-        BatchStage<TwoBags<Integer, String>> aggregated = srcStage.aggregate2(stage1, toTwoBags());
+        BatchStage<Tuple2<List<Integer>, List<String>>> aggregated = srcStage.aggregate2(
+                stage1, aggregateOperation2(AggregateOperations.toList(), AggregateOperations.toList()));
 
         //Then
         aggregated.drainTo(sink);
@@ -100,10 +93,10 @@ public class BatchAggregateTest extends PipelineTestSupport {
         Iterator<?> sinkIter = sinkList.iterator();
         assertTrue(sinkIter.hasNext());
         @SuppressWarnings("unchecked")
-        TwoBags<Integer, String> actual = (TwoBags<Integer, String>) sinkIter.next();
+        Tuple2<List<Integer>, List<String>> actual = (Tuple2<List<Integer>, List<String>>) sinkIter.next();
         assertFalse(sinkIter.hasNext());
-        assertEquals(toBag(input), toBag(actual.bag0()));
-        assertEquals(toBag(input.stream().map(mapFn).collect(toList())), toBag(actual.bag1()));
+        assertEquals(toBag(input), toBag(actual.f0()));
+        assertEquals(toBag(input.stream().map(mapFn).collect(toList())), toBag(actual.f1()));
     }
 
     @Test
@@ -121,8 +114,9 @@ public class BatchAggregateTest extends PipelineTestSupport {
         BatchStage<String> stage2 = p.drawFrom(mapValuesSource(src2Name)).map(mapFn2);
 
         // When
-        BatchStage<ThreeBags<Integer, String, String>> aggregated =
-                srcStage.aggregate3(stage1, stage2, toThreeBags());
+        BatchStage<Tuple3<List<Integer>, List<String>, List<String>>> aggregated =
+                srcStage.aggregate3(stage1, stage2, aggregateOperation3(
+                        AggregateOperations.toList(), AggregateOperations.toList(), AggregateOperations.toList()));
 
         //Then
         aggregated.drainTo(sink);
@@ -130,11 +124,12 @@ public class BatchAggregateTest extends PipelineTestSupport {
         Iterator<?> sinkIter = sinkList.iterator();
         assertTrue(sinkIter.hasNext());
         @SuppressWarnings("unchecked")
-        ThreeBags<Integer, String, String> actual = (ThreeBags<Integer, String, String>) sinkIter.next();
+        Tuple3<List<Integer>, List<String>, List<String>> actual = (Tuple3<List<Integer>, List<String>, List<String>>)
+                sinkIter.next();
         assertFalse(sinkIter.hasNext());
-        assertEquals(toBag(input), toBag(actual.bag0()));
-        assertEquals(toBag(input.stream().map(mapFn1).collect(toList())), toBag(actual.bag1()));
-        assertEquals(toBag(input.stream().map(mapFn2).collect(toList())), toBag(actual.bag2()));
+        assertEquals(toBag(input), toBag(actual.f0()));
+        assertEquals(toBag(input.stream().map(mapFn1).collect(toList())), toBag(actual.f1()));
+        assertEquals(toBag(input.stream().map(mapFn2).collect(toList())), toBag(actual.f2()));
     }
 
     @Test
