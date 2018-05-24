@@ -17,36 +17,43 @@
 package com.hazelcast.jet.impl.client;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
-import com.hazelcast.client.impl.protocol.codec.JetGetMetricBlobsCodec;
-import com.hazelcast.client.impl.protocol.codec.JetGetMetricBlobsCodec.RequestParameters;
+import com.hazelcast.client.impl.protocol.codec.JetReadMetricsCodec;
+import com.hazelcast.client.impl.protocol.codec.JetReadMetricsCodec.RequestParameters;
 import com.hazelcast.client.impl.protocol.task.AbstractMessageTask;
 import com.hazelcast.instance.Node;
-import com.hazelcast.jet.impl.metrics.JetMetricsService;
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.impl.metrics.JetMetricsService;
 import com.hazelcast.nio.Connection;
 
 import java.security.Permission;
 
-public class JetGetMetricsBlobsMessageTask extends AbstractMessageTask<RequestParameters> {
+public class JetReadMetricsMessageTask extends AbstractMessageTask<RequestParameters> {
 
-    protected JetGetMetricsBlobsMessageTask(ClientMessage clientMessage, Node node, Connection connection) {
+    protected JetReadMetricsMessageTask(ClientMessage clientMessage, Node node, Connection connection) {
         super(clientMessage, node, connection);
     }
 
     @Override
     protected void processMessage() {
+        if (!parameters.uuid.equals(nodeEngine.getLocalMember().getUuid())) {
+            // do not throw RetryableException here
+            throw new IllegalArgumentException(
+                    "Requested metrics for member " + parameters.uuid
+                            + ", actual was " + nodeEngine.getLocalMember().getUuid()
+            );
+        }
         JetMetricsService jetMetricsService = getService(JetMetricsService.SERVICE_NAME);
         sendResponse(jetMetricsService.getMetricBlobs(parameters.fromSequence));
     }
 
     @Override
     protected RequestParameters decodeClientMessage(ClientMessage clientMessage) {
-        return JetGetMetricBlobsCodec.decodeRequest(clientMessage);
+        return JetReadMetricsCodec.decodeRequest(clientMessage);
     }
 
     @Override
     protected ClientMessage encodeResponse(Object response) {
-        return JetGetMetricBlobsCodec.encodeResponse(serializationService.toData(response));
+        return JetReadMetricsCodec.encodeResponse(serializationService.toData(response));
     }
 
     @Override

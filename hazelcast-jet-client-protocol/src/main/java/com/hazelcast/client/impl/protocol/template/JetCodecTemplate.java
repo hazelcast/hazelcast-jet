@@ -52,5 +52,5 @@ public interface JetCodecTemplate {
     boolean restartJob(long jobId);
 
     @Request(id = 10, retryable = true, response = ResponseMessageConst.DATA)
-    Object getMetricBlobs(long fromSequence);
+    Object readMetrics(String uuid, long fromSequence);
 }
