@@ -38,11 +38,16 @@ import static com.hazelcast.internal.metrics.MetricsUtil.escapeMetricNamePart;
  */
 public class CompressingProbeRenderer implements ProbeRenderer {
 
-    private static final short SHORT_BITS = 8 * Bits.SHORT_SIZE_IN_BYTES;
+    private static final int BITS_IN_BYTE = 8;
+    private static final int BYTE_MASK = 0xff;
+
+    private static final short SHORT_BITS = BITS_IN_BYTE * Bits.SHORT_SIZE_IN_BYTES;
     // required precision after the decimal point for doubles
     private static final int CONVERSION_PRECISION = 4;
     // coefficient for converting doubles to long
     private static final double DOUBLE_TO_LONG = Math.pow(10, CONVERSION_PRECISION);
+
+    private static final short BINARY_FORMAT_VERSION = 1;
 
     private DataOutputStream dos;
     private ByteArrayOutputStream baos;
@@ -53,6 +58,8 @@ public class CompressingProbeRenderer implements ProbeRenderer {
         Deflater compressor = new Deflater();
         compressor.setLevel(Deflater.BEST_SPEED);
         baos = new ByteArrayOutputStream(estimatedBytes);
+        baos.write((BINARY_FORMAT_VERSION >>> BITS_IN_BYTE) & BYTE_MASK);
+        baos.write(BINARY_FORMAT_VERSION & BYTE_MASK);
         dos = new DataOutputStream(new DeflaterOutputStream(baos, compressor));
     }
 
@@ -127,7 +134,14 @@ public class CompressingProbeRenderer implements ProbeRenderer {
     }
 
     static Iterator<Metric> decompressingIterator(byte[] bytes) {
-        DataInputStream dis = new DataInputStream(new InflaterInputStream(new ByteArrayInputStream(bytes)));
+        ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+        int version = (bais.read() << BITS_IN_BYTE) + bais.read();
+        if (version != BINARY_FORMAT_VERSION) {
+            throw new RuntimeException("Incorrect format, expected version " + BINARY_FORMAT_VERSION
+                    + ", got " + version);
+        }
+        DataInputStream dis = new DataInputStream(new InflaterInputStream(bais));
+
         return new Iterator<Metric>() {
             String lastName = "";
             Metric next;
