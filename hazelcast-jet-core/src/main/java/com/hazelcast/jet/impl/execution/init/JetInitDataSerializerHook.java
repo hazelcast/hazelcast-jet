@@ -45,7 +45,6 @@ import com.hazelcast.jet.impl.operation.SubmitJobOperation;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SnapshotKey;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl;
-import com.hazelcast.jet.impl.metrics.ConcurrentArrayRingbuffer;
 import com.hazelcast.nio.serialization.DataSerializableFactory;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
@@ -85,7 +84,6 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
     public static final int ASYNC_SNAPSHOT_WRITER_SNAPSHOT_DATA_KEY = 28;
     public static final int ASYNC_SNAPSHOT_WRITER_SNAPSHOT_DATA_VALUE_TERMINATOR = 29;
     public static final int SNAPSHOT_OPERATION_RESULT = 30;
-    public static final int RINGBUFFER_SLICE = 31;
 
     public static final int FACTORY_ID = FactoryIdHelper.getFactoryId(JET_IMPL_DS_FACTORY, JET_IMPL_DS_FACTORY_ID);
 
@@ -167,8 +165,6 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
                     return AsyncSnapshotWriterImpl.SnapshotDataValueTerminator.INSTANCE;
                 case SNAPSHOT_OPERATION_RESULT:
                     return new SnapshotOperationResult();
-                case RINGBUFFER_SLICE:
-                    return new ConcurrentArrayRingbuffer.RingbufferSlice<>();
                 default:
                     throw new IllegalArgumentException("Unknown type id " + typeId);
             }

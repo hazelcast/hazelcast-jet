@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.metrics;
 
-import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -151,12 +150,12 @@ public class ConcurrentArrayRingbuffer<E> {
 
         @Override
         public int getFactoryId() {
-            return JetInitDataSerializerHook.FACTORY_ID;
+            return MetricsSerializerHook.FACTORY_ID;
         }
 
         @Override
         public int getId() {
-            return JetInitDataSerializerHook.RINGBUFFER_SLICE;
+            return MetricsSerializerHook.RINGBUFFER_SLICE;
         }
 
         @Override
