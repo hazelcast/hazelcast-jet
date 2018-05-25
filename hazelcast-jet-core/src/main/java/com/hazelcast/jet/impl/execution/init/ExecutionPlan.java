@@ -173,7 +173,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 ProbeBuilder probeBuilder = this.nodeEngine.getMetricsRegistry().newProbeBuilder()
                         .withTag("module", "jet")
                         .withTag("job", idToString(jobId))
-                        .withTag("vertex", vertex.name());
+                        .withTag("vertex", vertex.name())
+                        .withTag("edgesIn", String.valueOf(vertex.inboundEdges().size()))
+                        .withTag("edgesOut", String.valueOf(vertex.outboundEdges().size()));
                 ProbeBuilder processorProbeBuilder = probeBuilder
                         .withTag("proc", String.valueOf(globalProcessorIndex));
                 processorProbeBuilder
