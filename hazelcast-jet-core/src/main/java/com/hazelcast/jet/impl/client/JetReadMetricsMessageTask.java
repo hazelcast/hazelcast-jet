@@ -73,7 +73,7 @@ public class JetReadMetricsMessageTask extends AbstractMessageTask<RequestParame
 
     @Override
     public String getMethodName() {
-        return "getJobSubmissionTime";
+        return "readMetrics";
     }
 
     @Override
