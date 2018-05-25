@@ -124,6 +124,7 @@ public final class Jet {
                         .setMergePolicyConfig(
                                 new MergePolicyConfig().setPolicy(IgnoreMergingEntryMapMergePolicy.class.getName()))
                 )
+                .setProperty(Diagnostics.METRICS_DISTRIBUTED_DATASTRUCTURES.getName(), "true")
                 .setProperty(Diagnostics.METRICS_LEVEL.getName(), ProbeLevel.INFO.name());
     }
 }
