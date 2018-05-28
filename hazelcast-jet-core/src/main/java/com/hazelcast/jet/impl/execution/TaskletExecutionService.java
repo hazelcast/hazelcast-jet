@@ -71,6 +71,8 @@ public class TaskletExecutionService {
     private final ILogger logger;
     private final AtomicInteger cooperativeThreadIndex = new AtomicInteger();
     private final MetricsRegistry metricsRegistry;
+    @Probe
+    private final AtomicInteger blockingWorkerCount = new AtomicInteger();
 
     private volatile boolean isShutdown;
 
@@ -80,6 +82,9 @@ public class TaskletExecutionService {
         this.cooperativeThreadPool = new Thread[threadCount];
         this.logger = nodeEngine.getLoggingService().getLogger(TaskletExecutionService.class);
         this.metricsRegistry = nodeEngine.getMetricsRegistry();
+        metricsRegistry.newProbeBuilder()
+                       .withTag("module", "jet")
+                       .scanAndRegister(this);
     }
 
     /**
@@ -198,6 +203,7 @@ public class TaskletExecutionService {
             final String oldName = currentThread().getName();
             currentThread().setName(oldName.replaceAll(".thread-[0-9]+$", quoteReplacement("." + tracker.tasklet)));
             assert !oldName.equals(currentThread().getName()) : "unexpected thread name pattern: " + oldName;
+            blockingWorkerCount.incrementAndGet();
 
             try {
                 startedLatch.countDown();
@@ -221,6 +227,7 @@ public class TaskletExecutionService {
                 logger.warning("Exception in " + t, e);
                 tracker.executionTracker.exception(new JetException("Exception in " + t + ": " + e, e));
             } finally {
+                blockingWorkerCount.decrementAndGet();
                 currentThread().setContextClassLoader(clBackup);
                 currentThread().setName(oldName);
                 tracker.executionTracker.taskletDone();
