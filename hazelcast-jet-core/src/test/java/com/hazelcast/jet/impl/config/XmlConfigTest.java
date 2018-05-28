@@ -179,7 +179,6 @@ public class XmlConfigTest {
 
     private static void assertConfig(JetConfig jetConfig) {
         assertEquals("cooperativeThreadCount", 55, jetConfig.getInstanceConfig().getCooperativeThreadCount());
-        assertEquals("tempDir", "/var/tmp", jetConfig.getInstanceConfig().getTempDir());
         assertEquals("backupCount", 2, jetConfig.getInstanceConfig().getBackupCount());
         assertEquals("flowControlMs", 50, jetConfig.getInstanceConfig().getFlowControlPeriodMs());
 
