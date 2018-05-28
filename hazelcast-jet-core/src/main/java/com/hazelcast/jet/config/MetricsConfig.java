@@ -69,8 +69,8 @@ public class MetricsConfig {
      * collection can have some overhead if there is a significant number of data structures.
      */
     @Nonnull
-    public MetricsConfig setEnabledForDataSturctures(boolean enableDataSturctures) {
-        this.enableDataStructures = enableDataSturctures;
+    public MetricsConfig setEnableForDataStructures(boolean enableDataStructures) {
+        this.enableDataStructures = enableDataStructures;
         return this;
     }
 
