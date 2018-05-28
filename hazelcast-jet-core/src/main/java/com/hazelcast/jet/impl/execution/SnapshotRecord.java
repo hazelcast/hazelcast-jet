@@ -128,6 +128,10 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         out.writeLong(jobId);
         out.writeLong(snapshotId);
         out.writeLong(startTime);
+        out.writeLong(endTime);
+        out.writeLong(numBytes);
+        out.writeLong(numKeys);
+        out.writeLong(numChunks);
         out.writeUTF(status.toString());
         out.writeObject(vertices);
     }
@@ -137,6 +141,10 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         jobId = in.readLong();
         snapshotId = in.readLong();
         startTime = in.readLong();
+        endTime = in.readLong();
+        numBytes = in.readLong();
+        numKeys = in.readLong();
+        numChunks = in.readLong();
         status = SnapshotStatus.valueOf(in.readUTF());
         vertices = in.readObject();
     }
@@ -147,6 +155,10 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
                 "jobId=" + idToString(jobId) +
                 ", snapshotId=" + snapshotId +
                 ", startTime=" + toLocalDateTime(startTime) +
+                ", endTime=" + toLocalDateTime(endTime) +
+                ", numBytes=" + numBytes +
+                ", numKeys=" + numKeys +
+                ", numChunks=" + numChunks +
                 ", status=" + status +
                 ", vertices=" + vertices +
                 '}';

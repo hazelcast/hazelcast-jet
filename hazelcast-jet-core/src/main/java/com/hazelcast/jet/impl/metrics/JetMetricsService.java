@@ -16,9 +16,12 @@
 
 package com.hazelcast.jet.impl.metrics;
 
-import com.hazelcast.jet.impl.metrics.ConcurrentArrayRingbuffer.RingbufferSlice;
-import com.hazelcast.jet.impl.util.LoggingUtil;
+import com.hazelcast.config.Config;
+import com.hazelcast.internal.diagnostics.Diagnostics;
+import com.hazelcast.internal.metrics.ProbeLevel;
+import com.hazelcast.jet.config.MetricsConfig;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.spi.ConfigurableService;
 import com.hazelcast.spi.ManagedService;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
@@ -29,12 +32,11 @@ import java.util.concurrent.TimeUnit;
 
 import static com.hazelcast.jet.Util.entry;
 
-public class JetMetricsService implements ManagedService {
+public class JetMetricsService implements ManagedService, ConfigurableService<MetricsConfig> {
 
     public static final String SERVICE_NAME = "hz:impl:jetMetricsService";
 
     public static final int COLLECTION_INTERVAL_SECONDS = 1;
-    public static final int METRICS_JOURNAL_CAPACITY = 120;
 
     private static final int INITIAL_BUFFER_SIZE = 2 << 16;
     private static final int SIZE_FACTOR_NUMERATOR = 11;
@@ -47,9 +49,8 @@ public class JetMetricsService implements ManagedService {
      * the metrics are compressed into a blob and stored along with the timestamp,
      * with the format (timestamp, byte[])
      */
-    // TODO [viliam] make the length configurable
-    private final ConcurrentArrayRingbuffer<Map.Entry<Long, byte[]>> metricsJournal =
-            new ConcurrentArrayRingbuffer<>(METRICS_JOURNAL_CAPACITY);
+    private ConcurrentArrayRingbuffer<Map.Entry<Long, byte[]>> metricsJournal;
+    private MetricsConfig config;
 
 
     public JetMetricsService(NodeEngine nodeEngine) {
@@ -57,10 +58,16 @@ public class JetMetricsService implements ManagedService {
         this.logger = nodeEngine.getLogger(getClass());
     }
 
+
+    @Override
+    public void configure(MetricsConfig config) {
+        this.config = config;
+    }
+
     @Override
     public void init(NodeEngine nodeEngine, Properties properties) {
-        // if capacity is 0, metric collection is disabled
-        if (metricsJournal.getCapacity() > 0) {
+        if (config.isEnabled()) {
+            metricsJournal = new ConcurrentArrayRingbuffer<>(config.getRetentionSeconds());
             int[] lastSize = {INITIAL_BUFFER_SIZE};
             nodeEngine.getExecutionService().scheduleWithRepetition("MetricsForMcCollection", () -> {
                 CompressingProbeRenderer renderer = new CompressingProbeRenderer(
@@ -69,12 +76,14 @@ public class JetMetricsService implements ManagedService {
                 byte[] blob = renderer.getRenderedBlob();
                 lastSize[0] = blob.length;
                 metricsJournal.add(entry(System.currentTimeMillis(), blob));
-                LoggingUtil.logFine(logger, "Collected %,d metrics, %,d bytes", renderer.getCount(), blob.length);
+                if (logger.isFineEnabled()) {
+                    logger.fine(String.format("Collected %,d metrics, %,d bytes", renderer.getCount(), blob.length));
+                }
             }, COLLECTION_INTERVAL_SECONDS, COLLECTION_INTERVAL_SECONDS, TimeUnit.SECONDS);
         }
     }
 
-    public RingbufferSlice<Map.Entry<Long, byte[]>> getMetricBlobs(long startSequence) {
+    public ConcurrentArrayRingbuffer.RingbufferSlice<Map.Entry<Long, byte[]>> getMetricBlobs(long startSequence) {
         return metricsJournal.copyFrom(startSequence);
     }
 
@@ -87,5 +96,16 @@ public class JetMetricsService implements ManagedService {
     @Override
     public void shutdown(boolean terminate) {
 
+    }
+
+    // apply MetricsConfig to HZ properties
+    // these properties need to be set here so that the metrics get applied from startup
+    public static void applyMetricsConfig(Config hzConfig, MetricsConfig metricsConfig) {
+        if (metricsConfig.isEnabled()) {
+            hzConfig.setProperty(Diagnostics.METRICS_LEVEL.getName(), ProbeLevel.INFO.name());
+            if (metricsConfig.isEnabledForDataStructures()) {
+                hzConfig.setProperty(Diagnostics.METRICS_DISTRIBUTED_DATASTRUCTURES.getName(), "true");
+            }
+        }
     }
 }

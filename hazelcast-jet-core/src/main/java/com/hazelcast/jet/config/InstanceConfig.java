@@ -49,6 +49,7 @@ public class InstanceConfig {
      * jobs. This refers only to threads executing <em>cooperative</em>
      * processors; each <em>blocking</em> processor is assigned its own thread.
      */
+    @Nonnull
     public InstanceConfig setCooperativeThreadCount(int size) {
         checkPositive(size, "cooperativeThreadCount should be a positive number");
         this.cooperativeThreadCount = size;
@@ -65,6 +66,7 @@ public class InstanceConfig {
     /**
      * Sets the directory where Jet can place its temporary working directories.
      */
+    @Nonnull
     public InstanceConfig setTempDir(String tempDir) {
         this.tempDir = tempDir;
         return this;
@@ -86,6 +88,7 @@ public class InstanceConfig {
      * is allowed to send over a given DAG edge. This method sets the length
      * (in milliseconds) of the interval between flow-control ("ack") packets.
      */
+    @Nonnull
     public InstanceConfig setFlowControlPeriodMs(int flowControlPeriodMs) {
         checkPositive(flowControlPeriodMs, "flowControlPeriodMs should be a positive number");
         this.flowControlPeriodMs = flowControlPeriodMs;

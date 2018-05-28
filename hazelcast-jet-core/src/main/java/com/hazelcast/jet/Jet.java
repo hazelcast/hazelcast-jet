@@ -29,9 +29,8 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.instance.HazelcastInstanceImpl;
 import com.hazelcast.instance.HazelcastInstanceProxy;
-import com.hazelcast.internal.diagnostics.Diagnostics;
-import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.config.MetricsConfig;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JetInstanceImpl;
 import com.hazelcast.jet.impl.metrics.JetMetricsService;
@@ -39,6 +38,7 @@ import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.map.merge.IgnoreMergingEntryMapMergePolicy;
 
 import static com.hazelcast.jet.impl.config.XmlJetConfigBuilder.getClientConfig;
+import static com.hazelcast.jet.impl.metrics.JetMetricsService.applyMetricsConfig;
 
 /**
  * Entry point to the Jet product.
@@ -115,7 +115,8 @@ public final class Jet {
         servicesConfig
                 .addServiceConfig(new ServiceConfig().setEnabled(true)
                         .setName(JetMetricsService.SERVICE_NAME)
-                        .setClassName(JetMetricsService.class.getName()));
+                        .setClassName(JetMetricsService.class.getName())
+                        .setConfigObject(jetConfig.getMetricsConfig()));
 
         hzConfig
                 .addMapConfig(new MapConfig(INTERNAL_JET_OBJECTS_PREFIX + "*")
@@ -123,8 +124,10 @@ public final class Jet {
                         .setStatisticsEnabled(false)
                         .setMergePolicyConfig(
                                 new MergePolicyConfig().setPolicy(IgnoreMergingEntryMapMergePolicy.class.getName()))
-                )
-                .setProperty(Diagnostics.METRICS_DISTRIBUTED_DATASTRUCTURES.getName(), "true")
-                .setProperty(Diagnostics.METRICS_LEVEL.getName(), ProbeLevel.INFO.name());
+                );
+
+        MetricsConfig metricsConfig = jetConfig.getMetricsConfig();
+        applyMetricsConfig(hzConfig, metricsConfig);
     }
+
 }
