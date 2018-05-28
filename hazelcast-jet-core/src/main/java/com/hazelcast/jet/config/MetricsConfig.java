@@ -19,7 +19,7 @@ package com.hazelcast.jet.config;
 import javax.annotation.Nonnull;
 
 /**
- * Configuration optional specific to metrics collection
+ * Optional configuration specific to metrics collection.
  */
 public class MetricsConfig {
 
@@ -66,7 +66,7 @@ public class MetricsConfig {
 
     /**
      * Sets whether metrics should be collected for data structures. Metrics
-     * collection can have some overhead if there is a significant amount of data structures.
+     * collection can have some overhead if there is a significant number of data structures.
      */
     @Nonnull
     public MetricsConfig setEnabledForDataSturctures(boolean enableDataSturctures) {
@@ -75,7 +75,7 @@ public class MetricsConfig {
     }
 
     /**
-     * Returns if metric collection should be enabled for data structures.
+     * Returns if metric collection is be enabled for data structures.
      */
     public boolean isEnabledForDataStructures() {
         return enableDataStructures;
