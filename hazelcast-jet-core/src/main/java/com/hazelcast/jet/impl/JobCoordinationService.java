@@ -23,6 +23,7 @@ import com.hazelcast.internal.partition.impl.InternalPartitionServiceImpl;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
@@ -54,7 +55,9 @@ import static com.hazelcast.jet.core.JobStatus.NOT_STARTED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.FAILED;
 import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.SUCCESSFUL;
+import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
+import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 import static com.hazelcast.jet.impl.util.Util.idToString;
 import static com.hazelcast.jet.impl.util.Util.jobAndExecutionId;
 import static com.hazelcast.util.executor.ExecutorType.CACHED;
@@ -101,10 +104,14 @@ public class JobCoordinationService {
     }
 
     public ClassLoader getClassLoader(long jobId) {
+        JobConfig jobConfig = getJobConfig(jobId);
+        return getClassLoader(jobConfig, jobId);
+    }
+
+    public ClassLoader getClassLoader(JobConfig config, long jobId) {
         PrivilegedAction<JetClassLoader> action = () -> {
-            JobConfig jobConfig = getJobConfig(jobId);
-            ClassLoader parent = jobConfig.getClassLoaderFactory() != null
-                    ? jobConfig.getClassLoaderFactory().getJobClassLoader()
+            ClassLoader parent = config.getClassLoaderFactory() != null
+                    ? config.getClassLoaderFactory().getJobClassLoader()
                     : null;
             return new JetClassLoader(parent, jobRepository.getJobResources(jobId));
         };
@@ -175,7 +182,8 @@ public class JobCoordinationService {
         }
 
         int quorumSize = config.isSplitBrainProtectionEnabled() ? getQuorumSize() : 0;
-        JobRecord jobRecord = new JobRecord(jobId, Clock.currentTimeMillis(), dag, config, quorumSize);
+        String dagJson = dagToJson(jobId, config, dag);
+        JobRecord jobRecord = new JobRecord(jobId, Clock.currentTimeMillis(), dag, dagJson, config, quorumSize);
         MasterContext masterContext = new MasterContext(nodeEngine, this, jobRecord);
 
         // just try to initiate the coordination
@@ -197,6 +205,14 @@ public class JobCoordinationService {
         nodeEngine.getExecutionService().execute(COORDINATOR_EXECUTOR_NAME, () -> tryStartJob(masterContext));
 
         return masterContext.completionFuture();
+    }
+
+    private String dagToJson(long jobId, JobConfig jobConfig, Data dagData) {
+        ClassLoader classLoader = getClassLoader(jobConfig, jobId);
+        DAG dag = deserializeWithCustomClassLoader(nodeEngine.getSerializationService(), classLoader, dagData);
+        int localParallelism = getJetInstance(nodeEngine).getConfig().getInstanceConfig()
+                                                               .getCooperativeThreadCount();
+        return dag.toJson(localParallelism).toString();
     }
 
     public CompletableFuture<Void> joinSubmittedJob(long jobId) {

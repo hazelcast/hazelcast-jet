@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.com.eclipsesource.json.JsonArray;
+import com.hazelcast.com.eclipsesource.json.JsonObject;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.SerializationConstants;
 import com.hazelcast.nio.ObjectDataInput;
@@ -299,13 +301,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
         final StringBuilder b = new StringBuilder("dag\n");
         for (Vertex v : this) {
             b.append("    .vertex(\"").append(v.getName()).append("\")");
-            int localParallelism = v.getLocalParallelism();
-            if (localParallelism == -1) {
-                localParallelism = v.getMetaSupplier().preferredLocalParallelism();
-                if (localParallelism == -1) {
-                    localParallelism = defaultLocalParallelism;
-                }
-            }
+            int localParallelism = getLocalParallelism(defaultLocalParallelism, v);
             if (localParallelism != -1) {
                 b.append(".localParallelism(").append(localParallelism).append(')');
             }
@@ -315,6 +311,51 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
             b.append("    .edge(").append(e).append(")\n");
         }
         return b.toString();
+    }
+
+    /**
+     * Returns a JSON representation of the DAG.
+     *
+     * @param defaultLocalParallelism the local parallelism that will be shown if
+     *                                neither overridden on the vertex nor the
+     *                                preferred parallelism is defined by
+     *                                meta-supplier
+     */
+    public JsonObject toJson(int defaultLocalParallelism) {
+        JsonObject dag = new JsonObject();
+        JsonArray vertices = new JsonArray();
+        for (Vertex v : this) {
+            JsonObject vertex = new JsonObject();
+            vertex.add("name", v.getName());
+            vertex.add("parallelism", getLocalParallelism(defaultLocalParallelism, v));
+            vertices.add(vertex);
+        }
+        dag.add("vertices", vertices);
+
+        JsonArray edges = new JsonArray();
+        for (Edge e : this.edges) {
+            JsonObject edge = new JsonObject();
+            edge.add("from", e.getSourceName());
+            edge.add("fromOrdinal", e.getSourceOrdinal());
+            edge.add("to", e.getDestName());
+            edge.add("fromOrdinal", e.getDestOrdinal());
+            edge.add("priority", e.getPriority());
+            edge.add("type", e.getRoutingPolicy().toString().toLowerCase());
+            edges.add(edge);
+        }
+        dag.add("edges", edges);
+        return dag;
+    }
+
+    private static int getLocalParallelism(int defaultLocalParallelism, Vertex v) {
+        int localParallelism = v.getLocalParallelism();
+        if (localParallelism == -1) {
+            localParallelism = v.getMetaSupplier().preferredLocalParallelism();
+            if (localParallelism == -1) {
+                localParallelism = defaultLocalParallelism;
+            }
+        }
+        return localParallelism;
     }
 
     @Override
