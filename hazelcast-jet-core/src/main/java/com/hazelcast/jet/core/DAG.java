@@ -338,7 +338,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
             edge.add("from", e.getSourceName());
             edge.add("fromOrdinal", e.getSourceOrdinal());
             edge.add("to", e.getDestName());
-            edge.add("fromOrdinal", e.getDestOrdinal());
+            edge.add("toOrdinal", e.getDestOrdinal());
             edge.add("priority", e.getPriority());
             edge.add("type", e.getRoutingPolicy().toString().toLowerCase());
             edges.add(edge);
