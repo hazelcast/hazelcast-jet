@@ -30,6 +30,7 @@ import com.hazelcast.util.Preconditions;
 import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
+import static com.hazelcast.util.Preconditions.checkPositive;
 
 /**
  * See {@link Sinks#builder(DistributedBiFunction)}.
@@ -43,6 +44,7 @@ public final class SinkBuilder<W, T> {
     private DistributedBiConsumer<? super W, ? super T> onReceiveFn;
     private DistributedConsumer<? super W> flushFn = noopConsumer();
     private DistributedConsumer<? super W> destroyFn = noopConsumer();
+    private int preferredLocalParallelism = 2;
 
     /**
      * Use {@link Sinks#builder(DistributedBiFunction)}.
@@ -100,6 +102,18 @@ public final class SinkBuilder<W, T> {
     }
 
     /**
+     * Sets the local parallelism of the sink, default value is {@code 2}
+     *
+     * @param preferredLocalParallelism the local parallelism of the sink
+     */
+    @Nonnull
+    public SinkBuilder<W, T> preferredLocalParallelism(int preferredLocalParallelism) {
+        checkPositive(preferredLocalParallelism, "Preferred local parallelism should be a positive number");
+        this.preferredLocalParallelism = preferredLocalParallelism;
+        return this;
+    }
+
+    /**
      * Creates and returns the {@link Sink} with the components you supplied to
      * this builder.
      */
@@ -115,6 +129,6 @@ public final class SinkBuilder<W, T> {
                 flushFn,
                 destroyFn
         );
-        return new SinkImpl<>("custom-sink", ProcessorMetaSupplier.of(supplier, 2));
+        return new SinkImpl<>("custom-sink", ProcessorMetaSupplier.of(supplier, preferredLocalParallelism));
     }
 }
