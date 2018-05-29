@@ -19,6 +19,7 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedBiFunction;
@@ -30,7 +31,6 @@ import com.hazelcast.util.Preconditions;
 import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
-import static com.hazelcast.util.Preconditions.checkPositive;
 
 /**
  * See {@link Sinks#builder(DistributedBiFunction)}.
@@ -108,7 +108,7 @@ public final class SinkBuilder<W, T> {
      */
     @Nonnull
     public SinkBuilder<W, T> preferredLocalParallelism(int preferredLocalParallelism) {
-        checkPositive(preferredLocalParallelism, "Preferred local parallelism should be a positive number");
+        Vertex.checkLocalParallelism(preferredLocalParallelism);
         this.preferredLocalParallelism = preferredLocalParallelism;
         return this;
     }
