@@ -22,7 +22,7 @@ import java.io.Serializable;
 /**
  * Represents the function you pass to a windowed group-and-aggregate
  * method in the Pipeline API, such as {@link
- * com.hazelcast.jet.pipeline.StageWithGroupingAndWindow#aggregate stage.aggregate()}.
+ * com.hazelcast.jet.pipeline.StageWithGroupingAndWindow#aggregate3 stage.aggregate3()}.
  * It creates the item to emit based on the results of a single aggregate
  * operation performed for a particular window and a particular grouping
  * key.

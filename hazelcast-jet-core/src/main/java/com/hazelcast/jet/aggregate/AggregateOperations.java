@@ -57,24 +57,6 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns an aggregate operation whose result is an arbitrary item it
-     * observed, or {@code null} if it observed no items. If you use it in a
-     * group-and-aggregate operation, the result will be a set of distinct
-     * items (one for each grouping key).
-     */
-    @Nonnull
-    @SuppressWarnings("checkstyle:needbraces")
-    public static <T> AggregateOperation1<T, MutableReference<T>, T> pickAny() {
-        return AggregateOperation
-                .withCreate(MutableReference<T>::new)
-                // Result would be correct even without the acc.isNull() check, but that
-                // can cause more GC churn due to medium-lived objects.
-                .<T>andAccumulate((acc, item) -> { if (acc.isNull()) acc.set(item); })
-                .andCombine((acc1, acc2) -> { if (acc1.isNull()) acc1.set(acc2.get()); })
-                .andFinish(MutableReference::get);
-    }
-
-    /**
      * Returns an aggregate operation that computes the number of items.
      */
     @Nonnull
@@ -989,6 +971,34 @@ public final class AggregateOperations {
                 .andDeduct(deductAccValueFn != null
                         ? (a, b) -> a.set(deductFn.apply(a.get(), b.get()))
                         : null)
+                .andFinish(MutableReference::get);
+    }
+
+    /**
+     * Returns an aggregate operation whose result is an arbitrary item it
+     * observed, or {@code null} if it observed no items.
+     * <p>
+     * You can use it to implement <em>distinct</em> operation: you group by
+     * the desired key and the value will be any object with that key. For
+     * example, extract distinct last name from a list of persons. The result
+     * will be a stream of Person objects, one for each distinct last name:
+     * <pre>
+     *     Pipeline p = Pipeline.create();
+     *     p.&lt;Person>drawFrom(list("persons"))
+     *      .groupingKey(Person::getLastName)
+     *      .aggregate(pickAny())
+     *      .drainTo(...);
+     * </pre>
+     */
+    @Nonnull
+    @SuppressWarnings("checkstyle:needbraces")
+    public static <T> AggregateOperation1<T, MutableReference<T>, T> pickAny() {
+        return AggregateOperation
+                .withCreate(MutableReference<T>::new)
+                // Result would be correct even without the acc.isNull() check, but that
+                // can cause more GC churn due to medium-lived objects.
+                .<T>andAccumulate((acc, item) -> { if (acc.isNull()) acc.set(item); })
+                .andCombine((acc1, acc2) -> { if (acc1.isNull()) acc1.set(acc2.get()); })
                 .andFinish(MutableReference::get);
     }
 

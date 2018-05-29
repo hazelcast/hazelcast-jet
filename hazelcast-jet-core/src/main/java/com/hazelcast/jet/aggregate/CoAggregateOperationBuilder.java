@@ -31,7 +31,6 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.datamodel.Tag.tag;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static java.util.Arrays.stream;
 import static java.util.Comparator.comparing;
@@ -59,10 +58,11 @@ public class CoAggregateOperationBuilder {
     CoAggregateOperationBuilder() { }
 
     /**
-     * Registers the given aggregate operation with the tag corresponding to
-     * an input to the co-aggregating operation being built. If you are
-     * preparing an operation to pass to an {@link StageWithWindow#aggregateBuilder()
-     * aggregate builder}, you must use the tags you obtained from it.
+     * Registers the given aggregate operation with the tag corresponding to an
+     * input to the co-aggregating operation being built. If you are preparing
+     * an operation to pass to an {@linkplain
+     * StageWithWindow#aggregateBuilder() aggregate builder}, you must use the
+     * tags you obtained from it.
      * <p>
      * Returns the tag you'll use to retrieve the results of aggregating this
      * input.
@@ -107,7 +107,7 @@ public class CoAggregateOperationBuilder {
         for (int i = 0; i < tags.length; i++) {
             Preconditions.checkTrue(tags[i].index() == i, "Registered tags' indices are "
                     + stream(tags).map(Tag::index).collect(toList())
-                    + " but should be " + range(0, tags.length).boxed().collect(toList()));
+                    + ", but should be " + range(0, tags.length).boxed().collect(toList()));
         }
         // Variable `sorted` extracted due to type inference failure
         Stream<Entry<Tag, AggregateOperation1>> sorted = opsByTag.entrySet().stream()

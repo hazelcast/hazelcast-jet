@@ -290,7 +290,7 @@ public class BatchAggregateTest extends PipelineTestSupport {
 
         BatchStage<ItemsByTag> aggregated = b.build(aggrOp);
 
-        //Then
+        // Then
         validateAggrBuilder(fx, tag0, tag1, tag2, aggregated);
     }
 

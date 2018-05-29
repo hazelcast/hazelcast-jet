@@ -24,10 +24,8 @@ import java.util.Set;
 import java.util.function.Function;
 
 /**
- * Batch processor that emits the distinct items it observes. Items are
- * distinct if they have non-equal keys as returned from the supplied
- * {@code keyFn}.
- * */
+ * See {@link com.hazelcast.jet.core.processor.Processors#distinctP}.
+ */
 public class DistinctP<T, K> extends AbstractProcessor {
     private final Function<? super T, ? extends K> keyFn;
     private final Set<K> seenItems = new HashSet<>();
