@@ -19,7 +19,7 @@ package com.hazelcast.jet.config;
 import javax.annotation.Nonnull;
 
 /**
- * Optional configuration specific to metrics collection.
+ * Configuration options specific to metrics collection.
  */
 public class MetricsConfig {
 
