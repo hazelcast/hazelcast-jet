@@ -49,7 +49,7 @@ public class MetricsConfig {
     }
 
     /**
-     * Gets the retention in seconds for collected metrics on each instance
+     * Sets the retention in seconds for collected metrics on each instance
      */
     @Nonnull
     public MetricsConfig setRetentionSeconds(int retentionSeconds) {
@@ -66,7 +66,7 @@ public class MetricsConfig {
 
     /**
      * Sets whether metrics should be collected for data structures. Metrics
-     * collection can have some overhead if there is a significant number of data structures.
+     * collection can have some overhead if there is a large number of data structures.
      */
     @Nonnull
     public MetricsConfig setEnableForDataStructures(boolean enableDataStructures) {
@@ -75,7 +75,7 @@ public class MetricsConfig {
     }
 
     /**
-     * Returns if metric collection is be enabled for data structures.
+     * Returns if metric collection is enabled for data structures.
      */
     public boolean isEnabledForDataStructures() {
         return enableDataStructures;
