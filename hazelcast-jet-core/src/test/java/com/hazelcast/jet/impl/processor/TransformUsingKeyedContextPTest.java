@@ -21,7 +21,11 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.pipeline.ContextFactory;
+import com.hazelcast.test.HazelcastParallelClassRunner;
+import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
 
 import java.util.Map.Entry;
 import java.util.stream.LongStream;
@@ -29,16 +33,17 @@ import java.util.stream.LongStream;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.Util.entry;
 import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
 
+@Category(ParallelTest.class)
+@RunWith(HazelcastParallelClassRunner.class)
 public class TransformUsingKeyedContextPTest {
 
     @Test
     public void test_map() {
         DistributedSupplier<Processor> supplier =
-                Processors.<long[], Entry<String, Long>, String, Entry<String, Long>>mapUsingKeyedContextP(
+                Processors.mapUsingKeyedContextP(
                         ContextFactory.withCreateFn(jet -> new long[1]),
-                        singletonList((Entry<String, Long> t) -> t.getKey()),
+                        (Entry<String, Long> t) -> t.getKey(),
                         (ctx, item) -> entry(item.getKey(), ctx[0] += item.getValue())
                 );
 
@@ -60,9 +65,9 @@ public class TransformUsingKeyedContextPTest {
     @Test
     public void test_filter() {
         DistributedSupplier<Processor> supplier =
-                Processors.<long[], Entry<String, Long>, String>filterUsingKeyedContextP(
+                Processors.filterUsingKeyedContextP(
                         ContextFactory.withCreateFn(jet -> new long[1]),
-                        singletonList((Entry<String, Long> t) -> t.getKey()),
+                        (Entry<String, Long> t) -> t.getKey(),
                         (ctx, item) -> (ctx[0] += item.getValue()) > 2
                 );
 
@@ -82,9 +87,9 @@ public class TransformUsingKeyedContextPTest {
     @Test
     public void test_flatMap() {
         DistributedSupplier<Processor> supplier =
-                Processors.<long[], Entry<String, Long>, String, Entry<String, Long>>flatMapUsingKeyedContextP(
+                Processors.flatMapUsingKeyedContextP(
                         ContextFactory.withCreateFn(jet -> new long[1]),
-                        singletonList((Entry<String, Long> t) -> t.getKey()),
+                        (Entry<String, Long> t) -> t.getKey(),
                         (ctx, item) -> traverseStream(LongStream.range(0, item.getValue())
                                                                 .mapToObj(i -> entry(item.getKey(), i)))
                 );

@@ -39,11 +39,11 @@ import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.impl.processor.GroupP;
 import com.hazelcast.jet.impl.processor.InsertWatermarksP;
-import com.hazelcast.jet.impl.processor.TransformUsingKeyedContextP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
 import com.hazelcast.jet.impl.processor.TransformP;
 import com.hazelcast.jet.impl.processor.TransformUsingContextP;
+import com.hazelcast.jet.impl.processor.TransformUsingKeyedContextP;
 import com.hazelcast.jet.impl.util.WrappingProcessorMetaSupplier;
 import com.hazelcast.jet.impl.util.WrappingProcessorSupplier;
 import com.hazelcast.jet.pipeline.ContextFactory;
@@ -51,6 +51,7 @@ import com.hazelcast.jet.pipeline.ContextFactory;
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.function.Function;
 
 import static com.hazelcast.jet.core.TimestampKind.EVENT;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
@@ -818,7 +819,7 @@ public final class Processors {
      * won't be saved to the snapshot and will misbehave in a fault-tolerant
      * stream processing job.
      *
-     * @param keyFns functions that compute the grouping key
+     * @param keyFn a function that computes the grouping key
      * @param contextFactory the context factory
      * @param mapFn a stateless mapping function
      *
@@ -830,10 +831,10 @@ public final class Processors {
     @Nonnull
     public static <C, T, K, R> DistributedSupplier<Processor> mapUsingKeyedContextP(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull List<DistributedFunction<?, ? extends K>> keyFns,
+            @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
     ) {
-        return () -> new TransformUsingKeyedContextP<C, T, K, R>(contextFactory, keyFns,
+        return () -> new TransformUsingKeyedContextP<C, T, K, R>(contextFactory, keyFn,
                 (singletonTraverser, context, item) -> {
                     singletonTraverser.accept(mapFn.apply(context, item));
                     return singletonTraverser;
@@ -853,6 +854,7 @@ public final class Processors {
      * stream processing job.
      *
      * @param contextFactory the context factory
+     * @param keyFn a function that computes the grouping key
      * @param filterFn a stateless predicate to test each received item against
      * @param <C> type of context object
      * @param <T> type of received and emitted item
@@ -861,10 +863,10 @@ public final class Processors {
     @Nonnull
     public static <C, T, K> DistributedSupplier<Processor> filterUsingKeyedContextP(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull List<DistributedFunction<?, ? extends K>> keyFns,
+            @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     ) {
-        return () -> new TransformUsingKeyedContextP<C, T, K, T>(contextFactory, keyFns,
+        return () -> new TransformUsingKeyedContextP<C, T, K, T>(contextFactory, keyFn,
                 (singletonTraverser, context, item) -> {
                     singletonTraverser.accept(filterFn.test(context, item) ? item : null);
                     return singletonTraverser;
@@ -886,6 +888,7 @@ public final class Processors {
      * stream processing job.
      *
      * @param contextFactory the context factory
+     * @param keyFn a function that computes the grouping key
      * @param flatMapFn a stateless function that maps the received item to a traverser over
      *                  the output items
      * @param <C> type of context object
@@ -896,11 +899,35 @@ public final class Processors {
     @Nonnull
     public static <C, T, K, R> DistributedSupplier<Processor> flatMapUsingKeyedContextP(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull List<DistributedFunction<?, ? extends K>> keyFns,
+            @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return () -> new TransformUsingKeyedContextP<C, T, K, R>(contextFactory, keyFns,
+        return () -> new TransformUsingKeyedContextP<C, T, K, R>(contextFactory, keyFn,
                 (singletonTraverser, context, item) -> flatMapFn.apply(context, item));
+    }
+
+    @Nonnull
+    public static <T, K, R, OUT> DistributedSupplier<Processor> rollingAggregation(
+            @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
+            @Nonnull AggregateOperation1<? super T, ?, R> aggrOp,
+            @Nonnull DistributedBiFunction<K, R, OUT> mapToOutputFn
+    ) {
+        // Early check for identity finish: tries to finish an empty accumulator, different instance
+        // must be returned.
+        Object emptyAcc = aggrOp.createFn().get();
+        if (emptyAcc == ((Function) aggrOp.finishFn()).apply(emptyAcc)) {
+            throw new IllegalArgumentException("Aggregate operation must not use identity finish");
+        }
+        AggregateOperation1<? super T, Object, R> aggrOp1 = (AggregateOperation1<? super T, Object, R>) aggrOp;
+
+        return mapUsingKeyedContextP(ContextFactory.withCreateFn(jet -> aggrOp1.createFn().get()),
+                keyFn,
+                (Object acc, T item) -> {
+                    aggrOp1.accumulateFn().accept(acc, item);
+                    R r = aggrOp1.finishFn().apply(acc);
+                    assert r != acc : "Aggregate operation must not use identity finish";
+                    return mapToOutputFn.apply(keyFn.apply(item), r);
+                });
     }
 
     /**

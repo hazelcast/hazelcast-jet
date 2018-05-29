@@ -27,10 +27,8 @@ import com.hazelcast.jet.pipeline.ContextFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.Function;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
 
@@ -40,9 +38,8 @@ import static com.hazelcast.jet.Traversers.traverseIterable;
  * object.
  */
 public final class TransformUsingKeyedContextP<C, T, K, R> extends AbstractProcessor {
-
     private final ContextFactory<C> contextFactory;
-    private final List<DistributedFunction<Object, ? extends K>> keyFns;
+    private final DistributedFunction<? super T, ? extends K> keyFn;
     private final DistributedTriFunction<ResettableSingletonTraverser<R>, ? super C, ? super T,
             ? extends Traverser<? extends R>> flatMapFn;
 
@@ -57,12 +54,12 @@ public final class TransformUsingKeyedContextP<C, T, K, R> extends AbstractProce
      */
     public TransformUsingKeyedContextP(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull List<? extends Function<?, ? extends K>> keyFns,
+            @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
             @Nonnull DistributedTriFunction<ResettableSingletonTraverser<R>, ? super C, ? super T,
                     ? extends Traverser<? extends R>> flatMapFn
     ) {
         this.contextFactory = contextFactory;
-        this.keyFns = (List<DistributedFunction<Object, ? extends K>>) keyFns;
+        this.keyFn = keyFn;
         this.flatMapFn = flatMapFn;
     }
 
@@ -79,7 +76,7 @@ public final class TransformUsingKeyedContextP<C, T, K, R> extends AbstractProce
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         if (outputTraverser == null) {
-            K key = keyFns.get(ordinal).apply(item);
+            K key = keyFn.apply((T) item);
             C contextObject = contextObjects.computeIfAbsent(key, k -> contextFactory.createFn().apply(jet));
             outputTraverser = flatMapFn.apply(singletonTraverser, contextObject, (T) item);
         }
