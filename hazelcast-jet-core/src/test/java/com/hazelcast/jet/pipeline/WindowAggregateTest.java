@@ -18,6 +18,7 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.aggregate.CoAggregateOperationBuilder;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.TimestampedItem;
@@ -25,35 +26,43 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.jet.pipeline.BatchAggregateTest.QuadFunction;
 import org.junit.Test;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
+import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperationBuilder;
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.datamodel.ItemsByTag.itemsByTag;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
-import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.pipeline.WindowDefinition.session;
+import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
+import static java.lang.Math.min;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Stream.concat;
 import static org.junit.Assert.assertEquals;
 
 public class WindowAggregateTest extends PipelineStreamTestSupport {
 
     @Test
     public void when_setWindowDefinition_then_windowDefinitionReturnsIt() {
-        Pipeline p = Pipeline.create();
+        // Given
         SlidingWindowDef tumbling = tumbling(2);
-        StageWithWindow<Entry<Long, String>> stage =
-                p.drawFrom(Sources.<Long, String>mapJournal("source", START_FROM_OLDEST))
-                 .window(tumbling);
+
+        // When
+        StageWithWindow<Integer> stage = mapJournalSrcStage.window(tumbling);
+
+        // Then
         assertEquals(tumbling, stage.windowDefinition());
     }
 
@@ -141,13 +150,56 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         aggregated.drainTo(sink);
         jet().newJob(p);
 
-        Function<Integer, Long> expectedWindowSum = start -> start * start + winSize * (winSize - 1) / 2L;
-        Map<String, Integer> expectedBag = toBag(input
+        Function<Integer, Long> expectedWindowSum = start -> winSize * (2L * start + winSize - 1) / 2;
+        List<String> expected = input
                 .stream()
                 .map(i -> i - i % winSize)
                 .distinct()
                 .map(start -> formatFn.apply((long) start + winSize, expectedWindowSum.apply(start)))
-                .collect(toList()));
+                .collect(toList());
+        Map<String, Integer> expectedBag = toBag(expected);
+        assertTrueEventually(() -> assertEquals(expectedBag, sinkToBag()));
+    }
+
+    @Test
+    public void slidingWindow() {
+        // Given
+        List<Integer> input = sequence(itemCount);
+        DistributedBiFunction<Long, Long, String> formatFn =
+                (timestamp, item) -> String.format("(%03d, %03d)", timestamp, item);
+
+        addToSrcMapJournal(input);
+        addToSrcMapJournal(closingItems);
+
+        // When
+        final int winSize = 4;
+        final int slideBy = 2;
+        StreamStage<String> aggregated = mapJournalSrcStage
+                .addTimestamps(i -> i, 0)
+                .window(sliding(winSize, slideBy))
+                .aggregate(summingLong(i -> i), (start, end, sum) -> formatFn.apply(end, sum));
+
+        // Then
+        aggregated.drainTo(sink);
+        jet().newJob(p);
+
+        // Window covers [start, end)
+        BiFunction<Integer, Integer, Long> expectedWindowSum =
+                (start, end) -> (end - start) * (start + end - 1) / 2L;
+        Stream<String> headOfStream = IntStream
+                .range(-winSize + slideBy, 0)
+                .map(i -> i + i % slideBy) // result of % is negative because i is negative
+                .distinct()
+                .mapToObj(start -> formatFn.apply((long) start + winSize,
+                        expectedWindowSum.apply(0, start + winSize)));
+        Stream<String> restOfStream = input
+                .stream()
+                .map(i -> i - i % slideBy)
+                .distinct()
+                .map(start -> formatFn.apply((long) start + winSize,
+                        expectedWindowSum.apply(start, min(start + winSize, itemCount))));
+        List<String> expected = concat(headOfStream, restOfStream).collect(toList());
+        Map<String, Integer> expectedBag = toBag(expected);
         assertTrueEventually(() -> assertEquals(expectedBag, sinkToBag()));
     }
 
@@ -186,7 +238,83 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
     }
 
     @Test
-    public void aggregate2() {
+    public void aggregate2_withSeparateAggrOps() {
+        AggregateOperation1<Integer, LongAccumulator, Long> aggrOp = summingLong(i -> i);
+        testAggregate2((stage0, stage1) -> stage0.aggregate2(aggrOp, stage1, aggrOp));
+    }
+
+    @Test
+    public void aggregate2_withAggrOp2() {
+        AggregateOperation1<Integer, LongAccumulator, Long> aggrOp = summingLong(i -> i);
+        testAggregate2((stage0, stage1) -> stage0.aggregate2(stage1, aggregateOperation2(aggrOp, aggrOp)));
+    }
+
+    private void testAggregate2(
+            BiFunction<
+                    StageWithWindow<Integer>,
+                    StreamStage<Integer>,
+                    StreamStage<TimestampedItem<Tuple2<Long, Long>>>>
+                attachAggregatingStageFn
+    ) {
+        // Given
+        List<Integer> input = sequence(itemCount);
+        addToSrcMapJournal(input);
+        addToSrcMapJournal(closingItems);
+
+        String srcName1 = journaledMapName();
+        Map<String, Integer> srcMap1 = jet().getMap(srcName1);
+        addToMapJournal(srcMap1, input);
+        addToMapJournal(srcMap1, closingItems);
+
+        StreamStage<Integer> stage0 = mapJournalSrcStage.addTimestamps(i -> i, 0);
+        StreamStage<Integer> stage1 = drawEventJournalValues(srcName1).addTimestamps(i -> i, 0);
+
+        // When
+        final int winSize = 4;
+        StreamStage<TimestampedItem<Tuple2<Long, Long>>> aggregated =
+                attachAggregatingStageFn.apply(stage0.window(tumbling(winSize)), stage1);
+
+        //Then
+        aggregated.drainTo(sink);
+        jet().newJob(p);
+        Function<Integer, Long> expectedWindowSum = start -> winSize * (2L * start + winSize - 1) / 2;
+        List<TimestampedItem<Tuple2<Long, Long>>> expected = input
+                .stream()
+                .map(i -> i - i % winSize)
+                .distinct()
+                .map(start -> {
+                    long sum = expectedWindowSum.apply(start);
+                    return new TimestampedItem<>((long) start + winSize, tuple2(sum, sum));
+                })
+                .collect(toList());
+        Map<TimestampedItem<Tuple2<Long, Long>>, Integer> expectedBag = toBag(expected);
+        assertTrueEventually(() -> assertEquals(expectedBag, sinkToBag()));
+    }
+
+    @Test
+    public void aggregate2_withSeparateAggrOps_withOutputFn() {
+        AggregateOperation1<Integer, LongAccumulator, Long> aggrOp = summingLong(i -> i);
+        testAggregate2_withOutputFn((stage0, stage1, formatFn) ->
+                stage0.aggregate2(aggrOp, stage1, aggrOp,
+                        (start, end, sum0, sum1) -> formatFn.apply(end, tuple2(sum0, sum1))));
+    }
+
+    @Test
+    public void aggregate2_withAggrOp2_withOutputFn() {
+        AggregateOperation1<Integer, LongAccumulator, Long> aggrOp = summingLong(i -> i);
+        testAggregate2_withOutputFn((stage0, stage1, formatFn) ->
+                stage0.aggregate2(stage1, aggregateOperation2(aggrOp, aggrOp),
+                        (start, end, sums) -> formatFn.apply(end, sums)));
+    }
+
+    private void testAggregate2_withOutputFn(
+            TriFunction<
+                    StageWithWindow<Integer>,
+                    StreamStage<Integer>,
+                    DistributedBiFunction<Long, Tuple2<Long, Long>, String>,
+                    StreamStage<String>
+                > attachAggregatingStageFn
+    ) {
         // Given
         List<Integer> input = sequence(itemCount);
         DistributedBiFunction<Long, Tuple2<Long, Long>, String> formatFn =
@@ -200,24 +328,19 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         addToMapJournal(srcMap1, input);
         addToMapJournal(srcMap1, closingItems);
 
-        StreamStage<Integer> srcStage0 = mapJournalSrcStage.addTimestamps(i -> i, 0);
-        StreamStage<Integer> srcStage1 = drawEventJournalValues(srcName1).addTimestamps(i -> i, 0);
+        StreamStage<Integer> stage0 = mapJournalSrcStage.addTimestamps(i -> i, 0);
+        StreamStage<Integer> stage1 = drawEventJournalValues(srcName1).addTimestamps(i -> i, 0);
 
         // When
         final int winSize = 4;
-        AggregateOperation1<Integer, LongAccumulator, Long> aggrOp = summingLong(i -> i);
-        StreamStage<String> aggregated = srcStage0
-                .window(tumbling(winSize))
-                .aggregate2(
-                        srcStage1,
-                        aggregateOperation2(aggrOp, aggrOp, Tuple2::tuple2),
-                        (start, end, sums) -> formatFn.apply(end, sums));
+        StreamStage<String> aggregated =
+            attachAggregatingStageFn.apply(stage0.window(tumbling(winSize)), stage1, formatFn);
 
         // Then
         aggregated.drainTo(sink);
         jet().newJob(p);
 
-        Function<Integer, Long> expectedWindowSum = start -> start * start + winSize * (winSize - 1) / 2L;
+        Function<Integer, Long> expectedWindowSum = start -> winSize * (2L * start + winSize - 1) / 2;
         List<String> expected = input
                 .stream()
                 .map(i -> i - i % winSize)
@@ -232,12 +355,96 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
     }
 
     @Test
-    public void aggregate3() {
+    public void aggregate3_withSeparateAggrOps() {
+        AggregateOperation1<Integer, LongAccumulator, Long> aggrOp = summingLong(i -> i);
+        testAggregate3((stage0, stage1, stage2) -> stage0.aggregate3(aggrOp, stage1, aggrOp, stage2, aggrOp));
+    }
+
+    @Test
+    public void aggregate3_withAggrOp3() {
+        AggregateOperation1<Integer, LongAccumulator, Long> aggrOp = summingLong(i -> i);
+        testAggregate3((stage0, stage1, stage2) ->
+                stage0.aggregate3(stage1, stage2, aggregateOperation3(aggrOp, aggrOp, aggrOp)));
+    }
+
+    private void testAggregate3(
+            TriFunction<
+                    StageWithWindow<Integer>,
+                    StreamStage<Integer>,
+                    StreamStage<Integer>,
+                    StreamStage<TimestampedItem<Tuple3<Long, Long, Long>>>>
+                attachAggregatingStageFn
+    ) {
         // Given
         List<Integer> input = sequence(itemCount);
-        DistributedBiFunction<Long, Tuple3<Long, Long, Long>, String> formatFn =
-                (timestamp, sums) -> String.format("(%03d: %03d, %03d, %03d)",
-                        timestamp, sums.f0(), sums.f1(), sums.f2());
+        addToSrcMapJournal(input);
+        addToSrcMapJournal(closingItems);
+
+        String srcName1 = journaledMapName();
+        Map<String, Integer> srcMap1 = jet().getMap(srcName1);
+        addToMapJournal(srcMap1, input);
+        addToMapJournal(srcMap1, closingItems);
+
+        String srcName2 = journaledMapName();
+        Map<String, Integer> srcMap2 = jet().getMap(srcName2);
+        addToMapJournal(srcMap2, input);
+        addToMapJournal(srcMap2, closingItems);
+
+        StreamStage<Integer> stage0 = mapJournalSrcStage.addTimestamps(i -> i, 0);
+        StreamStage<Integer> stage1 = drawEventJournalValues(srcName1).addTimestamps(i -> i, 0);
+        StreamStage<Integer> stage2 = drawEventJournalValues(srcName2).addTimestamps(i -> i, 0);
+
+        // When
+        final int winSize = 4;
+        StreamStage<TimestampedItem<Tuple3<Long, Long, Long>>> aggregated =
+                attachAggregatingStageFn.apply(stage0.window(tumbling(winSize)), stage1, stage2);
+
+        //Then
+        aggregated.drainTo(sink);
+        jet().newJob(p);
+        Function<Integer, Long> expectedWindowSum = start -> winSize * (2L * start + winSize - 1) / 2;
+        List<TimestampedItem<Tuple3<Long, Long, Long>>> expected = input
+                .stream()
+                .map(i -> i - i % winSize)
+                .distinct()
+                .map(start -> {
+                    long sum = expectedWindowSum.apply(start);
+                    return new TimestampedItem<>((long) start + winSize, tuple3(sum, sum, sum));
+                })
+                .collect(toList());
+        Map<TimestampedItem<Tuple3<Long, Long, Long>>, Integer> expectedBag = toBag(expected);
+        assertTrueEventually(() -> assertEquals(expectedBag, sinkToBag()));
+    }
+
+    @Test
+    public void aggregate3_withSeparateAggrOps_withOutputFn() {
+        AggregateOperation1<Integer, LongAccumulator, Long> aggrOp = summingLong(i -> i);
+        testAggregate3_withOutputFn((stage0, stage1, stage2, formatFn) ->
+                stage0.aggregate3(aggrOp, stage1, aggrOp, stage2, aggrOp,
+                        (start, end, sum0, sum1, sum2) -> formatFn.apply(end, tuple3(sum0, sum1, sum2))));
+    }
+
+    @Test
+    public void aggregate3_withAggrOp3_withOutputFn() {
+        AggregateOperation1<Integer, LongAccumulator, Long> aggrOp = summingLong(i -> i);
+        testAggregate3_withOutputFn((stage0, stage1, stage2, formatFn) ->
+                stage0.aggregate3(stage1, stage2, aggregateOperation3(aggrOp, aggrOp, aggrOp),
+                        (start, end, sums) -> formatFn.apply(end, tuple3(sums.f0(), sums.f1(), sums.f2()))));
+    }
+
+    private void testAggregate3_withOutputFn(
+            QuadFunction<
+                    StageWithWindow<Integer>,
+                    StreamStage<Integer>,
+                    StreamStage<Integer>,
+                    DistributedBiFunction<Long, Tuple3<Long, Long, Long>, String>,
+                    StreamStage<String>
+                > attachAggregatingStageFn
+    ) {
+        // Given
+        List<Integer> input = sequence(itemCount);
+        DistributedBiFunction<Long, Tuple3<Long, Long, Long>, String> formatFn = (timestamp, sums) ->
+                String.format("(%03d: %03d, %03d, %03d)", timestamp, sums.f0(), sums.f1(), sums.f2());
 
         addToSrcMapJournal(input);
         addToSrcMapJournal(closingItems);
@@ -252,25 +459,19 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         addToMapJournal(srcMap2, input);
         addToMapJournal(srcMap2, closingItems);
 
-        StreamStage<Integer> srcStage0 = mapJournalSrcStage.addTimestamps(i -> i, 0);
-        StreamStage<Integer> srcStage1 = drawEventJournalValues(srcName1).addTimestamps(i -> i, 0);
-        StreamStage<Integer> srcStage2 = drawEventJournalValues(srcName2).addTimestamps(i -> i, 0);
+        StreamStage<Integer> stage0 = mapJournalSrcStage.addTimestamps(i -> i, 0);
+        StreamStage<Integer> stage1 = drawEventJournalValues(srcName1).addTimestamps(i -> i, 0);
+        StreamStage<Integer> stage2 = drawEventJournalValues(srcName2).addTimestamps(i -> i, 0);
 
         // When
         final int winSize = 4;
-        AggregateOperation1<Integer, LongAccumulator, Long> aggrOp = summingLong(i -> i);
-        StreamStage<String> aggregated = srcStage0
-                .window(tumbling(winSize))
-                .aggregate3(
-                        srcStage1, srcStage2,
-                        aggregateOperation3(aggrOp, aggrOp, aggrOp, Tuple3::tuple3),
-                        (start, end, sums) -> formatFn.apply(end, sums));
+        StreamStage<String> aggregated =
+                attachAggregatingStageFn.apply(stage0.window(tumbling(winSize)), stage1, stage2, formatFn);
 
-        // Then
+        //Then
         aggregated.drainTo(sink);
         jet().newJob(p);
-
-        Function<Integer, Long> expectedWindowSum = start -> start * start + winSize * (winSize - 1) / 2L;
+        Function<Integer, Long> expectedWindowSum = start -> winSize * (2L * start + winSize - 1) / 2;
         List<String> expected = input
                 .stream()
                 .map(i -> i - i % winSize)
@@ -284,39 +485,81 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         assertTrueEventually(() -> assertEquals(expectedBag, sinkToBag()));
     }
 
-    @Test
-    public void aggregateBuilder() {
-        // Given
+    private class AggregateBuilderFixture {
         List<Integer> input = sequence(itemCount);
 
-        addToSrcMapJournal(input);
-        addToSrcMapJournal(closingItems);
+        String srcName1 = journaledMapName();
+        Map<String, Integer> srcMap1 = jet().getMap(srcName1);
 
-        String srcName2 = journaledMapName();
-        Map<String, Integer> srcMap2 = jet().getMap(srcName2);
-        addToMapJournal(srcMap2, input);
-        addToMapJournal(srcMap2, closingItems);
+        StreamStage<Integer> srcStage0 = mapJournalSrcStage.addTimestamps(i -> i, 0);
+        StreamStage<Integer> srcStage1 = drawEventJournalValues(srcName1).addTimestamps(i -> i, 0);
 
-        StreamStage<Integer> srcStage1 = mapJournalSrcStage.addTimestamps(i -> i, 0);
-        StreamStage<Integer> srcStage2 = drawEventJournalValues(srcName2).addTimestamps(i -> i, 0);
+        {
+            addToSrcMapJournal(input);
+            addToSrcMapJournal(closingItems);
+            addToMapJournal(srcMap1, input);
+            addToMapJournal(srcMap1, closingItems);
+        }
+    }
+
+    @Test
+    public void aggregateBuilder_withSeparateAggrOps() {
+        // Given
+        AggregateBuilderFixture fx = new AggregateBuilderFixture();
 
         // When
         final int winSize = 4;
         AggregateOperation1<Integer, LongAccumulator, Long> aggrOp = summingLong(i -> i);
-        WindowAggregateBuilder<Long> b = srcStage1.window(tumbling(winSize)).aggregateBuilder(aggrOp);
+        WindowAggregateBuilder<Long> b = fx.srcStage0.window(tumbling(winSize)).aggregateBuilder(aggrOp);
         Tag<Long> tag0 = b.tag0();
-        Tag<Long> tag1 = b.add(srcStage2, aggrOp);
+        Tag<Long> tag1 = b.add(fx.srcStage1, aggrOp);
         DistributedBiFunction<Long, ItemsByTag, String> formatFn =
                 (timestamp, sums) -> String.format("(%03d: %03d, %03d)", timestamp, sums.get(tag0), sums.get(tag1));
 
         StreamStage<String> aggregated = b.build((start, end, sums) -> formatFn.apply(end, sums));
 
         // Then
+        validateAggrBuilder(aggregated, fx, winSize, tag0, tag1, formatFn);
+    }
+
+    @Test
+    public void aggregateBuilder_withComplexAggrOp() {
+        // Given
+        AggregateBuilderFixture fx = new AggregateBuilderFixture();
+
+        // When
+        final int winSize = 4;
+        AggregateOperation1<Integer, LongAccumulator, Long> aggrOp = summingLong(i -> i);
+        WindowAggregateBuilder1<Integer> b = fx.srcStage0.window(tumbling(winSize)).aggregateBuilder();
+        Tag<Integer> tag0_in = b.tag0();
+        Tag<Integer> tag1_in = b.add(fx.srcStage1);
+
+        CoAggregateOperationBuilder b2 = coAggregateOperationBuilder();
+        Tag<Long> tag0 = b2.add(tag0_in, aggrOp);
+        Tag<Long> tag1 = b2.add(tag1_in, aggrOp);
+        DistributedBiFunction<Long, ItemsByTag, String> formatFn =
+                (timestamp, sums) -> String.format("(%03d: %03d, %03d)", timestamp, sums.get(tag0), sums.get(tag1));
+
+        StreamStage<String> aggregated = b.build(
+                b2.build(),
+                (start, end, sums) -> formatFn.apply(end, sums));
+
+        // Then
+        validateAggrBuilder(aggregated, fx, winSize, tag0, tag1, formatFn);
+    }
+
+    @SuppressWarnings("SameParameterValue")
+    private void validateAggrBuilder(
+            StreamStage<String> aggregated, AggregateBuilderFixture fx,
+            int winSize,
+            Tag<Long> tag0, Tag<Long> tag1,
+            DistributedBiFunction<Long, ItemsByTag, String> formatFn
+    ) {
         aggregated.drainTo(sink);
         jet().newJob(p);
 
-        Function<Integer, Long> expectedWindowSum = start -> start * start + winSize * (winSize - 1) / 2L;
-        List<String> expected = input
+        Function<Integer, Long> expectedWindowSum = start -> winSize * (2L * start + winSize - 1) / 2;
+        List<String> expected = fx.input
                 .stream()
                 .map(i -> i - i % winSize)
                 .distinct()

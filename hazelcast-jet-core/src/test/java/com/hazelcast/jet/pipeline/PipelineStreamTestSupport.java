@@ -46,7 +46,7 @@ public abstract class PipelineStreamTestSupport extends PipelineTestSupport {
     public void beforePipelineStreamTestSupport() {
         HazelcastInstance hz = member.getHazelcastInstance();
         int partitionCount = getPartitionService(hz).getPartitionCount();
-        itemCount = 2 * partitionCount;
+        itemCount = 1_000 * partitionCount;
         inputKeys = IntStream.range(0, partitionCount)
                              .mapToObj(i -> generateKeyForPartition(hz, i))
                              .collect(toList());
