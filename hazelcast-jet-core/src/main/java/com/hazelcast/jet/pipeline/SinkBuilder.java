@@ -21,8 +21,8 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.DistributedBiConsumer;
+import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedConsumer;
-import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.util.Preconditions;
@@ -32,22 +32,22 @@ import javax.annotation.Nonnull;
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 
 /**
- * See {@link Sinks#builder(DistributedFunction)}.
+ * See {@link Sinks#builder(DistributedBiFunction)}.
  *
  * @param <W> type of the writer object
  * @param <T> type of the items the sink will accept
  */
 public final class SinkBuilder<W, T> {
 
-    private final DistributedFunction<? super JetInstance, ? extends W> createFn;
+    private final DistributedBiFunction<? super JetInstance, Integer, ? extends W> createFn;
     private DistributedBiConsumer<? super W, ? super T> onReceiveFn;
     private DistributedConsumer<? super W> flushFn = noopConsumer();
     private DistributedConsumer<? super W> destroyFn = noopConsumer();
 
     /**
-     * Use {@link Sinks#builder(DistributedFunction)}.
+     * Use {@link Sinks#builder(DistributedBiFunction)}.
      */
-    SinkBuilder(@Nonnull DistributedFunction<? super JetInstance, ? extends W> createFn) {
+    SinkBuilder(@Nonnull DistributedBiFunction<? super JetInstance, Integer, ? extends W> createFn) {
         this.createFn = createFn;
     }
 
@@ -108,9 +108,9 @@ public final class SinkBuilder<W, T> {
         Preconditions.checkNotNull(onReceiveFn, "onReceiveFn must be set");
 
         // local copy for serialization
-        DistributedFunction<? super JetInstance, ? extends W> createFn = this.createFn;
+        DistributedBiFunction<? super JetInstance, Integer, ? extends W> createFn = this.createFn;
         DistributedSupplier<Processor> supplier = SinkProcessors.writeBufferedP(
-                ctx -> createFn.apply(ctx.jetInstance()),
+                ctx -> createFn.apply(ctx.jetInstance(), ctx.globalProcessorIndex()),
                 onReceiveFn,
                 flushFn,
                 destroyFn

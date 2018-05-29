@@ -589,9 +589,9 @@ public final class Sinks {
      * These are the callback functions you can provide to implement the sink's
      * behavior:
      * <ol><li>
-     *     {@code createFn} creates the writer. Gets the local Jet instance as
-     *     argument. It will be called once for each worker thread. This
-     *     component is required.
+     *     {@code createFn} creates the writer. Gets the local Jet instance and
+     *     global processor index as argument. It will be called once for each
+     *     worker thread. This component is required.
      * </li><li>
      *     {@code onReceiveFn} gets notified of each item the sink receives and
      *     (typically) passes it to the writer. This component is required.
@@ -609,7 +609,7 @@ public final class Sinks {
      */
     @Nonnull
     public static <W, T> SinkBuilder<W, T> builder(
-            @Nonnull DistributedFunction<? super JetInstance, ? extends W> createFn
+            @Nonnull DistributedBiFunction<? super JetInstance, Integer, ? extends W> createFn
     ) {
         return new SinkBuilder<>(createFn);
     }

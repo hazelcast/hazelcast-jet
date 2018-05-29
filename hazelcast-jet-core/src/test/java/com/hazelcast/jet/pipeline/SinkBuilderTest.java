@@ -101,7 +101,7 @@ public class SinkBuilderTest extends PipelineTestSupport {
     }
 
     private Sink<Integer> buildRandomFileSink(String listName) {
-        return Sinks.<File, Integer>builder((instance) ->
+        return Sinks.<File, Integer>builder((instance, index) ->
                 uncheckCall(() -> {
                     File directory = createTempDirectory();
                     File file = new File(directory, randomName());
@@ -116,7 +116,7 @@ public class SinkBuilderTest extends PipelineTestSupport {
 
     private Sink<Integer> buildSocketSink(int localPort) {
         return Sinks.<BufferedWriter, Integer>builder(
-                (jetInstance) -> uncheckCall(() -> getSocketWriter(localPort))
+                (jetInstance, index) -> uncheckCall(() -> getSocketWriter(localPort))
         ).onReceiveFn((s, item) -> uncheckRun(() -> s.append((char) item.intValue()).append('\n')))
          .flushFn(s -> uncheckRun(s::flush))
          .destroyFn(s -> uncheckRun(s::close))
