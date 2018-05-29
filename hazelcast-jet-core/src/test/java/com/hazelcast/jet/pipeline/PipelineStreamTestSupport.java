@@ -34,6 +34,8 @@ public abstract class PipelineStreamTestSupport extends PipelineTestSupport {
 
     StreamStage<Integer> mapJournalSrcStage;
 
+    long maxLag;
+
     // Windowing tests use input items as timestamps. This list contains items
     // that will advance the watermark on all partitions enough to close all
     // open windows.
@@ -46,11 +48,12 @@ public abstract class PipelineStreamTestSupport extends PipelineTestSupport {
     public void beforePipelineStreamTestSupport() {
         HazelcastInstance hz = member.getHazelcastInstance();
         int partitionCount = getPartitionService(hz).getPartitionCount();
-        itemCount = 1_000 * partitionCount;
+        itemCount = 16 * partitionCount;
         inputKeys = IntStream.range(0, partitionCount)
                              .mapToObj(i -> generateKeyForPartition(hz, i))
                              .collect(toList());
         closingItems = nCopies(inputKeys.size(), 16 * itemCount);
+        maxLag = itemCount / 2;
         srcMap = jet().getMap(journaledSrcMapName);
         mapJournalSrcStage = drawEventJournalValues(journaledSrcMapName);
     }

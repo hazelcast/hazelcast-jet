@@ -79,7 +79,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         // For window size 2, streamInput looks like this (timestamp, item):
         // (0, 0), (0, 0), (1, 1), (1, 1), (2, 0), (2, 0), (3, 1), (3, 1), ...
         // I.e., there are duplicate items 0 and 1 in each window.
-        StreamStage<Integer> streamInput = mapJournalSrcStage.addTimestamps(i -> i, 0)
+        StreamStage<Integer> streamInput = mapJournalSrcStage.addTimestamps(i -> i, maxLag)
                                                              .map(i -> i % winSize);
 
         // When
@@ -113,7 +113,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<String> distinct = mapJournalSrcStage
-                .addTimestamps(i -> i, 0)
+                .addTimestamps(i -> i, maxLag)
                 .window(tumbling(winSize))
                 .distinctBy(keyFn, (start, end, item) -> formatFn.apply(end, item));
 
@@ -142,7 +142,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         // When
         final int winSize = 4;
         StreamStage<String> aggregated = mapJournalSrcStage
-                .addTimestamps(i -> i, 0)
+                .addTimestamps(i -> i, maxLag)
                 .window(tumbling(winSize))
                 .aggregate(summingLong(i -> i), (start, end, sum) -> formatFn.apply(end, sum));
 
@@ -175,7 +175,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         final int winSize = 4;
         final int slideBy = 2;
         StreamStage<String> aggregated = mapJournalSrcStage
-                .addTimestamps(i -> i, 0)
+                .addTimestamps(i -> i, maxLag)
                 .window(sliding(winSize, slideBy))
                 .aggregate(summingLong(i -> i), (start, end, sum) -> formatFn.apply(end, sum));
 
@@ -219,7 +219,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<String> aggregated = mapJournalSrcStage
-                .addTimestamps(i -> i, 0)
+                .addTimestamps(i -> i, maxLag)
                 .window(session(sessionTimeout))
                 .aggregate(summingLong(i -> i), (start, end, sum) -> formatFn.apply(start, sum));
 
@@ -266,8 +266,8 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         addToMapJournal(srcMap1, input);
         addToMapJournal(srcMap1, closingItems);
 
-        StreamStage<Integer> stage0 = mapJournalSrcStage.addTimestamps(i -> i, 0);
-        StreamStage<Integer> stage1 = drawEventJournalValues(srcName1).addTimestamps(i -> i, 0);
+        StreamStage<Integer> stage0 = mapJournalSrcStage.addTimestamps(i -> i, maxLag);
+        StreamStage<Integer> stage1 = drawEventJournalValues(srcName1).addTimestamps(i -> i, maxLag);
 
         // When
         final int winSize = 4;
@@ -328,8 +328,8 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         addToMapJournal(srcMap1, input);
         addToMapJournal(srcMap1, closingItems);
 
-        StreamStage<Integer> stage0 = mapJournalSrcStage.addTimestamps(i -> i, 0);
-        StreamStage<Integer> stage1 = drawEventJournalValues(srcName1).addTimestamps(i -> i, 0);
+        StreamStage<Integer> stage0 = mapJournalSrcStage.addTimestamps(i -> i, maxLag);
+        StreamStage<Integer> stage1 = drawEventJournalValues(srcName1).addTimestamps(i -> i, maxLag);
 
         // When
         final int winSize = 4;
@@ -390,9 +390,9 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         addToMapJournal(srcMap2, input);
         addToMapJournal(srcMap2, closingItems);
 
-        StreamStage<Integer> stage0 = mapJournalSrcStage.addTimestamps(i -> i, 0);
-        StreamStage<Integer> stage1 = drawEventJournalValues(srcName1).addTimestamps(i -> i, 0);
-        StreamStage<Integer> stage2 = drawEventJournalValues(srcName2).addTimestamps(i -> i, 0);
+        StreamStage<Integer> stage0 = mapJournalSrcStage.addTimestamps(i -> i, maxLag);
+        StreamStage<Integer> stage1 = drawEventJournalValues(srcName1).addTimestamps(i -> i, maxLag);
+        StreamStage<Integer> stage2 = drawEventJournalValues(srcName2).addTimestamps(i -> i, maxLag);
 
         // When
         final int winSize = 4;
@@ -459,9 +459,9 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         addToMapJournal(srcMap2, input);
         addToMapJournal(srcMap2, closingItems);
 
-        StreamStage<Integer> stage0 = mapJournalSrcStage.addTimestamps(i -> i, 0);
-        StreamStage<Integer> stage1 = drawEventJournalValues(srcName1).addTimestamps(i -> i, 0);
-        StreamStage<Integer> stage2 = drawEventJournalValues(srcName2).addTimestamps(i -> i, 0);
+        StreamStage<Integer> stage0 = mapJournalSrcStage.addTimestamps(i -> i, maxLag);
+        StreamStage<Integer> stage1 = drawEventJournalValues(srcName1).addTimestamps(i -> i, maxLag);
+        StreamStage<Integer> stage2 = drawEventJournalValues(srcName2).addTimestamps(i -> i, maxLag);
 
         // When
         final int winSize = 4;
@@ -491,8 +491,8 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         String srcName1 = journaledMapName();
         Map<String, Integer> srcMap1 = jet().getMap(srcName1);
 
-        StreamStage<Integer> srcStage0 = mapJournalSrcStage.addTimestamps(i -> i, 0);
-        StreamStage<Integer> srcStage1 = drawEventJournalValues(srcName1).addTimestamps(i -> i, 0);
+        StreamStage<Integer> srcStage0 = mapJournalSrcStage.addTimestamps(i -> i, maxLag);
+        StreamStage<Integer> srcStage1 = drawEventJournalValues(srcName1).addTimestamps(i -> i, maxLag);
 
         {
             addToSrcMapJournal(input);

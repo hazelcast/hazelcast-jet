@@ -63,6 +63,7 @@ public abstract class TestInClusterSupport extends JetTestSupport {
     @BeforeClass
     public static void setupCluster() {
         int parallelism = Runtime.getRuntime().availableProcessors() / MEMBER_COUNT / 2;
+        parallelism = 4;
         JetConfig config = new JetConfig();
         config.getInstanceConfig().setCooperativeThreadCount(parallelism <= 2 ? 2 : parallelism);
         Config hzConfig = config.getHazelcastConfig();

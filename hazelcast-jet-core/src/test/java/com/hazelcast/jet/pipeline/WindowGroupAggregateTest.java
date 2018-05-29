@@ -89,7 +89,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
         }
 
         private StreamStage<Entry<String, Integer>> addKeys(StreamStage<Integer> stage) {
-            return stage.addTimestamps(i -> i, 0)
+            return stage.addTimestamps(i -> i, maxLag)
                         .flatMap(i -> Traverser.over(entry("a", i), entry("b", i)));
         }
     }
@@ -495,7 +495,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
         }
 
         private StreamStage<Entry<String, Integer>> addKeys(StreamStage<Integer> stage) {
-            return stage.addTimestamps(i -> i, 0)
+            return stage.addTimestamps(i -> i, maxLag)
                         .flatMap(i -> Traverser.over(entry("a", i), entry("b", i)));
         }
     }
