@@ -39,6 +39,7 @@ import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.impl.processor.GroupP;
 import com.hazelcast.jet.impl.processor.InsertWatermarksP;
+import com.hazelcast.jet.impl.processor.TransformUsingKeyedContextP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
 import com.hazelcast.jet.impl.processor.TransformP;
@@ -799,6 +800,106 @@ public final class Processors {
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         return TransformUsingContextP.<C, T, R>supplier(contextFactory,
+                (singletonTraverser, context, item) -> flatMapFn.apply(context, item));
+    }
+
+    /**
+     * TODO
+     *
+     * Returns a supplier of processors for a vertex which, for each received
+     * item, emits the result of applying the given mapping function to it. The
+     * mapping function receives another parameter, the context object which
+     * Jet will create using the supplied {@code contextFactory}.
+     * <p>
+     * If the mapping result is {@code null}, the vertex emits nothing.
+     * Therefore it can be used to implement filtering semantics as well.
+     * <p>
+     * While it's allowed to store some local state in the context object, it
+     * won't be saved to the snapshot and will misbehave in a fault-tolerant
+     * stream processing job.
+     *
+     * @param keyFns functions that compute the grouping key
+     * @param contextFactory the context factory
+     * @param mapFn a stateless mapping function
+     *
+     * @param <C> context object type
+     * @param <T> received item type
+     * @param <K> key type
+     * @param <R> emitted item type
+     */
+    @Nonnull
+    public static <C, T, K, R> DistributedSupplier<Processor> mapUsingKeyedContextP(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull List<DistributedFunction<?, ? extends K>> keyFns,
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
+    ) {
+        return () -> new TransformUsingKeyedContextP<C, T, K, R>(contextFactory, keyFns,
+                (singletonTraverser, context, item) -> {
+                    singletonTraverser.accept(mapFn.apply(context, item));
+                    return singletonTraverser;
+                });
+    }
+
+    /**
+     * TODO
+     *
+     * Returns a supplier of processors for a vertex that emits the same items
+     * it receives, but only those that pass the given predicate. The predicate
+     * function receives another parameter, the context object which Jet will
+     * create using the supplied {@code contextFactory}.
+     * <p>
+     * While it's allowed to store some local state in the context object, it
+     * won't be saved to the snapshot and will misbehave in a fault-tolerant
+     * stream processing job.
+     *
+     * @param contextFactory the context factory
+     * @param filterFn a stateless predicate to test each received item against
+     * @param <C> type of context object
+     * @param <T> type of received and emitted item
+     * @param <K> key type
+     */
+    @Nonnull
+    public static <C, T, K> DistributedSupplier<Processor> filterUsingKeyedContextP(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull List<DistributedFunction<?, ? extends K>> keyFns,
+            @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
+    ) {
+        return () -> new TransformUsingKeyedContextP<C, T, K, T>(contextFactory, keyFns,
+                (singletonTraverser, context, item) -> {
+                    singletonTraverser.accept(filterFn.test(context, item) ? item : null);
+                    return singletonTraverser;
+                });
+    }
+
+    /**
+     * TODO
+     *
+     * Returns a supplier of processors for a vertex that applies the provided
+     * item-to-traverser mapping function to each received item and emits all
+     * the items from the resulting traverser. The traverser must be
+     * <em>null-terminated</em>. The mapping function receives another parameter,
+     * the context object which Jet will create using the supplied {@code
+     * contextFactory}.
+     * <p>
+     * While it's allowed to store some local state in the context object, it
+     * won't be saved to the snapshot and will misbehave in a fault-tolerant
+     * stream processing job.
+     *
+     * @param contextFactory the context factory
+     * @param flatMapFn a stateless function that maps the received item to a traverser over
+     *                  the output items
+     * @param <C> type of context object
+     * @param <T> received item type
+     * @param <K> key type
+     * @param <R> emitted item type
+     */
+    @Nonnull
+    public static <C, T, K, R> DistributedSupplier<Processor> flatMapUsingKeyedContextP(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull List<DistributedFunction<?, ? extends K>> keyFns,
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
+    ) {
+        return () -> new TransformUsingKeyedContextP<C, T, K, R>(contextFactory, keyFns,
                 (singletonTraverser, context, item) -> flatMapFn.apply(context, item));
     }
 
