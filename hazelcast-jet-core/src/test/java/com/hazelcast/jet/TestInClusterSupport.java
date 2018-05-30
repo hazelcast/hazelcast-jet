@@ -63,11 +63,13 @@ public abstract class TestInClusterSupport extends JetTestSupport {
     @BeforeClass
     public static void setupCluster() {
         int parallelism = Runtime.getRuntime().availableProcessors() / MEMBER_COUNT / 2;
-        parallelism = 4;
         JetConfig config = new JetConfig();
         config.getInstanceConfig().setCooperativeThreadCount(parallelism <= 2 ? 2 : parallelism);
         Config hzConfig = config.getHazelcastConfig();
-        hzConfig.getProperties().setProperty("hazelcast.partition.count", "" + parallelism * MEMBER_COUNT);
+        // Set partition count to match the parallelism of IMap sources.
+        // Their preferred local parallelism is 2, therefore partition count
+        // should be 2 * MEMBER_COUNT.
+        hzConfig.getProperties().setProperty("hazelcast.partition.count", "" + 2 * MEMBER_COUNT);
         hzConfig.addCacheConfig(new CacheSimpleConfig().setName("*"));
         hzConfig.getMapEventJournalConfig(JOURNALED_MAP_PREFIX + '*').setEnabled(true);
         hzConfig.getCacheEventJournalConfig(JOURNALED_CACHE_PREFIX + '*').setEnabled(true);
