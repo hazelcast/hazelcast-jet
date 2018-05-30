@@ -45,8 +45,9 @@ public class StageWithGroupingImpl<T, K> extends StageWithGroupingBase<T, K> imp
 
     @Nonnull @Override
     public BatchStage<T> distinct() {
-        return batchStage().filterUsingContext(ContextFactory.withCreateFn(
-                jet -> new HashSet<>()), (ctx, item) -> ctx.add(keyFn().apply(item)));
+        DistributedFunction<? super T, ? extends K> keyFn = keyFn();
+        return batchStage().filterUsingContext(ContextFactory.withCreateFn(jet -> new HashSet<>()),
+                (ctx, item) -> ctx.add(keyFn.apply(item)));
     }
 
     @Nonnull
