@@ -101,9 +101,9 @@ public interface StageWithWindow<T> {
     }
 
     /**
-     * Attaches to this stage a stage that performs the given aggregate operation
-     * over all the items that belong to a given window. Once the window is
-     * complete, it invokes {@code mapToOutputFn} with the result of the aggregate
+     * Attaches a stage that performs the given aggregate operation over all
+     * the items that belong to a given window. Once the window is complete,
+     * it invokes {@code mapToOutputFn} with the result of the aggregate
      * operation and emits its return value as the window result.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
@@ -119,11 +119,10 @@ public interface StageWithWindow<T> {
     );
 
     /**
-     * Attaches to this stage a stage that performs the given aggregate
-     * operation over all the items that belong to a given window. Once the
-     * window is complete, it emits a {@code TimestampedItem} with the result
-     * of the aggregate operation and the timestamp denoting the window's
-     * ending time.
+     * Attaches a stage that performs the given aggregate operation over all
+     * the items that belong to a given window. Once the window is complete, it
+     * emits a {@code TimestampedItem} with the result of the aggregate
+     * operation and the timestamp denoting the window's ending time.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      * @param aggrOp the aggregate operation to perform
@@ -138,11 +137,11 @@ public interface StageWithWindow<T> {
     }
 
     /**
-     * Attaches to this stage a stage that performs the given aggregate
-     * operation over all the items that belong to the same window. It receives
-     * the items from both this stage and {@code stage1}. Once a given window
-     * is complete, it invokes {@code mapToOutputFn} with the result of the
-     * aggregate operation and emits its return value as the window result.
+     * Attaches a stage that performs the given aggregate operation over all
+     * the items that belong to the same window. It receives the items from
+     * both this stage and {@code stage1}. Once a given window is complete, it
+     * invokes {@code mapToOutputFn} with the result of the aggregate
+     * operation and emits its return value as the window result.
      * <p>
      * This variant requires you to provide a two-input aggregate operation
      * (refer to its {@linkplain AggregateOperation2 Javadoc} for a simple
@@ -171,12 +170,11 @@ public interface StageWithWindow<T> {
             @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn);
 
     /**
-     * Attaches to this stage a stage that performs the given aggregate
-     * operation over all the items that belong to the same window. It receives
-     * the items from both this stage and {@code stage1}. Once a given window
-     * is complete, it emits a {@link TimestampedItem} with the result
-     * of the aggregate operation and the timestamp denoting the window's
-     * ending time.
+     * Attaches a stage that performs the given aggregate operation over all
+     * the items that belong to the same window. It receives the items from
+     * both this stage and {@code stage1}. Once a given window is complete, it
+     * emits a {@link TimestampedItem} with the result of the aggregate
+     * operation and the timestamp denoting the window's ending time.
      * <p>
      * This variant requires you to provide a two-input aggregate operation
      * (refer to its {@linkplain AggregateOperation2 Javadoc} for a simple
@@ -203,13 +201,12 @@ public interface StageWithWindow<T> {
     }
 
     /**
-     * Attaches to this stage a stage that performs the given co-aggregate
-     * operation over the items from both this stage and {@code stage1} you
-     * supply. It performs the aggregation separately for each input stage:
-     * {@code aggrOp0} on this stage and {@code aggrOp1} on {@code stage1}.
-     * Once it has received all the items belonging to a window, it calls
-     * the supplied {@code mapToOutputFn} with the aggregation results to
-     * create the item to emit.
+     * Attaches a stage that performs the given co-aggregate operation over the
+     * items from both this stage and {@code stage1} you supply. It performs
+     * the aggregation separately for each input stage: {@code aggrOp0} on this
+     * stage and {@code aggrOp1} on {@code stage1}. Once it has received all
+     * the items belonging to a window, it calls the supplied {@code
+     * mapToOutputFn} with the aggregation results to create the item to emit.
      * <p>
      * The aggregating stage emits a single item for each completed window.
      *
@@ -235,12 +232,12 @@ public interface StageWithWindow<T> {
     }
 
     /**
-     * Attaches to this stage a stage that performs the given co-aggregate
-     * operation over the items from both this stage and {@code stage1} you
-     * supply. It performs the aggregation separately for each input stage:
-     * {@code aggrOp0} on this stage and {@code aggrOp1} on {@code stage1}.
-     * Once it has received all the items belonging to a window, it emits a
-     * {@code TimestampedItem(Tuple2(result0, result1))}.
+     * Attaches a stage that performs the given co-aggregate operation over the
+     * items from both this stage and {@code stage1} you supply. It performs
+     * the aggregation separately for each input stage: {@code aggrOp0} on this
+     * stage and {@code aggrOp1} on {@code stage1}. Once it has received all
+     * the items belonging to a window, it emits a {@code
+     * TimestampedItem(Tuple2(result0, result1))}.
      * <p>
      * The aggregating stage emits a single item for each completed window.
      *
@@ -263,11 +260,11 @@ public interface StageWithWindow<T> {
     }
 
     /**
-     * Attaches to this stage a stage that performs the given aggregate
-     * operation over the items it receives from this stage as well as
-     * {@code stage1} and {@code stage2} you supply. Once a given window
-     * is complete, it invokes {@code mapToOutputFn} with the result of the
-     * aggregate operation and emits its return value as the window result.
+     * Attaches a stage that performs the given aggregate operation over the
+     * items it receives from this stage as well as {@code stage1} and {@code
+     * stage2} you supply. Once a given window is complete, it invokes {@code
+     * mapToOutputFn} with the result of the aggregate operation and emits its
+     * return value as the window result.
      * <p>
      * This variant requires you to provide a three-input aggregate operation
      * (refer to its {@linkplain AggregateOperation3 Javadoc} for a simple
@@ -297,12 +294,11 @@ public interface StageWithWindow<T> {
             @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn);
 
     /**
-     * Attaches to this stage a stage that performs the given aggregate
-     * operation over the items it receives from this stage as well as
-     * {@code stage1} and {@code stage2} you supply. Once a given window
-     * is complete, it emits a {@link TimestampedItem} with the result
-     * of the aggregate operation and the timestamp denoting the window's
-     * ending time.
+     * Attaches a stage that performs the given aggregate operation over the
+     * items it receives from this stage as well as {@code stage1} and {@code
+     * stage2} you supply. Once a given window is complete, it emits a {@link
+     * TimestampedItem} with the result of the aggregate operation and the
+     * timestamp denoting the window's ending time.
      * <p>
      * This variant requires you to provide a three-input aggregate operation
      * (refer to its {@linkplain AggregateOperation3 Javadoc} for a simple
@@ -333,14 +329,14 @@ public interface StageWithWindow<T> {
     }
 
     /**
-     * Attaches to this stage a stage that performs the given aggregate
-     * operation over all the items that belong to the same window. It receives
-     * the items from both this stage and {@code stage1}. It performs the
-     * aggregation separately for each input stage: {@code aggrOp0} on this
-     * stage, {@code aggrOp1} on {@code stage1} and {@code aggrOp2} on {@code
-     * stage2}. Once a given window is complete, it invokes {@code
-     * mapToOutputFn} with the result of the aggregate operation and emits its
-     * return value as the window result.
+     * Attaches a stage that performs the given aggregate operation over all
+     * the items that belong to the same window. It receives the items from
+     * both this stage and {@code stage1}. It performs the aggregation
+     * separately for each input stage: {@code aggrOp0} on this stage, {@code
+     * aggrOp1} on {@code stage1} and {@code aggrOp2} on {@code stage2}. Once a
+     * given window is complete, it invokes {@code mapToOutputFn} with the
+     * result of the aggregate operation and emits its return value as the
+     * window result.
      * <p>
      * The aggregating stage emits a single item for each completed window.
      *
@@ -368,13 +364,13 @@ public interface StageWithWindow<T> {
     }
 
     /**
-     * Attaches to this stage a stage that performs the given aggregate
-     * operation over all the items that belong to the same window. It receives
-     * the items from both this stage and {@code stage1}. It performs the
-     * aggregation separately for each input stage: {@code aggrOp0} on this
-     * stage, {@code aggrOp1} on {@code stage1} and {@code aggrOp2} on {@code
-     * stage2}. Once it has received all the items belonging to a window, it
-     * emits a {@code TimestampedItem(Tuple3(result0, result1, result2))}.
+     * Attaches a stage that performs the given aggregate operation over all
+     * the items that belong to the same window. It receives the items from
+     * both this stage and {@code stage1}. It performs the aggregation
+     * separately for each input stage: {@code aggrOp0} on this stage, {@code
+     * aggrOp1} on {@code stage1} and {@code aggrOp2} on {@code stage2}. Once
+     * it has received all the items belonging to a window, it emits a {@code
+     * TimestampedItem(Tuple3(result0, result1, result2))}.
      * <p>
      * The aggregating stage emits a single item for each completed window.
      *

@@ -45,10 +45,9 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation
 public interface StageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> {
 
     /**
-     * Attaches to this stage a stage that emits just the items that are
-     * distinct according to the grouping key (no two emitted items map to the
-     * same key). There is no guarantee among the items with the same key which
-     * one it will emit.
+     * Attaches a stage that emits just the items that are distinct according
+     * to the grouping key (no two emitted items map to the same key). There is
+     * no guarantee among the items with the same key which one it will emit.
      *
      * @return the newly attached stage
      */
@@ -56,12 +55,12 @@ public interface StageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> 
     BatchStage<T> distinct();
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * group-and-aggregate operation. For each distinct grouping key it
-     * observes in the input, it performs the supplied aggregate operation
-     * across all the items sharing that key. Once it has received all the
-     * items, it calls the supplied {@code mapToOutputFn} with each key and the
-     * associated aggregation result to create the items to emit.
+     * Attaches a stage that performs the given group-and-aggregate operation.
+     * For each distinct grouping key it observes in the input, it performs the
+     * supplied aggregate operation across all the items sharing that key. Once
+     * it has received all the items, it calls the supplied {@code mapToOutputFn}
+     * with each key and the associated aggregation result to create the items
+     * to emit.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      * @param aggrOp the aggregate operation to perform
@@ -76,11 +75,10 @@ public interface StageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> 
             @Nonnull DistributedBiFunction<? super K, ? super R, ? extends OUT> mapToOutputFn);
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * group-and-aggregate operation. It emits one key-value pair (in a {@code
-     * Map.Entry}) for each distinct key it observes in its input. The value
-     * is the result of the aggregate operation across all the items with the
-     * given grouping key.
+     * Attaches a stage that performs the given group-and-aggregate operation.
+     * It emits one key-value pair (in a {@code Map.Entry}) for each distinct
+     * key it observes in its input. The value is the result of the aggregate
+     * operation across all the items with the given grouping key.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      * @param aggrOp the aggregate operation to perform
@@ -95,13 +93,13 @@ public interface StageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> 
     }
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * cogroup-and-aggregate operation over the items from both this stage
-     * and {@code stage1} you supply. For each distinct grouping key it
-     * observes in the input, it performs the supplied aggregate operation
-     * across all the items sharing that key. Once it has received all the
-     * items, it calls the supplied {@code mapToOutputFn} with each key and
-     * the associated aggregation result to create the items to emit.
+     * Attaches a stage that performs the given cogroup-and-aggregate operation
+     * over the items from both this stage and {@code stage1} you supply. For
+     * each distinct grouping key it observes in the input, it performs the
+     * supplied aggregate operation across all the items sharing that key. Once
+     * it has received all the items, it calls the supplied {@code mapToOutputFn}
+     * with each key and the associated aggregation result to create the items
+     * to emit.
      * <p>
      * This variant requires you to provide a two-input aggregate operation
      * (refer to its {@linkplain AggregateOperation2 Javadoc} for a simple
@@ -128,12 +126,11 @@ public interface StageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> 
             @Nonnull DistributedBiFunction<? super K, ? super R, ? extends OUT> mapToOutputFn);
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * cogroup-and-aggregate operation over the items from both this stage
-     * and {@code stage1} you supply. It emits one key-value pair (in a {@code
-     * Map.Entry}) for each distinct key it observes in its input. The value
-     * is the result of the aggregate operation across all the items with the
-     * given grouping key.
+     * Attaches a stage that performs the given cogroup-and-aggregate operation
+     * over the items from both this stage and {@code stage1} you supply. It
+     * emits one key-value pair (in a {@code Map.Entry}) for each distinct key
+     * it observes in its input. The value is the result of the aggregate
+     * operation across all the items with the given grouping key.
      * <p>
      * This variant requires you to provide a two-input aggregate operation
      * (refer to its {@linkplain AggregateOperation2 Javadoc} for a simple
@@ -160,15 +157,15 @@ public interface StageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> 
     }
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * cogroup-and-aggregate transformation of the items from both this stage
-     * and {@code stage1} you supply. For each distinct grouping key it
-     * observes in the input, it performs the supplied aggregate operation
-     * across all the items sharing that key. It performs the aggregation
-     * separately for each input stage: {@code aggrOp0} on this stage and
-     * {@code aggrOp1} on {@code stage1}. Once it has received all the
-     * items, it calls the supplied {@code mapToOutputFn} with each key and
-     * the associated aggregation results to create the items to emit.
+     * Attaches a stage that performs the given cogroup-and-aggregate
+     * transformation of the items from both this stage and {@code stage1} you
+     * supply. For each distinct grouping key it observes in the input, it
+     * performs the supplied aggregate operation across all the items sharing
+     * that key. It performs the aggregation separately for each input stage:
+     * {@code aggrOp0} on this stage and {@code aggrOp1} on {@code stage1}.
+     * Once it has received all the items, it calls the supplied {@code
+     * mapToOutputFn} with each key and the associated aggregation results to
+     * create the items to emit.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      *
@@ -192,15 +189,14 @@ public interface StageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> 
     }
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * cogroup-and-aggregate transformation of the items from both this stage
-     * and {@code stage1} you supply. For each distinct grouping key it
-     * observes in the input, it performs the supplied aggregate operation
-     * across all the items sharing that key. It performs the aggregation
-     * separately for each input stage: {@code aggrOp0} on this stage and
-     * {@code aggrOp1} on {@code stage1}. Once it has received all the
-     * items, it emits for each distinct key a {@code Map.Entry(key,
-     * Tuple2(result0, result1))}.
+     * Attaches a stage that performs the given cogroup-and-aggregate
+     * transformation of the items from both this stage and {@code stage1}
+     * you supply. For each distinct grouping key it observes in the input, it
+     * performs the supplied aggregate operation across all the items sharing
+     * that key. It performs the aggregation separately for each input stage:
+     * {@code aggrOp0} on this stage and {@code aggrOp1} on {@code stage1}.
+     * Once it has received all the items, it emits for each distinct key a
+     * {@code Map.Entry(key, Tuple2(result0, result1))}.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      *
@@ -223,13 +219,13 @@ public interface StageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> 
     }
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * cogroup-and-aggregate operation over the items from this stage as well
-     * as {@code stage1} and {@code stage2} you supply. For each distinct
-     * grouping key it observes in the input, it performs the supplied
-     * aggregate operation across all the items sharing that key. Once it has
-     * received all the items, it calls the supplied {@code mapToOutputFn} with
-     * each key and the associated aggregation result to create the items to
+     * Attaches a stage that performs the given cogroup-and-aggregate operation
+     * over the items from this stage as well as {@code stage1} and {@code
+     * stage2} you supply. For each distinct grouping key it observes in the
+     * input, it performs the supplied aggregate operation across all the items
+     * sharing that key. Once it has received all the items, it calls the
+     * supplied {@code mapToOutputFn} with each key and the associated
+     * aggregation result to create the items to
      * emit.
      * <p>
      * This variant requires you to provide a three-input aggregate operation
@@ -261,12 +257,12 @@ public interface StageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> 
             @Nonnull DistributedBiFunction<? super K, ? super R, ? extends OUT> mapToOutputFn);
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * cogroup-and-aggregate operation over the items from this stage as well
-     * as {@code stage1} and {@code stage2} you supply. It emits one key-value
-     * pair (in a {@code Map.Entry}) for each distinct key it observes in its
-     * input. The value is the result of the aggregate operation across all the
-     * items with the given grouping key.
+     * Attaches a stage that performs the given cogroup-and-aggregate operation
+     * over the items from this stage as well as {@code stage1} and {@code
+     * stage2} you supply. It emits one key-value pair (in a {@code Map.Entry})
+     * for each distinct key it observes in its input. The value is the result
+     * of the aggregate operation across all the items with the given grouping
+     * key.
      * <p>
      * This variant requires you to provide a three-input aggregate operation
      * (refer to its {@linkplain AggregateOperation3 Javadoc} for a simple
@@ -297,14 +293,14 @@ public interface StageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> 
     }
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * cogroup-and-aggregate transformation of the items from this stage as
-     * well as {@code stage1} and {@code stage2} you supply. For each distinct
-     * grouping key it observes in the input, it performs the supplied
-     * aggregate operation across all the items sharing that key. It performs
-     * the aggregation separately for each input stage: {@code aggrOp0} on this
-     * stage, {@code aggrOp1} on {@code stage1} and {@code aggrOp2} on {@code
-     * stage2}. Once it has received all the items, it calls the supplied {@code
+     * Attaches a stage that performs the given cogroup-and-aggregate
+     * transformation of the items from this stage as well as {@code stage1}
+     * and {@code stage2} you supply. For each distinct grouping key it
+     * observes in the input, it performs the supplied aggregate operation
+     * across all the items sharing that key. It performs the aggregation
+     * separately for each input stage: {@code aggrOp0} on this stage, {@code
+     * aggrOp1} on {@code stage1} and {@code aggrOp2} on {@code stage2}. Once
+     * it has received all the items, it calls the supplied {@code
      * mapToOutputFn} with each key and the associated aggregation results to
      * create the items to emit.
      *
@@ -338,15 +334,15 @@ public interface StageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> 
     }
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * cogroup-and-aggregate transformation of the items from this stage as
-     * well as {@code stage1} and {@code stage2} you supply. For each distinct
-     * grouping key it observes in the input, it performs the supplied
-     * aggregate operation across all the items sharing that key. It performs
-     * the aggregation separately for each input stage: {@code aggrOp0} on this
-     * stage, {@code aggrOp1} on {@code stage1} and {@code aggrOp2} on {@code
-     * stage2}. Once it has received all the items, it emits for each distinct
-     * key a {@code Map.Entry(key, Tuple3(result0, result1, result2))}.
+     * Attaches a stage that performs the given cogroup-and-aggregate
+     * transformation of the items from this stage as well as {@code stage1}
+     * and {@code stage2} you supply. For each distinct grouping key it
+     * observes in the input, it performs the supplied aggregate operation
+     * across all the items sharing that key. It performs the aggregation
+     * separately for each input stage: {@code aggrOp0} on this stage, {@code
+     * aggrOp1} on {@code stage1} and {@code aggrOp2} on {@code stage2}. Once
+     * it has received all the items, it emits for each distinct key a {@code
+     * Map.Entry(key, Tuple3(result0, result1, result2))}.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      *

@@ -92,14 +92,13 @@ public interface StageWithGroupingAndWindow<T, K> {
     }
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * group-and-aggregate operation over the window described by the window
-     * definition captured by this object. For each distinct grouping key it
-     * observes in the input belonging to a given window, it performs the
-     * supplied aggregate operation across all the items sharing that key. Once
-     * it has received all the items, it calls the supplied {@code
-     * mapToOutputFn} with each key and the associated aggregation result to
-     * create the items to emit.
+     * Attaches a stage that performs the given group-and-aggregate operation
+     * over the window described by the window definition captured by this
+     * object. For each distinct grouping key it observes in the input
+     * belonging to a given window, it performs the supplied aggregate
+     * operation across all the items sharing that key. Once it has received
+     * all the items, it calls the supplied {@code mapToOutputFn} with each key
+     * and the associated aggregation result to create the items to emit.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      * @param aggrOp the aggregate operation to perform
@@ -116,11 +115,11 @@ public interface StageWithGroupingAndWindow<T, K> {
     );
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * group-and-aggregate operation. It emits one key-value pair (in a {@link
-     * TimestampedEntry}) for each distinct key it observes in its input
-     * belonging to a given window. The value is the result of the aggregate
-     * operation across all the items with the given grouping key.
+     * Attaches a stage that performs the given group-and-aggregate operation.
+     * It emits one key-value pair (in a {@link TimestampedEntry}) for each
+     * distinct key it observes in its input belonging to a given window. The
+     * value is the result of the aggregate operation across all the items with
+     * the given grouping key.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      * @param aggrOp the aggregate operation to perform
@@ -133,14 +132,13 @@ public interface StageWithGroupingAndWindow<T, K> {
     }
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * cogroup-and-aggregate operation over the items from both this stage
-     * and {@code stage1} you supply. For each distinct grouping key it
-     * observes in the input belonging to a given window, it performs the
-     * supplied aggregate operation across all the items sharing that key. Once
-     * it has received all the items, it calls the supplied {@code
-     * mapToOutputFn} with each key and the associated aggregation result to
-     * create the items to emit.
+     * Attaches a stage that performs the given cogroup-and-aggregate operation
+     * over the items from both this stage and {@code stage1} you supply. For
+     * each distinct grouping key it observes in the input belonging to a given
+     * window, it performs the supplied aggregate operation across all the items
+     * sharing that key. Once it has received all the items, it calls the
+     * supplied {@code mapToOutputFn} with each key and the associated
+     * aggregation result to create the items to emit.
      * <p>
      * This variant requires you to provide a two-input aggregate operation
      * (refer to its {@linkplain AggregateOperation2 Javadoc} for a simple
@@ -168,12 +166,12 @@ public interface StageWithGroupingAndWindow<T, K> {
     );
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * cogroup-and-aggregate operation over the items from both this stage
-     * and {@code stage1} you supply. It emits one key-value pair (in a {@link
-     * TimestampedEntry}) for each distinct key it observes in the input
-     * belonging to a given window. The value is the result of the aggregate
-     * operation across all the items with the given grouping key.
+     * Attaches a stage that performs the given cogroup-and-aggregate operation
+     * over the items from both this stage and {@code stage1} you supply. It
+     * emits one key-value pair (in a {@link TimestampedEntry}) for each
+     * distinct key it observes in the input belonging to a given window. The
+     * value is the result of the aggregate operation across all the items with
+     * the given grouping key.
      * <p>
      * This variant requires you to provide a two-input aggregate operation
      * (refer to its {@linkplain AggregateOperation2 Javadoc} for a simple
@@ -200,16 +198,15 @@ public interface StageWithGroupingAndWindow<T, K> {
     }
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * cogroup-and-aggregate operation over the items from both this stage
-     * and {@code stage1} you supply. For each distinct grouping key it
-     * observes in the input belonging to a given window, it performs the
-     * supplied aggregate operation across all the items sharing that key. It
-     * performs the aggregation separately for each input stage: {@code aggrOp0}
-     * on this stage and {@code aggrOp1} on {@code stage1}. Once it has
-     * received all the items belonging to a window, it calls the supplied
-     * {@code mapToOutputFn} with each key and the associated aggregation
-     * results to create the item to emit.
+     * Attaches a stage that performs the given cogroup-and-aggregate operation
+     * over the items from both this stage and {@code stage1} you supply. For
+     * each distinct grouping key it observes in the input belonging to a given
+     * window, it performs the supplied aggregate operation across all the
+     * items sharing that key. It performs the aggregation separately for each
+     * input stage: {@code aggrOp0} on this stage and {@code aggrOp1} on {@code
+     * stage1}. Once it has received all the items belonging to a window, it
+     * calls the supplied {@code mapToOutputFn} with each key and the
+     * associated aggregation results to create the item to emit.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      * @param aggrOp0 aggregate operation to perform on this stage
@@ -234,15 +231,15 @@ public interface StageWithGroupingAndWindow<T, K> {
     }
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * cogroup-and-aggregate operation over the items from both this stage
-     * and {@code stage1} you supply. For each distinct grouping key it
-     * observes in the input belonging to a given window, it performs the
-     * supplied aggregate operation across all the items sharing that key. It
-     * performs the aggregation separately for each input stage: {@code aggrOp0}
-     * on this stage and {@code aggrOp1} on {@code stage1}. Once it has
-     * received all the items belonging to a window, it emits for each distinct
-     * key a {@code TimestampedEntry(key, Tuple2(result0, result1))}.
+     * Attaches a stage that performs the given cogroup-and-aggregate operation
+     * over the items from both this stage and {@code stage1} you supply. For
+     * each distinct grouping key it observes in the input belonging to a given
+     * window, it performs the supplied aggregate operation across all the
+     * items sharing that key. It performs the aggregation separately for each
+     * input stage: {@code aggrOp0} on this stage and {@code aggrOp1} on {@code
+     * stage1}. Once it has received all the items belonging to a window, it
+     * emits for each distinct key a {@code TimestampedEntry(key, Tuple2(result0,
+     * result1))}.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      * @param aggrOp0 aggregate operation to perform on this stage
@@ -262,14 +259,14 @@ public interface StageWithGroupingAndWindow<T, K> {
     }
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * cogroup-and-aggregate operation over the items from this stage as well
-     * as {@code stage1} and {@code stage2} you supply. For each distinct
-     * grouping key it observes in the input belonging to a given window, it
-     * performs the supplied aggregate operation across all the items sharing
-     * that key. Once it has received all the items for a window, it calls the
-     * supplied {@code mapToOutputFn} with each key and the associated
-     * aggregation result to create the items to emit.
+     * Attaches a stage that performs the given cogroup-and-aggregate operation
+     * over the items from this stage as well as {@code stage1} and {@code
+     * stage2} you supply. For each distinct grouping key it observes in the
+     * input belonging to a given window, it performs the supplied aggregate
+     * operation across all the items sharing that key. Once it has received
+     * all the items for a window, it calls the supplied {@code mapToOutputFn}
+     * with each key and the associated aggregation result to create the items
+     * to emit.
      * <p>
      * This variant requires you to provide a three-input aggregate operation
      * (refer to its {@linkplain AggregateOperation3 Javadoc} for a simple
@@ -300,14 +297,13 @@ public interface StageWithGroupingAndWindow<T, K> {
             @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn);
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * cogroup-and-aggregate operation over the items from this stage as well
-     * as {@code stage1} and {@code stage2} you supply. For each distinct
-     * grouping key it observes in the input belonging to a given window, it
-     * performs the supplied aggregate operation across all the items sharing
-     * that key. Once it has received all the items belonging to a window, it
-     * emits for each distinct key a {@code
-     * TimestampedEntry(key, Tuple3(result0, result1, result2))}.
+     * Attaches a stage that performs the given cogroup-and-aggregate operation
+     * over the items from this stage as well as {@code stage1} and {@code
+     * stage2} you supply. For each distinct grouping key it observes in the
+     * input belonging to a given window, it performs the supplied aggregate
+     * operation across all the items sharing that key. Once it has received
+     * all the items belonging to a window, it emits for each distinct key a
+     * {@code TimestampedEntry(key, Tuple3(result0, result1, result2))}.
      * <p>
      * This variant requires you to provide a three-input aggregate operation
      * (refer to its {@linkplain AggregateOperation3 Javadoc} for a simple
@@ -339,16 +335,15 @@ public interface StageWithGroupingAndWindow<T, K> {
     }
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * cogroup-and-aggregate operation over the items from both this stage
-     * and {@code stage1} you supply. For each distinct grouping key it
-     * observes in the input belonging to a given window, it performs the
-     * supplied aggregate operation across all the items sharing that key.
-     * It performs the aggregation separately for each input stage: {@code
-     * aggrOp0} on this stage, {@code aggrOp1} on {@code stage1} and {@code
-     * aggrOp2} on {@code stage2}. Once it has received all the items, it calls
-     * the supplied {@code mapToOutputFn} with each key and the associated
-     * aggregation result to create the items to emit.
+     * Attaches a stage that performs the given cogroup-and-aggregate operation
+     * over the items from both this stage and {@code stage1} you supply. For
+     * each distinct grouping key it observes in the input belonging to a given
+     * window, it performs the supplied aggregate operation across all the
+     * items sharing that key. It performs the aggregation separately for each
+     * input stage: {@code aggrOp0} on this stage, {@code aggrOp1} on {@code
+     * stage1} and {@code aggrOp2} on {@code stage2}. Once it has received all
+     * the items, it calls the supplied {@code mapToOutputFn} with each key and
+     * the associated aggregation result to create the items to emit.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      * @param aggrOp0 aggregate operation to perform on this stage
@@ -380,16 +375,15 @@ public interface StageWithGroupingAndWindow<T, K> {
     }
 
     /**
-     * Attaches to this stage a stage that performs the given
-     * cogroup-and-aggregate operation over the items from both this stage
-     * and {@code stage1} you supply. For each distinct grouping key it
-     * observes in the input belonging to a given window, it performs the
-     * supplied aggregate operation across all the items sharing that key.
-     * It performs the aggregation separately for each input stage: {@code
-     * aggrOp0} on this stage, {@code aggrOp1} on {@code stage1} and {@code
-     * aggrOp2} on {@code stage2}. Once it has received all the items, it
-     * calls the supplied {@code mapToOutputFn} with each key and the
-     * associated aggregation result to create the items to emit.
+     * Attaches a stage that performs the given cogroup-and-aggregate operation
+     * over the items from both this stage and {@code stage1} you supply. For
+     * each distinct grouping key it observes in the input belonging to a given
+     * window, it performs the supplied aggregate operation across all the
+     * items sharing that key. It performs the aggregation separately for each
+     * input stage: {@code aggrOp0} on this stage, {@code aggrOp1} on {@code
+     * stage1} and {@code aggrOp2} on {@code stage2}. Once it has received all
+     * the items, it calls the supplied {@code mapToOutputFn} with each key and
+     * the associated aggregation result to create the items to emit.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      * @param aggrOp0 aggregate operation to perform on this stage

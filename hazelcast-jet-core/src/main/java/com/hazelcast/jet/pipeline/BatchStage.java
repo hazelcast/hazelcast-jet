@@ -83,10 +83,9 @@ public interface BatchStage<T> extends GeneralStage<T> {
     );
 
     /**
-     * Attaches to this stage a stage that emits just the items that are
-     * distinct according to their definition of equality ({@code equals} and
-     * {@code hashCode}). There is no guarantee among equal items which one
-     * it will emit.
+     * Attaches a stage that emits just the items that are distinct according
+     * to their definition of equality ({@code equals} and {@code hashCode}).
+     * There is no guarantee among equal items which one it will emit.
      *
      * @return the newly attached stage
      */
@@ -96,10 +95,9 @@ public interface BatchStage<T> extends GeneralStage<T> {
     }
 
     /**
-     * Attaches to this stage a stage that emits all the items from this
-     * stage as well as all the items from the supplied stage. The other
-     * stage's type parameter must be assignment-compatible with this stage's
-     * type parameter.
+     * Attaches a stage that emits all the items from this stage as well as all
+     * the items from the supplied stage. The other stage's type parameter must
+     * be assignment-compatible with this stage's type parameter.
      *
      * @param other the other stage whose data to merge into this one
      * @return the newly attached stage
@@ -129,8 +127,8 @@ public interface BatchStage<T> extends GeneralStage<T> {
     }
 
     /**
-     * Attaches to this stage a stage that performs the given aggregate operation
-     * over all the items it receives. The aggregating stage emits a single item.
+     * Attaches a stage that performs the given aggregate operation over all
+     * the items it receives. The aggregating stage emits a single item.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      * @param aggrOp the aggregate operation to perform
@@ -143,17 +141,17 @@ public interface BatchStage<T> extends GeneralStage<T> {
     );
 
     /**
-     * Attaches to this stage a stage that performs the given aggregate
-     * operation over all the items it receives from both this stage and {@code
-     * stage1} you supply. This variant requires you to provide a two-input
-     * aggregate operation (refer to its {@linkplain AggregateOperation2
-     * Javadoc} for a simple example). If you can express your logic in terms
-     * of two single-input aggregate operations, one for each input stream,
-     * then you should use {@link #aggregate2(AggregateOperation1, BatchStage,
-     * AggregateOperation1) stage0.aggregate2(aggrOp0, stage1, aggrOp1)} because
-     * it offers a simpler API and you can use the already defined single-input
-     * operations. Use this variant only when you have the need to implement an
-     * aggregate operation that combines the input streams into the same
+     * Attaches a stage that performs the given aggregate operation over all
+     * the items it receives from both this stage and {@code stage1} you supply.
+     * This variant requires you to provide a two-input aggregate operation
+     * (refer to its {@linkplain AggregateOperation2 Javadoc} for a simple
+     * example). If you can express your logic in terms of two single-input
+     * aggregate operations, one for each input stream, then you should use
+     * {@link #aggregate2(AggregateOperation1, BatchStage, AggregateOperation1)
+     * stage0.aggregate2(aggrOp0, stage1, aggrOp1)} because it offers a simpler
+     * API and you can use the already defined single-input operations. Use
+     * this variant only when you have the need to implement an aggregate
+     * operation that combines the input streams into the same
      * accumulator.
      * <p>
      * The returned stage emits a single item.
@@ -170,10 +168,10 @@ public interface BatchStage<T> extends GeneralStage<T> {
             @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp);
 
     /**
-     * Attaches to this stage a stage that co-aggregates the data from this
-     * and the supplied stage by performing a separate aggregate operation
-     * on each and then passing both results to {@code mapToOutputFn}, which
-     * transforms them into the final output.
+     * Attaches a stage that co-aggregates the data from this and the supplied
+     * stage by performing a separate aggregate operation on each and then
+     * passing both results to {@code mapToOutputFn}, which transforms them
+     * into the final output.
      * <p>
      * The returned stage emits a single item.
      *
@@ -197,9 +195,9 @@ public interface BatchStage<T> extends GeneralStage<T> {
     }
 
     /**
-     * Attaches to this stage a stage that co-aggregates the data from this
-     * and the supplied stage by performing a separate aggregate operation
-     * on each and emitting a {@link Tuple2} with their results.
+     * Attaches a stage that co-aggregates the data from this and the supplied
+     * stage by performing a separate aggregate operation on each and emitting
+     * a {@link Tuple2} with their results.
      * <p>
      * The returned stage emits a single item.
      *
@@ -220,10 +218,10 @@ public interface BatchStage<T> extends GeneralStage<T> {
     }
 
     /**
-     * Attaches to this stage a stage that performs the given aggregate
-     * operation over all the items it receives from this stage as well as
-     * {@code stage1} and {@code stage2} you supply. This variant requires you
-     * to provide a three-input aggregate operation (refer to its {@linkplain
+     * Attaches a stage that performs the given aggregate operation over all
+     * the items it receives from this stage as well as {@code stage1} and
+     * {@code stage2} you supply. This variant requires you to provide a
+     * three-input aggregate operation (refer to its {@linkplain
      * AggregateOperation3 Javadoc} for a simple example). If you can express
      * your logic in terms of two single-input aggregate operations, one for
      * each input stream, then you should use {@link #aggregate3(
@@ -250,10 +248,10 @@ public interface BatchStage<T> extends GeneralStage<T> {
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp);
 
     /**
-     * Attaches to this stage a stage that co-aggregates the data from this
-     * and the two supplied stages by performing a separate aggregate operation
-     * on each and then passing all three results to {@code mapToOutputFn},
-     * which transforms them into the final output.
+     * Attaches a stage that co-aggregates the data from this and the two
+     * supplied stages by performing a separate aggregate operation on each and
+     * then passing all three results to {@code mapToOutputFn}, which
+     * transforms them into the final output.
      * <p>
      * The returned stage emits a single item.
      *
@@ -283,9 +281,9 @@ public interface BatchStage<T> extends GeneralStage<T> {
     }
 
     /**
-     * Attaches to this stage a stage that co-aggregates the data from this
-     * and the two supplied stages by performing a separate aggregate operation
-     * on each and emitting a {@link Tuple3} with their results.
+     * Attaches a stage that co-aggregates the data from this and the two
+     * supplied stages by performing a separate aggregate operation on each and
+     * emitting a {@link Tuple3} with their results.
      * <p>
      * The returned stage emits a single item.
      *

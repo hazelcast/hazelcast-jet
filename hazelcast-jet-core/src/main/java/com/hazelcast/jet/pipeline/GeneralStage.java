@@ -368,11 +368,11 @@ public interface GeneralStage<T> extends Stage {
     }
 
     /**
-     * Attaches to this stage a stage with a custom transform based on the
-     * provided supplier of Core API {@link Processor}s. To be compatible with
-     * the rest of the pipeline, the processor must expect a single inbound
-     * edge and arbitrarily many outbound edges, and it must push the same data
-     * to all outbound edges.
+     * Attaches a stage with a custom transform based on the provided supplier
+     * of Core API {@link Processor}s. To be compatible with the rest of the
+     * pipeline, the processor must expect a single inbound edge and
+     * arbitrarily many outbound edges, and it must push the same data to all
+     * outbound edges.
      * <p>
      * Note that the returned stage's type parameter is inferred from the call
      * site and not propagated from the processor that will produce the result,
