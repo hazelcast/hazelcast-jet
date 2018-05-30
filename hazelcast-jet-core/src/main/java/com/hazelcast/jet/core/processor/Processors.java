@@ -907,6 +907,14 @@ public final class Processors {
     }
 
     @Nonnull
+    public static <T, K, R> DistributedSupplier<Processor> rollingAggregation(
+            @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
+            @Nonnull AggregateOperation1<? super T, ?, R> aggrOp
+    ) {
+        return rollingAggregation(keyFn, aggrOp, Util::entry);
+    }
+
+    @Nonnull
     public static <T, K, R, OUT> DistributedSupplier<Processor> rollingAggregation(
             @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
             @Nonnull AggregateOperation1<? super T, ?, R> aggrOp,

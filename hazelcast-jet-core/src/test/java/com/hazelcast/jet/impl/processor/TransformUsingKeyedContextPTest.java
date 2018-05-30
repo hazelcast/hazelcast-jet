@@ -32,6 +32,7 @@ import java.util.stream.LongStream;
 
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static java.util.Arrays.asList;
 
 @Category(ParallelTest.class)
@@ -112,6 +113,26 @@ public class TransformUsingKeyedContextPTest {
                            entry("b", 1L),
                            entry("b", 2L),
                            entry("b", 3L)
+                   ));
+    }
+
+    @Test
+    public void test_rollingAggregation() {
+        DistributedSupplier<Processor> supplier = Processors.<Entry<String, Long>, String, Long>rollingAggregation(
+                Entry::getKey, summingLong(Entry::getValue));
+
+        TestSupport.verifyProcessor(supplier)
+                   .input(asList(
+                           entry("a", 1L),
+                           entry("b", 2L),
+                           entry("a", 3L),
+                           entry("b", 4L)
+                   ))
+                   .expectOutput(asList(
+                           entry("a", 1L),
+                           entry("b", 2L),
+                           entry("a", 4L),
+                           entry("b", 6L)
                    ));
     }
 }
