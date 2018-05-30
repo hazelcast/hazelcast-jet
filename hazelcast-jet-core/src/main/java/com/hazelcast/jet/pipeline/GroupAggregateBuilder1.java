@@ -35,10 +35,10 @@ import java.util.Map.Entry;
  * @param <K> type of the grouping key
  */
 public class GroupAggregateBuilder1<T0, K> {
-    private final GrAggBuilder<K> graggBuilder;
+    private final GrAggBuilder<K> grAggBuilder;
 
     GroupAggregateBuilder1(@Nonnull StageWithGrouping<T0, K> s) {
-        graggBuilder = new GrAggBuilder<>(s);
+        grAggBuilder = new GrAggBuilder<>(s);
     }
 
     /**
@@ -61,7 +61,7 @@ public class GroupAggregateBuilder1<T0, K> {
     @Nonnull
     @SuppressWarnings("unchecked")
     public <T> Tag<T> add(@Nonnull StageWithGrouping<T, K> stage) {
-        return graggBuilder.add(stage);
+        return grAggBuilder.add(stage);
     }
 
     /**
@@ -80,7 +80,7 @@ public class GroupAggregateBuilder1<T0, K> {
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        return graggBuilder.buildBatch(aggrOp, mapToOutputFn);
+        return grAggBuilder.buildBatch(aggrOp, mapToOutputFn);
     }
 
     /**
@@ -96,6 +96,6 @@ public class GroupAggregateBuilder1<T0, K> {
     public <A, R> BatchStage<Entry<K, R>> build(
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
-        return graggBuilder.buildBatch(aggrOp, Util::entry);
+        return grAggBuilder.buildBatch(aggrOp, Util::entry);
     }
 }

@@ -41,14 +41,14 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperati
  */
 public class WindowGroupAggregateBuilder<K, R0> {
     private final GrAggBuilder<K> grAggBuilder;
-    private final CoAggregateOperationBuilder aggropBuilder = coAggregateOperationBuilder();
+    private final CoAggregateOperationBuilder aggrOpBuilder = coAggregateOperationBuilder();
 
     <T0> WindowGroupAggregateBuilder(
             @Nonnull StageWithGroupingAndWindow<T0, K> stage0,
             @Nonnull AggregateOperation1<? super T0, ?, ? extends R0> aggrOp0
     ) {
         grAggBuilder = new GrAggBuilder<>(stage0);
-        aggropBuilder.add(Tag.tag0(), aggrOp0);
+        aggrOpBuilder.add(Tag.tag0(), aggrOp0);
     }
 
     /**
@@ -74,7 +74,7 @@ public class WindowGroupAggregateBuilder<K, R0> {
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     ) {
         Tag<T> tag = grAggBuilder.add(stage);
-        return aggropBuilder.add(tag, aggrOp);
+        return aggrOpBuilder.add(tag, aggrOp);
     }
 
     /**
@@ -93,7 +93,7 @@ public class WindowGroupAggregateBuilder<K, R0> {
     public <OUT> StreamStage<OUT> build(
             @Nonnull KeyedWindowResultFunction<? super K, ItemsByTag, OUT> mapToOutputFn
     ) {
-        AggregateOperation<Object[], ItemsByTag> aggrOp = aggropBuilder.build();
+        AggregateOperation<Object[], ItemsByTag> aggrOp = aggrOpBuilder.build();
         return grAggBuilder.buildStream(aggrOp, mapToOutputFn);
     }
 

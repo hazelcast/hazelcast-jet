@@ -42,7 +42,7 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperati
  */
 public class WindowAggregateBuilder<R0> {
     private final AggBuilder aggBuilder;
-    private final CoAggregateOperationBuilder aggropBuilder = coAggregateOperationBuilder();
+    private final CoAggregateOperationBuilder aggrOpBuilder = coAggregateOperationBuilder();
 
     <T0> WindowAggregateBuilder(
             @Nonnull StreamStage<T0> s,
@@ -50,7 +50,7 @@ public class WindowAggregateBuilder<R0> {
             @Nonnull WindowDefinition wDef
     ) {
         aggBuilder = new AggBuilder(s, wDef);
-        aggropBuilder.add(Tag.tag0(), aggrOp0);
+        aggrOpBuilder.add(Tag.tag0(), aggrOp0);
     }
 
     /**
@@ -76,7 +76,7 @@ public class WindowAggregateBuilder<R0> {
             AggregateOperation1<? super T, ?, ? extends R> aggrOp
     ) {
         Tag<T> tag = aggBuilder.add(stage);
-        return aggropBuilder.add(tag, aggrOp);
+        return aggrOpBuilder.add(tag, aggrOp);
     }
 
     /**
@@ -97,7 +97,7 @@ public class WindowAggregateBuilder<R0> {
     public <OUT> StreamStage<OUT> build(
             @Nonnull WindowResultFunction<? super ItemsByTag, ? extends OUT> mapToOutputFn
     ) {
-        AggregateOperation<Object[], ItemsByTag> aggrOp = aggropBuilder.build();
+        AggregateOperation<Object[], ItemsByTag> aggrOp = aggrOpBuilder.build();
         CreateOutStageFn<OUT, StreamStage<OUT>> createOutStageFn = StreamStageImpl::new;
         return aggBuilder.build(aggrOp, createOutStageFn, mapToOutputFn);
     }
