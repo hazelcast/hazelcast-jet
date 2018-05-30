@@ -33,6 +33,8 @@ import com.hazelcast.jet.function.DistributedTriFunction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import java.util.HashSet;
+
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
@@ -92,7 +94,10 @@ public interface BatchStage<T> extends GeneralStage<T> {
      * @return the newly attached stage
      */
     @Nonnull
-    <K> BatchStage<T> distinctBy(DistributedFunction<? super T, ? extends K> keyFn);
+    default <K> BatchStage<T> distinctBy(DistributedFunction<? super T, ? extends K> keyFn) {
+        return filterUsingContext(ContextFactory.withCreateFn(
+                jet -> new HashSet<>()), (ctx, item) -> ctx.add(keyFn.apply(item)));
+    }
 
     /**
      * Attaches to this stage a stage that emits just the items that are

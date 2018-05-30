@@ -33,6 +33,7 @@ import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToDoubleFunction;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.function.DistributedTriFunction;
+import com.hazelcast.jet.pipeline.StageWithWindow;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -978,10 +979,11 @@ public final class AggregateOperations {
      * Returns an aggregate operation whose result is an arbitrary item it
      * observed, or {@code null} if it observed no items.
      * <p>
-     * You can use it to implement <em>distinct</em> operation: you group by
-     * the desired key and the value will be any object with that key. For
-     * example, extract distinct last name from a list of persons. The result
-     * will be a stream of Person objects, one for each distinct last name:
+     * The implementation of {@link StageWithWindow#distinct()} uses this
+     * operation and, if needed, you can use it directly for the same purpose.
+     * For example, in a stream of Person objects you can specify the last name
+     * as the key. The result will be a stream of Person objects, one for each
+     * distinct last name:
      * <pre>
      *     Pipeline p = Pipeline.create();
      *     p.&lt;Person>drawFrom(list("persons"))
