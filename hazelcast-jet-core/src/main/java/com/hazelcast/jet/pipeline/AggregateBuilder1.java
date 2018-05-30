@@ -45,6 +45,7 @@ public class AggregateBuilder1<T0> {
      * the {@code AggregateOperation} that you'll pass to {@link #build
      * build(aggrOp)}.
      */
+    @Nonnull
     public Tag<T0> tag0() {
         return Tag.tag0();
     }
@@ -55,6 +56,7 @@ public class AggregateBuilder1<T0> {
      * stage when building the {@code AggregateOperation} that you'll pass to
      * {@link #build build()}.
      */
+    @Nonnull
     public <T> Tag<T> add(@Nonnull BatchStage<T> stage) {
         return aggBuilder.add(stage);
     }
@@ -71,6 +73,7 @@ public class AggregateBuilder1<T0> {
      * @param <R> type of the output item
      * @return a new stage representing the co-aggregation
      */
+    @Nonnull
     @SuppressWarnings("unchecked")
     public <A, R> BatchStage<R> build(@Nonnull AggregateOperation<A, R> aggrOp) {
         CreateOutStageFn<R, BatchStage<R>> createOutStageFn = BatchStageImpl::new;

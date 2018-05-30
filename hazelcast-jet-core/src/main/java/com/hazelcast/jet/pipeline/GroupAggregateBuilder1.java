@@ -47,6 +47,7 @@ public class GroupAggregateBuilder1<T0, K> {
      * the {@code AggregateOperation} that you'll pass to {@link #build
      * build(aggrOp)}.
      */
+    @Nonnull
     public Tag<T0> tag0() {
         return Tag.tag0();
     }
@@ -57,6 +58,7 @@ public class GroupAggregateBuilder1<T0, K> {
      * stage when building the {@code AggregateOperation} that you'll pass to
      * {@link #build build()}.
      */
+    @Nonnull
     @SuppressWarnings("unchecked")
     public <T> Tag<T> add(@Nonnull StageWithGrouping<T, K> stage) {
         return graggBuilder.add(stage);
@@ -73,6 +75,7 @@ public class GroupAggregateBuilder1<T0, K> {
      * @param <R> the type of the output item
      * @return a new stage representing the co-aggregation
      */
+    @Nonnull
     public <A, R, OUT> BatchStage<OUT> build(
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
@@ -89,6 +92,7 @@ public class GroupAggregateBuilder1<T0, K> {
      * @param <R> the type of the aggregation result
      * @return a new stage representing the co-group-and-aggregate operation
      */
+    @Nonnull
     public <A, R> BatchStage<Entry<K, R>> build(
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {

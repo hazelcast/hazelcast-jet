@@ -57,6 +57,7 @@ public class GroupAggregateBuilder<K, R0> {
      * the {@code AggregateOperation} that you'll pass to {@link #build
      * build(aggrOp)}.
      */
+    @Nonnull
     public Tag<R0> tag0() {
         return Tag.tag0();
     }
@@ -67,6 +68,7 @@ public class GroupAggregateBuilder<K, R0> {
      * stage when building the {@code AggregateOperation} that you'll pass to
      * {@link #build build()}.
      */
+    @Nonnull
     public <T, R> Tag<R> add(
             @Nonnull StageWithGrouping<T, K> stage,
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
@@ -87,6 +89,7 @@ public class GroupAggregateBuilder<K, R0> {
      * @param mapToOutputFn function that transforms the aggregation result into the output item
      * @param <OUT> the output item type
      */
+    @Nonnull
     public <OUT> BatchStage<OUT> build(
             @Nonnull DistributedBiFunction<? super K, ItemsByTag, OUT> mapToOutputFn
     ) {
@@ -104,6 +107,7 @@ public class GroupAggregateBuilder<K, R0> {
      *
      * @return a new stage representing the co-aggregation
      */
+    @Nonnull
     public BatchStage<Entry<K, ItemsByTag>> build() {
         return build(Util::entry);
     }

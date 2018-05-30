@@ -44,7 +44,7 @@ import javax.annotation.Nonnull;
 public class WindowGroupAggregateBuilder1<T0, K> {
     private final GrAggBuilder<K> grAggBuilder;
 
-    WindowGroupAggregateBuilder1(StageWithGroupingAndWindow<T0, K> s) {
+    WindowGroupAggregateBuilder1(@Nonnull StageWithGroupingAndWindow<T0, K> s) {
         grAggBuilder = new GrAggBuilder<>(s);
     }
 
@@ -54,6 +54,7 @@ public class WindowGroupAggregateBuilder1<T0, K> {
      * the {@code AggregateOperation} that you'll pass to {@link #build
      * build(aggrOp)}.
      */
+    @Nonnull
     public Tag<T0> tag0() {
         return Tag.tag0();
     }
@@ -64,7 +65,8 @@ public class WindowGroupAggregateBuilder1<T0, K> {
      * to refer to this stage when building the {@code AggregateOperation} that
      * you'll pass to {@link #build build()}.
      */
-    public <T> Tag<T> add(StreamStageWithGrouping<T, K> stage) {
+    @Nonnull
+    public <T> Tag<T> add(@Nonnull StreamStageWithGrouping<T, K> stage) {
         return grAggBuilder.add(stage);
     }
 
@@ -82,6 +84,7 @@ public class WindowGroupAggregateBuilder1<T0, K> {
      * @param <OUT>         the type of the output item
      * @return a new stage representing the co-aggregation
      */
+    @Nonnull
     public <A, R, OUT> StreamStage<OUT> build(
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
@@ -94,6 +97,7 @@ public class WindowGroupAggregateBuilder1<T0, K> {
      * which results in a stage that emits {@link TimestampedEntry}s. The timestamp
      * of the entry corresponds to the timestamp of the window's end.
      */
+    @Nonnull
     public <A, R> StreamStage<TimestampedEntry<K, R>> build(
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {

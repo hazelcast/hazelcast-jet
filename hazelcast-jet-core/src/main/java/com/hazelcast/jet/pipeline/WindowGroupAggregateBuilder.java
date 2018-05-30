@@ -44,8 +44,8 @@ public class WindowGroupAggregateBuilder<K, R0> {
     private final CoAggregateOperationBuilder aggropBuilder = coAggregateOperationBuilder();
 
     <T0> WindowGroupAggregateBuilder(
-            StageWithGroupingAndWindow<T0, K> stage0,
-            AggregateOperation1<? super T0, ?, ? extends R0> aggrOp0
+            @Nonnull StageWithGroupingAndWindow<T0, K> stage0,
+            @Nonnull AggregateOperation1<? super T0, ?, ? extends R0> aggrOp0
     ) {
         grAggBuilder = new GrAggBuilder<>(stage0);
         aggropBuilder.add(Tag.tag0(), aggrOp0);
@@ -57,6 +57,7 @@ public class WindowGroupAggregateBuilder<K, R0> {
      * the {@code AggregateOperation} that you'll pass to {@link #build
      * build(aggrOp)}.
      */
+    @Nonnull
     public Tag<R0> tag0() {
         return Tag.tag0();
     }
@@ -67,9 +68,10 @@ public class WindowGroupAggregateBuilder<K, R0> {
      * to refer to this stage when building the {@code AggregateOperation} that
      * you'll pass to {@link #build build()}.
      */
+    @Nonnull
     public <T, R> Tag<R> add(
-            StreamStageWithGrouping<T, K> stage,
-            AggregateOperation1<? super T, ?, ? extends R> aggrOp
+            @Nonnull StreamStageWithGrouping<T, K> stage,
+            @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     ) {
         Tag<T> tag = grAggBuilder.add(stage);
         return aggropBuilder.add(tag, aggrOp);
@@ -87,6 +89,7 @@ public class WindowGroupAggregateBuilder<K, R0> {
      * @param mapToOutputFn function that transforms the aggregation result into the output item
      * @param <OUT> the output item type
      */
+    @Nonnull
     public <OUT> StreamStage<OUT> build(
             @Nonnull KeyedWindowResultFunction<? super K, ItemsByTag, OUT> mapToOutputFn
     ) {
@@ -99,6 +102,7 @@ public class WindowGroupAggregateBuilder<K, R0> {
      * in a stage that emits {@link TimestampedEntry}s. The timestamp of the
      * entry corresponds to the timestamp of the window's end.
      */
+    @Nonnull
     public StreamStage<TimestampedEntry<K, ItemsByTag>> build() {
         return build(TimestampedEntry::new);
     }

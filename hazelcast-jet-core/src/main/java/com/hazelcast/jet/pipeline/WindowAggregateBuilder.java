@@ -59,6 +59,7 @@ public class WindowAggregateBuilder<R0> {
      * the {@code AggregateOperation} that you'll pass to {@link #build
      * build(aggrOp)}.
      */
+    @Nonnull
     public Tag<R0> tag0() {
         return Tag.tag0();
     }
@@ -69,6 +70,7 @@ public class WindowAggregateBuilder<R0> {
      * stage when building the {@code AggregateOperation} that you'll pass to
      * {@link #build build()}.
      */
+    @Nonnull
     public <T, R> Tag<R> add(
             StreamStage<T> stage,
             AggregateOperation1<? super T, ?, ? extends R> aggrOp
@@ -91,6 +93,7 @@ public class WindowAggregateBuilder<R0> {
      *
      * @return a new stage representing the co-aggregation
      */
+    @Nonnull
     public <OUT> StreamStage<OUT> build(
             @Nonnull WindowResultFunction<? super ItemsByTag, ? extends OUT> mapToOutputFn
     ) {
@@ -106,6 +109,7 @@ public class WindowAggregateBuilder<R0> {
      *
      * @return a new stage representing the cogroup-and-aggregate operation
      */
+    @Nonnull
     public StreamStage<TimestampedItem<ItemsByTag>> build() {
         return build(TimestampedItem::new);
     }
