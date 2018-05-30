@@ -40,11 +40,11 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperati
  */
 public class AggregateBuilder<R0> {
     private final AggBuilder aggBuilder;
-    private final CoAggregateOperationBuilder aggropBuilder = coAggregateOperationBuilder();
+    private final CoAggregateOperationBuilder aggrOpBuilder = coAggregateOperationBuilder();
 
     <T0> AggregateBuilder(@Nonnull BatchStage<T0> s, @Nonnull AggregateOperation1<? super T0, ?, ? extends R0> aggrOp) {
         aggBuilder = new AggBuilder(s, null);
-        aggropBuilder.add(Tag.tag0(), aggrOp);
+        aggrOpBuilder.add(Tag.tag0(), aggrOp);
     }
 
     /**
@@ -70,7 +70,7 @@ public class AggregateBuilder<R0> {
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     ) {
         Tag<T> tag = aggBuilder.add(stage);
-        return aggropBuilder.add(tag, aggrOp);
+        return aggrOpBuilder.add(tag, aggrOp);
     }
 
     /**
@@ -91,7 +91,7 @@ public class AggregateBuilder<R0> {
     public <R> BatchStage<R> build(
             @Nonnull DistributedFunction<? super ItemsByTag, ? extends R> finishFn
     ) {
-        AggregateOperation<Object[], R> aggrOp = aggropBuilder.build(finishFn);
+        AggregateOperation<Object[], R> aggrOp = aggrOpBuilder.build(finishFn);
         CreateOutStageFn<R, BatchStage<R>> createOutStageFn = BatchStageImpl::new;
         return aggBuilder.build(aggrOp, createOutStageFn, null);
     }
@@ -107,7 +107,7 @@ public class AggregateBuilder<R0> {
      */
     @Nonnull
     public BatchStage<ItemsByTag> build() {
-        AggregateOperation<Object[], ItemsByTag> aggrOp = aggropBuilder.build();
+        AggregateOperation<Object[], ItemsByTag> aggrOp = aggrOpBuilder.build();
         CreateOutStageFn<ItemsByTag, BatchStage<ItemsByTag>> createOutStageFn = BatchStageImpl::new;
         return aggBuilder.build(aggrOp, createOutStageFn, null);
     }

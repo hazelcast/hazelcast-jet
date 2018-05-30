@@ -101,7 +101,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void distinctBy_withOutputFn() {
+    public void distinct_withOutputFn() {
         // Given
         int winSize = itemCount;
         DistributedFunction<Integer, Integer> keyFn = i -> i / 2;

@@ -261,7 +261,7 @@ public class BatchStageTest extends PipelineTestSupport {
     }
 
     @Test
-    public void distinctBy() {
+    public void distinct() {
         // Given
         DistributedFunction<Integer, Integer> keyFn = i -> i / 2;
         List<Integer> input = IntStream.range(0, 2 * itemCount).boxed().collect(toList());

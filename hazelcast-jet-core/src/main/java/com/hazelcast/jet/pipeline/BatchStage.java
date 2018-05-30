@@ -83,7 +83,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
     /**
      * Attaches a stage that emits just the items that are distinct according
      * to their definition of equality ({@code equals} and {@code hashCode}).
-     * There is no guarantee among equal items which one it will emit.
+     * There is no guarantee which one of equal items it will emit.
      *
      * @return the newly attached stage
      */

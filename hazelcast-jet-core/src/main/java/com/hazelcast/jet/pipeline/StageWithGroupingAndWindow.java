@@ -79,9 +79,9 @@ public interface StageWithGroupingAndWindow<T, K> {
     /**
      * Attaches a stage that passes through just the items that are distinct
      * within their window according to the grouping key (no two items emitted
-     * for a window map to the same key). There is no guarantee among the items
-     * with the same key which one it will pass through. The stage emits
-     * results in the form of {@link TimestampedItem TimestampedItem(windowEnd,
+     * for a window map to the same key). There is no guarantee which one of
+     * the items with the same key will pass through. The stage emits results
+     * in the form of {@link TimestampedItem TimestampedItem(windowEnd,
      * distinctItem)}.
      *
      * @return the newly attached stage

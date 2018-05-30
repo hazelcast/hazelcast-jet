@@ -44,8 +44,9 @@ public interface StageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> 
 
     /**
      * Attaches a stage that emits just the items that are distinct according
-     * to the grouping key (no two emitted items map to the same key). There is
-     * no guarantee among the items with the same key which one it will emit.
+     * to the grouping key (no two items which map to the same key will be on
+     * the output). There is no guarantee which one of the items with the same
+     * key it will emit.
      *
      * @return the newly attached stage
      */

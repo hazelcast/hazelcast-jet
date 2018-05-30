@@ -89,7 +89,7 @@ public interface StageWithWindow<T> {
     /**
      * Attaches a stage that passes through just the items that are distinct
      * within their window (no two items emitted for a window are equal). There
-     * is no guarantee among the items with the same key which one it will pass
+     * is no guarantee which one of the items with the same key will pass
      * through. The stage emits results in the form of {@link TimestampedItem
      * TimestampedItem(windowEnd, distinctItem)}.
      *
