@@ -130,7 +130,8 @@ public final class JmsSinkBuilder<T> {
      * Sets the function which creates the message from the item.
      * <p>
      * If not provided, the builder creates a function which wraps {@code
-     * item.toString()} into a {@link javax.jms.TextMessage}.
+     * item.toString()} into a {@link javax.jms.TextMessage}, unless the item
+     * is already an instance of {@code javax.jms.Message}.
      */
     public JmsSinkBuilder<T> messageFn(DistributedBiFunction<Session, T, Message> messageFn) {
         this.messageFn = messageFn;

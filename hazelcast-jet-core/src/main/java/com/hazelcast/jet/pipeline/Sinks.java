@@ -637,43 +637,6 @@ public final class Sinks {
     /**
      * Returns a builder object that offers a step-by-step fluent API to build
      * a custom JMS queue sink for the Pipeline API.
-     * <p>
-     * These are the callback functions you can provide to implement the sink's
-     * behavior:
-     * <ol><li>
-     *     {@code factorySupplier} creates the connection factory. This
-     *     component is required.
-     * </li><li>
-     *     {@code destinationName} sets the name of the destination. This
-     *     component is required.
-     * </li><li>
-     *     {@code connectionFn} creates the connection. This component is
-     *     optional; if not provided, the builder creates a function which uses
-     *     {@code ConnectionFactory#createConnection(username, password)} to
-     *     create the connection. See {@link
-     *     JmsSinkBuilder#connectionParams(String, String)}.
-     * </li><li>
-     *     {@code sessionFn} creates the session. This component is optional;
-     *     if not provided, the builder creates a function which uses {@code
-     *     Connection#createSession(boolean transacted, int acknowledgeMode)}
-     *     to create the session. See {@link
-     *     JmsSinkBuilder#sessionParams(boolean, int)}.
-     * </li><li>
-     *     {@code messageFn} creates the message from the item. This component is
-     *     optional; if not provided, the builder creates a function that wraps {@code
-     *     item.toString()} into a {@link javax.jms.TextMessage}, unless the item is
-     *     an instance of {@code javax.jms.Message}.
-     * </li><li>
-     *     {@code sendFn} sends the message via message producer. This component
-     *     is optional; if not provided, the builder creates a function which sends
-     *     the message using {@code MessageProducer#send(Message message)}.
-     * </li><li>
-     *     {@code flushFn} flushes the session. This component is optional; if
-     *     not provided, the builder creates a no-op consumer.
-     * </li><li>
-     *     {@code topic} sets that the destination is a topic. This call is
-     *     optional; if not called, the builder treats the destination as a queue.
-     * </li></ol>
      *
      * @param <T> type of the items the sink accepts
      */
@@ -705,43 +668,6 @@ public final class Sinks {
     /**
      * Returns a builder object that offers a step-by-step fluent API to build
      * a custom JMS topic sink for the Pipeline API.
-     * <p>
-     * These are the callback functions you can provide to implement the sink's
-     * behavior:
-     * <ol><li>
-     *     {@code factorySupplier} creates the connection factory. This
-     *     component is required.
-     * </li><li>
-     *     {@code destinationName} sets the name of the destination. This
-     *     component is required.
-     * </li><li>
-     *     {@code connectionFn} creates the connection. This component is
-     *     optional; if not provided, the builder creates a function which uses
-     *     {@code ConnectionFactory#createConnection(username, password)} to
-     *     create the connection. See {@link
-     *     JmsSinkBuilder#connectionParams(String, String)}.
-     * </li><li>
-     *     {@code sessionFn} creates the session. This component is optional;
-     *     if not provided, the builder creates a function which uses {@code
-     *     Connection#createSession(boolean transacted, int acknowledgeMode)}
-     *     to create the session. See {@link
-     *     JmsSinkBuilder#sessionParams(boolean, int)}.
-     * </li><li>
-     *     {@code messageFn} creates the message from the item. This component is
-     *     optional; if not provided, the builder creates a function that wraps {@code
-     *     item.toString()} into a {@link javax.jms.TextMessage}, unless the item is
-     *     an instance of {@code javax.jms.Message}.
-     * </li><li>
-     *     {@code sendFn} sends the message via message producer. This component
-     *     is optional; if not provided, the builder creates a function which sends
-     *     the message using {@code MessageProducer#send(Message message)}.
-     * </li><li>
-     *     {@code flushFn} flushes the session. This component is optional; if
-     *     not provided, the builder creates a no-op consumer.
-     * </li><li>
-     *     {@code topic} sets that the destination is a topic. This call is
-     *     optional; if not called, the builder treats the destination as a queue.
-     * </li></ol>
      *
      * @param <T> type of the items the sink accepts
      */

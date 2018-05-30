@@ -868,36 +868,6 @@ public final class Sources {
     /**
      * Returns a builder object that offers a step-by-step fluent API to build
      * a custom JMS {@link StreamSource} for the Pipeline API.
-     * <p>
-     * These are the callback functions you can provide to implement the
-     * sources's behavior:
-     * <ol><li>
-     *     {@code factorySupplier} creates the connection factory. This
-     *     component is required.
-     * </li><li>
-     *     {@code connectionFn} creates the connection. This component is
-     *     optional; if not provided, the builder creates a function which uses
-     *     {@code ConnectionFactory#createConnection(username, password)} to
-     *     create the connection. See {@link JmsSourceBuilder#connectionParams}.
-     * </li><li>
-     *     {@code sessionFn} creates the session. This component is optional;
-     *     if not provided, the builder creates a function which uses {@code
-     *     Connection#createSession(boolean transacted, int acknowledgeMode)}
-     *     to create the session. See {@link JmsSourceBuilder#sessionParams}.
-     * </li><li>
-     *     {@code consumerFn} creates the message consumer. This component is
-     *     optional; if not provided, the builder creates a function which uses
-     *     {@code Session#createConsumer(Destination destination)} to create the
-     *     consumer. Either {@code consumerFn} or {@code destinationName} should
-     *     be set. See {@link JmsSourceBuilder#destinationName(String)}.
-     * </li><li>
-     *     {@code projectionFn} creates the output object from a {@code Message}.
-     *     This component is optional; if not provided, identity function is
-     *     used instead.
-     * </li><li>
-     *     {@code flushFn} flushes the session. This component is optional; if
-     *     not provided builder creates a no-op consumer.
-     * </li></ol>
      *
      * @param <T> type of the items the source emits
      */
@@ -928,36 +898,6 @@ public final class Sources {
     /**
      * Returns a builder object that offers a step-by-step fluent API to build
      * a custom JMS {@link StreamSource} for the Pipeline API.
-     * <p>
-     * These are the callback functions you can provide to implement the
-     * sources's behavior:
-     * <ol><li>
-     *     {@code factorySupplier} creates the connection factory. This
-     *     component is required.
-     * </li><li>
-     *     {@code connectionFn} creates the connection. This component is
-     *     optional; if not provided, the builder creates a function which uses
-     *     {@code ConnectionFactory#createConnection(username, password)} to
-     *     create the connection. See {@link JmsSourceBuilder#connectionParams}.
-     * </li><li>
-     *     {@code sessionFn} creates the session. This component is optional;
-     *     if not provided, the builder creates a function which uses {@code
-     *     Connection#createSession(boolean transacted, int acknowledgeMode)}
-     *     to create the session. See {@link JmsSourceBuilder#sessionParams}.
-     * </li><li>
-     *     {@code consumerFn} creates the message consumer. This component is
-     *     optional; if not provided, the builder creates a function which uses
-     *     {@code Session#createConsumer(Destination destination)} to create the
-     *     consumer. Either {@code consumerFn} or {@code destinationName} should
-     *     be set. See {@link JmsSourceBuilder#destinationName(String)}.
-     * </li><li>
-     *     {@code projectionFn} creates the output object from a {@code Message}.
-     *     This component is optional; if not provided, identity function is
-     *     used instead.
-     * </li><li>
-     *     {@code flushFn} flushes the session. This component is optional; if
-     *     not provided builder creates a no-op consumer.
-     * </li></ol>
      *
      * @param <T> type of the items the source emits
      */
