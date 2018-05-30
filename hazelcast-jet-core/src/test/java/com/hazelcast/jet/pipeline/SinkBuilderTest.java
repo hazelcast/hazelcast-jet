@@ -104,13 +104,8 @@ public class SinkBuilderTest extends PipelineTestSupport {
         }
     }
 
-<<<<<<< HEAD
-    private Sink<Integer> buildRandomFileSink(String listName) {
-        return Sinks.<File, Integer>builder(context ->
-=======
     private static Sink<Integer> buildRandomFileSink(String listName) {
-        return Sinks.<File, Integer>builder((instance) ->
->>>>>>> Tests for Pipeline API
+        return Sinks.<File, Integer>builder(context ->
                 uncheckCall(() -> {
                     File directory = createTempDirectory();
                     File file = new File(directory, randomName());
@@ -118,21 +113,8 @@ public class SinkBuilderTest extends PipelineTestSupport {
                     context.jetInstance().getList(listName).add(directory.toPath().toString());
                     return file;
                 }))
-<<<<<<< HEAD
-                .onReceiveFn((sink, item) -> uncheckRun(() -> {
-                    appendToFile(sink, item.toString());
-                })).build();
-    }
-
-    private Sink<Integer> buildSocketSink(int localPort) {
-        return Sinks.<BufferedWriter, Integer>builder(context -> uncheckCall(() -> getSocketWriter(localPort)))
-                .onReceiveFn((s, item) -> uncheckRun(() -> s.append((char) item.intValue()).append('\n')))
-                .flushFn(s -> uncheckRun(s::flush))
-                .destroyFn(s -> uncheckRun(s::close))
+                .onReceiveFn((sink, item) -> uncheckRun(() -> appendToFile(sink, item.toString())))
                 .build();
-=======
-                .onReceiveFn((sink, item) -> uncheckRun(() -> appendToFile(sink, item.toString()))).build();
->>>>>>> Tests for Pipeline API
     }
 
     private static PrintWriter getSocketWriter(int localPort) throws IOException {
