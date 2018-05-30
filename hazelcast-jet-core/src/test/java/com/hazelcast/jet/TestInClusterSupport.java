@@ -33,6 +33,8 @@ import org.junit.runners.Parameterized.Parameters;
 import java.util.Arrays;
 import java.util.function.Supplier;
 
+import static java.lang.Math.max;
+
 @RunWith(Parameterized.class)
 @Category(ParallelTest.class)
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
@@ -64,7 +66,7 @@ public abstract class TestInClusterSupport extends JetTestSupport {
     public static void setupCluster() {
         int parallelism = Runtime.getRuntime().availableProcessors() / MEMBER_COUNT / 2;
         JetConfig config = new JetConfig();
-        config.getInstanceConfig().setCooperativeThreadCount(parallelism <= 2 ? 2 : parallelism);
+        config.getInstanceConfig().setCooperativeThreadCount(max(2, parallelism));
         Config hzConfig = config.getHazelcastConfig();
         // Set partition count to match the parallelism of IMap sources.
         // Their preferred local parallelism is 2, therefore partition count

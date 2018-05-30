@@ -62,7 +62,6 @@ public class SinkBuilderTest extends PipelineTestSupport {
         assertEquals(itemCount, count);
     }
 
-
     @Test
     public void socketSink() throws IOException {
         // Given
@@ -101,7 +100,7 @@ public class SinkBuilderTest extends PipelineTestSupport {
 
             //Then
             execute();
-            assertEquals(itemCount, counter.get());
+            assertTrueEventually(() -> assertEquals(itemCount, counter.get()));
         }
     }
 
