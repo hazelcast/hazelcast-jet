@@ -22,6 +22,8 @@ import com.hazelcast.jet.impl.pipeline.AggBuilder;
 import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
 import com.hazelcast.jet.impl.pipeline.BatchStageImpl;
 
+import javax.annotation.Nonnull;
+
 /**
  * Offers a step-by-step API to build a pipeline stage that co-aggregates
  * the data from several input stages. To obtain it, call {@link
@@ -33,7 +35,7 @@ import com.hazelcast.jet.impl.pipeline.BatchStageImpl;
 public class AggregateBuilder1<T0> {
     private final AggBuilder aggBuilder;
 
-    AggregateBuilder1(BatchStage<T0> s) {
+    AggregateBuilder1(@Nonnull BatchStage<T0> s) {
         this.aggBuilder = new AggBuilder(s, null);
     }
 
@@ -53,7 +55,7 @@ public class AggregateBuilder1<T0> {
      * stage when building the {@code AggregateOperation} that you'll pass to
      * {@link #build build()}.
      */
-    public <T> Tag<T> add(BatchStage<T> stage) {
+    public <T> Tag<T> add(@Nonnull BatchStage<T> stage) {
         return aggBuilder.add(stage);
     }
 
@@ -70,7 +72,7 @@ public class AggregateBuilder1<T0> {
      * @return a new stage representing the co-aggregation
      */
     @SuppressWarnings("unchecked")
-    public <A, R> BatchStage<R> build(AggregateOperation<A, R> aggrOp) {
+    public <A, R> BatchStage<R> build(@Nonnull AggregateOperation<A, R> aggrOp) {
         CreateOutStageFn<R, BatchStage<R>> createOutStageFn = BatchStageImpl::new;
         return aggBuilder.build(aggrOp, createOutStageFn, null);
     }

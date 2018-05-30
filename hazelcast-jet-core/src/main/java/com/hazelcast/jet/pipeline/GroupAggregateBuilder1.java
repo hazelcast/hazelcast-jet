@@ -26,11 +26,10 @@ import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 
 /**
- * Offers a step-by-step fluent API to build a pipeline stage that
- * co-groups and aggregates the data from several input stages. To obtain
- * it, call {@link StageWithGrouping#aggregateBuilder()} on one of the
- * stages to co-group and refer to that method's Javadoc for further
- * details.
+ * Offers a step-by-step API to build a pipeline stage that co-groups and
+ * aggregates the data from several input stages. To obtain it, call {@link
+ * StageWithGrouping#aggregateBuilder()} on one of the stages to co-group
+ * and refer to that method's Javadoc for further details.
  *
  * @param <T0> type of the stream-0 item
  * @param <K> type of the grouping key
@@ -38,7 +37,7 @@ import java.util.Map.Entry;
 public class GroupAggregateBuilder1<T0, K> {
     private final GrAggBuilder<K> graggBuilder;
 
-    GroupAggregateBuilder1(StageWithGrouping<T0, K> s) {
+    GroupAggregateBuilder1(@Nonnull StageWithGrouping<T0, K> s) {
         graggBuilder = new GrAggBuilder<>(s);
     }
 
@@ -59,7 +58,7 @@ public class GroupAggregateBuilder1<T0, K> {
      * {@link #build build()}.
      */
     @SuppressWarnings("unchecked")
-    public <T> Tag<T> add(StageWithGrouping<T, K> stage) {
+    public <T> Tag<T> add(@Nonnull StageWithGrouping<T, K> stage) {
         return graggBuilder.add(stage);
     }
 

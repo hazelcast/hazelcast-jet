@@ -31,11 +31,10 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperationBuilder;
 
 /**
- * Offers a step-by-step fluent API to build a pipeline stage that
- * co-groups and aggregates the data from several input stages. To obtain
- * it, call {@link StageWithGrouping#aggregateBuilder()} on one of the
- * stages to co-group and refer to that method's Javadoc for further
- * details.
+ * Offers a step-by-step API to build a pipeline stage that co-groups and
+ * aggregates the data from several input stages. To obtain it, call {@link
+ * StageWithGrouping#aggregateBuilder()} on one of the stages to co-group
+ * and refer to that method's Javadoc for further details.
  *
  * @param <K> type of the grouping key
  * @param <R0> type of the aggregation result for stream-0
@@ -45,8 +44,8 @@ public class GroupAggregateBuilder<K, R0> {
     private final CoAggregateOperationBuilder aggropBuilder = coAggregateOperationBuilder();
 
     <T0> GroupAggregateBuilder(
-            StageWithGrouping<T0, K> stage0,
-            AggregateOperation1<? super T0, ?, ? extends R0> aggrOp0
+            @Nonnull StageWithGrouping<T0, K> stage0,
+            @Nonnull AggregateOperation1<? super T0, ?, ? extends R0> aggrOp0
     ) {
         grAggBuilder = new GrAggBuilder<>(stage0);
         aggropBuilder.add(Tag.tag0(), aggrOp0);
@@ -69,8 +68,8 @@ public class GroupAggregateBuilder<K, R0> {
      * {@link #build build()}.
      */
     public <T, R> Tag<R> add(
-            StageWithGrouping<T, K> stage,
-            AggregateOperation1<? super T, ?, ? extends R> aggrOp
+            @Nonnull StageWithGrouping<T, K> stage,
+            @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     ) {
         Tag<T> tag = grAggBuilder.add(stage);
         return aggropBuilder.add(tag, aggrOp);

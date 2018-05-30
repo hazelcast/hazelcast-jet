@@ -19,13 +19,15 @@ package com.hazelcast.jet.impl.pipeline.transform;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
+import javax.annotation.Nonnull;
+
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static java.util.Arrays.asList;
 
 public class MergeTransform<T> extends AbstractTransform {
 
-    public MergeTransform(Transform upstream1, Transform upstream2) {
+    public MergeTransform(@Nonnull Transform upstream1, @Nonnull Transform upstream2) {
         super("merge", asList(upstream1, upstream2));
     }
 

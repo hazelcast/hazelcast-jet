@@ -286,7 +286,7 @@ public interface GeneralStage<T> extends Stage {
      * @throws IllegalArgumentException if this stage already has timestamps
      */
     @Nonnull
-    StreamStage<T> addTimestamps(DistributedToLongFunction<? super T> timestampFn, long allowedLag);
+    StreamStage<T> addTimestamps(@Nonnull DistributedToLongFunction<? super T> timestampFn, long allowedLag);
 
     /**
      * Attaches to this stage a sink stage, one that accepts data but doesn't

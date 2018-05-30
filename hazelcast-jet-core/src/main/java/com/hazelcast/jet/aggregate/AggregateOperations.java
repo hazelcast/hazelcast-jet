@@ -1006,13 +1006,15 @@ public final class AggregateOperations {
 
     /**
      * Returns an aggregate operation that accumulates all input items into an
-     * {@code ArrayList} and sorts it.
+     * {@code ArrayList} and sorts it with the given comparator. Use {@link
+     * DistributedComparator#naturalOrder()} if you want to sort {@code
+     * Comparable} items by their natural order.
      *
      * @param comparator the comparator to use for sorting
      * @param <T> the type of input items
      */
     public static <T> AggregateOperation1<T, ArrayList<T>, List<T>> sorting(
-            DistributedComparator<? super T> comparator
+            @Nonnull DistributedComparator<? super T> comparator
     ) {
         return AggregateOperation
                 .withCreate(ArrayList<T>::new)
