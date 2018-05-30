@@ -33,8 +33,6 @@ import com.hazelcast.jet.function.DistributedTriFunction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import java.util.HashSet;
-
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
