@@ -83,33 +83,16 @@ public interface BatchStage<T> extends GeneralStage<T> {
     );
 
     /**
-     * Attaches to this stage a stage that extracts a key from each item
-     * (using the supplied {@code keyFn}) and emits just the items that
-     * are distinct according to that key (no two emitted items map to the
-     * same key). There is no guarantee among the items with the same key
-     * which one it will emit. Returns the newly attached stage.
-     *
-     * @param keyFn function that extracts the key from the item
-     * @param <K> type of the key
-     * @return the newly attached stage
-     */
-    @Nonnull
-    default <K> BatchStage<T> distinctBy(DistributedFunction<? super T, ? extends K> keyFn) {
-        return filterUsingContext(ContextFactory.withCreateFn(
-                jet -> new HashSet<>()), (ctx, item) -> ctx.add(keyFn.apply(item)));
-    }
-
-    /**
      * Attaches to this stage a stage that emits just the items that are
-     * distinct according to their definition of equality ({@code equals}
-     * and {@code hashCode}). There is no guarantee among the items with the
-     * same key which one it will emit. Returns the newly attached stage.
+     * distinct according to their definition of equality ({@code equals} and
+     * {@code hashCode}). There is no guarantee among equal items which one
+     * it will emit.
      *
      * @return the newly attached stage
      */
     @Nonnull
     default BatchStage<T> distinct() {
-        return distinctBy(wholeItem());
+        return groupingKey(wholeItem()).distinct();
     }
 
     /**

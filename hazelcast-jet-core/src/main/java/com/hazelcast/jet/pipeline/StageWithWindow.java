@@ -72,36 +72,32 @@ public interface StageWithWindow<T> {
     );
 
     /**
-     * Javadoc pending.
+     * Attaches a stage that passes through just the items that are distinct
+     * within their window (no two items emitted for a window are equal). There
+     * is no guarantee among the items with the same key which one it will pass
+     * through. To create the item to emit, the stage calls the supplied {@code
+     * mapToOutputFn}.
      *
-     * @param keyFn
-     * @param mapToOutputFn
-     * @param <K>
-     * @param <R>
+     * @param mapToOutputFn function that returns the items to emit
+     * @return the newly attached stage
      */
     @Nonnull
-    <K, R> StreamStage<R> distinctBy(
-            DistributedFunction<? super T, ? extends K> keyFn,
-            WindowResultFunction<? super T, ? extends R> mapToOutputFn
-    );
-
-    /**
-     * Javadoc pending.
-     *
-     * @param keyFn
-     * @param <K>
-     */
-    @Nonnull
-    default <K> StreamStage<TimestampedItem<T>> distinctBy(DistributedFunction<? super T, ? extends K> keyFn) {
-        return distinctBy(keyFn, TimestampedItem::new);
+    default <R> StreamStage<R> distinct(@Nonnull WindowResultFunction<? super T, ? extends R> mapToOutputFn) {
+        return groupingKey(wholeItem()).distinct(mapToOutputFn);
     }
 
     /**
-     * Javadoc pending.
+     * Attaches a stage that passes through just the items that are distinct
+     * within their window (no two items emitted for a window are equal). There
+     * is no guarantee among the items with the same key which one it will pass
+     * through. The stage emits results in the form of {@link TimestampedItem
+     * TimestampedItem(windowEnd, distinctItem)}.
+     *
+     * @return the newly attached stage
      */
     @Nonnull
     default StreamStage<TimestampedItem<T>> distinct() {
-        return distinctBy(wholeItem(), TimestampedItem::new);
+        return groupingKey(wholeItem()).distinct();
     }
 
     /**

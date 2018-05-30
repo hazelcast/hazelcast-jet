@@ -23,8 +23,10 @@ import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.function.DistributedFunction;
 
 import javax.annotation.Nonnull;
+import java.util.HashSet;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
@@ -41,6 +43,17 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation
  * @param <K> type of the key
  */
 public interface StageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> {
+
+    /**
+     * Attaches to this stage a stage that emits just the items that are
+     * distinct according to the grouping key (no two emitted items map to the
+     * same key). There is no guarantee among the items with the same key which
+     * one it will emit.
+     *
+     * @return the newly attached stage
+     */
+    @Nonnull
+    BatchStage<T> distinct();
 
     /**
      * Attaches to this stage a stage that performs the given
@@ -403,7 +416,7 @@ public interface StageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> 
      */
     @Nonnull
     default <R0> GroupAggregateBuilder<K, R0> aggregateBuilder(
-            AggregateOperation1<? super T, ?, ? extends R0> aggrOp0
+            @Nonnull AggregateOperation1<? super T, ?, ? extends R0> aggrOp0
     ) {
         return new GroupAggregateBuilder<>(this, aggrOp0);
     }

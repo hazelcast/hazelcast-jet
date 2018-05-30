@@ -20,12 +20,14 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.KeyedWindowResult2Function;
 import com.hazelcast.jet.function.KeyedWindowResult3Function;
 import com.hazelcast.jet.function.KeyedWindowResultFunction;
+import com.hazelcast.jet.function.WindowResultFunction;
 
 import javax.annotation.Nonnull;
 
@@ -60,6 +62,36 @@ public interface StageWithGroupingAndWindow<T, K> {
     WindowDefinition windowDefinition();
 
     /**
+     * Attaches a stage that passes through just the items that are distinct
+     * within their window according to the grouping key (no two items emitted
+     * for a window map to the same key). There is no guarantee among the items
+     * with the same key which one it will pass through. To create the item to
+     * emit, the stage calls the supplied {@code mapToOutputFn}.
+     *
+     * @param mapToOutputFn function that returns the items to emit
+     * @return the newly attached stage
+     */
+    @Nonnull
+    <R> StreamStage<R> distinct(
+            @Nonnull WindowResultFunction<? super T, ? extends R> mapToOutputFn
+    );
+
+    /**
+     * Attaches a stage that passes through just the items that are distinct
+     * within their window according to the grouping key (no two items emitted
+     * for a window map to the same key). There is no guarantee among the items
+     * with the same key which one it will pass through. The stage emits
+     * results in the form of {@link TimestampedItem TimestampedItem(windowEnd,
+     * distinctItem)}.
+     *
+     * @return the newly attached stage
+     */
+    @Nonnull
+    default StreamStage<TimestampedItem<T>> distinct() {
+        return distinct(TimestampedItem::new);
+    }
+
+    /**
      * Attaches to this stage a stage that performs the given
      * group-and-aggregate operation over the window described by the window
      * definition captured by this object. For each distinct grouping key it
@@ -71,7 +103,7 @@ public interface StageWithGroupingAndWindow<T, K> {
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      * @param aggrOp the aggregate operation to perform
-     * @param mapToOutputFn the function that creates the output item
+     * @param mapToOutputFn function that returns the output items
      * @param <A> type of the accumulator used by the aggregate operation
      * @param <R> type of the aggregation result
      * @param <OUT> type of the output item
@@ -96,8 +128,9 @@ public interface StageWithGroupingAndWindow<T, K> {
      * @param <R> type of the aggregation result
      */
     @Nonnull
-    <A, R> StreamStage<TimestampedEntry<K, R>> aggregate(
-            @Nonnull AggregateOperation1<? super T, A, R> aggrOp);
+    default <A, R> StreamStage<TimestampedEntry<K, R>> aggregate(@Nonnull AggregateOperation1<? super T, A, R> aggrOp) {
+        return aggregate(aggrOp, TimestampedEntry::new);
+    }
 
     /**
      * Attaches to this stage a stage that performs the given
@@ -424,7 +457,7 @@ public interface StageWithGroupingAndWindow<T, K> {
      */
     @Nonnull
     default <R0> WindowGroupAggregateBuilder<K, R0> aggregateBuilder(
-            AggregateOperation1<? super T, ?, ? extends R0> aggrOp0
+            @Nonnull AggregateOperation1<? super T, ?, ? extends R0> aggrOp0
     ) {
         return new WindowGroupAggregateBuilder<>(this, aggrOp0);
     }

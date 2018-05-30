@@ -66,15 +66,6 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
         return new StageWithGroupingAndWindowImpl<>(streamStage, keyFn, wDef);
     }
 
-    @Nonnull
-    public <K, R> StreamStage<R> distinctBy(
-            DistributedFunction<? super T, ? extends K> keyFn,
-            WindowResultFunction<? super T, ? extends R> mapToOutputFn
-    ) {
-        return groupingKey(keyFn).aggregate(pickAny(),
-                (start, end, key, item) -> mapToOutputFn.apply(start, end, item));
-    }
-
     @Nonnull @Override
     @SuppressWarnings("unchecked")
     public <A, R, OUT> StreamStage<OUT> aggregate(

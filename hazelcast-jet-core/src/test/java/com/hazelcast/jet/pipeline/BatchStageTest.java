@@ -269,7 +269,7 @@ public class BatchStageTest extends PipelineTestSupport {
         putToBatchSrcMap(input);
 
         // When
-        BatchStage<Integer> distinct = srcStage.distinctBy(keyFn);
+        BatchStage<Integer> distinct = srcStage.groupingKey(keyFn).distinct();
 
         // Then
         distinct.drainTo(sink);
