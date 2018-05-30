@@ -20,30 +20,21 @@ import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.Offloadable;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBinaryOperator;
-import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.map.EntryProcessor;
 
 import javax.annotation.Nonnull;
-import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
-import javax.jms.Message;
-import javax.jms.MessageProducer;
-import javax.jms.Session;
 import java.nio.charset.Charset;
 import java.util.Map;
 
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
 import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLoggerP;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
-import static com.hazelcast.jet.core.processor.SinkProcessors.writeJmsQueueP;
-import static com.hazelcast.jet.core.processor.SinkProcessors.writeJmsTopicP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.mergeMapP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.mergeRemoteMapP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.updateMapP;
@@ -624,57 +615,11 @@ public final class Sinks {
     }
 
     /**
-     * Returns a sink which connects to a JMS provider and sends messages to the
-     * specified JMS queue.
-     * <p>
-     * Sink creates a single connection for each member using the given {@code
-     * connectionSupplier} and then creates a session and producer for each
-     * {@link com.hazelcast.jet.core.Processor processor} using the given
-     * {@code sessionFn} and {@code name}.
-     * <p>
-     * Sink converts an item to a {@link Message} using the given {@code
-     * messageFn} and sends this message using the given {@code sendFn}. After
-     * a batch of messages is sent, sink flushes the session using the given
-     * {@code flushFn}.
-     * <p>
-     * Behavior on job restart: the processor is stateless. If the job is
-     * restarted, duplicate events can occur. If you need exactly-once behavior,
-     * you must ensure idempotence on the application level.
-     * <p>
-     * IO failures are generally handled by JMS provider and do not cause the
-     * processor to fail. Most of the providers offer a configuration parameter
-     * to enable auto-reconnection, refer to provider documentation for details.
-     * <p>
-     * Default local parallelism for this processor is 4 (or less if less CPUs
-     * are available).
-     *
-     * @param connectionSupplier supplier to obtain connection to the JMS provider
-     * @param sessionF           function to create session from the JMS connection
-     * @param messageFn          function to create message from the item
-     * @param sendFn             function to send the message to JMS queue
-     * @param flushFn            function to commit the session for transacted sessions
-     * @param name               the name of the queue
-     */
-    @Nonnull
-    public static <T> Sink<T> jmsQueue(
-            @Nonnull DistributedSupplier<Connection> connectionSupplier,
-            @Nonnull DistributedFunction<Connection, Session> sessionF,
-            @Nonnull DistributedBiFunction<Session, T, Message> messageFn,
-            @Nonnull DistributedBiConsumer<MessageProducer, Message> sendFn,
-            @Nonnull DistributedConsumer<Session> flushFn,
-            @Nonnull String name
-    ) {
-        return fromProcessor("jmsQueueSink(" + name + ")",
-                SinkProcessors.writeJmsQueueP(connectionSupplier, sessionF, messageFn, sendFn, flushFn, name));
-    }
-
-    /**
-     * Convenience for {@link #jmsQueue(DistributedSupplier,
-     * DistributedFunction, DistributedBiFunction, DistributedBiConsumer,
-     * DistributedConsumer, String)}. Sink creates a connection without any
-     * authentication parameters and uses non-transacted sessions with {@code
-     * Session.AUTO_ACKNOWLEDGE} mode. Sink wraps {@code item.toString()} into
-     * a {@link javax.jms.TextMessage}
+     * Convenience for {@link #jmsQueueBuilder(DistributedSupplier)}. Creates a
+     * connection without any authentication parameters and uses non-transacted
+     * sessions with {@code Session.AUTO_ACKNOWLEDGE} mode. If a received item
+     * is not an instance of {@code javax.jms.Message}, the sink wraps {@code
+     * item.toString()} into a {@link javax.jms.TextMessage}.
      *
      * @param factorySupplier supplier to obtain JMS connection factory
      * @param name            the name of the queue
@@ -684,61 +629,65 @@ public final class Sinks {
             @Nonnull DistributedSupplier<ConnectionFactory> factorySupplier,
             @Nonnull String name
     ) {
-        return fromProcessor("jmsQueueSink(" + name + ")", writeJmsQueueP(factorySupplier, name));
+        return Sinks.<T>jmsQueueBuilder(factorySupplier)
+                .destinationName(name)
+                .build();
     }
 
     /**
-     * Returns a sink which connects to a JMS provider and sends messages to the
-     * specified JMS topic.
+     * Returns a builder object that offers a step-by-step fluent API to build
+     * a custom JMS queue sink for the Pipeline API.
      * <p>
-     * Sink creates a single connection for each member using the given {@code
-     * connectionSupplier} and then creates a session and producer for each
-     * {@link com.hazelcast.jet.core.Processor processor} using the given
-     * {@code sessionFn} and {@code name}.
-     * <p>
-     * Sink converts an item to a {@link Message} using the given {@code
-     * messageFn} and sends this message using the given {@code sendFn}. After
-     * a batch of messages is sent, sink flushes the session using the given
-     * {@code flushFn}.
-     * <p>
-     * Behavior on job restart: the processor is stateless. If the job is
-     * restarted, duplicate events can occur. If you need exactly-once behavior,
-     * you must ensure idempotence on the application level.
-     * <p>
-     * IO failures are generally handled by JMS provider and do not cause the
-     * processor to fail. Most of the providers offer a configuration parameter
-     * to enable auto-reconnection, refer to provider documentation for details.
-     * <p>
-     * Default local parallelism for this processor is 4 (or less if less CPUs
-     * are available).
+     * These are the callback functions you can provide to implement the sink's
+     * behavior:
+     * <ol><li>
+     *     {@code factorySupplier} creates the connection factory. This
+     *     component is required.
+     * </li><li>
+     *     {@code destinationName} sets the name of the destination. This
+     *     component is required.
+     * </li><li>
+     *     {@code connectionFn} creates the connection. This component is
+     *     optional; if not provided, the builder creates a function which uses
+     *     {@code ConnectionFactory#createConnection(username, password)} to
+     *     create the connection. See {@link
+     *     JmsSinkBuilder#connectionParams(String, String)}.
+     * </li><li>
+     *     {@code sessionFn} creates the session. This component is optional;
+     *     if not provided, the builder creates a function which uses {@code
+     *     Connection#createSession(boolean transacted, int acknowledgeMode)}
+     *     to create the session. See {@link
+     *     JmsSinkBuilder#sessionParams(boolean, int)}.
+     * </li><li>
+     *     {@code messageFn} creates the message from the item. This component is
+     *     optional; if not provided, the builder creates a function that wraps {@code
+     *     item.toString()} into a {@link javax.jms.TextMessage}, unless the item is
+     *     an instance of {@code javax.jms.Message}.
+     * </li><li>
+     *     {@code sendFn} sends the message via message producer. This component
+     *     is optional; if not provided, the builder creates a function which sends
+     *     the message using {@code MessageProducer#send(Message message)}.
+     * </li><li>
+     *     {@code flushFn} flushes the session. This component is optional; if
+     *     not provided, the builder creates a no-op consumer.
+     * </li><li>
+     *     {@code topic} sets that the destination is a topic. This call is
+     *     optional; if not called, the builder treats the destination as a queue.
+     * </li></ol>
      *
-     * @param connectionSupplier supplier to obtain connection to the JMS provider
-     * @param sessionF           function to create session from the JMS connection
-     * @param messageFn          function to create message from the item
-     * @param sendFn             function to send the message to JMS queue
-     * @param flushFn            function to commit the session for transacted sessions
-     * @param name               the name of the topic
+     * @param <T> type of the items the sink accepts
      */
     @Nonnull
-    public static <T> Sink<T> jmsTopic(
-            @Nonnull DistributedSupplier<Connection> connectionSupplier,
-            @Nonnull DistributedFunction<Connection, Session> sessionF,
-            @Nonnull DistributedBiFunction<Session, T, Message> messageFn,
-            @Nonnull DistributedBiConsumer<MessageProducer, Message> sendFn,
-            @Nonnull DistributedConsumer<Session> flushFn,
-            @Nonnull String name
-    ) {
-        return fromProcessor("jmsTopicSink(" + name + ")",
-                SinkProcessors.writeJmsTopicP(connectionSupplier, sessionF, messageFn, sendFn, flushFn, name));
+    public static <T> JmsSinkBuilder<T> jmsQueueBuilder(DistributedSupplier<ConnectionFactory> factorySupplier) {
+        return new JmsSinkBuilder<>(factorySupplier, false);
     }
 
     /**
-     * Convenience for {@link #jmsTopic(DistributedSupplier,
-     * DistributedFunction, DistributedBiFunction, DistributedBiConsumer,
-     * DistributedConsumer, String)}. Sink creates a connection without any
-     * authentication parameters and uses non-transacted sessions with {@code
-     * Session.AUTO_ACKNOWLEDGE} mode. Sink wraps {@code item.toString()} into
-     * a {@link javax.jms.TextMessage}
+     * Convenience for {@link #jmsTopicBuilder(DistributedSupplier)}. Creates a
+     * connection without any authentication parameters and uses non-transacted
+     * sessions with {@code Session.AUTO_ACKNOWLEDGE} mode. If a received item
+     * is not an instance of {@code javax.jms.Message}, the sink wraps {@code
+     * item.toString()} into a {@link javax.jms.TextMessage}.
      *
      * @param factorySupplier supplier to obtain JMS connection factory
      * @param name            the name of the queue
@@ -748,7 +697,56 @@ public final class Sinks {
             @Nonnull DistributedSupplier<ConnectionFactory> factorySupplier,
             @Nonnull String name
     ) {
-        return fromProcessor("jmsTopicSink(" + name + ")", writeJmsTopicP(factorySupplier, name));
+        return Sinks.<T>jmsTopicBuilder(factorySupplier)
+                .destinationName(name)
+                .build();
     }
 
+    /**
+     * Returns a builder object that offers a step-by-step fluent API to build
+     * a custom JMS topic sink for the Pipeline API.
+     * <p>
+     * These are the callback functions you can provide to implement the sink's
+     * behavior:
+     * <ol><li>
+     *     {@code factorySupplier} creates the connection factory. This
+     *     component is required.
+     * </li><li>
+     *     {@code destinationName} sets the name of the destination. This
+     *     component is required.
+     * </li><li>
+     *     {@code connectionFn} creates the connection. This component is
+     *     optional; if not provided, the builder creates a function which uses
+     *     {@code ConnectionFactory#createConnection(username, password)} to
+     *     create the connection. See {@link
+     *     JmsSinkBuilder#connectionParams(String, String)}.
+     * </li><li>
+     *     {@code sessionFn} creates the session. This component is optional;
+     *     if not provided, the builder creates a function which uses {@code
+     *     Connection#createSession(boolean transacted, int acknowledgeMode)}
+     *     to create the session. See {@link
+     *     JmsSinkBuilder#sessionParams(boolean, int)}.
+     * </li><li>
+     *     {@code messageFn} creates the message from the item. This component is
+     *     optional; if not provided, the builder creates a function that wraps {@code
+     *     item.toString()} into a {@link javax.jms.TextMessage}, unless the item is
+     *     an instance of {@code javax.jms.Message}.
+     * </li><li>
+     *     {@code sendFn} sends the message via message producer. This component
+     *     is optional; if not provided, the builder creates a function which sends
+     *     the message using {@code MessageProducer#send(Message message)}.
+     * </li><li>
+     *     {@code flushFn} flushes the session. This component is optional; if
+     *     not provided, the builder creates a no-op consumer.
+     * </li><li>
+     *     {@code topic} sets that the destination is a topic. This call is
+     *     optional; if not called, the builder treats the destination as a queue.
+     * </li></ol>
+     *
+     * @param <T> type of the items the sink accepts
+     */
+    @Nonnull
+    public static <T> JmsSinkBuilder<T> jmsTopicBuilder(DistributedSupplier<ConnectionFactory> factorySupplier) {
+        return new JmsSinkBuilder<>(factorySupplier, true);
+    }
 }
