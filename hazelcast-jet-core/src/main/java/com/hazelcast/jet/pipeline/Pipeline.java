@@ -88,4 +88,11 @@ public interface Pipeline {
     static Pipeline create() {
         return new PipelineImpl();
     }
+
+    /**
+     * Returns a DOT format (graphviz) representation of the DAG
+     */
+    @Nonnull
+    String toDotString();
+
 }

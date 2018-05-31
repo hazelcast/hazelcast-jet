@@ -16,12 +16,14 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.jet.core.Edge.RoutingPolicy;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.SerializationConstants;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,6 +34,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
@@ -249,7 +253,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
                         .add(edge.getDestination());
         }
         for (Vertex v : nameToVertex.values()) {
-            adjacencyMap.computeIfAbsent(v, x -> emptyList());
+            adjacencyMap.putIfAbsent(v, emptyList());
         }
         return topologicalSort(adjacencyMap, Vertex::getName);
     }
@@ -315,6 +319,57 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
             b.append("    .edge(").append(e).append(")\n");
         }
         return b.toString();
+    }
+
+    /**
+     * Returns a DOT format (graphviz) representation of the DAG
+     */
+    @Nonnull
+    public String toDotString() {
+        final StringBuilder builder = new StringBuilder("digraph DAG {\n");
+        Pattern stepPattern = Pattern.compile("(?<stepName>.+)-step[12]+");
+        int clusterCount = 0;
+        for (Vertex v : this) {
+            List<Edge> out = getOutboundEdges(v.getName());
+            List<Edge> in = getInboundEdges(v.getName());
+            if (out.isEmpty() && in.isEmpty()) {
+                // dangling vertex
+                builder.append("\t")
+                       .append("\"").append(v.getName()).append("\"")
+                       .append(";\n");
+            }
+            for (Edge e : out) {
+                List<String> labels = new ArrayList<>();
+                if (e.isDistributed()) {
+                    labels.add("distributed");
+                }
+                if (e.getRoutingPolicy() != RoutingPolicy.UNICAST) {
+                    labels.add(e.getRoutingPolicy().toString().toLowerCase());
+                }
+                Matcher srcMatcher = stepPattern.matcher(e.getSourceName());
+                Matcher destMatcher = stepPattern.matcher(e.getDestName());
+                boolean inCluster = srcMatcher.matches() && destMatcher.matches()
+                        && srcMatcher.group("stepName").equals(destMatcher.group("stepName"));
+                if (inCluster) {
+                    builder.append("\tsubgraph cluster_").append(clusterCount++).append(" {\n")
+                           .append("\t");
+                }
+                builder.append("\t")
+                       .append("\"").append(e.getSourceName()).append("\"")
+                       .append(" -> ")
+                       .append("\"").append(e.getDestName()).append("\"");
+                if (!labels.isEmpty()) {
+                    String[] labelArr = labels.toArray(new String[0]);
+                    builder.append(" [label=\"").append(String.join("-", labelArr)).append("\"]");
+                }
+                builder.append(";\n");
+                if (inCluster) {
+                    builder.append("\t}\n");
+                }
+            }
+        }
+        builder.append("}");
+        return builder.toString();
     }
 
     @Override
