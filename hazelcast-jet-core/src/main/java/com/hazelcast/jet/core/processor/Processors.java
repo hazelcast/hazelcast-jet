@@ -51,7 +51,6 @@ import com.hazelcast.jet.pipeline.ContextFactory;
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.function.Function;
 
 import static com.hazelcast.jet.core.TimestampKind.EVENT;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
@@ -488,7 +487,7 @@ public final class Processors {
      * result by combining the partial results of the frames belonging to it
      * and finally applying the {@code finish} aggregation primitive. After
      * this it deletes from storage all the frames that trail behind the
-     * emitted windows. To compte the item to emit, it calls {@code
+     * emitted windows. To compute the item to emit, it calls {@code
      * mapToOutputFn} with the window's start and end timestamps, the key and
      * the aggregation result. The window end time is the exclusive upper bound
      * of the timestamps belonging to the window.
@@ -904,38 +903,6 @@ public final class Processors {
     ) {
         return () -> new TransformUsingKeyedContextP<C, T, K, R>(contextFactory, keyFn,
                 (singletonTraverser, context, item) -> flatMapFn.apply(context, item));
-    }
-
-    @Nonnull
-    public static <T, K, R> DistributedSupplier<Processor> rollingAggregation(
-            @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
-            @Nonnull AggregateOperation1<? super T, ?, R> aggrOp
-    ) {
-        return rollingAggregation(keyFn, aggrOp, Util::entry);
-    }
-
-    @Nonnull
-    public static <T, K, R, OUT> DistributedSupplier<Processor> rollingAggregation(
-            @Nonnull DistributedFunction<? super T, ? extends K> keyFn,
-            @Nonnull AggregateOperation1<? super T, ?, R> aggrOp,
-            @Nonnull DistributedBiFunction<K, R, OUT> mapToOutputFn
-    ) {
-        // Early check for identity finish: tries to finish an empty accumulator, different instance
-        // must be returned.
-        Object emptyAcc = aggrOp.createFn().get();
-        if (emptyAcc == ((Function) aggrOp.finishFn()).apply(emptyAcc)) {
-            throw new IllegalArgumentException("Aggregate operation must not use identity finish");
-        }
-        AggregateOperation1<? super T, Object, R> aggrOp1 = (AggregateOperation1<? super T, Object, R>) aggrOp;
-
-        return mapUsingKeyedContextP(ContextFactory.withCreateFn(jet -> aggrOp1.createFn().get()),
-                keyFn,
-                (Object acc, T item) -> {
-                    aggrOp1.accumulateFn().accept(acc, item);
-                    R r = aggrOp1.finishFn().apply(acc);
-                    assert r != acc : "Aggregate operation must not use identity finish";
-                    return mapToOutputFn.apply(keyFn.apply(item), r);
-                });
     }
 
     /**

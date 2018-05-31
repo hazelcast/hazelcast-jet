@@ -17,6 +17,7 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBiPredicate;
@@ -161,6 +162,15 @@ public interface GeneralStage<T> extends Stage {
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     );
+
+    /**
+     * TODO [viliam] pending javadoc
+     * @param aggrOp
+     * @param <R>
+     * @return
+     */
+    @Nonnull
+    <R> GeneralStage<R> rollingAggregation(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp);
 
     /**
      * Attaches to both this and the supplied stage a hash-joining stage and
