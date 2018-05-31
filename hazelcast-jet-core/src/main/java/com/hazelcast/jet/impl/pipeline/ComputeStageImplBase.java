@@ -135,7 +135,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             DistributedFunction<? super T, ? extends K> keyFn,
             DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
     ) {
-        return (RET) attach(new MapUsingKeyedContextTransform(this.transform, contextFactory, keyFn,
+        return (RET) attach(new MapUsingKeyedContextTransform(this.transform, contextFactory,
+                fnAdapter.adaptKeyFn(keyFn),
                 fnAdapter.adaptMapUsingContextFn(mapFn)), fnAdapter);
     }
 
@@ -161,7 +162,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             DistributedFunction<? super T, ? extends K> keyFn,
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     ) {
-        return (RET) attach(new FilterUsingKeyedContextTransform(this.transform, contextFactory, keyFn,
+        return (RET) attach(new FilterUsingKeyedContextTransform(this.transform, contextFactory,
+                fnAdapter.adaptKeyFn(keyFn),
                 fnAdapter.adaptFilterUsingContextFn(filterFn)), fnAdapter);
     }
 
@@ -187,7 +189,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             DistributedFunction<? super T, ? extends K> keyFn,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return (RET) attach(new FlatMapUsingKeyedContextTransform(this.transform, contextFactory, keyFn,
+        return (RET) attach(new FlatMapUsingKeyedContextTransform(this.transform, contextFactory,
+                fnAdapter.adaptKeyFn(keyFn),
                 fnAdapter.adaptFlatMapUsingContextFn(flatMapFn)), fnAdapter);
     }
 

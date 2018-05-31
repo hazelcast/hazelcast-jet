@@ -104,6 +104,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<String> mapped = mapJournalSrcStage
+                .addTimestamps()
                 .mapUsingContext(
                         ContextFactories.<Long, String>replicatedMapContext(enrichingMapName),
                         ReplicatedMap::get);
@@ -124,6 +125,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<String> mapped = mapJournalSrcStage
+                .addTimestamps()
                 .groupingKey(i -> i % modulo)
                 .mapUsingContext(
                         ContextFactory.withCreateFn(jet -> new char[] {12345}),
@@ -195,6 +197,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<Integer> mapped = mapJournalSrcStage
+                .addTimestamps()
                 .groupingKey(i -> i % modulo)
                 // filtering even numbers in an odd way
                 .filterUsingContext(
@@ -261,6 +264,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<Integer> mapped = mapJournalSrcStage
+                .addTimestamps()
                 .groupingKey(i -> i % modulo)
                 // duplicating even numbers in an odd way, keeping odd numbers intact
                 .flatMapUsingContext(
