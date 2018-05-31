@@ -23,11 +23,11 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.function.DistributedFunction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,7 +36,6 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Traversers.traverseStream;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -51,30 +50,38 @@ import static java.util.stream.Collectors.toList;
  * one file is only read by one thread, so extra parallelism won't improve
  * performance if there aren't enough files to read.
  */
-public final class ReadFilesP<R> extends AbstractProcessor {
+public final class ReadFilesP<W, R> extends AbstractProcessor {
 
-    private final Charset charset;
-    private final int parallelism;
-    private final int id;
-    private final DistributedBiFunction<String, String, R> mapOutputFn;
     private final Path directory;
     private final String glob;
+    private final int localProcessorIndex;
+    private final boolean sharedFileSystem;
+    private final DistributedFunction<Path, Stream<W>> streamFn;
+    private final DistributedBiFunction<String, W, R> mapOutputFn;
+
+    private int processorIndex;
+    private int parallelism;
     private DirectoryStream<Path> directoryStream;
     private Traverser<R> outputTraverser;
-    private Stream<String> currentFileLines;
+    private Stream<W> currentStream;
 
-    private ReadFilesP(String directory, Charset charset, String glob, int parallelism, int id,
-                       DistributedBiFunction<String, String, R> mapOutputFn) {
+    private ReadFilesP(@Nonnull String directory, @Nonnull String glob,
+                       @Nonnull DistributedFunction<Path, Stream<W>> streamFn,
+                       @Nonnull DistributedBiFunction<String, W, R> mapOutputFn,
+                       int localProcessorIndex, boolean sharedFileSystem) {
         this.directory = Paths.get(directory);
         this.glob = glob;
-        this.charset = charset;
-        this.parallelism = parallelism;
-        this.id = id;
+        this.streamFn = streamFn;
         this.mapOutputFn = mapOutputFn;
+        this.localProcessorIndex = localProcessorIndex;
+        this.sharedFileSystem = sharedFileSystem;
     }
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
+        processorIndex = sharedFileSystem ? context.globalProcessorIndex() : localProcessorIndex;
+        parallelism = sharedFileSystem ? context.totalParallelism() : context.localParallelism();
+
         directoryStream = Files.newDirectoryStream(directory, glob);
         outputTraverser = Traversers.traverseIterator(directoryStream.iterator())
                                     .filter(this::shouldProcessEvent)
@@ -91,26 +98,22 @@ public final class ReadFilesP<R> extends AbstractProcessor {
             return false;
         }
         int hashCode = file.hashCode();
-        return ((hashCode & Integer.MAX_VALUE) % parallelism) == id;
+        return ((hashCode & Integer.MAX_VALUE) % parallelism) == processorIndex;
     }
 
     private Traverser<R> processFile(Path file) {
         if (getLogger().isFinestEnabled()) {
             getLogger().finest("Processing file " + file);
         }
-        try {
-            assert currentFileLines == null : "currentFileLines != null";
-            currentFileLines = Files.lines(file, charset);
-            String fileName = file.getFileName().toString();
-            return traverseStream(currentFileLines)
-                    .map(line -> mapOutputFn.apply(fileName, line))
-                    .onFirstNull(() -> {
-                        currentFileLines.close();
-                        currentFileLines = null;
-                    });
-        } catch (IOException e) {
-            throw sneakyThrow(e);
-        }
+        assert currentStream == null : "currentFileLines != null";
+        currentStream = streamFn.apply(file);
+        String fileName = file.getFileName().toString();
+        return traverseStream(currentStream)
+                .map(line -> mapOutputFn.apply(fileName, line))
+                .onFirstNull(() -> {
+                    currentStream.close();
+                    currentStream = null;
+                });
     }
 
     @Override
@@ -123,8 +126,8 @@ public final class ReadFilesP<R> extends AbstractProcessor {
                 ex = e;
             }
         }
-        if (currentFileLines != null) {
-            currentFileLines.close();
+        if (currentStream != null) {
+            currentStream.close();
         }
         if (ex != null) {
             throw ex;
@@ -139,16 +142,17 @@ public final class ReadFilesP<R> extends AbstractProcessor {
     /**
      * Private API. Use {@link SourceProcessors#readFilesP} instead.
      */
-    public static ProcessorMetaSupplier metaSupplier(
+    public static <W, R> ProcessorMetaSupplier metaSupplier(
             @Nonnull String directory,
-            @Nonnull String charset,
             @Nonnull String glob,
-            @Nonnull DistributedBiFunction<String, String, ?> mapOutputFn
+            @Nonnull DistributedFunction<Path, Stream<W>> streamFn,
+            @Nonnull DistributedBiFunction<String, W, R> mapOutputFn,
+            boolean sharedFileSystem
     ) {
         return ProcessorMetaSupplier.of((ProcessorSupplier)
                 count -> IntStream.range(0, count)
-                                  .mapToObj(i -> new ReadFilesP(directory, Charset.forName(charset), glob, count, i,
-                                          mapOutputFn))
+                                  .mapToObj(i -> new ReadFilesP<>(directory, glob, streamFn,
+                                          mapOutputFn, i, sharedFileSystem))
                                   .collect(toList()),
                 2);
     }

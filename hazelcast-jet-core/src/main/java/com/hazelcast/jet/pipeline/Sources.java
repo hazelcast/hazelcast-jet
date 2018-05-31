@@ -763,20 +763,21 @@ public final class Sources {
             @Nonnull String directory,
             @Nonnull Charset charset,
             @Nonnull String glob,
-            @Nonnull DistributedBiFunction<String, String, ? extends R> mapOutputFn
+            @Nonnull DistributedBiFunction<String, String, ? extends R> mapOutputFn,
+            boolean sharedFileSystem
     ) {
         return batchFromProcessor("filesSource(" + new File(directory, glob) + ')',
-                readFilesP(directory, charset, glob, mapOutputFn));
+                readFilesP(directory, charset, glob, mapOutputFn, sharedFileSystem));
     }
 
     /**
-     * Convenience for {@link #files(String, Charset, String, DistributedBiFunction)
+     * Convenience for {@link #files(String, Charset, String, DistributedBiFunction, boolean)
      * the full version of readFiles} which uses UTF-8 encoding, matches all
      * the files in the directory and emits lines of text in the files.
      */
     @Nonnull
     public static BatchSource<String> files(@Nonnull String directory) {
-        return files(directory, UTF_8, GLOB_WILDCARD, (file, line) -> line);
+        return files(directory, UTF_8, GLOB_WILDCARD, (file, line) -> line, false);
     }
 
     /**
