@@ -83,7 +83,10 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
      * @param name the unique name of the vertex
      * @param simpleSupplier the simple, parameterless supplier of {@code Processor} instances
      */
-    public Vertex newVertex(String name, DistributedSupplier<? extends Processor> simpleSupplier) {
+    @Nonnull
+    public Vertex newVertex(
+            @Nonnull String name, @Nonnull DistributedSupplier<? extends Processor> simpleSupplier
+    ) {
         return addVertex(new Vertex(name, simpleSupplier));
     }
 
@@ -95,7 +98,8 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
      * @param name the unique name of the vertex
      * @param processorSupplier the supplier of {@code Processor} instances which will be used on all members
      */
-    public Vertex newVertex(String name, ProcessorSupplier processorSupplier) {
+    @Nonnull
+    public Vertex newVertex(@Nonnull String name, @Nonnull ProcessorSupplier processorSupplier) {
         return addVertex(new Vertex(name, processorSupplier));
     }
 
@@ -108,14 +112,16 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
      * @param metaSupplier the meta-supplier of {@code ProcessorSupplier}s for each member
      *
      */
-    public Vertex newVertex(String name, ProcessorMetaSupplier metaSupplier) {
+    @Nonnull
+    public Vertex newVertex(@Nonnull String name, @Nonnull ProcessorMetaSupplier metaSupplier) {
         return addVertex(new Vertex(name, metaSupplier));
     }
 
     /**
      * Adds a vertex to this DAG. The vertex name must be unique.
      */
-    public DAG vertex(Vertex vertex) {
+    @Nonnull
+    public DAG vertex(@Nonnull Vertex vertex) {
         addVertex(vertex);
         return this;
     }
@@ -128,7 +134,8 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
      * and outbound ordinals are independent, so there can be two edges at the
      * same ordinal, one inbound and one outbound.
      */
-    public DAG edge(Edge edge) {
+    @Nonnull
+    public DAG edge(@Nonnull Edge edge) {
         if (edge.getDestination() == null) {
             throw new IllegalArgumentException("Edge has no destination");
         }
@@ -175,7 +182,8 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     /**
      * Returns the inbound edges connected to the vertex with the given name.
      */
-    public List<Edge> getInboundEdges(String vertexName) {
+    @Nonnull
+    public List<Edge> getInboundEdges(@Nonnull String vertexName) {
         if (!nameToVertex.containsKey(vertexName)) {
             throw new IllegalArgumentException("No vertex with name '" + vertexName + "' found in this DAG");
         }
@@ -191,7 +199,8 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     /**
      * Returns the outbound edges connected to the vertex with the given name.
      */
-    public List<Edge> getOutboundEdges(String vertexName) {
+    @Nonnull
+    public List<Edge> getOutboundEdges(@Nonnull String vertexName) {
         if (!nameToVertex.containsKey(vertexName)) {
             throw new IllegalArgumentException("No vertex with name '" + vertexName + "' found in this DAG");
         }
@@ -207,7 +216,8 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     /**
      * Returns the vertex with the given name.
      */
-    public Vertex getVertex(String vertexName) {
+    @Nonnull
+    public Vertex getVertex(@Nonnull String vertexName) {
         return nameToVertex.get(vertexName);
     }
 
@@ -215,6 +225,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
      * Returns an iterator over the DAG's vertices in topological order.
      */
     @Override
+    @Nonnull
     public Iterator<Vertex> iterator() {
         return validate().iterator();
     }
@@ -287,6 +298,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     }
 
     @Override
+    @Nonnull
     public String toString() {
         return toString(-1);
     }
@@ -299,6 +311,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
      *                                preferred parallelism is defined by
      *                                meta-supplier
      */
+    @Nonnull
     public String toString(int defaultLocalParallelism) {
         final StringBuilder b = new StringBuilder("dag\n");
         for (Vertex v : this) {

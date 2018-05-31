@@ -72,6 +72,7 @@ public interface Pipeline {
      *
      * @param <T> the type of data being drained to the sink
      */
+    @Nonnull
     <T> SinkStage drainTo(@Nonnull Sink<T> sink, GeneralStage<?>... stagesToDrain);
 
     /**
