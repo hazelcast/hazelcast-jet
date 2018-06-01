@@ -45,6 +45,7 @@ import java.util.stream.IntStream;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DONT_ADAPT;
 import static com.hazelcast.jet.impl.pipeline.Planner.uniqueName;
+import static com.hazelcast.jet.impl.util.Util.escapeGraphviz;
 import static java.util.stream.Collectors.toList;
 
 public class PipelineImpl implements Pipeline {
@@ -103,13 +104,13 @@ public class PipelineImpl implements Pipeline {
         return "Pipeline " + adjacencyMap;
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public String toDotString() {
         Map<Transform, List<Transform>> adjMap = this.adjacencyMap();
         Map<Transform, String> transformNames = new HashMap<>();
         Set<String> knownNames = new HashSet<>();
-        final StringBuilder builder = new StringBuilder("digraph Pipeline {\n");
+        final StringBuilder builder = new StringBuilder(256);
+        builder.append("digraph Pipeline {\n");
         for (Entry<Transform, List<Transform>> entry : adjMap.entrySet()) {
             Transform src = entry.getKey();
             String srcName = transformNames.computeIfAbsent(
@@ -120,16 +121,15 @@ public class PipelineImpl implements Pipeline {
                         dest, t -> uniqueName(knownNames, t.name(), "")
                 );
                 builder.append("\t")
-                       .append("\"").append(srcName).append("\"")
+                       .append("\"").append(escapeGraphviz(srcName)).append("\"")
                        .append(" -> ")
-                       .append("\"").append(destName).append("\"")
+                       .append("\"").append(escapeGraphviz(destName)).append("\"")
                        .append(";\n");
             }
         }
         builder.append("}");
         return builder.toString();
     }
-
 
     Map<Transform, List<Transform>> adjacencyMap() {
         Map<Transform, List<Transform>> safeCopy = new LinkedHashMap<>();

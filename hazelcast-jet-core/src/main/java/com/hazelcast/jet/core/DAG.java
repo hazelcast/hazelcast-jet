@@ -39,10 +39,12 @@ import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
+import static com.hazelcast.jet.impl.util.Util.escapeGraphviz;
 import static com.hazelcast.util.Preconditions.checkTrue;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.newSetFromMap;
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.joining;
 
 /**
  * Describes a computation to be performed by the Jet computation engine.
@@ -335,12 +337,13 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     }
 
     /**
-     * Returns a DOT format (graphviz) representation of the DAG
+     * Returns a DOT format (graphviz) representation of the DAG.
      */
     @Nonnull
     public String toDotString() {
-        final StringBuilder builder = new StringBuilder("digraph DAG {\n");
-        Pattern stepPattern = Pattern.compile("(?<stepName>.+)-step[12]+");
+        final StringBuilder builder = new StringBuilder(512);
+        builder.append("digraph DAG {\n");
+        Pattern stepPattern = Pattern.compile("(?<stepName>.+)-step[12]");
         int clusterCount = 0;
         for (Vertex v : this) {
             List<Edge> out = getOutboundEdges(v.getName());
@@ -348,7 +351,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
             if (out.isEmpty() && in.isEmpty()) {
                 // dangling vertex
                 builder.append("\t")
-                       .append("\"").append(v.getName()).append("\"")
+                       .append("\"").append(escapeGraphviz(v.getName())).append("\"")
                        .append(";\n");
             }
             for (Edge e : out) {
@@ -368,12 +371,11 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
                            .append("\t");
                 }
                 builder.append("\t")
-                       .append("\"").append(e.getSourceName()).append("\"")
+                       .append("\"").append(escapeGraphviz(e.getSourceName())).append("\"")
                        .append(" -> ")
-                       .append("\"").append(e.getDestName()).append("\"");
+                       .append("\"").append(escapeGraphviz(e.getDestName())).append("\"");
                 if (!labels.isEmpty()) {
-                    String[] labelArr = labels.toArray(new String[0]);
-                    builder.append(" [label=\"").append(String.join("-", labelArr)).append("\"]");
+                    builder.append(labels.stream().collect(joining("-", " [label=\"", "\"]")));
                 }
                 builder.append(";\n");
                 if (inCluster) {

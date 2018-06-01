@@ -95,5 +95,4 @@ public interface Pipeline {
      */
     @Nonnull
     String toDotString();
-
 }
