@@ -728,6 +728,10 @@ public final class Processors {
      * If the mapping result is {@code null}, the vertex emits nothing.
      * Therefore it can be used to implement filtering semantics as well.
      * <p>
+     * Unlike {@link #mapUsingKeyedContextP} (with the "{@code Keyed}" part),
+     * this method creates one context object per processor (or per member, if
+     * {@linkplain ContextFactory#shareLocally() shared}).
+     * <p>
      * While it's allowed to store some local state in the context object, it
      * won't be saved to the snapshot and will misbehave in a fault-tolerant
      * stream processing job.
@@ -754,6 +758,10 @@ public final class Processors {
      * it receives, but only those that pass the given predicate. The predicate
      * function receives another parameter, the context object which Jet will
      * create using the supplied {@code contextFactory}.
+     * <p>
+     * Unlike {@link #filterUsingKeyedContextP} (with the "{@code Keyed}"
+     * part), this method creates one context object per processor (or per
+     * member, if {@linkplain ContextFactory#shareLocally() shared}).
      * <p>
      * While it's allowed to store some local state in the context object, it
      * won't be saved to the snapshot and will misbehave in a fault-tolerant
@@ -783,6 +791,10 @@ public final class Processors {
      * the context object which Jet will create using the supplied {@code
      * contextFactory}.
      * <p>
+     * Unlike {@link #flatMapUsingKeyedContextP} (with the "{@code Keyed}"
+     * part), this method creates one context object per processor (or per
+     * member, if {@linkplain ContextFactory#shareLocally() shared}).
+     * <p>
      * While it's allowed to store some local state in the context object, it
      * won't be saved to the snapshot and will misbehave in a fault-tolerant
      * stream processing job.
@@ -804,22 +816,24 @@ public final class Processors {
     }
 
     /**
-     * TODO
-     *
      * Returns a supplier of processors for a vertex which, for each received
      * item, emits the result of applying the given mapping function to it. The
-     * mapping function receives another parameter, the context object which
-     * Jet will create using the supplied {@code contextFactory}.
+     * mapping function receives another parameter, a context object which Jet
+     * will create using the supplied {@code contextFactory} for each key.
+     * <p>
+     * Unlike {@link #mapUsingContextP} (without the "{@code Keyed}" part),
+     * this method creates separate context object for each key. A context
+     * object, once created, is stored until the end of the job, so watch your
+     * number of keys.
      * <p>
      * If the mapping result is {@code null}, the vertex emits nothing.
      * Therefore it can be used to implement filtering semantics as well.
      * <p>
-     * While it's allowed to store some local state in the context object, it
-     * won't be saved to the snapshot and will misbehave in a fault-tolerant
-     * stream processing job.
+     * This vertex saves the state to snapshot so the context objects will
+     * survive a job restart.
      *
-     * @param keyFn a function that computes the grouping key
      * @param contextFactory the context factory
+     * @param keyFn a function that computes the grouping key
      * @param mapFn a stateless mapping function
      *
      * @param <C> context object type
@@ -841,16 +855,18 @@ public final class Processors {
     }
 
     /**
-     * TODO
-     *
      * Returns a supplier of processors for a vertex that emits the same items
      * it receives, but only those that pass the given predicate. The predicate
-     * function receives another parameter, the context object which Jet will
-     * create using the supplied {@code contextFactory}.
+     * function receives another parameter, a context object which Jet will
+     * create using the supplied {@code contextFactory} for each key.
      * <p>
-     * While it's allowed to store some local state in the context object, it
-     * won't be saved to the snapshot and will misbehave in a fault-tolerant
-     * stream processing job.
+     * Unlike {@link #filterUsingContextP} (without the "{@code Keyed}" part),
+     * this method creates separate context object for each key. A context
+     * object, once created, is stored until the end of the job, so watch your
+     * number of keys.
+     * <p>
+     * This vertex saves the state to snapshot so the context objects will
+     * survive a job restart.
      *
      * @param contextFactory the context factory
      * @param keyFn a function that computes the grouping key
@@ -873,18 +889,20 @@ public final class Processors {
     }
 
     /**
-     * TODO
-     *
      * Returns a supplier of processors for a vertex that applies the provided
      * item-to-traverser mapping function to each received item and emits all
      * the items from the resulting traverser. The traverser must be
-     * <em>null-terminated</em>. The mapping function receives another parameter,
-     * the context object which Jet will create using the supplied {@code
-     * contextFactory}.
+     * <em>null-terminated</em>. The mapping function receives another
+     * parameter, a context object which Jet will create using the supplied
+     * {@code contextFactory} for each key.
      * <p>
-     * While it's allowed to store some local state in the context object, it
-     * won't be saved to the snapshot and will misbehave in a fault-tolerant
-     * stream processing job.
+     * Unlike {@link #flatMapUsingContextP} (without the "{@code Keyed}" part),
+     * this method creates separate context object for each key. A context
+     * object, once created, is stored until the end of the job, so watch your
+     * number of keys.
+     * <p>
+     * This vertex saves the state to snapshot so the context objects will
+     * survive a job restart.
      *
      * @param contextFactory the context factory
      * @param keyFn a function that computes the grouping key

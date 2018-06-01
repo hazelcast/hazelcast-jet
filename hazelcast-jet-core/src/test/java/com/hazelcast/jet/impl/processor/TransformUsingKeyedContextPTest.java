@@ -63,6 +63,28 @@ public class TransformUsingKeyedContextPTest {
     }
 
     @Test
+    public void test_filterUsingMap() {
+        DistributedSupplier<Processor> supplier =
+                Processors.mapUsingKeyedContextP(
+                        ContextFactory.withCreateFn(jet -> new long[1]),
+                        (Entry<String, Long> t) -> t.getKey(),
+                        (ctx, item) -> (ctx[0] += item.getValue()) > 2 ? item : null
+                );
+
+        TestSupport.verifyProcessor(supplier)
+                   .input(asList(
+                           entry("a", 1L),
+                           entry("b", 2L),
+                           entry("a", 3L),
+                           entry("b", 4L)
+                   ))
+                   .expectOutput(asList(
+                           entry("a", 3L),
+                           entry("b", 4L)
+                   ));
+    }
+
+    @Test
     public void test_filter() {
         DistributedSupplier<Processor> supplier =
                 Processors.filterUsingKeyedContextP(
