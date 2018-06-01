@@ -49,10 +49,13 @@ import javax.jms.TextMessage;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
+import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.util.Collections.synchronizedList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
+import static javax.jms.Session.AUTO_ACKNOWLEDGE;
 
 @RunWith(HazelcastParallelClassRunner.class)
 public class JmsIntegrationTest extends JetTestSupport {
@@ -146,9 +149,33 @@ public class JmsIntegrationTest extends JetTestSupport {
     }
 
     @Test
-    public void sourceQueue_withBuilder() {
-        StreamSource<String> source = Sources.<String>jmsQueueBuilder(() -> broker.createConnectionFactory())
+    public void sourceQueue_whenBuilder() {
+        StreamSource<TextMessage> source = Sources.<TextMessage>jmsQueueBuilder(() -> broker.createConnectionFactory())
                 .destinationName(destinationName)
+                .build();
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.drawFrom(source)
+                .map(message-> uncheckCall(message::getText))
+                .drainTo(Sinks.list(listName));
+
+        startJob(pipeline);
+
+        List<String> messages = sendMessages(true);
+
+        IListJet<String> list = instance.getList(listName);
+        assertEqualsEventually(list::size, messages.size());
+        assertContainsAll(list, messages);
+    }
+
+    @Test
+    public void sourceQueue_whenBuilder_withFunctions() {
+        String queueName = destinationName;
+        StreamSource<String> source = Sources.<String>jmsQueueBuilder(() -> broker.createConnectionFactory())
+                .connectionFn(factory -> uncheckCall(factory::createConnection))
+                .sessionFn(connection -> uncheckCall(() -> connection.createSession(false, AUTO_ACKNOWLEDGE)))
+                .consumerFn(session -> uncheckCall(() -> session.createConsumer(session.createQueue(queueName))))
+                .flushFn(noopConsumer())
                 .projectionFn(TEXT_MESSAGE_FN)
                 .build();
 
@@ -165,7 +192,7 @@ public class JmsIntegrationTest extends JetTestSupport {
     }
 
     @Test
-    public void sourceTopic_withBuilder() {
+    public void sourceTopic_whenBuilder() {
         StreamSource<String> source = Sources.<String>jmsTopicBuilder(() -> broker.createConnectionFactory())
                 .destinationName(destinationName)
                 .projectionFn(TEXT_MESSAGE_FN)
@@ -185,7 +212,29 @@ public class JmsIntegrationTest extends JetTestSupport {
     }
 
     @Test
-    public void sinkQueue_withBuilder() throws JMSException {
+    public void sourceTopic_whenBuilder_withParameters() {
+        StreamSource<String> source = Sources.<String>jmsTopicBuilder(() -> broker.createConnectionFactory())
+                .connectionParams(null, null)
+                .sessionParams(false, AUTO_ACKNOWLEDGE)
+                .destinationName(destinationName)
+                .projectionFn(TEXT_MESSAGE_FN)
+                .build();
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.drawFrom(source).drainTo(Sinks.list(listName));
+
+        startJob(pipeline);
+        sleepSeconds(1);
+
+        List<String> messages = sendMessages(false);
+
+        IListJet<String> list = instance.getList(listName);
+        assertEqualsEventually(list::size, messages.size());
+        assertContainsAll(list, messages);
+    }
+
+    @Test
+    public void sinkQueue_whenBuilder() throws JMSException {
         populateList();
 
         Sink<String> sink = Sinks.<String>jmsQueueBuilder(() -> broker.createConnectionFactory())
@@ -204,10 +253,56 @@ public class JmsIntegrationTest extends JetTestSupport {
     }
 
     @Test
-    public void sinkTopic_withBuilder() throws JMSException {
+    public void sinkQueue_whenBuilder_withFunctions() throws JMSException {
+        populateList();
+
+        Sink<String> sink = Sinks.<String>jmsQueueBuilder(() -> broker.createConnectionFactory())
+                .connectionFn(factory -> uncheckCall(factory::createConnection))
+                .sessionFn(connection -> uncheckCall(() -> connection.createSession(false, AUTO_ACKNOWLEDGE)))
+                .messageFn((session, item) -> uncheckCall(() -> session.createTextMessage(item)))
+                .sendFn((producer, message) -> uncheckRun(() -> producer.send(message)))
+                .flushFn(noopConsumer())
+                .destinationName(destinationName)
+                .build();
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.drawFrom(Sources.<String>list(listName))
+                .drainTo(sink);
+
+        List<String> messages = consumeMessages(true);
+        startJob(pipeline);
+
+        assertEqualsEventually(messages::size, MESSAGE_COUNT);
+        assertContainsAll(instance.getList(listName), messages);
+    }
+
+    @Test
+    public void sinkTopic_whenBuilder() throws JMSException {
         populateList();
 
         Sink<String> sink = Sinks.<String>jmsTopicBuilder(() -> broker.createConnectionFactory())
+                .destinationName(destinationName)
+                .build();
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.drawFrom(Sources.<String>list(listName))
+                .drainTo(sink);
+
+        List<String> messages = consumeMessages(false);
+        sleepSeconds(1);
+        startJob(pipeline);
+
+        assertEqualsEventually(messages::size, MESSAGE_COUNT);
+        assertContainsAll(instance.getList(listName), messages);
+    }
+
+    @Test
+    public void sinkTopic_whenBuilder_withParameters() throws JMSException {
+        populateList();
+
+        Sink<String> sink = Sinks.<String>jmsTopicBuilder(() -> broker.createConnectionFactory())
+                .connectionParams(null, null)
+                .sessionParams(false, AUTO_ACKNOWLEDGE)
                 .destinationName(destinationName)
                 .build();
 
@@ -231,7 +326,7 @@ public class JmsIntegrationTest extends JetTestSupport {
         List<String> messages = synchronizedList(new ArrayList<>());
         spawn(() -> {
             try {
-                Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+                Session session = connection.createSession(false, AUTO_ACKNOWLEDGE);
                 Destination dest = isQueue ? session.createQueue(destinationName) : session.createTopic(destinationName);
                 MessageConsumer consumer = session.createConsumer(dest);
                 int count = 0;
@@ -285,7 +380,7 @@ public class JmsIntegrationTest extends JetTestSupport {
         Connection connection = connectionFactory.createConnection();
         connection.start();
 
-        Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+        Session session = connection.createSession(false, AUTO_ACKNOWLEDGE);
         Destination destination = isQueue ? session.createQueue(destinationName) : session.createTopic(destinationName);
         MessageProducer producer = session.createProducer(destination);
         TextMessage textMessage = session.createTextMessage(message);
