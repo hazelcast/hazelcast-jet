@@ -71,8 +71,9 @@ public final class AvroSinks {
             @Nonnull DistributedSupplier<Schema> schemaSupplier,
             @Nonnull DistributedSupplier<DatumWriter<R>> datumWriterSupplier
     ) {
-        return Sinks.<DataFileWriter<R>, R>builder(context -> createWriter(Paths.get(directoryName),
-                context.globalProcessorIndex(), schemaSupplier, datumWriterSupplier))
+        return Sinks.<DataFileWriter<R>, R>builder("avroFilesSink(" + directoryName + ')',
+                context -> createWriter(Paths.get(directoryName), context.globalProcessorIndex(),
+                        schemaSupplier, datumWriterSupplier))
                 .onReceiveFn((writer, item) -> uncheckRun(() -> writer.append(item)))
                 .flushFn(writer -> uncheckRun(writer::flush))
                 .destroyFn(writer -> uncheckRun(writer::close))
