@@ -83,7 +83,7 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
         }
     }
 
-    public ConcurrentArrayRingbuffer.RingbufferSlice<Map.Entry<Long, byte[]>> getMetricBlobs(long startSequence) {
+    public ConcurrentArrayRingbuffer.RingbufferSlice<Map.Entry<Long, byte[]>> readMetrics(long startSequence) {
         return metricsJournal.copyFrom(startSequence);
     }
 

@@ -43,7 +43,7 @@ public class JetReadMetricsMessageTask extends AbstractMessageTask<RequestParame
             );
         }
         JetMetricsService jetMetricsService = getService(JetMetricsService.SERVICE_NAME);
-        sendResponse(jetMetricsService.getMetricBlobs(parameters.fromSequence));
+        sendResponse(jetMetricsService.readMetrics(parameters.fromSequence));
     }
 
     @Override
