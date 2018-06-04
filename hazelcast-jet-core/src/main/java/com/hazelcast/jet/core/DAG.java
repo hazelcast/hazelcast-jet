@@ -364,9 +364,9 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
                 }
                 Matcher srcMatcher = stepPattern.matcher(e.getSourceName());
                 Matcher destMatcher = stepPattern.matcher(e.getDestName());
-                boolean inCluster = srcMatcher.matches() && destMatcher.matches()
+                boolean inSubgraph = srcMatcher.matches() && destMatcher.matches()
                         && srcMatcher.group("stepName").equals(destMatcher.group("stepName"));
-                if (inCluster) {
+                if (inSubgraph) {
                     builder.append("\tsubgraph cluster_").append(clusterCount++).append(" {\n")
                            .append("\t");
                 }
@@ -378,7 +378,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
                     builder.append(labels.stream().collect(joining("-", " [label=\"", "\"]")));
                 }
                 builder.append(";\n");
-                if (inCluster) {
+                if (inSubgraph) {
                     builder.append("\t}\n");
                 }
             }
