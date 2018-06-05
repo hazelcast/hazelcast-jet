@@ -20,7 +20,6 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -32,11 +31,9 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Traversers.traverseStream;
-import static java.util.stream.Collectors.toList;
 
 /**
  * Private API, use {@link SourceProcessors#readFilesP}.
@@ -54,7 +51,6 @@ public final class ReadFilesP<W, R> extends AbstractProcessor {
 
     private final Path directory;
     private final String glob;
-    private final int localProcessorIndex;
     private final boolean sharedFileSystem;
     private final DistributedFunction<Path, Stream<W>> readFileFn;
     private final DistributedBiFunction<String, W, R> mapOutputFn;
@@ -68,20 +64,17 @@ public final class ReadFilesP<W, R> extends AbstractProcessor {
     private ReadFilesP(@Nonnull String directory, @Nonnull String glob,
                        @Nonnull DistributedFunction<Path, Stream<W>> readFileFn,
                        @Nonnull DistributedBiFunction<String, W, R> mapOutputFn,
-                       int localProcessorIndex,
-                       boolean sharedFileSystem
-    ) {
+                       boolean sharedFileSystem) {
         this.directory = Paths.get(directory);
         this.glob = glob;
         this.readFileFn = readFileFn;
         this.mapOutputFn = mapOutputFn;
-        this.localProcessorIndex = localProcessorIndex;
         this.sharedFileSystem = sharedFileSystem;
     }
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        processorIndex = sharedFileSystem ? context.globalProcessorIndex() : localProcessorIndex;
+        processorIndex = sharedFileSystem ? context.globalProcessorIndex() : context.localProcessorIndex();
         parallelism = sharedFileSystem ? context.totalParallelism() : context.localParallelism();
 
         directoryStream = Files.newDirectoryStream(directory, glob);
@@ -151,11 +144,7 @@ public final class ReadFilesP<W, R> extends AbstractProcessor {
             @Nonnull DistributedBiFunction<String, W, R> mapOutputFn,
             boolean sharedFileSystem
     ) {
-        return ProcessorMetaSupplier.of((ProcessorSupplier)
-                count -> IntStream.range(0, count)
-                                  .mapToObj(i -> new ReadFilesP<>(directory, glob, readFileFn,
-                                          mapOutputFn, i, sharedFileSystem))
-                                  .collect(toList()),
+        return ProcessorMetaSupplier.of(() -> new ReadFilesP<>(directory, glob, readFileFn, mapOutputFn, sharedFileSystem),
                 2);
     }
 }

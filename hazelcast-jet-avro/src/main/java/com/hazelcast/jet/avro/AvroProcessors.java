@@ -30,8 +30,7 @@ import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 
 /**
- * Static utility class with factories of Apache Avro source and sink
- * processors.
+ * Static utility class with factory of Apache Avro source processor.
  */
 public final class AvroProcessors {
 
