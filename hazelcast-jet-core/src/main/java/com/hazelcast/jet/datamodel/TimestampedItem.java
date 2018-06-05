@@ -16,8 +16,6 @@
 
 package com.hazelcast.jet.datamodel;
 
-import com.hazelcast.jet.function.WindowResultFunction;
-
 import javax.annotation.Nonnull;
 import java.io.Serializable;
 import java.util.Objects;
@@ -42,17 +40,6 @@ public final class TimestampedItem<T> implements Serializable {
     public TimestampedItem(long timestamp, @Nonnull T item) {
         this.timestamp = timestamp;
         this.item = item;
-    }
-
-    /**
-     * This constructor exists in order to match the shape of the functional
-     * interface {@link WindowResultFunction}.
-     * <p>
-     * Constructs a timestamped item with the supplied field values. Ignores
-     * the first argument.
-     */
-    public TimestampedItem(long ignored, long timestamp, @Nonnull T item) {
-        this(timestamp, item);
     }
 
     /**
@@ -90,5 +77,17 @@ public final class TimestampedItem<T> implements Serializable {
     public String toString() {
         return "TimestampedItem{ts=" + toLocalTime(timestamp)
                 + ", value='" + item + "'}";
+    }
+
+
+    /**
+     * This method matches the shape of the functional interface {@link
+     * com.hazelcast.jet.function.WindowResultFunction WindowResultFunction}.
+     * <p>
+     * Constructs a {@code TimestampedItem} using the window end time as the
+     * timestamp.
+     */
+    public static <V> TimestampedItem<V> mapWindowResult(long winStart, long winEnd, @Nonnull V value) {
+        return new TimestampedItem<>(winEnd, value);
     }
 }
