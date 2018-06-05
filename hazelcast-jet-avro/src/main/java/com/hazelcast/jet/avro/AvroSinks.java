@@ -19,7 +19,6 @@ package com.hazelcast.jet.avro;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericDatumWriter;
@@ -30,13 +29,9 @@ import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.avro.specific.SpecificRecord;
 
 import javax.annotation.Nonnull;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
-import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 
 /**
- * Contains factory methods for Avro sinks.
+ * Contains factory methods for Apache Avro sinks.
  */
 public final class AvroSinks {
 
@@ -44,9 +39,9 @@ public final class AvroSinks {
     }
 
     /**
-     * Returns a sink that that writes the items it receives to Avro files. Each
-     * processor will write to its own file whose name is equal to the
-     * processor's global index (an integer unique to each processor of the
+     * Returns a sink that that writes the items it receives to Apache Avro
+     * files. Each processor will write to its own file whose name is equal to
+     * the processor's global index (an integer unique to each processor of the
      * vertex), but a single pathname is used to resolve the containing
      * directory of all files, on all cluster members.
      * <p>
@@ -71,14 +66,8 @@ public final class AvroSinks {
             @Nonnull DistributedSupplier<Schema> schemaSupplier,
             @Nonnull DistributedSupplier<DatumWriter<R>> datumWriterSupplier
     ) {
-        return Sinks.<DataFileWriter<R>, R>builder("avroFilesSink(" + directoryName + ')',
-                context -> createWriter(Paths.get(directoryName), context.globalProcessorIndex(),
-                        schemaSupplier, datumWriterSupplier))
-                .onReceiveFn((writer, item) -> uncheckRun(() -> writer.append(item)))
-                .flushFn(writer -> uncheckRun(writer::flush))
-                .destroyFn(writer -> uncheckRun(writer::close))
-                .preferredLocalParallelism(1)
-                .build();
+        return Sinks.fromProcessor("avroFilesSink(" + directoryName + ')',
+                AvroProcessors.writeFilesP(directoryName, schemaSupplier, datumWriterSupplier));
     }
 
     /**
@@ -108,19 +97,5 @@ public final class AvroSinks {
         return files(directoryName, schemaSupplier, GenericDatumWriter::new);
     }
 
-    @SuppressFBWarnings(value = "RV_RETURN_VALUE_IGNORED_BAD_PRACTICE",
-            justification = "mkdirs() returns false if the directory already existed, which is good. "
-                    + "We don't care even if it didn't exist and we failed to create it, "
-                    + "because we'll fail later when trying to create the file.")
-    private static <R> DataFileWriter<R> createWriter(Path directory, int globalIndex,
-                                                      DistributedSupplier<Schema> schemaSupplier,
-                                                      DistributedSupplier<DatumWriter<R>> datumWriterSupplier) {
-        directory.toFile().mkdirs();
 
-        Path file = directory.resolve(String.valueOf(globalIndex));
-
-        DataFileWriter<R> writer = new DataFileWriter<>(datumWriterSupplier.get());
-        uncheckRun(() -> writer.create(schemaSupplier.get(), file.toFile()));
-        return writer;
-    }
 }

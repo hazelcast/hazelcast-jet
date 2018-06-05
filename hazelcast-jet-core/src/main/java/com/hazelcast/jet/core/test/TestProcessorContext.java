@@ -43,7 +43,7 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
     @Override
     public int localProcessorIndex() {
         assert localProcessorIndex >= 0 && localProcessorIndex < localParallelism()
-                : "globalProcessorIndex should be in range 0.." + (localParallelism() - 1);
+                : "localProcessorIndex should be in range 0.." + (localParallelism() - 1);
         return localProcessorIndex;
     }
 

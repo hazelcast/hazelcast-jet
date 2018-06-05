@@ -20,17 +20,25 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.connector.ReadFilesP;
+import com.hazelcast.jet.impl.connector.WriteBufferedP;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
+import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.io.DatumReader;
+import org.apache.avro.io.DatumWriter;
 
 import javax.annotation.Nonnull;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.stream.StreamSupport;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 
 /**
- * Static utility class with factory of Apache Avro source processor.
+ * Static utility class with factories of Apache Avro source and sink
+ * processors.
  */
 public final class AvroProcessors {
 
@@ -55,6 +63,41 @@ public final class AvroProcessors {
                                         .onClose(() -> uncheckRun(reader::close));
                 }),
                 mapOutputFn, sharedFileSystem);
+    }
+
+    /**
+     * Returns a supplier of processors for {@link AvroSinks#files}.
+     */
+    @Nonnull
+    public static <R> ProcessorMetaSupplier writeFilesP(
+            @Nonnull String directoryName,
+            @Nonnull DistributedSupplier<Schema> schemaSupplier,
+            @Nonnull DistributedSupplier<DatumWriter<R>> datumWriterSupplier
+    ) {
+        return ProcessorMetaSupplier.of(
+                WriteBufferedP.<DataFileWriter<R>, R>supplier(
+                        context -> createWriter(Paths.get(directoryName), context.globalProcessorIndex(),
+                                schemaSupplier, datumWriterSupplier),
+                        (writer, item) -> uncheckRun(() -> writer.append(item)),
+                        writer -> uncheckRun(writer::flush),
+                        writer -> uncheckRun(writer::close)
+                ), 1);
+    }
+
+    @SuppressFBWarnings(value = "RV_RETURN_VALUE_IGNORED_BAD_PRACTICE",
+            justification = "mkdirs() returns false if the directory already existed, which is good. "
+                    + "We don't care even if it didn't exist and we failed to create it, "
+                    + "because we'll fail later when trying to create the file.")
+    private static <R> DataFileWriter<R> createWriter(Path directory, int globalIndex,
+                                                      DistributedSupplier<Schema> schemaSupplier,
+                                                      DistributedSupplier<DatumWriter<R>> datumWriterSupplier) {
+        directory.toFile().mkdirs();
+
+        Path file = directory.resolve(String.valueOf(globalIndex));
+
+        DataFileWriter<R> writer = new DataFileWriter<>(datumWriterSupplier.get());
+        uncheckRun(() -> writer.create(schemaSupplier.get(), file.toFile()));
+        return writer;
     }
 
 }
