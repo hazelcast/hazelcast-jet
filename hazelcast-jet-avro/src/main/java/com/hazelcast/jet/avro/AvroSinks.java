@@ -44,7 +44,7 @@ public final class AvroSinks {
     }
 
     /**
-     * Returns a sink that that writes the items it receives to avro files. Each
+     * Returns a sink that that writes the items it receives to Avro files. Each
      * processor will write to its own file whose name is equal to the
      * processor's global index (an integer unique to each processor of the
      * vertex), but a single pathname is used to resolve the containing
@@ -84,7 +84,7 @@ public final class AvroSinks {
     /**
      * Convenience for {@link #files(String, DistributedSupplier,
      * DistributedSupplier)} which uses either {@link SpecificDatumWriter} or
-     * {@link ReflectDatumWriter} depending on the supplied {@code recordClass}
+     * {@link ReflectDatumWriter} depending on the supplied {@code recordClass}.
      */
     @Nonnull
     public static <R> Sink<R> files(
@@ -98,7 +98,7 @@ public final class AvroSinks {
 
     /**
      * Convenience for {@link #files(String, DistributedSupplier,
-     * DistributedSupplier)} which uses {@link GenericDatumWriter}
+     * DistributedSupplier)} which uses {@link GenericDatumWriter}.
      */
     @Nonnull
     public static Sink<IndexedRecord> files(

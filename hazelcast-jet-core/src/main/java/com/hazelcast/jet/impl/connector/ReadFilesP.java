@@ -56,7 +56,7 @@ public final class ReadFilesP<W, R> extends AbstractProcessor {
     private final String glob;
     private final int localProcessorIndex;
     private final boolean sharedFileSystem;
-    private final DistributedFunction<Path, Stream<W>> streamFn;
+    private final DistributedFunction<Path, Stream<W>> readFileFn;
     private final DistributedBiFunction<String, W, R> mapOutputFn;
 
     private int processorIndex;
@@ -66,12 +66,14 @@ public final class ReadFilesP<W, R> extends AbstractProcessor {
     private Stream<W> currentStream;
 
     private ReadFilesP(@Nonnull String directory, @Nonnull String glob,
-                       @Nonnull DistributedFunction<Path, Stream<W>> streamFn,
+                       @Nonnull DistributedFunction<Path, Stream<W>> readFileFn,
                        @Nonnull DistributedBiFunction<String, W, R> mapOutputFn,
-                       int localProcessorIndex, boolean sharedFileSystem) {
+                       int localProcessorIndex,
+                       boolean sharedFileSystem
+    ) {
         this.directory = Paths.get(directory);
         this.glob = glob;
-        this.streamFn = streamFn;
+        this.readFileFn = readFileFn;
         this.mapOutputFn = mapOutputFn;
         this.localProcessorIndex = localProcessorIndex;
         this.sharedFileSystem = sharedFileSystem;
@@ -105,8 +107,8 @@ public final class ReadFilesP<W, R> extends AbstractProcessor {
         if (getLogger().isFinestEnabled()) {
             getLogger().finest("Processing file " + file);
         }
-        assert currentStream == null : "currentFileLines != null";
-        currentStream = streamFn.apply(file);
+        assert currentStream == null : "currentStream != null";
+        currentStream = readFileFn.apply(file);
         String fileName = file.getFileName().toString();
         return traverseStream(currentStream)
                 .map(line -> mapOutputFn.apply(fileName, line))
@@ -145,13 +147,13 @@ public final class ReadFilesP<W, R> extends AbstractProcessor {
     public static <W, R> ProcessorMetaSupplier metaSupplier(
             @Nonnull String directory,
             @Nonnull String glob,
-            @Nonnull DistributedFunction<Path, Stream<W>> streamFn,
+            @Nonnull DistributedFunction<Path, Stream<W>> readFileFn,
             @Nonnull DistributedBiFunction<String, W, R> mapOutputFn,
             boolean sharedFileSystem
     ) {
         return ProcessorMetaSupplier.of((ProcessorSupplier)
                 count -> IntStream.range(0, count)
-                                  .mapToObj(i -> new ReadFilesP<>(directory, glob, streamFn,
+                                  .mapToObj(i -> new ReadFilesP<>(directory, glob, readFileFn,
                                           mapOutputFn, i, sharedFileSystem))
                                   .collect(toList()),
                 2);

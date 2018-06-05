@@ -47,8 +47,9 @@ public class User implements Serializable {
         this.password = password;
     }
 
-    @Override public String toString() {
-        return "User{" +
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "{" +
                 "username='" + username + '\'' +
                 ", password='" + password + '\'' +
                 '}';

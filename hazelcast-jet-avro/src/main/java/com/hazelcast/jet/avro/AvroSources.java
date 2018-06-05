@@ -39,20 +39,23 @@ public final class AvroSources {
     }
 
     /**
-     * Returns a source that reads records from Apache Avro file and emits the
-     * results of transforming each record with the supplied mapping function.
+     * A source that reads records from Apache Avro files in a directory (but
+     * not its subdirectories).
      * <p>
-     * The source assigns files in the supplied directory to Jet {@link
-     * com.hazelcast.jet.core.Processor processors} according to the {@code
-     * sharedFileSystem} parameter.
+     * If {@code sharedFileSystem} is {@code true}, Jet will assume all members
+     * see the same files. They will split the work so that each member will
+     * read a part of the files. If {@code sharedFileSystem} is {@code false},
+     * each member will read all files in the directory, assuming the are
+     * local.
      * <p>
-     * Any {@code IOException} will cause the job to fail.
+     * The source does not save any state to snapshot. If the job is restarted,
+     * it will re-emit all entries.
      * <p>
-     * Default local parallelism for this processor is 2 (or less if less CPUs
-     * are available).
+     * Any {@code IOException} will cause the job to fail. The files must not
+     * change while being read; if they do, the behavior is unspecified.
      * <p>
-     * This source does not save any state to snapshot. If the job is restarted,
-     * all entries will be emitted again.
+     * The default local parallelism for this processor is 2 (or 1 if just 1
+     * CPU is available).
      *
      * @param directory           parent directory of the files
      * @param glob                the globbing mask, see {@link
@@ -61,8 +64,9 @@ public final class AvroSources {
      * @param datumReaderSupplier the datum reader supplier
      * @param mapOutputFn         function to create output items. Parameters are
      *                            {@code fileName} and {@code W}.
-     * @param sharedFileSystem    true if files are shared across cluster false if
-     *                            files are local
+     * @param sharedFileSystem    {@code true} if files are in a shared storage
+     *                                        visible to all members, {@code
+     *                                        false} otherwise
      * @param <W>                 the type of the records
      * @param <R>                 the type of the emitted value
      */
@@ -83,14 +87,15 @@ public final class AvroSources {
      * #files(String, String, DistributedSupplier, DistributedBiFunction, boolean)}
      * which reads all the files in the supplied directory as specific records
      * using supplied {@code recordClass}. If {@code recordClass} implements
-     * {@link SpecificRecord}, {@link SpecificDatumReader} is used otherwise
-     * {@link ReflectDatumReader} to read the records.
+     * {@link SpecificRecord}, {@link SpecificDatumReader} is used to read the
+     * records, {@link ReflectDatumReader} is used otherwise.
      */
     @Nonnull
     public static <R> BatchSource<R> files(
             @Nonnull String directory,
             @Nonnull Class<R> recordClass,
-            boolean sharedFileSystem) {
+            boolean sharedFileSystem
+    ) {
         return files(directory, "*", () -> SpecificRecord.class.isAssignableFrom(recordClass) ?
                         new SpecificDatumReader<>(recordClass) : new ReflectDatumReader<>(recordClass),
                 (s, r) -> r, sharedFileSystem);
@@ -107,8 +112,8 @@ public final class AvroSources {
     public static <R> BatchSource<R> files(
             @Nonnull String directory,
             @Nonnull DistributedBiFunction<String, GenericRecord, R> mapOutputFn,
-            boolean sharedFileSystem) {
+            boolean sharedFileSystem
+    ) {
         return files(directory, "*", GenericDatumReader::new, mapOutputFn, sharedFileSystem);
     }
-
 }

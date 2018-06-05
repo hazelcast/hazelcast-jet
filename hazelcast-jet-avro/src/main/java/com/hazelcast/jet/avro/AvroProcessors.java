@@ -39,8 +39,7 @@ public final class AvroProcessors {
     }
 
     /**
-     * Returns a supplier of processors for
-     * {@link AvroSources#files(String, String, DistributedSupplier, DistributedBiFunction, boolean)}.
+     * Returns a supplier of processors for {@link AvroSources#files}.
      */
     @Nonnull
     public static <W, R> ProcessorMetaSupplier readFilesP(

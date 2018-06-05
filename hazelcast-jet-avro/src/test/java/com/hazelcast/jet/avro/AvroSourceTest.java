@@ -23,6 +23,7 @@ import com.hazelcast.jet.avro.model.User;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.nio.IOUtil;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericRecord;
@@ -37,7 +38,6 @@ import java.io.File;
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastParallelClassRunner.class)
 public class AvroSourceTest extends JetTestSupport {
@@ -58,17 +58,11 @@ public class AvroSourceTest extends JetTestSupport {
 
     @AfterClass
     public static void cleanup() {
-        File[] files = directory.listFiles();
-        if (files != null) {
-            for (File file : files) {
-                assertTrue(file.delete());
-            }
-        }
-        assertTrue(directory.delete());
+        IOUtil.delete(directory);
     }
 
     @Before
-    public void setup() throws Exception {
+    public void setup() {
         jet = createJetMember();
         list = jet.getList("writer");
     }
@@ -118,5 +112,4 @@ public class AvroSourceTest extends JetTestSupport {
     private static User toUser(GenericRecord record) {
         return new User(record.get(0).toString(), record.get(1).toString());
     }
-
 }
