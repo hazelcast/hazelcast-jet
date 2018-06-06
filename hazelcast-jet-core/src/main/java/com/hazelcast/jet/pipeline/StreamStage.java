@@ -89,7 +89,7 @@ public interface StreamStage<T> extends GeneralStage<T> {
     );
 
     @Nonnull @Override
-    <R> StreamStage<R> rollingAggregation(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp);
+    <R> StreamStage<R> aggregateRolling(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp);
 
     @Nonnull @Override
     <K, T1_IN, T1, R> StreamStage<R> hashJoin(

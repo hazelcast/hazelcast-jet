@@ -334,7 +334,7 @@ public class BatchStageTest extends PipelineTestSupport {
     }
 
     @Test
-    public void rollingAggregation_keyed() {
+    public void aggregateRolling_keyed() {
         // Given
         List<Integer> input = sequence(itemCount);
         putToBatchSrcMap(input);
@@ -342,7 +342,7 @@ public class BatchStageTest extends PipelineTestSupport {
         // When
         BatchStage<Entry<Integer, Long>> mapped = srcStage
                 .groupingKey(i -> i % 2)
-                .rollingAggregation(counting());
+                .aggregateRolling(counting());
 
         // Then
         mapped.drainTo(sink);
@@ -356,14 +356,14 @@ public class BatchStageTest extends PipelineTestSupport {
     }
 
     @Test
-    public void rollingAggregation_global() {
+    public void aggregateRolling_global() {
         // Given
         List<Integer> input = sequence(itemCount);
         putToBatchSrcMap(input);
 
         // When
         BatchStage<Long> mapped = srcStage
-                .rollingAggregation(counting());
+                .aggregateRolling(counting());
 
         // Then
         mapped.drainTo(sink);

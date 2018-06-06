@@ -74,18 +74,18 @@ public interface StageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> 
     );
 
     @Nonnull @Override
-    default <R> BatchStage<Entry<K, R>> rollingAggregation(
+    default <R> BatchStage<Entry<K, R>> aggregateRolling(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     ) {
-        return (BatchStage<Entry<K, R>>) (BatchStage) GeneralStageWithGrouping.super.rollingAggregation(aggrOp);
+        return (BatchStage<Entry<K, R>>) (BatchStage) GeneralStageWithGrouping.super.aggregateRolling(aggrOp);
     }
 
     @Nonnull @Override
-    default <R, OUT> BatchStage<OUT> rollingAggregation(
+    default <R, OUT> BatchStage<OUT> aggregateRolling(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp,
             @Nonnull DistributedBiFunction<K, R, OUT> mapToOutputFn
     ) {
-        return (BatchStage<OUT>) GeneralStageWithGrouping.super.rollingAggregation(aggrOp, mapToOutputFn);
+        return (BatchStage<OUT>) GeneralStageWithGrouping.super.aggregateRolling(aggrOp, mapToOutputFn);
     }
 
     /**

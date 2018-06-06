@@ -33,9 +33,13 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 
 /**
- * Processor which, for each received item, emits all the items from the
- * traverser returned by the given item-to-traverser function, using a context
- * object.
+ * Backing processor for {@link
+ * com.hazelcast.jet.pipeline.GeneralStageWithGrouping#mapUsingContext}.
+ *
+ * @param <C> context object type
+ * @param <T> received item type
+ * @param <K> key type
+ * @param <R> emitted item type
  */
 public final class TransformUsingKeyedContextP<C, T, K, R> extends AbstractProcessor {
     private final ContextFactory<C> contextFactory;

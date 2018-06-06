@@ -58,9 +58,18 @@ public interface GeneralStageWithGrouping<T, K> {
      * <p>
      * Context objects are saved to state snapshot. Therefore they have to be
      * serializable if snapshotting is enabled.
-     * <p>
-     * <strong>NOTE:</strong> A context object, once created, is only released
-     * at the end of the job.
+     *
+     * <h3>Note on context object retention</h3>
+     * A context object, once created, is only released at the end of the job.
+     * If new keys appear and disappear on the stream, you'll run out of memory
+     * over time.
+     *
+     * <h3>Note on item retention in {@linkplain GeneralStage#addTimestamps
+     * jobs with timestamps}</h3>
+     *
+     * The context should not be used to accumulate stream items and emit the
+     * result later, such as aggregating N items into one. The emitted item
+     * will always have the timestamp of the item it was mapped from.
      *
      * @param contextFactory the context factory
      * @param mapFn a stateless mapping function
@@ -84,9 +93,11 @@ public interface GeneralStageWithGrouping<T, K> {
      * <p>
      * Context objects are saved to state snapshot. Therefore they have to be
      * serializable if snapshotting is enabled.
-     * <p>
-     * <strong>NOTE:</strong> A context object, once created, is only released
-     * at the end of the job.
+     *
+     * <h3>Note on context object retention</h3>
+     * A context object, once created, is only released at the end of the job.
+     * If new keys appear and disappear on the stream, you'll run out of memory
+     * over time.
      *
      * @param contextFactory the context factory
      * @param filterFn a stateless filter predicate function
@@ -107,12 +118,18 @@ public interface GeneralStageWithGrouping<T, K> {
      * must be <em>null-terminated</em>. The mapping function receives another
      * parameter, the context object which Jet will create using the supplied
      * {@code contextFactory}, separately for each grouping key.
-     * <p>
-     * Context objects are saved to state snapshot. Therefore they have to be
-     * serializable if snapshotting is enabled.
-     * <p>
-     * <strong>NOTE:</strong> A context object, once created, is only released
-     * at the end of the job.
+     *
+     * <h3>Note on context object retention</h3>
+     * A context object, once created, is only released at the end of the job.
+     * If new keys appear and disappear on the stream, you'll run out of memory
+     * over time.
+     *
+     * <h3>Note on item retention in {@linkplain GeneralStage#addTimestamps
+     * jobs with timestamps}</h3>
+     *
+     * The context should not be used to accumulate stream items and emit the
+     * result later, such as aggregating N items into one. The emitted item
+     * will always have the timestamp of the item it was mapped from.
      *
      * @param contextFactory the context factory
      * @param flatMapFn a stateless flatmapping function, whose result type is
@@ -131,15 +148,15 @@ public interface GeneralStageWithGrouping<T, K> {
     /**
      * A shortcut for:
      * <blockquote>
-     *     {@link #rollingAggregation(AggregateOperation1,
-     *     DistributedBiFunction) rollingAggregation(aggrOp, Util::entry)}.
+     *     {@link #aggregateRolling(AggregateOperation1,
+     *     DistributedBiFunction) aggregateRolling(aggrOp, Util::entry)}.
      * </blockquote>
      */
     @Nonnull
-    default <R> GeneralStage<Entry<K, R>> rollingAggregation(
+    default <R> GeneralStage<Entry<K, R>> aggregateRolling(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     ) {
-        return rollingAggregation(aggrOp, Util::entry);
+        return aggregateRolling(aggrOp, Util::entry);
     }
 
     /**
@@ -182,7 +199,7 @@ public interface GeneralStageWithGrouping<T, K> {
      * @return the newly attached stage
      */
     @Nonnull
-    default <R, OUT> GeneralStage<OUT> rollingAggregation(
+    default <R, OUT> GeneralStage<OUT> aggregateRolling(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp,
             @Nonnull DistributedBiFunction<K, R, OUT> mapToOutputFn
     ) {

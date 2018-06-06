@@ -59,18 +59,18 @@ public interface StreamStageWithGrouping<T, K> extends GeneralStageWithGrouping<
     );
 
     @Nonnull @Override
-    default <R> StreamStage<Entry<K, R>> rollingAggregation(
+    default <R> StreamStage<Entry<K, R>> aggregateRolling(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     ) {
-        return (StreamStage<Entry<K, R>>) (StreamStage) GeneralStageWithGrouping.super.rollingAggregation(aggrOp);
+        return (StreamStage<Entry<K, R>>) (StreamStage) GeneralStageWithGrouping.super.aggregateRolling(aggrOp);
     }
 
     @Nonnull @Override
-    default <R, OUT> StreamStage<OUT> rollingAggregation(
+    default <R, OUT> StreamStage<OUT> aggregateRolling(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp,
             @Nonnull DistributedBiFunction<K, R, OUT> mapToOutputFn
     ) {
-        return (StreamStage<OUT>) GeneralStageWithGrouping.super.rollingAggregation(aggrOp, mapToOutputFn);
+        return (StreamStage<OUT>) GeneralStageWithGrouping.super.aggregateRolling(aggrOp, mapToOutputFn);
     }
 
 

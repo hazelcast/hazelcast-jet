@@ -101,8 +101,8 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     }
 
     @Nonnull @Override
-    public <R> StreamStage<R> rollingAggregation(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp) {
-        return groupingKey(constantKey()).rollingAggregation(aggrOp, (k, v) -> v);
+    public <R> StreamStage<R> aggregateRolling(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp) {
+        return groupingKey(constantKey()).aggregateRolling(aggrOp, (k, v) -> v);
     }
 
     @Nonnull @Override

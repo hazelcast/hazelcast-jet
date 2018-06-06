@@ -288,7 +288,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     }
 
     @Test
-    public void rollingAggregation_keyed() {
+    public void aggregateRolling_keyed() {
         // Given
         List<Integer> input = sequence(itemCount);
         putToBatchSrcMap(input);
@@ -296,7 +296,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // When
         StreamStage<Entry<Integer, Long>> mapped = mapJournalSrcStage
                 .groupingKey(i -> i % 2)
-                .rollingAggregation(counting());
+                .aggregateRolling(counting());
 
         // Then
         mapped.drainTo(sink);
@@ -310,14 +310,14 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     }
 
     @Test
-    public void rollingAggregation_global() {
+    public void aggregateRolling_global() {
         // Given
         List<Integer> input = sequence(itemCount);
         putToBatchSrcMap(input);
 
         // When
         StreamStage<Long> mapped = mapJournalSrcStage
-                .rollingAggregation(counting());
+                .aggregateRolling(counting());
 
         // Then
         mapped.drainTo(sink);

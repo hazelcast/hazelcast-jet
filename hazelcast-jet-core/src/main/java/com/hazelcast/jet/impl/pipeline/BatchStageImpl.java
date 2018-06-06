@@ -102,8 +102,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    public <R> BatchStage<R> rollingAggregation(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp) {
-        return groupingKey(constantKey()).rollingAggregation(aggrOp, (k, v) -> v);
+    public <R> BatchStage<R> aggregateRolling(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp) {
+        return groupingKey(constantKey()).aggregateRolling(aggrOp, (k, v) -> v);
     }
 
     @Nonnull @Override

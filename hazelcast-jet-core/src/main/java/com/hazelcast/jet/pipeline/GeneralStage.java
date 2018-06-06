@@ -94,12 +94,21 @@ public interface GeneralStage<T> extends Stage {
      * <p>
      * If the mapping result is {@code null}, it emits nothing. Therefore this
      * stage can be used to implement filtering semantics as well.
-     * <p>
-     * <strong>NOTE:</strong> any state you maintain in the context object does
-     * not automatically become a part of a fault-tolerant snapshot. If Jet must
-     * restore from a snapshot, your state will either be lost (if it was just
-     * local state) or not rewound to the checkpoint (if it was stored in some
-     * durable storage).
+     *
+     * <h3>Note on state saving</h3>
+     * Any state you maintain in the context object does not automatically
+     * become a part of a fault-tolerant snapshot. If Jet must restore from a
+     * snapshot, your state will either be lost (if it was just local state) or
+     * not rewound to the checkpoint (if it was stored in some durable
+     * storage).
+     *
+     * <h3>Note on item retention in {@linkplain GeneralStage#addTimestamps
+     * jobs with timestamps}</h3>
+     *
+     * The context should not be used to accumulate stream items and emit the
+     * result later. For example to run an async operation for the item and
+     * return the result later with next item. This can cause that the
+     * watermark to overtake the items and render the items late.
      *
      * @param <C> type of context object
      * @param <R> the result type of the mapping function
@@ -119,12 +128,13 @@ public interface GeneralStage<T> extends Stage {
      * to the output or to discard it. The predicate function receives another
      * parameter, the context object which Jet will create using the supplied
      * {@code contextFactory}.
-     * <p>
-     * <strong>NOTE:</strong> any state you maintain in the context object does
-     * not automatically become a part of a fault-tolerant snapshot. If Jet must
-     * restore from a snapshot, your state will either be lost (if it was just
-     * local state) or not rewound to the checkpoint (if it was stored in some
-     * durable storage).
+     *
+     * <h3>Note on state saving</h3>
+     * Any state you maintain in the context object does not automatically
+     * become a part of a fault-tolerant snapshot. If Jet must restore from a
+     * snapshot, your state will either be lost (if it was just local state) or
+     * not rewound to the checkpoint (if it was stored in some durable
+     * storage).
      *
      * @param <C> type of context object
      * @param contextFactory the context factory
@@ -144,12 +154,21 @@ public interface GeneralStage<T> extends Stage {
      * must be <em>null-terminated</em>. The mapping function receives another
      * parameter, the context object which Jet will create using the supplied
      * {@code contextFactory}.
-     * <p>
-     * <strong>NOTE:</strong> any state you maintain in the context object does
-     * not automatically become a part of a fault-tolerant snapshot. If Jet must
-     * restore from a snapshot, your state will either be lost (if it was just
-     * local state) or not rewound to the checkpoint (if it was stored in some
-     * durable storage).
+     *
+     * <h3>Note on state saving</h3>
+     * Any state you maintain in the context object does not automatically
+     * become a part of a fault-tolerant snapshot. If Jet must restore from a
+     * snapshot, your state will either be lost (if it was just local state) or
+     * not rewound to the checkpoint (if it was stored in some durable
+     * storage).
+     *
+     * <h3>Note on item retention in {@linkplain GeneralStage#addTimestamps
+     * jobs with timestamps}</h3>
+     *
+     * The context should not be used to accumulate stream items and emit the
+     * result later. For example to run an async operation for the item and
+     * return the result later with next item. This can cause that the
+     * watermark to overtake the items and render the items late.
      *
      * @param <C> type of context object
      * @param <R> the type of items in the result's traversers
@@ -201,7 +220,7 @@ public interface GeneralStage<T> extends Stage {
      * @return the newly attached stage
      */
     @Nonnull
-    <R> GeneralStage<R> rollingAggregation(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp);
+    <R> GeneralStage<R> aggregateRolling(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp);
 
     /**
      * Attaches to both this and the supplied stage a hash-joining stage and

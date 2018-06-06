@@ -81,7 +81,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
     );
 
     @Nonnull @Override
-    <R> BatchStage<R> rollingAggregation(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp);
+    <R> BatchStage<R> aggregateRolling(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp);
 
     /**
      * Attaches a stage that emits just the items that are distinct according
