@@ -35,9 +35,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
+import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.datamodel.ItemsByTag.itemsByTag;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
@@ -346,9 +349,9 @@ public class BatchStageTest extends PipelineTestSupport {
         execute();
         assertEquals(0, itemCount % 2);
         List<Entry<Integer, Long>> expected = LongStream.range(1, itemCount / 2 + 1)
-                .boxed()
-                .flatMap(i -> Stream.of(entry(0, i), entry(1, i)))
-                .collect(toList());
+                                                        .boxed()
+                                                        .flatMap(i -> Stream.of(entry(0, i), entry(1, i)))
+                                                        .collect(toList());
         assertEquals(toBag(expected), sinkToBag());
     }
 
