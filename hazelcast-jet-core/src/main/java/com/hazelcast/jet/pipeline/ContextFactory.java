@@ -67,7 +67,7 @@ public final class ContextFactory<C> implements Serializable {
      * Creates a new {@link ContextFactory} with the given create-function.
      *
      * @param createContextFn the function to create new context object, given
-     *                       a JetInstance
+     *                        a JetInstance
      * @param <C> the user-defined context object type
      * @return a new factory instance
      */
