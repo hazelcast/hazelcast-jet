@@ -452,8 +452,8 @@ public class MasterContext {
     private void onSnapshotCompleted(Map<MemberInfo, Object> responses, long executionId, long snapshotId) {
         Map<Address, Throwable> errors = responses.entrySet().stream()
             .filter(e -> e.getValue() instanceof Throwable)
-            .map(e -> (Entry<MemberInfo, Throwable>) e.getValue())
-            .filter(e -> !(e.getValue() instanceof CancellationException) || !isRestartableException(e.getValue()))
+            .filter(e -> !(e.getValue() instanceof CancellationException)
+                    || !isRestartableException((Throwable) e.getValue()))
             .collect(Collectors.toMap(e -> e.getKey().getAddress(), e -> (Throwable) e.getValue()));
 
         boolean isSuccess = errors.isEmpty();
