@@ -38,11 +38,9 @@ public class InstanceConfig {
      */
     public static final int DEFAULT_BACKUP_COUNT = MapConfig.DEFAULT_BACKUP_COUNT;
 
-
     private int cooperativeThreadCount = Runtime.getRuntime().availableProcessors();
     private int flowControlPeriodMs = DEFAULT_FLOW_CONTROL_PERIOD_MS;
     private int backupCount = DEFAULT_BACKUP_COUNT;
-    private String tempDir;
 
     /**
      * Sets the number of threads each cluster member will use to execute Jet
@@ -61,24 +59,6 @@ public class InstanceConfig {
      */
     public int getCooperativeThreadCount() {
         return  cooperativeThreadCount;
-    }
-
-    /**
-     * Sets the directory where Jet can place its temporary working directories.
-     */
-    @Nonnull
-    public InstanceConfig setTempDir(String tempDir) {
-        this.tempDir = tempDir;
-        return this;
-    }
-
-    /**
-     * Returns Jet's temp directory. Defaults to {@code java.io.tmpdir} system
-     * property.
-     */
-    @Nonnull
-    public String getTempDir() {
-        return tempDir == null ? System.getProperty("java.io.tmpdir") : tempDir;
     }
 
     /**
@@ -111,6 +91,7 @@ public class InstanceConfig {
      * in the case that at most two members fail simultaneously the job can be restarted
      * and continued from latest snapshot.
      */
+    @Nonnull
     public InstanceConfig setBackupCount(int newBackupCount) {
         checkBackupCount(newBackupCount, 0);
         this.backupCount = newBackupCount;

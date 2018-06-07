@@ -25,13 +25,13 @@ import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.pipeline.transform.WindowGroupTransform;
 import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
+import com.hazelcast.jet.pipeline.GroupAggregateBuilder1;
 import com.hazelcast.jet.pipeline.StageWithGrouping;
 import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
 import com.hazelcast.jet.pipeline.WindowDefinition;
-import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder;
+import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder1;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -41,12 +41,11 @@ import static com.hazelcast.jet.datamodel.Tag.tag;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
 import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptAggregateOperation;
-import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptKeyFn;
 import static java.util.stream.Collectors.toList;
 
 /**
- * Support class for {@link GroupAggregateBuilder}
- * and {@link WindowGroupAggregateBuilder}. The
+ * Support class for {@link GroupAggregateBuilder1}
+ * and {@link WindowGroupAggregateBuilder1}. The
  * motivation is to have the ability to specify different output
  * types ({@code Entry<K, R>} vs. {@code TimestampedEntry<K, R>}).
  *
@@ -78,12 +77,12 @@ public class GrAggBuilder<K> {
     }
 
     @SuppressWarnings("unchecked")
-    public <E> Tag<E> add(StreamStageWithGrouping<E, K> stage) {
+    public <T> Tag<T> add(StreamStageWithGrouping<T, K> stage) {
         ComputeStageImplBase computeStage = ((StageWithGroupingBase) stage).computeStage;
         ensureJetEvents(computeStage, "This pipeline stage");
         upstreamStages.add(computeStage);
         keyFns.add(stage.keyFn());
-        return (Tag<E>) tag(upstreamStages.size() - 1);
+        return (Tag<T>) tag(upstreamStages.size() - 1);
     }
 
     @SuppressWarnings("unchecked")
@@ -115,7 +114,7 @@ public class GrAggBuilder<K> {
         // Avoided Stream API here due to static typing issues
         List<DistributedFunction<?, ? extends K>> adaptedKeyFns = new ArrayList<>();
         for (DistributedFunction keyFn : keyFns) {
-            adaptedKeyFns.add(adaptKeyFn(keyFn));
+            adaptedKeyFns.add(fnAdapter.adaptKeyFn(keyFn));
         }
 
         Transform transform = new WindowGroupTransform<K, A, R, JetEvent<OUT>>(

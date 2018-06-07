@@ -18,15 +18,17 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.Offloadable;
-import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBinaryOperator;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.map.EntryProcessor;
 
 import javax.annotation.Nonnull;
+import javax.jms.ConnectionFactory;
 import java.nio.charset.Charset;
 import java.util.Map;
 
@@ -578,9 +580,10 @@ public final class Sinks {
      * These are the callback functions you can provide to implement the sink's
      * behavior:
      * <ol><li>
-     *     {@code createFn} creates the writer. Gets the local Jet instance as
-     *     argument. It will be called once for each worker thread. This
-     *     component is required.
+     *     {@code createFn} creates the writer. Gets the processor context as
+     *     argument which can be used to obtain local Jet instance, global
+     *     processor index etc. It will be called once for each worker thread.
+     *     This component is required.
      * </li><li>
      *     {@code onReceiveFn} gets notified of each item the sink receives and
      *     (typically) passes it to the writer. This component is required.
@@ -598,9 +601,10 @@ public final class Sinks {
      */
     @Nonnull
     public static <W, T> SinkBuilder<W, T> builder(
-            @Nonnull DistributedFunction<? super JetInstance, ? extends W> createFn
+            @Nonnull String name,
+            @Nonnull DistributedFunction<Processor.Context, ? extends W> createFn
     ) {
-        return new SinkBuilder<>(createFn);
+        return new SinkBuilder<>(name, createFn);
     }
 
     /**
@@ -609,5 +613,67 @@ public final class Sinks {
     @Nonnull
     public static <T> Sink<T> noop() {
         return fromProcessor("noop", preferLocalParallelismOne(noopP()));
+    }
+
+    /**
+     * Convenience for {@link #jmsQueueBuilder(DistributedSupplier)}. Creates a
+     * connection without any authentication parameters and uses non-transacted
+     * sessions with {@code Session.AUTO_ACKNOWLEDGE} mode. If a received item
+     * is not an instance of {@code javax.jms.Message}, the sink wraps {@code
+     * item.toString()} into a {@link javax.jms.TextMessage}.
+     *
+     * @param factorySupplier supplier to obtain JMS connection factory
+     * @param name            the name of the queue
+     */
+    @Nonnull
+    public static <T> Sink<T> jmsQueue(
+            @Nonnull DistributedSupplier<ConnectionFactory> factorySupplier,
+            @Nonnull String name
+    ) {
+        return Sinks.<T>jmsQueueBuilder(factorySupplier)
+                .destinationName(name)
+                .build();
+    }
+
+    /**
+     * Returns a builder object that offers a step-by-step fluent API to build
+     * a custom JMS queue sink for the Pipeline API.
+     *
+     * @param <T> type of the items the sink accepts
+     */
+    @Nonnull
+    public static <T> JmsSinkBuilder<T> jmsQueueBuilder(DistributedSupplier<ConnectionFactory> factorySupplier) {
+        return new JmsSinkBuilder<>(factorySupplier, false);
+    }
+
+    /**
+     * Convenience for {@link #jmsTopicBuilder(DistributedSupplier)}. Creates a
+     * connection without any authentication parameters and uses non-transacted
+     * sessions with {@code Session.AUTO_ACKNOWLEDGE} mode. If a received item
+     * is not an instance of {@code javax.jms.Message}, the sink wraps {@code
+     * item.toString()} into a {@link javax.jms.TextMessage}.
+     *
+     * @param factorySupplier supplier to obtain JMS connection factory
+     * @param name            the name of the queue
+     */
+    @Nonnull
+    public static <T> Sink<T> jmsTopic(
+            @Nonnull DistributedSupplier<ConnectionFactory> factorySupplier,
+            @Nonnull String name
+    ) {
+        return Sinks.<T>jmsTopicBuilder(factorySupplier)
+                .destinationName(name)
+                .build();
+    }
+
+    /**
+     * Returns a builder object that offers a step-by-step fluent API to build
+     * a custom JMS topic sink for the Pipeline API.
+     *
+     * @param <T> type of the items the sink accepts
+     */
+    @Nonnull
+    public static <T> JmsSinkBuilder<T> jmsTopicBuilder(DistributedSupplier<ConnectionFactory> factorySupplier) {
+        return new JmsSinkBuilder<>(factorySupplier, true);
     }
 }

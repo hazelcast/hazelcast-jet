@@ -19,9 +19,9 @@ package com.hazelcast.jet.impl.pipeline;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.KeyedWindowResultFunction;
+import com.hazelcast.jet.function.WindowResultFunction;
 import com.hazelcast.jet.impl.pipeline.transform.WindowGroupTransform;
 import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
 import com.hazelcast.jet.pipeline.StreamStage;
@@ -30,12 +30,12 @@ import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
 
+import static com.hazelcast.jet.aggregate.AggregateOperations.pickAny;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
 import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptAggregateOperation1;
 import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptAggregateOperation2;
 import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptAggregateOperation3;
-import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptKeyFn;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
@@ -60,6 +60,13 @@ public class StageWithGroupingAndWindowImpl<T, K>
         return wDef;
     }
 
+    @Nonnull
+    public <R> StreamStage<R> distinct(
+            @Nonnull WindowResultFunction<? super T, ? extends R> mapToOutputFn
+    ) {
+        return aggregate(pickAny(), (start, end, key, item) -> mapToOutputFn.apply(start, end, item));
+    }
+
     @Nonnull @Override
     @SuppressWarnings("unchecked")
     public <A, R, OUT> StreamStage<OUT> aggregate(
@@ -71,19 +78,11 @@ public class StageWithGroupingAndWindowImpl<T, K>
         return computeStage.attach(new WindowGroupTransform<K, A, R, JetEvent<OUT>>(
                         singletonList(computeStage.transform),
                         wDef,
-                        singletonList(adaptKeyFn(keyFn())),
+                        singletonList(fnAdapter.adaptKeyFn(keyFn())),
                         adaptAggregateOperation1(aggrOp),
                         fnAdapter.adaptKeyedWindowResultFn(mapToOutputFn)
                 ),
                 fnAdapter);
-    }
-
-    @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    public <A, R> StreamStage<TimestampedEntry<K, R>> aggregate(
-            @Nonnull AggregateOperation1<? super T, A, R> aggrOp
-    ) {
-        return aggregate(aggrOp, TimestampedEntry::new);
     }
 
     @Nonnull @Override
@@ -100,19 +99,11 @@ public class StageWithGroupingAndWindowImpl<T, K>
         return computeStage.attach(new WindowGroupTransform<K, A, R, JetEvent<OUT>>(
                 asList(computeStage.transform, stageImpl1.transform),
                 wDef,
-                asList(adaptKeyFn(keyFn()),
-                       adaptKeyFn(stage1.keyFn())),
+                asList(fnAdapter.adaptKeyFn(keyFn()),
+                       fnAdapter.adaptKeyFn(stage1.keyFn())),
                 adaptAggregateOperation2(aggrOp),
                 fnAdapter.adaptKeyedWindowResultFn(mapToOutputFn)
         ), fnAdapter);
-    }
-
-    @Nonnull @Override
-    public <T1, A, R> StreamStage<TimestampedEntry<K, R>> aggregate2(
-            @Nonnull StreamStageWithGrouping<T1, ? extends K> stage1,
-            @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp
-    ) {
-        return aggregate2(stage1, aggrOp, TimestampedEntry::new);
     }
 
     @Nonnull @Override
@@ -133,21 +124,11 @@ public class StageWithGroupingAndWindowImpl<T, K>
                 new WindowGroupTransform<K, A, R, JetEvent<OUT>>(
                         asList(computeStage.transform, stageImpl1.transform, stageImpl2.transform),
                         wDef,
-                        asList(adaptKeyFn(keyFn()),
-                               adaptKeyFn(stage1.keyFn()),
-                               adaptKeyFn(stage2.keyFn())),
+                        asList(fnAdapter.adaptKeyFn(keyFn()),
+                               fnAdapter.adaptKeyFn(stage1.keyFn()),
+                               fnAdapter.adaptKeyFn(stage2.keyFn())),
                         adaptAggregateOperation3(aggrOp),
                         fnAdapter.adaptKeyedWindowResultFn(mapToOutputFn)
                 ), fnAdapter);
-    }
-
-    @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    public <T1, T2, A, R> StreamStage<TimestampedEntry<K, R>> aggregate3(
-            @Nonnull StreamStageWithGrouping<T1, ? extends K> stage1,
-            @Nonnull StreamStageWithGrouping<T2, ? extends K> stage2,
-            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp
-    ) {
-        return aggregate3(stage1, stage2, aggrOp, TimestampedEntry::new);
     }
 }

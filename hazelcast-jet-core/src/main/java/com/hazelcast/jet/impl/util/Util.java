@@ -469,4 +469,12 @@ public final class Util {
         }
         return sum;
     }
+
+    /**
+     * Escapes the vertex name for graphviz by prefixing the quote character
+     * with backslash.
+     */
+    public static String escapeGraphviz(String value) {
+        return value.replace("\"", "\\\"");
+    }
 }

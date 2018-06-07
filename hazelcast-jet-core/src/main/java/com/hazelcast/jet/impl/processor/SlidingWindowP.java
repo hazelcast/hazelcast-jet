@@ -50,11 +50,11 @@ import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static com.hazelcast.jet.impl.util.Util.lazyAdd;
 import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
 import static com.hazelcast.jet.impl.util.Util.logLateEvent;
-import static com.hazelcast.util.Preconditions.checkNotNull;
 import static com.hazelcast.util.Preconditions.checkTrue;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.emptyMap;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Handles various setups of sliding and tumbling window aggregation.
@@ -120,7 +120,7 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
         checkTrue(keyFns.size() == aggrOp.arity(), keyFns.size() + " key functions " +
                 "provided for " + aggrOp.arity() + "-arity aggregate operation");
         if (!winPolicy.isTumbling()) {
-            checkNotNull(aggrOp.combineFn(), "combine primitive of AggregateOperation is required for sliding windows");
+            requireNonNull(aggrOp.combineFn(), "AggregateOperation.combineFn is required for sliding windows");
         }
         this.winPolicy = winPolicy;
         this.frameTimestampFns = (List<ToLongFunction<Object>>) frameTimestampFns;
@@ -131,7 +131,7 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
         this.isLastStage = isLastStage;
         this.wmFlatMapper = flatMapper(
                 wm -> windowTraverserAndEvictor(wm.timestamp())
-                        .onFirstNull(() -> nextWinToEmit = this.winPolicy.higherFrameTs(wm.timestamp()))
+                        .onFirstNull(() -> nextWinToEmit = winPolicy.higherFrameTs(wm.timestamp()))
         );
         this.emptyAcc = aggrOp.createFn().get();
     }

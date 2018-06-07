@@ -16,13 +16,13 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.DistributedBiConsumer;
-import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.util.Preconditions;
@@ -32,22 +32,25 @@ import javax.annotation.Nonnull;
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 
 /**
- * See {@link Sinks#builder(DistributedFunction)}.
+ * See {@link Sinks#builder(String, DistributedFunction)}.
  *
  * @param <W> type of the writer object
  * @param <T> type of the items the sink will accept
  */
 public final class SinkBuilder<W, T> {
 
-    private final DistributedFunction<? super JetInstance, ? extends W> createFn;
+    private final DistributedFunction<Processor.Context, ? extends W> createFn;
+    private final String name;
     private DistributedBiConsumer<? super W, ? super T> onReceiveFn;
     private DistributedConsumer<? super W> flushFn = noopConsumer();
     private DistributedConsumer<? super W> destroyFn = noopConsumer();
+    private int preferredLocalParallelism = 2;
 
     /**
-     * Use {@link Sinks#builder(DistributedFunction)}.
+     * Use {@link Sinks#builder(String, DistributedFunction)}.
      */
-    SinkBuilder(@Nonnull DistributedFunction<? super JetInstance, ? extends W> createFn) {
+    SinkBuilder(@Nonnull String name, DistributedFunction<Processor.Context, ? extends W> createFn) {
+        this.name = name;
         this.createFn = createFn;
     }
 
@@ -100,6 +103,18 @@ public final class SinkBuilder<W, T> {
     }
 
     /**
+     * Sets the local parallelism of the sink, default value is {@code 2}
+     *
+     * @param preferredLocalParallelism the local parallelism of the sink
+     */
+    @Nonnull
+    public SinkBuilder<W, T> preferredLocalParallelism(int preferredLocalParallelism) {
+        Vertex.checkLocalParallelism(preferredLocalParallelism);
+        this.preferredLocalParallelism = preferredLocalParallelism;
+        return this;
+    }
+
+    /**
      * Creates and returns the {@link Sink} with the components you supplied to
      * this builder.
      */
@@ -107,14 +122,7 @@ public final class SinkBuilder<W, T> {
     public Sink<T> build() {
         Preconditions.checkNotNull(onReceiveFn, "onReceiveFn must be set");
 
-        // local copy for serialization
-        DistributedFunction<? super JetInstance, ? extends W> createFn = this.createFn;
-        DistributedSupplier<Processor> supplier = SinkProcessors.writeBufferedP(
-                ctx -> createFn.apply(ctx.jetInstance()),
-                onReceiveFn,
-                flushFn,
-                destroyFn
-        );
-        return new SinkImpl<>("custom-sink", ProcessorMetaSupplier.of(supplier, 2));
+        DistributedSupplier<Processor> supplier = SinkProcessors.writeBufferedP(createFn, onReceiveFn, flushFn, destroyFn);
+        return new SinkImpl<>(name, ProcessorMetaSupplier.of(supplier, preferredLocalParallelism));
     }
 }

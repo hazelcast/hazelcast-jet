@@ -41,7 +41,8 @@ import java.util.Objects;
  * objects in the {@link com.hazelcast.jet.accumulator accumulator} package
  * that you can reuse, and you can also write your own if needed. The
  * accumulator must be serializable because Jet may need to send it to
- * another member to be combined with other accumulators.
+ * another member to be combined with other accumulators or store it in state
+ * snapshot.
  * <p>
  * After it processes all the items in a batch/window, Jet transforms the
  * accumulator into the final result by applying the {@link #finishFn()
@@ -55,7 +56,7 @@ import java.util.Objects;
  * <p>
  * Finally, {@code AggregateOperation} also defines the {@link #deductFn()
  * deduct} primitive, which allows Jet to efficiently aggregate infinite
- * stream data over a <em>sliding window</em> by evicting old data from the
+ * stream data into a <em>sliding window</em> by evicting old data from the
  * existing accumulator instead of building a new one from scratch each time
  * the window slides forward. Providing a {@code deduct} primitive that makes
  * the computation more efficient than rebuilding the accumulator from scratch
@@ -74,8 +75,8 @@ import java.util.Objects;
  * as {@link com.hazelcast.jet.pipeline.StageWithGroupingAndWindow#aggregate2
  * stage.aggregate2()}, then you'll deal with specializations of this interface
  * such as {@link AggregateOperation2} and you'll identify the input stages by
- * their index, zero index corresponding to the stage you're calling the
- * method on and the higher indices corresponding to the stages you pass in as
+ * their index; zero index corresponds to the stage you're calling the
+ * method on and the higher indices correspond to the stages you pass in as
  * arguments.
  * <p>
  * This is a summary of all the primitives involved:
@@ -173,7 +174,7 @@ public interface AggregateOperation<A, R> extends Serializable {
      * to determine whether the accumulator is now "empty" (i.e., equal to a
      * fresh instance), which signals that the current window contains no more
      * items with the associated grouping key and the entry must be removed
-     * from the resuts.
+     * from the results.
      */
     @Nullable
     DistributedBiConsumer<? super A, ? super A> deductFn();
@@ -211,7 +212,9 @@ public interface AggregateOperation<A, R> extends Serializable {
      * Returns a copy of this aggregate operation, but with the {@code
      * accumulate} primitive replaced with one that expects to find
      * accumulator objects in the input and will combine them all into
-     * a single accumulator of the same type.
+     * a single accumulator of the same type. It's used for the second
+     * aggregation stage in two-stage aggregation when accumulators from 1st
+     * stage are found on the input.
      *
      * @param getAccFn the function that extracts the accumulator from the stream item
      * @param <T> the type of stream item

@@ -24,6 +24,7 @@ import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.map.journal.EventJournalMapEvent;
@@ -32,6 +33,8 @@ import com.hazelcast.projection.Projections;
 import com.hazelcast.query.Predicate;
 
 import javax.annotation.Nonnull;
+import javax.jms.ConnectionFactory;
+import javax.jms.Message;
 import java.io.File;
 import java.nio.charset.Charset;
 import java.util.Map;
@@ -732,17 +735,19 @@ public final class Sources {
 
     /**
      * A source that emits lines from files in a directory (but not its
-     * subdirectories. The files must not change while being read; if they do,
-     * the behavior is unspecified.
+     * subdirectories).
      * <p>
-     * To be useful, the source should be configured to read data local to each
-     * member. For example, if the pathname resolves to a shared network
-     * filesystem visible by multiple members, they will emit duplicate data.
+     * If {@code sharedFileSystem} is {@code true}, Jet will assume all members
+     * see the same files. They will split the work so that each member will
+     * read a part of the files. If {@code sharedFileSystem} is {@code false},
+     * each member will read all files in the directory, assuming the are
+     * local.
      * <p>
      * The source does not save any state to snapshot. If the job is restarted,
      * it will re-emit all entries.
      * <p>
-     * Any {@code IOException} will cause the job to fail.
+     * Any {@code IOException} will cause the job to fail. The files must not
+     * change while being read; if they do, the behavior is unspecified.
      * <p>
      * The default local parallelism for this processor is 2 (or 1 if just 1
      * CPU is available).
@@ -754,26 +759,32 @@ public final class Sources {
      *             Use {@code "*"} for all files.
      * @param mapOutputFn function to create output items. Parameters are
      *                    {@code fileName} and {@code line}.
+     * @param sharedFileSystem {@code true} if files are in a shared storage
+     *                         visible to all members, {@code false} otherwise
      */
     @Nonnull
     public static <R> BatchSource<R> files(
             @Nonnull String directory,
             @Nonnull Charset charset,
             @Nonnull String glob,
-            @Nonnull DistributedBiFunction<String, String, ? extends R> mapOutputFn
+            @Nonnull DistributedBiFunction<String, String, ? extends R> mapOutputFn,
+            boolean sharedFileSystem
     ) {
         return batchFromProcessor("filesSource(" + new File(directory, glob) + ')',
-                readFilesP(directory, charset, glob, mapOutputFn));
+                readFilesP(directory, charset, glob, mapOutputFn, sharedFileSystem));
     }
 
     /**
-     * Convenience for {@link #files(String, Charset, String, DistributedBiFunction)
-     * the full version of readFiles} which uses UTF-8 encoding, matches all
-     * the files in the directory and emits lines of text in the files.
+     * Shortcut for <pre>{@code
+     *   files(directory, UTF_8, GLOB_WILDCARD, (file, line) -> line, false)
+     * }</pre>
+     *
+     * See the {@linkplain #files(String, Charset, String,
+     * DistributedBiFunction, boolean) full method}.
      */
     @Nonnull
     public static BatchSource<String> files(@Nonnull String directory) {
-        return files(directory, UTF_8, GLOB_WILDCARD, (file, line) -> line);
+        return files(directory, UTF_8, GLOB_WILDCARD, (file, line) -> line, false);
     }
 
     /**
@@ -841,5 +852,65 @@ public final class Sources {
     @Nonnull
     public static StreamSource<String> fileWatcher(@Nonnull String watchedDirectory) {
         return fileWatcher(watchedDirectory, UTF_8, GLOB_WILDCARD);
+    }
+
+    /**
+     * Convenience for {@link #jmsQueueBuilder(DistributedSupplier)}. This
+     * version creates a connection without any authentication parameters and
+     * uses non-transacted sessions with {@code Session.AUTO_ACKNOWLEDGE} mode.
+     * JMS {@link Message} objects are emitted to downstream.
+     *
+     * @param factorySupplier supplier to obtain JMS connection factory
+     * @param name            the name of the queue
+     */
+    @Nonnull
+    public static StreamSource<Message> jmsQueue(
+            @Nonnull DistributedSupplier<ConnectionFactory> factorySupplier,
+            @Nonnull String name
+    ) {
+        return Sources.<Message>jmsQueueBuilder(factorySupplier)
+                .destinationName(name)
+                .build();
+    }
+
+    /**
+     * Returns a builder object that offers a step-by-step fluent API to build
+     * a custom JMS {@link StreamSource} for the Pipeline API.
+     *
+     * @param <T> type of the items the source emits
+     */
+    @Nonnull
+    public static <T> JmsSourceBuilder<T> jmsQueueBuilder(DistributedSupplier<ConnectionFactory> factorySupplier) {
+        return new JmsSourceBuilder<>(factorySupplier, false);
+    }
+
+    /**
+     * Convenience for {@link #jmsTopicBuilder(DistributedSupplier)}. This
+     * version creates a connection without any authentication parameters and
+     * uses non-transacted sessions with {@code Session.AUTO_ACKNOWLEDGE} mode.
+     * JMS {@link Message} objects are emitted to downstream.
+     *
+     * @param factorySupplier supplier to obtain JMS connection factory
+     * @param name            the name of the topic
+     */
+    @Nonnull
+    public static StreamSource<Message> jmsTopic(
+            @Nonnull DistributedSupplier<ConnectionFactory> factorySupplier,
+            @Nonnull String name
+    ) {
+        return Sources.<Message>jmsTopicBuilder(factorySupplier)
+                .destinationName(name)
+                .build();
+    }
+
+    /**
+     * Returns a builder object that offers a step-by-step fluent API to build
+     * a custom JMS {@link StreamSource} for the Pipeline API.
+     *
+     * @param <T> type of the items the source emits
+     */
+    @Nonnull
+    public static <T> JmsSourceBuilder<T> jmsTopicBuilder(DistributedSupplier<ConnectionFactory> factorySupplier) {
+        return new JmsSourceBuilder<>(factorySupplier, true);
     }
 }

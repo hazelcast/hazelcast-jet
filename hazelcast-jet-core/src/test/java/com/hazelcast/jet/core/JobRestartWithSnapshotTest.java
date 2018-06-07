@@ -268,7 +268,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
     }
 
     @Test
-    public void when_snapshotDoneBeforeStarted_then_snapshotSuccessful() throws Exception {
+    public void when_snapshotDoneBeforeStarted_then_snapshotSuccessful() {
         /*
         Design of this test
 
@@ -305,7 +305,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
     }
 
     @Test
-    public void when_snapshotStartedBeforeExecution_then_firstSnapshotIsSuccessful() throws Exception {
+    public void when_snapshotStartedBeforeExecution_then_firstSnapshotIsSuccessful() {
         // instance1 is always coordinator
         // delay ExecuteOperation so that snapshot is started before execution is started on the worker member
         delayOperationsFrom(hz(instance1), JetInitDataSerializerHook.FACTORY_ID,
@@ -423,6 +423,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         spawn(() -> {
             for (int i = 0; i < 10; i++) {
                 job.restart();
+                waitForFirstSnapshot(snapshotsMap, 3);
                 waitForNextSnapshot(snapshotsMap, 5);
                 Thread.sleep(500);
             }

@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBiPredicate;
@@ -35,6 +36,8 @@ import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
+
+import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 
 public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements StreamStage<T> {
 
@@ -98,6 +101,16 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     }
 
     @Nonnull @Override
+    public <R> StreamStage<R> aggregateRolling(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp) {
+        return groupingKey(constantKey()).aggregateRolling(aggrOp, (k, v) -> v);
+    }
+
+    @Nonnull @Override
+    public StreamStage<T> merge(@Nonnull StreamStage<? extends T> other) {
+        return attachMerge(other);
+    }
+
+    @Nonnull @Override
     public <K, T1_IN, T1, R> StreamStage<R> hashJoin(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1,
@@ -107,7 +120,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     }
 
     @Nonnull @Override
-    public <K1, T1_IN, T1, K2, T2_IN, T2, R> StreamStage<R> hashJoin2(
+    public <K1, K2, T1_IN, T2_IN, T1, T2, R> StreamStage<R> hashJoin2(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
             @Nonnull BatchStage<T2_IN> stage2,

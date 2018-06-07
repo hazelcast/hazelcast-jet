@@ -37,13 +37,14 @@ import com.hazelcast.jet.pipeline.StageWithGrouping;
 
 import javax.annotation.Nonnull;
 
+import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
 public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchStage<T> {
 
     BatchStageImpl(@Nonnull Transform transform, @Nonnull PipelineImpl pipeline) {
-        super(transform, DONT_ADAPT, pipeline, true);
+        super(transform, DO_NOT_ADAPT, pipeline, true);
     }
 
     /**
@@ -101,6 +102,16 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
+    public <R> BatchStage<R> aggregateRolling(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp) {
+        return groupingKey(constantKey()).aggregateRolling(aggrOp, (k, v) -> v);
+    }
+
+    @Nonnull @Override
+    public BatchStage<T> merge(@Nonnull BatchStage<? extends T> other) {
+        return attachMerge(other);
+    }
+
+    @Nonnull @Override
     public <K, T1_IN, T1, R> BatchStage<R> hashJoin(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1,
@@ -110,7 +121,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    public <K1, T1_IN, T1, K2, T2_IN, T2, R> BatchStage<R> hashJoin2(
+    public <K1, K2, T1_IN, T2_IN, T1, T2, R> BatchStage<R> hashJoin2(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
             @Nonnull BatchStage<T2_IN> stage2,
@@ -131,7 +142,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BatchStage<T1> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp
     ) {
-        return attach(new AggregateTransform<>(asList(transform, transformOf(stage1)), aggrOp), DONT_ADAPT);
+        return attach(new AggregateTransform<>(asList(transform, transformOf(stage1)), aggrOp), DO_NOT_ADAPT);
     }
 
     @Nonnull @Override
@@ -140,8 +151,9 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BatchStage<T2> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp
     ) {
-        return attach(new AggregateTransform<>(asList(transform, transformOf(stage1), transformOf(stage2)), aggrOp),
-                DONT_ADAPT);
+        return attach(new AggregateTransform<>(
+                asList(transform, transformOf(stage1), transformOf(stage2)), aggrOp),
+                DO_NOT_ADAPT);
     }
 
     @Nonnull @Override
