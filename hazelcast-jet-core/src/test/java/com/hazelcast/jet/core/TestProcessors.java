@@ -41,6 +41,29 @@ import static org.junit.Assert.assertTrue;
 
 public class TestProcessors {
 
+    /**
+     * Reset the static counters in test processors. Call before starting each
+     * test that uses them.
+     *
+     * @param totalParallelism
+     */
+    public static void reset(int totalParallelism) {
+        MockPMS.initCalled.set(false);
+        MockPMS.closeCalled.set(false);
+        MockPMS.receivedCloseError.set(null);
+
+        MockPS.closeCount.set(0);
+        MockPS.initCount.set(0);
+        MockPS.receivedCloseErrors.clear();
+
+        MockP.initCount.set(0);
+        MockP.closeCount.set(0);
+        MockP.receivedCloseErrors.clear();
+
+        StuckProcessor.proceedLatch = new CountDownLatch(1);
+        StuckProcessor.executionStarted = new CountDownLatch(totalParallelism);
+    }
+
     public static class Identity extends AbstractProcessor {
         @Override
         protected boolean tryProcess(int ordinal, @Nonnull Object item) {
@@ -93,9 +116,9 @@ public class TestProcessors {
         private RuntimeException initError;
         private RuntimeException getError;
         private RuntimeException closeError;
-        private final DistributedSupplier<MockPS> supplierFn;
+        private final DistributedSupplier<ProcessorSupplier> supplierFn;
 
-        public MockPMS(DistributedSupplier<MockPS> supplierFn) {
+        public MockPMS(DistributedSupplier<ProcessorSupplier> supplierFn) {
             this.supplierFn = supplierFn;
         }
 
@@ -250,6 +273,11 @@ public class TestProcessors {
 
         public MockP setCloseError(Exception closeError) {
             this.closeError = closeError;
+            return this;
+        }
+
+        public MockP nonCooperative() {
+            setCooperative(false);
             return this;
         }
 
