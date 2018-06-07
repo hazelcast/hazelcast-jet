@@ -16,25 +16,27 @@
 
 package com.hazelcast.jet;
 
+import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
+
 /**
  * Exception to throw from job-executing methods to indicate a failure that can
  * be resolved by restarting the job.
  * <p>
  * It is handled when thrown from:<ul>
- *     <li>{@link com.hazelcast.jet.core.Processor Processor} methods
+ *     <li>{@link Processor} methods
  *     <li>lambda functions: key & timestamp extractors, map functions...
  *     <li>sources/sinks
- *     <li>{@code init()} method in {@link com.hazelcast.jet.core.Processor
- *         Processor}, {@link com.hazelcast.jet.core.ProcessorSupplier
- *         ProcessorSupplier} and {@link
- *         com.hazelcast.jet.core.ProcessorMetaSupplier ProcessorMetaSupplier}
- *         (but not their {@code close()} methods)
+ *     <li>{@code init()} method in {@link Processor}, {@link
+ *          ProcessorSupplier} and {@link ProcessorMetaSupplier} (but not their
+ *          {@code close()} methods)
  *     <li>...
  * </ul>
  *
  * If this exception is caught, the job will be terminated abruptly and
- * restarted (if {@link
- * com.hazelcast.jet.config.JobConfig#setAutoRestartOnMemberFailure(boolean)
+ * restarted (if {@link JobConfig#setAutoRestartOnMemberFailure(boolean)
  * enabled}).
  */
 public class RestartableException extends JetException {
