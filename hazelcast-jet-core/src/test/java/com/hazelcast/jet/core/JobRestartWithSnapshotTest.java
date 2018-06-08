@@ -169,7 +169,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                     aggrOp.withFinishFn(identity())
             ));
             Vertex aggregateStage2 = dag.newVertex("aggregateStage2",
-                    combineToSlidingWindowP(wDef, aggrOp, TimestampedEntry::mapWindowResult));
+                    combineToSlidingWindowP(wDef, aggrOp, TimestampedEntry::fromWindowResult));
 
             dag.edge(between(insWm, aggregateStage1)
                     .partitioned(entryKey()))
@@ -184,7 +184,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                     TimestampKind.EVENT,
                     wDef,
                     aggrOp,
-                    TimestampedEntry::mapWindowResult));
+                    TimestampedEntry::fromWindowResult));
 
             dag.edge(between(insWm, aggregate)
                     .distributed()

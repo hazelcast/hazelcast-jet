@@ -347,9 +347,10 @@ public interface GeneralStage<T> extends Stage {
      * <b>Warning:</b> make sure the property you access in {@code timestampFn}
      * isn't null, it would fail the job. Also that there are no nonsensical
      * values such as -1, MIN_VALUE, 2100-01-01 etc - we'll treat those as real
-     * timestamps and they can mess the logic.
+     * timestamps and they can cause unspecified behaviour.
      *
-     * @param timestampFn a function that returns the timestamp for each item
+     * @param timestampFn a function that returns the timestamp for each item,
+     *                    typically in milliseconds
      * @param allowedLag the allowed lag behind the top observed timestamp.
      *                   Time unit is the same as the unit used by {@code
      *                   timestampFn}

@@ -89,7 +89,7 @@ public final class TimestampedItem<T> implements Serializable {
      * Constructs a {@code TimestampedItem} using the window end time as the
      * timestamp.
      */
-    public static <V> TimestampedItem<V> mapWindowResult(long winStart, long winEnd, @Nonnull V value) {
+    public static <V> TimestampedItem<V> fromWindowResult(long winStart, long winEnd, @Nonnull V value) {
         return new TimestampedItem<>(winEnd, value);
     }
 }

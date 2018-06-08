@@ -468,7 +468,7 @@ public final class Processors {
                 timestampKind,
                 winPolicy.toTumblingByFrame(),
                 aggrOp.withFinishFn(identity()),
-                TimestampedEntry::mapWindowResult,
+                TimestampedEntry::fromWindowResult,
                 false
         );
     }

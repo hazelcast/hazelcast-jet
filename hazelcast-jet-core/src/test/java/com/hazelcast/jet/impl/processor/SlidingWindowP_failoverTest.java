@@ -62,7 +62,7 @@ public class SlidingWindowP_failoverTest {
                 singletonList((DistributedToLongFunction<Entry<?, Long>>) Entry::getValue),
                 wDef,
                 aggrOp,
-                TimestampedEntry::mapWindowResult,
+                TimestampedEntry::fromWindowResult,
                 true);
 
         Outbox outbox = new TestOutbox(128);

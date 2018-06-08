@@ -107,8 +107,8 @@ public class SlidingWindowPTest {
                         TimestampKind.EVENT,
                         windowDef,
                         operation,
-                        TimestampedEntry::mapWindowResult)
-                : combineToSlidingWindowP(windowDef, operation, TimestampedEntry::mapWindowResult);
+                        TimestampedEntry::fromWindowResult)
+                : combineToSlidingWindowP(windowDef, operation, TimestampedEntry::fromWindowResult);
 
         // new supplier to save the last supplied instance
         supplier = () -> lastSuppliedProcessor = (SlidingWindowP) procSupplier.get();
