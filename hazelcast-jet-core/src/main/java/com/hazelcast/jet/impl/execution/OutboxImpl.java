@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
 import static com.hazelcast.util.Preconditions.checkPositive;
 
 public class OutboxImpl implements Outbox {
@@ -129,7 +130,8 @@ public class OutboxImpl implements Outbox {
                 }
                 if (result.isDone()) {
                     broadcastTracker.set(i);
-                    counters.lazySet(i, counters.get(i) + 1);
+                    // we are the only updating thread, no need for CAS operations
+                    lazyIncrement(counters, i);
                 } else {
                     done = false;
                 }

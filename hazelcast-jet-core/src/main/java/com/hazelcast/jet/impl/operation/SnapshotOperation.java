@@ -56,7 +56,7 @@ public class SnapshotOperation extends AsyncOperation {
                         "Snapshot %s for job %s finished successfully on member",
                         snapshotId, idToString(jobId()));
             } else {
-                getLogger().warning(String.format("Snapshot %d for job %s finished with error on member",
+                getLogger().warning(String.format("Snapshot %d for job %s finished with an error on member",
                         snapshotId, idToString(jobId())), result.getError());
                 // wrap the exception
                 result.error = new JetException("Exception during snapshot: " + result.error, result.error);
@@ -85,6 +85,9 @@ public class SnapshotOperation extends AsyncOperation {
         snapshotId = in.readLong();
     }
 
+    /**
+     * The result of SnapshotOperation with snapshot statistics and error.
+     */
     public static final class SnapshotOperationResult implements IdentifiedDataSerializable {
         private long numBytes;
         private long numKeys;

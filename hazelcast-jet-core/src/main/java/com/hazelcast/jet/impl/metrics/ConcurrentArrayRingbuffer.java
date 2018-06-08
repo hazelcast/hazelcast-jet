@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static java.lang.System.arraycopy;
 
@@ -123,7 +124,6 @@ public class ConcurrentArrayRingbuffer<E> {
         // we use Object[] (instead of E[]) because jet contains only serializer for Object[], not for
         // subtypes.
         private Object[] elements;
-
         private long nextSequence;
 
         // for deserialization
@@ -137,6 +137,10 @@ public class ConcurrentArrayRingbuffer<E> {
 
         public List<E> elements() {
             return (List<E>) Arrays.asList(elements);
+        }
+
+        public Stream<E> stream() {
+            return (Stream<E>) Arrays.stream(elements);
         }
 
         /**

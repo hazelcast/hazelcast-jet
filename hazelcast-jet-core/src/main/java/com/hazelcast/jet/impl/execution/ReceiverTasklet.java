@@ -85,8 +85,8 @@ public class ReceiverTasklet implements Tasklet {
 
     private boolean receptionDone;
 
-    private final AtomicLong itemsOutCounter = new AtomicLong();
-    private final AtomicLong bytesOutCounter = new AtomicLong();
+    private final AtomicLong itemsInCounter = new AtomicLong();
+    private final AtomicLong bytesInCounter = new AtomicLong();
 
     //                    FLOW-CONTROL STATE
     //            All arrays are indexed by sender ID.
@@ -262,8 +262,8 @@ public class ReceiverTasklet implements Tasklet {
                 received.close();
                 tracker.madeProgress();
             }
-            lazyAdd(bytesOutCounter, totalBytes);
-            lazyAdd(itemsOutCounter, totalItems);
+            lazyAdd(bytesInCounter, totalBytes);
+            lazyAdd(itemsInCounter, totalItems);
         } catch (IOException e) {
             throw rethrow(e);
         }
@@ -278,11 +278,11 @@ public class ReceiverTasklet implements Tasklet {
         }
     }
 
-    public AtomicLong getItemsOutCounter() {
-        return itemsOutCounter;
+    public AtomicLong getItemsInCounter() {
+        return itemsInCounter;
     }
 
-    public AtomicLong getBytesOutCounter() {
-        return bytesOutCounter;
+    public AtomicLong getBytesInCounter() {
+        return bytesInCounter;
     }
 }

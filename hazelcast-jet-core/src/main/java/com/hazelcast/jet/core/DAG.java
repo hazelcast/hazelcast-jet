@@ -77,7 +77,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     private Set<Edge> edges = new LinkedHashSet<>();
     private Map<String, Vertex> nameToVertex = new HashMap<>();
     // Transient field:
-    private Set<Vertex> verticesByIdentity = newSetFromMap(new IdentityHashMap<Vertex, Boolean>());
+    private Set<Vertex> verticesByIdentity = newSetFromMap(new IdentityHashMap<>());
 
     /**
      * Creates a vertex from a {@code Supplier<Processor>} and adds it to this DAG.

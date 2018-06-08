@@ -31,6 +31,7 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 
 public class JetMetricsService implements ManagedService, ConfigurableService<MetricsConfig> {
 
@@ -44,6 +45,7 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
 
     private final NodeEngineImpl nodeEngine;
     private final ILogger logger;
+
     /**
      * Ringbuffer which stores a bounded history of metrics. For each round of collection,
      * the metrics are compressed into a blob and stored along with the timestamp,
@@ -52,12 +54,10 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
     private ConcurrentArrayRingbuffer<Map.Entry<Long, byte[]>> metricsJournal;
     private MetricsConfig config;
 
-
     public JetMetricsService(NodeEngine nodeEngine) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.logger = nodeEngine.getLogger(getClass());
     }
-
 
     @Override
     public void configure(MetricsConfig config) {
@@ -69,16 +69,14 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
         if (config.isEnabled()) {
             metricsJournal = new ConcurrentArrayRingbuffer<>(config.getRetentionSeconds());
             int[] lastSize = {INITIAL_BUFFER_SIZE};
-            nodeEngine.getExecutionService().scheduleWithRepetition("MetricsForMcCollection", () -> {
+            nodeEngine.getExecutionService().scheduleWithRepetition("MetricsForManCenterCollection", () -> {
                 CompressingProbeRenderer renderer = new CompressingProbeRenderer(
                         lastSize[0] * SIZE_FACTOR_NUMERATOR / SIZE_FACTOR_DENOMINATOR);
                 this.nodeEngine.getMetricsRegistry().render(renderer);
                 byte[] blob = renderer.getRenderedBlob();
                 lastSize[0] = blob.length;
                 metricsJournal.add(entry(System.currentTimeMillis(), blob));
-                if (logger.isFineEnabled()) {
-                    logger.fine(String.format("Collected %,d metrics, %,d bytes", renderer.getCount(), blob.length));
-                }
+                logFine(logger, "Collected %,d metrics, %,d bytes", renderer.getCount(), blob.length);
             }, COLLECTION_INTERVAL_SECONDS, COLLECTION_INTERVAL_SECONDS, TimeUnit.SECONDS);
         }
     }
@@ -87,15 +85,12 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
         return metricsJournal.copyFrom(startSequence);
     }
 
-
     @Override
     public void reset() {
-
     }
 
     @Override
     public void shutdown(boolean terminate) {
-
     }
 
     // apply MetricsConfig to HZ properties

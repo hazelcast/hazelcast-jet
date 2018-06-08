@@ -17,11 +17,10 @@
 package com.hazelcast.jet.impl.metrics;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.impl.metrics.CompressingProbeRenderer.decompressingIterator;
 
@@ -32,11 +31,9 @@ public class MetricsResultSet  {
 
     public MetricsResultSet(ConcurrentArrayRingbuffer.RingbufferSlice<Map.Entry<Long, byte[]>> slice) {
         this.nextSequence = slice.nextSequence();
-        List<MetricsCollection> list = new ArrayList<>();
-        for (Entry<Long, byte[]> e : slice.elements()) {
-            list.add(new MetricsCollection(e.getKey(), e.getValue()));
-        }
-        this.collections = list;
+        this.collections = slice.stream()
+                .map(e -> new MetricsCollection(e.getKey(), e.getValue()))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -77,6 +74,5 @@ public class MetricsResultSet  {
             return decompressingIterator(bytes);
         }
     }
-
 }
 

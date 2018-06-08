@@ -325,16 +325,17 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
      * Populates {@code localConveyorMap}, {@code edgeSenderConveyorMap}.
      * Populates {@link #senderMap} and {@link #tasklets} fields.
      */
-    private List<OutboundEdgeStream> createOutboundEdgeStreams(VertexDef srcVertex, int processorIdx,
-                                                               ProbeBuilder probeBuilder) {
+    private List<OutboundEdgeStream> createOutboundEdgeStreams(
+            VertexDef srcVertex, int processorIdx, final ProbeBuilder probeBuilder
+    ) {
         final List<OutboundEdgeStream> outboundStreams = new ArrayList<>();
         for (EdgeDef edge : srcVertex.outboundEdges()) {
-            probeBuilder = probeBuilder.withTag("ordinal", String.valueOf(edge.sourceOrdinal()));
+            ProbeBuilder probeBuilder2 = probeBuilder.withTag("ordinal", String.valueOf(edge.sourceOrdinal()));
             Map<Address, ConcurrentConveyor<Object>> memberToSenderConveyorMap = null;
             if (edge.isDistributed()) {
-                memberToSenderConveyorMap = memberToSenderConveyorMap(edgeSenderConveyorMap, edge, probeBuilder);
+                memberToSenderConveyorMap = memberToSenderConveyorMap(edgeSenderConveyorMap, edge, probeBuilder2);
             }
-            outboundStreams.add(createOutboundEdgeStream(edge, processorIdx, memberToSenderConveyorMap, probeBuilder));
+            outboundStreams.add(createOutboundEdgeStream(edge, processorIdx, memberToSenderConveyorMap, probeBuilder2));
         }
         return outboundStreams;
     }
@@ -424,7 +425,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
     private OutboundCollector[] createOutboundCollectors(
             EdgeDef edge, int processorIndex, Map<Address, ConcurrentConveyor<Object>> senderConveyorMap,
-            ProbeBuilder probeBuilder) {
+            ProbeBuilder probeBuilder
+    ) {
         final int upstreamParallelism = edge.sourceVertex().localParallelism();
         final int downstreamParallelism = edge.destVertex().localParallelism();
         final int numRemoteMembers = ptionArrgmt.remotePartitionAssignment.get().size();
@@ -493,8 +495,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         return allCollectors;
     }
 
-    private void createIfAbsentReceiverTasklet(EdgeDef edge, int[][] ptionsPerProcessor, int totalPtionCount,
-                                               ProbeBuilder probeBuilder) {
+    private void createIfAbsentReceiverTasklet(
+            EdgeDef edge, int[][] ptionsPerProcessor, int totalPtionCount, ProbeBuilder probeBuilder
+    ) {
         final ConcurrentConveyor<Object>[] localConveyors = localConveyorMap.get(edge.edgeId());
 
         receiverMap.computeIfAbsent(edge.destVertex().vertexId(), x -> new HashMap<>())
@@ -520,8 +523,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                            if (firstTasklet == null) {
                                firstTasklet = receiverTasklet;
                            }
-                           itemCounters.add(receiverTasklet.getItemsOutCounter());
-                           bytesCounters.add(receiverTasklet.getBytesOutCounter());
+                           itemCounters.add(receiverTasklet.getItemsInCounter());
+                           bytesCounters.add(receiverTasklet.getBytesInCounter());
                        }
                        if (firstTasklet != null) {
                            // We register the metrics to the first tasklet. The metrics itself aggregate counters from
@@ -579,6 +582,4 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                              .filter(VertexDef::isHigherPriorityUpstream)
                              .count();
     }
-
 }
-

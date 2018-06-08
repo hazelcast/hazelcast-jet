@@ -37,6 +37,9 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
+
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -66,8 +69,6 @@ import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
-import javax.annotation.CheckReturnValue;
-import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
@@ -436,13 +437,14 @@ public final class Util {
         lazyAdd(counter, 1);
     }
 
-    public static void lazyIncrement(AtomicLongArray counter, int index) {
-        lazyAdd(counter, index, 1);
+    public static void lazyIncrement(AtomicLongArray counters, int index) {
+        lazyAdd(counters, index, 1);
     }
 
     /**
      * Adds {@code addend} to the counter, using {@code lazySet}. Useful for
-     * incrementing {@linkplain com.hazelcast.internal.metrics.Probe probes}.
+     * incrementing {@linkplain com.hazelcast.internal.metrics.Probe probes}
+     * if only one thread is updating the value.
      */
     public static void lazyAdd(AtomicLong counter, long addend) {
         counter.lazySet(counter.get() + addend);
@@ -450,10 +452,11 @@ public final class Util {
 
     /**
      * Adds {@code addend} to the counter, using {@code lazySet}. Useful for
-     * incrementing {@linkplain com.hazelcast.internal.metrics.Probe probes}.
+     * incrementing {@linkplain com.hazelcast.internal.metrics.Probe probes}
+     * if only one thread is updating the value.
      */
-    public static void lazyAdd(AtomicLongArray counter, int index, long addend) {
-        counter.lazySet(index, counter.get(index) + addend);
+    public static void lazyAdd(AtomicLongArray counters, int index, long addend) {
+        counters.lazySet(index, counters.get(index) + addend);
     }
 
     /**

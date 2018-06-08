@@ -19,7 +19,8 @@ package com.hazelcast.jet.impl.exception;
 import com.hazelcast.jet.JetException;
 
 /**
- * The exception class thrown and handled internally when a job restart is requested
+ * The exception class thrown and handled internally when a job restart is
+ * requested.
  */
 public class JobRestartRequestedException extends JetException {
 }

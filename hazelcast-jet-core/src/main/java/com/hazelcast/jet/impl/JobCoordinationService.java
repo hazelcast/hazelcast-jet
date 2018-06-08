@@ -210,9 +210,8 @@ public class JobCoordinationService {
     private String dagToJson(long jobId, JobConfig jobConfig, Data dagData) {
         ClassLoader classLoader = getClassLoader(jobConfig, jobId);
         DAG dag = deserializeWithCustomClassLoader(nodeEngine.getSerializationService(), classLoader, dagData);
-        int localParallelism = getJetInstance(nodeEngine).getConfig().getInstanceConfig()
-                                                               .getCooperativeThreadCount();
-        return dag.toJson(localParallelism).toString();
+        int coopThreadCount = getJetInstance(nodeEngine).getConfig().getInstanceConfig().getCooperativeThreadCount();
+        return dag.toJson(coopThreadCount).toString();
     }
 
     public CompletableFuture<Void> joinSubmittedJob(long jobId) {
@@ -530,7 +529,8 @@ public class JobCoordinationService {
     }
 
     void completeSnapshot(long jobId, long executionId, long snapshotId, boolean isSuccess,
-                          long numBytes, long numKeys, long numChunks) {
+                          long numBytes, long numKeys, long numChunks
+    ) {
         MasterContext masterContext = masterContexts.get(jobId);
         if (masterContext != null) {
             try {

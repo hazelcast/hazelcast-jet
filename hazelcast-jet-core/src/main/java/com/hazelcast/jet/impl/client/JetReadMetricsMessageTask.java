@@ -35,11 +35,14 @@ public class JetReadMetricsMessageTask extends AbstractMessageTask<RequestParame
 
     @Override
     protected void processMessage() {
+        // readMetrics requests are sent to member identified by address, but we want it by member UUID.
+        // After member restart, address remains, but UUID changes. If the local member has different
+        // UUID than then intended one, fail.
         if (!parameters.uuid.equals(nodeEngine.getLocalMember().getUuid())) {
             // do not throw RetryableException here
             throw new IllegalArgumentException(
                     "Requested metrics for member " + parameters.uuid
-                            + ", actual was " + nodeEngine.getLocalMember().getUuid()
+                            + ", but local member is " + nodeEngine.getLocalMember().getUuid()
             );
         }
         JetMetricsService jetMetricsService = getService(JetMetricsService.SERVICE_NAME);

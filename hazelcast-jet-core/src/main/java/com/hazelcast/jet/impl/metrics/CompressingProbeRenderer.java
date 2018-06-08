@@ -36,7 +36,7 @@ import static com.hazelcast.internal.metrics.MetricsUtil.escapeMetricNamePart;
  * Probe renderer to serialize metrics to byte[] to be sent to ManCenter.
  * Additionally, it converts legacy metric names to {@code [metric=<oldName>]}.
  */
-public class CompressingProbeRenderer implements ProbeRenderer {
+class CompressingProbeRenderer implements ProbeRenderer {
 
     private static final int BITS_IN_BYTE = 8;
     private static final int BYTE_MASK = 0xff;
@@ -54,7 +54,7 @@ public class CompressingProbeRenderer implements ProbeRenderer {
     private String lastName = "";
     private int count;
 
-    public CompressingProbeRenderer(int estimatedBytes) {
+    CompressingProbeRenderer(int estimatedBytes) {
         Deflater compressor = new Deflater();
         compressor.setLevel(Deflater.BEST_SPEED);
         baos = new ByteArrayOutputStream(estimatedBytes);

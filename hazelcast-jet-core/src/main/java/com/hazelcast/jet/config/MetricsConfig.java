@@ -24,7 +24,7 @@ import javax.annotation.Nonnull;
 public class MetricsConfig {
 
     /**
-     * Default retention period for metrics
+     * Default retention period for metrics.
      */
     public static final int DEFAULT_METRICS_RETENTION_SECONDS = 120;
 
@@ -33,7 +33,7 @@ public class MetricsConfig {
     private boolean enableDataStructures;
 
     /**
-     * Sets whether metrics collection should be enabled for the node
+     * Sets whether metrics collection should be enabled for the node.
      */
     @Nonnull
     public MetricsConfig setEnabled(boolean enabled) {
@@ -42,14 +42,14 @@ public class MetricsConfig {
     }
 
     /**
-     * Returns if metrics collection is enabled
+     * Returns if metrics collection is enabled.
      */
     public boolean isEnabled() {
         return enabled;
     }
 
     /**
-     * Sets the retention in seconds for collected metrics on each instance
+     * Sets the retention in seconds for collected metrics on each instance.
      */
     @Nonnull
     public MetricsConfig setRetentionSeconds(int retentionSeconds) {
@@ -58,7 +58,7 @@ public class MetricsConfig {
     }
 
     /**
-     * Returns the number of seconds of metrics to be retained on the instance
+     * Returns the number of seconds of metrics to be retained on the instance.
      */
     public int getRetentionSeconds() {
         return retentionSeconds;
