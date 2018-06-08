@@ -432,7 +432,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
         when_deserializationOnMembersFails_then_jobSubmissionFails(createJetClient());
     }
 
-    public void when_deserializationOnMembersFails_then_jobSubmissionFails(JetInstance instance) throws Throwable {
+    private void when_deserializationOnMembersFails_then_jobSubmissionFails(JetInstance instance) throws Throwable {
         // Given
         DAG dag = new DAG();
         // this is designed to fail when member deserializes the execution plan while executing
@@ -458,7 +458,7 @@ public class ExecutionLifecycleTest extends JetTestSupport {
         when_deserializationOnMasterFails_then_jobSubmissionFails(createJetClient());
     }
 
-    public void when_deserializationOnMasterFails_then_jobSubmissionFails(JetInstance instance) throws Throwable {
+    private void when_deserializationOnMasterFails_then_jobSubmissionFails(JetInstance instance) throws Throwable {
         // Given
         DAG dag = new DAG();
         // this is designed to fail when the master member deserializes the DAG
@@ -469,10 +469,14 @@ public class ExecutionLifecycleTest extends JetTestSupport {
         expectedException.expectMessage("fake.Class");
 
         // When
-        executeAndPeel(instance.newJob(dag));
+        try {
+            instance.newJob(dag).join();
+        } catch (Throwable e) {
+            throw peel(e);
+        }
     }
 
-    public Job runJobExpectFailure(@Nonnull DAG dag, @Nonnull RuntimeException expectedException) {
+    private Job runJobExpectFailure(@Nonnull DAG dag, @Nonnull RuntimeException expectedException) {
         Job job = null;
         try {
             job = instance.newJob(dag);

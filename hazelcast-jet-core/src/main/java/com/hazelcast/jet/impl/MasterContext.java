@@ -454,7 +454,7 @@ public class MasterContext {
             mergedResult.merge((SnapshotOperationResult) response);
         }
 
-        boolean isSuccess = mergedResult.getError() != null;
+        boolean isSuccess = mergedResult.getError() == null;
         if (!isSuccess) {
             logger.warning(jobAndExecutionId(jobId, executionId) + " snapshot " + snapshotId + " has failure, " +
                     "first failure: " + mergedResult.getError());
