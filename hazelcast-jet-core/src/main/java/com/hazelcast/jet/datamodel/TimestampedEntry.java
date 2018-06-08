@@ -94,7 +94,6 @@ public final class TimestampedEntry<K, V> implements Map.Entry<K, V> {
 
     /**
      * This method matches the shape of the functional interface {@link
-     * com.hazelcast.jet.function.KeyedWindowResultFunction
      * KeyedWindowResultFunction}.
      * <p>
      * Constructs a {@code TimestampedEntry} using the window end time as the
