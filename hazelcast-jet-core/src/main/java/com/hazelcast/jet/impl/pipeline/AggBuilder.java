@@ -72,7 +72,6 @@ public class AggBuilder {
             @Nonnull CreateOutStageFn<OUT, OUT_STAGE> createOutStageFn,
             @Nullable WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
     ) {
-        checkSerializable(createOutStageFn, "createOutStageFn");
         checkSerializable(mapToOutputFn, "mapToOutputFn");
 
         AggregateOperation adaptedAggrOp = wDef != null ? adaptAggregateOperation(aggrOp) : aggrOp;
