@@ -886,9 +886,10 @@ public final class Sources {
      * The source does not save any state to snapshot. The source starts
      * emitting items where it left from.
      * <p>
-     * IO failures are generally handled by JMS provider and do not cause the
-     * processor to fail. Most of the providers offer a configuration parameter
-     * to enable auto-reconnection, refer to provider documentation for details.
+     * IO failures should be handled by the JMS provider. If any JMS operation
+     * throws an exception, the job will fail. Most of the providers offer a
+     * configuration parameter to enable auto-reconnection, refer to provider
+     * documentation for details.
      * <p>
      * Default local parallelism for this processor is 4 (or less if less CPUs
      * are available).
@@ -937,9 +938,10 @@ public final class Sources {
      * If the consumer is non-durable then source emits the items published
      * after the restart.
      * <p>
-     * IO failures are generally handled by JMS provider and do not cause the
-     * processor to fail. Most of the providers offer a configuration parameter
-     * to enable auto-reconnection, refer to provider documentation for details.
+     * IO failures should be handled by the JMS provider. If any JMS operation
+     * throws an exception, the job will fail. Most of the providers offer a
+     * configuration parameter to enable auto-reconnection, refer to provider
+     * documentation for details.
      *
      * @param <T> type of the items the source emits
      */

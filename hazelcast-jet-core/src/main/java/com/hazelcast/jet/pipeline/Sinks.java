@@ -644,9 +644,10 @@ public final class Sinks {
      * restarted, duplicate events can occur. If you need exactly-once behavior,
      * you must ensure idempotence on the application level.
      * <p>
-     * IO failures are generally handled by JMS provider and do not cause the
-     * processor to fail. Most of the providers offer a configuration parameter
-     * to enable auto-reconnection, refer to provider documentation for details.
+     * IO failures should be handled by the JMS provider. If any JMS operation
+     * throws an exception, the job will fail. Most of the providers offer a
+     * configuration parameter to enable auto-reconnection, refer to provider
+     * documentation for details.
      * <p>
      * Default local parallelism for this processor is 4 (or less if less CPUs
      * are available).
@@ -687,9 +688,10 @@ public final class Sinks {
      * restarted, duplicate events can occur. If you need exactly-once behavior,
      * you must ensure idempotence on the application level.
      * <p>
-     * IO failures are generally handled by JMS provider and do not cause the
-     * processor to fail. Most of the providers offer a configuration parameter
-     * to enable auto-reconnection, refer to provider documentation for details.
+     * IO failures should be handled by the JMS provider. If any JMS operation
+     * throws an exception, the job will fail. Most of the providers offer a
+     * configuration parameter to enable auto-reconnection, refer to provider
+     * documentation for details.
      * <p>
      * Default local parallelism for this processor is 4 (or less if less CPUs
      * are available).
