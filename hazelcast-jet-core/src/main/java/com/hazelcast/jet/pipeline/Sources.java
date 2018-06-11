@@ -762,21 +762,21 @@ public final class Sources {
      * @param glob the globbing mask, see {@link
      *             java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()}.
      *             Use {@code "*"} for all files.
-     * @param mapOutputFn function to create output items. Parameters are
-     *                    {@code fileName} and {@code line}.
      * @param sharedFileSystem {@code true} if files are in a shared storage
      *                         visible to all members, {@code false} otherwise
+     * @param mapOutputFn function to create output items. Parameters are
+     *                    {@code fileName} and {@code line}.
      */
     @Nonnull
     public static <R> BatchSource<R> files(
             @Nonnull String directory,
             @Nonnull Charset charset,
             @Nonnull String glob,
-            @Nonnull DistributedBiFunction<String, String, ? extends R> mapOutputFn,
-            boolean sharedFileSystem
+            boolean sharedFileSystem,
+            @Nonnull DistributedBiFunction<String, String, ? extends R> mapOutputFn
     ) {
         return batchFromProcessor("filesSource(" + new File(directory, glob) + ')',
-                readFilesP(directory, charset, glob, mapOutputFn, sharedFileSystem));
+                readFilesP(directory, charset, glob, sharedFileSystem, mapOutputFn));
     }
 
     /**
@@ -784,12 +784,12 @@ public final class Sources {
      *   files(directory, UTF_8, GLOB_WILDCARD, (file, line) -> line, false)
      * }</pre>
      *
-     * See the {@linkplain #files(String, Charset, String,
-     * DistributedBiFunction, boolean) full method}.
+     * See the {@linkplain #files(String, Charset, String, boolean,
+     * DistributedBiFunction) full method}.
      */
     @Nonnull
     public static BatchSource<String> files(@Nonnull String directory) {
-        return files(directory, UTF_8, GLOB_WILDCARD, (file, line) -> line, false);
+        return files(directory, UTF_8, GLOB_WILDCARD, false, (file, line) -> line);
     }
 
     /**
@@ -843,13 +843,15 @@ public final class Sources {
      * @param glob the globbing mask, see {@link
      *             java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()}.
      *             Use {@code "*"} for all files.
+     * @param sharedFileSystem {@code true} if files are in a shared storage
+     *                         visible to all members, {@code false} otherwise
      */
     @Nonnull
     public static StreamSource<String> fileWatcher(
             @Nonnull String watchedDirectory, @Nonnull Charset charset, @Nonnull String glob, boolean sharedFileSystem
     ) {
         return streamFromProcessor("fileWatcherSource(" + watchedDirectory + '/' + glob + ')',
-                streamFilesP(watchedDirectory, charset, glob, (file, line) -> line, sharedFileSystem)
+                streamFilesP(watchedDirectory, charset, glob, sharedFileSystem, (file, line) -> line)
         );
     }
 

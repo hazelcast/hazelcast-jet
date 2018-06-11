@@ -316,22 +316,22 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link Sources#files(String, Charset, String, DistributedBiFunction, boolean)}.
+     * {@link Sources#files(String, Charset, String, boolean, DistributedBiFunction)}.
      */
     @Nonnull
     public static <R> ProcessorMetaSupplier readFilesP(
             @Nonnull String directory,
             @Nonnull Charset charset,
             @Nonnull String glob,
-            @Nonnull DistributedBiFunction<String, String, R> mapOutputFn,
-            boolean sharedFileSystem
+            boolean sharedFileSystem,
+            @Nonnull DistributedBiFunction<String, String, R> mapOutputFn
     ) {
         checkSerializable(mapOutputFn, "mapOutputFn");
 
         String charsetName = charset.name();
-        return ReadFilesP.metaSupplier(directory, glob,
+        return ReadFilesP.metaSupplier(directory, glob, sharedFileSystem,
                 path -> uncheckCall(() -> Files.lines(path, Charset.forName(charsetName))),
-                mapOutputFn, sharedFileSystem);
+                mapOutputFn);
     }
 
     /**
@@ -343,10 +343,10 @@ public final class SourceProcessors {
             @Nonnull String watchedDirectory,
             @Nonnull Charset charset,
             @Nonnull String glob,
-            @Nonnull DistributedBiFunction<String, String, ?> mapOutputFn,
-            boolean sharedFileSystem
+            boolean sharedFileSystem,
+            @Nonnull DistributedBiFunction<String, String, ?> mapOutputFn
     ) {
-        return StreamFilesP.metaSupplier(watchedDirectory, charset.name(), glob, mapOutputFn, sharedFileSystem);
+        return StreamFilesP.metaSupplier(watchedDirectory, charset.name(), glob, sharedFileSystem, mapOutputFn);
     }
 
     /**

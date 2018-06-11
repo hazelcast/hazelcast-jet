@@ -93,8 +93,8 @@ public class StreamFilesP<R> extends AbstractProcessor {
     private final Path watchedDirectory;
     private final Charset charset;
     private final PathMatcher glob;
-    private final DistributedBiFunction<String, String, R> mapOutputFn;
     private final boolean sharedFileSystem;
+    private final DistributedBiFunction<String, String, R> mapOutputFn;
 
     private final Queue<Path> eventQueue = new ArrayDeque<>();
 
@@ -109,13 +109,13 @@ public class StreamFilesP<R> extends AbstractProcessor {
     private int processorIndex;
 
     StreamFilesP(@Nonnull String watchedDirectory, @Nonnull Charset charset, @Nonnull String glob,
-                 @Nonnull DistributedBiFunction<String, String, R> mapOutputFn, boolean sharedFileSystem
+                 boolean sharedFileSystem, @Nonnull DistributedBiFunction<String, String, R> mapOutputFn
     ) {
         this.watchedDirectory = Paths.get(watchedDirectory);
         this.charset = charset;
         this.glob = FileSystems.getDefault().getPathMatcher("glob:" + glob);
-        this.mapOutputFn = mapOutputFn;
         this.sharedFileSystem = sharedFileSystem;
+        this.mapOutputFn = mapOutputFn;
         setCooperative(false);
     }
 
@@ -348,11 +348,11 @@ public class StreamFilesP<R> extends AbstractProcessor {
             @Nonnull String watchedDirectory,
             @Nonnull String charset,
             @Nonnull String glob,
-            @Nonnull DistributedBiFunction<String, String, ?> mapOutputFn,
-            boolean sharedFileSystem
+            boolean sharedFileSystem,
+            @Nonnull DistributedBiFunction<String, String, ?> mapOutputFn
     ) {
         return ProcessorMetaSupplier.of(() ->
-                new StreamFilesP<>(watchedDirectory, Charset.forName(charset), glob, mapOutputFn, sharedFileSystem), 2);
+                new StreamFilesP<>(watchedDirectory, Charset.forName(charset), glob, sharedFileSystem, mapOutputFn), 2);
     }
 
     private static WatchEvent.Modifier[] getHighSensitivityModifiers() {

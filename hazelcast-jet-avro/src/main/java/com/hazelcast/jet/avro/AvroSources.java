@@ -61,12 +61,12 @@ public final class AvroSources {
      * @param glob                the globbing mask, see {@link
      *                            java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()}.
      *                            Use {@code "*"} for all files.
-     * @param datumReaderSupplier the datum reader supplier
-     * @param mapOutputFn         function to create output items. Parameters are
-     *                            {@code fileName} and {@code W}.
      * @param sharedFileSystem    {@code true} if files are in a shared storage
      *                                        visible to all members, {@code
      *                                        false} otherwise
+     * @param datumReaderSupplier the datum reader supplier
+     * @param mapOutputFn         function to create output items. Parameters are
+     *                            {@code fileName} and {@code W}.
      * @param <W>                 the type of the records
      * @param <R>                 the type of the emitted value
      */
@@ -74,17 +74,17 @@ public final class AvroSources {
     public static <W, R> BatchSource<R> files(
             @Nonnull String directory,
             @Nonnull String glob,
+            boolean sharedFileSystem,
             @Nonnull DistributedSupplier<DatumReader<W>> datumReaderSupplier,
-            @Nonnull DistributedBiFunction<String, W, ? extends R> mapOutputFn,
-            boolean sharedFileSystem
+            @Nonnull DistributedBiFunction<String, W, ? extends R> mapOutputFn
     ) {
         return Sources.batchFromProcessor("avroFilesSource(" + new File(directory, glob) + ')',
-                AvroProcessors.readFilesP(directory, glob, datumReaderSupplier, mapOutputFn, sharedFileSystem));
+                AvroProcessors.readFilesP(directory, glob, sharedFileSystem, datumReaderSupplier, mapOutputFn));
     }
 
     /**
      * Convenience for {@link
-     * #files(String, String, DistributedSupplier, DistributedBiFunction, boolean)}
+     * #files(String, String, boolean, DistributedSupplier, DistributedBiFunction)}
      * which reads all the files in the supplied directory as specific records
      * using supplied {@code recordClass}. If {@code recordClass} implements
      * {@link SpecificRecord}, {@link SpecificDatumReader} is used to read the
@@ -93,17 +93,17 @@ public final class AvroSources {
     @Nonnull
     public static <R> BatchSource<R> files(
             @Nonnull String directory,
-            @Nonnull Class<R> recordClass,
-            boolean sharedFileSystem
+            boolean sharedFileSystem,
+            @Nonnull Class<R> recordClass
     ) {
-        return files(directory, "*", () -> SpecificRecord.class.isAssignableFrom(recordClass) ?
+        return files(directory, "*", sharedFileSystem, () -> SpecificRecord.class.isAssignableFrom(recordClass) ?
                         new SpecificDatumReader<>(recordClass) : new ReflectDatumReader<>(recordClass),
-                (s, r) -> r, sharedFileSystem);
+                (s, r) -> r);
     }
 
     /**
      * Convenience for {@link
-     * #files(String, String, DistributedSupplier, DistributedBiFunction, boolean)}
+     * #files(String, String, boolean, DistributedSupplier, DistributedBiFunction)}
      * which reads all the files in the supplied directory as generic records and
      * emits the results of transforming each generic record with the supplied
      * mapping function.
@@ -111,9 +111,9 @@ public final class AvroSources {
     @Nonnull
     public static <R> BatchSource<R> files(
             @Nonnull String directory,
-            @Nonnull DistributedBiFunction<String, GenericRecord, R> mapOutputFn,
-            boolean sharedFileSystem
+            boolean sharedFileSystem,
+            @Nonnull DistributedBiFunction<String, GenericRecord, R> mapOutputFn
     ) {
-        return files(directory, "*", GenericDatumReader::new, mapOutputFn, sharedFileSystem);
+        return files(directory, "*", sharedFileSystem, GenericDatumReader::new, mapOutputFn);
     }
 }
