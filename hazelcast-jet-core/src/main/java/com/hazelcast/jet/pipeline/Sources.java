@@ -798,9 +798,11 @@ public final class Sources {
      * new contents added after startup: both new files and new content
      * appended to existing ones.
      * <p>
-     * To be useful, the source should be configured to read data local to each
-     * member. For example, if the pathname resolves to a shared network
-     * filesystem visible by multiple members, they will emit duplicate data.
+     * If {@code sharedFileSystem} is {@code true}, Jet will assume all members
+     * see the same files. They will split the work so that each member will
+     * read a part of the files. If {@code sharedFileSystem} is {@code false},
+     * each member will read all files in the directory, assuming the are
+     * local.
      * <p>
      * If, during the scanning phase, the source observes a file that doesn't
      * end with a newline, it will assume that there is a line just being
@@ -809,7 +811,8 @@ public final class Sources {
      * The source completes when the directory is deleted. However, in order
      * to delete the directory, all files in it must be deleted and if you
      * delete a file that is currently being read from, the job may encounter
-     * an {@code IOException}. The directory must be deleted on all nodes.
+     * an {@code IOException}. The directory must be deleted on all nodes if
+     * {@code sharedFileSystem} is {@code false}.
      * <p>
      * Any {@code IOException} will cause the job to fail.
      * <p>
