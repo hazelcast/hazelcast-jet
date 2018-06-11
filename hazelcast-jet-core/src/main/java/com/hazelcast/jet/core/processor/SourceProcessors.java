@@ -336,16 +336,17 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link Sources#fileWatcher(String, Charset, String)}.
+     * {@link Sources#fileWatcher(String, Charset, String, boolean)}.
      */
     @Nonnull
     public static ProcessorMetaSupplier streamFilesP(
             @Nonnull String watchedDirectory,
             @Nonnull Charset charset,
             @Nonnull String glob,
-            @Nonnull DistributedBiFunction<String, String, ?> mapOutputFn
+            @Nonnull DistributedBiFunction<String, String, ?> mapOutputFn,
+            boolean sharedFileSystem
     ) {
-        return StreamFilesP.metaSupplier(watchedDirectory, charset.name(), glob, mapOutputFn);
+        return StreamFilesP.metaSupplier(watchedDirectory, charset.name(), glob, mapOutputFn, sharedFileSystem);
     }
 
     /**

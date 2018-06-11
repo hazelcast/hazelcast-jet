@@ -271,7 +271,7 @@ public class StreamFilesP_integrationTest extends JetTestSupport {
 
     private DAG buildDag() {
         DAG dag = new DAG();
-        Vertex reader = dag.newVertex("reader", streamFilesP(directory.getPath(), UTF_8, "*", Util::entry))
+        Vertex reader = dag.newVertex("reader", streamFilesP(directory.getPath(), UTF_8, "*", Util::entry, false))
                            .localParallelism(1);
         Vertex writer = dag.newVertex("writer", writeListP(list.getName())).localParallelism(1);
         dag.edge(between(reader, writer));

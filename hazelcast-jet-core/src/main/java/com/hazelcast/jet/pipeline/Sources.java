@@ -843,20 +843,20 @@ public final class Sources {
      */
     @Nonnull
     public static StreamSource<String> fileWatcher(
-            @Nonnull String watchedDirectory, @Nonnull Charset charset, @Nonnull String glob
+            @Nonnull String watchedDirectory, @Nonnull Charset charset, @Nonnull String glob, boolean sharedFileSystem
     ) {
         return streamFromProcessor("fileWatcherSource(" + watchedDirectory + '/' + glob + ')',
-                streamFilesP(watchedDirectory, charset, glob, (file, line) -> line)
+                streamFilesP(watchedDirectory, charset, glob, (file, line) -> line, sharedFileSystem)
         );
     }
 
     /**
-     * Convenience for {@link #fileWatcher(String, Charset, String)
-     * streamFiles(watchedDirectory, UTF_8, "*")}.
+     * Convenience for {@link #fileWatcher(String, Charset, String, boolean)
+     * streamFiles(watchedDirectory, UTF_8, "*", false)}.
      */
     @Nonnull
     public static StreamSource<String> fileWatcher(@Nonnull String watchedDirectory) {
-        return fileWatcher(watchedDirectory, UTF_8, GLOB_WILDCARD);
+        return fileWatcher(watchedDirectory, UTF_8, GLOB_WILDCARD, false);
     }
 
     /**
