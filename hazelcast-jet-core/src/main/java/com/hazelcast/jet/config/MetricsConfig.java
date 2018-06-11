@@ -33,7 +33,8 @@ public class MetricsConfig {
     private boolean enableDataStructures;
 
     /**
-     * Sets whether metrics collection should be enabled for the node.
+     * Sets whether metrics collection should be enabled for the node. It's
+     * enabled by default.
      */
     @Nonnull
     public MetricsConfig setEnabled(boolean enabled) {
@@ -42,14 +43,15 @@ public class MetricsConfig {
     }
 
     /**
-     * Returns if metrics collection is enabled.
+     * Returns if metrics collection is enabled. It's enabled by default.
      */
     public boolean isEnabled() {
         return enabled;
     }
 
     /**
-     * Sets the retention in seconds for collected metrics on each instance.
+     * Returns the number of seconds the metrics will be retained on the
+     * instance. Default is {@link #DEFAULT_METRICS_RETENTION_SECONDS}.
      */
     @Nonnull
     public MetricsConfig setRetentionSeconds(int retentionSeconds) {
@@ -58,7 +60,8 @@ public class MetricsConfig {
     }
 
     /**
-     * Returns the number of seconds of metrics to be retained on the instance.
+     * Returns the number of seconds the metrics will be retained on the
+     * instance. Default is {@link #DEFAULT_METRICS_RETENTION_SECONDS}.
      */
     public int getRetentionSeconds() {
         return retentionSeconds;
@@ -66,7 +69,8 @@ public class MetricsConfig {
 
     /**
      * Sets whether metrics should be collected for data structures. Metrics
-     * collection can have some overhead if there is a large number of data structures.
+     * collection can have some overhead if there is a large number of data
+     * structures. It's disabled by default.
      */
     @Nonnull
     public MetricsConfig setEnabledForDataStructures(boolean enableDataStructures) {
@@ -75,7 +79,8 @@ public class MetricsConfig {
     }
 
     /**
-     * Returns if metric collection is enabled for data structures.
+     * Returns if metric collection is enabled for data structures. It's
+     * disabled by default.
      */
     public boolean isEnabledForDataStructures() {
         return enableDataStructures;
