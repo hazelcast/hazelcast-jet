@@ -70,7 +70,6 @@
             -Dhazelcast.logging.type=log4j
             -Dhazelcast.test.use.network=false
             -Djava.net.preferIPv4Stack=true
-            -verbose:gc
         </argLine>
         <main.basedir>${project.basedir}</main.basedir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

@@ -119,7 +119,7 @@ public class ProcessorTasklet implements Tasklet {
         currInstream = instreamCursor != null ? instreamCursor.value() : null;
         receivedCounts = new AtomicLongArray(instreams.size());
         receivedBatches = new AtomicLongArray(instreams.size());
-        emittedCounts = new AtomicLongArray(outstreams.size() + (context.snapshottingEnabled() ? 1 : 0));
+        emittedCounts = new AtomicLongArray(outstreams.size() + 1);
         outbox = createOutbox(ssCollector);
         receivedBarriers = new BitSet(instreams.size());
         state = initialProcessingState();
@@ -140,11 +140,10 @@ public class ProcessorTasklet implements Tasklet {
                             (LongProbeFunction<ProcessorTasklet>) t -> t.receivedBatches.get(finalI));
         }
 
-        for (int i = 0; i < emittedCounts.length(); i++) {
+        for (int i = 0; i < emittedCounts.length() - (context.snapshottingEnabled() ? 0 : 1); i++) {
             int finalI = i;
             probeBuilder
-                    .withTag("ordinal", context.snapshottingEnabled() && i == emittedCounts.length() - 1
-                            ? "snapshot" : String.valueOf(i))
+                    .withTag("ordinal", i == emittedCounts.length() - 1 ? "snapshot" : String.valueOf(i))
                     .register(this, "emittedCount", ProbeLevel.INFO,
                             (LongProbeFunction<ProcessorTasklet>) t -> t.emittedCounts.get(finalI));
         }
@@ -157,16 +156,13 @@ public class ProcessorTasklet implements Tasklet {
                 (LongProbeFunction<ProcessorTasklet>) t -> t.queuesCapacity.get());
     }
 
-    private OutboxImpl createOutbox(OutboundCollector ssCollector) {
-        OutboundCollector[] collectors = new OutboundCollector[outstreams.length
-                + (context.snapshottingEnabled() ? 1 : 0)];
+    private OutboxImpl createOutbox(@Nonnull OutboundCollector ssCollector) {
+        OutboundCollector[] collectors = new OutboundCollector[outstreams.length + 1];
         for (int i = 0; i < outstreams.length; i++) {
             collectors[i] = outstreams[i].getCollector();
         }
-        if (context.snapshottingEnabled()) {
-            collectors[outstreams.length] = ssCollector;
-        }
-        return new OutboxImpl(collectors, context.snapshottingEnabled(), progTracker,
+        collectors[outstreams.length] = ssCollector;
+        return new OutboxImpl(collectors, true, progTracker,
                 context.getSerializationService(), OUTBOX_BATCH_SIZE, emittedCounts);
     }
 
