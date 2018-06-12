@@ -135,6 +135,9 @@ public class XmlConfigTest {
         properties.put("thread.count", String.valueOf(55));
         properties.put("flow.control.period", "50");
         properties.put("backup.count", "2");
+        properties.put("metrics.enabled", "false");
+        properties.put("metrics.retention", "124");
+        properties.put("metrics.enabled-for-data-structures", "true");
 
         // When
         JetConfig jetConfig = JetConfig.loadDefault(properties);
