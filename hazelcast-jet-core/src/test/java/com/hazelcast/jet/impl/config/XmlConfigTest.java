@@ -32,6 +32,7 @@ import java.io.InputStream;
 import java.util.Properties;
 
 import static com.hazelcast.jet.config.InstanceConfig.DEFAULT_FLOW_CONTROL_PERIOD_MS;
+import static com.hazelcast.jet.config.MetricsConfig.DEFAULT_METRICS_RETENTION_SECONDS;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -56,6 +57,7 @@ public class XmlConfigTest {
         assertEquals(Runtime.getRuntime().availableProcessors(),
                 jetConfig.getInstanceConfig().getCooperativeThreadCount());
         assertEquals(DEFAULT_FLOW_CONTROL_PERIOD_MS, jetConfig.getInstanceConfig().getFlowControlPeriodMs());
+        assertEquals(DEFAULT_METRICS_RETENTION_SECONDS, jetConfig.getMetricsConfig().getRetentionSeconds());
         assertDefaultMemberConfig(jetConfig.getHazelcastConfig());
     }
 

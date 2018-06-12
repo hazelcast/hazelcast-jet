@@ -23,6 +23,8 @@ import org.junit.rules.ExpectedException;
 import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class JetConfigTest_loadFromClassPath {
 
@@ -55,5 +57,11 @@ public class JetConfigTest_loadFromClassPath {
         assertEquals(123, config.getInstanceConfig().getCooperativeThreadCount());
         assertEquals(456, config.getInstanceConfig().getFlowControlPeriodMs());
         assertEquals(6, config.getInstanceConfig().getBackupCount());
+
+        MetricsConfig metricsConfig = config.getMetricsConfig();
+        assertFalse(metricsConfig.isEnabled());
+        assertEquals(124, metricsConfig.getRetentionSeconds());
+        assertTrue(metricsConfig.isEnabledForDataStructures());
+
     }
 }
