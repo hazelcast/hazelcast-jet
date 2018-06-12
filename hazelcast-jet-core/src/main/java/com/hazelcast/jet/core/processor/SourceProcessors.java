@@ -32,6 +32,7 @@ import com.hazelcast.jet.impl.connector.StreamEventJournalP;
 import com.hazelcast.jet.impl.connector.StreamFilesP;
 import com.hazelcast.jet.impl.connector.StreamJmsP;
 import com.hazelcast.jet.impl.connector.StreamSocketP;
+import com.hazelcast.jet.pipeline.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.journal.EventJournalMapEvent;
@@ -315,8 +316,8 @@ public final class SourceProcessors {
     }
 
     /**
-     * Returns a supplier of processors for
-     * {@link Sources#files(String, Charset, String, boolean, DistributedBiFunction)}.
+     * Returns a supplier of processors for {@link Sources#filesBuilder}.
+     * See {@link FileSourceBuilder#build} for more details.
      */
     @Nonnull
     public static <R> ProcessorMetaSupplier readFilesP(
@@ -335,8 +336,8 @@ public final class SourceProcessors {
     }
 
     /**
-     * Returns a supplier of processors for
-     * {@link Sources#fileWatcher(String, Charset, String, boolean)}.
+     * Returns a supplier of processors for {@link Sources#filesBuilder}.
+     * See {@link FileSourceBuilder#buildWatcher} for more details.
      */
     @Nonnull
     public static ProcessorMetaSupplier streamFilesP(
@@ -346,6 +347,8 @@ public final class SourceProcessors {
             boolean sharedFileSystem,
             @Nonnull DistributedBiFunction<String, String, ?> mapOutputFn
     ) {
+        checkSerializable(mapOutputFn, "mapOutputFn");
+
         return StreamFilesP.metaSupplier(watchedDirectory, charset.name(), glob, sharedFileSystem, mapOutputFn);
     }
 

@@ -50,7 +50,6 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Static utility class with factories of sink processors (the terminators
@@ -236,8 +235,7 @@ public final class SinkProcessors {
     }
 
     /**
-     * Returns a supplier of processors for
-     * {@link Sinks#files(String, DistributedFunction, Charset, boolean)}.
+     * Returns a supplier of processors for {@link Sinks#filesBuilder}.
      */
     @Nonnull
     public static <T> ProcessorMetaSupplier writeFileP(
@@ -251,24 +249,6 @@ public final class SinkProcessors {
         return WriteFileP.metaSupplier(directoryName, toStringFn, charset.name(), append);
     }
 
-    /**
-     * Returns a supplier of processors for
-     * {@link Sinks#files(String, DistributedFunction)}.
-     */
-    @Nonnull
-    public static <T> ProcessorMetaSupplier writeFileP(
-            @Nonnull String directoryName, @Nonnull DistributedFunction<T, String> toStringFn
-    ) {
-        return writeFileP(directoryName, toStringFn, UTF_8, false);
-    }
-
-    /**
-     * Returns a supplier of processors for {@link Sinks#files(String)}.
-     */
-    @Nonnull
-    public static ProcessorMetaSupplier writeFileP(@Nonnull String directoryName) {
-        return writeFileP(directoryName, Object::toString, UTF_8, false);
-    }
 
     /**
      * Shortcut for {@link #writeBufferedP(DistributedFunction,
