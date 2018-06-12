@@ -71,7 +71,7 @@ public final class SourceProcessors {
      */
     @Nonnull
     public static ProcessorMetaSupplier readMapP(@Nonnull String mapName) {
-        return ReadWithPartitionIteratorP.readMapP(mapName);
+        return ReadWithPartitionIteratorP.readMapSupplier(mapName);
     }
 
     /**
@@ -84,7 +84,7 @@ public final class SourceProcessors {
             @Nonnull Predicate<K, V> predicate,
             @Nonnull Projection<Entry<K, V>, T> projectionFn
     ) {
-        return ReadWithPartitionIteratorP.readMapP(mapName, predicate, projectionFn);
+        return ReadWithPartitionIteratorP.readMapSupplier(mapName, predicate, projectionFn);
     }
 
     /**
@@ -97,7 +97,7 @@ public final class SourceProcessors {
             @Nonnull Predicate<K, V> predicate,
             @Nonnull DistributedFunction<Entry<K, V>, T> projectionFn
     ) {
-        return ReadWithPartitionIteratorP.readMapP(mapName, predicate, toProjection(projectionFn));
+        return ReadWithPartitionIteratorP.readMapSupplier(mapName, predicate, toProjection(projectionFn));
     }
 
 
@@ -129,7 +129,7 @@ public final class SourceProcessors {
         checkSerializable(predicateFn, "predicateFn");
         checkSerializable(projectionFn, "projectionFn");
 
-        return StreamEventJournalP.streamMapP(mapName, predicateFn, projectionFn, initialPos, wmGenParams);
+        return StreamEventJournalP.streamMapSupplier(mapName, predicateFn, projectionFn, initialPos, wmGenParams);
     }
 
     /**
@@ -138,7 +138,7 @@ public final class SourceProcessors {
      */
     @Nonnull
     public static ProcessorMetaSupplier readRemoteMapP(@Nonnull String mapName, @Nonnull ClientConfig clientConfig) {
-        return ReadWithPartitionIteratorP.readRemoteMapP(mapName, clientConfig);
+        return ReadWithPartitionIteratorP.readRemoteMapSupplier(mapName, clientConfig);
     }
 
     /**
@@ -152,7 +152,7 @@ public final class SourceProcessors {
             @Nonnull Predicate<K, V> predicate,
             @Nonnull Projection<Entry<K, V>, T> projection
     ) {
-        return ReadWithPartitionIteratorP.readRemoteMapP(mapName, clientConfig, projection, predicate);
+        return ReadWithPartitionIteratorP.readRemoteMapSupplier(mapName, clientConfig, projection, predicate);
     }
 
     /**
@@ -166,7 +166,7 @@ public final class SourceProcessors {
             @Nonnull Predicate<K, V> predicate,
             @Nonnull DistributedFunction<Entry<K, V>, T> projectionFn
     ) {
-        return ReadWithPartitionIteratorP.readRemoteMapP(
+        return ReadWithPartitionIteratorP.readRemoteMapSupplier(
                 mapName, clientConfig, toProjection(projectionFn), predicate
         );
     }
@@ -200,7 +200,7 @@ public final class SourceProcessors {
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
-        return StreamEventJournalP.streamRemoteMapP(
+        return StreamEventJournalP.streamRemoteMapSupplier(
                 mapName, clientConfig, predicateFn, projectionFn, initialPos, wmGenParams);
     }
 
@@ -210,7 +210,7 @@ public final class SourceProcessors {
      */
     @Nonnull
     public static ProcessorMetaSupplier readCacheP(@Nonnull String cacheName) {
-        return ReadWithPartitionIteratorP.readCacheP(cacheName);
+        return ReadWithPartitionIteratorP.readCacheSupplier(cacheName);
     }
 
     /**
@@ -239,7 +239,7 @@ public final class SourceProcessors {
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
-        return StreamEventJournalP.streamCacheP(cacheName, predicateFn, projectionFn, initialPos,
+        return StreamEventJournalP.streamCacheSupplier(cacheName, predicateFn, projectionFn, initialPos,
                 wmGenParams);
     }
 
@@ -251,7 +251,7 @@ public final class SourceProcessors {
     public static ProcessorMetaSupplier readRemoteCacheP(
             @Nonnull String cacheName, @Nonnull ClientConfig clientConfig
     ) {
-        return ReadWithPartitionIteratorP.readRemoteCacheP(cacheName, clientConfig);
+        return ReadWithPartitionIteratorP.readRemoteCacheSupplier(cacheName, clientConfig);
     }
 
     /**
@@ -282,7 +282,7 @@ public final class SourceProcessors {
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
-        return StreamEventJournalP.streamRemoteCacheP(cacheName, clientConfig, predicateFn, projectionFn, initialPos,
+        return StreamEventJournalP.streamRemoteCacheSupplier(cacheName, clientConfig, predicateFn, projectionFn, initialPos,
                 wmGenParams);
     }
 
