@@ -38,7 +38,7 @@ public final class FileSinkBuilder<T> {
     private boolean append;
 
     /**
-     * Use {@link Sinks#filesBuilder}
+     * Use {@link Sinks#filesBuilder}.
      */
     FileSinkBuilder(@Nonnull String directoryName) {
         this.directoryName = directoryName;
@@ -65,7 +65,7 @@ public final class FileSinkBuilder<T> {
 
     /**
      * Sets whether to append ({@code true}) or overwrite ({@code false})
-     * an existing file. Default value is {@code false}
+     * an existing file. Default value is {@code false}.
      */
     public FileSinkBuilder<T> append(boolean append) {
         this.append = append;

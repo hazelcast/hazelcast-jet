@@ -749,11 +749,11 @@ public final class Sources {
      *      .charset(UTF_8)
      *      .glob(GLOB_WILDCARD)
      *      .sharedFileSystem(false)
-     *      .mapToOutputFn((file, line) -> line)
+     *      .mapToOutputFn((fileName, line) -> line)
      *      .build()
      * }</pre>
      *
-     * See the {@linkplain #filesBuilder(String)}.
+     * See {@link #filesBuilder(String)}.
      */
     @Nonnull
     public static BatchSource<String> files(@Nonnull String directory) {
@@ -766,11 +766,11 @@ public final class Sources {
      *      .charset(UTF_8)
      *      .glob(GLOB_WILDCARD)
      *      .sharedFileSystem(false)
-     *      .mapToOutputFn((file, line) -> line)
+     *      .mapToOutputFn((fileName, line) -> line)
      *      .buildWatcher()
      * }</pre>
      *
-     * See the {@linkplain #filesBuilder(String)}.
+     * See {@link #filesBuilder(String)}.
      */
     @Nonnull
     public static StreamSource<String> fileWatcher(@Nonnull String watchedDirectory) {
