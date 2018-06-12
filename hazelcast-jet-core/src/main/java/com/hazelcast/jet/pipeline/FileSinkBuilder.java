@@ -25,7 +25,7 @@ import java.nio.charset.StandardCharsets;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeFileP;
 
 /**
- * See {@link Sinks#filesBuilder}
+ * See {@link Sinks#filesBuilder}.
  *
  * @param <T> type of the items the sink accepts
  */

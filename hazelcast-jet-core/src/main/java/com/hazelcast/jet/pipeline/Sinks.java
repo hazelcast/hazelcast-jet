@@ -492,8 +492,9 @@ public final class Sinks {
      * vertex), but a single pathname is used to resolve the containing
      * directory of all files, on all cluster members.
      * <p>
-     * No state is saved to snapshot for this sink. After the job is restarted,
-     * the items will likely be duplicated, providing an <i>at-least-once</i>
+     * No state is saved to snapshot for this sink. If the job is restarted and
+     * {@linkplain FileSinkBuilder#append(boolean) appending} is enabled, the
+     * items will likely be duplicated, providing an <i>at-least-once</i>
      * guarantee.
      * <p>
      * The default local parallelism for this sink is 1.
