@@ -53,6 +53,10 @@ public class JetConfigTest_loadFromClassPath {
         properties.setProperty("flow.control.period", "456");
         properties.setProperty("backup.count", "6");
 
+        properties.setProperty("metrics.enabled", "false");
+        properties.setProperty("metrics.retention", "124");
+        properties.setProperty("metrics.enabled-for-data-structures", "true");
+
         JetConfig config = JetConfig.loadFromClasspath(TEST_XML_JET_WITH_VARIABLES, properties);
         assertEquals(123, config.getInstanceConfig().getCooperativeThreadCount());
         assertEquals(456, config.getInstanceConfig().getFlowControlPeriodMs());
@@ -62,6 +66,5 @@ public class JetConfigTest_loadFromClassPath {
         assertFalse(metricsConfig.isEnabled());
         assertEquals(124, metricsConfig.getRetentionSeconds());
         assertTrue(metricsConfig.isEnabledForDataStructures());
-
     }
 }
