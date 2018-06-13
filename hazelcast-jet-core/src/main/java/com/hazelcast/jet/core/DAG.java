@@ -340,6 +340,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
      *                                preferred parallelism is defined by
      *                                meta-supplier
      */
+    @Nonnull
     public JsonObject toJson(int defaultLocalParallelism) {
         JsonObject dag = new JsonObject();
         JsonArray vertices = new JsonArray();
