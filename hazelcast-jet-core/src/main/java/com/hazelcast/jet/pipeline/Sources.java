@@ -734,12 +734,13 @@ public final class Sources {
 
     /**
      * Returns a builder object that offers a step-by-step fluent API to build
-     * a custom File source for the Pipeline API. See javadoc on {@link
+     * a custom File source for the Pipeline API. The source reads lines from
+     * files in a directory (but not its subdirectories). See javadoc on {@link
      * FileSourceBuilder#build()} and {@link FileSourceBuilder#buildWatcher()}
      * for more details.
      */
     @Nonnull
-    public static <R> FileSourceBuilder<R> filesBuilder(@Nonnull String directory) {
+    public static <R> FileSourceBuilder<String, R> filesBuilder(@Nonnull String directory) {
         return new FileSourceBuilder<>(directory);
     }
 

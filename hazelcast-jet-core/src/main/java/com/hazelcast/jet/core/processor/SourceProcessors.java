@@ -282,8 +282,8 @@ public final class SourceProcessors {
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull WatermarkGenerationParams<T> wmGenParams
     ) {
-        return StreamEventJournalP.streamRemoteCacheSupplier(cacheName, clientConfig, predicateFn, projectionFn, initialPos,
-                wmGenParams);
+        return StreamEventJournalP
+                .streamRemoteCacheSupplier(cacheName, clientConfig, predicateFn, projectionFn, initialPos, wmGenParams);
     }
 
     /**

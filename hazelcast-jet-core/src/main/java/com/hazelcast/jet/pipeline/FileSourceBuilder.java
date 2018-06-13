@@ -18,12 +18,17 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.impl.connector.ReadFilesP;
 
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.stream.Stream;
 
-import static com.hazelcast.jet.core.processor.SourceProcessors.readFilesP;
+import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.pipeline.Sources.batchFromProcessor;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -31,9 +36,11 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * Builder for a file source which reads lines from files in a directory (but not
  * its subdirectories) and emits output object created by {@code mapOutputFn}
  *
+ * @param <W> the type of the stream created by {@code readFileFn},
+ *           default value is {@linkplain String}
  * @param <R> the type of the items the source emits
  */
-public final class FileSourceBuilder<R> {
+public final class FileSourceBuilder<W, R> {
 
     private static final String GLOB_WILDCARD = "*";
 
@@ -42,20 +49,36 @@ public final class FileSourceBuilder<R> {
     private Charset charset = UTF_8;
     private String glob = GLOB_WILDCARD;
     private boolean sharedFileSystem;
-    private DistributedBiFunction<String, String, ? extends R> mapOutputFn = (file, line) -> (R) line;
+    private String sourceName = "filesSource";
+    private DistributedFunction<Path, Stream<W>> readFileFn;
+    private DistributedBiFunction<String, W, ? extends R> mapOutputFn = (file, line) -> (R) line;
 
     /**
-     * Use {@link Sources#filesBuilder}
+     * Use {@link Sources#filesBuilder}.
      */
     FileSourceBuilder(@Nonnull String directory) {
         this.directory = directory;
     }
 
     /**
+     * This constructor is used by Avro module.
+     */
+    public FileSourceBuilder(@Nonnull String directory,
+                             @Nonnull String sourceName,
+                             @Nonnull DistributedFunction<Path, Stream<W>> readFileFn) {
+        this.directory = directory;
+        this.sourceName = sourceName;
+        this.readFileFn = readFileFn;
+    }
+
+    /**
      * Sets the character set used to encode the files. Default value is {@link
      * java.nio.charset.StandardCharsets#UTF_8}.
+     * <p>
+     * Setting this component does not have any effect if builder is used by
+     * Avro module.
      */
-    public FileSourceBuilder<R> charset(@Nonnull Charset charset) {
+    public FileSourceBuilder<W, R> charset(@Nonnull Charset charset) {
         this.charset = charset;
         return this;
     }
@@ -65,7 +88,7 @@ public final class FileSourceBuilder<R> {
      * java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()}.
      * Default value is {@code "*"} which means all files.
      */
-    public FileSourceBuilder<R> glob(@Nonnull String glob) {
+    public FileSourceBuilder<W, R> glob(@Nonnull String glob) {
         this.glob = glob;
         return this;
     }
@@ -80,7 +103,7 @@ public final class FileSourceBuilder<R> {
      * each member will read all files in the directory, assuming the are
      * local.
      */
-    public FileSourceBuilder<R> sharedFileSystem(boolean sharedFileSystem) {
+    public FileSourceBuilder<W, R> sharedFileSystem(boolean sharedFileSystem) {
         this.sharedFileSystem = sharedFileSystem;
         return this;
     }
@@ -89,14 +112,13 @@ public final class FileSourceBuilder<R> {
      * Sets the function which creates output object from each line. Default value
      * is {@code (file, line) -> line}.
      */
-    public FileSourceBuilder<R> mapOutputFn(@Nonnull DistributedBiFunction<String, String, ? extends R> mapOutputFn) {
+    public FileSourceBuilder<W, R> mapOutputFn(@Nonnull DistributedBiFunction<String, W, ? extends R> mapOutputFn) {
         this.mapOutputFn = mapOutputFn;
         return this;
     }
 
     /**
-     * Builds a source which reads lines from files in a directory (but not its
-     * subdirectories) and emits output object created by {@code mapOutputFn}
+     * Builds a custom file {@link BatchSource} with supplied components.
      * <p>
      * The source does not save any state to snapshot. If the job is restarted,
      * it will re-emit all entries.
@@ -108,8 +130,12 @@ public final class FileSourceBuilder<R> {
      * CPU is available).
      */
     public BatchSource<R> build() {
-        return batchFromProcessor("filesSource(" + new File(directory, glob) + ')',
-                readFilesP(directory, charset, glob, sharedFileSystem, mapOutputFn));
+        if (readFileFn == null) {
+            String charsetName = charset.name();
+            readFileFn = path -> uncheckCall(() -> (Stream<W>) Files.lines(path, Charset.forName(charsetName)));
+        }
+        return batchFromProcessor(sourceName + "(" + new File(directory, glob) + ')',
+                ReadFilesP.metaSupplier(directory, glob, sharedFileSystem, readFileFn, mapOutputFn));
     }
 
     /**
@@ -153,7 +179,8 @@ public final class FileSourceBuilder<R> {
      * resolved by upgrading the JRE to the latest version.
      */
     public StreamSource<R> buildWatcher() {
+        DistributedBiFunction<String, String, ? extends R> outputFn = (DistributedBiFunction) mapOutputFn;
         return Sources.streamFromProcessor("fileWatcherSource(" + directory + '/' + glob + ')',
-                SourceProcessors.streamFilesP(directory, charset, glob, sharedFileSystem, mapOutputFn));
+                SourceProcessors.streamFilesP(directory, charset, glob, sharedFileSystem, outputFn));
     }
 }

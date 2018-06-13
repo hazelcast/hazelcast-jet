@@ -139,7 +139,8 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
                         .iterator(FETCH_SIZE, partition, PREFETCH_VALUES));
     }
 
-    public static ProcessorMetaSupplier readRemoteCacheSupplier(@Nonnull String cacheName, @Nonnull ClientConfig clientConfig) {
+    public static ProcessorMetaSupplier readRemoteCacheSupplier(@Nonnull String cacheName,
+                                                                @Nonnull ClientConfig clientConfig) {
         return new RemoteClusterMetaSupplier<>(clientConfig,
                 instance -> partition -> ((ClientCacheProxy) instance.getCacheManager().getCache(cacheName))
                         .iterator(FETCH_SIZE, partition, PREFETCH_VALUES));

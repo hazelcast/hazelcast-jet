@@ -66,6 +66,7 @@ public final class AvroSinks {
             @Nonnull DistributedSupplier<Schema> schemaSupplier,
             @Nonnull DistributedSupplier<DatumWriter<R>> datumWriterSupplier
     ) {
+
         return Sinks.fromProcessor("avroFilesSink(" + directoryName + ')',
                 AvroProcessors.writeFilesP(directoryName, schemaSupplier, datumWriterSupplier));
     }
