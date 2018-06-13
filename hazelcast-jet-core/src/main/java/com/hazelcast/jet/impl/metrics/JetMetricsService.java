@@ -80,7 +80,7 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
                 lastSize[0] = blob.length;
                 metricsJournal.add(entry(System.currentTimeMillis(), blob));
                 logFine(logger, "Collected %,d metrics, %,d bytes", renderer.getCount(), blob.length);
-            }, config.getCollectionIntervalSeconds(), config.getCollectionIntervalSeconds(), TimeUnit.SECONDS);
+            }, 1, config.getCollectionIntervalSeconds(), TimeUnit.SECONDS);
         }
     }
 

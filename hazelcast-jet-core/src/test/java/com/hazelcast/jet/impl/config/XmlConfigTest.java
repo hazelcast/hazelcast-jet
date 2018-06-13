@@ -61,7 +61,6 @@ public class XmlConfigTest {
         assertEquals(Runtime.getRuntime().availableProcessors(),
                 jetConfig.getInstanceConfig().getCooperativeThreadCount());
         assertEquals(DEFAULT_FLOW_CONTROL_PERIOD_MS, jetConfig.getInstanceConfig().getFlowControlPeriodMs());
-        assertEquals(DEFAULT_FLOW_CONTROL_PERIOD_MS, jetConfig.getInstanceConfig().getFlowControlPeriodMs());
 
         assertTrue(jetConfig.getMetricsConfig().isEnabled());
         assertEquals(DEFAULT_METRICS_RETENTION_SECONDS, jetConfig.getMetricsConfig().getRetentionSeconds());

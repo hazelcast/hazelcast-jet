@@ -59,7 +59,7 @@ public class MetricsConfig {
 
     /**
      * Returns the number of seconds the metrics will be retained on the
-     * instance. By default metrics are retained by 5 seconds.
+     * instance. By default metrics are retained for 5 seconds.
      */
     @Nonnull
     public MetricsConfig setRetentionSeconds(int retentionSeconds) {
