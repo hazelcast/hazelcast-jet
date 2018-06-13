@@ -734,10 +734,10 @@ public final class Sources {
 
     /**
      * Returns a builder object that offers a step-by-step fluent API to build
-     * a custom File source for the Pipeline API. The source reads lines from
-     * files in a directory (but not its subdirectories). See javadoc on {@link
-     * FileSourceBuilder#build()} and {@link FileSourceBuilder#buildWatcher()}
-     * for more details.
+     * a custom source to read files for the Pipeline API. The source reads
+     * lines from files in a directory (but not its subdirectories). Using this
+     * builder you can build {@linkplain FileSourceBuilder#build() batching} or
+     * {@linkplain FileSourceBuilder#buildWatcher() streaming} reader.
      */
     @Nonnull
     public static <R> FileSourceBuilder<String, R> filesBuilder(@Nonnull String directory) {
@@ -745,7 +745,9 @@ public final class Sources {
     }
 
     /**
-     * Shortcut for <pre>{@code
+     * A source to read all files in a directory in a batch way.
+     * <p>
+     * This method is a shortcut for: <pre>{@code
      *   filesBuilder(directory)
      *      .charset(UTF_8)
      *      .glob(GLOB_WILDCARD)
@@ -762,7 +764,11 @@ public final class Sources {
     }
 
     /**
-     * Shortcut for <pre>{@code
+     * A source to stream lines added to files in a directory. This is a
+     * streaming source, it will watch directory and emit lines as they are
+     * appended to files in that directory.
+     * <p>
+     * This method is a shortcut for: <pre>{@code
      *   filesBuilder(directory)
      *      .charset(UTF_8)
      *      .glob(GLOB_WILDCARD)
