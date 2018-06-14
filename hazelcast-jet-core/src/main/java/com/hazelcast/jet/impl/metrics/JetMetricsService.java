@@ -20,12 +20,19 @@ import com.hazelcast.config.Config;
 import com.hazelcast.internal.diagnostics.Diagnostics;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.jet.config.MetricsConfig;
+import com.hazelcast.jet.impl.metrics.jmx.JmxRenderer;
+import com.hazelcast.jet.impl.metrics.jmx.Metrics;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.ConfigurableService;
 import com.hazelcast.spi.ManagedService;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
+import com.hazelcast.spi.properties.GroupProperty;
 
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import java.lang.management.ManagementFactory;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
@@ -76,15 +83,18 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
             logger.info("Configuring metrics collection, collection interval=" + config.getCollectionIntervalSeconds()
                     + " seconds and retention=" + config.getRetentionSeconds() + " seconds");
             int[] lastSize = {INITIAL_BUFFER_SIZE};
+            JmxRenderer jmxRenderer = new JmxRenderer();
             nodeEngine.getExecutionService().scheduleWithRepetition("MetricsForManCenterCollection", () -> {
                 CompressingProbeRenderer renderer = new CompressingProbeRenderer(
                         lastSize[0] * SIZE_FACTOR_NUMERATOR / SIZE_FACTOR_DENOMINATOR);
                 this.nodeEngine.getMetricsRegistry().render(renderer);
+                this.nodeEngine.getMetricsRegistry().render(jmxRenderer);
                 byte[] blob = renderer.getRenderedBlob();
                 lastSize[0] = blob.length;
                 metricsJournal.add(entry(System.currentTimeMillis(), blob));
                 logFine(logger, "Collected %,d metrics, %,d bytes", renderer.getCount(), blob.length);
             }, 1, config.getCollectionIntervalSeconds(), TimeUnit.SECONDS);
+
         }
     }
 

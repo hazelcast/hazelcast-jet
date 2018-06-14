@@ -98,24 +98,6 @@ public class JetService
             throw new IllegalStateException("JetConfig is not initialized");
         }
 
-        // register a JMX bean
-        if (nodeEngine.getProperties().getBoolean(GroupProperty.ENABLE_JMX)) {
-            MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-            assert mBeanName == null : "mBeanName=" + mBeanName;
-            try {
-                mBeanName = new ObjectName("com.hazelcast:type=Metrics,name="
-                        + escapeObjectNameValue(nodeEngine.getHazelcastInstance().getName()));
-            } catch (MalformedObjectNameException e) {
-                throw new RuntimeException(e); // should never happen
-            }
-            Metrics mBean = new Metrics(this.nodeEngine.getMetricsRegistry());
-            try {
-                mbs.registerMBean(mBean, mBeanName);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
-
         jetInstance = new JetInstanceImpl((HazelcastInstanceImpl) engine.getHazelcastInstance(), config);
         taskletExecutionService = new TaskletExecutionService(nodeEngine,
                 config.getInstanceConfig().getCooperativeThreadCount());
@@ -146,17 +128,6 @@ public class JetService
                 "\t|   | |   |  /    |     |     |     |   |     |   |      \\   | |       |  \n" +
                 "\to   o o   o o---o o---o o---o o---o o   o o---o   o       o--o o---o   o   ");
         logger.info("Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.");
-    }
-
-    private String escapeObjectNameValue(String name) {
-        if (name.indexOf(',') < 0
-                && name.indexOf('=') < 0
-                && name.indexOf(':') < 0
-                && name.indexOf('\"') < 0
-                && name.indexOf('\n') < 0) {
-            return name;
-        }
-        return "\"" + name.replace("\"", "\\\"").replace("\n", "\\n ") + '"';
     }
 
     @Override
