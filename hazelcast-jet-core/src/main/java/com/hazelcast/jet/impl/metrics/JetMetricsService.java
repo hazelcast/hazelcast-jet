@@ -21,18 +21,12 @@ import com.hazelcast.internal.diagnostics.Diagnostics;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.jet.config.MetricsConfig;
 import com.hazelcast.jet.impl.metrics.jmx.JmxRenderer;
-import com.hazelcast.jet.impl.metrics.jmx.Metrics;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.ConfigurableService;
 import com.hazelcast.spi.ManagedService;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
-import com.hazelcast.spi.properties.GroupProperty;
 
-import javax.management.MBeanServer;
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
-import java.lang.management.ManagementFactory;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
@@ -94,7 +88,6 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
                 metricsJournal.add(entry(System.currentTimeMillis(), blob));
                 logFine(logger, "Collected %,d metrics, %,d bytes", renderer.getCount(), blob.length);
             }, 1, config.getCollectionIntervalSeconds(), TimeUnit.SECONDS);
-
         }
     }
 
