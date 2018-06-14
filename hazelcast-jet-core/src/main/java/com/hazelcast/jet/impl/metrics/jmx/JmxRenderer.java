@@ -52,7 +52,7 @@ public class JmxRenderer implements ProbeRenderer {
             String unit = "unknown";
             String module = null;
             String metric = null;
-            int level = 0;
+            int tag = 0;
 
             for (Entry<String, String> entry : tagsList) {
                 switch (entry.getKey()) {
@@ -69,8 +69,8 @@ public class JmxRenderer implements ProbeRenderer {
                         if (mBeanTags.length() > 0) {
                             mBeanTags.append(',');
                         }
-                        mBeanTags.append("level")
-                                 .append(level++)
+                        mBeanTags.append("tag")
+                                 .append(tag++)
                                  .append('=');
                         if (entry.getKey().length() == 0) {
                             // key is empty for old metric names (see parseOldMetricName)
