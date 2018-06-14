@@ -33,6 +33,10 @@ import java.util.concurrent.TimeUnit;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 
+/**
+ * A service to render metrics at regular intervals and store them in a
+ * ringbuffer from which the clients can read.
+ */
 public class JetMetricsService implements ManagedService, ConfigurableService<MetricsConfig> {
 
     public static final String SERVICE_NAME = "hz:impl:jetMetricsService";

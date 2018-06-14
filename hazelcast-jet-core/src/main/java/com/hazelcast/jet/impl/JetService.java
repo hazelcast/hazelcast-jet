@@ -26,6 +26,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.impl.execution.TaskletExecutionService;
+import com.hazelcast.jet.impl.metrics.jmx.Metrics;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
@@ -41,8 +42,14 @@ import com.hazelcast.spi.MembershipServiceEvent;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.PacketHandler;
+import com.hazelcast.spi.properties.GroupProperty;
 
+import javax.management.InstanceNotFoundException;
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -66,6 +73,7 @@ public class JetService
     private JobRepository jobRepository;
     private JobCoordinationService jobCoordinationService;
     private JobExecutionService jobExecutionService;
+    private volatile ObjectName mBeanName;
 
     private final AtomicInteger numConcurrentAsyncOps = new AtomicInteger();
 
@@ -88,6 +96,24 @@ public class JetService
     public void init(NodeEngine engine, Properties properties) {
         if (config == null) {
             throw new IllegalStateException("JetConfig is not initialized");
+        }
+
+        // register a JMX bean
+        if (nodeEngine.getProperties().getBoolean(GroupProperty.ENABLE_JMX)) {
+            MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+            assert mBeanName == null : "mBeanName=" + mBeanName;
+            try {
+                mBeanName = new ObjectName("com.hazelcast:type=Metrics,name="
+                        + escapeObjectNameValue(nodeEngine.getHazelcastInstance().getName()));
+            } catch (MalformedObjectNameException e) {
+                throw new RuntimeException(e); // should never happen
+            }
+            Metrics mBean = new Metrics(this.nodeEngine.getMetricsRegistry());
+            try {
+                mbs.registerMBean(mBean, mBeanName);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
 
         jetInstance = new JetInstanceImpl((HazelcastInstanceImpl) engine.getHazelcastInstance(), config);
@@ -122,11 +148,34 @@ public class JetService
         logger.info("Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.");
     }
 
+    private String escapeObjectNameValue(String name) {
+        if (name.indexOf(',') < 0
+                && name.indexOf('=') < 0
+                && name.indexOf(':') < 0
+                && name.indexOf('\"') < 0
+                && name.indexOf('\n') < 0) {
+            return name;
+        }
+        return "\"" + name.replace("\"", "\\\"").replace("\n", "\\n ") + '"';
+    }
+
     @Override
     public void shutdown(boolean terminate) {
         jobExecutionService.reset("shutdown", HazelcastInstanceNotActiveException::new);
         networking.shutdown();
         taskletExecutionService.shutdown();
+
+        if (mBeanName != null) {
+            MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+            try {
+                mbs.unregisterMBean(mBeanName);
+            } catch (InstanceNotFoundException e) {
+                // ignored
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            mBeanName = null;
+        }
     }
 
     @Override
