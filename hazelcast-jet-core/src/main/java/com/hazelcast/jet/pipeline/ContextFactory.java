@@ -34,9 +34,9 @@ import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
  *     <li>{@link GeneralStage#mapUsingContext}
  *     <li>{@link GeneralStage#filterUsingContext}
  *     <li>{@link GeneralStage#flatMapUsingContext}
- *     <li>{@link GeneralStageWithGrouping#mapUsingContext}
- *     <li>{@link GeneralStageWithGrouping#filterUsingContext}
- *     <li>{@link GeneralStageWithGrouping#flatMapUsingContext}
+ *     <li>{@link GeneralStageWithKey#mapStateful}
+ *     <li>{@link GeneralStageWithKey#filterStateful}
+ *     <li>{@link GeneralStageWithKey#flatMapStateful}
  * </ul>
  *
  * @param <C> the user-defined context object type

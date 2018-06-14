@@ -103,7 +103,7 @@ public class AggregateOperationsTest {
 
     @Test
     public void when_summingToDouble() {
-        validateOp(summingDouble(Double::doubleValue), DoubleAccumulator::finish,
+        validateOp(summingDouble(Double::doubleValue), DoubleAccumulator::export,
                 0.5, 1.5, 0.5, 2.0, 2.0);
     }
 
@@ -207,7 +207,7 @@ public class AggregateOperationsTest {
                 allOf(AggregateOperation
                                 .withCreate(LongAccumulator::new)
                                 .<Long>andAccumulate(LongAccumulator::addAllowingOverflow)
-                                .andFinish(LongAccumulator::get),
+                                .andExportFinish(LongAccumulator::get),
                         summingLong(x -> x));
         assertNull(composite.combineFn());
     }
@@ -221,7 +221,7 @@ public class AggregateOperationsTest {
         BiConsumer<? super LinTrendAccumulator, ? super Entry<Long, Long>> accFn = op.accumulateFn();
         BiConsumer<? super LinTrendAccumulator, ? super LinTrendAccumulator> combineFn = op.combineFn();
         BiConsumer<? super LinTrendAccumulator, ? super LinTrendAccumulator> deductFn = op.deductFn();
-        Function<? super LinTrendAccumulator, Double> finishFn = op.finishFn();
+        Function<? super LinTrendAccumulator, ? extends Double> finishFn = op.finishFn();
         assertNotNull(deductFn);
 
         // When

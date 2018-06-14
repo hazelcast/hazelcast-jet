@@ -31,24 +31,28 @@ public class AggregateOperation2Impl<T0, T1, A, R>
         extends AggregateOperationImpl<A, R>
         implements AggregateOperation2<T0, T1, A, R> {
 
-    public AggregateOperation2Impl(@Nonnull DistributedSupplier<A> createFn,
-                                   @Nonnull DistributedBiConsumer<? super A, ? super T0> accumulateFn0,
-                                   @Nonnull DistributedBiConsumer<? super A, ? super T1> accumulateFn1,
-                                   @Nullable DistributedBiConsumer<? super A, ? super A> combineFn,
-                                   @Nullable DistributedBiConsumer<? super A, ? super A> deductFn,
-                                   @Nonnull DistributedFunction<? super A, R> finishFn
+    public AggregateOperation2Impl(
+            @Nonnull DistributedSupplier<A> createFn,
+            @Nonnull DistributedBiConsumer<? super A, ? super T0> accumulateFn0,
+            @Nonnull DistributedBiConsumer<? super A, ? super T1> accumulateFn1,
+            @Nullable DistributedBiConsumer<? super A, ? super A> combineFn,
+            @Nullable DistributedBiConsumer<? super A, ? super A> deductFn,
+            @Nonnull DistributedFunction<? super A, ? extends R> exportFn,
+            @Nonnull DistributedFunction<? super A, ? extends R> finishFn
     ) {
         super(createFn, accumulateFns(accumulateFn0, accumulateFn1),
-                combineFn, deductFn, finishFn);
+                combineFn, deductFn, exportFn, finishFn);
     }
 
-    private AggregateOperation2Impl(@Nonnull DistributedSupplier<A> createFn,
-                                    @Nonnull DistributedBiConsumer<? super A, ?>[] accumulateFns,
-                                    @Nullable DistributedBiConsumer<? super A, ? super A> combineFn,
-                                    @Nullable DistributedBiConsumer<? super A, ? super A> deductFn,
-                                    @Nonnull DistributedFunction<? super A, R> finishFn
+    private AggregateOperation2Impl(
+            @Nonnull DistributedSupplier<A> createFn,
+            @Nonnull DistributedBiConsumer<? super A, ?>[] accumulateFns,
+            @Nullable DistributedBiConsumer<? super A, ? super A> combineFn,
+            @Nullable DistributedBiConsumer<? super A, ? super A> deductFn,
+            @Nonnull DistributedFunction<? super A, ? extends R> exportFn,
+            @Nonnull DistributedFunction<? super A, ? extends R> finishFn
     ) {
-        super(createFn, accumulateFns, combineFn, deductFn, finishFn);
+        super(createFn, accumulateFns, combineFn, deductFn, exportFn, finishFn);
     }
 
     @Nonnull @Override
@@ -69,7 +73,7 @@ public class AggregateOperation2Impl<T0, T1, A, R>
     ) {
         checkSerializable(newAccFn0, "newAccFn0");
         return new AggregateOperation2Impl<>(
-                createFn(), newAccFn0, accumulateFn1(), combineFn(), deductFn(), finishFn());
+                createFn(), newAccFn0, accumulateFn1(), combineFn(), deductFn(), exportFn(), finishFn());
     }
 
     @Nonnull @Override
@@ -78,7 +82,7 @@ public class AggregateOperation2Impl<T0, T1, A, R>
     ) {
         checkSerializable(newAccFn1, "newAccFn1");
         return new AggregateOperation2Impl<>(
-                createFn(), accumulateFn0(), newAccFn1, combineFn(), deductFn(), finishFn());
+                createFn(), accumulateFn0(), newAccFn1, combineFn(), deductFn(), exportFn(), finishFn());
     }
 
     @Nonnull @Override
@@ -91,12 +95,10 @@ public class AggregateOperation2Impl<T0, T1, A, R>
         return (DistributedBiConsumer<? super A, T>) accumulateFns[tag.index()];
     }
 
-    @Nonnull
-    @Override
-    public <R1> AggregateOperation2<T0, T1, A, R1> withFinishFn(
-            @Nonnull DistributedFunction<? super A, R1> finishFn
-    ) {
-        checkSerializable(finishFn, "finishFn");
-        return new AggregateOperation2Impl<>(createFn(), accumulateFns, combineFn(), deductFn(), finishFn);
+    @Nonnull @Override
+    public AggregateOperation2<T0, T1, A, A> withIdentityFinish() {
+        return new AggregateOperation2Impl<>(
+                createFn(), accumulateFns, combineFn(), deductFn(),
+                unsupportedExportFn(), DistributedFunction.identity());
     }
 }

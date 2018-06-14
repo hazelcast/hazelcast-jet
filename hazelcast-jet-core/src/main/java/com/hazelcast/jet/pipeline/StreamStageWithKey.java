@@ -16,10 +16,9 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.Traverser;
+import com.hazelcast.core.IMap;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedBiFunction;
-import com.hazelcast.jet.function.DistributedBiPredicate;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
@@ -31,46 +30,43 @@ import java.util.Map.Entry;
  * @param <T> type of the stream items
  * @param <K> type of the key
  */
-public interface StreamStageWithGrouping<T, K> extends GeneralStageWithGrouping<T, K> {
+public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
 
     /**
      * Adds the definition of the window to use in the group-and-aggregate
      * pipeline stage being constructed.
      */
     @Nonnull
-    StageWithGroupingAndWindow<T, K> window(@Nonnull WindowDefinition wDef);
+    StageWithKeyAndWindow<T, K> window(@Nonnull WindowDefinition wDef);
 
     @Nonnull @Override
-    <C, R> StreamStage<R> mapUsingContext(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
-    );
-
-    @Nonnull @Override
-    <C> StreamStage<T> filterUsingContext(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
-    );
-
-    @Nonnull @Override
-    <C, R> StreamStage<R> flatMapUsingContext(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
-    );
-
-    @Nonnull @Override
-    default <R> StreamStage<Entry<K, R>> aggregateRolling(
-            @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
+    default <V, R> StreamStage<R> mapUsingIMap(
+            @Nonnull String mapName,
+            @Nonnull DistributedBiFunction<? super T, ? super V, ? extends R> mapFn
     ) {
-        return (StreamStage<Entry<K, R>>) (StreamStage) GeneralStageWithGrouping.super.aggregateRolling(aggrOp);
+        return (StreamStage<R>) GeneralStageWithKey.super.<V, R>mapUsingIMap(mapName, mapFn);
     }
 
     @Nonnull @Override
-    default <R, OUT> StreamStage<OUT> aggregateRolling(
-            @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp,
-            @Nonnull DistributedBiFunction<K, R, OUT> mapToOutputFn
+    default <V, R> StreamStage<R> mapUsingIMap(
+            @Nonnull IMap<K, V> iMap,
+            @Nonnull DistributedBiFunction<? super T, ? super V, ? extends R> mapFn
     ) {
-        return (StreamStage<OUT>) GeneralStageWithGrouping.super.aggregateRolling(aggrOp, mapToOutputFn);
+        return (StreamStage<R>) GeneralStageWithKey.super.<V, R>mapUsingIMap(iMap, mapFn);
+    }
+
+    @Nonnull @Override
+    @SuppressWarnings("unchecked")
+    <R, OUT> StreamStage<OUT> rollingAggregate(
+            @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp,
+            @Nonnull DistributedBiFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
+    );
+
+    @Nonnull @Override
+    default <R> StreamStage<Entry<K, R>> rollingAggregate(
+            @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
+    ) {
+        return (StreamStage<Entry<K, R>>) GeneralStageWithKey.super.<R>rollingAggregate(aggrOp);
     }
 
 

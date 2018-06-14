@@ -26,10 +26,10 @@ import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.pipeline.transform.WindowGroupTransform;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.GroupAggregateBuilder1;
-import com.hazelcast.jet.pipeline.StageWithGrouping;
-import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
+import com.hazelcast.jet.pipeline.BatchStageWithKey;
+import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
 import com.hazelcast.jet.pipeline.StreamStage;
-import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
+import com.hazelcast.jet.pipeline.StreamStageWithKey;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder1;
 
@@ -58,7 +58,7 @@ public class GrAggBuilder<K> {
     private final List<DistributedFunction<?, ? extends K>> keyFns = new ArrayList<>();
 
     @SuppressWarnings("unchecked")
-    public GrAggBuilder(StageWithGrouping<?, K> stage0) {
+    public GrAggBuilder(BatchStageWithKey<?, K> stage0) {
         ComputeStageImplBase computeStage = ((StageWithGroupingBase) stage0).computeStage;
         pipelineImpl = (PipelineImpl) computeStage.getPipeline();
         wDef = null;
@@ -67,7 +67,7 @@ public class GrAggBuilder<K> {
     }
 
     @SuppressWarnings("unchecked")
-    public GrAggBuilder(StageWithGroupingAndWindow<?, K> stage) {
+    public GrAggBuilder(StageWithKeyAndWindow<?, K> stage) {
         ComputeStageImplBase computeStage = ((StageWithGroupingBase) stage).computeStage;
         ensureJetEvents(computeStage, "This pipeline stage");
         pipelineImpl = (PipelineImpl) computeStage.getPipeline();
@@ -77,7 +77,7 @@ public class GrAggBuilder<K> {
     }
 
     @SuppressWarnings("unchecked")
-    public <T> Tag<T> add(StreamStageWithGrouping<T, K> stage) {
+    public <T> Tag<T> add(StreamStageWithKey<T, K> stage) {
         ComputeStageImplBase computeStage = ((StageWithGroupingBase) stage).computeStage;
         ensureJetEvents(computeStage, "This pipeline stage");
         upstreamStages.add(computeStage);
@@ -86,7 +86,7 @@ public class GrAggBuilder<K> {
     }
 
     @SuppressWarnings("unchecked")
-    public <E> Tag<E> add(StageWithGrouping<E, K> stage) {
+    public <E> Tag<E> add(BatchStageWithKey<E, K> stage) {
         upstreamStages.add(((StageWithGroupingBase) stage).computeStage);
         keyFns.add(stage.keyFn());
         return (Tag<E>) tag(upstreamStages.size() - 1);
@@ -117,7 +117,7 @@ public class GrAggBuilder<K> {
             adaptedKeyFns.add(fnAdapter.adaptKeyFn(keyFn));
         }
 
-        Transform transform = new WindowGroupTransform<K, A, R, JetEvent<OUT>>(
+        Transform transform = new WindowGroupTransform<K, R, JetEvent<OUT>>(
                 upstreamTransforms, wDef, adaptedKeyFns, adaptAggregateOperation(aggrOp),
                 fnAdapter.adaptKeyedWindowResultFn(mapToOutputFn)
         );

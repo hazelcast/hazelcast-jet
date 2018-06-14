@@ -93,6 +93,40 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     }
 
     @Test
+    public void filter() {
+        // Given
+        List<Integer> input = sequence(itemCount);
+        addToSrcMapJournal(input);
+        DistributedPredicate<Integer> filterFn = i -> i % 2 == 1;
+
+        // When
+        StreamStage<Integer> filtered = mapJournalSrcStage.filter(filterFn);
+
+        // Then
+        filtered.drainTo(sink);
+        jet().newJob(p);
+        Map<Integer, Integer> expected = toBag(input.stream().filter(filterFn).collect(toList()));
+        assertTrueEventually(() -> assertEquals(expected, sinkToBag()));
+    }
+
+    @Test
+    public void flatMap() {
+        // Given
+        List<Integer> input = sequence(itemCount);
+        addToSrcMapJournal(input);
+        DistributedFunction<Integer, Stream<String>> flatMapFn = o -> Stream.of(o + "A", o + "B");
+
+        // When
+        StreamStage<String> flatMapped = mapJournalSrcStage.flatMap(o -> traverseStream(flatMapFn.apply(o)));
+
+        // Then
+        flatMapped.drainTo(sink);
+        jet().newJob(p);
+        Map<String, Integer> expected = toBag(input.stream().flatMap(flatMapFn).collect(toList()));
+        assertTrueEventually(() -> assertEquals(expected, sinkToBag()));
+    }
+
+    @Test
     public void mapUsingContext() {
         // Given
         List<Integer> input = sequence(itemCount);
@@ -113,55 +147,6 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         mapped.drainTo(sink);
         jet().newJob(p);
         Map<String, Integer> expected = toBag(input.stream().map(mapFn).collect(toList()));
-        assertTrueEventually(() -> assertEquals(expected, sinkToBag()));
-    }
-
-    @Test
-    public void mapUsingKeyedContext() {
-        // Given
-        final int modulo = 4;
-        List<Integer> input = sequence(itemCount);
-        putToBatchSrcMap(input);
-
-        // When
-        StreamStage<String> mapped = mapJournalSrcStage
-                .addTimestamps()
-                .groupingKey(i -> i % modulo)
-                .mapUsingContext(
-                        ContextFactory.withCreateFn(jet -> new char[] {12345}),
-                        (ctx, item) -> {
-                            // We don't mutate the context, as in this test items come in unordered.
-                            // We initialize it on first item and then assert we get the same context
-                            char expectedCtx = (char) ('a' + item % modulo);
-                            if (ctx[0] == 12345) {
-                                ctx[0] = expectedCtx;
-                            } else {
-                                assertEquals(expectedCtx, ctx[0]);
-                            }
-                            return item + "-" + ctx[0];
-                        });
-
-        // Then
-        mapped.drainTo(sink);
-        jet().newJob(p);
-        Map<String, Integer> expected = toBag(input.stream().map(i -> i + "-" + (char) ('a' + i % 4)).collect(toList()));
-        assertTrueEventually(() -> assertEquals(expected, sinkToBag()));
-    }
-
-    @Test
-    public void filter() {
-        // Given
-        List<Integer> input = sequence(itemCount);
-        addToSrcMapJournal(input);
-        DistributedPredicate<Integer> filterFn = i -> i % 2 == 1;
-
-        // When
-        StreamStage<Integer> filtered = mapJournalSrcStage.filter(filterFn);
-
-        // Then
-        filtered.drainTo(sink);
-        jet().newJob(p);
-        Map<Integer, Integer> expected = toBag(input.stream().filter(filterFn).collect(toList()));
         assertTrueEventually(() -> assertEquals(expected, sinkToBag()));
     }
 
@@ -189,54 +174,6 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     }
 
     @Test
-    public void filterUsingKeyedContext() {
-        // Given
-        final int modulo = 4;
-        List<Integer> input = sequence(itemCount);
-        putToBatchSrcMap(input);
-
-        // When
-        StreamStage<Integer> mapped = mapJournalSrcStage
-                .addTimestamps()
-                .groupingKey(i -> i % modulo)
-                // filtering even numbers in an odd way
-                .filterUsingContext(
-                        ContextFactory.withCreateFn(jet -> new int[] {-1}),
-                        (ctx, item) -> {
-                            int expectedCtx = item % 2;
-                            if (ctx[0] == -1) {
-                                ctx[0] = expectedCtx;
-                            } else {
-                                assertEquals(expectedCtx, ctx[0]);
-                            }
-                            return ctx[0] == 1;
-                        });
-
-        // Then
-        mapped.drainTo(sink);
-        jet().newJob(p);
-        Map<Integer, Integer> expected = toBag(input.stream().filter(i -> i % 2 == 1).collect(toList()));
-        assertTrueEventually(() -> assertEquals(expected, sinkToBag()));
-    }
-
-    @Test
-    public void flatMap() {
-        // Given
-        List<Integer> input = sequence(itemCount);
-        addToSrcMapJournal(input);
-        DistributedFunction<Integer, Stream<String>> flatMapFn = o -> Stream.of(o + "A", o + "B");
-
-        // When
-        StreamStage<String> flatMapped = mapJournalSrcStage.flatMap(o -> traverseStream(flatMapFn.apply(o)));
-
-        // Then
-        flatMapped.drainTo(sink);
-        jet().newJob(p);
-        Map<String, Integer> expected = toBag(input.stream().flatMap(flatMapFn).collect(toList()));
-        assertTrueEventually(() -> assertEquals(expected, sinkToBag()));
-    }
-
-    @Test
     public void flatMapUsingContext() {
         // Given
         List<Integer> input = sequence(itemCount);
@@ -256,47 +193,15 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     }
 
     @Test
-    public void flatMapUsingKeyedContext() {
-        // Given
-        final int modulo = 4;
-        List<Integer> input = sequence(itemCount);
-        putToBatchSrcMap(input);
-
-        // When
-        StreamStage<Integer> mapped = mapJournalSrcStage
-                .addTimestamps()
-                .groupingKey(i -> i % modulo)
-                // duplicating even numbers in an odd way, keeping odd numbers intact
-                .flatMapUsingContext(
-                        ContextFactory.withCreateFn(jet -> new int[] {-1}),
-                        (ctx, item) -> {
-                            int expectedCtx = item % 2;
-                            if (ctx[0] == -1) {
-                                ctx[0] = expectedCtx;
-                            } else {
-                                assertEquals(expectedCtx, ctx[0]);
-                            }
-                            return ctx[0] == 1 ? Traverser.over(item, item) : Traverser.over(item);
-                        });
-
-        // Then
-        mapped.drainTo(sink);
-        jet().newJob(p);
-        Map<Integer, Integer> expected = toBag(
-                input.stream().flatMap(i -> i % 2 == 0 ? Stream.of(i) : Stream.of(i, i)).collect(toList()));
-        assertTrueEventually(() -> assertEquals(expected, sinkToBag()));
-    }
-
-    @Test
-    public void aggregateRolling_keyed() {
+    public void rollingAggregate_keyed() {
         // Given
         List<Integer> input = sequence(itemCount);
         putToBatchSrcMap(input);
 
         // When
         StreamStage<Entry<Integer, Long>> mapped = mapJournalSrcStage
-                .groupingKey(i -> i % 2)
-                .aggregateRolling(counting());
+                .addKey(i -> i % 2)
+                .rollingAggregate(counting());
 
         // Then
         mapped.drainTo(sink);
@@ -310,14 +215,14 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     }
 
     @Test
-    public void aggregateRolling_global() {
+    public void rollingAggregate_global() {
         // Given
         List<Integer> input = sequence(itemCount);
         putToBatchSrcMap(input);
 
         // When
         StreamStage<Long> mapped = mapJournalSrcStage
-                .aggregateRolling(counting());
+                .rollingAggregate(counting());
 
         // Then
         mapped.drainTo(sink);
@@ -401,7 +306,6 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 .stream().map(i -> tuple3(i, i + "A", i + "B")).collect(toList()));
         assertTrueEventually(() -> assertEquals(expected, sinkToBag()));
     }
-
 
     @Test
     public void hashJoinBuilder() {

@@ -131,7 +131,7 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
                             singletonList(timestampFn),
                             TimestampKind.EVENT,
                             wDef,
-                            counting.withFinishFn(identity())
+                            counting.withIdentityFinish()
                     ));
             Vertex slidingWin = dag.newVertex("slidingWin",
                     combineToSlidingWindowP(wDef, counting, TimestampedEntry::fromWindowResult));

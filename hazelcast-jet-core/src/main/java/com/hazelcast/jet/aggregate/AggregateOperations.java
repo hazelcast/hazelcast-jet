@@ -22,7 +22,6 @@ import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.accumulator.LongDoubleAccumulator;
 import com.hazelcast.jet.accumulator.LongLongAccumulator;
 import com.hazelcast.jet.accumulator.MutableReference;
-import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.DistributedBiConsumer;
@@ -45,9 +44,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
+import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 /**
@@ -69,7 +70,7 @@ public final class AggregateOperations {
                 .andAccumulate((LongAccumulator a, T item) -> a.add(1))
                 .andCombine(LongAccumulator::add)
                 .andDeduct(LongAccumulator::subtractAllowingOverflow)
-                .andFinish(LongAccumulator::get);
+                .andExportFinish(LongAccumulator::get);
     }
 
     /**
@@ -88,7 +89,7 @@ public final class AggregateOperations {
                 .andAccumulate((LongAccumulator a, T item) -> a.add(getLongValueFn.applyAsLong(item)))
                 .andCombine(LongAccumulator::add)
                 .andDeduct(LongAccumulator::subtract)
-                .andFinish(LongAccumulator::get);
+                .andExportFinish(LongAccumulator::get);
     }
 
     /**
@@ -107,7 +108,7 @@ public final class AggregateOperations {
                 .andAccumulate((DoubleAccumulator a, T item) -> a.accumulate(getDoubleValueFn.applyAsDouble(item)))
                 .andCombine(DoubleAccumulator::combine)
                 .andDeduct(DoubleAccumulator::deduct)
-                .andFinish(DoubleAccumulator::finish);
+                .andExportFinish(DoubleAccumulator::export);
     }
 
     /**
@@ -153,7 +154,7 @@ public final class AggregateOperations {
                         a1.set(a2.get());
                     }
                 })
-                .andFinish(MutableReference::get);
+                .andExportFinish(MutableReference::get);
     }
 
     /**
@@ -188,7 +189,7 @@ public final class AggregateOperations {
                     a1.set1(Math.subtractExact(a1.get1(), a2.get1()));
                     a1.set2(Math.subtractExact(a1.get2(), a2.get2()));
                 })
-                .andFinish(a -> (double) a.get2() / a.get1());
+                .andExportFinish(a -> (double) a.get2() / a.get1());
     }
 
     /**
@@ -223,7 +224,7 @@ public final class AggregateOperations {
                     a1.setLong(Math.subtractExact(a1.getLong(), a2.getLong()));
                     a1.setDouble(a1.getDouble() - a2.getDouble());
                 })
-                .andFinish(a -> a.getDouble() / a.getLong());
+                .andExportFinish(a -> a.getDouble() / a.getLong());
     }
 
     /**
@@ -245,371 +246,8 @@ public final class AggregateOperations {
                         a.accumulate(getXFn.applyAsLong(item), getYFn.applyAsLong(item)))
                 .andCombine(LinTrendAccumulator::combine)
                 .andDeduct(LinTrendAccumulator::deduct)
-                .andFinish(LinTrendAccumulator::finish);
+                .andExportFinish(LinTrendAccumulator::export);
     }
-
-    /**
-     * Convenience for {@link #allOf(AggregateOperation1, AggregateOperation1,
-     * DistributedBiFunction)} with identity finish.
-     */
-    @Nonnull
-    public static <T, A0, A1, R0, R1> AggregateOperation1<T, Tuple2<A0, A1>, Tuple2<R0, R1>> allOf(
-            @Nonnull AggregateOperation1<? super T, A0, R0> op1,
-            @Nonnull AggregateOperation1<? super T, A1, R1> op2
-    ) {
-        return allOf(op1, op2, Tuple2::tuple2);
-    }
-
-    /**
-     * Returns composite aggregate operation from 2 other aggregate operations.
-     * It allows you to calculate multiple aggregations over the same items at once.
-     *
-     * @param op0 1st operation
-     * @param op1 2nd operation
-     * @param finishFn a function combining 2 results into single target instance
-     *
-     * @param <T> type of input items
-     * @param <A0> 1st accumulator type
-     * @param <A1> 2nd accumulator type
-     * @param <R0> 1st result type
-     * @param <R1> 2nd result type
-     * @param <R> final result type
-     *
-     * @return the composite operation
-     */
-    @Nonnull
-    public static <T, A0, A1, R0, R1, R> AggregateOperation1<T, Tuple2<A0, A1>, R> allOf(
-            @Nonnull AggregateOperation1<? super T, A0, R0> op0,
-            @Nonnull AggregateOperation1<? super T, A1, R1> op1,
-            @Nonnull DistributedBiFunction<? super R0, ? super R1, R> finishFn
-    ) {
-        checkSerializable(finishFn, "finishFn");
-        DistributedBiConsumer<? super A0, ? super A0> combine0 = op0.combineFn();
-        DistributedBiConsumer<? super A1, ? super A1> combine1 = op1.combineFn();
-        DistributedBiConsumer<? super A0, ? super A0> deduct0 = op0.deductFn();
-        DistributedBiConsumer<? super A1, ? super A1> deduct1 = op1.deductFn();
-        return AggregateOperation
-                .withCreate(() -> tuple2(op0.createFn().get(), op1.createFn().get()))
-                .<T>andAccumulate((acc, item) -> {
-                    op0.accumulateFn().accept(acc.f0(), item);
-                    op1.accumulateFn().accept(acc.f1(), item);
-                })
-                .andCombine(combine0 == null || combine1 == null ? null :
-                        (acc1, acc2) -> {
-                            combine0.accept(acc1.f0(), acc2.f0());
-                            combine1.accept(acc1.f1(), acc2.f1());
-                        })
-                .andDeduct(deduct0 == null || deduct1 == null ? null :
-                        (acc1, acc2) -> {
-                            deduct0.accept(acc1.f0(), acc2.f0());
-                            deduct1.accept(acc1.f1(), acc2.f1());
-                        })
-                .andFinish(acc -> finishFn.apply(op0.finishFn().apply(acc.f0()), op1.finishFn().apply(acc.f1())));
-    }
-
-    /**
-     * Convenience for {@link #allOf(AggregateOperation1, AggregateOperation1,
-     * AggregateOperation1, DistributedTriFunction)} with identity finisher.
-     */
-    @Nonnull
-    public static <T, A0, A1, A2, R0, R1, R2>
-    AggregateOperation1<T, Tuple3<A0, A1, A2>, Tuple3<R0, R1, R2>>
-    allOf(
-            @Nonnull AggregateOperation1<? super T, A0, ? extends R0> op0,
-            @Nonnull AggregateOperation1<? super T, A1, ? extends R1> op1,
-            @Nonnull AggregateOperation1<? super T, A2, ? extends R2> op2
-    ) {
-        return allOf(op0, op1, op2, Tuple3::tuple3);
-    }
-
-    /**
-     * Returns composite aggregate operation from 3 other aggregate operations.
-     * It allows you to calculate multiple aggregations over the same items at once.
-     *
-     * @param op0 1st operation
-     * @param op1 2nd operation
-     * @param op2 3rd operation
-     * @param finishFn a function combining 3 results into single target instance
-     *
-     * @param <T> type of input items
-     * @param <A0> 1st accumulator type
-     * @param <A1> 2nd accumulator type
-     * @param <A2> 3rd accumulator type
-     * @param <R0> 1st result type
-     * @param <R1> 2nd result type
-     * @param <R2> 3rd result type
-     * @param <R> final result type
-     *
-     * @return the composite operation
-     */
-    @Nonnull
-    public static <T, A0, A1, A2, R0, R1, R2, R> AggregateOperation1<T, Tuple3<A0, A1, A2>, R> allOf(
-            @Nonnull AggregateOperation1<? super T, A0, ? extends R0> op0,
-            @Nonnull AggregateOperation1<? super T, A1, ? extends R1> op1,
-            @Nonnull AggregateOperation1<? super T, A2, ? extends R2> op2,
-            @Nonnull DistributedTriFunction<? super R0, ? super R1, ? super R2, ? extends R> finishFn
-    ) {
-        checkSerializable(finishFn, "finishFn");
-        DistributedBiConsumer<? super A0, ? super A0> combine0 = op0.combineFn();
-        DistributedBiConsumer<? super A1, ? super A1> combine1 = op1.combineFn();
-        DistributedBiConsumer<? super A2, ? super A2> combine2 = op2.combineFn();
-        DistributedBiConsumer<? super A0, ? super A0> deduct0 = op0.deductFn();
-        DistributedBiConsumer<? super A1, ? super A1> deduct1 = op1.deductFn();
-        DistributedBiConsumer<? super A2, ? super A2> deduct2 = op2.deductFn();
-        return AggregateOperation
-                .withCreate(() -> tuple3(op0.createFn().get(), op1.createFn().get(), op2.createFn().get()))
-                .<T>andAccumulate((acc, item) -> {
-                    op0.accumulateFn().accept(acc.f0(), item);
-                    op1.accumulateFn().accept(acc.f1(), item);
-                    op2.accumulateFn().accept(acc.f2(), item);
-                })
-                .andCombine(combine0 == null || combine1 == null || combine2 == null ? null :
-                        (acc1, acc2) -> {
-                            combine0.accept(acc1.f0(), acc2.f0());
-                            combine1.accept(acc1.f1(), acc2.f1());
-                            combine2.accept(acc1.f2(), acc2.f2());
-                        })
-                .andDeduct(deduct0 == null || deduct1 == null || deduct2 == null ? null :
-                        (acc1, acc2) -> {
-                            deduct0.accept(acc1.f0(), acc2.f0());
-                            deduct1.accept(acc1.f1(), acc2.f1());
-                            deduct2.accept(acc1.f2(), acc2.f2());
-                        })
-                .andFinish(acc -> finishFn.apply(
-                        op0.finishFn().apply(acc.f0()),
-                        op1.finishFn().apply(acc.f1()),
-                        op2.finishFn().apply(acc.f2())));
-    }
-
-    /**
-     * Returns a builder object that helps you create a composite of multiple
-     * aggregate operations. The resulting aggregate operation will perform all
-     * of the constituent operations at the same time and you can retrieve each
-     * result from the {@link ItemsByTag} object you'll get in the output.
-     * <p>
-     * The builder object is primarily intended to build a composite of four or more
-     * aggregate operations. For up to three operations, prefer the explicit, more
-     * type-safe variants {@link #allOf(AggregateOperation1, AggregateOperation1) allOf(op1, op2)}
-     * and {@link #allOf(AggregateOperation1, AggregateOperation1,
-     * AggregateOperation1) allOf(op1, op2, op3)}.
-     * <p>
-     * Example that calculates the count and the sum of the items:
-     * <pre>{@code
-     * AllOfAggregationBuilder<Long> builder = allOfBuilder();
-     * Tag<Long> tagSum = builder.add(summingLong(Long::longValue));
-     * Tag<Long> tagCount = builder.add(counting());
-     * AggregateOperation1<Long, ?, ItemsByTag> compositeAggrOp = builder.build();
-     * }</pre>
-     *
-     * When you receive the resulting {@link ItemsByTag}, fetch the individual
-     * results using the tags as keys, for example:
-     * <pre>{@code
-     * batchStage.aggregate(compositeAggrOp).map((ItemsByTag result) -> {
-     *     Long sum = result.get(tagSum);
-     *     Long count = result.get(tagCount);
-     *     ...
-     * });
-     * }</pre>
-     *
-     * @param <T> type of input items
-     */
-    @Nonnull
-    public static <T> AllOfAggregationBuilder<T> allOfBuilder() {
-        return new AllOfAggregationBuilder<>();
-    }
-
-    /**
-     * Returns an aggregate operation that is a composite of two independent
-     * aggregate operations, each one accepting its own input. You need this
-     * kind of operation for a two-way co-aggregating pipeline stage:
-     * {@link StageWithWindow#aggregate2 stage.aggregate2()}.
-     * <p>
-     * This method is suitable when you can express your computation as two
-     * independent aggregate operations where you combine only their final
-     * results. If you need an operation that combines the two inputs in the
-     * accumulation phase, you can create an aggregate operation by specifying
-     * each primitive using the {@linkplain AggregateOperation#withCreate
-     * aggregate operation builder}.
-     *
-     * @param op0 the aggregate operation that will receive the first stage's input
-     * @param op1 the aggregate operation that will receive the second stage's input
-     * @param finishFn the function that transforms the individual aggregate results into the
-     *                 overall result that the co-aggregating stage emits
-     * @param <T0> type of items in the first stage
-     * @param <A0> type of the first aggregate operation's accumulator
-     * @param <R0> type of the first aggregate operation's result
-     * @param <T1> type of items in the second stage
-     * @param <A1> type of the second aggregate operation's accumulator
-     * @param <R1> type of the second aggregate operation's result
-     * @param <R> type of the result
-     */
-    public static <T0, A0, R0, T1, A1, R1, R> AggregateOperation2<T0, T1, Tuple2<A0, A1>, R> aggregateOperation2(
-            @Nonnull AggregateOperation1<? super T0, A0, ? extends R0> op0,
-            @Nonnull AggregateOperation1<? super T1, A1, ? extends R1> op1,
-            @Nonnull DistributedBiFunction<? super R0, ? super R1, ? extends R> finishFn
-    ) {
-        checkSerializable(finishFn, "finishFn");
-        DistributedBiConsumer<? super A0, ? super A0> combine0 = op0.combineFn();
-        DistributedBiConsumer<? super A1, ? super A1> combine1 = op1.combineFn();
-        DistributedBiConsumer<? super A0, ? super A0> deduct0 = op0.deductFn();
-        DistributedBiConsumer<? super A1, ? super A1> deduct1 = op1.deductFn();
-        return AggregateOperation
-                .withCreate(() -> tuple2(op0.createFn().get(), op1.createFn().get()))
-                .<T0>andAccumulate0((acc, item) -> op0.accumulateFn().accept(acc.f0(), item))
-                .<T1>andAccumulate1((acc, item) -> op1.accumulateFn().accept(acc.f1(), item))
-                .andCombine(combine0 == null || combine1 == null ? null :
-                        (acc1, acc2) -> {
-                            combine0.accept(acc1.f0(), acc2.f0());
-                            combine1.accept(acc1.f1(), acc2.f1());
-                        })
-                .andDeduct(deduct0 == null || deduct1 == null ? null :
-                        (acc1, acc2) -> {
-                            deduct0.accept(acc1.f0(), acc2.f0());
-                            deduct1.accept(acc1.f1(), acc2.f1());
-                        })
-                .andFinish(acc -> finishFn.apply(op0.finishFn().apply(acc.f0()), op1.finishFn().apply(acc.f1())));
-    }
-
-    /**
-     * Convenience for {@link #aggregateOperation2(AggregateOperation1,
-     *      AggregateOperation1, DistributedBiFunction)
-     * aggregateOperation2(aggrOp0, aggrOp1, finishFn)} that outputs a
-     * {@code Tuple2(result0, result1)}.
-     *
-     * @param op0 the aggregate operation that will receive the first stage's input
-     * @param op1 the aggregate operation that will receive the second stage's input
-     * @param <T0> type of items in the first stage
-     * @param <A0> type of the first aggregate operation's accumulator
-     * @param <R0> type of the first aggregate operation's result
-     * @param <T1> type of items in the second stage
-     * @param <A1> type of the second aggregate operation's accumulator
-     * @param <R1> type of the second aggregate operation's result
-     */
-    public static <T0, T1, A0, A1, R0, R1>
-    AggregateOperation2<T0, T1, Tuple2<A0, A1>, Tuple2<R0, R1>>
-    aggregateOperation2(
-            @Nonnull AggregateOperation1<? super T0, A0, ? extends R0> op0,
-            @Nonnull AggregateOperation1<? super T1, A1, ? extends R1> op1
-    ) {
-        return aggregateOperation2(op0, op1, Tuple2::tuple2);
-    }
-
-    /**
-     * Returns an aggregate operation that is a composite of three independent
-     * aggregate operations, each one accepting its own input. You need this
-     * kind of operation for a three-way co-aggregating pipeline stage:
-     * {@link StageWithWindow#aggregate3 stage.aggregate3()}.
-     * <p>
-     * This method is suitable when you can express your computation as three
-     * independent aggregate operations where you combine only their final
-     * results. If you need an operation that combines the three inputs in the
-     * accumulation phase, you can create an aggregate operation by specifying
-     * each primitive using the {@linkplain AggregateOperation#withCreate
-     * aggregate operation builder}.
-     *
-     * @param op0 the aggregate operation that will receive the first stage's input
-     * @param op1 the aggregate operation that will receive the second stage's input
-     * @param op2 the aggregate operation that will receive the third stage's input
-     * @param finishFn the function that transforms the individual aggregate results into the
-     *                 overall result that the co-aggregating stage emits
-     * @param <T0> type of items in the first stage
-     * @param <A0> type of the first aggregate operation's accumulator
-     * @param <R0> type of the first aggregate operation's result
-     * @param <T1> type of items in the second stage
-     * @param <A1> type of the second aggregate operation's accumulator
-     * @param <R1> type of the second aggregate operation's result
-     * @param <T2> type of items in the third stage
-     * @param <A2> type of the third aggregate operation's accumulator
-     * @param <R2> type of the third aggregate operation's result
-     * @param <R> type of the result
-     */
-    public static <T0, T1, T2, A0, A1, A2, R0, R1, R2, R>
-    AggregateOperation3<T0, T1, T2, Tuple3<A0, A1, A2>, R> aggregateOperation3(
-            @Nonnull AggregateOperation1<? super T0, A0, ? extends R0> op0,
-            @Nonnull AggregateOperation1<? super T1, A1, ? extends R1> op1,
-            @Nonnull AggregateOperation1<? super T2, A2, ? extends R2> op2,
-            @Nonnull DistributedTriFunction<? super R0, ? super R1, ? super R2, ? extends R> finishFn
-    ) {
-        checkSerializable(finishFn, "finishFn");
-        DistributedBiConsumer<? super A0, ? super A0> combine0 = op0.combineFn();
-        DistributedBiConsumer<? super A1, ? super A1> combine1 = op1.combineFn();
-        DistributedBiConsumer<? super A2, ? super A2> combine2 = op2.combineFn();
-        DistributedBiConsumer<? super A0, ? super A0> deduct0 = op0.deductFn();
-        DistributedBiConsumer<? super A1, ? super A1> deduct1 = op1.deductFn();
-        DistributedBiConsumer<? super A2, ? super A2> deduct2 = op2.deductFn();
-        return AggregateOperation
-                .withCreate(() -> tuple3(op0.createFn().get(), op1.createFn().get(), op2.createFn().get()))
-                .<T0>andAccumulate0((acc, item) -> op0.accumulateFn().accept(acc.f0(), item))
-                .<T1>andAccumulate1((acc, item) -> op1.accumulateFn().accept(acc.f1(), item))
-                .<T2>andAccumulate2((acc, item) -> op2.accumulateFn().accept(acc.f2(), item))
-                .andCombine(combine0 == null || combine1 == null || combine2 == null ? null :
-                        (acc1, acc2) -> {
-                            combine0.accept(acc1.f0(), acc2.f0());
-                            combine1.accept(acc1.f1(), acc2.f1());
-                            combine2.accept(acc1.f2(), acc2.f2());
-                        })
-                .andDeduct(deduct0 == null || deduct1 == null || deduct2 == null ? null :
-                        (acc1, acc2) -> {
-                            deduct0.accept(acc1.f0(), acc2.f0());
-                            deduct1.accept(acc1.f1(), acc2.f1());
-                            deduct2.accept(acc1.f2(), acc2.f2());
-                        })
-                .andFinish(acc -> finishFn.apply(
-                        op0.finishFn().apply(acc.f0()),
-                        op1.finishFn().apply(acc.f1()),
-                        op2.finishFn().apply(acc.f2())));
-    }
-
-    /**
-     * Convenience for {@link #aggregateOperation3(AggregateOperation1, AggregateOperation1,
-     *      AggregateOperation1, DistributedTriFunction)
-     * aggregateOperation3(aggrOp0, aggrOp1, aggrOp2, finishFn)} that outputs a
-     * {@code Tuple3(result0, result1, result2)}.
-     *
-     * @param op0 the aggregate operation that will receive the first stage's input
-     * @param op1 the aggregate operation that will receive the second stage's input
-     * @param op2 the aggregate operation that will receive the third stage's input
-     * @param <T0> type of items in the first stage
-     * @param <A0> type of the first aggregate operation's accumulator
-     * @param <R0> type of the first aggregate operation's result
-     * @param <T1> type of items in the second stage
-     * @param <A1> type of the second aggregate operation's accumulator
-     * @param <R1> type of the second aggregate operation's result
-     * @param <T2> type of items in the third stage
-     * @param <A2> type of the third aggregate operation's accumulator
-     * @param <R2> type of the third aggregate operation's result
-     */
-    public static <T0, T1, T2, A0, A1, A2, R0, R1, R2>
-    AggregateOperation3<T0, T1, T2, Tuple3<A0, A1, A2>, Tuple3<R0, R1, R2>>
-    aggregateOperation3(
-            @Nonnull AggregateOperation1<? super T0, A0, ? extends R0> op0,
-            @Nonnull AggregateOperation1<? super T1, A1, ? extends R1> op1,
-            @Nonnull AggregateOperation1<? super T2, A2, ? extends R2> op2
-    ) {
-        return aggregateOperation3(op0, op1, op2, Tuple3::tuple3);
-    }
-
-    /**
-     * Returns a builder object that offers a step-by-step fluent API to create
-     * an aggregate operation that accepts multiple inputs. You must supply
-     * this kind of operation to a co-aggregating pipeline stage. Most typically
-     * you'll need this builder if you're using the {@link
-     * com.hazelcast.jet.pipeline.StageWithWindow#aggregateBuilder()}. For
-     * two-way or three-way co-aggregation you can use {@link
-     * AggregateOperations#aggregateOperation2} and {@link AggregateOperations#aggregateOperation3}.
-     * <p>
-     * This builder is suitable when you can express your computation as
-     * independent aggregate operations on each input where you combine only
-     * their final results. If you need an operation that combines the inputs
-     * in the accumulation phase, you can create an aggregate operation by
-     * specifying each primitive using the {@linkplain AggregateOperation#withCreate
-     * aggregate operation builder}.
-     */
-    @Nonnull
-    public static CoAggregateOperationBuilder coAggregateOperationBuilder() {
-        return new CoAggregateOperationBuilder();
-    }
-
 
     /**
      * Returns an aggregate operation that concatenates the input items into a
@@ -620,7 +258,7 @@ public final class AggregateOperations {
                 .withCreate(StringBuilder::new)
                 .<CharSequence>andAccumulate(StringBuilder::append)
                 .andCombine(StringBuilder::append)
-                .andFinish(StringBuilder::toString);
+                .andExportFinish(StringBuilder::toString);
     }
 
     /**
@@ -657,7 +295,7 @@ public final class AggregateOperations {
                     }
                     l.append(r, prefixLen, r.length());
                 })
-                .andFinish(r -> r.append(suffix).toString());
+                .andExportFinish(r -> r.append(suffix).toString());
     }
 
     /**
@@ -678,9 +316,8 @@ public final class AggregateOperations {
     public static <T, U, A, R>
     AggregateOperation1<T, A, R> mapping(
             @Nonnull DistributedFunction<? super T, ? extends U> mapFn,
-            @Nonnull AggregateOperation1<? super U, A, R> downstream
+            @Nonnull AggregateOperation1<? super U, A, ? extends R> downstream
     ) {
-        checkSerializable(mapFn, "mapFn");
         DistributedBiConsumer<? super A, ? super U> downstreamAccumulateFn = downstream.accumulateFn();
         return AggregateOperation
                 .withCreate(downstream.createFn())
@@ -692,7 +329,7 @@ public final class AggregateOperations {
                 })
                 .andCombine(downstream.combineFn())
                 .andDeduct(downstream.deductFn())
-                .andFinish(downstream.finishFn());
+                .andExportFinish(downstream.exportFn());
     }
 
     /**
@@ -711,12 +348,16 @@ public final class AggregateOperations {
     public static <T, C extends Collection<T>> AggregateOperation1<T, C, C> toCollection(
             DistributedSupplier<C> createCollectionFn
     ) {
-        checkSerializable(createCollectionFn, "createCollectionFn");
         return AggregateOperation
                 .withCreate(createCollectionFn)
                 .<T>andAccumulate(Collection::add)
                 .andCombine(Collection::addAll)
-                .andIdentityFinish();
+                .andExport(acc -> {
+                    C result = createCollectionFn.get();
+                    result.addAll(acc);
+                    return result;
+                })
+                .andFinish(identity());
     }
 
     /**
@@ -764,9 +405,7 @@ public final class AggregateOperations {
             DistributedFunction<? super T, ? extends U> toValueFn
     ) {
         return toMap(toKeyFn, toValueFn,
-                (k, v) -> {
-                    throw new IllegalStateException("Duplicate key: " + k);
-                },
+                (k, v) -> { throw new IllegalStateException("Duplicate key: " + k); },
                 HashMap::new);
     }
 
@@ -833,18 +472,17 @@ public final class AggregateOperations {
             DistributedBinaryOperator<U> mergeFn,
             DistributedSupplier<M> createMapFn
     ) {
-        checkSerializable(toKeyFn, "toKeyFn");
-        checkSerializable(toValueFn, "toValueFn");
-        checkSerializable(mergeFn, "mergeFn");
-        checkSerializable(createMapFn, "createMapFn");
-
         DistributedBiConsumer<M, T> accumulateFn =
                 (map, element) -> map.merge(toKeyFn.apply(element), toValueFn.apply(element), mergeFn);
         return AggregateOperation
                 .withCreate(createMapFn)
                 .andAccumulate(accumulateFn)
                 .andCombine((l, r) -> r.forEach((key, value) -> l.merge(key, value, mergeFn)))
-                .andIdentityFinish();
+                .andExportFinish(acc -> {
+                    M result = createMapFn.get();
+                    result.putAll(acc);
+                    return result;
+                });
     }
 
     /**
@@ -946,7 +584,7 @@ public final class AggregateOperations {
         };
 
         return AggregateOperation.withCreate(createAccMapFn).andAccumulate(accumulateFn)
-                .andCombine(combineFn).andFinish(finisher);
+                .andCombine(combineFn).andExportFinish(finisher);
     }
 
     /**
@@ -999,7 +637,7 @@ public final class AggregateOperations {
                 .andDeduct(deductAccValueFn != null
                         ? (a, b) -> a.set(deductFn.apply(a.get(), b.get()))
                         : null)
-                .andFinish(MutableReference::get);
+                .andExportFinish(MutableReference::get);
     }
 
     /**
@@ -1026,17 +664,9 @@ public final class AggregateOperations {
                 .withCreate(MutableReference<T>::new)
                 // Result would be correct even without the acc.isNull() check, but that
                 // can cause more GC churn due to medium-lived objects.
-                .<T>andAccumulate((acc, item) -> {
-                    if (acc.isNull()) {
-                        acc.set(item);
-                    }
-                })
-                .andCombine((acc1, acc2) -> {
-                    if (acc1.isNull()) {
-                        acc1.set(acc2.get());
-                    }
-                })
-                .andFinish(MutableReference::get);
+                .<T>andAccumulate((acc, item) -> { if (acc.isNull()) acc.set(item); })
+                .andCombine((acc1, acc2) -> { if (acc1.isNull()) acc1.set(acc2.get()); })
+                .andExportFinish(MutableReference::get);
     }
 
     /**
@@ -1056,9 +686,387 @@ public final class AggregateOperations {
                 .withCreate(ArrayList<T>::new)
                 .<T>andAccumulate(ArrayList::add)
                 .andCombine(ArrayList::addAll)
+                .andExport(list -> list.stream().sorted(comparator).collect(Collectors.toList()))
                 .andFinish(list -> {
                     list.sort(comparator);
                     return list;
                 });
+    }
+
+    /**
+     * Returns an aggregate operation that is a composite of two aggregate
+     * operations. It allows you to calculate multiple aggregations over the
+     * same items at once.
+     *
+     * @param op0 1st operation
+     * @param op1 2nd operation
+     * @param exportFinishFn function combining the two results into a single target instance
+     *
+     * @param <T> type of input items
+     * @param <A0> 1st accumulator type
+     * @param <A1> 2nd accumulator type
+     * @param <R0> 1st result type
+     * @param <R1> 2nd result type
+     * @param <R> final result type
+     *
+     * @return the composite operation
+     */
+    @Nonnull
+    public static <T, A0, A1, R0, R1, R> AggregateOperation1<T, Tuple2<A0, A1>, R> allOf(
+            @Nonnull AggregateOperation1<? super T, A0, ? extends R0> op0,
+            @Nonnull AggregateOperation1<? super T, A1, ? extends R1> op1,
+            @Nonnull DistributedBiFunction<? super R0, ? super R1, ? extends R> exportFinishFn
+    ) {
+        DistributedBiConsumer<? super A0, ? super A0> combine0 = op0.combineFn();
+        DistributedBiConsumer<? super A1, ? super A1> combine1 = op1.combineFn();
+        DistributedBiConsumer<? super A0, ? super A0> deduct0 = op0.deductFn();
+        DistributedBiConsumer<? super A1, ? super A1> deduct1 = op1.deductFn();
+        return AggregateOperation
+                .withCreate(() -> tuple2(op0.createFn().get(), op1.createFn().get()))
+                .<T>andAccumulate((acc, item) -> {
+                    op0.accumulateFn().accept(acc.f0(), item);
+                    op1.accumulateFn().accept(acc.f1(), item);
+                })
+                .andCombine(combine0 == null || combine1 == null ? null :
+                        (acc1, acc2) -> {
+                            combine0.accept(acc1.f0(), acc2.f0());
+                            combine1.accept(acc1.f1(), acc2.f1());
+                        })
+                .andDeduct(deduct0 == null || deduct1 == null ? null :
+                        (acc1, acc2) -> {
+                            deduct0.accept(acc1.f0(), acc2.f0());
+                            deduct1.accept(acc1.f1(), acc2.f1());
+                        })
+                .<R>andExport(acc ->
+                        exportFinishFn.apply(op0.exportFn().apply(acc.f0()), op1.exportFn().apply(acc.f1())))
+                .andFinish(acc ->
+                        exportFinishFn.apply(op0.finishFn().apply(acc.f0()), op1.finishFn().apply(acc.f1())));
+    }
+
+    /**
+     * Convenience for {@link #allOf(AggregateOperation1, AggregateOperation1,
+     * DistributedBiFunction)} with identity finish.
+     */
+    @Nonnull
+    public static <T, A0, A1, R0, R1> AggregateOperation1<T, Tuple2<A0, A1>, Tuple2<R0, R1>> allOf(
+            @Nonnull AggregateOperation1<? super T, A0, R0> op1,
+            @Nonnull AggregateOperation1<? super T, A1, R1> op2
+    ) {
+        return allOf(op1, op2, Tuple2::tuple2);
+    }
+
+    /**
+     * Returns an aggregate operation that is a composite of three aggregate
+     * operations. It allows you to calculate multiple aggregations over the
+     * same items at once.
+     *
+     * @param op0 1st operation
+     * @param op1 2nd operation
+     * @param op2 3rd operation
+     * @param exportFinishFn function combining the three results into a single target instance
+     *
+     * @param <T> type of input items
+     * @param <A0> 1st accumulator type
+     * @param <A1> 2nd accumulator type
+     * @param <A2> 3rd accumulator type
+     * @param <R0> 1st result type
+     * @param <R1> 2nd result type
+     * @param <R2> 3rd result type
+     * @param <R> final result type
+     *
+     * @return the composite operation
+     */
+    @Nonnull
+    public static <T, A0, A1, A2, R0, R1, R2, R> AggregateOperation1<T, Tuple3<A0, A1, A2>, R> allOf(
+            @Nonnull AggregateOperation1<? super T, A0, ? extends R0> op0,
+            @Nonnull AggregateOperation1<? super T, A1, ? extends R1> op1,
+            @Nonnull AggregateOperation1<? super T, A2, ? extends R2> op2,
+            @Nonnull DistributedTriFunction<? super R0, ? super R1, ? super R2, ? extends R> exportFinishFn
+    ) {
+        DistributedBiConsumer<? super A0, ? super A0> combine0 = op0.combineFn();
+        DistributedBiConsumer<? super A1, ? super A1> combine1 = op1.combineFn();
+        DistributedBiConsumer<? super A2, ? super A2> combine2 = op2.combineFn();
+        DistributedBiConsumer<? super A0, ? super A0> deduct0 = op0.deductFn();
+        DistributedBiConsumer<? super A1, ? super A1> deduct1 = op1.deductFn();
+        DistributedBiConsumer<? super A2, ? super A2> deduct2 = op2.deductFn();
+        return AggregateOperation
+                .withCreate(() -> tuple3(op0.createFn().get(), op1.createFn().get(), op2.createFn().get()))
+                .<T>andAccumulate((acc, item) -> {
+                    op0.accumulateFn().accept(acc.f0(), item);
+                    op1.accumulateFn().accept(acc.f1(), item);
+                    op2.accumulateFn().accept(acc.f2(), item);
+                })
+                .andCombine(combine0 == null || combine1 == null || combine2 == null ? null :
+                        (acc1, acc2) -> {
+                            combine0.accept(acc1.f0(), acc2.f0());
+                            combine1.accept(acc1.f1(), acc2.f1());
+                            combine2.accept(acc1.f2(), acc2.f2());
+                        })
+                .andDeduct(deduct0 == null || deduct1 == null || deduct2 == null ? null :
+                        (acc1, acc2) -> {
+                            deduct0.accept(acc1.f0(), acc2.f0());
+                            deduct1.accept(acc1.f1(), acc2.f1());
+                            deduct2.accept(acc1.f2(), acc2.f2());
+                        })
+                .<R>andExport(acc -> exportFinishFn.apply(
+                        op0.exportFn().apply(acc.f0()),
+                        op1.exportFn().apply(acc.f1()),
+                        op2.exportFn().apply(acc.f2())))
+                .andFinish(acc -> exportFinishFn.apply(
+                        op0.finishFn().apply(acc.f0()),
+                        op1.finishFn().apply(acc.f1()),
+                        op2.finishFn().apply(acc.f2())));
+    }
+
+    /**
+     * Convenience for {@link #allOf(AggregateOperation1, AggregateOperation1,
+     * AggregateOperation1, DistributedTriFunction)} with identity finisher.
+     */
+    @Nonnull
+    public static <T, A0, A1, A2, R0, R1, R2>
+    AggregateOperation1<T, Tuple3<A0, A1, A2>, Tuple3<R0, R1, R2>>
+    allOf(
+            @Nonnull AggregateOperation1<? super T, A0, ? extends R0> op0,
+            @Nonnull AggregateOperation1<? super T, A1, ? extends R1> op1,
+            @Nonnull AggregateOperation1<? super T, A2, ? extends R2> op2
+    ) {
+        return allOf(op0, op1, op2, Tuple3::tuple3);
+    }
+
+    /**
+     * Returns a builder object that helps you create a composite of multiple
+     * aggregate operations. The resulting aggregate operation will perform all
+     * of the constituent operations at the same time and you can retrieve each
+     * result from the {@link com.hazelcast.jet.datamodel.ItemsByTag} object
+     * you'll get in the output.
+     * <p>
+     * The builder object is primarily intended to build a composite of four or more
+     * aggregate operations. For up to three operations, prefer the explicit, more
+     * type-safe variants {@link #allOf(AggregateOperation1, AggregateOperation1) allOf(op1, op2)}
+     * and {@link #allOf(AggregateOperation1, AggregateOperation1,
+     * AggregateOperation1) allOf(op1, op2, op3)}.
+     * <p>
+     * Example that calculates the count and the sum of the items:
+     * <pre>{@code
+     * AllOfAggregationBuilder<Long> builder = allOfBuilder();
+     * Tag<Long> tagSum = builder.add(summingLong(Long::longValue));
+     * Tag<Long> tagCount = builder.add(counting());
+     * AggregateOperation1<Long, ?, ItemsByTag> compositeAggrOp = builder.build();
+     * }</pre>
+     *
+     * When you receive the resulting {@link com.hazelcast.jet.datamodel.ItemsByTag
+     * ItemsByTag}, fetch the individual results using the tags as keys, for example:
+     * <pre>{@code
+     * batchStage.aggregate(compositeAggrOp).map((ItemsByTag result) -> {
+     *     Long sum = result.get(tagSum);
+     *     Long count = result.get(tagCount);
+     *     ...
+     * });
+     * }</pre>
+     *
+     * @param <T> type of input items
+     */
+    @Nonnull
+    public static <T> AllOfAggregationBuilder<T> allOfBuilder() {
+        return new AllOfAggregationBuilder<>();
+    }
+
+    /**
+     * Returns an aggregate operation that is a composite of two independent
+     * aggregate operations, each one accepting its own input. You need this
+     * kind of operation for a two-way co-aggregating pipeline stage:
+     * {@link com.hazelcast.jet.pipeline.StageWithWindow#aggregate2
+     * stage.aggregate2()}.
+     * <p>
+     * This method is suitable when you can express your computation as two
+     * independent aggregate operations where you combine only their final
+     * results. If you need an operation that combines the two inputs in the
+     * accumulation phase, you can create an aggregate operation by specifying
+     * each primitive using the {@linkplain AggregateOperation#withCreate
+     * aggregate operation builder}.
+     *
+     * @param op0 the aggregate operation that will receive the first stage's input
+     * @param op1 the aggregate operation that will receive the second stage's input
+     * @param exportFinishFn the function that transforms the individual aggregate results into the
+     *                 overall result that the co-aggregating stage emits
+     * @param <T0> type of items in the first stage
+     * @param <A0> type of the first aggregate operation's accumulator
+     * @param <R0> type of the first aggregate operation's result
+     * @param <T1> type of items in the second stage
+     * @param <A1> type of the second aggregate operation's accumulator
+     * @param <R1> type of the second aggregate operation's result
+     * @param <R> type of the result
+     */
+    public static <T0, A0, R0, T1, A1, R1, R> AggregateOperation2<T0, T1, Tuple2<A0, A1>, R> aggregateOperation2(
+            @Nonnull AggregateOperation1<? super T0, A0, ? extends R0> op0,
+            @Nonnull AggregateOperation1<? super T1, A1, ? extends R1> op1,
+            @Nonnull DistributedBiFunction<? super R0, ? super R1, ? extends R> exportFinishFn
+    ) {
+        DistributedBiConsumer<? super A0, ? super A0> combine0 = op0.combineFn();
+        DistributedBiConsumer<? super A1, ? super A1> combine1 = op1.combineFn();
+        DistributedBiConsumer<? super A0, ? super A0> deduct0 = op0.deductFn();
+        DistributedBiConsumer<? super A1, ? super A1> deduct1 = op1.deductFn();
+        return AggregateOperation
+                .withCreate(() -> tuple2(op0.createFn().get(), op1.createFn().get()))
+                .<T0>andAccumulate0((acc, item) -> op0.accumulateFn().accept(acc.f0(), item))
+                .<T1>andAccumulate1((acc, item) -> op1.accumulateFn().accept(acc.f1(), item))
+                .andCombine(combine0 == null || combine1 == null ? null :
+                        (acc1, acc2) -> {
+                            combine0.accept(acc1.f0(), acc2.f0());
+                            combine1.accept(acc1.f1(), acc2.f1());
+                        })
+                .andDeduct(deduct0 == null || deduct1 == null ? null :
+                        (acc1, acc2) -> {
+                            deduct0.accept(acc1.f0(), acc2.f0());
+                            deduct1.accept(acc1.f1(), acc2.f1());
+                        })
+                .<R>andExport(acc ->
+                        exportFinishFn.apply(op0.exportFn().apply(acc.f0()), op1.exportFn().apply(acc.f1())))
+                .andFinish(acc ->
+                        exportFinishFn.apply(op0.finishFn().apply(acc.f0()), op1.finishFn().apply(acc.f1())));
+    }
+
+    /**
+     * Convenience for {@link #aggregateOperation2(AggregateOperation1,
+     *      AggregateOperation1, DistributedBiFunction)
+     * aggregateOperation2(aggrOp0, aggrOp1, finishFn)} that outputs a
+     * {@code Tuple2(result0, result1)}.
+     *
+     * @param op0 the aggregate operation that will receive the first stage's input
+     * @param op1 the aggregate operation that will receive the second stage's input
+     * @param <T0> type of items in the first stage
+     * @param <A0> type of the first aggregate operation's accumulator
+     * @param <R0> type of the first aggregate operation's result
+     * @param <T1> type of items in the second stage
+     * @param <A1> type of the second aggregate operation's accumulator
+     * @param <R1> type of the second aggregate operation's result
+     */
+    public static <T0, T1, A0, A1, R0, R1>
+    AggregateOperation2<T0, T1, Tuple2<A0, A1>, Tuple2<R0, R1>>
+    aggregateOperation2(
+            @Nonnull AggregateOperation1<? super T0, A0, ? extends R0> op0,
+            @Nonnull AggregateOperation1<? super T1, A1, ? extends R1> op1
+    ) {
+        return aggregateOperation2(op0, op1, Tuple2::tuple2);
+    }
+
+    /**
+     * Returns an aggregate operation that is a composite of three independent
+     * aggregate operations, each one accepting its own input. You need this
+     * kind of operation for a three-way co-aggregating pipeline stage:
+     * {@link com.hazelcast.jet.pipeline.StageWithWindow#aggregate3
+     * stage.aggregate3()}.
+     * <p>
+     * This method is suitable when you can express your computation as three
+     * independent aggregate operations where you combine only their final
+     * results. If you need an operation that combines the three inputs in the
+     * accumulation phase, you can create an aggregate operation by specifying
+     * each primitive using the {@linkplain AggregateOperation#withCreate
+     * aggregate operation builder}.
+     *
+     * @param op0 the aggregate operation that will receive the first stage's input
+     * @param op1 the aggregate operation that will receive the second stage's input
+     * @param op2 the aggregate operation that will receive the third stage's input
+     * @param exportFinishFn the function that transforms the individual aggregate results into the
+     *                 overall result that the co-aggregating stage emits
+     * @param <T0> type of items in the first stage
+     * @param <A0> type of the first aggregate operation's accumulator
+     * @param <R0> type of the first aggregate operation's result
+     * @param <T1> type of items in the second stage
+     * @param <A1> type of the second aggregate operation's accumulator
+     * @param <R1> type of the second aggregate operation's result
+     * @param <T2> type of items in the third stage
+     * @param <A2> type of the third aggregate operation's accumulator
+     * @param <R2> type of the third aggregate operation's result
+     * @param <R> type of the result
+     */
+    public static <T0, T1, T2, A0, A1, A2, R0, R1, R2, R>
+    AggregateOperation3<T0, T1, T2, Tuple3<A0, A1, A2>, R> aggregateOperation3(
+            @Nonnull AggregateOperation1<? super T0, A0, ? extends R0> op0,
+            @Nonnull AggregateOperation1<? super T1, A1, ? extends R1> op1,
+            @Nonnull AggregateOperation1<? super T2, A2, ? extends R2> op2,
+            @Nonnull DistributedTriFunction<? super R0, ? super R1, ? super R2, ? extends R> exportFinishFn
+    ) {
+        DistributedBiConsumer<? super A0, ? super A0> combine0 = op0.combineFn();
+        DistributedBiConsumer<? super A1, ? super A1> combine1 = op1.combineFn();
+        DistributedBiConsumer<? super A2, ? super A2> combine2 = op2.combineFn();
+        DistributedBiConsumer<? super A0, ? super A0> deduct0 = op0.deductFn();
+        DistributedBiConsumer<? super A1, ? super A1> deduct1 = op1.deductFn();
+        DistributedBiConsumer<? super A2, ? super A2> deduct2 = op2.deductFn();
+        return AggregateOperation
+                .withCreate(() -> tuple3(op0.createFn().get(), op1.createFn().get(), op2.createFn().get()))
+                .<T0>andAccumulate0((acc, item) -> op0.accumulateFn().accept(acc.f0(), item))
+                .<T1>andAccumulate1((acc, item) -> op1.accumulateFn().accept(acc.f1(), item))
+                .<T2>andAccumulate2((acc, item) -> op2.accumulateFn().accept(acc.f2(), item))
+                .andCombine(combine0 == null || combine1 == null || combine2 == null ? null :
+                        (acc1, acc2) -> {
+                            combine0.accept(acc1.f0(), acc2.f0());
+                            combine1.accept(acc1.f1(), acc2.f1());
+                            combine2.accept(acc1.f2(), acc2.f2());
+                        })
+                .andDeduct(deduct0 == null || deduct1 == null || deduct2 == null ? null :
+                        (acc1, acc2) -> {
+                            deduct0.accept(acc1.f0(), acc2.f0());
+                            deduct1.accept(acc1.f1(), acc2.f1());
+                            deduct2.accept(acc1.f2(), acc2.f2());
+                        })
+                .<R>andExport(acc -> exportFinishFn.apply(
+                        op0.exportFn().apply(acc.f0()),
+                        op1.exportFn().apply(acc.f1()),
+                        op2.exportFn().apply(acc.f2())))
+                .andFinish(acc -> exportFinishFn.apply(
+                        op0.finishFn().apply(acc.f0()),
+                        op1.finishFn().apply(acc.f1()),
+                        op2.finishFn().apply(acc.f2())));
+    }
+
+    /**
+     * Convenience for {@link #aggregateOperation3(AggregateOperation1, AggregateOperation1,
+     *      AggregateOperation1, DistributedTriFunction)
+     * aggregateOperation3(aggrOp0, aggrOp1, aggrOp2, finishFn)} that outputs a
+     * {@code Tuple3(result0, result1, result2)}.
+     *
+     * @param op0 the aggregate operation that will receive the first stage's input
+     * @param op1 the aggregate operation that will receive the second stage's input
+     * @param op2 the aggregate operation that will receive the third stage's input
+     * @param <T0> type of items in the first stage
+     * @param <A0> type of the first aggregate operation's accumulator
+     * @param <R0> type of the first aggregate operation's result
+     * @param <T1> type of items in the second stage
+     * @param <A1> type of the second aggregate operation's accumulator
+     * @param <R1> type of the second aggregate operation's result
+     * @param <T2> type of items in the third stage
+     * @param <A2> type of the third aggregate operation's accumulator
+     * @param <R2> type of the third aggregate operation's result
+     */
+    public static <T0, T1, T2, A0, A1, A2, R0, R1, R2>
+    AggregateOperation3<T0, T1, T2, Tuple3<A0, A1, A2>, Tuple3<R0, R1, R2>>
+    aggregateOperation3(
+            @Nonnull AggregateOperation1<? super T0, A0, ? extends R0> op0,
+            @Nonnull AggregateOperation1<? super T1, A1, ? extends R1> op1,
+            @Nonnull AggregateOperation1<? super T2, A2, ? extends R2> op2
+    ) {
+        return aggregateOperation3(op0, op1, op2, Tuple3::tuple3);
+    }
+
+    /**
+     * Returns a builder object that offers a step-by-step fluent API to create
+     * an aggregate operation that accepts multiple inputs. You must supply
+     * this kind of operation to a co-aggregating pipeline stage. Most typically
+     * you'll need this builder if you're using the {@link
+     * com.hazelcast.jet.pipeline.StageWithWindow#aggregateBuilder()}. For
+     * two-way or three-way co-aggregation you can use {@link
+     * AggregateOperations#aggregateOperation2} and {@link AggregateOperations#aggregateOperation3}.
+     * <p>
+     * This builder is suitable when you can express your computation as
+     * independent aggregate operations on each input where you combine only
+     * their final results. If you need an operation that combines the inputs
+     * in the accumulation phase, you can create an aggregate operation by
+     * specifying each primitive using the {@linkplain AggregateOperation#withCreate
+     * aggregate operation builder}.
+     */
+    @Nonnull
+    public static CoAggregateOperationBuilder coAggregateOperationBuilder() {
+        return new CoAggregateOperationBuilder();
     }
 }

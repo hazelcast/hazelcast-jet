@@ -115,7 +115,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         StreamStage<String> distinct = mapJournalSrcStage
                 .addTimestamps(i -> i, maxLag)
                 .window(tumbling(winSize))
-                .groupingKey(keyFn)
+                .addKey(keyFn)
                 .distinct((start, end, item) -> formatFn.apply(end, item));
 
         // Then

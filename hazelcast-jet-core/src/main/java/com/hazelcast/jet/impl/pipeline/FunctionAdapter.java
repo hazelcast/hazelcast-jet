@@ -39,7 +39,6 @@ import com.hazelcast.jet.pipeline.JoinClause;
 import javax.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.pipeline.JetEvent.jetEvent;
@@ -49,55 +48,58 @@ import static com.hazelcast.jet.pipeline.JoinClause.onKeys;
 public class FunctionAdapter {
 
     @Nonnull
-    @SuppressWarnings("unchecked")
-    DistributedFunction<?, ?> adaptKeyFn(@Nonnull DistributedFunction<?, ?> keyFn) {
+    <T, K> DistributedFunction<?, ? extends K> adaptKeyFn(@Nonnull DistributedFunction<? super T, ? extends K> keyFn) {
         return keyFn;
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
-    DistributedFunction<?, ?> adaptMapFn(@Nonnull DistributedFunction mapFn) {
+    <T, R> DistributedFunction<?, ?> adaptMapFn(@Nonnull DistributedFunction<? super T, ? extends R> mapFn) {
         return mapFn;
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
-    DistributedBiFunction<?, ?, ?> adaptMapUsingContextFn(@Nonnull DistributedBiFunction mapFn) {
-        return mapFn;
-    }
-
-    @Nonnull
-    @SuppressWarnings("unchecked")
-    DistributedPredicate<?> adaptFilterFn(@Nonnull DistributedPredicate filterFn) {
+    <T> DistributedPredicate<?> adaptFilterFn(@Nonnull DistributedPredicate<? super T> filterFn) {
         return filterFn;
     }
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    <C, T> DistributedBiPredicate<C, T> adaptFilterUsingContextFn(@Nonnull DistributedBiPredicate<C, T> filterFn) {
-        return filterFn;
-    }
-
-    @Nonnull
-    @SuppressWarnings("unchecked")
-    <R, T> DistributedFunction<Object, ? extends Traverser<?>> adaptFlatMapFn(
+    <T, R> DistributedFunction<?, ? extends Traverser<Object>> adaptFlatMapFn(
             @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return (DistributedFunction<? super Object, ? extends Traverser<?>>) flatMapFn;
+        return (DistributedFunction<?, ? extends Traverser<Object>>) flatMapFn;
     }
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    <C, R, T> DistributedBiFunction<? super C, Object, ? extends Traverser<?>> adaptFlatMapUsingContextFn(
+    <C, T, R> DistributedBiFunction<? super C, ?, ?> adaptMapUsingContextFn(
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
+    ) {
+        return mapFn;
+    }
+
+    @Nonnull
+    @SuppressWarnings("unchecked")
+    <C, T> DistributedBiPredicate<? super C, ?> adaptFilterUsingContextFn(
+            @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
+    ) {
+        return filterFn;
+    }
+
+    @Nonnull
+    @SuppressWarnings("unchecked")
+    <C, T, R> DistributedBiFunction<? super C, ?, ? extends Traverser<?>> adaptFlatMapUsingContextFn(
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return (DistributedBiFunction<? super C, ? super Object, ? extends Traverser<?>>) flatMapFn;
+        return flatMapFn;
     }
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    DistributedFunction<?, ?> adaptToStringFn(@Nonnull DistributedFunction<?, ? extends CharSequence> mapFn) {
-        return mapFn;
+    <T, R extends CharSequence> DistributedFunction<?, R> adaptToStringFn(
+            @Nonnull DistributedFunction<? super T, R> toStringFn
+    ) {
+        return toStringFn;
     }
 
     @Nonnull
@@ -119,13 +121,13 @@ public class FunctionAdapter {
         return (DistributedTriFunction<Object, T1, T2, Object>) mapToOutputFn;
     }
 
-    <R, OUT> WindowResultFunction adaptWindowResultFn(
+    <R, OUT> WindowResultFunction<?, ?> adaptWindowResultFn(
             WindowResultFunction<? super R, ? extends OUT> windowResultFn
     ) {
         return windowResultFn;
     }
 
-    <K, R, OUT> KeyedWindowResultFunction adaptKeyedWindowResultFn(
+    <K, R, OUT> KeyedWindowResultFunction<?, ?, ?> adaptKeyedWindowResultFn(
             KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> keyedWindowResultFn
     ) {
         return keyedWindowResultFn;
@@ -195,13 +197,14 @@ public class FunctionAdapter {
 
 class JetEventFunctionAdapter extends FunctionAdapter {
     @Nonnull @Override
-    DistributedFunction adaptKeyFn(@Nonnull DistributedFunction keyFn) {
-        return e -> keyFn.apply(((JetEvent) e).payload());
+    @SuppressWarnings("unchecked")
+    <T, K> DistributedFunction<?, ? extends K> adaptKeyFn(@Nonnull DistributedFunction<? super T, ? extends K> keyFn) {
+        return e -> ((Function<Object, K>) keyFn).apply(((JetEvent) e).payload());
     }
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    DistributedFunction adaptMapFn(@Nonnull DistributedFunction mapFn) {
+    DistributedFunction<?, ?> adaptMapFn(@Nonnull DistributedFunction mapFn) {
         return e -> {
             Object result = mapFn.apply(((JetEvent) e).payload());
             return result != null ? jetEvent(result, ((JetEvent) e).timestamp()) : null;
@@ -210,7 +213,20 @@ class JetEventFunctionAdapter extends FunctionAdapter {
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    DistributedBiFunction adaptMapUsingContextFn(@Nonnull DistributedBiFunction mapFn) {
+    DistributedPredicate<?> adaptFilterFn(@Nonnull DistributedPredicate filterFn) {
+        return e -> filterFn.test(((JetEvent) e).payload());
+    }
+
+    @Nonnull @Override
+    @SuppressWarnings("unchecked")
+    DistributedFunction<?, ? extends Traverser<Object>> adaptFlatMapFn(@Nonnull DistributedFunction flatMapFn) {
+        DistributedFunction<Object, Traverser> fn = (DistributedFunction<Object, Traverser>) flatMapFn;
+        return e -> fn.apply(((JetEvent) e).payload()).map(r -> jetEvent(r, ((JetEvent) e).timestamp()));
+    }
+
+    @Nonnull @Override
+    @SuppressWarnings("unchecked")
+    DistributedBiFunction<?, ?, ?> adaptMapUsingContextFn(@Nonnull DistributedBiFunction mapFn) {
         return (context, e) -> {
             Object result = mapFn.apply(context, ((JetEvent) e).payload());
             return result != null ? jetEvent(result, ((JetEvent) e).timestamp()) : null;
@@ -219,39 +235,28 @@ class JetEventFunctionAdapter extends FunctionAdapter {
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    DistributedPredicate adaptFilterFn(@Nonnull DistributedPredicate filterFn) {
-        return e -> filterFn.test(((JetEvent) e).payload());
-    }
-
-    @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    DistributedBiPredicate adaptFilterUsingContextFn(@Nonnull DistributedBiPredicate filterFn) {
-        return (context, e) -> filterFn.test(context, ((JetEvent) e).payload());
-    }
-
-    @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    <R, T> DistributedFunction<? super Object, ? extends Traverser<?>> adaptFlatMapFn(
-            @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
+    <C, T> DistributedBiPredicate<? super C, ?> adaptFilterUsingContextFn(
+            @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     ) {
-        DistributedFunction<Object, Traverser> fn = (DistributedFunction<Object, Traverser>) (Function) flatMapFn;
-        return e -> fn.apply(((JetEvent) e).payload()).map(r -> jetEvent(r, ((JetEvent) e).timestamp()));
+        return (context, e) -> filterFn.test(context, ((JetEvent<T>) e).payload());
     }
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    <C, R, T> DistributedBiFunction<? super C, Object, ? extends Traverser<?>> adaptFlatMapUsingContextFn(
+    <C, T, R> DistributedBiFunction<? super C, Object, ? extends Traverser<?>> adaptFlatMapUsingContextFn(
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        DistributedBiFunction<C, Object, Traverser> fn =
-                (DistributedBiFunction<C, Object, Traverser>) (BiFunction) flatMapFn;
+        DistributedBiFunction<C, Object, Traverser> fn = (DistributedBiFunction<C, Object, Traverser>) flatMapFn;
         return (context, e) -> fn.apply(context, ((JetEvent) e).payload())
                                  .map(r -> jetEvent(r, ((JetEvent) e).timestamp()));
     }
 
     @Nonnull @Override
-    DistributedFunction<?, ?> adaptToStringFn(@Nonnull DistributedFunction mapFn) {
-        return e -> mapFn.apply(((JetEvent) e).payload());
+    @SuppressWarnings("unchecked")
+    <T, R extends CharSequence> DistributedFunction<?, R> adaptToStringFn(
+            @Nonnull DistributedFunction<? super T, R> toStringFn
+    ) {
+        return e -> toStringFn.apply((T) (((JetEvent) e).payload()));
     }
 
     @Nonnull @Override

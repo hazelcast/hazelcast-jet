@@ -31,25 +31,29 @@ public class AggregateOperation3Impl<T0, T1, T2, A, R>
         extends AggregateOperationImpl<A, R>
         implements AggregateOperation3<T0, T1, T2, A, R> {
 
-    public AggregateOperation3Impl(@Nonnull DistributedSupplier<A> createAccumulatorFn,
-                                   @Nonnull DistributedBiConsumer<? super A, ? super T0> accumulateItemF0,
-                                   @Nonnull DistributedBiConsumer<? super A, ? super T1> accumulateItemF1,
-                                   @Nonnull DistributedBiConsumer<? super A, ? super T2> accumulateItemF2,
-                                   @Nullable DistributedBiConsumer<? super A, ? super A> combineAccumulatorsFn,
-                                   @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorFn,
-                                   @Nonnull DistributedFunction<? super A, R> finishAccumulationFn
+    public AggregateOperation3Impl(
+            @Nonnull DistributedSupplier<A> createFn,
+            @Nonnull DistributedBiConsumer<? super A, ? super T0> accumulateFn0,
+            @Nonnull DistributedBiConsumer<? super A, ? super T1> accumulateFn1,
+            @Nonnull DistributedBiConsumer<? super A, ? super T2> accumulateFn2,
+            @Nullable DistributedBiConsumer<? super A, ? super A> combineFn,
+            @Nullable DistributedBiConsumer<? super A, ? super A> deductFn,
+            @Nonnull DistributedFunction<? super A, ? extends R> exportFn,
+            @Nonnull DistributedFunction<? super A, ? extends R> finishFn
     ) {
-        super(createAccumulatorFn, accumulateFns(accumulateItemF0, accumulateItemF1, accumulateItemF2),
-                combineAccumulatorsFn, deductAccumulatorFn, finishAccumulationFn);
+        super(createFn, accumulateFns(accumulateFn0, accumulateFn1, accumulateFn2),
+                combineFn, deductFn, exportFn, finishFn);
     }
 
-    private AggregateOperation3Impl(@Nonnull DistributedSupplier<A> createAccumulatorFn,
-                                    @Nonnull DistributedBiConsumer<? super A, ?>[] accumulateFs,
-                                    @Nullable DistributedBiConsumer<? super A, ? super A> combineAccumulatorsFn,
-                                    @Nullable DistributedBiConsumer<? super A, ? super A> deductAccumulatorFn,
-                                    @Nonnull DistributedFunction<? super A, R> finishAccumulationFn
+    private AggregateOperation3Impl(
+            @Nonnull DistributedSupplier<A> createFn,
+            @Nonnull DistributedBiConsumer<? super A, ?>[] accumulateFns,
+            @Nullable DistributedBiConsumer<? super A, ? super A> combineFn,
+            @Nullable DistributedBiConsumer<? super A, ? super A> deductFn,
+            @Nonnull DistributedFunction<? super A, ? extends R> exportFn,
+            @Nonnull DistributedFunction<? super A, ? extends R> finishFn
     ) {
-        super(createAccumulatorFn, accumulateFs, combineAccumulatorsFn, deductAccumulatorFn, finishAccumulationFn);
+        super(createFn, accumulateFns, combineFn, deductFn, exportFn, finishFn);
     }
 
     @Nonnull @Override
@@ -76,7 +80,8 @@ public class AggregateOperation3Impl<T0, T1, T2, A, R>
     ) {
         checkSerializable(newAccFn0, "newAccFn0");
         return new AggregateOperation3Impl<>(
-                createFn(), newAccFn0, accumulateFn1(), accumulateFn2(), combineFn(), deductFn(), finishFn());
+                createFn(), newAccFn0, accumulateFn1(), accumulateFn2(),
+                combineFn(), deductFn(), exportFn(), finishFn());
     }
 
     @Nonnull @Override
@@ -85,7 +90,8 @@ public class AggregateOperation3Impl<T0, T1, T2, A, R>
     ) {
         checkSerializable(newAccFn1, "newAccFn1");
         return new AggregateOperation3Impl<>(
-                createFn(), accumulateFn0(), newAccFn1, accumulateFn2(), combineFn(), deductFn(), finishFn());
+                createFn(), accumulateFn0(), newAccFn1, accumulateFn2(),
+                combineFn(), deductFn(), exportFn(), finishFn());
     }
 
     @Nonnull @Override
@@ -94,7 +100,8 @@ public class AggregateOperation3Impl<T0, T1, T2, A, R>
     ) {
         checkSerializable(newAccFn2, "newAccFn2");
         return new AggregateOperation3Impl<>(
-                createFn(), accumulateFn0(), accumulateFn1(), newAccFn2, combineFn(), deductFn(), finishFn());
+                createFn(), accumulateFn0(), accumulateFn1(), newAccFn2,
+                combineFn(), deductFn(), exportFn(), finishFn());
     }
 
     @Nonnull @Override
@@ -107,12 +114,10 @@ public class AggregateOperation3Impl<T0, T1, T2, A, R>
         return (DistributedBiConsumer<? super A, T>) accumulateFns[tag.index()];
     }
 
-    @Nonnull
-    @Override
-    public <R1> AggregateOperation3<T0, T1, T2, A, R1> withFinishFn(
-            @Nonnull DistributedFunction<? super A, R1> finishFn
-    ) {
-        checkSerializable(finishFn, "finishFn");
-        return new AggregateOperation3Impl<>(createFn(), accumulateFns, combineFn(), deductFn(), finishFn);
+    @Nonnull @Override
+    public AggregateOperation3<T0, T1, T2, A, A> withIdentityFinish() {
+        return new AggregateOperation3Impl<>(
+                createFn(), accumulateFns, combineFn(), deductFn(),
+                unsupportedExportFn(), DistributedFunction.identity());
     }
 }

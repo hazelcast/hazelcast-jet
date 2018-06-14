@@ -494,7 +494,7 @@ public abstract class DistributedCollectors {
         return AggregateOperation.withCreate(collector.supplier())
                                  .andAccumulate(collector.accumulator())
                                  .andCombine((l, r) -> collector.combiner().apply(l, r))
-                                 .andFinish(collector.finisher());
+                                 .andExportFinish(collector.finisher());
     }
 
     private static <T> DistributedSupplier<MutableReference<T>> refSupplier(T obj) {
