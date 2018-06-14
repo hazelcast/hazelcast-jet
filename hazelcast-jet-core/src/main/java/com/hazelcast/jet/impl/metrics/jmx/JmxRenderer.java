@@ -16,13 +16,14 @@
 
 package com.hazelcast.jet.impl.metrics.jmx;
 
+import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.internal.metrics.MetricsUtil;
 import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,9 +35,11 @@ public class JmxRenderer implements ProbeRenderer {
 
     private final MBeanServer platformMBeanServer;
     private final ConcurrentMap<String, Metric> chm = new ConcurrentHashMap<>();
+    private final String instanceNameEscaped;
 
-    public JmxRenderer() {
+    public JmxRenderer(HazelcastInstance instance) {
         platformMBeanServer = ManagementFactory.getPlatformMBeanServer();
+        instanceNameEscaped = escapeObjectNameValue(instance.getName());
     }
 
     @Override
@@ -44,11 +47,12 @@ public class JmxRenderer implements ProbeRenderer {
         chm.computeIfAbsent(name, k -> {
             List<Entry<String, String>> tagsList = name.startsWith("[") && name.endsWith("]")
                     ? MetricsUtil.parseMetricName(name)
-                    : Collections.singletonList(entry("metric", name));
+                    : parseOldMetricName(name);
             StringBuilder mBeanTags = new StringBuilder();
             String unit = "unknown";
             String module = null;
             String metric = null;
+            int level = 0;
 
             for (Entry<String, String> entry : tagsList) {
                 switch (entry.getKey()) {
@@ -65,9 +69,15 @@ public class JmxRenderer implements ProbeRenderer {
                         if (mBeanTags.length() > 0) {
                             mBeanTags.append(',');
                         }
-                        mBeanTags.append(MetricsUtil.escapeMetricNamePart(entry.getKey()))
-                                 .append('=')
-                                 .append(MetricsUtil.escapeMetricNamePart(entry.getValue()));
+                        mBeanTags.append("level")
+                                 .append(level++)
+                                 .append('=');
+                        if (entry.getKey().length() == 0) {
+                            // key is empty for old metric names (see parseOldMetricName)
+                            mBeanTags.append(escapeObjectNameValue(entry.getValue()));
+                        } else {
+                            mBeanTags.append(escapeObjectNameValue(entry.getKey() + '=' + entry.getValue()));
+                        }
                 }
             }
             assert metric != null : "metric == null";
@@ -78,11 +88,11 @@ public class JmxRenderer implements ProbeRenderer {
                 objectNameStr.append('.').append(module);
             }
             objectNameStr.append(":type=Metrics");
-            objectNameStr.append(",name=").append(escapeObjectNameValue(metric));
+            objectNameStr.append(",instance=").append(instanceNameEscaped);
             if (mBeanTags.length() > 0) {
-                objectNameStr.append(",tags=")
-                        .append(escapeObjectNameValue(mBeanTags.toString()));
+                objectNameStr.append(',').append(mBeanTags);
             }
+            objectNameStr.append(",name=").append(escapeObjectNameValue(metric));
 
             Metric bean = new Metric(unit);
             try {
@@ -94,6 +104,31 @@ public class JmxRenderer implements ProbeRenderer {
         }).setValue(value);
     }
 
+    private List<Entry<String, String>> parseOldMetricName(String name) {
+        List<Entry<String, String>> res = new ArrayList<>();
+        boolean inBracket = false;
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < name.length(); i++) {
+            char ch = name.charAt(i);
+            if (ch == '.' && !inBracket) {
+                res.add(entry("", builder.toString()));
+                builder.setLength(0);
+            } else {
+                builder.append(ch);
+                if (ch == '[') {
+                    inBracket = true;
+                } else if (ch == ']') {
+                    inBracket = false;
+                }
+            }
+        }
+        // trailing entry
+        if (builder.length() > 0) {
+            res.add(entry("metric", builder.toString()));
+        }
+        return res;
+    }
+
     @Override
     public void renderDouble(String name, double value) {
 
@@ -101,7 +136,7 @@ public class JmxRenderer implements ProbeRenderer {
 
     @Override
     public void renderException(String name, Exception e) {
-
+        e.printStackTrace();
     }
 
     @Override

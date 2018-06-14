@@ -77,7 +77,7 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
             logger.info("Configuring metrics collection, collection interval=" + config.getCollectionIntervalSeconds()
                     + " seconds and retention=" + config.getRetentionSeconds() + " seconds");
             int[] lastSize = {INITIAL_BUFFER_SIZE};
-            JmxRenderer jmxRenderer = new JmxRenderer();
+            JmxRenderer jmxRenderer = new JmxRenderer(nodeEngine.getHazelcastInstance());
             nodeEngine.getExecutionService().scheduleWithRepetition("MetricsForManCenterCollection", () -> {
                 CompressingProbeRenderer renderer = new CompressingProbeRenderer(
                         lastSize[0] * SIZE_FACTOR_NUMERATOR / SIZE_FACTOR_DENOMINATOR);
