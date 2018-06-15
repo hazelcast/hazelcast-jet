@@ -18,6 +18,7 @@ package com.hazelcast.jet.accumulator;
 
 import com.hazelcast.jet.JetException;
 import com.hazelcast.nio.ObjectDataOutput;
+
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Objects;

@@ -39,7 +39,6 @@ import com.hazelcast.jet.pipeline.JoinClause;
 import javax.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.function.BiConsumer;
 
 import static com.hazelcast.jet.impl.pipeline.JetEvent.jetEvent;
 

@@ -17,7 +17,6 @@
 package com.hazelcast.jet.aggregate;
 
 import com.hazelcast.jet.function.DistributedBiConsumer;
-import com.hazelcast.jet.function.DistributedFunction;
 
 import javax.annotation.Nonnull;
 
