@@ -16,7 +16,8 @@
 
 package com.hazelcast.jet.impl.metrics;
 
-import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
+import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.LoggingService;
 import com.hazelcast.nio.Bits;
 
 import java.io.ByteArrayInputStream;
@@ -26,17 +27,24 @@ import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Map.Entry;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterInputStream;
 
 import static com.hazelcast.internal.metrics.MetricsUtil.escapeMetricNamePart;
+import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 
 /**
  * Probe renderer to serialize metrics to byte[] to be sent to ManCenter.
  * Additionally, it converts legacy metric names to {@code [metric=<oldName>]}.
  */
-public class CompressingProbeRenderer implements ProbeRenderer {
+public class CompressingProbeRenderer implements MetricsRenderPlugin {
+
+    private static final int INITIAL_BUFFER_SIZE = 2 << 16;
+    private static final int SIZE_FACTOR_NUMERATOR = 11;
+    private static final int SIZE_FACTOR_DENOMINATOR = 10;
 
     private static final int BITS_IN_BYTE = 8;
     private static final int BYTE_MASK = 0xff;
@@ -49,18 +57,35 @@ public class CompressingProbeRenderer implements ProbeRenderer {
 
     private static final short BINARY_FORMAT_VERSION = 1;
 
-    private DataOutputStream dos;
-    private ByteArrayOutputStream baos;
-    private String lastName = "";
-    private int count;
+    private final ConcurrentArrayRingbuffer<Entry<Long, byte[]>> metricsJournal;
+    private final ILogger logger;
 
-    public CompressingProbeRenderer(int estimatedBytes) {
+    private DataOutputStream dos;
+    private ByteArrayOutputStream baos = new ByteArrayOutputStream(INITIAL_BUFFER_SIZE);
+    private String lastName;
+    private int count;
+    private int lastSize;
+
+    public CompressingProbeRenderer(
+            LoggingService loggingService,
+            ConcurrentArrayRingbuffer<Entry<Long, byte[]>> metricsJournal
+    ) {
+        this.metricsJournal = metricsJournal;
+        logger = loggingService.getLogger(getClass());
+        reset(INITIAL_BUFFER_SIZE);
+    }
+
+    private void reset(int estimatedBytes) {
         Deflater compressor = new Deflater();
         compressor.setLevel(Deflater.BEST_SPEED);
-        baos = new ByteArrayOutputStream(estimatedBytes);
+        lastSize = baos.size();
+        // TODO shrink the buffer based on estimatedSize. We don't know the allocated capacity though
+        baos.reset();
         baos.write((BINARY_FORMAT_VERSION >>> BITS_IN_BYTE) & BYTE_MASK);
         baos.write(BINARY_FORMAT_VERSION & BYTE_MASK);
         dos = new DataOutputStream(new DeflaterOutputStream(baos, compressor));
+        count = 0;
+        lastName = "";
     }
 
     @Override
@@ -108,29 +133,24 @@ public class CompressingProbeRenderer implements ProbeRenderer {
     }
 
     @Override
-    public void renderException(String name, Exception e) {
-        // ignore
-    }
-
-    @Override
-    public void renderNoValue(String name) {
-        // ignore
+    public void afterEnd() {
+        byte[] blob = getRenderedBlob();
+        metricsJournal.add(entry(System.currentTimeMillis(), blob));
+        logFine(logger, "Collected %,d metrics, %,d bytes", getCount(), blob.length);
+        reset(lastSize * SIZE_FACTOR_NUMERATOR / SIZE_FACTOR_DENOMINATOR);
     }
 
     public int getCount() {
         return count;
     }
 
-    public byte[] getRenderedBlob() {
+    private byte[] getRenderedBlob() {
         try {
             dos.close();
-            return baos.toByteArray();
         } catch (IOException e) {
             throw new RuntimeException(e); // should never be thrown
-        } finally {
-            dos = null;
-            baos = null;
         }
+        return baos.toByteArray();
     }
 
     static Iterator<Metric> decompressingIterator(byte[] bytes) {

@@ -18,23 +18,25 @@ package com.hazelcast.jet.impl.metrics.jmx;
 
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.internal.metrics.MetricsUtil;
-import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
+import com.hazelcast.jet.impl.metrics.MetricsRenderPlugin;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 import static com.hazelcast.jet.Util.entry;
 
-public class JmxRenderer implements ProbeRenderer {
+public class JmxRenderer implements MetricsRenderPlugin {
 
     private final MBeanServer platformMBeanServer;
-    private final ConcurrentMap<String, Metric> chm = new ConcurrentHashMap<>();
+    private final Map<String, MetricData> metricNameToMetricData = new HashMap<>();
+    private final Map<String, MetricsDynamicMBean> mBeans = new HashMap<>();
     private final String instanceNameEscaped;
 
     public JmxRenderer(HazelcastInstance instance) {
@@ -43,15 +45,77 @@ public class JmxRenderer implements ProbeRenderer {
     }
 
     @Override
-    public void renderLong(String name, long value) {
-        chm.computeIfAbsent(name, k -> {
-            List<Entry<String, String>> tagsList = name.startsWith("[") && name.endsWith("]")
-                    ? MetricsUtil.parseMetricName(name)
-                    : parseOldMetricName(name);
+    public void renderLong(String metricName, long value) {
+        renderNumber(metricName, value);
+    }
+
+    @Override
+    public void renderDouble(String metricName, double value) {
+        renderNumber(metricName, value);
+    }
+
+    private void renderNumber(String metricName, Number value) {
+        MetricData metricData = metricNameToMetricData.computeIfAbsent(metricName,
+                n -> new MetricData(n, instanceNameEscaped));
+        assert !metricData.wasPresent : "metric '" + metricName + "' was rendered twice";
+        metricData.wasPresent = true;
+        mBeans.computeIfAbsent(metricData.objectName, objectNameStr -> {
+            MetricsDynamicMBean bean = new MetricsDynamicMBean();
+            try {
+                platformMBeanServer.registerMBean(bean, new ObjectName(objectNameStr));
+                return bean;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).setMetricValue(metricData.metric, metricData.unit, value);
+    }
+
+    @Override
+    public void afterEnd() {
+        // remove metrics that weren't present in current rendering
+        for (Iterator<MetricData> iterator = metricNameToMetricData.values().iterator(); iterator.hasNext(); ) {
+            MetricData metricData = iterator.next();
+            if (!metricData.wasPresent) {
+                MetricsDynamicMBean mBean = mBeans.get(metricData.objectName);
+                mBean.removeMetric(metricData.metric);
+                if (mBean.numAttributes() == 0) {
+                    iterator.remove();
+                }
+            } else {
+                metricData.wasPresent = false;
+            }
+        }
+    }
+
+    @SuppressWarnings("checkstyle:BooleanExpressionComplexity")
+    private static String escapeObjectNameValue(String name) {
+        if (name.indexOf(',') < 0
+                && name.indexOf('=') < 0
+                && name.indexOf(':') < 0
+                && name.indexOf('*') < 0
+                && name.indexOf('?') < 0
+                && name.indexOf('\"') < 0
+                && name.indexOf('\n') < 0) {
+            return name;
+        }
+        return "\"" + name.replace("\"", "\\\"").replace("\n", "\\n ") + '"';
+    }
+
+    private static class MetricData {
+        String objectName;
+        String metric;
+        String unit;
+        boolean wasPresent;
+
+        @SuppressWarnings("checkstyle:ExecutableStatementCount")
+        MetricData(String metricName, String instanceNameEscaped) {
+            List<Entry<String, String>> tagsList = metricName.startsWith("[") && metricName.endsWith("]")
+                    ? MetricsUtil.parseMetricName(metricName)
+                    : parseOldMetricName(metricName);
             StringBuilder mBeanTags = new StringBuilder();
-            String unit = "unknown";
             String module = null;
-            String metric = null;
+            metric = null;
+            unit = "unknown";
             int tag = 0;
 
             for (Entry<String, String> entry : tagsList) {
@@ -92,69 +156,32 @@ public class JmxRenderer implements ProbeRenderer {
             if (mBeanTags.length() > 0) {
                 objectNameStr.append(',').append(mBeanTags);
             }
-            objectNameStr.append(",name=").append(escapeObjectNameValue(metric));
+            objectName = objectNameStr.toString();
+        }
 
-            Metric bean = new Metric(unit);
-            try {
-                platformMBeanServer.registerMBean(bean, new ObjectName(objectNameStr.toString()));
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-            return bean;
-        }).setValue(value);
-    }
-
-    private List<Entry<String, String>> parseOldMetricName(String name) {
-        List<Entry<String, String>> res = new ArrayList<>();
-        boolean inBracket = false;
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < name.length(); i++) {
-            char ch = name.charAt(i);
-            if (ch == '.' && !inBracket) {
-                res.add(entry("", builder.toString()));
-                builder.setLength(0);
-            } else {
-                builder.append(ch);
-                if (ch == '[') {
-                    inBracket = true;
-                } else if (ch == ']') {
-                    inBracket = false;
+        private static List<Entry<String, String>> parseOldMetricName(String name) {
+            List<Entry<String, String>> res = new ArrayList<>();
+            boolean inBracket = false;
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < name.length(); i++) {
+                char ch = name.charAt(i);
+                if (ch == '.' && !inBracket) {
+                    res.add(entry("", builder.toString()));
+                    builder.setLength(0);
+                } else {
+                    builder.append(ch);
+                    if (ch == '[') {
+                        inBracket = true;
+                    } else if (ch == ']') {
+                        inBracket = false;
+                    }
                 }
             }
+            // trailing entry
+            if (builder.length() > 0) {
+                res.add(entry("metric", builder.toString()));
+            }
+            return res;
         }
-        // trailing entry
-        if (builder.length() > 0) {
-            res.add(entry("metric", builder.toString()));
-        }
-        return res;
-    }
-
-    @Override
-    public void renderDouble(String name, double value) {
-
-    }
-
-    @Override
-    public void renderException(String name, Exception e) {
-        e.printStackTrace();
-    }
-
-    @Override
-    public void renderNoValue(String name) {
-
-    }
-
-    @SuppressWarnings("checkstyle:BooleanExpressionComplexity")
-    private String escapeObjectNameValue(String name) {
-        if (name.indexOf(',') < 0
-                && name.indexOf('=') < 0
-                && name.indexOf(':') < 0
-                && name.indexOf('*') < 0
-                && name.indexOf('?') < 0
-                && name.indexOf('\"') < 0
-                && name.indexOf('\n') < 0) {
-            return name;
-        }
-        return "\"" + name.replace("\"", "\\\"").replace("\n", "\\n ") + '"';
     }
 }

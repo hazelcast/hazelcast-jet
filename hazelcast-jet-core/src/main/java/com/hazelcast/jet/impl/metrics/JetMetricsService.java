@@ -19,21 +19,21 @@ package com.hazelcast.jet.impl.metrics;
 import com.hazelcast.config.Config;
 import com.hazelcast.internal.diagnostics.Diagnostics;
 import com.hazelcast.internal.metrics.ProbeLevel;
+import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
 import com.hazelcast.jet.config.MetricsConfig;
 import com.hazelcast.jet.impl.metrics.jmx.JmxRenderer;
-import com.hazelcast.jet.impl.metrics.jmx.JmxRenderer2;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.ConfigurableService;
 import com.hazelcast.spi.ManagedService;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
-import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
+import static java.util.Arrays.asList;
 
 /**
  * A service to render metrics at regular intervals and store them in a
@@ -42,10 +42,6 @@ import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 public class JetMetricsService implements ManagedService, ConfigurableService<MetricsConfig> {
 
     public static final String SERVICE_NAME = "hz:impl:jetMetricsService";
-
-    private static final int INITIAL_BUFFER_SIZE = 2 << 16;
-    private static final int SIZE_FACTOR_NUMERATOR = 11;
-    private static final int SIZE_FACTOR_DENOMINATOR = 10;
 
     private final NodeEngineImpl nodeEngine;
     private final ILogger logger;
@@ -77,17 +73,41 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
             metricsJournal = new ConcurrentArrayRingbuffer<>(journalSize);
             logger.info("Configuring metrics collection, collection interval=" + config.getCollectionIntervalSeconds()
                     + " seconds and retention=" + config.getRetentionSeconds() + " seconds");
-            int[] lastSize = {INITIAL_BUFFER_SIZE};
-            JmxRenderer2 jmxRenderer = new JmxRenderer2(nodeEngine.getHazelcastInstance());
+            JmxRenderer jmxRenderer = new JmxRenderer(nodeEngine.getHazelcastInstance());
+            CompressingProbeRenderer mcRenderer = new CompressingProbeRenderer(
+                    this.nodeEngine.getLoggingService(), metricsJournal);
+
+            List<MetricsRenderPlugin> plugins = asList(jmxRenderer, mcRenderer);
+            ProbeRenderer renderer = new ProbeRenderer() {
+                @Override
+                public void renderLong(String name, long value) {
+                    for (MetricsRenderPlugin plugin : plugins) {
+                        plugin.renderLong(name, value);
+                    }
+                }
+
+                @Override
+                public void renderDouble(String name, double value) {
+                    for (MetricsRenderPlugin plugin : plugins) {
+                        plugin.renderDouble(name, value);
+                    }
+                }
+
+                @Override
+                public void renderException(String name, Exception e) {
+                    logger.warning("Error when rendering '" + name + '\'', e);
+                }
+
+                @Override
+                public void renderNoValue(String name) {
+                }
+            };
+
             nodeEngine.getExecutionService().scheduleWithRepetition("MetricsForManCenterCollection", () -> {
-                CompressingProbeRenderer renderer = new CompressingProbeRenderer(
-                        lastSize[0] * SIZE_FACTOR_NUMERATOR / SIZE_FACTOR_DENOMINATOR);
                 this.nodeEngine.getMetricsRegistry().render(renderer);
-                this.nodeEngine.getMetricsRegistry().render(jmxRenderer);
-                byte[] blob = renderer.getRenderedBlob();
-                lastSize[0] = blob.length;
-                metricsJournal.add(entry(System.currentTimeMillis(), blob));
-                logFine(logger, "Collected %,d metrics, %,d bytes", renderer.getCount(), blob.length);
+                for (MetricsRenderPlugin plugin : plugins) {
+                    plugin.afterEnd();
+                }
             }, 1, config.getCollectionIntervalSeconds(), TimeUnit.SECONDS);
         }
     }

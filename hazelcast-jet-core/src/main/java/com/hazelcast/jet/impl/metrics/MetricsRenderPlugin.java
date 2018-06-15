@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.metrics.jmx;
+package com.hazelcast.jet.impl.metrics;
 
-public interface MetricMBean {
-    long getValue();
-    String getUnit();
+public interface MetricsRenderPlugin {
+    void renderLong(String name, long value);
+    void renderDouble(String name, double value);
+
+    void afterEnd();
 }

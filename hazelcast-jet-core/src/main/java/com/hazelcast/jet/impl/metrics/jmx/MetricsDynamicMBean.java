@@ -16,28 +16,41 @@
 
 package com.hazelcast.jet.impl.metrics.jmx;
 
+import com.hazelcast.jet.datamodel.Tuple2;
+
 import javax.management.Attribute;
 import javax.management.AttributeList;
 import javax.management.DynamicMBean;
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
 
+import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static java.util.stream.Collectors.toCollection;
 
-public class MetricDynamicMBean implements DynamicMBean {
+public class MetricsDynamicMBean implements DynamicMBean {
 
-    private final Map<String, Long> metrics = new HashMap<>();
+    private final ConcurrentMap<String, Tuple2<String, AtomicReference<Number>>> metrics = new ConcurrentHashMap<>();
 
-    void addMetric(String name, long value) {
-        metrics.put(name, value);
+    /**
+     * Sets metric value and adds it if necessary.
+     */
+    void setMetricValue(String name, String unit, Number value) {
+        metrics.computeIfAbsent(name, k -> tuple2(unit, new AtomicReference<>()))
+               .f1().lazySet(value);
+    }
+
+    void removeMetric(String name) {
+        metrics.remove(name);
     }
 
     @Override
     public Object getAttribute(String attribute) {
-        return metrics.get(attribute);
+        return metrics.get(attribute).f1();
     }
 
     @Override
@@ -47,10 +60,9 @@ public class MetricDynamicMBean implements DynamicMBean {
 
     @Override
     public AttributeList getAttributes(String[] attributes) {
-        AttributeList list = Arrays.stream(attributes)
-                .map(a -> new Attribute(a, getAttribute(a)))
-                .collect(toCollection(AttributeList::new));
-        return list;
+        return Arrays.stream(attributes)
+                     .map(a -> new Attribute(a, getAttribute(a)))
+                     .collect(toCollection(AttributeList::new));
     }
 
     @Override
@@ -65,17 +77,17 @@ public class MetricDynamicMBean implements DynamicMBean {
 
     @Override
     public MBeanInfo getMBeanInfo() {
-        return new MBeanInfo("Metric", "", attributeInfos(), null, null, null, null);
-    }
-
-    private MBeanAttributeInfo[] attributeInfos() {
         MBeanAttributeInfo[] array = new MBeanAttributeInfo[metrics.size()];
         int i = 0;
-        for (String metric : metrics.keySet()) {
-            array[i++] = new MBeanAttributeInfo(metric, "", "", true, false, false);
+        for (Entry<String, Tuple2<String, AtomicReference<Number>>> entry : metrics.entrySet()) {
+            array[i++] = new MBeanAttributeInfo(entry.getKey(), "", "Unit: " + entry.getValue().f0(),
+                    true, false, false);
         }
 
-        return array;
+        return new MBeanInfo("Metric", "", array, null, null, null, null);
     }
 
+    int numAttributes() {
+        return metrics.size();
+    }
 }
