@@ -20,5 +20,5 @@ public interface MetricsRenderPlugin {
     void renderLong(String name, long value);
     void renderDouble(String name, double value);
 
-    void afterEnd();
+    void onRenderingComplete();
 }

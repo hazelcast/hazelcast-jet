@@ -32,12 +32,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static java.util.stream.Collectors.toCollection;
 
-public class MetricsDynamicMBean implements DynamicMBean {
+public class MetricsMBean implements DynamicMBean {
 
+    // we add attributes here while they might be read in parallel by JMX client
     private final ConcurrentMap<String, Tuple2<String, AtomicReference<Number>>> metrics = new ConcurrentHashMap<>();
 
     /**
-     * Sets metric value and adds it if necessary.
+     * Adds a metric if necessary and sets its value.
      */
     void setMetricValue(String name, String unit, Number value) {
         metrics.computeIfAbsent(name, k -> tuple2(unit, new AtomicReference<>()))

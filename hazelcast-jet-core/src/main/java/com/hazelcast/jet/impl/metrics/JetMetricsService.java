@@ -27,13 +27,14 @@ import com.hazelcast.spi.ConfigurableService;
 import com.hazelcast.spi.ManagedService;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
+import com.hazelcast.spi.properties.GroupProperty;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-
-import static java.util.Arrays.asList;
 
 /**
  * A service to render metrics at regular intervals and store them in a
@@ -53,6 +54,7 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
      */
     private ConcurrentArrayRingbuffer<Map.Entry<Long, byte[]>> metricsJournal;
     private MetricsConfig config;
+    private volatile ScheduledFuture<?> scheduledFuture;
 
     public JetMetricsService(NodeEngine nodeEngine) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
@@ -66,50 +68,54 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
 
     @Override
     public void init(NodeEngine nodeEngine, Properties properties) {
-        if (config.isEnabled()) {
-            int journalSize = Math.max(
-                    1, (int) Math.ceil((double) config.getRetentionSeconds() / config.getCollectionIntervalSeconds())
-            );
-            metricsJournal = new ConcurrentArrayRingbuffer<>(journalSize);
-            logger.info("Configuring metrics collection, collection interval=" + config.getCollectionIntervalSeconds()
-                    + " seconds and retention=" + config.getRetentionSeconds() + " seconds");
-            JmxRenderer jmxRenderer = new JmxRenderer(nodeEngine.getHazelcastInstance());
-            CompressingProbeRenderer mcRenderer = new CompressingProbeRenderer(
-                    this.nodeEngine.getLoggingService(), metricsJournal);
-
-            List<MetricsRenderPlugin> plugins = asList(jmxRenderer, mcRenderer);
-            ProbeRenderer renderer = new ProbeRenderer() {
-                @Override
-                public void renderLong(String name, long value) {
-                    for (MetricsRenderPlugin plugin : plugins) {
-                        plugin.renderLong(name, value);
-                    }
-                }
-
-                @Override
-                public void renderDouble(String name, double value) {
-                    for (MetricsRenderPlugin plugin : plugins) {
-                        plugin.renderDouble(name, value);
-                    }
-                }
-
-                @Override
-                public void renderException(String name, Exception e) {
-                    logger.warning("Error when rendering '" + name + '\'', e);
-                }
-
-                @Override
-                public void renderNoValue(String name) {
-                }
-            };
-
-            nodeEngine.getExecutionService().scheduleWithRepetition("MetricsForManCenterCollection", () -> {
-                this.nodeEngine.getMetricsRegistry().render(renderer);
-                for (MetricsRenderPlugin plugin : plugins) {
-                    plugin.afterEnd();
-                }
-            }, 1, config.getCollectionIntervalSeconds(), TimeUnit.SECONDS);
+        if (!config.isEnabled()) {
+            return;
         }
+
+        int journalSize = Math.max(
+                1, (int) Math.ceil((double) config.getRetentionSeconds() / config.getCollectionIntervalSeconds())
+        );
+        metricsJournal = new ConcurrentArrayRingbuffer<>(journalSize);
+        logger.info("Configuring metrics collection, collection interval=" + config.getCollectionIntervalSeconds()
+                + " seconds and retention=" + config.getRetentionSeconds() + " seconds");
+        List<MetricsRenderPlugin> plugins = new ArrayList<>();
+        plugins.add(new CompressingProbeRenderer(this.nodeEngine.getLoggingService(), metricsJournal));
+        if (nodeEngine.getProperties().getBoolean(GroupProperty.ENABLE_JMX)) {
+            plugins.add(new JmxRenderer(nodeEngine.getHazelcastInstance()));
+        }
+
+        // a renderer to render all the plugins
+        ProbeRenderer renderer = new ProbeRenderer() {
+            @Override
+            public void renderLong(String name, long value) {
+                for (MetricsRenderPlugin plugin : plugins) {
+                    plugin.renderLong(name, value);
+                }
+            }
+
+            @Override
+            public void renderDouble(String name, double value) {
+                for (MetricsRenderPlugin plugin : plugins) {
+                    plugin.renderDouble(name, value);
+                }
+            }
+
+            @Override
+            public void renderException(String name, Exception e) {
+                logger.warning("Error when rendering '" + name + '\'', e);
+            }
+
+            @Override
+            public void renderNoValue(String name) {
+            }
+        };
+
+        scheduledFuture = nodeEngine.getExecutionService().scheduleWithRepetition("MetricsForManCenterCollection", () -> {
+            this.nodeEngine.getMetricsRegistry().render(renderer);
+            for (MetricsRenderPlugin plugin : plugins) {
+                plugin.onRenderingComplete();
+            }
+        }, 1, config.getCollectionIntervalSeconds(), TimeUnit.SECONDS);
     }
 
     public ConcurrentArrayRingbuffer.RingbufferSlice<Map.Entry<Long, byte[]>> readMetrics(long startSequence) {
@@ -122,6 +128,10 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
 
     @Override
     public void shutdown(boolean terminate) {
+        if (scheduledFuture != null) {
+            scheduledFuture.cancel(false);
+            scheduledFuture = null;
+        }
     }
 
     // apply MetricsConfig to HZ properties

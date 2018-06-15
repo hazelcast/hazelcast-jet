@@ -21,6 +21,7 @@ import com.hazelcast.internal.metrics.MetricsUtil;
 import com.hazelcast.jet.impl.metrics.MetricsRenderPlugin;
 
 import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
@@ -32,12 +33,19 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
 
+/**
+ * Renderer to create, register and unregister mBeans for metrics as they are
+ * rendered.
+ */
 public class JmxRenderer implements MetricsRenderPlugin {
 
     private final MBeanServer platformMBeanServer;
-    private final Map<String, MetricData> metricNameToMetricData = new HashMap<>();
-    private final Map<String, MetricsDynamicMBean> mBeans = new HashMap<>();
     private final String instanceNameEscaped;
+
+    /** key: metric name, value: MetricData */
+    private final Map<String, MetricData> metricNameToMetricData = new HashMap<>();
+    /** key: jmx object name, value: mBean */
+    private final Map<ObjectName, MetricsMBean> mBeans = new HashMap<>();
 
     public JmxRenderer(HazelcastInstance instance) {
         platformMBeanServer = ManagementFactory.getPlatformMBeanServer();
@@ -59,27 +67,36 @@ public class JmxRenderer implements MetricsRenderPlugin {
                 n -> new MetricData(n, instanceNameEscaped));
         assert !metricData.wasPresent : "metric '" + metricName + "' was rendered twice";
         metricData.wasPresent = true;
-        mBeans.computeIfAbsent(metricData.objectName, objectNameStr -> {
-            MetricsDynamicMBean bean = new MetricsDynamicMBean();
+        MetricsMBean mBean = mBeans.computeIfAbsent(metricData.objectName, objectName -> {
+            MetricsMBean bean = new MetricsMBean();
             try {
-                platformMBeanServer.registerMBean(bean, new ObjectName(objectNameStr));
-                return bean;
+                platformMBeanServer.registerMBean(bean, objectName);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-        }).setMetricValue(metricData.metric, metricData.unit, value);
+            return bean;
+        });
+        mBean.setMetricValue(metricData.metric, metricData.unit, value);
     }
 
     @Override
-    public void afterEnd() {
+    public void onRenderingComplete() {
         // remove metrics that weren't present in current rendering
         for (Iterator<MetricData> iterator = metricNameToMetricData.values().iterator(); iterator.hasNext(); ) {
             MetricData metricData = iterator.next();
             if (!metricData.wasPresent) {
-                MetricsDynamicMBean mBean = mBeans.get(metricData.objectName);
+                iterator.remove();
+                // remove the metric from the bean
+                MetricsMBean mBean = mBeans.get(metricData.objectName);
                 mBean.removeMetric(metricData.metric);
+                // remove entire bean if no metric is left
                 if (mBean.numAttributes() == 0) {
-                    iterator.remove();
+                    mBeans.remove(metricData.objectName);
+                    try {
+                        platformMBeanServer.unregisterMBean(metricData.objectName);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             } else {
                 metricData.wasPresent = false;
@@ -102,7 +119,7 @@ public class JmxRenderer implements MetricsRenderPlugin {
     }
 
     private static class MetricData {
-        String objectName;
+        ObjectName objectName;
         String metric;
         String unit;
         boolean wasPresent;
@@ -156,7 +173,11 @@ public class JmxRenderer implements MetricsRenderPlugin {
             if (mBeanTags.length() > 0) {
                 objectNameStr.append(',').append(mBeanTags);
             }
-            objectName = objectNameStr.toString();
+            try {
+                objectName = new ObjectName(objectNameStr.toString());
+            } catch (MalformedObjectNameException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         private static List<Entry<String, String>> parseOldMetricName(String name) {

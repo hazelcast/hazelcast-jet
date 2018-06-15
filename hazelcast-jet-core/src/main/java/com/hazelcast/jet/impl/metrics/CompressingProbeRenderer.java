@@ -35,14 +35,15 @@ import java.util.zip.InflaterInputStream;
 import static com.hazelcast.internal.metrics.MetricsUtil.escapeMetricNamePart;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
+import static java.lang.Math.multiplyExact;
 
 /**
- * Probe renderer to serialize metrics to byte[] to be sent to ManCenter.
+ * Renderer to serialize metrics to byte[] to be read by ManCenter.
  * Additionally, it converts legacy metric names to {@code [metric=<oldName>]}.
  */
 public class CompressingProbeRenderer implements MetricsRenderPlugin {
 
-    private static final int INITIAL_BUFFER_SIZE = 2 << 16;
+    private static final int INITIAL_BUFFER_SIZE = 2 << 11; // 2kB
     private static final int SIZE_FACTOR_NUMERATOR = 11;
     private static final int SIZE_FACTOR_DENOMINATOR = 10;
 
@@ -61,7 +62,7 @@ public class CompressingProbeRenderer implements MetricsRenderPlugin {
     private final ILogger logger;
 
     private DataOutputStream dos;
-    private ByteArrayOutputStream baos = new ByteArrayOutputStream(INITIAL_BUFFER_SIZE);
+    private MorePublicByteArrayOutputStream baos = new MorePublicByteArrayOutputStream(INITIAL_BUFFER_SIZE);
     private String lastName;
     private int count;
     private int lastSize;
@@ -79,7 +80,10 @@ public class CompressingProbeRenderer implements MetricsRenderPlugin {
         Deflater compressor = new Deflater();
         compressor.setLevel(Deflater.BEST_SPEED);
         lastSize = baos.size();
-        // TODO shrink the buffer based on estimatedSize. We don't know the allocated capacity though
+        // shrink the `baos` if capacity is more than 50% larger than estimated size
+        if (baos.capacity() > multiplyExact(estimatedBytes, 3) / 2) {
+            baos = new MorePublicByteArrayOutputStream(estimatedBytes);
+        }
         baos.reset();
         baos.write((BINARY_FORMAT_VERSION >>> BITS_IN_BYTE) & BYTE_MASK);
         baos.write(BINARY_FORMAT_VERSION & BYTE_MASK);
@@ -133,11 +137,11 @@ public class CompressingProbeRenderer implements MetricsRenderPlugin {
     }
 
     @Override
-    public void afterEnd() {
+    public void onRenderingComplete() {
         byte[] blob = getRenderedBlob();
         metricsJournal.add(entry(System.currentTimeMillis(), blob));
         logFine(logger, "Collected %,d metrics, %,d bytes", getCount(), blob.length);
-        reset(lastSize * SIZE_FACTOR_NUMERATOR / SIZE_FACTOR_DENOMINATOR);
+        reset(blob.length * SIZE_FACTOR_NUMERATOR / SIZE_FACTOR_DENOMINATOR);
     }
 
     public int getCount() {
@@ -201,5 +205,15 @@ public class CompressingProbeRenderer implements MetricsRenderPlugin {
                 }
             }
         };
+    }
+
+    private static class MorePublicByteArrayOutputStream extends ByteArrayOutputStream {
+        MorePublicByteArrayOutputStream(int size) {
+            super(size);
+        }
+
+        int capacity() {
+            return buf.length;
+        }
     }
 }
