@@ -50,16 +50,16 @@ public class WindowGroupTransform<K, R, OUT> extends AbstractTransform {
     @Nonnull
     private final List<DistributedFunction<?, ? extends K>> keyFns;
     @Nonnull
-    private final AggregateOperation<?, R> aggrOp;
+    private final AggregateOperation<?, ? extends R> aggrOp;
     @Nonnull
-    private final KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn;
+    private final KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn;
 
     public WindowGroupTransform(
             @Nonnull List<Transform> upstream,
             @Nonnull WindowDefinition wDef,
             @Nonnull List<DistributedFunction<?, ? extends K>> keyFns,
-            @Nonnull AggregateOperation<?, R> aggrOp,
-            @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
+            @Nonnull AggregateOperation<?, ? extends R> aggrOp,
+            @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
     ) {
         super(createName(wDef), upstream);
         this.wDef = wDef;

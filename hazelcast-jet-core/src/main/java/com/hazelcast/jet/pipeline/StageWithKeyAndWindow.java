@@ -190,7 +190,7 @@ public interface StageWithKeyAndWindow<T, K> {
             @Nonnull StreamStageWithKey<T1, ? extends K> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, ?, ? extends R> aggrOp
     ) {
-        return this.<T1, R, TimestampedEntry<K, R>>aggregate2(stage1, aggrOp, TimestampedEntry::fromWindowResult);
+        return aggregate2(stage1, aggrOp, TimestampedEntry::fromWindowResult);
     }
 
     /**
@@ -253,7 +253,7 @@ public interface StageWithKeyAndWindow<T, K> {
     ) {
         KeyedWindowResultFunction<K, Tuple2<R0, R1>, TimestampedEntry<K, Tuple2<R0, R1>>> outputFn =
                 TimestampedEntry::fromWindowResult;
-        return this.aggregate2(stage1, aggregateOperation2(aggrOp0, aggrOp1, Tuple2::tuple2), outputFn);
+        return aggregate2(stage1, aggregateOperation2(aggrOp0, aggrOp1, Tuple2::tuple2), outputFn);
     }
 
     /**

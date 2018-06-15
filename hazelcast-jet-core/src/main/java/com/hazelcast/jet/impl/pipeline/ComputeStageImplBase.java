@@ -191,7 +191,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         checkSerializable(mapFn, "mapFn");
         checkSerializable(partitionKeyFn, "partitionKeyFn");
         DistributedBiFunction adaptedMapFn = fnAdapter.adaptMapUsingContextFn(mapFn);
-        DistributedFunction<?, ? extends K> adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
+        DistributedFunction adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
         return (RET) attach(
                 mapUsingContextPartitionedTransform(transform, contextFactory, adaptedMapFn, adaptedPartitionKeyFn),
                 fnAdapter);
@@ -207,7 +207,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         checkSerializable(filterFn, "filterFn");
         checkSerializable(partitionKeyFn, "partitionKeyFn");
         DistributedBiPredicate adaptedFilterFn = fnAdapter.adaptFilterUsingContextFn(filterFn);
-        DistributedFunction<?, ? extends K> adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
+        DistributedFunction adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
         return (RET) attach(
                 filterUsingPartitionedContextTransform(
                         transform, contextFactory, adaptedFilterFn, adaptedPartitionKeyFn),
@@ -224,7 +224,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         checkSerializable(flatMapFn, "flatMapFn");
         checkSerializable(partitionKeyFn, "partitionKeyFn");
         DistributedBiFunction adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingContextFn(flatMapFn);
-        DistributedFunction<?, ? extends K> adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
+        DistributedFunction adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
         return (RET) attach(
                 flatMapUsingPartitionedContextTransform(
                         transform, contextFactory, adaptedFlatMapFn, adaptedPartitionKeyFn),

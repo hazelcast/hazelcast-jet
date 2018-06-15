@@ -39,10 +39,9 @@ import com.hazelcast.jet.pipeline.JoinClause;
 import javax.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.function.Function;
+import java.util.function.BiConsumer;
 
 import static com.hazelcast.jet.impl.pipeline.JetEvent.jetEvent;
-import static com.hazelcast.jet.pipeline.JoinClause.onKeys;
 
 
 public class FunctionAdapter {
@@ -64,10 +63,10 @@ public class FunctionAdapter {
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    <T, R> DistributedFunction<?, ? extends Traverser<Object>> adaptFlatMapFn(
+    <T, R> DistributedFunction<?, ? extends Traverser<?>> adaptFlatMapFn(
             @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return (DistributedFunction<?, ? extends Traverser<Object>>) flatMapFn;
+        return flatMapFn;
     }
 
     @Nonnull
@@ -96,29 +95,30 @@ public class FunctionAdapter {
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    <T, R extends CharSequence> DistributedFunction<?, R> adaptToStringFn(
-            @Nonnull DistributedFunction<? super T, R> toStringFn
+    <T, R extends CharSequence> DistributedFunction<?, ? extends R> adaptToStringFn(
+            @Nonnull DistributedFunction<? super T, ? extends R> toStringFn
     ) {
         return toStringFn;
     }
 
     @Nonnull
-    public JoinClause adaptJoinClause(@Nonnull JoinClause joinClause) {
+    public <K, T0, T1, T1_OUT> JoinClause<? extends K, ?, ? super T1, ? extends T1_OUT>
+    adaptJoinClause(@Nonnull JoinClause<? extends K, ? super T0, ? super T1, ? extends T1_OUT> joinClause) {
         return joinClause;
     }
 
     @SuppressWarnings("unchecked")
-    public <T, T1, R> DistributedBiFunction<Object, T1, Object> adaptHashJoinOutputFn(
-            DistributedBiFunction<T, T1, R> mapToOutputFn
+    public <T, T1, R> DistributedBiFunction<?, ? super T1, ?> adaptHashJoinOutputFn(
+            DistributedBiFunction<? super T, ? super T1, ? extends R> mapToOutputFn
     ) {
-        return (DistributedBiFunction<Object, T1, Object>) mapToOutputFn;
+        return mapToOutputFn;
     }
 
     @SuppressWarnings("unchecked")
-    <T, T1, T2, R> DistributedTriFunction<Object, T1, T2, Object> adaptHashJoinOutputFn(
-            DistributedTriFunction<T, T1, T2, R> mapToOutputFn
+    <T, T1, T2, R> DistributedTriFunction<?, ? super T1, ? super T2, ?> adaptHashJoinOutputFn(
+            DistributedTriFunction<? super T, ? super T1, ? super T2, ? extends R> mapToOutputFn
     ) {
-        return (DistributedTriFunction<Object, T1, T2, Object>) mapToOutputFn;
+        return mapToOutputFn;
     }
 
     <R, OUT> WindowResultFunction<?, ?> adaptWindowResultFn(
@@ -197,116 +197,110 @@ public class FunctionAdapter {
 
 class JetEventFunctionAdapter extends FunctionAdapter {
     @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    <T, K> DistributedFunction<?, ? extends K> adaptKeyFn(@Nonnull DistributedFunction<? super T, ? extends K> keyFn) {
-        return e -> ((Function<Object, K>) keyFn).apply(((JetEvent) e).payload());
+    <T, K> DistributedFunction<? super JetEvent<T>, ? extends K> adaptKeyFn(
+            @Nonnull DistributedFunction<? super T, ? extends K> keyFn
+    ) {
+        return e -> keyFn.apply(e.payload());
     }
 
     @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    DistributedFunction<?, ?> adaptMapFn(@Nonnull DistributedFunction mapFn) {
+    <T, R> DistributedFunction<? super JetEvent<T>, ?> adaptMapFn(
+            @Nonnull DistributedFunction<? super T, ? extends R> mapFn
+    ) {
         return e -> {
-            Object result = mapFn.apply(((JetEvent) e).payload());
-            return result != null ? jetEvent(result, ((JetEvent) e).timestamp()) : null;
+            R result = mapFn.apply(e.payload());
+            return result != null ? jetEvent(result, e.timestamp()) : null;
         };
     }
 
     @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    DistributedPredicate<?> adaptFilterFn(@Nonnull DistributedPredicate filterFn) {
-        return e -> filterFn.test(((JetEvent) e).payload());
+    <T> DistributedPredicate<? super JetEvent<T>> adaptFilterFn(@Nonnull DistributedPredicate<? super T> filterFn) {
+        return e -> filterFn.test(e.payload());
     }
 
     @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    DistributedFunction<?, ? extends Traverser<Object>> adaptFlatMapFn(@Nonnull DistributedFunction flatMapFn) {
-        DistributedFunction<Object, Traverser> fn = (DistributedFunction<Object, Traverser>) flatMapFn;
-        return e -> fn.apply(((JetEvent) e).payload()).map(r -> jetEvent(r, ((JetEvent) e).timestamp()));
+    <T, R> DistributedFunction<? super JetEvent<T>, Traverser<?>> adaptFlatMapFn(
+            @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
+    ) {
+        return e -> flatMapFn.apply(e.payload()).map(r -> jetEvent(r, e.timestamp()));
     }
 
     @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    DistributedBiFunction<?, ?, ?> adaptMapUsingContextFn(@Nonnull DistributedBiFunction mapFn) {
+    <C, T, R> DistributedBiFunction<? super C, ? super JetEvent<T>, ? extends JetEvent<R>> adaptMapUsingContextFn(
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
+    ) {
         return (context, e) -> {
-            Object result = mapFn.apply(context, ((JetEvent) e).payload());
-            return result != null ? jetEvent(result, ((JetEvent) e).timestamp()) : null;
+            R result = mapFn.apply(context, e.payload());
+            return result != null ? jetEvent(result, e.timestamp()) : null;
         };
     }
 
     @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    <C, T> DistributedBiPredicate<? super C, ?> adaptFilterUsingContextFn(
+    <C, T> DistributedBiPredicate<? super C, ? super JetEvent<T>> adaptFilterUsingContextFn(
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     ) {
-        return (context, e) -> filterFn.test(context, ((JetEvent<T>) e).payload());
+        return (context, e) -> filterFn.test(context, e.payload());
     }
 
     @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    <C, T, R> DistributedBiFunction<? super C, Object, ? extends Traverser<?>> adaptFlatMapUsingContextFn(
+    <C, T, R> DistributedBiFunction<? super C, ? super JetEvent<T>, ? extends Traverser<JetEvent<R>>>
+    adaptFlatMapUsingContextFn(
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        DistributedBiFunction<C, Object, Traverser> fn = (DistributedBiFunction<C, Object, Traverser>) flatMapFn;
-        return (context, e) -> fn.apply(context, ((JetEvent) e).payload())
-                                 .map(r -> jetEvent(r, ((JetEvent) e).timestamp()));
+        return (context, e) -> flatMapFn.apply(context, e.payload()).map(r -> jetEvent(r, e.timestamp()));
     }
 
     @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    <T, R extends CharSequence> DistributedFunction<?, R> adaptToStringFn(
-            @Nonnull DistributedFunction<? super T, R> toStringFn
+    <T, STR extends CharSequence> DistributedFunction<? super JetEvent<T>, ? extends STR> adaptToStringFn(
+            @Nonnull DistributedFunction<? super T, ? extends STR> toStringFn
     ) {
-        return e -> toStringFn.apply((T) (((JetEvent) e).payload()));
+        return e -> toStringFn.apply(e.payload());
     }
 
     @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    public JoinClause adaptJoinClause(@Nonnull JoinClause joinClause) {
-        return onKeys(adaptKeyFn(joinClause.leftKeyFn()), joinClause.rightKeyFn())
+    public <K, T0, T1, T1_OUT> JoinClause<? extends K, ? super JetEvent<T0>, ? super T1, ? extends T1_OUT>
+    adaptJoinClause(
+            @Nonnull JoinClause<? extends K, ? super T0, ? super T1, ? extends T1_OUT> joinClause
+    ) {
+        return JoinClause.<K, JetEvent<T0>, T1>onKeys(adaptKeyFn(joinClause.leftKeyFn()), joinClause.rightKeyFn())
                 .projecting(joinClause.rightProjectFn());
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public <T, T1, R> DistributedBiFunction<Object, T1, Object> adaptHashJoinOutputFn(
-            DistributedBiFunction<T, T1, R> mapToOutputFn
+    public <T, T1, R> DistributedBiFunction<? super JetEvent<T>, ? super T1, ?> adaptHashJoinOutputFn(
+            DistributedBiFunction<? super T, ? super T1, ? extends R> mapToOutputFn
     ) {
-        return (e, t1) -> {
-            JetEvent<T> jetEvent = (JetEvent) e;
-            return jetEvent(mapToOutputFn.apply(jetEvent.payload(), t1), jetEvent.timestamp());
-        };
+        return (e, t1) -> jetEvent(mapToOutputFn.apply(e.payload(), t1), e.timestamp());
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    <T, T1, T2, R> DistributedTriFunction<Object, T1, T2, Object> adaptHashJoinOutputFn(
-            DistributedTriFunction<T, T1, T2, R> mapToOutputFn
+    <T, T1, T2, R> DistributedTriFunction<? super JetEvent<T>, ? super T1, ? super T2, ?> adaptHashJoinOutputFn(
+            DistributedTriFunction<? super T, ? super T1, ? super T2, ? extends R> mapToOutputFn
     ) {
-        return (e, t1, t2) -> {
-            JetEvent<T> jetEvent = (JetEvent) e;
-            return jetEvent(mapToOutputFn.apply(jetEvent.payload(), t1, t2), jetEvent.timestamp());
-        };
+        return (e, t1, t2) -> jetEvent(mapToOutputFn.apply(e.payload(), t1, t2), e.timestamp());
     }
 
     @Override
-    <R, OUT> WindowResultFunction<? super R, JetEvent<OUT>> adaptWindowResultFn(
+    <R, OUT> WindowResultFunction<? super R, ? extends JetEvent<OUT>> adaptWindowResultFn(
             WindowResultFunction<? super R, ? extends OUT> windowResultFn
     ) {
-        return (long winStart, long winEnd, R windowResult) ->
+        return (winStart, winEnd, windowResult) ->
                 jetEvent(windowResultFn.apply(winStart, winEnd, windowResult), winEnd);
     }
 
     @Override
-    <K, R, OUT> KeyedWindowResultFunction<? super K, ? super R, JetEvent<OUT>> adaptKeyedWindowResultFn(
+    <K, R, OUT> KeyedWindowResultFunction<? super K, ? super R, ? extends JetEvent<OUT>> adaptKeyedWindowResultFn(
             KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> keyedWindowResultFn
     ) {
-        return (long winStart, long winEnd, K key, R windowResult) ->
+        return (winStart, winEnd, key, windowResult) ->
                 jetEvent(keyedWindowResultFn.apply(winStart, winEnd, key, windowResult), winEnd);
     }
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    static AggregateOperation adaptAggregateOperation(@Nonnull AggregateOperation aggrOp) {
+    static <A, R> AggregateOperation<A, ? extends R> adaptAggregateOperation(
+            @Nonnull AggregateOperation<A, ? extends R> aggrOp
+    ) {
         if (aggrOp instanceof AggregateOperation1) {
             return adaptAggregateOperation1((AggregateOperation1) aggrOp);
         } else if (aggrOp instanceof AggregateOperation2) {
@@ -315,29 +309,27 @@ class JetEventFunctionAdapter extends FunctionAdapter {
             return adaptAggregateOperation3((AggregateOperation3) aggrOp);
         } else {
             DistributedBiConsumer[] adaptedAccFns = new DistributedBiConsumer[aggrOp.arity()];
-            Arrays.setAll(adaptedAccFns, i -> adaptAccumulateFn(aggrOp.accumulateFn(i)));
+            Arrays.setAll(adaptedAccFns, i -> adaptAccumulateFn((DistributedBiConsumer) aggrOp.accumulateFn(i)));
             return aggrOp.withAccumulateFns(adaptedAccFns);
         }
     }
 
-    static <T, A, R> AggregateOperation1<JetEvent<T>, A, R> adaptAggregateOperation1(
-            @Nonnull AggregateOperation1<? super T, A, R> aggrOp
+    static <T, A, R> AggregateOperation1<? super JetEvent<T>, A, ? extends R> adaptAggregateOperation1(
+            @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
         return aggrOp.withAccumulateFn(adaptAccumulateFn(aggrOp.accumulateFn()));
     }
 
-    static <T0, T1, A, R> AggregateOperation2<JetEvent<T0>, JetEvent<T1>, A, R> adaptAggregateOperation2(
-            @Nonnull AggregateOperation2<? super T0, ? super T1, A, R> aggrOp
-    ) {
+    static <T0, T1, A, R> AggregateOperation2<? super JetEvent<T0>, ? super JetEvent<T1>, A, ? extends R>
+    adaptAggregateOperation2(@Nonnull AggregateOperation2<? super T0, ? super T1, A, ? extends R> aggrOp) {
         return aggrOp
                 .<JetEvent<T0>>withAccumulateFn0(adaptAccumulateFn(aggrOp.accumulateFn0()))
                 .withAccumulateFn1(adaptAccumulateFn(aggrOp.accumulateFn1()));
     }
 
-    static
-    <T0, T1, T2, A, R> AggregateOperation3<JetEvent<T0>, JetEvent<T1>, JetEvent<T2>, A, R> adaptAggregateOperation3(
-            @Nonnull AggregateOperation3<? super T0, ? super T1, ? super T2, A, R> aggrOp
-    ) {
+    static <T0, T1, T2, A, R>
+    AggregateOperation3<? super JetEvent<T0>, ? super JetEvent<T1>, ? super JetEvent<T2>, A, ? extends R>
+    adaptAggregateOperation3(@Nonnull AggregateOperation3<? super T0, ? super T1, ? super T2, A, ? extends R> aggrOp) {
         return aggrOp
                 .<JetEvent<T0>>withAccumulateFn0(adaptAccumulateFn(aggrOp.accumulateFn0()))
                 .<JetEvent<T1>>withAccumulateFn1(adaptAccumulateFn(aggrOp.accumulateFn1()))
@@ -345,11 +337,10 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
     private static <A, T> DistributedBiConsumer<? super A, ? super JetEvent<T>> adaptAccumulateFn(
             @Nonnull DistributedBiConsumer<? super A, ? super T> accumulateFn
     ) {
-        return (A acc, JetEvent<T> t) -> accumulateFn.accept(acc, t.payload());
+        return (acc, t) -> accumulateFn.accept(acc, t.payload());
     }
 }
 
