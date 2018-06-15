@@ -31,7 +31,7 @@ import static com.hazelcast.jet.core.processor.Processors.filterUsingContextP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapUsingContextP;
 import static com.hazelcast.jet.core.processor.Processors.mapUsingContextP;
 
-public class PartitionedProcessorTransform<T, K> extends ProcessorTransform {
+public final class PartitionedProcessorTransform<T, K> extends ProcessorTransform {
 
     private final DistributedFunction<? super T, ? extends K> partitionKeyFn;
 

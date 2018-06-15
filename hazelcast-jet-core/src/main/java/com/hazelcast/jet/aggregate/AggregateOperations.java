@@ -410,7 +410,9 @@ public final class AggregateOperations {
         checkSerializable(keyFn, "keyFn");
         checkSerializable(valueFn, "valueFn");
         return toMap(keyFn, valueFn,
-                (k, v) -> { throw new IllegalStateException("Duplicate key: " + k); },
+                (k, v) -> {
+                    throw new IllegalStateException("Duplicate key: " + k);
+                },
                 HashMap::new);
     }
 
@@ -677,8 +679,12 @@ public final class AggregateOperations {
                 .withCreate(MutableReference<T>::new)
                 // Result would be correct even without the acc.isNull() check, but that
                 // can cause more GC churn due to medium-lived objects.
-                .<T>andAccumulate((acc, item) -> { if (acc.isNull()) acc.set(item); })
-                .andCombine((acc1, acc2) -> { if (acc1.isNull()) acc1.set(acc2.get()); })
+                .<T>andAccumulate((acc, item) -> {
+                    if (acc.isNull()) acc.set(item);
+                })
+                .andCombine((acc1, acc2) -> {
+                    if (acc1.isNull()) acc1.set(acc2.get());
+                })
                 .andExportFinish(MutableReference::get);
     }
 

@@ -546,8 +546,8 @@ public class BatchAggregateTest extends PipelineTestSupport {
                     BatchStageWithKey<Integer, Integer>,
                     BatchStageWithKey<Integer, Integer>,
                     BatchStageWithKey<Integer, Integer>,
-                    BatchStage<Entry<Integer, Tuple3<Long, Long, Long>>>
-                > attachAggregatingStageFn
+                    BatchStage<Entry<Integer, Tuple3<Long, Long, Long>>>>
+                attachAggregatingStageFn
     ) {
         // Given
         List<Integer> input = sequence(itemCount);
