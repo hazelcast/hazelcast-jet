@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.processor.Processors;
@@ -39,48 +40,48 @@ public class RollingAggregatePTest {
     @Test
     public void rollingAggregate() {
         DistributedSupplier<Processor> supplier = Processors.rollingAggregateP(
-                Entry<String, Long>::getKey,
+                Entry::getKey,
                 AggregateOperation
                         .withCreate(() -> new long[1])
-                        .<Long>andAccumulate((acc, t) -> acc[0] += t)
+                        .<Entry<String, Long>>andAccumulate((acc, t) -> acc[0] += t.getValue())
                         .andExportFinish(acc -> acc[0]),
-                (key, result) -> result);
+                Util::entry);
 
         TestSupport.verifyProcessor(supplier)
-                   .input(asList(
-                           entry("a", 1L),
-                           entry("b", 2L),
-                           entry("a", 3L),
-                           entry("b", 4L)
-                   ))
-                   .expectOutput(asList(
-                           entry("a", 1L),
-                           entry("b", 2L),
-                           entry("a", 4L),
-                           entry("b", 6L)
-                   ));
+                .input(asList(
+                        entry("a", 1L),
+                        entry("b", 2L),
+                        entry("a", 3L),
+                        entry("b", 4L)
+                ))
+                .expectOutput(asList(
+                        entry("a", 1L),
+                        entry("b", 2L),
+                        entry("a", 4L),
+                        entry("b", 6L)
+                ));
     }
 
     @Test
     public void rollingAggregate_withFiltering() {
         DistributedSupplier<Processor> supplier = Processors.rollingAggregateP(
-                (Entry<String, Long> t) -> t.getKey(),
+                Entry::getKey,
                 AggregateOperation
                         .withCreate(() -> new long[1])
-                        .<Long>andAccumulate((acc, t) -> acc[0] += t)
+                        .<Entry<String, Long>>andAccumulate((acc, t) -> acc[0] += t.getValue())
                         .andExportFinish(acc -> acc[0] > 2 ? acc[0] : null),
-                (key, result) -> result);
+                (key, result) -> result == null ? null : entry(key, result));
 
         TestSupport.verifyProcessor(supplier)
-                   .input(asList(
-                           entry("a", 1L),
-                           entry("b", 2L),
-                           entry("a", 3L),
-                           entry("b", 4L)
-                   ))
-                   .expectOutput(asList(
-                           entry("a", 3L),
-                           entry("b", 4L)
-                   ));
+                .input(asList(
+                        entry("a", 1L),
+                        entry("b", 2L),
+                        entry("a", 3L),
+                        entry("b", 4L)
+                ))
+                .expectOutput(asList(
+                        entry("a", 4L),
+                        entry("b", 6L)
+                ));
     }
 }
