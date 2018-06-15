@@ -21,6 +21,7 @@ import com.hazelcast.internal.diagnostics.Diagnostics;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.jet.config.MetricsConfig;
 import com.hazelcast.jet.impl.metrics.jmx.JmxRenderer;
+import com.hazelcast.jet.impl.metrics.jmx.JmxRenderer2;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.ConfigurableService;
 import com.hazelcast.spi.ManagedService;
@@ -77,7 +78,7 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
             logger.info("Configuring metrics collection, collection interval=" + config.getCollectionIntervalSeconds()
                     + " seconds and retention=" + config.getRetentionSeconds() + " seconds");
             int[] lastSize = {INITIAL_BUFFER_SIZE};
-            JmxRenderer jmxRenderer = new JmxRenderer(nodeEngine.getHazelcastInstance());
+            JmxRenderer2 jmxRenderer = new JmxRenderer2(nodeEngine.getHazelcastInstance());
             nodeEngine.getExecutionService().scheduleWithRepetition("MetricsForManCenterCollection", () -> {
                 CompressingProbeRenderer renderer = new CompressingProbeRenderer(
                         lastSize[0] * SIZE_FACTOR_NUMERATOR / SIZE_FACTOR_DENOMINATOR);
