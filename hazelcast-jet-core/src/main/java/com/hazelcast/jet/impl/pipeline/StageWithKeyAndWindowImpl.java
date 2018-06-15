@@ -73,9 +73,11 @@ public class StageWithKeyAndWindowImpl<T, K>
             @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
     ) {
         ensureJetEvents(computeStage, "This pipeline stage");
+        checkSerializable(mapToOutputFn, "mapToOutputFn");
         return attachAggregate(aggrOp, mapToOutputFn);
     }
 
+    // This method was extracted in order to capture the wildcard parameter A.
     @SuppressWarnings("unchecked")
     private <A, R, OUT> StreamStage<OUT> attachAggregate(
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
@@ -100,9 +102,11 @@ public class StageWithKeyAndWindowImpl<T, K>
     ) {
         ensureJetEvents(computeStage, "This pipeline stage");
         ensureJetEvents(((StageWithGroupingBase) stage1).computeStage, "stage1");
+        checkSerializable(mapToOutputFn, "mapToOutputFn");
         return attachAggregate2(stage1, aggrOp, mapToOutputFn);
     }
 
+    // This method was extracted in order to capture the wildcard parameter A.
     @SuppressWarnings("unchecked")
     private <T1, A, R, OUT> StreamStage<OUT> attachAggregate2(
             @Nonnull StreamStageWithKey<T1, ? extends K> stage1,
@@ -130,15 +134,16 @@ public class StageWithKeyAndWindowImpl<T, K>
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> aggrOp,
             @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
     ) {
-        checkSerializable(mapToOutputFn, "mapToOutputFn");
         ComputeStageImplBase stageImpl1 = ((StageWithGroupingBase) stage1).computeStage;
         ComputeStageImplBase stageImpl2 = ((StageWithGroupingBase) stage2).computeStage;
         ensureJetEvents(computeStage, "This pipeline stage");
         ensureJetEvents(stageImpl1, "stage1");
         ensureJetEvents(stageImpl2, "stage2");
+        checkSerializable(mapToOutputFn, "mapToOutputFn");
         return attachAggregate3(stage1, stage2, aggrOp, mapToOutputFn);
     }
 
+    // This method was extracted in order to capture the wildcard parameter A.
     @SuppressWarnings("unchecked")
     private <T1, T2, A, R, OUT> StreamStage<OUT> attachAggregate3(
             @Nonnull StreamStageWithKey<T1, ? extends K> stage1,

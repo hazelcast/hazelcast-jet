@@ -38,6 +38,7 @@ import com.hazelcast.jet.pipeline.WindowDefinition;
 import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements StreamStage<T> {
 
@@ -51,6 +52,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
 
     @Nonnull @Override
     public <K> StreamStageWithKey<T, K> addKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn) {
+        checkSerializable(keyFn, "keyFn");
         return new StreamStageWithKeyImpl<>(this, keyFn);
     }
 

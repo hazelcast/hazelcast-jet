@@ -205,6 +205,7 @@ public final class AggregateOperationBuilder<A> {
                         " or use andExportFinish() to register the same function as both the export and" +
                         " finish primitive");
             }
+            checkSerializable(finishFn, "finishFn");
             return new AggregateOperation1Impl<>(
                     createFn, accumulateFn0, combineFn, deductFn, exportFn, finishFn);
         }
@@ -223,6 +224,7 @@ public final class AggregateOperationBuilder<A> {
                 throw new IllegalStateException("The export primitive is already registered. Call" +
                         " andFinish() if you want to register a separate finish primitive.");
             }
+            checkSerializable(exportFinishFn, "exportFinishFn");
             return new AggregateOperation1Impl<>(
                     createFn, accumulateFn0, combineFn, deductFn, exportFinishFn, exportFinishFn);
         }
@@ -298,6 +300,7 @@ public final class AggregateOperationBuilder<A> {
         public <R_NEW> Arity2<T0, T1, A, R_NEW> andExport(
                 @Nonnull DistributedFunction<? super A, ? extends R_NEW> exportFn
         ) {
+            checkSerializable(exportFn, "exportFn");
             @SuppressWarnings("unchecked")
             Arity2<T0, T1, A, R_NEW> newThis = (Arity2<T0, T1, A, R_NEW>) this;
             newThis.exportFn = exportFn;
@@ -419,6 +422,7 @@ public final class AggregateOperationBuilder<A> {
                                 " or use andExportFinish() to register the same function as both the export and" +
                                 " finish primitive");
             }
+            checkSerializable(finishFn, "finishFn");
             return new AggregateOperation3Impl<>(createFn,
                     accumulateFn0, accumulateFn1, accumulateFn2,
                     combineFn, deductFn, exportFn, finishFn);
@@ -434,6 +438,7 @@ public final class AggregateOperationBuilder<A> {
         public <R_NEW> AggregateOperation3<T0, T1, T2, A, R_NEW> andExportFinish(
                 @Nonnull DistributedFunction<? super A, ? extends R_NEW> exportFinishFn
         ) {
+            checkSerializable(exportFinishFn, "exportFinishFn");
             return new AggregateOperation3Impl<>(createFn, accumulateFn0, accumulateFn1, accumulateFn2,
                     combineFn, deductFn, exportFinishFn, exportFinishFn);
         }
@@ -516,6 +521,7 @@ public final class AggregateOperationBuilder<A> {
         public <R_NEW> VarArity<A, R_NEW> andExport(
                 @Nonnull DistributedFunction<? super A, ? extends R_NEW> exportFn
         ) {
+            checkSerializable(exportFn, "exportFn");
             @SuppressWarnings("unchecked")
             VarArity<A, R_NEW> newThis = (VarArity<A, R_NEW>) this;
             newThis.exportFn = exportFn;
@@ -538,6 +544,7 @@ public final class AggregateOperationBuilder<A> {
                                 " or use andExportFinish() to register the same function as both the export and" +
                                 " finish primitive");
             }
+            checkSerializable(finishFn, "finishFn");
             return new AggregateOperationImpl<>(
                     createFn, packAccumulateFns(), combineFn, deductFn, exportFn, finishFn);
         }
@@ -556,6 +563,7 @@ public final class AggregateOperationBuilder<A> {
                 throw new IllegalStateException("The export primitive is already registered. Call" +
                         " andFinish() if you want to register a separate finish primitive.");
             }
+            checkSerializable(exportFinishFn, "exportFinishFn");
             return new AggregateOperationImpl<>(
                     createFn, packAccumulateFns(), combineFn, deductFn, exportFinishFn, exportFinishFn);
         }

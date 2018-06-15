@@ -41,6 +41,7 @@ import static com.hazelcast.jet.datamodel.Tag.tag;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
 import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptAggregateOperation;
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -97,6 +98,7 @@ public class GrAggBuilder<K> {
             @Nonnull AggregateOperation<A, ? extends R> aggrOp,
             @Nonnull DistributedBiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
+        checkSerializable(mapToOutputFn, "mapToOutputFn");
         List<Transform> upstreamTransforms = upstreamStages.stream().map(s -> s.transform).collect(toList());
         Transform transform = new GroupTransform<>(upstreamTransforms, keyFns, aggrOp, mapToOutputFn);
         pipelineImpl.connect(upstreamTransforms, transform);
@@ -108,6 +110,7 @@ public class GrAggBuilder<K> {
             @Nonnull AggregateOperation<A, ? extends R> aggrOp,
             @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
+        checkSerializable(mapToOutputFn, "mapToOutputFn");
         List<Transform> upstreamTransforms = upstreamStages.stream().map(s -> s.transform).collect(toList());
         JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
 

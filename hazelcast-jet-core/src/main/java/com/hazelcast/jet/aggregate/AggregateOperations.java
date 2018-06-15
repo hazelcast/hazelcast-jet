@@ -142,7 +142,7 @@ public final class AggregateOperations {
             @Nonnull DistributedComparator<? super T> comparator
     ) {
         checkSerializable(comparator, "comparator");
-                return AggregateOperation
+        return AggregateOperation
                 .withCreate(MutableReference<T>::new)
                 .andAccumulate((MutableReference<T> a, T i) -> {
                     if (a.isNull() || comparator.compare(i, a.get()) > 0) {
@@ -239,7 +239,8 @@ public final class AggregateOperations {
             @Nonnull DistributedToLongFunction<T> getXFn,
             @Nonnull DistributedToLongFunction<T> getYFn
     ) {
-        checkSerializable(getXFn, "getYFn");
+        checkSerializable(getXFn, "getXFn");
+        checkSerializable(getYFn, "getYFn");
         return AggregateOperation
                 .withCreate(LinTrendAccumulator::new)
                 .andAccumulate((LinTrendAccumulator a, T item) ->
@@ -318,6 +319,7 @@ public final class AggregateOperations {
             @Nonnull DistributedFunction<? super T, ? extends U> mapFn,
             @Nonnull AggregateOperation1<? super U, A, ? extends R> downstream
     ) {
+        checkSerializable(mapFn, "mapFn");
         DistributedBiConsumer<? super A, ? super U> downstreamAccumulateFn = downstream.accumulateFn();
         return AggregateOperation
                 .withCreate(downstream.createFn())
@@ -348,6 +350,7 @@ public final class AggregateOperations {
     public static <T, C extends Collection<T>> AggregateOperation1<T, C, C> toCollection(
             DistributedSupplier<C> createCollectionFn
     ) {
+        checkSerializable(createCollectionFn, "createCollectionFn");
         return AggregateOperation
                 .withCreate(createCollectionFn)
                 .<T>andAccumulate(Collection::add)
@@ -394,17 +397,19 @@ public final class AggregateOperations {
      * @param <T> input item type
      * @param <K> type of the key
      * @param <U> type of the value
-     * @param toKeyFn a function to extract the key from the input item
-     * @param toValueFn a function to extract the value from the input item
+     * @param keyFn a function to extract the key from the input item
+     * @param valueFn a function to extract the value from the input item
      *
      * @see #toMap(DistributedFunction, DistributedFunction, DistributedBinaryOperator)
      * @see #toMap(DistributedFunction, DistributedFunction, DistributedBinaryOperator, DistributedSupplier)
      */
     public static <T, K, U> AggregateOperation1<T, Map<K, U>, Map<K, U>> toMap(
-            DistributedFunction<? super T, ? extends K> toKeyFn,
-            DistributedFunction<? super T, ? extends U> toValueFn
+            DistributedFunction<? super T, ? extends K> keyFn,
+            DistributedFunction<? super T, ? extends U> valueFn
     ) {
-        return toMap(toKeyFn, toValueFn,
+        checkSerializable(keyFn, "keyFn");
+        checkSerializable(valueFn, "valueFn");
+        return toMap(keyFn, valueFn,
                 (k, v) -> { throw new IllegalStateException("Duplicate key: " + k); },
                 HashMap::new);
     }
@@ -416,13 +421,13 @@ public final class AggregateOperations {
      * <p>
      * This aggregate operation resolves duplicate keys by applying {@code
      * mergeFn} to the conflicting values. {@code mergeFn} will act upon the
-     * values after {@code toValueFn} has already been applied.
+     * values after {@code valueFn} has already been applied.
      *
      * @param <T> input item type
      * @param <K> the type of key
      * @param <U> the output type of the value mapping function
-     * @param toKeyFn a function to extract the key from input item
-     * @param toValueFn a function to extract value from input item
+     * @param keyFn a function to extract the key from input item
+     * @param valueFn a function to extract value from input item
      * @param mergeFn a merge function, used to resolve collisions between
      *                      values associated with the same key, as supplied
      *                      to {@link Map#merge(Object, Object,
@@ -432,11 +437,13 @@ public final class AggregateOperations {
      * @see #toMap(DistributedFunction, DistributedFunction, DistributedBinaryOperator, DistributedSupplier)
      */
     public static <T, K, U> AggregateOperation1<T, Map<K, U>, Map<K, U>> toMap(
-            DistributedFunction<? super T, ? extends K> toKeyFn,
-            DistributedFunction<? super T, ? extends U> toValueFn,
+            DistributedFunction<? super T, ? extends K> keyFn,
+            DistributedFunction<? super T, ? extends U> valueFn,
             DistributedBinaryOperator<U> mergeFn
     ) {
-        return toMap(toKeyFn, toValueFn, mergeFn, HashMap::new);
+        checkSerializable(keyFn, "keyFn");
+        checkSerializable(valueFn, "valueFn");
+        return toMap(keyFn, valueFn, mergeFn, HashMap::new);
     }
 
     /**
@@ -454,8 +461,8 @@ public final class AggregateOperations {
      * @param <K> the output type of the key mapping function
      * @param <U> the output type of the value mapping function
      * @param <M> the type of the resulting {@code Map}
-     * @param toKeyFn a function to extract the key from input item
-     * @param toValueFn a function to extract value from input item
+     * @param keyFn a function to extract the key from input item
+     * @param valueFn a function to extract value from input item
      * @param mergeFn a merge function, used to resolve collisions between
      *                      values associated with the same key, as supplied
      *                      to {@link Map#merge(Object, Object,
@@ -467,13 +474,17 @@ public final class AggregateOperations {
      * @see #toMap(DistributedFunction, DistributedFunction, DistributedBinaryOperator)
      */
     public static <T, K, U, M extends Map<K, U>> AggregateOperation1<T, M, M> toMap(
-            DistributedFunction<? super T, ? extends K> toKeyFn,
-            DistributedFunction<? super T, ? extends U> toValueFn,
+            DistributedFunction<? super T, ? extends K> keyFn,
+            DistributedFunction<? super T, ? extends U> valueFn,
             DistributedBinaryOperator<U> mergeFn,
             DistributedSupplier<M> createMapFn
     ) {
+        checkSerializable(keyFn, "keyFn");
+        checkSerializable(valueFn, "valueFn");
+        checkSerializable(mergeFn, "mergeFn");
+        checkSerializable(createMapFn, "createMapFn");
         DistributedBiConsumer<M, T> accumulateFn =
-                (map, element) -> map.merge(toKeyFn.apply(element), toValueFn.apply(element), mergeFn);
+                (map, element) -> map.merge(keyFn.apply(element), valueFn.apply(element), mergeFn);
         return AggregateOperation
                 .withCreate(createMapFn)
                 .andAccumulate(accumulateFn)
@@ -487,13 +498,13 @@ public final class AggregateOperations {
 
     /**
      * Returns an {@code AggregateOperation1} that accumulates the items into a
-     * {@code HashMap} where the key is the result of applying {@code toKeyFn}
+     * {@code HashMap} where the key is the result of applying {@code keyFn}
      * and the value is a list of the items with that key.
      * <p>
      * This operation achieves the effect of a cascaded group-by where the
      * members of each group are further classified by a secondary key.
      *
-     * @param toKeyFn a function to extract the key from input item
+     * @param keyFn a function to extract the key from input item
      * @param <T> input item type
      * @param <K> the output type of the key mapping function
      *
@@ -501,21 +512,22 @@ public final class AggregateOperations {
      * @see #groupingBy(DistributedFunction, DistributedSupplier, AggregateOperation1)
      */
     public static <T, K> AggregateOperation1<T, Map<K, List<T>>, Map<K, List<T>>> groupingBy(
-            DistributedFunction<? super T, ? extends K> toKeyFn
+            DistributedFunction<? super T, ? extends K> keyFn
     ) {
-        return groupingBy(toKeyFn, toList());
+        checkSerializable(keyFn, "keyFn");
+        return groupingBy(keyFn, toList());
     }
 
     /**
      * Returns an {@code AggregateOperation1} that accumulates the items into a
-     * {@code HashMap} where the key is the result of applying {@code toKeyFn}
+     * {@code HashMap} where the key is the result of applying {@code keyFn}
      * and the value is the result of applying the downstream aggregate
      * operation to the items with that key.
      * <p>
      * This operation achieves the effect of a cascaded group-by where the
      * members of each group are further classified by a secondary key.
      *
-     * @param toKeyFn a function to extract the key from input item
+     * @param keyFn a function to extract the key from input item
      * @param downstream the downstream aggregate operation
      * @param <T> input item type
      * @param <K> the output type of the key mapping function
@@ -526,23 +538,24 @@ public final class AggregateOperations {
      * @see #groupingBy(DistributedFunction, DistributedSupplier, AggregateOperation1)
      */
     public static <T, K, A, R> AggregateOperation1<T, Map<K, A>, Map<K, R>> groupingBy(
-            DistributedFunction<? super T, ? extends K> toKeyFn,
+            DistributedFunction<? super T, ? extends K> keyFn,
             AggregateOperation1<? super T, A, R> downstream
     ) {
-        return groupingBy(toKeyFn, HashMap::new, downstream);
+        checkSerializable(keyFn, "keyFn");
+        return groupingBy(keyFn, HashMap::new, downstream);
     }
 
 
     /**
      * Returns an {@code AggregateOperation1} that accumulates the items into a
      * {@code Map} (as obtained from {@code createMapFn}) where the key is the
-     * result of applying {@code toKeyFn} and the value is the result of
+     * result of applying {@code keyFn} and the value is the result of
      * applying the downstream aggregate operation to the items with that key.
      * <p>
      * This operation achieves the effect of a cascaded group-by where the
      * members of each group are further classified by a secondary key.
      *
-     * @param toKeyFn a function to extract the key from input item
+     * @param keyFn a function to extract the key from input item
      * @param createMapFn a function which returns a new, empty {@code Map} into
      *                    which the results will be inserted
      * @param downstream the downstream aggregate operation
@@ -557,15 +570,15 @@ public final class AggregateOperations {
      */
     @SuppressWarnings("unchecked")
     public static <T, K, R, A, M extends Map<K, R>> AggregateOperation1<T, Map<K, A>, M> groupingBy(
-            DistributedFunction<? super T, ? extends K> toKeyFn,
+            DistributedFunction<? super T, ? extends K> keyFn,
             DistributedSupplier<M> createMapFn,
             AggregateOperation1<? super T, A, R> downstream
     ) {
-        checkSerializable(toKeyFn, "toKeyFn");
+        checkSerializable(keyFn, "keyFn");
         checkSerializable(createMapFn, "createMapFn");
 
         DistributedBiConsumer<? super Map<K, A>, T> accumulateFn = (m, t) -> {
-            A acc = m.computeIfAbsent(toKeyFn.apply(t), k -> downstream.createFn().get());
+            A acc = m.computeIfAbsent(keyFn.apply(t), k -> downstream.createFn().get());
             downstream.accumulateFn().accept(acc, t);
         };
 
@@ -717,6 +730,7 @@ public final class AggregateOperations {
             @Nonnull AggregateOperation1<? super T, A1, ? extends R1> op1,
             @Nonnull DistributedBiFunction<? super R0, ? super R1, ? extends R> exportFinishFn
     ) {
+        checkSerializable(exportFinishFn, "exportFinishFn");
         DistributedBiConsumer<? super A0, ? super A0> combine0 = op0.combineFn();
         DistributedBiConsumer<? super A1, ? super A1> combine1 = op1.combineFn();
         DistributedBiConsumer<? super A0, ? super A0> deduct0 = op0.deductFn();
@@ -783,6 +797,7 @@ public final class AggregateOperations {
             @Nonnull AggregateOperation1<? super T, A2, ? extends R2> op2,
             @Nonnull DistributedTriFunction<? super R0, ? super R1, ? super R2, ? extends R> exportFinishFn
     ) {
+        checkSerializable(exportFinishFn, "exportFinishFn");
         DistributedBiConsumer<? super A0, ? super A0> combine0 = op0.combineFn();
         DistributedBiConsumer<? super A1, ? super A1> combine1 = op1.combineFn();
         DistributedBiConsumer<? super A2, ? super A2> combine2 = op2.combineFn();
@@ -902,6 +917,7 @@ public final class AggregateOperations {
             @Nonnull AggregateOperation1<? super T1, A1, ? extends R1> op1,
             @Nonnull DistributedBiFunction<? super R0, ? super R1, ? extends R> exportFinishFn
     ) {
+        checkSerializable(exportFinishFn, "exportFinishFn");
         DistributedBiConsumer<? super A0, ? super A0> combine0 = op0.combineFn();
         DistributedBiConsumer<? super A1, ? super A1> combine1 = op1.combineFn();
         DistributedBiConsumer<? super A0, ? super A0> deduct0 = op0.deductFn();
@@ -987,6 +1003,7 @@ public final class AggregateOperations {
             @Nonnull AggregateOperation1<? super T2, A2, ? extends R2> op2,
             @Nonnull DistributedTriFunction<? super R0, ? super R1, ? super R2, ? extends R> exportFinishFn
     ) {
+        checkSerializable(exportFinishFn, "exportFinishFn");
         DistributedBiConsumer<? super A0, ? super A0> combine0 = op0.combineFn();
         DistributedBiConsumer<? super A1, ? super A1> combine1 = op1.combineFn();
         DistributedBiConsumer<? super A2, ? super A2> combine2 = op2.combineFn();

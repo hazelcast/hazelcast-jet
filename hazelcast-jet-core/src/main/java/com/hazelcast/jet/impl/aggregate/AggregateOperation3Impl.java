@@ -76,31 +76,31 @@ public class AggregateOperation3Impl<T0, T1, T2, A, R>
 
     @Nonnull @Override
     public <T0_NEW> AggregateOperation3<T0_NEW, T1, T2, A, R> withAccumulateFn0(
-            @Nonnull DistributedBiConsumer<? super A, ? super T0_NEW> newAccFn0
+            @Nonnull DistributedBiConsumer<? super A, ? super T0_NEW> accumulateFn0
     ) {
-        checkSerializable(newAccFn0, "newAccFn0");
+        checkSerializable(accumulateFn0, "accumulateFn0");
         return new AggregateOperation3Impl<>(
-                createFn(), newAccFn0, accumulateFn1(), accumulateFn2(),
+                createFn(), accumulateFn0, accumulateFn1(), accumulateFn2(),
                 combineFn(), deductFn(), exportFn(), finishFn());
     }
 
     @Nonnull @Override
     public <T1_NEW> AggregateOperation3<T0, T1_NEW, T2, A, R> withAccumulateFn1(
-            @Nonnull DistributedBiConsumer<? super A, ? super T1_NEW> newAccFn1
+            @Nonnull DistributedBiConsumer<? super A, ? super T1_NEW> accumulateFn1
     ) {
-        checkSerializable(newAccFn1, "newAccFn1");
+        checkSerializable(accumulateFn1, "accumulateFn1");
         return new AggregateOperation3Impl<>(
-                createFn(), accumulateFn0(), newAccFn1, accumulateFn2(),
+                createFn(), accumulateFn0(), accumulateFn1, accumulateFn2(),
                 combineFn(), deductFn(), exportFn(), finishFn());
     }
 
     @Nonnull @Override
     public <T2_NEW> AggregateOperation3<T0, T1, T2_NEW, A, R> withAccumulateFn2(
-            @Nonnull DistributedBiConsumer<? super A, ? super T2_NEW> newAccFn2
+            @Nonnull DistributedBiConsumer<? super A, ? super T2_NEW> accumulateFn2
     ) {
-        checkSerializable(newAccFn2, "newAccFn2");
+        checkSerializable(accumulateFn2, "accumulateFn2");
         return new AggregateOperation3Impl<>(
-                createFn(), accumulateFn0(), accumulateFn1(), newAccFn2,
+                createFn(), accumulateFn0(), accumulateFn1(), accumulateFn2,
                 combineFn(), deductFn(), exportFn(), finishFn());
     }
 

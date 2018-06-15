@@ -111,8 +111,8 @@ public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R> {
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    static <A> DistributedBiConsumer<? super A, ?>[] accumulateFns(DistributedBiConsumer... accFs) {
-        return (DistributedBiConsumer<? super A, ?>[]) accFs;
+    static <A> DistributedBiConsumer<? super A, ?>[] accumulateFns(DistributedBiConsumer... accFns) {
+        return (DistributedBiConsumer<? super A, ?>[]) accFns;
     }
 
     DistributedFunction<? super A, ? extends A> unsupportedExportFn() {

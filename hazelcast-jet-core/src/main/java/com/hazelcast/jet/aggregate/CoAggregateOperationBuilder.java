@@ -31,6 +31,7 @@ import java.util.Objects;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.function.DistributedFunction.identity;
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.util.Arrays.stream;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
@@ -94,6 +95,7 @@ public class CoAggregateOperationBuilder {
     public <R> AggregateOperation<Object[], R> build(
             @Nonnull DistributedFunction<? super ItemsByTag, ? extends R> exportFinishFn
     ) {
+        checkSerializable(exportFinishFn, "exportFinishFn");
         Tag[] tags = opsByTag.keySet().stream().sorted().toArray(Tag[]::new);
         for (int i = 0; i < tags.length; i++) {
             Preconditions.checkTrue(tags[i].index() == i, "Registered tags' indices are "

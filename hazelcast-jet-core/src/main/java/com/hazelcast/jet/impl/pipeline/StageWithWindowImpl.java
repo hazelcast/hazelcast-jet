@@ -34,14 +34,13 @@ import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEven
 import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptAggregateOperation1;
 import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptAggregateOperation2;
 import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptAggregateOperation3;
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
 public class StageWithWindowImpl<T> implements StageWithWindow<T> {
 
-    @Nonnull
     private final StreamStageImpl<T> streamStage;
-    @Nonnull
     private final WindowDefinition wDef;
 
     StageWithWindowImpl(@Nonnull StreamStageImpl<T> streamStage, @Nonnull WindowDefinition wDef) {
@@ -73,9 +72,11 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
             @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
     ) {
         ensureJetEvents(streamStage, "This pipeline stage");
+        checkSerializable(mapToOutputFn, "mapToOutputFn");
         return attachAggregate(aggrOp, mapToOutputFn);
     }
 
+    // This method was extracted in order to capture the wildcard parameter A.
     @SuppressWarnings("unchecked")
     private <A, R, OUT> StreamStage<OUT> attachAggregate(
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
@@ -100,9 +101,11 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
     ) {
         ensureJetEvents(streamStage, "This pipeline stage");
         ensureJetEvents((ComputeStageImplBase) stage1, "stage1");
+        checkSerializable(mapToOutputFn, "mapToOutputFn");
         return attachAggregate2(stage1, aggrOp, mapToOutputFn);
     }
 
+    // This method was extracted in order to capture the wildcard parameter A.
     @SuppressWarnings("unchecked")
     private <T1, A, R, OUT> StreamStage<OUT> attachAggregate2(
             @Nonnull StreamStage<T1> stage1,
@@ -132,9 +135,11 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
         ensureJetEvents(streamStage, "This pipeline stage");
         ensureJetEvents(stageImpl1, "stage1");
         ensureJetEvents(stageImpl2, "stage2");
+        checkSerializable(mapToOutputFn, "mapToOutputFn");
         return attachAggregate3(stage1, stage2, aggrOp, mapToOutputFn);
     }
 
+    // This method was extracted in order to capture the wildcard parameter A.
     @SuppressWarnings("unchecked")
     private <T1, T2, A, R, OUT> StreamStage<OUT> attachAggregate3(
             @Nonnull StreamStage<T1> stage1,

@@ -38,6 +38,7 @@ import com.hazelcast.jet.pipeline.BatchStageWithKey;
 import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
@@ -57,16 +58,19 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
 
     @Nonnull @Override
     public <K> BatchStageWithKey<T, K> addKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn) {
+        checkSerializable(keyFn, "keyFn");
         return new BatchStageWithKeyImpl<>(this, keyFn);
     }
 
     @Nonnull @Override
     public <R> BatchStage<R> map(@Nonnull DistributedFunction<? super T, ? extends R> mapFn) {
+        checkSerializable(mapFn, "mapFn");
         return attachMap(mapFn);
     }
 
     @Nonnull @Override
     public BatchStage<T> filter(@Nonnull DistributedPredicate<T> filterFn) {
+        checkSerializable(filterFn, "filterFn");
         return attachFilter(filterFn);
     }
 
@@ -74,6 +78,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     public <R> BatchStage<R> flatMap(
             @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
+        checkSerializable(flatMapFn, "flatMapFn");
         return attachFlatMap(flatMapFn);
     }
 
@@ -82,6 +87,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
     ) {
+        checkSerializable(mapFn, "mapFn");
         return attachMapUsingContext(contextFactory, mapFn);
     }
 
@@ -90,6 +96,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     ) {
+        checkSerializable(filterFn, "filterFn");
         return attachFilterUsingContext(contextFactory, filterFn);
     }
 
@@ -98,6 +105,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
+        checkSerializable(flatMapFn, "flatMapFn");
         return attachFlatMapUsingContext(contextFactory, flatMapFn);
     }
 

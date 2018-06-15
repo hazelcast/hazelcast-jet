@@ -21,12 +21,13 @@ import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.DistributedFunction;
 
 import javax.annotation.Nonnull;
-import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static com.hazelcast.jet.datamodel.Tag.tag;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 /**
  * Offers a step-by-step API to create a composite of multiple aggregate
@@ -34,7 +35,7 @@ import static com.hazelcast.jet.function.DistributedFunction.identity;
  *
  * @param <T> the type of the input items
  */
-public final class AllOfAggregationBuilder<T> implements Serializable {
+public final class AllOfAggregationBuilder<T> {
 
     private final List<Tag> tags = new ArrayList<>();
     private final List<AggregateOperation1> operations = new ArrayList<>();
@@ -76,12 +77,16 @@ public final class AllOfAggregationBuilder<T> implements Serializable {
     @Nonnull
     @SuppressWarnings({"unchecked", "ConstantConditions"})
     public <R> AggregateOperation1<T, Object[], R> build(@Nonnull DistributedFunction<ItemsByTag, R> exportFinishFn) {
+        checkSerializable(exportFinishFn, "exportFinishFn");
+
+        // Avoid capturing this builder in the lambdas:
+        List<Tag> tags = this.tags;
+        List<AggregateOperation1> operations = this.operations;
+
         return (AggregateOperation1<T, Object[], R>) AggregateOperation
                 .withCreate(() -> {
                     Object[] acc = new Object[tags.size()];
-                    for (int i = 0; i < acc.length; i++) {
-                        acc[i] = operations.get(i).createFn().get();
-                    }
+                    Arrays.setAll(acc, i -> operations.get(i).createFn().get());
                     return acc;
                 })
                 .andAccumulate((acc, item) -> {

@@ -129,6 +129,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @Nonnull
     @SuppressWarnings("unchecked")
     <RET> RET attachFilter(@Nonnull DistributedPredicate<T> filterFn) {
+        checkSerializable(filterFn, "filterFn");
         return (RET) attach(new FilterTransform(transform, fnAdapter.adaptFilterFn(filterFn)), fnAdapter);
     }
 
@@ -137,6 +138,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     <R, RET> RET attachFlatMap(
             @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
+        checkSerializable(flatMapFn, "flatMapFn");
         return (RET) attach(new FlatMapTransform(transform, fnAdapter.adaptFlatMapFn(flatMapFn)), fnAdapter);
     }
 
@@ -146,6 +148,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
     ) {
+        checkSerializable(mapFn, "mapFn");
         DistributedBiFunction adaptedMapFn = fnAdapter.adaptMapUsingContextFn(mapFn);
         return (RET) attach(
                 mapUsingContextTransform(transform, contextFactory, adaptedMapFn),
@@ -158,6 +161,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     ) {
+        checkSerializable(filterFn, "filterFn");
         DistributedBiPredicate adaptedFilterFn = fnAdapter.adaptFilterUsingContextFn(filterFn);
         return (RET) attach(
                 filterUsingContextTransform(transform, contextFactory, adaptedFilterFn),
@@ -170,6 +174,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
+        checkSerializable(flatMapFn, "flatMapFn");
         DistributedBiFunction adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingContextFn(flatMapFn);
         return (RET) attach(
                 flatMapUsingContextTransform(transform, contextFactory, adaptedFlatMapFn),
@@ -183,6 +188,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn,
             @Nonnull DistributedFunction<? super T, ? extends K> partitionKeyFn
     ) {
+        checkSerializable(mapFn, "mapFn");
+        checkSerializable(partitionKeyFn, "partitionKeyFn");
         DistributedBiFunction adaptedMapFn = fnAdapter.adaptMapUsingContextFn(mapFn);
         DistributedFunction<?, ? extends K> adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
         return (RET) attach(
@@ -197,6 +204,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn,
             @Nonnull DistributedFunction<? super T, ? extends K> partitionKeyFn
     ) {
+        checkSerializable(filterFn, "filterFn");
+        checkSerializable(partitionKeyFn, "partitionKeyFn");
         DistributedBiPredicate adaptedFilterFn = fnAdapter.adaptFilterUsingContextFn(filterFn);
         DistributedFunction<?, ? extends K> adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
         return (RET) attach(
@@ -212,6 +221,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn,
             @Nonnull DistributedFunction<? super T, ? extends K> partitionKeyFn
     ) {
+        checkSerializable(flatMapFn, "flatMapFn");
+        checkSerializable(partitionKeyFn, "partitionKeyFn");
         DistributedBiFunction adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingContextFn(flatMapFn);
         DistributedFunction<?, ? extends K> adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
         return (RET) attach(
@@ -228,6 +239,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull DistributedBiFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
 
     ) {
+        checkSerializable(keyFn, "keyFn");
+        checkSerializable(mapToOutputFn, "mapToOutputFn");
         return (RET) attach(
                 new RollingAggregateTransform(transform, fnAdapter.adaptKeyFn(keyFn), aggrOp, mapToOutputFn),
                 fnAdapter);
