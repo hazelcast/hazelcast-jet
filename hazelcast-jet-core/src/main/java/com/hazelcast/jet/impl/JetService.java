@@ -42,11 +42,7 @@ import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.PacketHandler;
 
-import javax.management.InstanceNotFoundException;
-import javax.management.MBeanServer;
-import javax.management.ObjectName;
 import java.io.IOException;
-import java.lang.management.ManagementFactory;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -70,7 +66,6 @@ public class JetService
     private JobRepository jobRepository;
     private JobCoordinationService jobCoordinationService;
     private JobExecutionService jobExecutionService;
-    private volatile ObjectName mBeanName;
 
     private final AtomicInteger numConcurrentAsyncOps = new AtomicInteger();
 
@@ -132,18 +127,6 @@ public class JetService
         jobExecutionService.reset("shutdown", HazelcastInstanceNotActiveException::new);
         networking.shutdown();
         taskletExecutionService.shutdown();
-
-        if (mBeanName != null) {
-            MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-            try {
-                mbs.unregisterMBean(mBeanName);
-            } catch (InstanceNotFoundException e) {
-                // ignored
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-            mBeanName = null;
-        }
     }
 
     @Override
