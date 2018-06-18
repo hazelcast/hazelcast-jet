@@ -26,6 +26,8 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.ConfigurableService;
 import com.hazelcast.spi.ManagedService;
 import com.hazelcast.spi.NodeEngine;
+import com.hazelcast.spi.Notifier;
+import com.hazelcast.spi.WaitNotifyKey;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import java.util.ArrayList;
@@ -46,6 +48,10 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
 
     private final NodeEngineImpl nodeEngine;
     private final ILogger logger;
+
+    // keys used for synchronization of read operation
+    private final MetricsNotifyKey notifyKey = new MetricsNotifyKey();
+    private final Notifier notifier = new MetricsNotifier();
 
     /**
      * Ringbuffer which stores a bounded history of metrics. For each round of collection,
@@ -120,8 +126,18 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
         }, 1, config.getCollectionIntervalSeconds(), TimeUnit.SECONDS);
     }
 
-    public ConcurrentArrayRingbuffer.RingbufferSlice<Map.Entry<Long, byte[]>> readMetrics(long startSequence) {
+    ConcurrentArrayRingbuffer.RingbufferSlice<Map.Entry<Long, byte[]>> readMetrics(long startSequence) {
+        if (!config.isEnabled()) {
+            throw new IllegalArgumentException("Metrics collection is not enabled");
+        }
         return metricsJournal.copyFrom(startSequence);
+    }
+
+    /**
+     * key used for signalling pending read operations
+     */
+    WaitNotifyKey waitNotifyKey() {
+        return notifyKey;
     }
 
     @Override
@@ -144,6 +160,32 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
             if (metricsConfig.isEnabledForDataStructures()) {
                 hzConfig.setProperty(Diagnostics.METRICS_DISTRIBUTED_DATASTRUCTURES.getName(), "true");
             }
+        }
+    }
+
+    private class MetricsNotifier implements Notifier {
+
+        @Override
+        public boolean shouldNotify() {
+            return true;
+        }
+
+        @Override
+        public WaitNotifyKey getNotifiedKey() {
+            return notifyKey;
+        }
+    }
+
+    private static class MetricsNotifyKey implements WaitNotifyKey {
+
+        @Override
+        public String getServiceName() {
+            return JetMetricsService.SERVICE_NAME;
+        }
+
+        @Override
+        public String getObjectName() {
+            return "metricsJournal";
         }
     }
 }
