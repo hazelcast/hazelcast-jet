@@ -74,11 +74,10 @@ public class HazelcastConnector_RestartTest extends JetTestSupport {
     }
 
     @Test
-    public void when_iMapWrittenAndMemberShutdown_then_jobRestarts() throws Exception {
+    public void when_iListWrittenAndMemberShutdown_then_jobRestarts() throws Exception {
         DAG dag = new DAG();
-        // source will emit 1 item per second
         Vertex source = dag.newVertex("source",
-                throttle(() -> new ListSource(range(0, 1000).boxed().collect(toList())), 1));
+                throttle(() -> new ListSource(range(0, 1000).boxed().collect(toList())), 10));
         Vertex sink = dag.newVertex("sink", writeListP("sink"));
         dag.edge(between(source, sink));
         source.localParallelism(1);
@@ -94,7 +93,7 @@ public class HazelcastConnector_RestartTest extends JetTestSupport {
         Future shutdownFuture = spawn(() -> instance2.shutdown());
 
         // Then - assert that the job stopped producing output
-        sleepSeconds(2);
+        sleepSeconds(4);
         assertFalse("node engine is running",
                 ((HazelcastInstanceImpl) instance2.getHazelcastInstance()).node.nodeEngine.isRunning());
         int sizeAfterShutdown = sinkList.size();
