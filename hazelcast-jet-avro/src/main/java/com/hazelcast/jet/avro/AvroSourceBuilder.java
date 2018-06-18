@@ -59,7 +59,7 @@ public final class AvroSourceBuilder<T> {
      * java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher()}.
      * Default value is {@code "*"} which means all files.
      */
-    public AvroSourceBuilder glob(@Nonnull String glob) {
+    public AvroSourceBuilder<T> glob(@Nonnull String glob) {
         this.glob = glob;
         return this;
     }
@@ -74,7 +74,7 @@ public final class AvroSourceBuilder<T> {
      * each member will read all files in the directory, assuming the are
      * local.
      */
-    public AvroSourceBuilder sharedFileSystem(boolean sharedFileSystem) {
+    public AvroSourceBuilder<T> sharedFileSystem(boolean sharedFileSystem) {
         this.sharedFileSystem = sharedFileSystem;
         return this;
     }
