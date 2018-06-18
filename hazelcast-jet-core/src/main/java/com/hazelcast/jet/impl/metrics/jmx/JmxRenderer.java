@@ -52,6 +52,11 @@ public class JmxRenderer implements MetricsRenderPlugin {
     }
 
     @Override
+    public String targetName() {
+        return "JMX";
+    }
+
+    @Override
     public void renderLong(String metricName, long value) {
         renderNumber(metricName, value);
     }
@@ -123,41 +128,12 @@ public class JmxRenderer implements MetricsRenderPlugin {
         String unit;
         boolean wasPresent;
 
+        /**
+         * See {@link
+         * com.hazelcast.jet.config.MetricsConfig#setExposeThroughJmx(boolean)}.
+         */
         @SuppressWarnings("checkstyle:ExecutableStatementCount")
         MetricData(String metricName, String instanceNameEscaped) {
-            // The code below converts metric name in two formats (old and new)
-            // into a JMX object name that, when rendered in tools like Java
-            // Mission Control or JConsole, will have nice tree structure.
-            //
-            // Examples of metric names in old format:
-            // - classloading.loadedClassesCount
-            // - classloading.totalLoadedClassesCount
-            // - client.endpoint.count
-            // - operation.thread[hz._hzInstance_2_jet.generic-operation.thread-<N>].errorCount
-            //
-            // Old metric names will be split on each '.' (ignoring periods inside of '[]').
-            //
-            // Examples of metric names in new format:
-            // - [module=jet,job=<jobId>,vertex=<vertexId>,proc=<processorNum>,metric=queuesCapacity]
-            // - [module=jet,job=<jobId>,vertex=<vertexId>,proc=<processorNum>,metric=queuesSize]
-            // - [module=jet,job=<jobId>,vertex=<vertexId>,ordinal=N,metric=distributedBytesIn]
-            //
-            // New metric names will be split on each tag, preserving the tag order.
-            //
-            // `metric` tag is treated specially: it will be removed from metric name and multiple metrics
-            // with the same tags except `metric` will be grouped under one MBean as its attributes. For old
-            // format, the part after the last '.' is treated as metric name.
-            //
-            // The JMX Object Name has special structure:
-            //   <domain>:<tag1>=<value1>,<tag2>=<value2>,...
-            // The UI tools display this hierarchy:
-            //   <domain>/<value1>/<value2>/...
-            //
-            // Tag order is irrelevant to ObjectName identity, but is important for the UI: it builds the tree
-            // based on the tag order. That's why we have to use the `ObjectName(String)` constructor;
-            // the ObjectName(String, Hashtable) constructor doesn't preserve the order. For tags we simply
-            // use "tag1", "tag2" because the tag name is not displayed in the UI.
-
             List<Entry<String, String>> tagsList = metricName.startsWith("[") && metricName.endsWith("]")
                     ? MetricsUtil.parseMetricName(metricName)
                     : parseOldMetricName(metricName);
@@ -208,6 +184,8 @@ public class JmxRenderer implements MetricsRenderPlugin {
                 objectNameStr.append(',').append(mBeanTags);
             }
             try {
+                // We use the ObjectName(String) constructor, not the one with Hashtable, because
+                // this one preserves the tag order which is important for the tree structure in UI tools.
                 objectName = new ObjectName(objectNameStr.toString());
             } catch (MalformedObjectNameException e) {
                 throw new RuntimeException(e);

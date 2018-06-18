@@ -65,7 +65,6 @@ public class CompressingProbeRenderer implements MetricsRenderPlugin {
     private MorePublicByteArrayOutputStream baos = new MorePublicByteArrayOutputStream(INITIAL_BUFFER_SIZE);
     private String lastName;
     private int count;
-    private int lastSize;
 
     public CompressingProbeRenderer(
             LoggingService loggingService,
@@ -76,10 +75,14 @@ public class CompressingProbeRenderer implements MetricsRenderPlugin {
         reset(INITIAL_BUFFER_SIZE);
     }
 
+    @Override
+    public String targetName() {
+        return "ManCenter";
+    }
+
     private void reset(int estimatedBytes) {
         Deflater compressor = new Deflater();
         compressor.setLevel(Deflater.BEST_SPEED);
-        lastSize = baos.size();
         // shrink the `baos` if capacity is more than 50% larger than estimated size
         if (baos.capacity() > multiplyExact(estimatedBytes, 3) / 2) {
             baos = new MorePublicByteArrayOutputStream(estimatedBytes);

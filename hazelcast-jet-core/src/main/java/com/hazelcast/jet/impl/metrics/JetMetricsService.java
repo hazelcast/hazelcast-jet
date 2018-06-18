@@ -27,7 +27,6 @@ import com.hazelcast.spi.ConfigurableService;
 import com.hazelcast.spi.ManagedService;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
-import com.hazelcast.spi.properties.GroupProperty;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +34,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * A service to render metrics at regular intervals and store them in a
@@ -68,22 +68,24 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
 
     @Override
     public void init(NodeEngine nodeEngine, Properties properties) {
-        if (!config.isEnabled()) {
+        List<MetricsRenderPlugin> plugins = new ArrayList<>();
+        if (config.isEnabled()) {
+            int journalSize = Math.max(
+                    1, (int) Math.ceil((double) config.getRetentionSeconds() / config.getCollectionIntervalSeconds())
+            );
+            metricsJournal = new ConcurrentArrayRingbuffer<>(journalSize);
+            plugins.add(new CompressingProbeRenderer(this.nodeEngine.getLoggingService(), metricsJournal));
+        }
+        if (config.isExposeThroughJmx()) {
+            plugins.add(new JmxRenderer(nodeEngine.getHazelcastInstance().getName()));
+        }
+        if (plugins.isEmpty()) {
             return;
         }
 
-        int journalSize = Math.max(
-                1, (int) Math.ceil((double) config.getRetentionSeconds() / config.getCollectionIntervalSeconds())
-        );
-        metricsJournal = new ConcurrentArrayRingbuffer<>(journalSize);
         logger.info("Configuring metrics collection, collection interval=" + config.getCollectionIntervalSeconds()
-                + " seconds and retention=" + config.getRetentionSeconds() + " seconds");
-        List<MetricsRenderPlugin> plugins = new ArrayList<>();
-        plugins.add(new CompressingProbeRenderer(this.nodeEngine.getLoggingService(), metricsJournal));
-        if (nodeEngine.getProperties().getBoolean(GroupProperty.ENABLE_JMX)) {
-            plugins.add(new JmxRenderer(nodeEngine.getHazelcastInstance().getName()));
-        }
-
+                + " seconds, retention=" + config.getRetentionSeconds() + " seconds, targets="
+                + plugins.stream().map(MetricsRenderPlugin::targetName).collect(Collectors.joining(", ")));
         // a renderer to render all the plugins
         ProbeRenderer renderer = new ProbeRenderer() {
             @Override

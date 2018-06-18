@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.metrics;
 
 public interface MetricsRenderPlugin {
+    String targetName();
     void renderLong(String name, long value);
     void renderDouble(String name, double value);
 
