@@ -38,6 +38,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static com.hazelcast.jet.Util.entry;
+
 /**
  * A service to render metrics at regular intervals and store them in a
  * ringbuffer from which the clients can read.
@@ -80,9 +82,12 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
                     1, (int) Math.ceil((double) config.getRetentionSeconds() / config.getCollectionIntervalSeconds())
             );
             metricsJournal = new ConcurrentArrayRingbuffer<>(journalSize);
-            plugins.add(new CompressingProbeRenderer(this.nodeEngine.getLoggingService(), metricsJournal));
+            plugins.add(new CompressingProbeRenderer(this.nodeEngine.getLoggingService(),
+                    (blob, ts) -> metricsJournal.add(entry(ts, blob)))
+            );
         }
         if (config.isExposeThroughJmx()) {
+
             plugins.add(new JmxRenderer(nodeEngine.getHazelcastInstance().getName()));
         }
         if (plugins.isEmpty()) {
