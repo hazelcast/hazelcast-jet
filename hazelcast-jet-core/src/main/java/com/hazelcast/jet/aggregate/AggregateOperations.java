@@ -43,6 +43,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -296,7 +297,13 @@ public final class AggregateOperations {
                     }
                     l.append(r, prefixLen, r.length());
                 })
-                .andExportFinish(r -> r.append(suffix).toString());
+                .andExportFinish(r -> {
+                    try {
+                        return r.append(suffix).toString();
+                    } finally {
+                        r.setLength(r.length() - suffix.length());
+                    }
+                });
     }
 
     /**
@@ -331,7 +338,8 @@ public final class AggregateOperations {
                 })
                 .andCombine(downstream.combineFn())
                 .andDeduct(downstream.deductFn())
-                .andExportFinish(downstream.exportFn());
+                .<R>andExport(downstream.exportFn())
+                .andFinish(downstream.finishFn());
     }
 
     /**
@@ -491,11 +499,12 @@ public final class AggregateOperations {
                 .withCreate(createMapFn)
                 .andAccumulate(accumulateFn)
                 .andCombine((l, r) -> r.forEach((key, value) -> l.merge(key, value, mergeFn)))
-                .andExportFinish(acc -> {
+                .andExport(acc -> {
                     M result = createMapFn.get();
                     result.putAll(acc);
                     return result;
-                });
+                })
+                .andFinish(identity());
     }
 
     /**
@@ -584,22 +593,34 @@ public final class AggregateOperations {
             downstream.accumulateFn().accept(acc, t);
         };
 
-        DistributedBiConsumer<Map<K, A>, Map<K, A>> combineFn = (l, r) ->
-                r.forEach((key, value) -> l.merge(key, value, (a, b) -> {
-                    downstream.combineFn().accept(a, b);
-                    return a;
-        }));
+        DistributedBiConsumer<Map<K, A>, Map<K, A>> combineFn;
+        DistributedBiConsumer<? super A, ? super A> downstreamCombineFn = downstream.combineFn();
+        if (downstreamCombineFn != null) {
+            combineFn = (l, r) ->
+                    r.forEach((key, value) -> l.merge(key, value, (a, b) -> {
+                        downstreamCombineFn.accept(a, b);
+                        return a;
+                    }));
+        } else {
+            combineFn = null;
+        }
 
         // replace the map contents with finished values
         DistributedSupplier<Map<K, A>> createAccMapFn = (DistributedSupplier<Map<K, A>>) createMapFn;
-        DistributedFunction<A, A> downstreamFinishFn = (DistributedFunction<A, A>) downstream.finishFn();
-        DistributedFunction<? super Map<K, A>, M> finisher = accMap -> {
-            accMap.replaceAll((K k, A v) -> downstreamFinishFn.apply(v));
-            return (M) accMap;
-        };
 
-        return AggregateOperation.withCreate(createAccMapFn).andAccumulate(accumulateFn)
-                .andCombine(combineFn).andExportFinish(finisher);
+        return AggregateOperation
+                .withCreate(createAccMapFn)
+                .andAccumulate(accumulateFn)
+                .andCombine(combineFn)
+                .andExport(accMap -> accMap.entrySet().stream()
+                                           .collect(Collectors.toMap(
+                                                   Entry::getKey,
+                                                   e -> downstream.exportFn().apply(e.getValue()))))
+                .andFinish(accMap -> {
+                    // replace the values in map in-place
+                    accMap.replaceAll((K k, A v) -> ((DistributedFunction<A, A>) downstream.finishFn()).apply(v));
+                    return (Map) accMap;
+                });
     }
 
     /**
@@ -705,7 +726,11 @@ public final class AggregateOperations {
                 .withCreate(ArrayList<T>::new)
                 .<T>andAccumulate(ArrayList::add)
                 .andCombine(ArrayList::addAll)
-                .andExport(list -> list.stream().sorted(comparator).collect(Collectors.toList()))
+                .andExport(acc -> {
+                    // sorting the accumulator doesn't harm - will make the next sort an easier job
+                    acc.sort(comparator);
+                    return (List<T>) new ArrayList<>(acc);
+                })
                 .andFinish(list -> {
                     list.sort(comparator);
                     return list;
