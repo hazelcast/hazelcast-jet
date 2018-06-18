@@ -65,6 +65,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.arrayIndexOf;
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.impl.util.Util.processorToPartitions;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static java.util.stream.Collectors.groupingBy;
@@ -469,51 +470,63 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     }
 
     @SuppressWarnings("unchecked")
-    public static <K, V, T> ProcessorMetaSupplier streamMapP(
+    public static <K, V, T> ProcessorMetaSupplier streamMapSupplier(
             @Nonnull String mapName,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projection,
             @Nonnull JournalInitialPosition initialPos,
             WatermarkGenerationParams<? super T> wmGenParams
     ) {
+        checkSerializable(predicate, "predicate");
+        checkSerializable(projection, "projection");
+
         return new ClusterMetaSupplier<>(null,
                 instance -> (EventJournalReader<EventJournalMapEvent<K, V>>) instance.getMap(mapName),
                 predicate, projection, initialPos, wmGenParams);
     }
 
     @SuppressWarnings("unchecked")
-    public static <K, V, T> ProcessorMetaSupplier streamRemoteMapP(
+    public static <K, V, T> ProcessorMetaSupplier streamRemoteMapSupplier(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projection,
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull WatermarkGenerationParams<T> wmGenParams) {
+        checkSerializable(predicate, "predicate");
+        checkSerializable(projection, "projection");
+
         return new ClusterMetaSupplier<>(clientConfig,
                 instance -> (EventJournalReader<EventJournalMapEvent<K, V>>) instance.getMap(mapName),
                 predicate, projection, initialPos, wmGenParams);
     }
 
     @SuppressWarnings("unchecked")
-    public static <K, V, T> ProcessorMetaSupplier streamCacheP(
+    public static <K, V, T> ProcessorMetaSupplier streamCacheSupplier(
             @Nonnull String cacheName,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projection,
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull WatermarkGenerationParams<T> wmGenParams) {
+        checkSerializable(predicate, "predicate");
+        checkSerializable(projection, "projection");
+
         return new ClusterMetaSupplier<>(null,
                 inst -> (EventJournalReader<EventJournalCacheEvent<K, V>>) inst.getCacheManager().getCache(cacheName),
                 predicate, projection, initialPos, wmGenParams);
     }
 
     @SuppressWarnings("unchecked")
-    public static <K, V, T> ProcessorMetaSupplier streamRemoteCacheP(
+    public static <K, V, T> ProcessorMetaSupplier streamRemoteCacheSupplier(
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projection,
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull WatermarkGenerationParams<T> wmGenParams) {
+        checkSerializable(predicate, "predicate");
+        checkSerializable(projection, "projection");
+
         return new ClusterMetaSupplier<>(clientConfig,
                 inst -> (EventJournalReader<EventJournalCacheEvent<K, V>>) inst.getCacheManager().getCache(cacheName),
                 predicate, projection, initialPos, wmGenParams);

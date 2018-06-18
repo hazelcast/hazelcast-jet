@@ -47,6 +47,7 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.client.HazelcastClient.newHazelcastClient;
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.impl.util.Util.processorToPartitions;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
@@ -89,13 +90,13 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
         };
     }
 
-    public static <T> ProcessorMetaSupplier readMapP(@Nonnull String mapName) {
+    public static <T> ProcessorMetaSupplier readMapSupplier(@Nonnull String mapName) {
         return new LocalClusterMetaSupplier<T>(
                 instance -> partition -> ((MapProxyImpl) instance.getMap(mapName))
                         .iterator(FETCH_SIZE, partition, PREFETCH_VALUES));
     }
 
-    public static <T> ProcessorMetaSupplier readRemoteMapP(
+    public static <T> ProcessorMetaSupplier readRemoteMapSupplier(
             @Nonnull String mapName, @Nonnull ClientConfig clientConfig
     ) {
         return new RemoteClusterMetaSupplier<T>(clientConfig,
@@ -103,11 +104,14 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
                         .iterator(FETCH_SIZE, partition, PREFETCH_VALUES));
     }
 
-    public static <K, V, T> ProcessorMetaSupplier readMapP(
+    public static <K, V, T> ProcessorMetaSupplier readMapSupplier(
             @Nonnull String mapName,
             @Nonnull Predicate<K, V> predicate,
             @Nonnull Projection<Map.Entry<K, V>, T> projection
     ) {
+        checkSerializable(predicate, "predicate");
+        checkSerializable(projection, "projection");
+
         return new LocalClusterMetaSupplier<T>(
                 instance -> partition -> {
                     MapProxyImpl map = (MapProxyImpl) instance.<K, V>getMap(mapName);
@@ -115,24 +119,28 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
                 });
     }
 
-    public static <K, V, T> ProcessorMetaSupplier readRemoteMapP(
+    public static <K, V, T> ProcessorMetaSupplier readRemoteMapSupplier(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull Projection<Entry<K, V>, T> projection,
             @Nonnull Predicate<K, V> predicate
     ) {
+        checkSerializable(projection, "projection");
+        checkSerializable(predicate, "predicate");
+
         return new RemoteClusterMetaSupplier<T>(clientConfig,
                 instance -> partition -> ((ClientMapProxy) instance.getMap(mapName))
                         .iterator(FETCH_SIZE, partition, projection, predicate));
     }
 
-    public static ProcessorMetaSupplier readCacheP(@Nonnull String cacheName) {
+    public static ProcessorMetaSupplier readCacheSupplier(@Nonnull String cacheName) {
         return new LocalClusterMetaSupplier<>(
                 instance -> partition -> ((CacheProxy) instance.getCacheManager().getCache(cacheName))
                         .iterator(FETCH_SIZE, partition, PREFETCH_VALUES));
     }
 
-    public static ProcessorMetaSupplier readRemoteCacheP(@Nonnull String cacheName, @Nonnull ClientConfig clientConfig) {
+    public static ProcessorMetaSupplier readRemoteCacheSupplier(@Nonnull String cacheName,
+                                                                @Nonnull ClientConfig clientConfig) {
         return new RemoteClusterMetaSupplier<>(clientConfig,
                 instance -> partition -> ((ClientCacheProxy) instance.getCacheManager().getCache(cacheName))
                         .iterator(FETCH_SIZE, partition, PREFETCH_VALUES));

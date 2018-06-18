@@ -26,10 +26,12 @@ import com.hazelcast.client.impl.protocol.codec.JetGetJobIdsCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobStatusCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobSubmissionTimeCodec;
 import com.hazelcast.client.impl.protocol.codec.JetJoinSubmittedJobCodec;
+import com.hazelcast.client.impl.protocol.codec.JetReadMetricsCodec;
 import com.hazelcast.client.impl.protocol.codec.JetRestartJobCodec;
 import com.hazelcast.client.impl.protocol.codec.JetSubmitJobCodec;
 import com.hazelcast.client.impl.protocol.task.MessageTask;
 import com.hazelcast.instance.Node;
+import com.hazelcast.jet.impl.metrics.JetReadMetricsMessageTask;
 import com.hazelcast.nio.Connection;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
@@ -54,6 +56,7 @@ public class JetMessageTaskFactoryProvider implements MessageTaskFactoryProvider
                 toFactory(JetGetJobSubmissionTimeMessageTask::new);
         factories[JetGetJobConfigCodec.REQUEST_TYPE.id()] = toFactory(JetGetJobConfigMessageTask::new);
         factories[JetRestartJobCodec.REQUEST_TYPE.id()] = toFactory(JetRestartJobMessageTask::new);
+        factories[JetReadMetricsCodec.REQUEST_TYPE.id()] = toFactory(JetReadMetricsMessageTask::new);
     }
 
     @Override

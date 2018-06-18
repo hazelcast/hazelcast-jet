@@ -32,15 +32,14 @@ import javax.jms.MessageConsumer;
 import javax.jms.Session;
 
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
- * See {@link Sources#jmsQueueBuilder} of {@link Sources#jmsTopicBuilder}.
- *
- * @param <T> type of the items the source emits
+ * See {@link Sources#jmsQueueBuilder} or {@link Sources#jmsTopicBuilder}.
  */
-public final class JmsSourceBuilder<T> {
+public final class JmsSourceBuilder {
 
     private final DistributedSupplier<ConnectionFactory> factorySupplier;
     private final boolean isTopic;
@@ -48,7 +47,6 @@ public final class JmsSourceBuilder<T> {
     private DistributedFunction<ConnectionFactory, Connection> connectionFn;
     private DistributedFunction<Connection, Session> sessionFn;
     private DistributedFunction<Session, MessageConsumer> consumerFn;
-    private DistributedFunction<Message, T> projectionFn;
     private DistributedConsumer<Session> flushFn;
 
     private String username;
@@ -61,6 +59,7 @@ public final class JmsSourceBuilder<T> {
      * Use {@link Sources#jmsQueueBuilder} of {@link Sources#jmsTopicBuilder}.
      */
     JmsSourceBuilder(DistributedSupplier<ConnectionFactory> factorySupplier, boolean isTopic) {
+        checkSerializable(factorySupplier, "factorySupplier");
         this.factorySupplier = factorySupplier;
         this.isTopic = isTopic;
     }
@@ -72,7 +71,7 @@ public final class JmsSourceBuilder<T> {
      * @param username   the username, Default value is {@code null}
      * @param password   the password, Default value is {@code null}
      */
-    public JmsSourceBuilder<T> connectionParams(String username, String password) {
+    public JmsSourceBuilder connectionParams(String username, String password) {
         this.username = username;
         this.password = password;
         return this;
@@ -85,7 +84,8 @@ public final class JmsSourceBuilder<T> {
      * ConnectionFactory#createConnection(username, password)} to create the
      * connection. See {@link #connectionParams(String, String)}.
      */
-    public JmsSourceBuilder<T> connectionFn(@Nonnull DistributedFunction<ConnectionFactory, Connection> connectionFn) {
+    public JmsSourceBuilder connectionFn(@Nonnull DistributedFunction<ConnectionFactory, Connection> connectionFn) {
+        checkSerializable(connectionFn, "connectionFn");
         this.connectionFn = connectionFn;
         return this;
     }
@@ -99,7 +99,7 @@ public final class JmsSourceBuilder<T> {
      * @param acknowledgeMode  sets the acknowledge mode of the session,
      *                         Default value is {@code Session.AUTO_ACKNOWLEDGE}
      */
-    public JmsSourceBuilder<T> sessionParams(boolean transacted, int acknowledgeMode) {
+    public JmsSourceBuilder sessionParams(boolean transacted, int acknowledgeMode) {
         this.transacted = transacted;
         this.acknowledgeMode = acknowledgeMode;
         return this;
@@ -112,7 +112,8 @@ public final class JmsSourceBuilder<T> {
      * Connection#createSession(boolean transacted, int acknowledgeMode)} to
      * create the session. See {@link #sessionParams(boolean, int)}.
      */
-    public JmsSourceBuilder<T> sessionFn(@Nonnull DistributedFunction<Connection, Session> sessionFn) {
+    public JmsSourceBuilder sessionFn(@Nonnull DistributedFunction<Connection, Session> sessionFn) {
+        checkSerializable(sessionFn, "sessionFn");
         this.sessionFn = sessionFn;
         return this;
     }
@@ -121,7 +122,7 @@ public final class JmsSourceBuilder<T> {
      * Sets the name of the destination. If {@code consumerFn} is provided this
      * parameter is ignored.
      */
-    public JmsSourceBuilder<T> destinationName(String destinationName) {
+    public JmsSourceBuilder destinationName(String destinationName) {
         this.destinationName = destinationName;
         return this;
     }
@@ -134,18 +135,9 @@ public final class JmsSourceBuilder<T> {
      * Either {@code consumerFn} or {@code destinationName} should be set. See
      * {@link #destinationName(String)}.
      */
-    public JmsSourceBuilder<T> consumerFn(@Nonnull DistributedFunction<Session, MessageConsumer> consumerFn) {
+    public JmsSourceBuilder consumerFn(@Nonnull DistributedFunction<Session, MessageConsumer> consumerFn) {
+        checkSerializable(consumerFn, "consumerFn");
         this.consumerFn = consumerFn;
-        return this;
-    }
-
-    /**
-     * Sets the function which creates output object from {@code Message}.
-     * <p>
-     * If not provided, the builder creates an identity function.
-     */
-    public JmsSourceBuilder<T> projectionFn(DistributedFunction<Message, T> projectionFn) {
-        this.projectionFn = projectionFn;
         return this;
     }
 
@@ -154,16 +146,21 @@ public final class JmsSourceBuilder<T> {
      * <p>
      * If not provided, the builder creates a no-op consumer.
      */
-    public JmsSourceBuilder<T> flushFn(DistributedConsumer<Session> flushFn) {
+    public JmsSourceBuilder flushFn(@Nonnull DistributedConsumer<Session> flushFn) {
+        checkSerializable(flushFn, "flushFn");
         this.flushFn = flushFn;
         return this;
     }
 
     /**
      * Creates and returns the JMS {@link StreamSource} with the supplied
-     * components.
+     * components and the projection function {@code projectionFn}.
+     *
+     * @param projectionFn the function which creates output object from each
+     *                    message
+     * @param <T> the type of the items the source emits
      */
-    public StreamSource<T> build() {
+    public <T> StreamSource<T> build(@Nonnull DistributedFunction<Message, T> projectionFn) {
         String usernameLocal = username;
         String passwordLocal = password;
         boolean transactedLocal = transacted;
@@ -184,9 +181,6 @@ public final class JmsSourceBuilder<T> {
                 return session.createConsumer(destination);
             });
         }
-        if (projectionFn == null) {
-            projectionFn = m -> (T) m;
-        }
         if (flushFn == null) {
             flushFn = noopConsumer();
         }
@@ -200,6 +194,13 @@ public final class JmsSourceBuilder<T> {
                 : SourceProcessors.streamJmsQueueP(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn);
 
         return new StreamSourceTransform<>(sourceName(), w -> metaSupplier, false);
+    }
+
+    /**
+     * Convenience for {@link JmsSourceBuilder#build(DistributedFunction)}.
+     */
+    public StreamSource<Message> build() {
+        return build(message -> message);
     }
 
     private String sourceName() {

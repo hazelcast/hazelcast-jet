@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.config;
 import com.hazelcast.config.Config;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.config.MetricsConfig;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Ignore;
@@ -32,11 +33,15 @@ import java.io.InputStream;
 import java.util.Properties;
 
 import static com.hazelcast.jet.config.InstanceConfig.DEFAULT_FLOW_CONTROL_PERIOD_MS;
+import static com.hazelcast.jet.config.MetricsConfig.DEFAULT_METRICS_COLLECTION_SECONDS;
+import static com.hazelcast.jet.config.MetricsConfig.DEFAULT_METRICS_RETENTION_SECONDS;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastParallelClassRunner.class)
 public class XmlConfigTest {
@@ -56,6 +61,11 @@ public class XmlConfigTest {
         assertEquals(Runtime.getRuntime().availableProcessors(),
                 jetConfig.getInstanceConfig().getCooperativeThreadCount());
         assertEquals(DEFAULT_FLOW_CONTROL_PERIOD_MS, jetConfig.getInstanceConfig().getFlowControlPeriodMs());
+
+        assertTrue(jetConfig.getMetricsConfig().isEnabled());
+        assertEquals(DEFAULT_METRICS_RETENTION_SECONDS, jetConfig.getMetricsConfig().getRetentionSeconds());
+        assertEquals(DEFAULT_METRICS_COLLECTION_SECONDS, jetConfig.getMetricsConfig().getCollectionIntervalSeconds());
+
         assertDefaultMemberConfig(jetConfig.getHazelcastConfig());
     }
 
@@ -133,6 +143,10 @@ public class XmlConfigTest {
         properties.put("thread.count", String.valueOf(55));
         properties.put("flow.control.period", "50");
         properties.put("backup.count", "2");
+        properties.put("metrics.enabled", "false");
+        properties.put("metrics.retention", "124");
+        properties.put("metrics.collection-interval", "123");
+        properties.put("metrics.enabled-for-data-structures", "true");
 
         // When
         JetConfig jetConfig = JetConfig.loadDefault(properties);
@@ -183,6 +197,11 @@ public class XmlConfigTest {
 
         assertEquals("value1", jetConfig.getProperties().getProperty("property1"));
         assertEquals("value2", jetConfig.getProperties().getProperty("property2"));
+
+        MetricsConfig metricsCfg = jetConfig.getMetricsConfig();
+        assertFalse("isEnabled", metricsCfg.isEnabled());
+        assertEquals("metricsRetentionSeconds", 124, metricsCfg.getRetentionSeconds());
+        assertEquals("metricsCollectionInterval", 123, metricsCfg.getCollectionIntervalSeconds());
     }
 
     private static void assertDefaultMemberConfig(Config config) {

@@ -169,7 +169,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                     aggrOp.withFinishFn(identity())
             ));
             Vertex aggregateStage2 = dag.newVertex("aggregateStage2",
-                    combineToSlidingWindowP(wDef, aggrOp, TimestampedEntry::new));
+                    combineToSlidingWindowP(wDef, aggrOp, TimestampedEntry::fromWindowResult));
 
             dag.edge(between(insWm, aggregateStage1)
                     .partitioned(entryKey()))
@@ -184,7 +184,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                     TimestampKind.EVENT,
                     wDef,
                     aggrOp,
-                    TimestampedEntry::new));
+                    TimestampedEntry::fromWindowResult));
 
             dag.edge(between(insWm, aggregate)
                     .distributed()
@@ -283,7 +283,9 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
 
         // instance1 is always coordinator
         delayOperationsFrom(
-                hz(instance1), JetInitDataSerializerHook.FACTORY_ID, singletonList(JetInitDataSerializerHook.SNAPSHOT_OP)
+                hz(instance1),
+                JetInitDataSerializerHook.FACTORY_ID,
+                singletonList(JetInitDataSerializerHook.SNAPSHOT_OPERATION)
         );
 
         DAG dag = new DAG();

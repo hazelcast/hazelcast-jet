@@ -89,8 +89,10 @@ public class StreamJmsPTest extends JetTestSupport {
 
         Queue<Object> queue = outbox.queue(0);
 
-        processor.complete();
-        assertEquals(message2, queue.poll());
+        assertTrueEventually(() -> {
+            processor.complete();
+            assertEquals(message2, queue.poll());
+        });
     }
 
     private void initializeProcessor(String destinationName, boolean isQueue) throws Exception {
