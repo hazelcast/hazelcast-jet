@@ -93,8 +93,9 @@ public final class AvroSourceBuilder<T> {
      * CPU is available).
      *
      * @param mapOutputFn the function which creates output object from each
-     *                    record.
-     * @param <R> the type of the items the source emits.
+     *                    record. Gets the filename and record read by {@code
+     *                    datumReader} as parameters
+     * @param <R>         the type of the items the source emits
      */
     public <R> BatchSource<R> build(@Nonnull DistributedBiFunction<String, T, R> mapOutputFn) {
         return batchFromProcessor("avroFilesSource(" + new File(directory, glob) + ')',
@@ -103,6 +104,8 @@ public final class AvroSourceBuilder<T> {
 
     /**
      * Convenience for {@link AvroSourceBuilder#build(DistributedBiFunction)}.
+     * Source emits records read by {@code datumReader} to downstream without
+     * any transformation.
      */
     public BatchSource<T> build() {
         return build((filename, record) -> record);

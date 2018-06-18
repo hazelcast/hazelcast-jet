@@ -86,6 +86,7 @@ public final class FileSourceBuilder {
 
     /**
      * Convenience for {@link FileSourceBuilder#build(DistributedBiFunction)}.
+     * Source emits lines to downstream without any transformation.
      */
     public BatchSource<String> build() {
         return build((filename, line) -> line);
@@ -105,7 +106,7 @@ public final class FileSourceBuilder {
      * CPU is available).
      *
      * @param mapOutputFn the function which creates output object from each
-     *                    line
+     *                    line. Gets the filename and line as parameters
      * @param <R> the type of the items the source emits
      */
     public <R> BatchSource<R> build(DistributedBiFunction<String, String, ? extends R> mapOutputFn) {
@@ -161,7 +162,7 @@ public final class FileSourceBuilder {
      * resolved by upgrading the JRE to the latest version.
      *
      * @param mapOutputFn the function which creates output object from each
-     *                    line
+     *                    line. Gets the filename and line as parameters
      * @param <R> the type of the items the source emits
      */
     public <R> StreamSource<R> buildWatcher(DistributedBiFunction<String, String, ? extends R> mapOutputFn) {
