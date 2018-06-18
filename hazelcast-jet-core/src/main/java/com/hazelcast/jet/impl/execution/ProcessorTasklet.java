@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.internal.metrics.LongProbeFunction;
 import com.hazelcast.internal.metrics.ProbeBuilder;
 import com.hazelcast.internal.metrics.ProbeLevel;
-import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
@@ -134,10 +133,10 @@ public class ProcessorTasklet implements Tasklet {
             int finalI = i;
             ProbeBuilder builderWithOrdinal = probeBuilder
                     .withTag("ordinal", String.valueOf(i));
-            builderWithOrdinal.register(this, "receivedCount", ProbeLevel.INFO, ProbeUnit.COUNT,
+            builderWithOrdinal.register(this, "receivedCount", ProbeLevel.INFO,
                             (LongProbeFunction<ProcessorTasklet>) t -> t.receivedCounts.get(finalI));
 
-            builderWithOrdinal.register(this, "receivedBatches", ProbeLevel.INFO, ProbeUnit.COUNT,
+            builderWithOrdinal.register(this, "receivedBatches", ProbeLevel.INFO,
                             (LongProbeFunction<ProcessorTasklet>) t -> t.receivedBatches.get(finalI));
         }
 
@@ -145,15 +144,15 @@ public class ProcessorTasklet implements Tasklet {
             int finalI = i;
             probeBuilder
                     .withTag("ordinal", i == emittedCounts.length() - 1 ? "snapshot" : String.valueOf(i))
-                    .register(this, "emittedCount", ProbeLevel.INFO, ProbeUnit.COUNT,
+                    .register(this, "emittedCount", ProbeLevel.INFO,
                             (LongProbeFunction<ProcessorTasklet>) t -> t.emittedCounts.get(finalI));
         }
 
-        probeBuilder.register(this, "lastReceivedWm", ProbeLevel.INFO, ProbeUnit.MS,
+        probeBuilder.register(this, "lastReceivedWm", ProbeLevel.INFO,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.watermarkCoalescer.lastEmittedWm());
-        probeBuilder.register(this, "queuesSize", ProbeLevel.INFO, ProbeUnit.COUNT,
+        probeBuilder.register(this, "queuesSize", ProbeLevel.INFO,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.queuesSize.get());
-        probeBuilder.register(this, "queuesCapacity", ProbeLevel.INFO, ProbeUnit.COUNT,
+        probeBuilder.register(this, "queuesCapacity", ProbeLevel.INFO,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.queuesCapacity.get());
     }
 
