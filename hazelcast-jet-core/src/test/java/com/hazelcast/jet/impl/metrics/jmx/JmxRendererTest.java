@@ -163,7 +163,8 @@ public class JmxRendererTest {
 
     private void assertMBeans(List<Tuple2<String, List<Entry<String, Number>>>> expected) throws Exception {
         Set<ObjectInstance> instances = queryOurInstances();
-        Map<ObjectName, ObjectInstance> instanceMap = instances.stream().collect(Collectors.toMap(ObjectInstance::getObjectName, Function.identity()));
+        Map<ObjectName, ObjectInstance> instanceMap =
+                instances.stream().collect(Collectors.toMap(ObjectInstance::getObjectName, Function.identity()));
 
         assertEquals("actual: " + instances, expected.size(), instances.size());
 
