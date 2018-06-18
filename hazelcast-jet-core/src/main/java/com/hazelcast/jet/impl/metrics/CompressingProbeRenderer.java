@@ -20,6 +20,7 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.nio.Bits;
 
+import javax.annotation.Nonnull;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -27,13 +28,12 @@ import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.Map.Entry;
+import java.util.function.ObjLongConsumer;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterInputStream;
 
 import static com.hazelcast.internal.metrics.MetricsUtil.escapeMetricNamePart;
-import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static java.lang.Math.multiplyExact;
 
@@ -58,8 +58,8 @@ public class CompressingProbeRenderer implements MetricsRenderPlugin {
 
     private static final short BINARY_FORMAT_VERSION = 1;
 
-    private final ConcurrentArrayRingbuffer<Entry<Long, byte[]>> metricsJournal;
     private final ILogger logger;
+    private ObjLongConsumer<byte[]> consumer;
 
     private DataOutputStream dos;
     private MorePublicByteArrayOutputStream baos = new MorePublicByteArrayOutputStream(INITIAL_BUFFER_SIZE);
@@ -67,10 +67,10 @@ public class CompressingProbeRenderer implements MetricsRenderPlugin {
     private int count;
 
     public CompressingProbeRenderer(
-            LoggingService loggingService,
-            ConcurrentArrayRingbuffer<Entry<Long, byte[]>> metricsJournal
+            @Nonnull LoggingService loggingService,
+            @Nonnull ObjLongConsumer<byte[]> writeFn
     ) {
-        this.metricsJournal = metricsJournal;
+        this.consumer = writeFn;
         logger = loggingService.getLogger(getClass());
         reset(INITIAL_BUFFER_SIZE);
     }
@@ -142,7 +142,7 @@ public class CompressingProbeRenderer implements MetricsRenderPlugin {
     @Override
     public void onRenderingComplete() {
         byte[] blob = getRenderedBlob();
-        metricsJournal.add(entry(System.currentTimeMillis(), blob));
+        consumer.accept(blob, System.currentTimeMillis());
         logFine(logger, "Collected %,d metrics, %,d bytes", getCount(), blob.length);
         reset(blob.length * SIZE_FACTOR_NUMERATOR / SIZE_FACTOR_DENOMINATOR);
     }
