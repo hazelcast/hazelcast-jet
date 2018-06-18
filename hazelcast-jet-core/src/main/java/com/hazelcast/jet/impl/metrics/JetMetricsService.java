@@ -81,7 +81,7 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
         List<MetricsRenderPlugin> plugins = new ArrayList<>();
         plugins.add(new CompressingProbeRenderer(this.nodeEngine.getLoggingService(), metricsJournal));
         if (nodeEngine.getProperties().getBoolean(GroupProperty.ENABLE_JMX)) {
-            plugins.add(new JmxRenderer(nodeEngine.getHazelcastInstance()));
+            plugins.add(new JmxRenderer(nodeEngine.getHazelcastInstance().getName()));
         }
 
         // a renderer to render all the plugins

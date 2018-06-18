@@ -20,6 +20,7 @@ import com.hazelcast.jet.datamodel.Tuple2;
 
 import javax.management.Attribute;
 import javax.management.AttributeList;
+import javax.management.AttributeNotFoundException;
 import javax.management.DynamicMBean;
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
@@ -30,6 +31,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
+import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.stream.Collectors.toCollection;
 
 public class MetricsMBean implements DynamicMBean {
@@ -50,8 +52,12 @@ public class MetricsMBean implements DynamicMBean {
     }
 
     @Override
-    public Object getAttribute(String attribute) {
-        return metrics.get(attribute).f1();
+    public Object getAttribute(String attributeName) throws AttributeNotFoundException {
+        Tuple2<String, AtomicReference<Number>> attribute = metrics.get(attributeName);
+        if (attribute == null) {
+            throw new AttributeNotFoundException(attributeName);
+        }
+        return attribute.f1().get();
     }
 
     @Override
@@ -62,7 +68,8 @@ public class MetricsMBean implements DynamicMBean {
     @Override
     public AttributeList getAttributes(String[] attributes) {
         return Arrays.stream(attributes)
-                     .map(a -> new Attribute(a, getAttribute(a)))
+                     .filter(metrics::containsKey)
+                     .map(a -> uncheckCall(() -> new Attribute(a, getAttribute(a))))
                      .collect(toCollection(AttributeList::new));
     }
 
