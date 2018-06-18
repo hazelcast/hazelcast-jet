@@ -17,9 +17,17 @@
 package com.hazelcast.jet.impl.metrics;
 
 public interface MetricsRenderPlugin {
-    String targetName();
+
     void renderLong(String name, long value);
     void renderDouble(String name, double value);
 
+    /**
+     * Callback called after all metrics are rendered.
+     */
     void onRenderingComplete();
+
+    /**
+     * Name for debugging purposes.
+     */
+    String name();
 }

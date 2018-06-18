@@ -52,8 +52,8 @@ public class JmxRenderer implements MetricsRenderPlugin {
     }
 
     @Override
-    public String targetName() {
-        return "JMX";
+    public String name() {
+        return "JMX Publisher";
     }
 
     @Override

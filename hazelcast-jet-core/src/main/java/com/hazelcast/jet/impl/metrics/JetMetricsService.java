@@ -95,8 +95,8 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
         }
 
         logger.info("Configuring metrics collection, collection interval=" + config.getCollectionIntervalSeconds()
-                + " seconds, retention=" + config.getRetentionSeconds() + " seconds, targets="
-                + plugins.stream().map(MetricsRenderPlugin::targetName).collect(Collectors.joining(", ")));
+                + " seconds, retention=" + config.getRetentionSeconds() + " seconds, renderers="
+                + plugins.stream().map(MetricsRenderPlugin::name).collect(Collectors.joining(", ", "[", "]")));
         // a renderer to render all the plugins
         ProbeRenderer renderer = new ProbeRenderer() {
             @Override

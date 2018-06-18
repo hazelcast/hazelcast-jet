@@ -59,7 +59,7 @@ public class CompressingProbeRenderer implements MetricsRenderPlugin {
     private static final short BINARY_FORMAT_VERSION = 1;
 
     private final ILogger logger;
-    private ObjLongConsumer<byte[]> consumer;
+    private final ObjLongConsumer<byte[]> consumer;
 
     private DataOutputStream dos;
     private MorePublicByteArrayOutputStream baos = new MorePublicByteArrayOutputStream(INITIAL_BUFFER_SIZE);
@@ -76,8 +76,8 @@ public class CompressingProbeRenderer implements MetricsRenderPlugin {
     }
 
     @Override
-    public String targetName() {
-        return "ManCenter";
+    public String name() {
+        return "ManCenter Collector";
     }
 
     private void reset(int estimatedBytes) {
