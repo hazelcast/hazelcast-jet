@@ -41,7 +41,7 @@ import static java.lang.Math.multiplyExact;
  * Renderer to serialize metrics to byte[] to be read by ManCenter.
  * Additionally, it converts legacy metric names to {@code [metric=<oldName>]}.
  */
-public class CompressingProbeRenderer implements MetricsPublisher {
+public class ManCenterPublisher implements MetricsPublisher {
 
     private static final int INITIAL_BUFFER_SIZE = 2 << 11; // 2kB
     private static final int SIZE_FACTOR_NUMERATOR = 11;
@@ -66,7 +66,7 @@ public class CompressingProbeRenderer implements MetricsPublisher {
     private String lastName;
     private int count;
 
-    public CompressingProbeRenderer(
+    public ManCenterPublisher(
             @Nonnull LoggingService loggingService,
             @Nonnull ObjLongConsumer<byte[]> writeFn
     ) {

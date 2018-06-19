@@ -21,7 +21,7 @@ import com.hazelcast.internal.diagnostics.Diagnostics;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
 import com.hazelcast.jet.config.MetricsConfig;
-import com.hazelcast.jet.impl.metrics.jmx.JmxRenderer;
+import com.hazelcast.jet.impl.metrics.jmx.JmxPublisher;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.ConfigurableService;
 import com.hazelcast.spi.ManagedService;
@@ -76,40 +76,39 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
 
     @Override
     public void init(NodeEngine nodeEngine, Properties properties) {
-        List<MetricsPublisher> plugins = new ArrayList<>();
+        List<MetricsPublisher> publishers = new ArrayList<>();
         if (config.isEnabled()) {
             int journalSize = Math.max(
                     1, (int) Math.ceil((double) config.getRetentionSeconds() / config.getCollectionIntervalSeconds())
             );
             metricsJournal = new ConcurrentArrayRingbuffer<>(journalSize);
-            plugins.add(new CompressingProbeRenderer(this.nodeEngine.getLoggingService(),
+            publishers.add(new ManCenterPublisher(this.nodeEngine.getLoggingService(),
                     (blob, ts) -> metricsJournal.add(entry(ts, blob)))
             );
         }
-        if (config.isExposeThroughJmx()) {
-
-            plugins.add(new JmxRenderer(nodeEngine.getHazelcastInstance().getName()));
+        if (config.isJmxEnabled()) {
+            publishers.add(new JmxPublisher(nodeEngine.getHazelcastInstance().getName()));
         }
-        if (plugins.isEmpty()) {
+        if (publishers.isEmpty()) {
             return;
         }
 
         logger.info("Configuring metrics collection, collection interval=" + config.getCollectionIntervalSeconds()
                 + " seconds, retention=" + config.getRetentionSeconds() + " seconds, publishers="
-                + plugins.stream().map(MetricsPublisher::name).collect(Collectors.joining(", ", "[", "]")));
-        // a renderer to render all the plugins
+                + publishers.stream().map(MetricsPublisher::name).collect(Collectors.joining(", ", "[", "]")));
+        // a renderer to render all the publishers
         ProbeRenderer renderer = new ProbeRenderer() {
             @Override
             public void renderLong(String name, long value) {
-                for (MetricsPublisher plugin : plugins) {
-                    plugin.publishLong(name, value);
+                for (MetricsPublisher publisher : publishers) {
+                    publisher.publishLong(name, value);
                 }
             }
 
             @Override
             public void renderDouble(String name, double value) {
-                for (MetricsPublisher plugin : plugins) {
-                    plugin.publishDouble(name, value);
+                for (MetricsPublisher publisher : publishers) {
+                    publisher.publishDouble(name, value);
                 }
             }
 
@@ -125,8 +124,8 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
 
         scheduledFuture = nodeEngine.getExecutionService().scheduleWithRepetition("MetricsForManCenterCollection", () -> {
             this.nodeEngine.getMetricsRegistry().render(renderer);
-            for (MetricsPublisher plugin : plugins) {
-                plugin.whenComplete();
+            for (MetricsPublisher publisher : publishers) {
+                publisher.whenComplete();
             }
         }, 1, config.getCollectionIntervalSeconds(), TimeUnit.SECONDS);
     }
@@ -162,7 +161,7 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
     public static void applyMetricsConfig(Config hzConfig, MetricsConfig metricsConfig) {
         if (metricsConfig.isEnabled()) {
             hzConfig.setProperty(Diagnostics.METRICS_LEVEL.getName(), ProbeLevel.INFO.name());
-            if (metricsConfig.isEnabledForDataStructures()) {
+            if (metricsConfig.isMetricsForDataStructures()) {
                 hzConfig.setProperty(Diagnostics.METRICS_DISTRIBUTED_DATASTRUCTURES.getName(), "true");
             }
         }

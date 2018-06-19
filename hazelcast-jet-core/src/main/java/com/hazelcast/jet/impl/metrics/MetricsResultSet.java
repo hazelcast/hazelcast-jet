@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.hazelcast.jet.impl.metrics.CompressingProbeRenderer.decompressingIterator;
+import static com.hazelcast.jet.impl.metrics.ManCenterPublisher.decompressingIterator;
 
 public class MetricsResultSet  {
 

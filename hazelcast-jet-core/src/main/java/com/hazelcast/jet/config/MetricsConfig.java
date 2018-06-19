@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.config;
 
+import com.hazelcast.internal.diagnostics.Diagnostics;
 import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
@@ -36,10 +37,10 @@ public class MetricsConfig {
     public static final int DEFAULT_METRICS_RETENTION_SECONDS = 5;
 
     private boolean enabled = true;
+    private boolean jmxEnabled = true;
     private int retentionSeconds = DEFAULT_METRICS_RETENTION_SECONDS;
-    private boolean enableDataStructures;
+    private boolean metricsForDataStructures;
     private int intervalSeconds = DEFAULT_METRICS_COLLECTION_SECONDS;
-    private boolean exposeThroughJmx;
 
     /**
      * Sets whether metrics collection should be enabled for the node. If
@@ -57,6 +58,54 @@ public class MetricsConfig {
      */
     public boolean isEnabled() {
         return enabled;
+    }
+
+    /**
+     * Returns whether metrics will be exposed through JMX MBeans.
+     */
+    public boolean isJmxEnabled() {
+        return jmxEnabled;
+    }
+
+    /**
+     * Enables metrics exposure through JMX. It's enabled by default. Metric
+     * values are collected in the {@linkplain #setCollectionIntervalSeconds
+     * metric collection interval} and written to a set of MBeans.
+     * <p>
+     * Metrics are exposed by converting the metric name to a structure that
+     * will be rendered in a tree structure in tools showing the beans (Java
+     * Mission Control or JConsole). MBean is identified by a {@link
+     * javax.management.ObjectName} which contains tag-value tuples. Although
+     * the order of tags is insignificant to the identity, the UI tools use the
+     * order of tags to generate tree structure and only display the values,
+     * not the tag names. Metric names also have tags and values, but in order
+     * to display the tag name in the UI, we use {@code "tag=value"} as a
+     * value. For example, the metric:
+     *
+     * <pre>
+     *     [module=jet,job=123,vertex=a,metric=emittedCount]
+     * </pre>
+     *
+     * will be rendered as an attribute named {@code emittedCount} in an MBean
+     * identified by:
+     *
+     * <pre>{@code
+     *     com.hazelcast.jet:type=Metrics,instance=<instanceName>,tag0="job=123",tag1="vertex=a"
+     * }</pre>
+     *
+     * This will cause the MBean to be rendered in a tree under {@code
+     * com.hazelcast.jet/Metrics/<instanceName>/job=123/vertex=a} nodes. For
+     * the old-style metric names, the name will be split on dots ('.') and a
+     * tag will be created for each level. The element after the last dot will
+     * be used as metric name.
+     * <p>
+     * Also some other tags are treated specially, namely {@code unit} (it is
+     * copied to attribute description), {@code module} (it is appended to the
+     * domain) and {@code metric} (it will be converted to attribute name in
+     * the MBean).
+     */
+    public void setJmxEnabled(boolean jmxEnabled) {
+        this.jmxEnabled = jmxEnabled;
     }
 
     /**
@@ -101,69 +150,21 @@ public class MetricsConfig {
     }
 
     /**
-     * Sets whether metrics should be collected for data structures. Metrics
-     * collection can have some overhead if there is a large number of data
-     * structures. It's disabled by default.
+     * Sets whether statistics for data structures are added to metrics. See
+     * {@link Diagnostics#METRICS_DISTRIBUTED_DATASTRUCTURES}. It's disabled by
+     * default.
      */
     @Nonnull
-    public MetricsConfig setEnabledForDataStructures(boolean enableDataStructures) {
-        this.enableDataStructures = enableDataStructures;
+    public MetricsConfig setMetricsForDataStructures(boolean metricsForDataStructures) {
+        this.metricsForDataStructures = metricsForDataStructures;
         return this;
     }
 
     /**
-     * Returns if metric collection is enabled for data structures.
+     * Returns if statistics for data structures are added to metrics. See
+     * {@link Diagnostics#METRICS_DISTRIBUTED_DATASTRUCTURES}.
      */
-    public boolean isEnabledForDataStructures() {
-        return enableDataStructures;
-    }
-
-    /**
-     * Returns whether metrics will be exposed through JMX MBeans.
-     */
-    public boolean isExposeThroughJmx() {
-        return exposeThroughJmx;
-    }
-
-    /**
-     * Enables metrics exposure through JMX. It's disabled by default. Metric
-     * values are collected in the {@linkplain #setCollectionIntervalSeconds
-     * metric collection interval} and written to a set of MBeans.
-     * <p>
-     * Metrics are exposed by converting the metric name to a structure that
-     * will be rendered in a tree structure in tools showing the beans (Java
-     * Mission Control or JConsole). MBean is identified by a {@link
-     * javax.management.ObjectName} which contains tag-value tuples. Although
-     * the order of tags is insignificant to the identity, the UI tools use the
-     * order of tags to generate tree structure and only display the values,
-     * not the tag names. Metric names also have tags and values, but in order
-     * to display the tag name in the UI, we use {@code "tag=value"} as a
-     * value. For example, the metric:
-     *
-     * <pre>
-     *     [module=jet,job=123,vertex=a,metric=emittedCount]
-     * </pre>
-     *
-     * will be rendered as an attribute named {@code emittedCount} in an MBean
-     * identified by:
-     *
-     * <pre>{@code
-     *     com.hazelcast.jet:type=Metrics,instance=<instanceName>,tag0="job=123",tag1="vertex=a"
-     * }</pre>
-     *
-     * This will cause the MBean to be rendered in a tree under {@code
-     * com.hazelcast.jet/Metrics/<instanceName>/job=123/vertex=a} nodes. For
-     * the old-style metric names, the name will be split on dots ('.') and a
-     * tag will be created for each level. The element after the last dot will
-     * be used as metric name.
-     * <p>
-     * Also some other tags are treated specially, namely {@code unit} (it is
-     * copied to attribute description), {@code module} (it is appended to the
-     * domain) and {@code metric} (it will be converted to attribute name in
-     * the MBean).
-     */
-    public MetricsConfig setExposeThroughJmx(boolean exposeThroughJmx) {
-        this.exposeThroughJmx = exposeThroughJmx;
-        return this;
+    public boolean isMetricsForDataStructures() {
+        return metricsForDataStructures;
     }
 }

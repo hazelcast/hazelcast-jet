@@ -225,6 +225,10 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
         if (enabled != null) {
             config.setEnabled(Boolean.parseBoolean(getTextContent(enabled)));
         }
+        enabled = edgeNode.getAttributes().getNamedItem("jmxEnabled");
+        if (enabled != null) {
+            config.setJmxEnabled(Boolean.parseBoolean(getTextContent(enabled)));
+        }
         for (Node child : childElements(edgeNode)) {
             String name = cleanNodeName(child);
             switch (name) {
@@ -234,8 +238,8 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
                 case "collection-interval-seconds":
                     config.setCollectionIntervalSeconds(intValue(child));
                     break;
-                case "enabled-for-data-structures":
-                    config.setEnabledForDataStructures(booleanValue(child));
+                case "metrics-for-data-structures":
+                    config.setMetricsForDataStructures(booleanValue(child));
                     break;
                 default:
                     throw new AssertionError("Unrecognized XML element: " + name);

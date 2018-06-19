@@ -43,7 +43,7 @@ import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class JmxRendererTest {
+public class JmxPublisherTest {
 
     private static final ObjectName OBJECT_NAME_NO_MODULE;
     private static final String MODULE_NAME = "moduleA";
@@ -58,12 +58,12 @@ public class JmxRendererTest {
         }
     }
 
-    private JmxRenderer jmxRenderer;
+    private JmxPublisher jmxPublisher;
     private MBeanServer platformMBeanServer;
 
     @Before
     public void before() throws Exception {
-        jmxRenderer = new JmxRenderer("inst1");
+        jmxPublisher = new JmxPublisher("inst1");
         platformMBeanServer = ManagementFactory.getPlatformMBeanServer();
         try {
             assertMBeans(emptyList());
@@ -84,35 +84,35 @@ public class JmxRendererTest {
 
     @Test
     public void when_singleMetricOldFormat() throws Exception {
-        jmxRenderer.publishLong("a.b.c", 1L);
+        jmxPublisher.publishLong("a.b.c", 1L);
         assertMBeans(singletonList(
                 tuple2("com.hazelcast:type=Metrics,instance=inst1,tag0=a,tag1=b", singletonList(entry("c", 1L)))));
     }
 
     @Test
     public void when_trailingPeriodOldFormat_doNotFail() throws Exception {
-        jmxRenderer.publishLong("a.b.", 1L);
+        jmxPublisher.publishLong("a.b.", 1L);
         assertMBeans(singletonList(
                 tuple2("com.hazelcast:type=Metrics,instance=inst1,tag0=a,tag1=b", singletonList(entry("metric", 1L)))));
     }
 
     @Test
     public void when_twoDotsOldFormat_doNotFail() throws Exception {
-        jmxRenderer.publishLong("a.b..c", 1L);
+        jmxPublisher.publishLong("a.b..c", 1L);
         assertMBeans(singletonList(
                 tuple2("com.hazelcast:type=Metrics,instance=inst1,tag0=a,tag1=b", singletonList(entry("c", 1L)))));
     }
 
     @Test
     public void when_metricTagMissingNewFormat_then_useDefault() throws Exception {
-        jmxRenderer.publishLong("a.b.", 1L);
+        jmxPublisher.publishLong("a.b.", 1L);
         assertMBeans(singletonList(
                 tuple2("com.hazelcast:type=Metrics,instance=inst1,tag0=a,tag1=b", singletonList(entry("metric", 1L)))));
     }
 
     @Test
     public void when_singleMetricNewFormat() throws Exception {
-        jmxRenderer.publishLong("[tag1=a,tag2=b,metric=c]", 1L);
+        jmxPublisher.publishLong("[tag1=a,tag2=b,metric=c]", 1L);
         assertMBeans(singletonList(
                 tuple2("com.hazelcast:type=Metrics,instance=inst1,tag0=\"tag1=a\",tag1=\"tag2=b\"",
                         singletonList(entry("c", 1L)))));
@@ -120,7 +120,7 @@ public class JmxRendererTest {
 
     @Test
     public void when_singleMetricNewFormatWithModule() throws Exception {
-        jmxRenderer.publishLong("[tag1=a,module=" + MODULE_NAME + ",metric=c]", 1L);
+        jmxPublisher.publishLong("[tag1=a,module=" + MODULE_NAME + ",metric=c]", 1L);
         assertMBeans(singletonList(
                 tuple2("com.hazelcast." + MODULE_NAME + ":type=Metrics,instance=inst1,tag0=\"tag1=a\"",
                         singletonList(entry("c", 1L)))));
@@ -128,10 +128,10 @@ public class JmxRendererTest {
 
     @Test
     public void when_moreMetricsOldFormat() throws Exception {
-        jmxRenderer.publishLong("a.b.c", 1L);
-        jmxRenderer.publishLong("a.b.d", 2L);
-        jmxRenderer.publishLong("a.c.a", 3L);
-        jmxRenderer.publishLong("a", 4L);
+        jmxPublisher.publishLong("a.b.c", 1L);
+        jmxPublisher.publishLong("a.b.d", 2L);
+        jmxPublisher.publishLong("a.c.a", 3L);
+        jmxPublisher.publishLong("a", 4L);
         assertMBeans(asList(
                 tuple2("com.hazelcast:type=Metrics,instance=inst1,tag0=a,tag1=b",
                         asList(entry("c", 1L), entry("d", 2L))),
@@ -144,11 +144,11 @@ public class JmxRendererTest {
 
     @Test
     public void when_moreMetricsNewFormat() throws Exception {
-        jmxRenderer.publishLong("[tag1=a,tag2=b,metric=c]", 1L);
-        jmxRenderer.publishLong("[tag1=a,tag2=b,metric=d]", 2L);
-        jmxRenderer.publishLong("[module=" + MODULE_NAME + ",tag1=a,tag2=b,metric=d]", 5L);
-        jmxRenderer.publishLong("[tag1=a,tag2=c,metric=a]", 3L);
-        jmxRenderer.publishLong("[metric=a]", 4L);
+        jmxPublisher.publishLong("[tag1=a,tag2=b,metric=c]", 1L);
+        jmxPublisher.publishLong("[tag1=a,tag2=b,metric=d]", 2L);
+        jmxPublisher.publishLong("[module=" + MODULE_NAME + ",tag1=a,tag2=b,metric=d]", 5L);
+        jmxPublisher.publishLong("[tag1=a,tag2=c,metric=a]", 3L);
+        jmxPublisher.publishLong("[metric=a]", 4L);
         assertMBeans(asList(
                 tuple2("com.hazelcast:type=Metrics,instance=inst1,tag0=\"tag1=a\",tag1=\"tag2=b\"",
                         asList(entry("c", 1L), entry("d", 2L))),

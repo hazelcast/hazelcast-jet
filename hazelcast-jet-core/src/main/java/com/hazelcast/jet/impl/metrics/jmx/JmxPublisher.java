@@ -36,7 +36,7 @@ import static com.hazelcast.jet.Util.entry;
  * Renderer to create, register and unregister mBeans for metrics as they are
  * rendered.
  */
-public class JmxRenderer implements MetricsPublisher {
+public class JmxPublisher implements MetricsPublisher {
 
     private final MBeanServer platformMBeanServer;
     private final String instanceNameEscaped;
@@ -46,7 +46,7 @@ public class JmxRenderer implements MetricsPublisher {
     /** key: jmx object name, value: mBean */
     private final Map<ObjectName, MetricsMBean> mBeans = new HashMap<>();
 
-    public JmxRenderer(String instanceName) {
+    public JmxPublisher(String instanceName) {
         platformMBeanServer = ManagementFactory.getPlatformMBeanServer();
         instanceNameEscaped = escapeObjectNameValue(instanceName);
     }

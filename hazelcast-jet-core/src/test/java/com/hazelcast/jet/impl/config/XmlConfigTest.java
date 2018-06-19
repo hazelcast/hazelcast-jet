@@ -63,8 +63,10 @@ public class XmlConfigTest {
         assertEquals(DEFAULT_FLOW_CONTROL_PERIOD_MS, jetConfig.getInstanceConfig().getFlowControlPeriodMs());
 
         assertTrue(jetConfig.getMetricsConfig().isEnabled());
+        assertTrue(jetConfig.getMetricsConfig().isJmxEnabled());
         assertEquals(DEFAULT_METRICS_RETENTION_SECONDS, jetConfig.getMetricsConfig().getRetentionSeconds());
         assertEquals(DEFAULT_METRICS_COLLECTION_SECONDS, jetConfig.getMetricsConfig().getCollectionIntervalSeconds());
+        assertFalse(jetConfig.getMetricsConfig().isMetricsForDataStructures());
 
         assertDefaultMemberConfig(jetConfig.getHazelcastConfig());
     }
@@ -144,6 +146,7 @@ public class XmlConfigTest {
         properties.put("flow.control.period", "50");
         properties.put("backup.count", "2");
         properties.put("metrics.enabled", "false");
+        properties.put("metrics.jmxEnabled", "false");
         properties.put("metrics.retention", "124");
         properties.put("metrics.collection-interval", "123");
         properties.put("metrics.enabled-for-data-structures", "true");
@@ -200,8 +203,10 @@ public class XmlConfigTest {
 
         MetricsConfig metricsCfg = jetConfig.getMetricsConfig();
         assertFalse("isEnabled", metricsCfg.isEnabled());
+        assertFalse("isJmxEnabled", metricsCfg.isJmxEnabled());
         assertEquals("metricsRetentionSeconds", 124, metricsCfg.getRetentionSeconds());
         assertEquals("metricsCollectionInterval", 123, metricsCfg.getCollectionIntervalSeconds());
+        assertTrue("metricsForDataStructures", metricsCfg.isMetricsForDataStructures());
     }
 
     private static void assertDefaultMemberConfig(Config config) {

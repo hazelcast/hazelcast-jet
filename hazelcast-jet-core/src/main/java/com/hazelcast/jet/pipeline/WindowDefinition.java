@@ -86,7 +86,10 @@ public interface WindowDefinition {
      * @param windowSize the size of the window (size of the range of the timestamps it covers)
      */
     @Nonnull
-    MetricsRendererPlugin
+    static SlidingWindowDef tumbling(long windowSize) {
+        return new SlidingWindowDef(windowSize, windowSize);
+    }
+
     /**
      * Returns a {@link WindowKind#SESSION session} window definition with the
      * given parameters.
