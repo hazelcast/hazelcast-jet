@@ -192,8 +192,10 @@ public final class AggregateOperationBuilder<A> {
         /**
          * Registers the supplied function as the {@code finish} primitive. Constructs
          * and returns an {@link AggregateOperation1} from the current state of the
-         * builder. The {@code export} primitive must already be registered, otherwise
-         * this method throws an exception.
+         * builder.
+         *
+         * @throws IllegalStateException if the {@code export} primitive was
+         * not registered
          */
         @Nonnull
         public AggregateOperation1<T0, A, R> andFinish(
@@ -213,8 +215,10 @@ public final class AggregateOperationBuilder<A> {
         /**
          * Registers the supplied function as both the {@code export} and {@code
          * finish} primitive. Constructs and returns an {@link AggregateOperation1}
-         * from the current state of the builder. The {@code export} primitive must
-         * not be already registered, otherwise this method throws an exception.
+         * from the current state of the builder.
+         *
+         * @throws IllegalStateException if the {@code export} primitive is
+         * already registered
          */
         @Nonnull
         public <R_NEW> AggregateOperation1<T0, A, R_NEW> andExportFinish(
@@ -310,8 +314,10 @@ public final class AggregateOperationBuilder<A> {
         /**
          * Registers the supplied function as the {@code finish} primitive. Constructs
          * and returns an {@link AggregateOperation1} from the current state of the
-         * builder. The {@code export} primitive must already be registered, otherwise
-         * this method throws an exception.
+         * builder.
+         *
+         * @throws IllegalStateException if the {@code export} primitive was
+         * not registered
          */
         @Nonnull
         public AggregateOperation2<T0, T1, A, R> andFinish(
@@ -331,8 +337,10 @@ public final class AggregateOperationBuilder<A> {
         /**
          * Registers the supplied function as both the {@code export} and {@code
          * finish} primitive. Constructs and returns an {@link AggregateOperation2}
-         * from the current state of the builder. The {@code export} primitive must
-         * not be already registered, otherwise this method throws an exception.
+         * from the current state of the builder.
+         *
+         * @throws IllegalStateException if the {@code export} primitive is
+         * already registered
          */
         @Nonnull
         public <R_NEW> AggregateOperation2<T0, T1, A, R_NEW> andExportFinish(
@@ -409,8 +417,10 @@ public final class AggregateOperationBuilder<A> {
         /**
          * Registers the supplied function as the {@code finish} primitive. Constructs
          * and returns an {@link AggregateOperation1} from the current state of the
-         * builder. The {@code export} primitive must already be registered, otherwise
-         * this method throws an exception.
+         * builder.
+         *
+         * @throws IllegalStateException if the {@code export} primitive was
+         * not registered
          */
         @Nonnull
         public AggregateOperation3<T0, T1, T2, A, R> andFinish(
@@ -431,8 +441,10 @@ public final class AggregateOperationBuilder<A> {
         /**
          * Registers the supplied function as both the {@code export} and {@code
          * finish} primitive. Constructs and returns an {@link AggregateOperation3}
-         * from the current state of the builder. The {@code export} primitive must
-         * not be already registered, otherwise this method throws an exception.
+         * from the current state of the builder.
+         *
+         * @throws IllegalStateException if the {@code export} primitive is
+         * already registered
          */
         @Nonnull
         public <R_NEW> AggregateOperation3<T0, T1, T2, A, R_NEW> andExportFinish(
@@ -531,8 +543,10 @@ public final class AggregateOperationBuilder<A> {
         /**
          * Registers the supplied function as the {@code finish} primitive. Constructs
          * and returns an {@link AggregateOperation1} from the current state of the
-         * builder. The {@code export} primitive must already be registered, otherwise
-         * this method throws an exception.
+         * builder.
+         *
+         * @throws IllegalStateException if the {@code export} primitive was
+         * not registered
          */
         @Nonnull
         public AggregateOperation<A, R> andFinish(
@@ -552,8 +566,10 @@ public final class AggregateOperationBuilder<A> {
         /**
          * Registers the supplied function as both the {@code export} and {@code
          * finish} primitive. Constructs and returns an {@link AggregateOperation1}
-         * from the current state of the builder. The {@code export} primitive must
-         * not be already registered, otherwise this method throws an exception.
+         * from the current state of the builder.
+         *
+         * @throws IllegalStateException if the {@code export} primitive is
+         * already registered
          */
         @Nonnull
         public <R_NEW> AggregateOperation<A, R_NEW> andExportFinish(

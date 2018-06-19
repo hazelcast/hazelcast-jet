@@ -106,7 +106,6 @@ public class AggregateOperation3Test {
         assertSame(acc, newAggrOp.finishFn().apply(acc));
     }
 
-
     @Test
     public void when_withCombiningAccumulateFn_then_accumulateFnCombines() {
         // Given

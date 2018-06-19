@@ -147,7 +147,9 @@ public interface GeneralStageWithKey<T, K> {
      * DistributedBiFunction) stageWithoutKey.mapUsingIMap()}, but here Jet
      * knows the key and uses it to partition and distribute the input in order
      * to achieve data locality. The value it fetches from the {@code IMap} is
-     * stored on the cluster member where the processing takes place.
+     * stored on the cluster member where the processing takes place. However,
+     * if the map doesn't use the default partitioning strategy, the data
+     * locality will be broken.
      *
      * @param mapName name of the {@code IMap}
      * @param mapFn the mapping function
@@ -176,7 +178,9 @@ public interface GeneralStageWithKey<T, K> {
      * DistributedBiFunction) stageWithoutKey.mapUsingIMap()}, but here Jet
      * knows the key and uses it to partition and distribute the input in order
      * to achieve data locality. The value it fetches from the {@code IMap} is
-     * stored on the cluster member where the processing takes place.
+     * stored on the cluster member where the processing takes place. However,
+     * if the map doesn't use the default partitioning strategy, the data
+     * locality will be broken.
      *
      * @param iMap the {@code IMap} to use as the context
      * @param mapFn the mapping function
@@ -238,13 +242,13 @@ public interface GeneralStageWithKey<T, K> {
      * Attaches a stage with a custom transform based on the provided supplier
      * of Core API {@link Processor}s. To be compatible with the rest of the
      * pipeline, the processor must expect a single inbound edge and
-     * arbitrarily many outbound edges, and it must push the same data to all
-     * outbound edges. The inbound edge will be distributed adn partitioned
+     * arbitrarily many outbound edges, and it must emit the same data to all
+     * outbound edges. The inbound edge will be distributed and partitioned
      * using the key function assigned to this stage.
      * <p>
-     * Note that the returned stage's type parameter is inferred from the call
-     * site and not propagated from the processor that will produce the result,
-     * so there is no actual type safety provided.
+     * Note that the type parameter of the returned stage is inferred from the
+     * call site and not propagated from the processor that will produce the
+     * result, so there is no actual type safety provided.
      *
      * @param <R> the type of the output items
      * @param stageName a human-readable name for the custom stage

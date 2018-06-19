@@ -89,17 +89,19 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
  *     the accumulator
  * </li><li>
  *     {@link #combineFn() combine} the contents of the right-hand
- *     accumulator into the left-hand one
+ *     accumulator into the left-hand one, optional
  * </li><li>
- *     {@link #deductFn() deduct} the contents of the right-hand
- *     accumulator from the left-hand one (undo the effects of {@code combine})
+ *     {@link #deductFn() deduct} the contents of the right-hand accumulator
+ *     from the left-hand one (undo the effects of {@code combine}), optional
  * </li><li>
- *     {@link #finishFn() finish} accumulation by transforming the accumulator
- *     object into the final result
+ *     {@link #exportFn() export}: calculate the result value from an
+ *     accumulator while preserving the accumulator state for further
+ *     accumulation. Used for aggregations with speculative results or for
+ *     rolling aggregations
  * </li><li>
- *     {@link #exportFn() export} the current aggregation result without
- *     disturbing the accumulator state (like {@code finish}, but for rolling
- *     aggregations)
+ *     {@link #finishFn() finish}: calculate the result value from an
+ *     accumulator. After this conversion the accumulator will no longer be
+ *     used, it's allowed, for example, to use the {@code identity()} function
  * </li></ol>
  *
  * @param <A> the type of the accumulator
@@ -186,20 +188,28 @@ public interface AggregateOperation<A, R> extends Serializable {
     DistributedBiConsumer<? super A, ? super A> deductFn();
 
     /**
-     * A primitive that transforms the accumulator into the result of
-     * aggregation. As opposed to the {@link #finishFn() finish} primitive,
-     * this operation must be non-destructive for the accumulator. Jet will
-     * keep using it.
+     * A primitive that transforms the accumulator into a result of the
+     * aggregation. Unlike {@link #finishFn() finish} primitive, this operation
+     * must not:
+     * <ul>
+     *     <li>mutate the accumulator: it must remain ready to accumulate more
+     *     items
+     *     <li>share mutable data with the accumulator: accumulating more items
+     *     to the accumulator must not change the result
+     * </ul>
+     * For example, when accumulating into an {@code ArrayList}, you must copy
+     * it before returning it. If the elements of the list are mutated, they
+     * must be copied as well.
      */
     @Nonnull
     DistributedFunction<? super A, ? extends R> exportFn();
 
     /**
-     * A primitive that finishes the accumulation process by transforming the
-     * accumulator object into the final result. Calling this primitive
-     * invalidates the accumulator: Jet will not pass it to any other
-     * primitives afterwards. Therefore it may safely return the accumulator
-     * itself (i.e., perform the <em>identity</em> finishing transform).
+     * A primitive that transforms the accumulator into a result of the
+     * aggregation. This is a relaxed version of {@link #exportFn() export}
+     * primitive: the accumulator is guaranteed to be no longer used after this
+     * operation. For example, when accumulating into an {@code ArrayList}, you
+     * can return the accumulator list directly without copying it.
      */
     @Nonnull
     default DistributedFunction<? super A, ? extends R> finishFn() {

@@ -608,7 +608,7 @@ public final class AggregateOperations {
         // replace the map contents with finished values
         DistributedSupplier<Map<K, A>> createAccMapFn = (DistributedSupplier<Map<K, A>>) createMapFn;
 
-        return AggregateOperation
+        return (AggregateOperation1<T, Map<K, A>, M>) AggregateOperation
                 .withCreate(createAccMapFn)
                 .andAccumulate(accumulateFn)
                 .andCombine(combineFn)

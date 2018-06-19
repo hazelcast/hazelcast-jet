@@ -494,7 +494,11 @@ public abstract class DistributedCollectors {
         return AggregateOperation.withCreate(collector.supplier())
                                  .andAccumulate(collector.accumulator())
                                  .andCombine((l, r) -> collector.combiner().apply(l, r))
-                                 .andExportFinish(collector.finisher());
+                                 .<R>andExport(x -> {
+                                     throw new UnsupportedOperationException(
+                                             "Can't use exportFn on an aggregate operation created from j.u.s.Collector");
+                                 })
+                                 .andFinish(collector.finisher());
     }
 
     private static <T> DistributedSupplier<MutableReference<T>> refSupplier(T obj) {
