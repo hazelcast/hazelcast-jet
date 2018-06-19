@@ -17,9 +17,11 @@
 package com.hazelcast.jet.impl.metrics.jmx;
 
 import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import javax.management.InstanceNotFoundException;
 import javax.management.MBeanServer;
@@ -43,6 +45,7 @@ import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+@RunWith(HazelcastSerialClassRunner.class)
 public class JmxPublisherTest {
 
     private static final ObjectName OBJECT_NAME_NO_MODULE;
