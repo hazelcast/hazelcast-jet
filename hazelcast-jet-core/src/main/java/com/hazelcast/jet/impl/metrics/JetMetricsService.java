@@ -76,7 +76,7 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
 
     @Override
     public void init(NodeEngine nodeEngine, Properties properties) {
-        List<MetricsRenderPlugin> plugins = new ArrayList<>();
+        List<MetricsPublisher> plugins = new ArrayList<>();
         if (config.isEnabled()) {
             int journalSize = Math.max(
                     1, (int) Math.ceil((double) config.getRetentionSeconds() / config.getCollectionIntervalSeconds())
@@ -95,21 +95,21 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
         }
 
         logger.info("Configuring metrics collection, collection interval=" + config.getCollectionIntervalSeconds()
-                + " seconds, retention=" + config.getRetentionSeconds() + " seconds, renderers="
-                + plugins.stream().map(MetricsRenderPlugin::name).collect(Collectors.joining(", ", "[", "]")));
+                + " seconds, retention=" + config.getRetentionSeconds() + " seconds, publishers="
+                + plugins.stream().map(MetricsPublisher::name).collect(Collectors.joining(", ", "[", "]")));
         // a renderer to render all the plugins
         ProbeRenderer renderer = new ProbeRenderer() {
             @Override
             public void renderLong(String name, long value) {
-                for (MetricsRenderPlugin plugin : plugins) {
-                    plugin.renderLong(name, value);
+                for (MetricsPublisher plugin : plugins) {
+                    plugin.publishLong(name, value);
                 }
             }
 
             @Override
             public void renderDouble(String name, double value) {
-                for (MetricsRenderPlugin plugin : plugins) {
-                    plugin.renderDouble(name, value);
+                for (MetricsPublisher plugin : plugins) {
+                    plugin.publishDouble(name, value);
                 }
             }
 
@@ -125,8 +125,8 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
 
         scheduledFuture = nodeEngine.getExecutionService().scheduleWithRepetition("MetricsForManCenterCollection", () -> {
             this.nodeEngine.getMetricsRegistry().render(renderer);
-            for (MetricsRenderPlugin plugin : plugins) {
-                plugin.onRenderingComplete();
+            for (MetricsPublisher plugin : plugins) {
+                plugin.whenComplete();
             }
         }, 1, config.getCollectionIntervalSeconds(), TimeUnit.SECONDS);
     }

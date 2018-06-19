@@ -16,15 +16,15 @@
 
 package com.hazelcast.jet.impl.metrics;
 
-public interface MetricsRenderPlugin {
+public interface MetricsPublisher {
 
-    void renderLong(String name, long value);
-    void renderDouble(String name, double value);
+    void publishLong(String name, long value);
+    void publishDouble(String name, double value);
 
     /**
-     * Callback called after all metrics are rendered.
+     * Callback called after all metrics are written.
      */
-    void onRenderingComplete();
+    void whenComplete();
 
     /**
      * Name for debugging purposes.

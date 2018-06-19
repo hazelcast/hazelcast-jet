@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.metrics.jmx;
 
 import com.hazelcast.internal.metrics.MetricsUtil;
-import com.hazelcast.jet.impl.metrics.MetricsRenderPlugin;
+import com.hazelcast.jet.impl.metrics.MetricsPublisher;
 
 import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
@@ -36,7 +36,7 @@ import static com.hazelcast.jet.Util.entry;
  * Renderer to create, register and unregister mBeans for metrics as they are
  * rendered.
  */
-public class JmxRenderer implements MetricsRenderPlugin {
+public class JmxRenderer implements MetricsPublisher {
 
     private final MBeanServer platformMBeanServer;
     private final String instanceNameEscaped;
@@ -57,12 +57,12 @@ public class JmxRenderer implements MetricsRenderPlugin {
     }
 
     @Override
-    public void renderLong(String metricName, long value) {
+    public void publishLong(String metricName, long value) {
         renderNumber(metricName, value);
     }
 
     @Override
-    public void renderDouble(String metricName, double value) {
+    public void publishDouble(String metricName, double value) {
         renderNumber(metricName, value);
     }
 
@@ -84,7 +84,7 @@ public class JmxRenderer implements MetricsRenderPlugin {
     }
 
     @Override
-    public void onRenderingComplete() {
+    public void whenComplete() {
         // remove metrics that weren't present in current rendering
         for (Iterator<MetricData> iterator = metricNameToMetricData.values().iterator(); iterator.hasNext(); ) {
             MetricData metricData = iterator.next();
