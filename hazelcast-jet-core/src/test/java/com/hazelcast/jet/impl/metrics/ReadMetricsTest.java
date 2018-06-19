@@ -20,8 +20,10 @@ import com.hazelcast.core.Member;
 import com.hazelcast.instance.MemberImpl;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.config.MetricsConfig;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
+import com.hazelcast.jet.impl.metrics.mancenter.MetricsResultSet;
 import com.hazelcast.nio.Address;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.util.UuidUtil;
@@ -46,7 +48,9 @@ public class ReadMetricsTest extends JetTestSupport {
 
     @Test
     public void when_readMetricsAsync() {
-        JetInstance inst = createJetMember();
+        MetricsConfig conf = new MetricsConfig();
+        conf.setCollectionIntervalSeconds(2);
+        JetInstance inst = createJetMember(new JetConfig().setMetricsConfig(conf));
         JetClientInstanceImpl client = (JetClientInstanceImpl) createJetClient();
         assertTrueEventually(() -> {
             Member member = inst.getHazelcastInstance().getCluster().getLocalMember();
@@ -57,9 +61,11 @@ public class ReadMetricsTest extends JetTestSupport {
                             .anyMatch(m -> m.key().equals("[metric=cluster.size]"))
             );
 
-            // immediate next call should not return empty result
-            result = client.readMetricsAsync(member, result.nextSequence()).get();
-            assertFalse(result.collections().isEmpty());
+            // immediate next two calls should not return empty result
+            for (int i = 0; i < 2; i++) {
+                result = client.readMetricsAsync(member, result.nextSequence()).get();
+                assertFalse(result.collections().isEmpty());
+            }
         }, 30);
     }
 

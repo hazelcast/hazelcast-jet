@@ -14,12 +14,10 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.config;
+package com.hazelcast.jet.config;
 
 import com.hazelcast.config.Config;
-import com.hazelcast.jet.config.EdgeConfig;
-import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.config.MetricsConfig;
+import com.hazelcast.jet.impl.config.XmlJetConfigLocator;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Ignore;

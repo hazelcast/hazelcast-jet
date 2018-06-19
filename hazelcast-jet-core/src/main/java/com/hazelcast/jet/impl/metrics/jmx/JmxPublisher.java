@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.metrics.jmx;
 
 import com.hazelcast.internal.metrics.MetricsUtil;
+import com.hazelcast.jet.config.MetricsConfig;
 import com.hazelcast.jet.impl.metrics.MetricsPublisher;
 
 import javax.management.MBeanServer;
@@ -41,9 +42,13 @@ public class JmxPublisher implements MetricsPublisher {
     private final MBeanServer platformMBeanServer;
     private final String instanceNameEscaped;
 
-    /** key: metric name, value: MetricData */
+    /**
+     * key: metric name, value: MetricData
+     */
     private final Map<String, MetricData> metricNameToMetricData = new HashMap<>();
-    /** key: jmx object name, value: mBean */
+    /**
+     * key: jmx object name, value: mBean
+     */
     private final Map<ObjectName, MetricsMBean> mBeans = new HashMap<>();
 
     public JmxPublisher(String instanceName) {
@@ -130,7 +135,7 @@ public class JmxPublisher implements MetricsPublisher {
 
         /**
          * See {@link
-         * com.hazelcast.jet.config.MetricsConfig#setExposeThroughJmx(boolean)}.
+         * MetricsConfig#setJmxEnabled(boolean)}.
          */
         @SuppressWarnings("checkstyle:ExecutableStatementCount")
         MetricData(String metricName, String instanceNameEscaped) {
@@ -159,8 +164,8 @@ public class JmxPublisher implements MetricsPublisher {
                             mBeanTags.append(',');
                         }
                         mBeanTags.append("tag")
-                                 .append(tag++)
-                                 .append('=');
+                                .append(tag++)
+                                .append('=');
                         if (entry.getKey().length() == 0) {
                             // key is empty for old metric names (see parseOldMetricName)
                             mBeanTags.append(escapeObjectNameValue(entry.getValue()));

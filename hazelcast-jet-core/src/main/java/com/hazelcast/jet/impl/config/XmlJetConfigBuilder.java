@@ -40,6 +40,7 @@ import javax.annotation.Nullable;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.InputStream;
+import java.util.Optional;
 import java.util.Properties;
 
 import static com.hazelcast.jet.impl.config.XmlJetConfigLocator.getClientConfigStream;
@@ -219,17 +220,13 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
         }
     }
 
-    private void parseMetrics(Node edgeNode) {
+    private void parseMetrics(Node metricsNode) {
         MetricsConfig config = jetConfig.getMetricsConfig();
-        Node enabled = edgeNode.getAttributes().getNamedItem("enabled");
-        if (enabled != null) {
-            config.setEnabled(Boolean.parseBoolean(getTextContent(enabled)));
-        }
-        enabled = edgeNode.getAttributes().getNamedItem("jmxEnabled");
-        if (enabled != null) {
-            config.setJmxEnabled(Boolean.parseBoolean(getTextContent(enabled)));
-        }
-        for (Node child : childElements(edgeNode)) {
+
+        getBoolAttribute(metricsNode, "enabled").ifPresent(config::setEnabled);
+        getBoolAttribute(metricsNode, "jmxEnabled").ifPresent(config::setJmxEnabled);
+
+        for (Node child : childElements(metricsNode)) {
             String name = cleanNodeName(child);
             switch (name) {
                 case "retention-seconds":
@@ -257,5 +254,9 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
 
     private boolean booleanValue(Node node) {
         return Boolean.parseBoolean(getTextContent(node));
+    }
+
+    private Optional<Boolean> getBoolAttribute(Node node, String name) {
+        return Optional.ofNullable(node.getAttributes().getNamedItem(name)).map(this::booleanValue);
     }
 }

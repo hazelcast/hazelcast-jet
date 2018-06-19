@@ -16,18 +16,30 @@
 
 package com.hazelcast.jet.impl.metrics;
 
+/**
+ * Represents an object which publishes a set of metrics to a
+ * some destination.
+ */
 public interface MetricsPublisher {
 
+    /**
+     * Publish the given metric with a long value
+     */
     void publishLong(String name, long value);
+
+    /**
+     * Publish the given metric with a double value
+     */
     void publishDouble(String name, double value);
 
     /**
-     * Callback called after all metrics are written.
+     * Callback is called after all metrics are published for a given
+     * metric collection round.
      */
     void whenComplete();
 
     /**
-     * Name for debugging purposes.
+     * Name of the publisher, only used for debugging purposes.
      */
     String name();
 }

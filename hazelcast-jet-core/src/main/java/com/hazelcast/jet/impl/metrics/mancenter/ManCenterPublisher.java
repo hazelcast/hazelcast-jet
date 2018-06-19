@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.metrics;
+package com.hazelcast.jet.impl.metrics.mancenter;
 
+import com.hazelcast.jet.impl.metrics.MetricsPublisher;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.nio.Bits;

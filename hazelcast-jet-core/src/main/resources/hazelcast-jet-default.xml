@@ -34,7 +34,6 @@
     </edge-defaults>
 
     <metrics>
-
         <!-- the number of seconds the metrics will be retained on the instance -->
         <retention-seconds>5</retention-seconds>
 
