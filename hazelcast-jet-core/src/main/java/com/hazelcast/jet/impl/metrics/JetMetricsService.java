@@ -164,7 +164,7 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
             publishers.add(publisher);
         }
         if (config.isJmxEnabled()) {
-            publishers.add(new JmxPublisher(nodeEngine.getHazelcastInstance().getName()));
+            publishers.add(new JmxPublisher(nodeEngine.getHazelcastInstance().getName(), "com.hazelcast"));
         }
         return publishers;
     }

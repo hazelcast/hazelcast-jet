@@ -25,7 +25,6 @@ import org.junit.runner.RunWith;
 
 import javax.management.InstanceNotFoundException;
 import javax.management.MBeanServer;
-import javax.management.MalformedObjectNameException;
 import javax.management.ObjectInstance;
 import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
@@ -34,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -48,26 +48,22 @@ import static org.junit.Assert.assertTrue;
 @RunWith(HazelcastSerialClassRunner.class)
 public class JmxPublisherTest {
 
-    private static final ObjectName OBJECT_NAME_NO_MODULE;
     private static final String MODULE_NAME = "moduleA";
-    private static final ObjectName OBJECT_NAME_WITH_MODULE;
 
-    static {
-        try {
-            OBJECT_NAME_NO_MODULE = new ObjectName("com.hazelcast:*");
-            OBJECT_NAME_WITH_MODULE = new ObjectName("com.hazelcast." + MODULE_NAME + ":*");
-        } catch (MalformedObjectNameException e) {
-            throw new RuntimeException(e);
-        }
-    }
+    private ObjectName objectNameNoModule;
+    private ObjectName objectNameWithModule;
 
     private JmxPublisher jmxPublisher;
     private MBeanServer platformMBeanServer;
+    private String domainPrefix;
 
     @Before
     public void before() throws Exception {
-        jmxPublisher = new JmxPublisher("inst1");
+        domainPrefix = "domain" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE);
+        jmxPublisher = new JmxPublisher("inst1", domainPrefix);
         platformMBeanServer = ManagementFactory.getPlatformMBeanServer();
+        objectNameNoModule = new ObjectName(domainPrefix + ":*");
+        objectNameWithModule = new ObjectName(domainPrefix + "." + MODULE_NAME + ":*");
         try {
             assertMBeans(emptyList());
         } catch (AssertionError e) {
@@ -89,35 +85,35 @@ public class JmxPublisherTest {
     public void when_singleMetricOldFormat() throws Exception {
         jmxPublisher.publishLong("a.b.c", 1L);
         assertMBeans(singletonList(
-                tuple2("com.hazelcast:type=Metrics,instance=inst1,tag0=a,tag1=b", singletonList(entry("c", 1L)))));
+                tuple2(domainPrefix + ":type=Metrics,instance=inst1,tag0=a,tag1=b", singletonList(entry("c", 1L)))));
     }
 
     @Test
     public void when_trailingPeriodOldFormat_doNotFail() throws Exception {
         jmxPublisher.publishLong("a.b.", 1L);
         assertMBeans(singletonList(
-                tuple2("com.hazelcast:type=Metrics,instance=inst1,tag0=a,tag1=b", singletonList(entry("metric", 1L)))));
+                tuple2(domainPrefix + ":type=Metrics,instance=inst1,tag0=a,tag1=b", singletonList(entry("metric", 1L)))));
     }
 
     @Test
     public void when_twoDotsOldFormat_doNotFail() throws Exception {
         jmxPublisher.publishLong("a.b..c", 1L);
         assertMBeans(singletonList(
-                tuple2("com.hazelcast:type=Metrics,instance=inst1,tag0=a,tag1=b", singletonList(entry("c", 1L)))));
+                tuple2(domainPrefix + ":type=Metrics,instance=inst1,tag0=a,tag1=b", singletonList(entry("c", 1L)))));
     }
 
     @Test
     public void when_metricTagMissingNewFormat_then_useDefault() throws Exception {
         jmxPublisher.publishLong("a.b.", 1L);
         assertMBeans(singletonList(
-                tuple2("com.hazelcast:type=Metrics,instance=inst1,tag0=a,tag1=b", singletonList(entry("metric", 1L)))));
+                tuple2(domainPrefix + ":type=Metrics,instance=inst1,tag0=a,tag1=b", singletonList(entry("metric", 1L)))));
     }
 
     @Test
     public void when_singleMetricNewFormat() throws Exception {
         jmxPublisher.publishLong("[tag1=a,tag2=b,metric=c]", 1L);
         assertMBeans(singletonList(
-                tuple2("com.hazelcast:type=Metrics,instance=inst1,tag0=\"tag1=a\",tag1=\"tag2=b\"",
+                tuple2(domainPrefix + ":type=Metrics,instance=inst1,tag0=\"tag1=a\",tag1=\"tag2=b\"",
                         singletonList(entry("c", 1L)))));
     }
 
@@ -125,7 +121,7 @@ public class JmxPublisherTest {
     public void when_singleMetricNewFormatWithModule() throws Exception {
         jmxPublisher.publishLong("[tag1=a,module=" + MODULE_NAME + ",metric=c]", 1L);
         assertMBeans(singletonList(
-                tuple2("com.hazelcast." + MODULE_NAME + ":type=Metrics,instance=inst1,tag0=\"tag1=a\"",
+                tuple2(domainPrefix + "." + MODULE_NAME + ":type=Metrics,instance=inst1,tag0=\"tag1=a\"",
                         singletonList(entry("c", 1L)))));
     }
 
@@ -136,11 +132,11 @@ public class JmxPublisherTest {
         jmxPublisher.publishLong("a.c.a", 3L);
         jmxPublisher.publishLong("a", 4L);
         assertMBeans(asList(
-                tuple2("com.hazelcast:type=Metrics,instance=inst1,tag0=a,tag1=b",
+                tuple2(domainPrefix + ":type=Metrics,instance=inst1,tag0=a,tag1=b",
                         asList(entry("c", 1L), entry("d", 2L))),
-                tuple2("com.hazelcast:type=Metrics,instance=inst1,tag0=a,tag1=c",
+                tuple2(domainPrefix + ":type=Metrics,instance=inst1,tag0=a,tag1=c",
                         singletonList(entry("a", 3L))),
-                tuple2("com.hazelcast:type=Metrics,instance=inst1",
+                tuple2(domainPrefix + ":type=Metrics,instance=inst1",
                         singletonList(entry("a", 4L)))
         ));
     }
@@ -153,13 +149,13 @@ public class JmxPublisherTest {
         jmxPublisher.publishLong("[tag1=a,tag2=c,metric=a]", 3L);
         jmxPublisher.publishLong("[metric=a]", 4L);
         assertMBeans(asList(
-                tuple2("com.hazelcast:type=Metrics,instance=inst1,tag0=\"tag1=a\",tag1=\"tag2=b\"",
+                tuple2(domainPrefix + ":type=Metrics,instance=inst1,tag0=\"tag1=a\",tag1=\"tag2=b\"",
                         asList(entry("c", 1L), entry("d", 2L))),
-                tuple2("com.hazelcast." + MODULE_NAME + ":type=Metrics,instance=inst1,tag0=\"tag1=a\",tag1=\"tag2=b\"",
+                tuple2(domainPrefix + "." + MODULE_NAME + ":type=Metrics,instance=inst1,tag0=\"tag1=a\",tag1=\"tag2=b\"",
                         singletonList(entry("d", 5L))),
-                tuple2("com.hazelcast:type=Metrics,instance=inst1,tag0=\"tag1=a\",tag1=\"tag2=c\"",
+                tuple2(domainPrefix + ":type=Metrics,instance=inst1,tag0=\"tag1=a\",tag1=\"tag2=c\"",
                         singletonList(entry("a", 3L))),
-                tuple2("com.hazelcast:type=Metrics,instance=inst1",
+                tuple2(domainPrefix + ":type=Metrics,instance=inst1",
                         singletonList(entry("a", 4L)))
         ));
     }
@@ -183,8 +179,8 @@ public class JmxPublisherTest {
 
     private Set<ObjectInstance> queryOurInstances() {
         Set<ObjectInstance> instances = new HashSet<>();
-        instances.addAll(platformMBeanServer.queryMBeans(OBJECT_NAME_NO_MODULE, null));
-        instances.addAll(platformMBeanServer.queryMBeans(OBJECT_NAME_WITH_MODULE, null));
+        instances.addAll(platformMBeanServer.queryMBeans(objectNameNoModule, null));
+        instances.addAll(platformMBeanServer.queryMBeans(objectNameWithModule, null));
         return instances;
     }
 }

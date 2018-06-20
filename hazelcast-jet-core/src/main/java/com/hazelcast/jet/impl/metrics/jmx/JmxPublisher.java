@@ -50,8 +50,10 @@ public class JmxPublisher implements MetricsPublisher {
      * key: jmx object name, value: mBean
      */
     private final Map<ObjectName, MetricsMBean> mBeans = new HashMap<>();
+    private final String domainPrefix;
 
-    public JmxPublisher(String instanceName) {
+    public JmxPublisher(String instanceName, String domainPrefix) {
+        this.domainPrefix = domainPrefix;
         platformMBeanServer = ManagementFactory.getPlatformMBeanServer();
         instanceNameEscaped = escapeObjectNameValue(instanceName);
     }
@@ -73,7 +75,7 @@ public class JmxPublisher implements MetricsPublisher {
 
     private void renderNumber(String metricName, Number value) {
         MetricData metricData = metricNameToMetricData.computeIfAbsent(metricName,
-                n -> new MetricData(n, instanceNameEscaped));
+                n -> new MetricData(n, instanceNameEscaped, domainPrefix));
         assert !metricData.wasPresent : "metric '" + metricName + "' was rendered twice";
         metricData.wasPresent = true;
         MetricsMBean mBean = mBeans.computeIfAbsent(metricData.objectName, objectName -> {
@@ -138,7 +140,7 @@ public class JmxPublisher implements MetricsPublisher {
          * MetricsConfig#setJmxEnabled(boolean)}.
          */
         @SuppressWarnings("checkstyle:ExecutableStatementCount")
-        MetricData(String metricName, String instanceNameEscaped) {
+        MetricData(String metricName, String instanceNameEscaped, String domainPrefix) {
             List<Entry<String, String>> tagsList = metricName.startsWith("[") && metricName.endsWith("]")
                     ? MetricsUtil.parseMetricName(metricName)
                     : parseOldMetricName(metricName);
@@ -179,7 +181,7 @@ public class JmxPublisher implements MetricsPublisher {
             assert metric != null : "metric == null";
 
             StringBuilder objectNameStr = new StringBuilder(mBeanTags.length() + (1 << 3 << 3));
-            objectNameStr.append("com.hazelcast");
+            objectNameStr.append(domainPrefix);
             if (module != null) {
                 objectNameStr.append('.').append(module);
             }
