@@ -136,7 +136,6 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
         }
     }
 
-
     // apply MetricsConfig to HZ properties
     // these properties need to be set here so that the metrics get applied from startup
     public static void applyMetricsConfig(Config hzConfig, MetricsConfig metricsConfig) {
@@ -170,37 +169,10 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
         return publishers;
     }
 
-    private class MetricsNotifier implements Notifier {
-
-        @Override
-        public boolean shouldNotify() {
-            return true;
-        }
-
-        @Override
-        public WaitNotifyKey getNotifiedKey() {
-            return notifyKey;
-        }
-    }
-
-    private static class MetricsNotifyKey implements WaitNotifyKey {
-
-        @Override
-        public String getServiceName() {
-            return JetMetricsService.SERVICE_NAME;
-        }
-
-        @Override
-        public String getObjectName() {
-            return "metricsJournal";
-        }
-    }
-
     /**
      * A probe renderer which renders the metrics to all the given publishers.
      */
     private class PublisherProbeRenderer implements ProbeRenderer {
-
         @Override
         public void renderLong(String name, long value) {
             for (MetricsPublisher publisher : publishers) {
@@ -235,6 +207,30 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
 
         private void logError(String name, Object value, MetricsPublisher publisher, Exception e) {
             logger.fine("Error publishing metric to: " + publisher.name() + ", metric=" + name + ", value=" + value, e);
+        }
+    }
+
+    private class MetricsNotifier implements Notifier {
+        @Override
+        public boolean shouldNotify() {
+            return true;
+        }
+
+        @Override
+        public WaitNotifyKey getNotifiedKey() {
+            return notifyKey;
+        }
+    }
+
+    private static class MetricsNotifyKey implements WaitNotifyKey {
+        @Override
+        public String getServiceName() {
+            return JetMetricsService.SERVICE_NAME;
+        }
+
+        @Override
+        public String getObjectName() {
+            return "metricsJournal";
         }
     }
 }

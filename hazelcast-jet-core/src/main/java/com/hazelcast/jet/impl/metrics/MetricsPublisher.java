@@ -17,18 +17,17 @@
 package com.hazelcast.jet.impl.metrics;
 
 /**
- * Represents an object which publishes a set of metrics to a
- * some destination.
+ * Represents an object which publishes a set of metrics to some destination.
  */
 public interface MetricsPublisher {
 
     /**
-     * Publish the given metric with a long value
+     * Publish the given metric with a long value.
      */
     void publishLong(String name, long value);
 
     /**
-     * Publish the given metric with a double value
+     * Publish the given metric with a double value.
      */
     void publishDouble(String name, double value);
 
@@ -40,7 +39,7 @@ public interface MetricsPublisher {
     }
 
     /**
-     * Perform any necessary cleanup before shutdown
+     * Perform any necessary cleanup before shutdown.
      */
     default void shutdown() {
     }
