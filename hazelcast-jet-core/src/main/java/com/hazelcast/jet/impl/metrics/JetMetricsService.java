@@ -91,7 +91,7 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
                 + " seconds, retention=" + config.getRetentionSeconds() + " seconds, publishers="
                 + publishers.stream().map(MetricsPublisher::name).collect(joining(", ", "[", "]")));
 
-        ProbeRenderer renderer = new PublisherProbeRenderer(publishers);
+        ProbeRenderer renderer = new PublisherProbeRenderer();
         scheduledFuture = nodeEngine.getExecutionService().scheduleWithRepetition("MetricsPublisher", () -> {
             this.nodeEngine.getMetricsRegistry().render(renderer);
             for (MetricsPublisher publisher : publishers) {
