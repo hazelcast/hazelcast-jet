@@ -162,8 +162,9 @@ public interface GeneralStageWithKey<T, K> {
             @Nonnull String mapName,
             @Nonnull DistributedBiFunction<? super T, ? super V, ? extends R> mapFn
     ) {
+        DistributedFunction<? super T, ? extends K> keyFn = keyFn();
         return mapUsingContext(ContextFactories.<K, V>iMapContext(mapName),
-                (map, item) -> mapFn.apply(item, map.get(keyFn().apply(item))));
+                (map, item) -> mapFn.apply(item, map.get(keyFn.apply(item))));
     }
 
     /**

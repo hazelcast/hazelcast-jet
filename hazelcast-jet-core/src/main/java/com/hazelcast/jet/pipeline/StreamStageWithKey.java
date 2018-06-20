@@ -17,8 +17,10 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.core.IMap;
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.function.DistributedBiPredicate;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
@@ -54,6 +56,24 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
     ) {
         return (StreamStage<R>) GeneralStageWithKey.super.<V, R>mapUsingIMap(iMap, mapFn);
     }
+
+    @Nonnull @Override
+    <C, R> StreamStage<R> mapUsingContext(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
+    );
+
+    @Nonnull @Override
+    <C> StreamStage<T> filterUsingContext(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
+    );
+
+    @Nonnull @Override
+    <C, R> StreamStage<R> flatMapUsingContext(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
+    );
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")

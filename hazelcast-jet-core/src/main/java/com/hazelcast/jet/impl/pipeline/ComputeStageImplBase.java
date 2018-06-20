@@ -268,7 +268,6 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
     <K1, T1_IN, T1, K2, T2_IN, T2, R, RET> RET attachHashJoin2(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
@@ -277,7 +276,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull DistributedTriFunction<T, T1, T2, R> mapToOutputFn
     ) {
         checkSerializable(mapToOutputFn, "mapToOutputFn");
-        return (RET) attach(new HashJoinTransform<>(
+        return attach(new HashJoinTransform<>(
                 asList(transform, transformOf(stage1), transformOf(stage2)),
                 asList(fnAdapter.adaptJoinClause(joinClause1), fnAdapter.adaptJoinClause(joinClause2)),
                 emptyList(),
