@@ -200,11 +200,6 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
      * A probe renderer which renders the metrics to all the given publishers.
      */
     private class PublisherProbeRenderer implements ProbeRenderer {
-        private final List<MetricsPublisher> publishers;
-
-        PublisherProbeRenderer(List<MetricsPublisher> publishers) {
-            this.publishers = publishers;
-        }
 
         @Override
         public void renderLong(String name, long value) {
