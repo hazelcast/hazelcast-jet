@@ -223,8 +223,8 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
     private void parseMetrics(Node metricsNode) {
         MetricsConfig config = jetConfig.getMetricsConfig();
 
-        getBoolAttribute(metricsNode, "enabled").ifPresent(config::setEnabled);
-        getBoolAttribute(metricsNode, "jmxEnabled").ifPresent(config::setJmxEnabled);
+        getBooleanAttribute(metricsNode, "enabled").ifPresent(config::setEnabled);
+        getBooleanAttribute(metricsNode, "jmxEnabled").ifPresent(config::setJmxEnabled);
 
         for (Node child : childElements(metricsNode)) {
             String name = cleanNodeName(child);
@@ -256,7 +256,7 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
         return Boolean.parseBoolean(getTextContent(node));
     }
 
-    private Optional<Boolean> getBoolAttribute(Node node, String name) {
+    private Optional<Boolean> getBooleanAttribute(Node node, String name) {
         return Optional.ofNullable(node.getAttributes().getNamedItem(name)).map(this::booleanValue);
     }
 }

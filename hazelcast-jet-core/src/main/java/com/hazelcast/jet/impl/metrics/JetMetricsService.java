@@ -67,6 +67,8 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
     private MetricsConfig config;
     private volatile ScheduledFuture<?> scheduledFuture;
 
+    private List<MetricsPublisher> publishers;
+
     public JetMetricsService(NodeEngine nodeEngine) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.logger = nodeEngine.getLogger(getClass());
@@ -79,7 +81,7 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
 
     @Override
     public void init(NodeEngine nodeEngine, Properties properties) {
-        List<MetricsPublisher> publishers = getPublishers();
+        this.publishers = getPublishers();
 
         if (publishers.isEmpty()) {
             return;
@@ -123,9 +125,17 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
     public void shutdown(boolean terminate) {
         if (scheduledFuture != null) {
             scheduledFuture.cancel(false);
-            scheduledFuture = null;
+        }
+
+        for (MetricsPublisher publisher : publishers) {
+            try {
+                publisher.shutdown();
+            } catch (Exception e) {
+                logger.warning("Error shutting down metrics publisher " + publisher.name(), e);
+            }
         }
     }
+
 
     // apply MetricsConfig to HZ properties
     // these properties need to be set here so that the metrics get applied from startup
@@ -229,9 +239,7 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
         }
 
         private void logError(String name, Object value, MetricsPublisher publisher, Exception e) {
-            logger.fine(
-                    "Error publishing metric to: " + publisher.name()
-                            + ", metric=" + name + ", value=" + value, e);
+            logger.fine("Error publishing metric to: " + publisher.name() + ", metric=" + name + ", value=" + value, e);
         }
     }
 }

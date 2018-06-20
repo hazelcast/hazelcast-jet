@@ -36,10 +36,18 @@ public interface MetricsPublisher {
      * Callback is called after all metrics are published for a given
      * metric collection round.
      */
-    void whenComplete();
+    default void whenComplete() {
+    }
+
+    /**
+     * Perform any necessary cleanup before shutdown
+     */
+    default void shutdown() {
+    }
 
     /**
      * Name of the publisher, only used for debugging purposes.
      */
     String name();
+
 }

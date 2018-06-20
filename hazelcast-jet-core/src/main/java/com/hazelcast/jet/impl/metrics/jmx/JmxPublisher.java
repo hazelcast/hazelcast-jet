@@ -224,4 +224,16 @@ public class JmxPublisher implements MetricsPublisher {
             return res;
         }
     }
+
+    @Override
+    public void shutdown() {
+        try {
+            ObjectName name = new ObjectName("com.hazelcast*" + ":instance=" + instanceNameEscaped + ",type=Metrics,*");
+            for (ObjectName bean : platformMBeanServer.queryNames(name, null)) {
+                platformMBeanServer.unregisterMBean(bean);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Exception when unregistering JMX beans", e);
+        }
+    }
 }
