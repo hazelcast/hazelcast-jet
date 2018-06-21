@@ -35,6 +35,7 @@ import java.nio.charset.Charset;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.Statement;
 import java.util.Map;
 
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
@@ -711,9 +712,9 @@ public final class Sinks {
     @Nonnull
     public static <T> Sink<T> jdbc(
             @Nonnull DistributedSupplier<Connection> connectionSupplier,
-            @Nonnull DistributedFunction<Connection, PreparedStatement> statementFn,
-            @Nonnull DistributedBiConsumer<PreparedStatement, T> updateFn,
-            @Nonnull DistributedBiConsumer<Connection, PreparedStatement> flushFn
+            @Nonnull DistributedFunction<Connection, Statement> statementFn,
+            @Nonnull DistributedBiConsumer<Statement, T> updateFn,
+            @Nonnull DistributedBiConsumer<Connection, Statement> flushFn
     ) {
         return Sinks.fromProcessor("jdbcSink",
                 SinkProcessors.writeJdbcP(connectionSupplier, statementFn, updateFn, flushFn));
@@ -730,7 +731,7 @@ public final class Sinks {
         return jdbc(
                 () -> uncheckCall(() -> DriverManager.getConnection(connectionUrl)),
                 connection -> uncheckCall(() -> connection.prepareStatement(updateQuery)),
-                updateFn,
+                (stmt, item) -> updateFn.accept((PreparedStatement) stmt, item),
                 (con, stmt) -> uncheckCall(stmt::executeBatch)
         );
     }

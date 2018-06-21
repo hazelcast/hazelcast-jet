@@ -24,8 +24,8 @@ import com.hazelcast.jet.function.DistributedSupplier;
 
 import javax.annotation.Nonnull;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeBufferedP;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
@@ -43,9 +43,9 @@ public final class WriteJdbcP {
      */
     public static <T> ProcessorMetaSupplier metaSupplier(
             @Nonnull DistributedSupplier<Connection> connectionSupplier,
-            @Nonnull DistributedFunction<Connection, PreparedStatement> statementFn,
-            @Nonnull DistributedBiConsumer<PreparedStatement, T> updateFn,
-            @Nonnull DistributedBiConsumer<Connection, PreparedStatement> flushFn
+            @Nonnull DistributedFunction<Connection, Statement> statementFn,
+            @Nonnull DistributedBiConsumer<Statement, T> updateFn,
+            @Nonnull DistributedBiConsumer<Connection, Statement> flushFn
 
     ) {
         return ProcessorMetaSupplier.preferLocalParallelismOne(writeBufferedP(
@@ -59,10 +59,10 @@ public final class WriteJdbcP {
     private static final class JdbcContext {
 
         private final Connection connection;
-        private final PreparedStatement statement;
+        private final Statement statement;
 
         JdbcContext(DistributedSupplier<Connection> connectionSupplier,
-                    DistributedFunction<Connection, PreparedStatement> statementFn) {
+                    DistributedFunction<Connection, Statement> statementFn) {
             this.connection = connectionSupplier.get();
             this.statement = statementFn.apply(connection);
         }
