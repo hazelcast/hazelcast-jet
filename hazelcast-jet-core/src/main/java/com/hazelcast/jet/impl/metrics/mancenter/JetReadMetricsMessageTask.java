@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.metrics;
+package com.hazelcast.jet.impl.metrics.mancenter;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.JetReadMetricsCodec;
 import com.hazelcast.client.impl.protocol.codec.JetReadMetricsCodec.RequestParameters;
 import com.hazelcast.client.impl.protocol.task.AbstractInvocationMessageTask;
 import com.hazelcast.instance.Node;
+import com.hazelcast.jet.impl.metrics.JetMetricsService;
 import com.hazelcast.nio.Connection;
 import com.hazelcast.spi.InvocationBuilder;
 import com.hazelcast.spi.Operation;
@@ -43,7 +44,7 @@ public class JetReadMetricsMessageTask extends AbstractInvocationMessageTask<Req
     protected Operation prepareOperation() {
         // readMetrics requests are sent to member identified by address, but we want it by member UUID.
         // After a member restart, the address remains, but UUID changes. If the local member has different
-        // UUID than then intended one, fail.
+        // UUID from the intended one, fail.
         if (!parameters.uuid.equals(nodeEngine.getLocalMember().getUuid())) {
             // do not throw RetryableException here
             throw new IllegalArgumentException(
