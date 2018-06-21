@@ -27,6 +27,7 @@ import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.connector.ReadFilesP;
 import com.hazelcast.jet.impl.connector.ReadIListP;
+import com.hazelcast.jet.impl.connector.ReadJdbcP;
 import com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP;
 import com.hazelcast.jet.impl.connector.StreamEventJournalP;
 import com.hazelcast.jet.impl.connector.StreamFilesP;
@@ -46,6 +47,8 @@ import javax.jms.MessageConsumer;
 import javax.jms.Session;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.cacheEventToEntry;
@@ -381,6 +384,24 @@ public final class SourceProcessors {
     ) {
         return ProcessorMetaSupplier.forceTotalParallelismOne(
                 StreamJmsP.supplier(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn));
+    }
+
+    /**
+     * Returns a supplier of processors for {@link
+     * Sources#jdbc(DistributedSupplier, DistributedFunction,
+     * DistributedBiFunction, DistributedFunction)}.
+     */
+    public static <T> ProcessorMetaSupplier readJdbcP(
+            @Nonnull DistributedSupplier<java.sql.Connection> connectionSupplier,
+            @Nonnull DistributedFunction<java.sql.Connection, Statement> statementFn,
+            @Nonnull DistributedBiFunction<Integer, Integer, String> sqlFn,
+            @Nonnull DistributedFunction<ResultSet, T> mapOutputFn
+    ) {
+        checkSerializable(connectionSupplier, "connectionSupplier");
+        checkSerializable(statementFn, "statementFn");
+        checkSerializable(sqlFn, "sqlFn");
+        checkSerializable(mapOutputFn, "mapOutputFn");
+        return ProcessorMetaSupplier.of(ReadJdbcP.supplier(connectionSupplier, statementFn, sqlFn, mapOutputFn), 1);
     }
 
     private static <I, O> Projection<I, O> toProjection(DistributedFunction<I, O> projectionFn) {

@@ -21,14 +21,16 @@ import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.EntryEventType;
 import com.hazelcast.jet.GenericPredicates;
-import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.WatermarkSourceUtil;
+import com.hazelcast.jet.core.processor.SourceProcessors;
+import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.impl.connector.ReadJdbcP;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.map.journal.EventJournalMapEvent;
@@ -41,6 +43,10 @@ import javax.annotation.Nonnull;
 import javax.jms.ConnectionFactory;
 import javax.jms.Message;
 import java.nio.charset.Charset;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
@@ -60,6 +66,7 @@ import static com.hazelcast.jet.core.processor.SourceProcessors.streamMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamRemoteCacheP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamRemoteMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamSocketP;
+import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -266,12 +273,13 @@ public final class Sources {
      *
      * @param mapName the name of the map
      * @param predicateFn the predicate to filter the events. If you want to specify just the
-     *                    projection, use {@link Util#mapPutEvents} to pass only {@link
-     *                    com.hazelcast.core.EntryEventType#ADDED ADDED} and {@link
-     *                    com.hazelcast.core.EntryEventType#UPDATED UPDATED} events.
+     *                    projection, use {@link com.hazelcast.jet.Util#mapPutEvents} to pass
+     *                    only {@link com.hazelcast.core.EntryEventType#ADDED ADDED} and
+     *                    {@link com.hazelcast.core.EntryEventType#UPDATED UPDATED} events.
      * @param projectionFn the projection to map the events. If the projection returns a {@code
      *                     null} for an item, that item will be filtered out. You may use {@link
-     *                     Util#mapEventToEntry()} to extract just the key and the new value.
+     *                     com.hazelcast.jet.Util#mapEventToEntry()} to extract just the key and
+     *                     the new value.
      * @param initialPos describes which event to start receiving from
      * @param <T> type of emitted item
      */
@@ -432,13 +440,14 @@ public final class Sources {
      *
      * @param mapName the name of the map
      * @param clientConfig configuration for the client to connect to the remote cluster
-     * @param predicateFn the predicate to filter the events. You may use {@link Util#mapPutEvents}
-     *                    to pass only {@link EntryEventType#ADDED
-     *                    ADDED} and {@link EntryEventType#UPDATED UPDATED}
+     * @param predicateFn the predicate to filter the events. You may use {@link
+     *                    com.hazelcast.jet.Util#mapPutEvents} to pass only {@link
+     *                    EntryEventType#ADDED ADDED} and {@link EntryEventType#UPDATED UPDATED}
      *                    events.
      * @param projectionFn the projection to map the events. If the projection returns a {@code
      *                     null} for an item, that item will be filtered out. You may use {@link
-     *                     Util#mapEventToEntry()} to extract just the key and the new value.
+     *                     com.hazelcast.jet.Util#mapEventToEntry()} to extract just the key and
+     *                     the new value.
      * @param initialPos describes which event to start receiving from
      * @param <K> type of key
      * @param <V> type of value
@@ -531,12 +540,13 @@ public final class Sources {
      *
      * @param cacheName the name of the cache
      * @param predicateFn the predicate to filter the events. You may use {@link
-     *                    Util#cachePutEvents()} to pass only {@link
+     *                    com.hazelcast.jet.Util#cachePutEvents()} to pass only {@link
      *                    com.hazelcast.cache.CacheEventType#CREATED CREATED} and {@link
      *                    com.hazelcast.cache.CacheEventType#UPDATED UPDATED} events.
      * @param projectionFn the projection to map the events. If the projection returns a {@code
      *                     null} for an item, that item will be filtered out. You may use {@link
-     *                     Util#cacheEventToEntry()} to extract just the key and the new value.
+     *                     com.hazelcast.jet.Util#cacheEventToEntry()} to extract just the key
+     *                     and the new value.
      * @param initialPos describes which event to start receiving from
      * @param <T> type of emitted item
      */
@@ -625,12 +635,13 @@ public final class Sources {
      * @param cacheName the name of the cache
      * @param clientConfig configuration for the client to connect to the remote cluster
      * @param predicateFn the predicate to filter the events. You may use {@link
-     *                    Util#cachePutEvents()} to pass only {@link
+     *                    com.hazelcast.jet.Util#cachePutEvents()} to pass only {@link
      *                    com.hazelcast.cache.CacheEventType#CREATED CREATED} and {@link
      *                    com.hazelcast.cache.CacheEventType#UPDATED UPDATED} events.
      * @param projectionFn the projection to map the events. If the projection returns a {@code
      *                     null} for an item, that item will be filtered out. You may use {@link
-     *                     Util#cacheEventToEntry()} to extract just the key and the new value.
+     *                     com.hazelcast.jet.Util#cacheEventToEntry()} to extract just the key
+     *                     and the new value.
      * @param initialPos describes which event to start receiving from
      * @param <T> type of emitted item
      */
@@ -869,5 +880,57 @@ public final class Sources {
     @Nonnull
     public static JmsSourceBuilder jmsTopicBuilder(DistributedSupplier<ConnectionFactory> factorySupplier) {
         return new JmsSourceBuilder(factorySupplier, true);
+    }
+
+    /**
+     * Returns a source which connects to the specified database using the given
+     * {@code connectionSupplier}, query the database using the the given {@code
+     * statementFn} and {@code sqlFn}. It creates output objects from the
+     * produced {@link ResultSet} using given {@code mapOutputFn} and emits them
+     * to downstream.
+     * <p>
+     * {@code sqlFn} gets total parallelism (local parallelism * member count)
+     * and global processor index as arguments and produces an sql query which
+     * fetches only a part of the whole result. For example: <pre> {@code
+     *  (parallelism, index) ->
+     *      String.format("select * from TABLE where mod(id,%d)=%d", parallelism, index)
+     * }</pre>
+     * <p>
+     * {@code mapOutputFn} gets produced {@link ResultSet} as argument and
+     * creates desired output object. The function is called for each row of the
+     * result set, user should not call {@link ResultSet#next()} in the function.
+     * <p>
+     * The source does not save any state to snapshot. If the job is restarted,
+     * it will re-emit all entries.
+     * <p>
+     * Any {@code SQLException} will cause the job to fail.
+     * <p>
+     * The default local parallelism for this processor is 1.
+     */
+    public static <T> BatchSource<T> jdbc(
+            @Nonnull DistributedSupplier<Connection> connectionSupplier,
+            @Nonnull DistributedFunction<Connection, Statement> statementFn,
+            @Nonnull DistributedBiFunction<Integer, Integer, String> sqlFn,
+            @Nonnull DistributedFunction<ResultSet, T> mapOutputFn
+    ) {
+        return batchFromProcessor("jdbcSource",
+                SourceProcessors.readJdbcP(connectionSupplier, statementFn, sqlFn, mapOutputFn));
+    }
+
+    /**
+     * Convenience for {@link Sources#jdbc(DistributedSupplier,
+     * DistributedFunction, DistributedBiFunction, DistributedFunction)}.
+     * A non-distributed, single-worker source which fetches the whole resultSet
+     * with a single query.
+     */
+    public static <T> BatchSource<T> jdbc(@Nonnull String connectionURL, @Nonnull String sql,
+                                           @Nonnull DistributedFunction<ResultSet, T> mapOutputFn) {
+        return batchFromProcessor("jdbcSource", ProcessorMetaSupplier.forceTotalParallelismOne(
+                ReadJdbcP.supplier(
+                        () -> uncheckCall(() -> DriverManager.getConnection(connectionURL)),
+                        connection -> uncheckCall(connection::createStatement),
+                        (parallelism, index) -> sql,
+                        mapOutputFn
+                )));
     }
 }

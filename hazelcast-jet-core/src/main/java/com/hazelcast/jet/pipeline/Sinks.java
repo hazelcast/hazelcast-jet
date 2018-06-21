@@ -20,6 +20,8 @@ import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.Offloadable;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBinaryOperator;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -30,6 +32,9 @@ import com.hazelcast.map.EntryProcessor;
 import javax.annotation.Nonnull;
 import javax.jms.ConnectionFactory;
 import java.nio.charset.Charset;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.util.Map;
 
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
@@ -48,6 +53,7 @@ import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteMapP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeSocketP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
+import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -631,7 +637,7 @@ public final class Sinks {
      * @param <T> type of the items the sink accepts
      */
     @Nonnull
-    public static <T> JmsSinkBuilder<T> jmsQueueBuilder(DistributedSupplier<ConnectionFactory> factorySupplier) {
+    public static <T> JmsSinkBuilder<T> jmsQueueBuilder(@Nonnull DistributedSupplier<ConnectionFactory> factorySupplier) {
         return new JmsSinkBuilder<>(factorySupplier, false);
     }
 
@@ -675,7 +681,57 @@ public final class Sinks {
      * @param <T> type of the items the sink accepts
      */
     @Nonnull
-    public static <T> JmsSinkBuilder<T> jmsTopicBuilder(DistributedSupplier<ConnectionFactory> factorySupplier) {
-        return new  JmsSinkBuilder<>(factorySupplier, true);
+    public static <T> JmsSinkBuilder<T> jmsTopicBuilder(@Nonnull DistributedSupplier<ConnectionFactory> factorySupplier) {
+        return new JmsSinkBuilder<>(factorySupplier, true);
+    }
+
+    /**
+     * Returns a sink that connects to the specified database using the given
+     * {@code connectionSupplier} and writes to it using the given {@code
+     * statementFn} and {@code updateFn}. After a batch of items is written,
+     * {@code flushFn} is called to flush the changes.
+     * <p>
+     * No state is saved to snapshot for this sink. After the job is restarted,
+     * the items will likely be duplicated, providing an <i>at-least-once</i>
+     * guarantee.
+     * <p>
+     * The default local parallelism for this sink is 1.
+     * @param connectionSupplier the supplier of database connection
+     * @param statementFn the function to prepare the statement
+     * @param updateFn the function to set the parameters of the statement for
+     *                 each item received and execute the update query. Instead
+     *                 of updating for each item, it can be used to add to batch
+     *                 via {@link PreparedStatement#addBatch()}
+     * @param flushFn the function to flush the changes. Gets {@code connection}
+     *                and {@code statement} as arguments. It can be used to
+     *                commit the connection if it is not {@code autoCommit} mode
+     *                or execute the batch
+     * @param <T> type of the items the sink accepts
+     */
+    @Nonnull
+    public static <T> Sink<T> jdbc(
+            @Nonnull DistributedSupplier<Connection> connectionSupplier,
+            @Nonnull DistributedFunction<Connection, PreparedStatement> statementFn,
+            @Nonnull DistributedBiConsumer<PreparedStatement, T> updateFn,
+            @Nonnull DistributedBiConsumer<Connection, PreparedStatement> flushFn
+    ) {
+        return Sinks.fromProcessor("jdbcSink",
+                SinkProcessors.writeJdbcP(connectionSupplier, statementFn, updateFn, flushFn));
+    }
+
+    /**
+     * Convenience for {@link Sinks#jdbc(DistributedSupplier,
+     * DistributedFunction, DistributedBiConsumer, DistributedBiConsumer)}.
+     */
+    @Nonnull
+    public static <T> Sink<T> jdbc(@Nonnull String connectionUrl,
+                                   @Nonnull String updateQuery,
+                                   @Nonnull DistributedBiConsumer<PreparedStatement, T> updateFn) {
+        return jdbc(
+                () -> uncheckCall(() -> DriverManager.getConnection(connectionUrl)),
+                connection -> uncheckCall(() -> connection.prepareStatement(updateQuery)),
+                updateFn,
+                (con, stmt) -> uncheckCall(stmt::executeBatch)
+        );
     }
 }
