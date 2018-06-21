@@ -61,7 +61,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
     public void windowDefinition() {
         SlidingWindowDef tumbling = tumbling(2);
         StageWithKeyAndWindow<Integer, Integer> stage =
-                mapJournalSrcStage.addKey(wholeItem()).window(tumbling);
+                srcStage.addKey(wholeItem()).window(tumbling);
         assertEquals(tumbling, stage.windowDefinition());
     }
 
@@ -77,7 +77,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
         Map<String, Integer> srcMap2 = jet().getMap(srcName2);
 
         StreamStage<Entry<String, Integer>> stage0() {
-            return addKeys(mapJournalSrcStage);
+            return addKeys(srcStage);
         }
 
         StreamStage<Entry<String, Integer>> stage1() {
@@ -485,7 +485,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
         String srcName1 = journaledMapName();
         Map<String, Integer> srcMap1 = jet().getMap(srcName1);
 
-        StreamStage<Entry<String, Integer>> stage0 = addKeys(mapJournalSrcStage);
+        StreamStage<Entry<String, Integer>> stage0 = addKeys(srcStage);
         StreamStage<Entry<String, Integer>> stage1 = addKeys(drawEventJournalValues(srcName1));
         {
             addToSrcMapJournal(input);
