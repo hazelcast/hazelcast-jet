@@ -32,7 +32,6 @@
 
     <properties>
         <main.basedir>${project.parent.basedir}</main.basedir>
-        <h2.version>1.4.196</h2.version>
     </properties>
 
     <build>
@@ -136,7 +135,8 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <version>${h2.version}</version>
+            <version>1.4.196</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

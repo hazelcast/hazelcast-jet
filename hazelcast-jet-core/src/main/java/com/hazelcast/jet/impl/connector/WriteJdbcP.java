@@ -25,6 +25,7 @@ import com.hazelcast.jet.function.DistributedSupplier;
 import javax.annotation.Nonnull;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeBufferedP;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
@@ -51,10 +52,7 @@ public final class WriteJdbcP {
                 context -> new JdbcContext(connectionSupplier, statementFn),
                 (jdbcContext, o) -> updateFn.accept(jdbcContext.statement, (T) o),
                 jdbcContext -> flushFn.accept(jdbcContext.connection, jdbcContext.statement),
-                jdbcContext -> {
-                    uncheckRun(jdbcContext.statement::close);
-                    uncheckRun(jdbcContext.connection::close);
-                }
+                jdbcContext -> uncheckRun(jdbcContext::close)
         ));
     }
 
@@ -67,6 +65,19 @@ public final class WriteJdbcP {
                     DistributedFunction<Connection, PreparedStatement> statementFn) {
             this.connection = connectionSupplier.get();
             this.statement = statementFn.apply(connection);
+        }
+
+        private void close() throws SQLException {
+            SQLException statementException = null;
+            try {
+                statement.close();
+            } catch (SQLException e) {
+                statementException = e;
+            }
+            connection.close();
+            if (statementException != null) {
+                throw statementException;
+            }
         }
     }
 }

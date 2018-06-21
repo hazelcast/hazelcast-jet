@@ -28,9 +28,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
+import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 
 /**
  * Private API, use {@link SourceProcessors#readJdbcP}.
@@ -84,18 +86,27 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
         if (traverser == null) {
             ResultSet resultSet = uncheckCall(() -> statement.executeQuery(sql));
             traverser = ((Traverser<ResultSet>) () -> uncheckCall(() -> resultSet.next() ? resultSet : null))
-                    .map(mapOutputFn);
+                    .map(mapOutputFn)
+                    .onFirstNull(() -> uncheckRun(resultSet::close));
         }
         return emitFromTraverser(traverser);
     }
 
     @Override
-    public void close(@Nullable Throwable error) throws Exception {
-        if (statement != null) {
-            statement.close();
+    public void close(@Nullable Throwable error) throws SQLException {
+        SQLException statementException = null;
+        try {
+            if (statement != null) {
+                statement.close();
+            }
+        } catch (SQLException e) {
+            statementException = e;
         }
         if (connection != null) {
             connection.close();
+        }
+        if (statementException != null) {
+            throw statementException;
         }
     }
 }
