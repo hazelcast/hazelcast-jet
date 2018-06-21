@@ -78,8 +78,6 @@ public abstract class PipelineStreamTestSupport extends PipelineTestSupport {
     }
 
     Job executeAsync() {
-        Job job = jet().newJob(p);
-        spawn(job::join);
-        return job;
+        return jet().newJob(p);
     }
 }
