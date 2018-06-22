@@ -17,6 +17,7 @@
 package com.hazelcast.jet.core.test;
 
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
@@ -32,6 +33,9 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
     protected ILogger logger;
 
     private JetInstance jetInstance;
+    private long jobId = 1;
+    private long executionId = 1;
+    private JobConfig jobConfig = new JobConfig();
     private int totalParallelism = 1;
     private int localParallelism = 1;
     private String vertexName = "testVertex";
@@ -47,6 +51,45 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
     @Nonnull
     public TestProcessorMetaSupplierContext setJetInstance(@Nonnull JetInstance jetInstance) {
         this.jetInstance = jetInstance;
+        return this;
+    }
+
+    @Override
+    public long jobId() {
+        return jobId;
+    }
+
+    /**
+     * Set the job ID.
+     */
+    public TestProcessorMetaSupplierContext setJobId(long jobId) {
+        this.jobId = jobId;
+        return this;
+    }
+
+    @Override
+    public long executionId() {
+        return executionId;
+    }
+
+    /**
+     * Set the execution ID.
+     */
+    public TestProcessorMetaSupplierContext setExecutionId(long executionId) {
+        this.executionId = executionId;
+        return this;
+    }
+
+    @Override @Nonnull
+    public JobConfig jobConfig() {
+        return jobConfig;
+    }
+
+    /**
+     * Set the job name.
+     */
+    public TestProcessorMetaSupplierContext setJobConfig(@Nonnull JobConfig jobConfig) {
+        this.jobConfig = jobConfig;
         return this;
     }
 
