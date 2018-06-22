@@ -27,6 +27,7 @@ import com.hazelcast.jet.function.DistributedSupplier;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -72,6 +73,16 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
             @Nonnull DistributedFunction<ResultSet, T> mapOutputFn
     ) {
         return ProcessorSupplier.of(() -> new ReadJdbcP<>(connectionSupplier, statementFn, sqlFn, mapOutputFn));
+    }
+
+    public static <T> ProcessorSupplier supplier(
+            @Nonnull String connectionURL, @Nonnull String query,
+            @Nonnull DistributedFunction<ResultSet, T> mapOutputFn
+    ) {
+        return ProcessorSupplier.of(() -> new ReadJdbcP<>(
+                () -> uncheckCall(() -> DriverManager.getConnection(connectionURL)),
+                connection -> uncheckCall(connection::createStatement),
+                (parallelism, index) -> query, mapOutputFn));
     }
 
     @Override

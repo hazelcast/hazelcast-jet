@@ -30,7 +30,6 @@ import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.impl.connector.ReadJdbcP;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.map.journal.EventJournalMapEvent;
@@ -44,7 +43,6 @@ import javax.jms.ConnectionFactory;
 import javax.jms.Message;
 import java.nio.charset.Charset;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.Map;
@@ -66,7 +64,6 @@ import static com.hazelcast.jet.core.processor.SourceProcessors.streamMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamRemoteCacheP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamRemoteMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamSocketP;
-import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -923,14 +920,10 @@ public final class Sources {
      * A non-distributed, single-worker source which fetches the whole resultSet
      * with a single query.
      */
-    public static <T> BatchSource<T> jdbc(@Nonnull String connectionURL, @Nonnull String sql,
-                                           @Nonnull DistributedFunction<ResultSet, T> mapOutputFn) {
-        return batchFromProcessor("jdbcSource", ProcessorMetaSupplier.forceTotalParallelismOne(
-                ReadJdbcP.supplier(
-                        () -> uncheckCall(() -> DriverManager.getConnection(connectionURL)),
-                        connection -> uncheckCall(connection::createStatement),
-                        (parallelism, index) -> sql,
-                        mapOutputFn
-                )));
+    public static <T> BatchSource<T> jdbc(@Nonnull String connectionURL, @Nonnull String query,
+                                          @Nonnull DistributedFunction<ResultSet, T> mapOutputFn) {
+
+        return batchFromProcessor("jdbcSource",
+                SourceProcessors.readJdbcP(connectionURL, query, mapOutputFn));
     }
 }

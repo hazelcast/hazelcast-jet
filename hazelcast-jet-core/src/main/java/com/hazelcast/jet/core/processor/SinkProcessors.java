@@ -44,6 +44,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.nio.charset.Charset;
+import java.sql.PreparedStatement;
 import java.sql.Statement;
 
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
@@ -343,5 +344,18 @@ public final class SinkProcessors {
         checkSerializable(updateFn, "updateFn");
         checkSerializable(flushFn, "flushFn");
         return WriteJdbcP.metaSupplier(connectionSupplier, statementFn, updateFn, flushFn);
+    }
+
+    /**
+     * Returns a supplier of processors for {@link
+     * Sinks#jdbc(String, String, DistributedBiConsumer)}.
+     */
+    public static <T> ProcessorMetaSupplier writeJdbcP(
+            @Nonnull String connectionUrl,
+            @Nonnull String updateQuery,
+            @Nonnull DistributedBiConsumer<PreparedStatement, T> bindFn
+    ) {
+        checkSerializable(bindFn, "bindFn");
+        return WriteJdbcP.metaSupplier(connectionUrl, updateQuery, bindFn);
     }
 }

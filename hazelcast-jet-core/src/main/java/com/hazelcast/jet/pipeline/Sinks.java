@@ -33,7 +33,6 @@ import javax.annotation.Nonnull;
 import javax.jms.ConnectionFactory;
 import java.nio.charset.Charset;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.Map;
@@ -54,7 +53,6 @@ import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteMapP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeSocketP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
-import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -723,16 +721,18 @@ public final class Sinks {
     /**
      * Convenience for {@link Sinks#jdbc(DistributedSupplier,
      * DistributedFunction, DistributedBiConsumer, DistributedBiConsumer)}.
+     * Uses batching if it is supported by driver.
+     *
+     * @param connectionUrl the database connection url
+     * @param updateQuery the sql which will do the insert/update
+     * @param bindFn the function to set the parameters of the statement for
+     *               each item received.
      */
     @Nonnull
     public static <T> Sink<T> jdbc(@Nonnull String connectionUrl,
                                    @Nonnull String updateQuery,
-                                   @Nonnull DistributedBiConsumer<PreparedStatement, T> updateFn) {
-        return jdbc(
-                () -> uncheckCall(() -> DriverManager.getConnection(connectionUrl)),
-                connection -> uncheckCall(() -> connection.prepareStatement(updateQuery)),
-                (stmt, item) -> updateFn.accept((PreparedStatement) stmt, item),
-                (con, stmt) -> uncheckCall(stmt::executeBatch)
-        );
+                                   @Nonnull DistributedBiConsumer<PreparedStatement, T> bindFn) {
+        return Sinks.fromProcessor("jdbcSink",
+                SinkProcessors.writeJdbcP(connectionUrl, updateQuery, bindFn));
     }
 }

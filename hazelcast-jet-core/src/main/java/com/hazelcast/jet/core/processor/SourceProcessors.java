@@ -401,7 +401,19 @@ public final class SourceProcessors {
         checkSerializable(statementFn, "statementFn");
         checkSerializable(sqlFn, "sqlFn");
         checkSerializable(mapOutputFn, "mapOutputFn");
-        return ProcessorMetaSupplier.of(ReadJdbcP.supplier(connectionSupplier, statementFn, sqlFn, mapOutputFn), 1);
+        return ProcessorMetaSupplier.preferLocalParallelismOne(
+                ReadJdbcP.supplier(connectionSupplier, statementFn, sqlFn, mapOutputFn));
+    }
+
+    /**
+     * Returns a supplier of processors for {@link
+     * Sources#jdbc(String, String, DistributedFunction)}.
+     */
+    public static <T> ProcessorMetaSupplier readJdbcP(
+            @Nonnull String connectionURL, @Nonnull String query,
+            @Nonnull DistributedFunction<ResultSet, T> mapOutputFn
+    ) {
+        return ProcessorMetaSupplier.forceTotalParallelismOne(ReadJdbcP.supplier(connectionURL, query, mapOutputFn));
     }
 
     private static <I, O> Projection<I, O> toProjection(DistributedFunction<I, O> projectionFn) {
