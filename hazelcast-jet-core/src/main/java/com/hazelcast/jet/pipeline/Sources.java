@@ -880,22 +880,56 @@ public final class Sources {
     }
 
     /**
-     * Returns a source which connects to the specified database using the given
-     * {@code connectionSupplier}, query the database using the the given {@code
-     * statementFn} and {@code sqlFn}. It creates output objects from the
-     * produced {@link ResultSet} using given {@code mapOutputFn} and emits them
-     * to downstream.
+     * Returns a source which connects to the specified database using the
+     * given {@code connectionSupplier}, queries the database using the the
+     * given {@code statementFn} and {@code sqlFn}. It creates output objects
+     * from the {@link ResultSet} using given {@code createOutputFn} and emits
+     * them downstream.
      * <p>
-     * {@code sqlFn} gets total parallelism (local parallelism * member count)
-     * and global processor index as arguments and produces an sql query which
-     * fetches only a part of the whole result. For example: <pre> {@code
+     * The {@code sqlFn} gets total parallelism (local parallelism * member
+     * count) and global processor index as arguments (in this order) and
+     * produces an SQL query which fetches a part of the whole result. For
+     * example:
+     * <pre> {@code
      *  (parallelism, index) ->
      *      String.format("select * from TABLE where mod(id,%d)=%d", parallelism, index)
      * }</pre>
+     * If the table itself isn't partitioned by the same key, then running
+     * multiple queries might not really be faster than using the {@linkplain
+     * #jdbc(String, String, DistributedFunction) simpler version} of this
+     * method, do your own testing.
      * <p>
-     * {@code mapOutputFn} gets produced {@link ResultSet} as argument and
-     * creates desired output object. The function is called for each row of the
-     * result set, user should not call {@link ResultSet#next()} in the function.
+     * {@code createOutputFn} gets the {@link ResultSet} and creates desired
+     * output object. The function is called for each row of the result set,
+     * user should not call {@link ResultSet#next()} or any other
+     * cursor-navigating functions.
+     * <p>
+     * Example: <pre>{@code
+     *     p.drawFrom(Sources.jdbc(
+     *         () -> {
+     *             try {
+     *                 return DriverManager.getConnection(DB_CONNECTION_URL);
+     *             } catch (SQLException e) {
+     *                 throw ExceptionUtil.rethrow(e);
+     *             }
+     *         },
+     *         con -> {
+     *             try {
+     *                 return con.createStatement();
+     *             } catch (SQLException e) {
+     *                 throw ExceptionUtil.rethrow(e);
+     *             }
+     *         },
+     *         (parallelism, index) -> "select ID, NAME from PERSON "
+     *                + "where mod(id," + parallelism + ")=" + index,
+     *         resultSet -> {
+     *             try {
+     *                 return new Person(resultSet.getInt(1), resultSet.getString(2));
+     *             } catch (SQLException e) {
+     *                 throw ExceptionUtil.rethrow(e);
+     *             }
+     *         }))
+     * }</pre>
      * <p>
      * The source does not save any state to snapshot. If the job is restarted,
      * it will re-emit all entries.
@@ -903,15 +937,21 @@ public final class Sources {
      * Any {@code SQLException} will cause the job to fail.
      * <p>
      * The default local parallelism for this processor is 1.
+     *
+     * @param connectionSupplier creates the connection
+     * @param statementFn creates {@link Statement} from the connection
+     * @param sqlFn creates SQL string from total parallelism and index
+     * @param createOutputFn creates output objects from {@link ResultSet}
+     * @param <T> type of output objects
      */
     public static <T> BatchSource<T> jdbc(
             @Nonnull DistributedSupplier<Connection> connectionSupplier,
             @Nonnull DistributedFunction<Connection, Statement> statementFn,
             @Nonnull DistributedBiFunction<Integer, Integer, String> sqlFn,
-            @Nonnull DistributedFunction<ResultSet, T> mapOutputFn
+            @Nonnull DistributedFunction<ResultSet, T> createOutputFn
     ) {
         return batchFromProcessor("jdbcSource",
-                SourceProcessors.readJdbcP(connectionSupplier, statementFn, sqlFn, mapOutputFn));
+                SourceProcessors.readJdbcP(connectionSupplier, statementFn, sqlFn, createOutputFn));
     }
 
     /**
@@ -919,11 +959,26 @@ public final class Sources {
      * DistributedFunction, DistributedBiFunction, DistributedFunction)}.
      * A non-distributed, single-worker source which fetches the whole resultSet
      * with a single query.
+     * <p>
+     * Example: <pre>{@code
+     *     p.drawFrom(Sources.jdbc(
+     *         DB_CONNECTION_URL,
+     *         "select ID, NAME from PERSON",
+     *         resultSet -> {
+     *             try {
+     *                 return new Person(resultSet.getInt(1), resultSet.getString(2));
+     *             } catch (SQLException e) {
+     *                 throw ExceptionUtil.rethrow(e);
+     *             }
+     *         }))
+     * }</pre>
      */
-    public static <T> BatchSource<T> jdbc(@Nonnull String connectionURL, @Nonnull String query,
-                                          @Nonnull DistributedFunction<ResultSet, T> mapOutputFn) {
-
+    public static <T> BatchSource<T> jdbc(
+            @Nonnull String connectionURL,
+            @Nonnull String query,
+            @Nonnull DistributedFunction<ResultSet, T> createOutputFn
+    ) {
         return batchFromProcessor("jdbcSource",
-                SourceProcessors.readJdbcP(connectionURL, query, mapOutputFn));
+                SourceProcessors.readJdbcP(connectionURL, query, createOutputFn));
     }
 }

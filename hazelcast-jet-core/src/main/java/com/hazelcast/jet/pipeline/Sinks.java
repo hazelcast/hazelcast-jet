@@ -690,11 +690,57 @@ public final class Sinks {
      * statementFn} and {@code updateFn}. After a batch of items is written,
      * {@code flushFn} is called to flush the changes.
      * <p>
+     * This is a more generic version, using the {@linkplain #jdbc(String,
+     * String, DistributedBiConsumer) simpler one} might work for you.
+     * <p>
+     * Example:<pre>{@code
+     *     p.drainTo(Sinks.jdbc(
+     *             () -> {
+     *                 try {
+     *                     Connection conn = DriverManager.getConnection("jdbc:...");
+     *                     conn.setAutoCommit(false);
+     *                     return conn;
+     *                 } catch (SQLException e) {
+     *                     throw ExceptionUtil.rethrow(e);
+     *                 }
+     *             },
+     *             conn -> {
+     *                 try {
+     *                     return conn.prepareStatement("REPLACE into table (id, name) values(?, ?)");
+     *                 } catch (SQLException e) {
+     *                     throw ExceptionUtil.rethrow(e);
+     *                 }
+     *             },
+     *             (stmt, item) -> {
+     *                 try {
+     *                     stmt.setInt(1, item.id);
+     *                     stmt.setInt(2, item.name);
+     *                     stmt.addBatch();
+     *                 } catch (SQLException e) {
+     *                     throw ExceptionUtil.rethrow(e);
+     *                 }
+     *
+     *             },
+     *             (conn, stmt) -> {
+     *                 try {
+     *                     stmt.executeBatch();
+     *                     conn.commit();
+     *                 } catch (SQLException e) {
+     *                     throw ExceptionUtil.rethrow(e);
+     *                 }
+     *             }
+     *     ));
+     * }</pre>
+     * <p>
      * No state is saved to snapshot for this sink. After the job is restarted,
      * the items will likely be duplicated, providing an <i>at-least-once</i>
-     * guarantee.
+     * guarantee. For this reason you should not use {@code INSERT} statement
+     * which can fail on duplicate primary key. Rather use an
+     * <em>insert-or-update</em> statement that can tolerate duplicate writes.
      * <p>
-     * The default local parallelism for this sink is 1.
+     * Any error from the JDBC operations will cause the job to fail. The
+     * default local parallelism for this sink is 1.
+     *
      * @param connectionSupplier the supplier of database connection
      * @param statementFn the function to prepare the statement
      * @param updateFn the function to set the parameters of the statement for
@@ -719,9 +765,38 @@ public final class Sinks {
     }
 
     /**
-     * Convenience for {@link Sinks#jdbc(DistributedSupplier,
+     * Simpler version of {@link Sinks#jdbc(DistributedSupplier,
      * DistributedFunction, DistributedBiConsumer, DistributedBiConsumer)}.
-     * Uses batching if it is supported by driver.
+     * <p>
+     * The {@code updateQuery} should contain a parametrized query. The {@code
+     * bindFn} will receive a {@code PreparedStatement} created for this query
+     * and should only bind parameters to it. The statement will be executed in
+     * batch mode (if the driver supports it) and will be committed after each
+     * batch.
+     * <p>
+     * Example:<pre>{@code
+     *     stage.drainTo(Sinks.jdbc(
+     *         "jdbc:...",
+     *         "REPLACE into table (id, name) values(?, ?)",
+     *         (stmt, item) -> {
+     *             try {
+     *                 stmt.setInt(1, item.id);
+     *                 stmt.setString(2, item.name);
+     *             } catch (SQLException e) {
+     *                 throw ExceptionUtil.rethrow(e);
+     *             }
+     *         }
+     *     ));
+     * }</pre>
+     * <p>
+     * No state is saved to snapshot for this sink. After the job is restarted,
+     * the items will likely be duplicated, providing an <i>at-least-once</i>
+     * guarantee. For this reason you should not use {@code INSERT} statement
+     * which can fail on duplicate primary key. Rather use an
+     * <em>insert-or-update</em> statement that can tolerate duplicate writes.
+     * <p>
+     * Any error from the JDBC operations will cause the job to fail. The
+     * default local parallelism for this sink is 1.
      *
      * @param connectionUrl the database connection url
      * @param updateQuery the sql which will do the insert/update

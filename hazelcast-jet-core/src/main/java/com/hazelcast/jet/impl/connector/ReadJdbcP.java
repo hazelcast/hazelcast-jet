@@ -76,7 +76,8 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
     }
 
     public static <T> ProcessorSupplier supplier(
-            @Nonnull String connectionURL, @Nonnull String query,
+            @Nonnull String connectionURL,
+            @Nonnull String query,
             @Nonnull DistributedFunction<ResultSet, T> mapOutputFn
     ) {
         return ProcessorSupplier.of(() -> new ReadJdbcP<>(

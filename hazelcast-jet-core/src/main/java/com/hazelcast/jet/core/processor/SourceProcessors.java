@@ -410,7 +410,8 @@ public final class SourceProcessors {
      * Sources#jdbc(String, String, DistributedFunction)}.
      */
     public static <T> ProcessorMetaSupplier readJdbcP(
-            @Nonnull String connectionURL, @Nonnull String query,
+            @Nonnull String connectionURL,
+            @Nonnull String query,
             @Nonnull DistributedFunction<ResultSet, T> mapOutputFn
     ) {
         return ProcessorMetaSupplier.forceTotalParallelismOne(ReadJdbcP.supplier(connectionURL, query, mapOutputFn));
