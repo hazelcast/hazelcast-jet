@@ -200,6 +200,8 @@ public interface AggregateOperation<A, R> extends Serializable {
      * For example, when accumulating into an {@code ArrayList}, you must copy
      * it before returning it. If the elements of the list are mutated, they
      * must be copied as well.
+     * <p>
+     * The returned function must not return {@code null} for any accumulator.
      */
     @Nonnull
     DistributedFunction<? super A, ? extends R> exportFn();
@@ -210,6 +212,8 @@ public interface AggregateOperation<A, R> extends Serializable {
      * primitive: the accumulator is guaranteed to be no longer used after this
      * operation. For example, when accumulating into an {@code ArrayList}, you
      * can return the accumulator list directly without copying it.
+     * <p>
+     * The returned function must not return {@code null} for any accumulator.
      */
     @Nonnull
     default DistributedFunction<? super A, ? extends R> finishFn() {
