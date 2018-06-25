@@ -22,6 +22,7 @@ import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.CircularListCursor;
@@ -31,6 +32,7 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.util.Preconditions;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayDeque;
@@ -122,11 +124,7 @@ public class ProcessorTasklet implements Tasklet {
                                     .sorted(comparing(OutboundEdgeStream::ordinal))
                                     .toArray(OutboundEdgeStream[]::new);
         this.ssContext = ssContext;
-        this.logger =
-                // jetInstance() can be null in tests
-                context.jetInstance() != null
-                        ? context.jetInstance().getHazelcastInstance().getLoggingService().getLogger(getClass())
-                        : Logger.getLogger(getClass());
+        this.logger = getLogger(context);
 
         instreamCursor = popInstreamGroup();
         currInstream = instreamCursor != null ? instreamCursor.value() : null;
@@ -139,6 +137,14 @@ public class ProcessorTasklet implements Tasklet {
         pendingSnapshotId = ssContext.lastSnapshotId() + 1;
 
         watermarkCoalescer = WatermarkCoalescer.create(maxWatermarkRetainMillis, instreams.size());
+    }
+
+    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE",
+            justification = "jetInstance() can be null in TestProcessorContext")
+    private ILogger getLogger(@Nonnull Context context) {
+        return context.jetInstance() != null
+                ? context.jetInstance().getHazelcastInstance().getLoggingService().getLogger(getClass())
+                : Logger.getLogger(getClass());
     }
 
     public void registerMetrics(final ProbeBuilder probeBuilder) {
