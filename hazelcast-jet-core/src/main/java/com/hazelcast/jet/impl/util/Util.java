@@ -48,7 +48,6 @@ import java.io.NotSerializableException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -341,11 +340,11 @@ public final class Util {
 
     @SuppressWarnings("checkstyle:magicnumber")
     public static long idFromString(String str) {
-        if (str == null || str.length() != ID_TEMPLATE.length) {
+        if (str == null) {
             return -1;
         }
         str = str.replaceAll("-", "");
-        return new BigInteger(str, 16).longValue();
+        return Long.parseUnsignedLong(str, 16);
     }
 
     public static <K, V> EntryProcessor<K, V> entryProcessor(
