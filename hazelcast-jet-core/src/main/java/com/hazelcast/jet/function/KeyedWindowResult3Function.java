@@ -48,7 +48,9 @@ import java.io.Serializable;
  */
 @FunctionalInterface
 public interface KeyedWindowResult3Function<K, R0, R1, R2, OUT> extends Serializable {
-    @Nullable OUT apply(
+
+    @Nullable
+    OUT apply(
             long winStart,
             long winEnd,
             @Nonnull K key,

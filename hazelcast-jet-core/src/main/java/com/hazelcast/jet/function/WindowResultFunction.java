@@ -40,7 +40,9 @@ import java.io.Serializable;
  */
 @FunctionalInterface
 public interface WindowResultFunction<R, OUT> extends Serializable {
-    @Nullable OUT apply(long start, long end, @Nonnull R result);
+
+    @Nullable
+    OUT apply(long start, long end, @Nonnull R result);
 
     default KeyedWindowResultFunction<Object, R, OUT> toKeyedWindowResultFn() {
         return (start, end, k, result) -> apply(start, end, result);
