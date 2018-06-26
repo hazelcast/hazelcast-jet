@@ -47,11 +47,10 @@ public interface GeneralStageWithKey<T, K> {
     DistributedFunction<? super T, ? extends K> keyFn();
 
     /**
-     * Attaches to this stage a mapping stage, one which applies the supplied
-     * function to each input item independently and emits the function's result
-     * as the output item. The mapping function receives another parameter, the
-     * context object which Jet will create using the supplied {@code
-     * contextFactory}.
+     * Attaches a mapping stage which applies the supplied function to each
+     * input item independently and emits the function's result as the output
+     * item. The mapping function receives another parameter, the context
+     * object, which Jet will create using the supplied {@code contextFactory}.
      * <p>
      * If the mapping result is {@code null}, it emits nothing. Therefore this
      * stage can be used to implement filtering semantics as well.
@@ -84,11 +83,11 @@ public interface GeneralStageWithKey<T, K> {
     );
 
     /**
-     * Attaches to this stage a filtering stage, one which applies the provided
-     * predicate function to each input item to decide whether to pass the item
-     * to the output or to discard it. The predicate function receives another
-     * parameter, the context object which Jet will create using the supplied
-     * {@code contextFactory}.
+     * Attaches a filtering stage which applies the provided predicate function
+     * to each input item to decide whether to pass the item to the output or
+     * to discard it. The predicate function receives another parameter, the
+     * context object, which Jet will create using the supplied {@code
+     * contextFactory}.
      *
      * <h3>Note on state saving</h3>
      * Any state you maintain in the context object does not automatically
@@ -109,12 +108,12 @@ public interface GeneralStageWithKey<T, K> {
     );
 
     /**
-     * Attaches to this stage a flat-mapping stage, one which applies the
-     * supplied function to each input item independently and emits all the
-     * items from the {@link Traverser} it returns as the output items. The
-     * traverser must be <em>null-terminated</em>. The mapping function
-     * receives another parameter, the context object which Jet will create
-     * using the supplied {@code contextFactory}.
+     * Attaches a flat-mapping stage which applies the supplied function to
+     * each input item independently and emits all the items from the
+     * {@link Traverser} it returns as the output items. The traverser must
+     * be <em>null-terminated</em>. The mapping function receives another
+     * parameter, the context object, which Jet will create using the supplied
+     * {@code contextFactory}.
      *
      * <h3>Interaction with fault-tolerant unbounded jobs</h3>
      * If you use this stage in a fault-tolerant unbounded job, keep in mind

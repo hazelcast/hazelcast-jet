@@ -88,7 +88,7 @@ public interface GeneralStage<T> extends Stage {
      * Attaches a mapping stage which applies the supplied function to each
      * input item independently and emits the function's result as the output
      * item. The mapping function receives another parameter, the context
-     * object which Jet will create using the supplied {@code contextFactory}.
+     * object, which Jet will create using the supplied {@code contextFactory}.
      * <p>
      * If the mapping result is {@code null}, it emits nothing. Therefore this
      * stage can be used to implement filtering semantics as well.
@@ -124,7 +124,7 @@ public interface GeneralStage<T> extends Stage {
      * Attaches a filtering stage which applies the provided predicate function
      * to each input item to decide whether to pass the item to the output or
      * to discard it. The predicate function receives another parameter, the
-     * context object which Jet will create using the supplied {@code
+     * context object, which Jet will create using the supplied {@code
      * contextFactory}.
      *
      * <h3>Note on state saving</h3>
@@ -150,7 +150,7 @@ public interface GeneralStage<T> extends Stage {
      * each input item independently and emits all items from the {@link
      * Traverser} it returns as the output items. The traverser must be
      * <em>null-terminated</em>. The mapping function receives another
-     * parameter, the context object which Jet will create using the supplied
+     * parameter, the context object, which Jet will create using the supplied
      * {@code contextFactory}.
      *
      * <h3>Note on state saving</h3>
