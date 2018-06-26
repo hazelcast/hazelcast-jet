@@ -235,7 +235,7 @@ public interface Processor {
     }
 
     /**
-     * Called as the last method in the processor lifecycle*. It is called
+     * Called as the last method in the processor lifecycle. It is called
      * whether the job was successful or not, and strictly before {@link
      * ProcessorSupplier#close} is called on this member. The method might get
      * called even if {@link #init} method was not yet called.

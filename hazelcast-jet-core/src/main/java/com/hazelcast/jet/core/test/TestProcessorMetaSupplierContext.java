@@ -46,7 +46,7 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
     }
 
     /**
-     * Set the jet instance.
+     * Sets the jet instance.
      */
     @Nonnull
     public TestProcessorMetaSupplierContext setJetInstance(@Nonnull JetInstance jetInstance) {
@@ -60,7 +60,7 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
     }
 
     /**
-     * Set the job ID.
+     * Sets the job ID.
      */
     public TestProcessorMetaSupplierContext setJobId(long jobId) {
         this.jobId = jobId;
@@ -73,7 +73,7 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
     }
 
     /**
-     * Set the execution ID.
+     * Sets the execution ID.
      */
     public TestProcessorMetaSupplierContext setExecutionId(long executionId) {
         this.executionId = executionId;
@@ -86,7 +86,7 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
     }
 
     /**
-     * Set the job name.
+     * Sets the job name.
      */
     public TestProcessorMetaSupplierContext setJobConfig(@Nonnull JobConfig jobConfig) {
         this.jobConfig = jobConfig;
@@ -99,11 +99,27 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
     }
 
     /**
-     * Set total parallelism.
+     * Sets the total parallelism.
      */
     @Nonnull
     public TestProcessorMetaSupplierContext setTotalParallelism(int totalParallelism) {
         this.totalParallelism = totalParallelism;
+        return this;
+    }
+
+    @Override
+    public int localParallelism() {
+        assert totalParallelism % localParallelism == 0 :
+                "totalParallelism=" + totalParallelism + " not divisible with localParallelism=" + localParallelism;
+        return localParallelism;
+    }
+
+    /**
+     * Sets local parallelism.
+     */
+    @Nonnull
+    public TestProcessorMetaSupplierContext setLocalParallelism(int localParallelism) {
+        this.localParallelism = localParallelism;
         return this;
     }
 
@@ -116,26 +132,10 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
     }
 
     /**
-     * Set the logger.
+     * Sets the logger.
      */
     public TestProcessorMetaSupplierContext setLogger(@Nonnull ILogger logger) {
         this.logger = logger;
-        return this;
-    }
-
-    @Override
-    public int localParallelism() {
-        assert totalParallelism % localParallelism == 0 :
-                "totalParallelism=" + totalParallelism + " not divisible with localParallelism=" + localParallelism;
-        return localParallelism;
-    }
-
-    /**
-     * Set local parallelism.
-     */
-    @Nonnull
-    public TestProcessorMetaSupplierContext setLocalParallelism(int localParallelism) {
-        this.localParallelism = localParallelism;
         return this;
     }
 
@@ -150,7 +150,7 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
     }
 
     /**
-     * Set the vertex name.
+     * Sets the vertex name.
      */
     @Nonnull
     public TestProcessorMetaSupplierContext setVertexName(@Nonnull String vertexName) {
