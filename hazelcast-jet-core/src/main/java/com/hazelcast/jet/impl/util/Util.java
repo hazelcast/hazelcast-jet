@@ -310,7 +310,11 @@ public final class Util {
         return Holder.NUMBER_GENERATOR.nextLong();
     }
 
-    public static String jobAndExecutionId(long jobId, long executionId) {
+    public static String jobNameAndExecutionId(String jobName, long executionId) {
+        return "job '" + jobName + "', execution " + idToString(executionId);
+    }
+
+    public static String jobIdAndExecutionId(long jobId, long executionId) {
         return "job " + idToString(jobId) + ", execution " + idToString(executionId);
     }
 

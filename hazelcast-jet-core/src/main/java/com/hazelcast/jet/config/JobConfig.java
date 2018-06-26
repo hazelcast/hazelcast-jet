@@ -56,8 +56,12 @@ public class JobConfig implements Serializable {
     }
 
     /**
-     * Sets the name for the job. Job names do not have to be unique.
-     * Default value is {@code null}.
+     * Sets the name for the job. Job names do not have to be unique but it's
+     * good to keep them unique to be able to distinguish them in logs or
+     * Management Center.
+     * <p>
+     * Default value is {@code null}, in this case a random job ID will be
+     * used.
      *
      * @return {@code this} instance for fluent API
      */

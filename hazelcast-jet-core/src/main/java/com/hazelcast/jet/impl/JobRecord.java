@@ -108,6 +108,7 @@ public class JobRecord implements IdentifiedDataSerializable {
     public String toString() {
         return "JobRecord{" +
                 "jobId=" + idToString(jobId) +
+                ", jobConfig.name=" + getConfig().getName() +
                 ", creationTime=" + toLocalDateTime(creationTime) +
                 ", dagJson=" + dagJson +
                 ", config=" + config +

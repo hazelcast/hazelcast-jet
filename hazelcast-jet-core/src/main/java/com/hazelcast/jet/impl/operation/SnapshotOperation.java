@@ -27,9 +27,8 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import java.io.IOException;
 
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
-import static com.hazelcast.jet.impl.util.Util.idToString;
 
-public class SnapshotOperation extends AsyncOperation {
+public class SnapshotOperation extends AsyncJobOperation {
 
     private long executionId;
     private long snapshotId;
@@ -54,10 +53,10 @@ public class SnapshotOperation extends AsyncOperation {
             if (result.getError() == null) {
                 logFine(getLogger(),
                         "Snapshot %s for job %s finished successfully on member",
-                        snapshotId, idToString(jobId()));
+                        snapshotId, ctx.jobNameAndExecutionId());
             } else {
                 getLogger().warning(String.format("Snapshot %d for job %s finished with an error on member",
-                        snapshotId, idToString(jobId())), result.getError());
+                        snapshotId, ctx.jobNameAndExecutionId()), result.getError());
                 // wrap the exception
                 result.error = new JetException("Exception during snapshot: " + result.error, result.error);
             }

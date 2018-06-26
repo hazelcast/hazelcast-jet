@@ -51,12 +51,12 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
         JetService service = getService();
 
         Address callerAddress = getCallerAddress();
-        logger.fine("Completing execution " + idToString(executionId) + " from caller: " + callerAddress
+        logger.fine("Completing execution with ID " + idToString(executionId) + " from caller: " + callerAddress
                 + " with " + error);
 
         Address masterAddress = getNodeEngine().getMasterAddress();
         if (!callerAddress.equals(masterAddress)) {
-            throw new IllegalStateException("Caller " + callerAddress + " cannot complete execution of "
+            throw new IllegalStateException("Caller " + callerAddress + " cannot complete execution with ID "
                     + idToString(executionId) + " because it is not master. Master is: " + masterAddress);
         }
 
