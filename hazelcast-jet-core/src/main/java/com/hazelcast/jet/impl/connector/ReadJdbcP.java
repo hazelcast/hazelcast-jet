@@ -26,7 +26,6 @@ import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.pipeline.ResultSetForPartitionFunction;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -102,7 +101,7 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
     }
 
     @Override
-    public void close(@Nullable Throwable error) throws Exception {
+    public void close() throws Exception {
         Exception resultSetException = null;
         Exception statementException = null;
         if (resultSet != null) {
