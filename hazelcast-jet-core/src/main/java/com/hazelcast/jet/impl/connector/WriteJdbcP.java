@@ -16,28 +16,145 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.jet.core.Inbox;
+import com.hazelcast.jet.core.Outbox;
+import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.impl.util.ExceptionUtil;
+import com.hazelcast.logging.ILogger;
+import com.hazelcast.util.concurrent.BackoffIdleStrategy;
+import com.hazelcast.util.concurrent.IdleStrategy;
 
 import javax.annotation.Nonnull;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.SQLNonTransientException;
+import java.util.ArrayList;
+import java.util.List;
 
-import static com.hazelcast.jet.core.processor.SinkProcessors.writeBufferedP;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Private API, use {@link SinkProcessors#writeJdbcP}.
  */
-public final class WriteJdbcP {
+public final class WriteJdbcP<T> implements Processor {
 
-    private WriteJdbcP() {
+    private static final IdleStrategy IDLER =
+            new BackoffIdleStrategy(0, 0, MILLISECONDS.toNanos(1), SECONDS.toNanos(10));
+
+    private final DistributedSupplier<Connection> connectionSupplier;
+    private final DistributedFunction<Connection, PreparedStatement> statementFn;
+    private final DistributedBiConsumer<PreparedStatement, T> updateFn;
+    private final DistributedBiConsumer<Connection, PreparedStatement> flushFn;
+
+    private ILogger logger;
+    private Connection connection;
+    private PreparedStatement statement;
+    private List<T> itemList = new ArrayList<>();
+    private int idleCount;
+
+    public WriteJdbcP(
+            @Nonnull DistributedSupplier<Connection> connectionSupplier,
+            @Nonnull DistributedFunction<Connection, PreparedStatement> statementFn,
+            @Nonnull DistributedBiConsumer<PreparedStatement, T> updateFn,
+            @Nonnull DistributedBiConsumer<Connection, PreparedStatement> flushFn
+    ) {
+        this.connectionSupplier = connectionSupplier;
+        this.statementFn = statementFn;
+        this.updateFn = updateFn;
+        this.flushFn = flushFn;
+    }
+
+    @Override
+    public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
+        logger = context.logger();
+        connection = connectionSupplier.get();
+        statement = statementFn.apply(connection);
+    }
+
+    @Override
+    public void process(int ordinal, @Nonnull Inbox inbox) {
+        if (!reconnectIfNecessary()) {
+            return;
+        }
+        if (itemList.isEmpty()) {
+            inbox.drainTo(itemList);
+        }
+        try {
+            itemList.forEach(item -> updateFn.accept(statement, item));
+            flushFn.accept(connection, statement);
+            itemList.clear();
+        } catch (Exception e) {
+            if (e.getCause() instanceof SQLNonTransientException) {
+                logger.warning("Exception during update", e.getCause());
+                idleCount++;
+            } else {
+                throw ExceptionUtil.rethrow(e);
+            }
+        }
+        idleCount = 0;
+    }
+
+    @Override
+    public boolean isCooperative() {
+        return false;
+    }
+
+    @Override
+    public void close() throws Exception {
+        Exception stmtException = close(statement);
+        Exception connectionException = close(connection);
+        if (stmtException != null) {
+            throw stmtException;
+        }
+        if (connectionException != null) {
+            throw connectionException;
+        }
+    }
+
+    private boolean reconnectIfNecessary() {
+        if (idleCount == 0) {
+            return true;
+        }
+        IDLER.idle(idleCount);
+
+        closeSilently(statement);
+        closeSilently(connection);
+
+        try {
+            connection = connectionSupplier.get();
+            statement = statementFn.apply(connection);
+        } catch (Exception e) {
+            logger.warning("Exception during reconnection", e);
+            idleCount++;
+            return false;
+        }
+        return true;
+    }
+
+    private void closeSilently(AutoCloseable closeable) {
+        try {
+            closeable.close();
+        } catch (Exception e) {
+            logger.warning("Exception during closing " + closeable, e);
+        }
+    }
+
+    private static Exception close(AutoCloseable closeable) {
+        try {
+            closeable.close();
+        } catch (Exception e) {
+            return e;
+        }
+        return null;
     }
 
     /**
@@ -50,12 +167,8 @@ public final class WriteJdbcP {
             @Nonnull DistributedBiConsumer<Connection, PreparedStatement> flushFn
 
     ) {
-        return ProcessorMetaSupplier.preferLocalParallelismOne(writeBufferedP(
-                context -> new JdbcContext(connectionSupplier, statementFn),
-                (jdbcContext, o) -> updateFn.accept(jdbcContext.statement, (T) o),
-                jdbcContext -> flushFn.accept(jdbcContext.connection, jdbcContext.statement),
-                jdbcContext -> uncheckRun(jdbcContext::close)
-        ));
+        return ProcessorMetaSupplier.preferLocalParallelismOne(() ->
+                new WriteJdbcP<>(connectionSupplier, statementFn, updateFn, flushFn));
     }
 
     /**
@@ -74,54 +187,15 @@ public final class WriteJdbcP {
         });
         DistributedFunction<Connection, PreparedStatement> statementFn =
                 connection -> uncheckCall(() -> connection.prepareStatement(updateQuery));
-        return ProcessorMetaSupplier.preferLocalParallelismOne(writeBufferedP(
-                context -> new JdbcContext(connectionSupplier, statementFn),
-                (jdbcContext, o) -> {
-                    bindFn.accept(jdbcContext.statement, (T) o);
-                    uncheckRun(() -> {
-                        if (jdbcContext.supportsBatch) {
-                            jdbcContext.statement.addBatch();
-                        } else {
-                            jdbcContext.statement.executeUpdate();
-                        }
-                    });
+        return ProcessorMetaSupplier.preferLocalParallelismOne(() -> new WriteJdbcP<>(connectionSupplier, statementFn,
+                (stmt, item) -> {
+                    bindFn.accept(stmt, (T) item);
+                    uncheckRun(stmt::addBatch);
                 },
-                jdbcContext -> {
-                    uncheckRun(() -> {
-                        if (jdbcContext.supportsBatch) {
-                            jdbcContext.statement.executeBatch();
-                        }
-                        jdbcContext.connection.commit();
-                    });
-                },
-                jdbcContext -> uncheckRun(jdbcContext::close)
+                (connection, stmt) -> uncheckRun(() -> {
+                    stmt.executeBatch();
+                    connection.commit();
+                })
         ));
-    }
-
-    private static final class JdbcContext {
-
-        private final Connection connection;
-        private final PreparedStatement statement;
-        private final boolean supportsBatch;
-
-        JdbcContext(DistributedSupplier<Connection> connectionSupplier,
-                    DistributedFunction<Connection, PreparedStatement> statementFn) {
-            this.connection = connectionSupplier.get();
-            this.statement = statementFn.apply(connection);
-            supportsBatch = uncheckCall(() -> connection.getMetaData().supportsBatchUpdates());
-        }
-
-        private void close() throws SQLException {
-            SQLException statementException = null;
-            try {
-                statement.close();
-            } catch (SQLException e) {
-                statementException = e;
-            }
-            connection.close();
-            if (statementException != null) {
-                throw statementException;
-            }
-        }
     }
 }

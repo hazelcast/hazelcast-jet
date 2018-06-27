@@ -80,7 +80,16 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
     ) {
         return ProcessorSupplier.of(() -> new ReadJdbcP<>(
                 () -> uncheckCall(() -> DriverManager.getConnection(connectionURL)),
-                resultSetFunction(query), mapOutputFn));
+                (connection, parallelism, index) -> {
+                    PreparedStatement statement = uncheckCall(() -> connection.prepareStatement(query));
+                    try {
+                        return statement.executeQuery();
+                    } catch (SQLException e) {
+                        uncheckRun(statement::close);
+                        throw ExceptionUtil.rethrow(e);
+                    }
+                },
+                mapOutputFn));
     }
 
     @Override
@@ -129,17 +138,5 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
             return e;
         }
         return null;
-    }
-
-    private static ResultSetForPartitionFunction resultSetFunction(String query) {
-        return (connection, parallelism, index) -> {
-            PreparedStatement statement = uncheckCall(() -> connection.prepareStatement(query));
-            try {
-                return statement.executeQuery();
-            } catch (SQLException e) {
-                uncheckRun(statement::close);
-                throw ExceptionUtil.rethrow(e);
-            }
-        };
     }
 }
