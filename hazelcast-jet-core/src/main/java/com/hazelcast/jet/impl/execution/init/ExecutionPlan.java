@@ -70,6 +70,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.internal.util.concurrent.ConcurrentConveyor.concurrentConveyor;
+import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.config.EdgeConfig.DEFAULT_QUEUE_SIZE;
 import static com.hazelcast.jet.impl.execution.OutboundCollector.compositeCollector;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
@@ -173,8 +174,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
                 ProbeBuilder probeBuilder = this.nodeEngine.getMetricsRegistry().newProbeBuilder()
                         .withTag("module", "jet")
-                        .withTag("job", Long.toHexString(jobId))
-                        .withTag("exId", Long.toHexString(executionId))
+                        .withTag("job", idToString(jobId))
+                        .withTag("exId", idToString(executionId))
                         .withTag("vertex", vertex.name());
 
                 if (vertex.inboundEdges().size() == 0) {
