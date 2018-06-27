@@ -56,7 +56,6 @@ public class WriteJdbcPTest extends PipelineTestSupport {
                      try {
                          stmt.setInt(1, item.id);
                          stmt.setString(2, item.name);
-                         stmt.addBatch();
                      } catch (SQLException e) {
                          throw ExceptionUtil.rethrow(e);
                      }
