@@ -48,6 +48,7 @@ import java.io.NotSerializableException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -330,7 +331,7 @@ public final class Util {
             return -1;
         }
         str = str.replaceAll("-", "");
-        return Long.parseUnsignedLong(str, 16);
+        return new BigInteger(str, 16).longValue();
     }
 
     public static <K, V> EntryProcessor<K, V> entryProcessor(
