@@ -260,7 +260,7 @@ public class JobCoordinationService {
 
     // If a job result is present, it completes the master context using the job result
     private boolean completeMasterContextIfJobAlreadyCompleted(MasterContext masterContext) {
-        long jobId = masterContext.getJobId();
+        long jobId = masterContext.jobId();
         JobResult jobResult = jobRepository.getJobResult(jobId);
         if (jobResult != null) {
             logger.fine("Completing master context for " + masterContext.jobIdString()
@@ -459,12 +459,12 @@ public class JobCoordinationService {
     void completeJob(MasterContext masterContext, long completionTime, Throwable error) {
         // the order of operations is important.
 
-        long jobId = masterContext.getJobId();
+        long jobId = masterContext.jobId();
         String coordinator = nodeEngine.getNode().getThisUuid();
 
         jobRepository.completeJob(jobId, coordinator, completionTime, error);
 
-        if (masterContexts.remove(masterContext.getJobId(), masterContext)) {
+        if (masterContexts.remove(masterContext.jobId(), masterContext)) {
             logger.fine(masterContext.jobIdString() + " is completed");
         } else {
             MasterContext existing = masterContexts.get(jobId);
@@ -581,7 +581,7 @@ public class JobCoordinationService {
 
         masterContexts.values().stream()
                       .filter(ctx -> name.equals(ctx.getJobConfig().getName()))
-                      .forEach(ctx -> jobs.put(ctx.getJobId(), ctx.getJobRecord().getCreationTime()));
+                      .forEach(ctx -> jobs.put(ctx.jobId(), ctx.getJobRecord().getCreationTime()));
 
         jobRepository.getJobResults(name)
                   .forEach(r -> jobs.put(r.getJobId(), r.getCreationTime()));

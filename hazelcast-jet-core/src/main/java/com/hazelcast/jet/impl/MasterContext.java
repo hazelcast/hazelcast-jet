@@ -121,7 +121,7 @@ public class MasterContext {
         this.cancellationToken = new CompletionToken(logger);
     }
 
-    public long getJobId() {
+    public long jobId() {
         return jobId;
     }
 
