@@ -175,7 +175,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 ProbeBuilder probeBuilder = this.nodeEngine.getMetricsRegistry().newProbeBuilder()
                         .withTag("module", "jet")
                         .withTag("job", idToString(jobId))
-                        .withTag("exId", idToString(executionId))
+                        .withTag("exec", idToString(executionId))
                         .withTag("vertex", vertex.name());
 
                 if (vertex.inboundEdges().size() == 0) {
