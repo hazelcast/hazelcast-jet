@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.function;
 
+import javax.annotation.Nonnull;
 import java.io.Serializable;
 
 import static com.hazelcast.util.Preconditions.checkNotNull;
@@ -28,8 +29,11 @@ public interface DistributedTriPredicate<T, U, V> extends TriPredicate<T, U, V>,
     /**
      * Returns a composite predicate which evaluates the
      * equivalent of {@code this.test(t, u, v) && other.test(t, u, v)}.
+     *
      */
-    default DistributedTriPredicate<T, U, V> and(DistributedTriPredicate<? super T, ? super U, ? super V> other) {
+    default DistributedTriPredicate<T, U, V> and(
+            @Nonnull DistributedTriPredicate<? super T, ? super U, ? super V> other
+    ) {
         checkNotNull(other, "other");
         return (t, u, v) -> test(t, u, v) && other.test(t, u, v);
     }
@@ -46,7 +50,9 @@ public interface DistributedTriPredicate<T, U, V> extends TriPredicate<T, U, V>,
      * Returns a composite predicate which evaluates the
      * equivalent of {@code this.test(t, u, v) || other.test(t, u, v)}.
      */
-    default DistributedTriPredicate<T, U, V> or(DistributedTriPredicate<? super T, ? super U, ? super V> other) {
+    default DistributedTriPredicate<T, U, V> or(
+            @Nonnull DistributedTriPredicate<? super T, ? super U, ? super V> other
+    ) {
         checkNotNull(other, "other");
         return (t, u, v) -> test(t, u, v) || other.test(t, u, v);
     }

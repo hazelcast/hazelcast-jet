@@ -16,7 +16,10 @@
 
 package com.hazelcast.jet.function;
 
+import javax.annotation.Nonnull;
 import java.util.function.Predicate;
+
+import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * Represents a predicate which accepts three arguments. This
@@ -35,4 +38,34 @@ public interface TriPredicate<T, U, V> {
      */
     boolean test(T t, U u, V v);
 
+    /**
+     * Returns a composite predicate which evaluates the
+     * equivalent of {@code this.test(t, u, v) && other.test(t, u, v)}.
+     *
+     */
+    default TriPredicate<T, U, V> and(
+            @Nonnull TriPredicate<? super T, ? super U, ? super V> other
+    ) {
+        checkNotNull(other, "other");
+        return (t, u, v) -> test(t, u, v) && other.test(t, u, v);
+    }
+
+    /**
+     * Returns a composite predicate which evaluates the
+     * equivalent of {@code !this.test(t, u, v)}.
+     */
+    default TriPredicate<T, U, V> negate() {
+        return (t, u, v) -> !test(t, u, v);
+    }
+
+    /**
+     * Returns a composite predicate which evaluates the
+     * equivalent of {@code this.test(t, u, v) || other.test(t, u, v)}.
+     */
+    default TriPredicate<T, U, V> or(
+            @Nonnull TriPredicate<? super T, ? super U, ? super V> other
+    ) {
+        checkNotNull(other, "other");
+        return (t, u, v) -> test(t, u, v) || other.test(t, u, v);
+    }
 }
