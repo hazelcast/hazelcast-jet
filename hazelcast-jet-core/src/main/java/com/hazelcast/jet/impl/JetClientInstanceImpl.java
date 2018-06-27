@@ -80,6 +80,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     @Nonnull @Override
     public Job newJob(@Nonnull DAG dag, @Nonnull JobConfig config) {
         long jobId = uploadResourcesAndAssignId(config);
+        updateJobConfigName(config, jobId);
         return new ClientJobProxy(client, jobId, dag, config);
     }
 

@@ -52,10 +52,10 @@ public class SnapshotOperation extends AsyncJobOperation {
         ctx.beginSnapshot(snapshotId).thenAccept(result -> {
             if (result.getError() == null) {
                 logFine(getLogger(),
-                        "Snapshot %s for job %s finished successfully on member",
+                        "Snapshot %s for %s finished successfully on member",
                         snapshotId, ctx.jobNameAndExecutionId());
             } else {
-                getLogger().warning(String.format("Snapshot %d for job %s finished with an error on member",
+                getLogger().warning(String.format("Snapshot %d for %s finished with an error on member",
                         snapshotId, ctx.jobNameAndExecutionId()), result.getError());
                 // wrap the exception
                 result.error = new JetException("Exception during snapshot: " + result.error, result.error);

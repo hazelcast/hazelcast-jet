@@ -31,6 +31,9 @@ import com.hazelcast.jet.stream.impl.IMapDecorator;
 import javax.annotation.Nonnull;
 import java.util.function.Supplier;
 
+import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.impl.util.Util.idFromString;
+
 abstract class AbstractJetInstance implements JetInstance {
     private final HazelcastInstance hazelcastInstance;
     private final JetCacheManagerImpl cacheManager;
@@ -82,8 +85,18 @@ abstract class AbstractJetInstance implements JetInstance {
         hazelcastInstance.shutdown();
     }
 
-    protected long uploadResourcesAndAssignId(JobConfig config) {
+    long uploadResourcesAndAssignId(JobConfig config) {
         return jobRepository.get().uploadJobResources(config);
     }
 
+    void updateJobConfigName(JobConfig config, long jobId) {
+        // If the config doesn't have a name, insert jobId to it.
+        // Also, if the name looks like jobId, replace it. The reason for this is that
+        // it will create confusion if the user (hopefully intentionally) submits the job
+        // multiple times and the name would look like jobId, but it would be a
+        // different value.
+        if (config.getName() == null || idFromString(config.getName()) != -1) {
+            config.setName(idToString(jobId));
+        }
+    }
 }

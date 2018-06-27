@@ -98,7 +98,7 @@ public class MasterContext {
     private final ILogger logger;
     private final JobRecord jobRecord;
     private final long jobId;
-    private final String jobNameOrId;
+    private final String jobName;
     private final NonCompletableFuture completionFuture = new NonCompletableFuture();
     private final CompletionToken cancellationToken;
     private final AtomicReference<JobStatus> jobStatus = new AtomicReference<>(NOT_STARTED);
@@ -117,7 +117,8 @@ public class MasterContext {
         this.logger = nodeEngine.getLogger(getClass());
         this.jobRecord = jobRecord;
         this.jobId = jobRecord.getJobId();
-        this.jobNameOrId = jobRecord.getConfig().getName() != null ? jobRecord.getConfig().getName() : idToString(jobId);
+        this.jobName = jobRecord.getConfig().getName();
+        assert jobName != null : "null job name";
         this.cancellationToken = new CompletionToken(logger);
     }
 
@@ -251,19 +252,19 @@ public class MasterContext {
     private boolean setJobStatusToStarting() {
         JobStatus status = jobStatus();
         if (status == COMPLETED || status == FAILED) {
-            logger.severe("Cannot init job " + jobNameOrId + ": it is already " + status);
+            logger.severe("Cannot init job '" + jobName + "': it is already " + status);
             return false;
         }
 
         if (cancellationToken.isCompleted()) {
-            logger.fine("Skipping init job " + jobNameOrId + ": is already cancelled.");
+            logger.fine("Skipping init job '" + jobName + "': is already cancelled.");
             finalizeJob(new CancellationException());
             return false;
         }
 
         if (status == NOT_STARTED) {
             if (!jobStatus.compareAndSet(NOT_STARTED, STARTING)) {
-                logger.fine("Cannot init job " + jobNameOrId + ": someone else is just starting it");
+                logger.fine("Cannot init job '" + jobName + "': someone else is just starting it");
                 return false;
             }
 
@@ -272,7 +273,7 @@ public class MasterContext {
 
         status = jobStatus();
         if (!(status == STARTING || status == RESTARTING)) {
-            logger.severe("Cannot init job " + jobNameOrId + ": status is " + status);
+            logger.severe("Cannot init job '" + jobName + "': status is " + status);
             return false;
         }
 
@@ -285,7 +286,7 @@ public class MasterContext {
             return false;
         }
 
-        logger.fine("Rescheduling restart of job " + jobNameOrId + ": quorum size " + quorumSize + " is not met");
+        logger.fine("Rescheduling restart of job '" + jobName + "': quorum size " + quorumSize + " is not met");
         scheduleRestart();
         return true;
     }
@@ -295,7 +296,7 @@ public class MasterContext {
             return false;
         }
 
-        logger.fine("Rescheduling restart of job " + jobNameOrId + ": cluster is not safe");
+        logger.fine("Rescheduling restart of job '" + jobName + "': cluster is not safe");
         scheduleRestart();
         return true;
     }
@@ -666,7 +667,7 @@ public class MasterContext {
     }
 
     String jobIdString() {
-        return jobNameAndExecutionId(jobNameOrId, executionId);
+        return jobNameAndExecutionId(jobName, executionId);
     }
 
     private static ClassLoader swapContextClassLoader(ClassLoader jobClassLoader) {

@@ -92,13 +92,13 @@ public class ExecutionContext {
     }
 
     public ExecutionContext initialize(ExecutionPlan plan) {
+        jobName = plan.getJobConfig().getName();
         // Must be populated early, so all processor suppliers are
         // available to be completed in the case of init failure
         procSuppliers = unmodifiableList(plan.getProcessorSuppliers());
         processors = plan.getProcessors();
         snapshotContext = new SnapshotContext(nodeEngine.getLogger(SnapshotContext.class), jobNameAndExecutionId(),
                 plan.lastSnapshotId(), plan.getJobConfig().getProcessingGuarantee());
-        jobName = plan.getJobConfig().getName();
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext);
         snapshotContext.initTaskletCount(plan.getStoreSnapshotTaskletCount(), plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
@@ -208,9 +208,7 @@ public class ExecutionContext {
     }
 
     public String jobNameAndExecutionId() {
-        return jobName != null
-                ? Util.jobNameAndExecutionId(jobName, executionId)
-                : Util.jobIdAndExecutionId(jobId, executionId);
+        return Util.jobNameAndExecutionId(jobName, executionId);
     }
 
     public Address coordinator() {
