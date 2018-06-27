@@ -26,7 +26,9 @@ import com.hazelcast.jet.core.TestProcessors.StuckProcessor;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import java.util.concurrent.CancellationException;
@@ -36,10 +38,8 @@ import static com.hazelcast.test.PacketFiltersUtil.rejectOperationsBetween;
 import static com.hazelcast.test.PacketFiltersUtil.resetPacketFiltersFrom;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
-
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class ManualRestartTest extends JetTestSupport {
@@ -48,6 +48,9 @@ public class ManualRestartTest extends JetTestSupport {
 
     private DAG dag;
     private JetInstance[] instances;
+
+    @Rule
+    public ExpectedException exception = ExpectedException.none();
 
     @Before
     public void setup() {
@@ -77,9 +80,7 @@ public class ManualRestartTest extends JetTestSupport {
         JetInstance client = createJetClient();
         Job job = client.newJob(dag, new JobConfig().setAutoRestartOnMemberFailure(autoRestartOnMemberFailureEnabled));
 
-        assertTrueEventually(() -> {
-            assertEquals(NODE_COUNT, MockPS.initCount.get());
-        });
+        assertTrueEventually(() -> assertEquals(NODE_COUNT, MockPS.initCount.get()), 10);
 
         // When the job is restarted after new members join to the cluster
         int newMemberCount = 2;
@@ -87,13 +88,13 @@ public class ManualRestartTest extends JetTestSupport {
             createJetMember();
         }
 
-        job.restart();
+        assertTrueAllTheTime(() -> assertEquals(NODE_COUNT, MockPS.initCount.get()), 3);
+
+        job.restart(false);
 
         // Then, the job restarts
         int initCount = NODE_COUNT * 2 + newMemberCount;
-        assertTrueEventually(() -> {
-            assertEquals(initCount, MockPS.initCount.get());
-        });
+        assertTrueEventually(() -> assertEquals(initCount, MockPS.initCount.get()), 10);
     }
 
     @Test
@@ -105,20 +106,23 @@ public class ManualRestartTest extends JetTestSupport {
         JetInstance client = createJetClient();
         Job job = client.newJob(dag);
 
-        assertTrueEventually(() -> assertTrue(job.getStatus() == JobStatus.STARTING));
+        assertTrueEventually(() -> assertSame(job.getStatus(), JobStatus.STARTING), 10);
 
         // Then, the job cannot restart
-        assertFalse(job.restart());
+        try {
+            job.restart(false);
+            fail("Restart should have failed");
+        } catch (IllegalStateException ignored) { }
 
         resetPacketFiltersFrom(instances[0].getHazelcastInstance());
     }
 
-    @Test(expected = IllegalStateException.class)
-    public void when_jobIsCompleted_then_isCannotBeRestarted() {
+    @Test
+    public void when_jobIsCompleted_then_itCannotBeRestarted() {
         // Given that the job is completed
         JetInstance client = createJetClient();
         Job job = client.newJob(dag);
-
+        assertTrueEventually(() -> assertEquals(JobStatus.RUNNING, job.getStatus()), 10);
         job.cancel();
 
         try {
@@ -128,6 +132,7 @@ public class ManualRestartTest extends JetTestSupport {
         }
 
         // Then, the job cannot restart
-        job.restart();
+        exception.expect(IllegalStateException.class);
+        job.restart(false);
     }
 }

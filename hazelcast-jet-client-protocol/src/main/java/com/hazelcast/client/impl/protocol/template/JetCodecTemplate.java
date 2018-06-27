@@ -48,8 +48,8 @@ public interface JetCodecTemplate {
     @Request(id = 8, retryable = false, response = ResponseMessageConst.DATA)
     Object getJobConfig(long jobId);
 
-    @Request(id = 9, retryable = false, response = ResponseMessageConst.BOOLEAN)
-    boolean restartJob(long jobId);
+    @Request(id = 9, retryable = false, response = ResponseMessageConst.VOID)
+    void restartJob(long jobId, boolean graceful);
 
     @Request(id = 10, retryable = true, response = ResponseMessageConst.DATA)
     Object readMetrics(String uuid, long fromSequence);

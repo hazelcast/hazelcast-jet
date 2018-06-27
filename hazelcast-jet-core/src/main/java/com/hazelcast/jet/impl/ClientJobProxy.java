@@ -73,11 +73,10 @@ public class ClientJobProxy extends AbstractJobProxy<HazelcastClientInstanceImpl
     }
 
     @Override
-    public boolean restart() {
+    public void restart(boolean graceful) {
         try {
-            ClientMessage request = JetRestartJobCodec.encodeRequest(getId());
-            ClientMessage response = invocation(request, masterAddress()).invoke().get();
-            return JetRestartJobCodec.decodeResponse(response).response;
+            ClientMessage request = JetRestartJobCodec.encodeRequest(getId(), graceful);
+            invocation(request, masterAddress()).invoke().get();
         } catch (ExecutionException | InterruptedException e) {
             throw rethrow(e);
         }

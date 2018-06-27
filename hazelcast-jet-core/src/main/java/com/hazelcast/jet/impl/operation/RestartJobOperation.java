@@ -18,34 +18,46 @@ package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
+
+import java.io.IOException;
 
 /**
  * Cancels the current execution of the job and restarts it
  */
 public class RestartJobOperation extends AbstractJobOperation implements IdentifiedDataSerializable {
-    private boolean response;
+    private boolean graceful;
 
     public RestartJobOperation() {
     }
 
-    public RestartJobOperation(long jobId) {
+    public RestartJobOperation(long jobId, boolean graceful) {
         super(jobId);
+        this.graceful = graceful;
     }
 
     @Override
     public void run() {
         JetService service = getService();
-        response = service.getJobCoordinationService().restartJobExecution(jobId());
-    }
-
-    @Override
-    public Object getResponse() {
-        return response;
+        service.getJobCoordinationService().restartJobExecution(jobId(), graceful);
     }
 
     @Override
     public int getId() {
         return JetInitDataSerializerHook.RESTART_JOB_OP;
+    }
+
+    @Override
+    protected void writeInternal(ObjectDataOutput out) throws IOException {
+        super.writeInternal(out);
+        out.writeBoolean(graceful);
+    }
+
+    @Override
+    protected void readInternal(ObjectDataInput in) throws IOException {
+        super.readInternal(in);
+        graceful = in.readBoolean();
     }
 }

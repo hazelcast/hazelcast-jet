@@ -38,8 +38,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
-import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.Util.memoizeConcurrent;
 import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
 
@@ -138,8 +139,18 @@ public abstract class AbstractJobProxy<T> implements Job {
     public boolean cancel() {
         boolean cancelled = cancelledJob.compareAndSet(false, true);
         if (cancelled) {
-            logger.fine("Sending cancel request for job " + idAndName());
-            invokeCancelJob().andThen(new CancelJobCallback());
+            logger.fine("Sending cancel request for job " + idAndName() + " request");
+            while (true) {
+                try {
+                    invokeCancelJob().get();
+                    break;
+                } catch (Exception e) {
+                    if (!isRestartable(e)) {
+                        throw rethrow(e);
+                    }
+                    logger.fine("Re-sending cancel request for job " + idAndName());
+                }
+            }
         }
         return cancelled;
     }
@@ -284,25 +295,6 @@ public abstract class AbstractJobProxy<T> implements Job {
                     + " split-brain merge and coordinator is not known";
             logger.warning(msg, t);
             future.internalCompleteExceptionally(new CancellationException(msg));
-        }
-    }
-
-    private class CancelJobCallback implements ExecutionCallback<Void> {
-
-        @Override
-        public void onResponse(Void response) {
-            logger.fine("Job " + idAndName() + " is cancelled.");
-        }
-
-        @Override
-        public void onFailure(Throwable t) {
-            Throwable ex = peel(t);
-            if (isRestartable(ex)) {
-                logger.fine("Re-sending cancel request for job " + idAndName());
-                invokeCancelJob().andThen(this);
-            } else {
-                logger.severe("Cancellation of job " + idAndName() + " failed.", t);
-            }
         }
     }
 }

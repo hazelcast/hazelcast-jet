@@ -417,7 +417,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         waitForFirstSnapshot(snapshotRepository, job.getId(), 5);
         spawn(() -> {
             for (int i = 0; i < 10; i++) {
-                job.restart();
+                job.restart(false);
                 waitForFirstSnapshot(snapshotRepository, job.getId(), 3);
                 waitForNextSnapshot(snapshotRepository, job.getId(), 5);
                 Thread.sleep(500);

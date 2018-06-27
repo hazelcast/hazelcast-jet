@@ -27,12 +27,12 @@ import com.hazelcast.spi.Operation;
 public class JetRestartJobMessageTask extends AbstractJetMessageTask<RequestParameters> {
     protected JetRestartJobMessageTask(ClientMessage clientMessage, Node node, Connection connection) {
         super(clientMessage, node, connection, JetRestartJobCodec::decodeRequest,
-                o -> JetRestartJobCodec.encodeResponse((Boolean) o));
+                o -> JetRestartJobCodec.encodeResponse());
     }
 
     @Override
     protected Operation prepareOperation() {
-        return new RestartJobOperation(parameters.jobId);
+        return new RestartJobOperation(parameters.jobId, parameters.graceful);
     }
 
     @Override

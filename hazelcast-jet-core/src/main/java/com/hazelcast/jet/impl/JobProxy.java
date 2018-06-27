@@ -64,9 +64,9 @@ public class JobProxy extends AbstractJobProxy<NodeEngineImpl> {
     }
 
     @Override
-    public boolean restart() {
+    public void restart(boolean graceful) {
         try {
-            return this.<Boolean>invokeOp(new RestartJobOperation(getId())).get();
+            this.invokeOp(new RestartJobOperation(getId(), graceful)).get();
         } catch (ExecutionException | InterruptedException e) {
             throw rethrow(e);
         }

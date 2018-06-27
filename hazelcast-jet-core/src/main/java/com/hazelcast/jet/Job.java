@@ -87,6 +87,8 @@ public interface Job {
      *
      * Starting from version 0.6, <code>job.getFuture().cancel()</code> fails
      * with an exception.
+     *
+     * @throws IllegalStateException if the job is not running: is restarting, completed...
      */
     boolean cancel();
 
@@ -102,12 +104,15 @@ public interface Job {
 
     /**
      * Cancels the current execution if the job is currently running and
-     * schedules a new execution with the current member list of the Jet cluster
+     * schedules a new execution with the current member list of the Jet
+     * cluster.
      *
-     * @throws IllegalStateException if the job has been already completed
+     * @param graceful If true, sources will stop emitting more items, all
+     *                 in-flight items will be processed, snapshot will be
+     *                 taken and the job will be restarted from that snapshot.
      *
-     * @return true if the current execution of the job is cancelled
+     * @throws IllegalStateException if the job has been already completed,
+     * job is not yet running, is already restarting etc.
      */
-    boolean restart();
-
+    void restart(boolean graceful);
 }

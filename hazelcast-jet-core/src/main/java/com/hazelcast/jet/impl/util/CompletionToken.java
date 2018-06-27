@@ -16,9 +16,12 @@
 
 package com.hazelcast.jet.impl.util;
 
+import com.hazelcast.jet.impl.TerminationMode;
 import com.hazelcast.logging.ILogger;
 
+import javax.annotation.Nullable;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 
@@ -27,22 +30,33 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
  * only in a single way and provides methods for ease of use
  */
 public class CompletionToken {
-    private final CompletableFuture<Void> future = new CompletableFuture<>();
+    private final CompletableFuture<TerminationMode> future = new CompletableFuture<>();
     private final ILogger logger;
 
     public CompletionToken(ILogger logger) {
         this.logger = logger;
     }
 
-    public boolean complete() {
-        return future.complete(null);
+    /**
+     * @return {@code true} if this invocation caused this CompletionToken to
+     * transition to a completed state, else {@code false}.
+     */
+    public boolean complete(TerminationMode mode) {
+        return future.complete(mode);
     }
 
-    public boolean isCompleted() {
-        return future.isDone();
+    /**
+     * Returns the value the token was completed with or {@code null}.
+     */
+    @Nullable
+    public TerminationMode get() {
+        return future.getNow(null);
     }
 
-    public void whenCompleted(Runnable runnable) {
-        future.whenComplete(withTryCatch(logger, (result, throwable) -> runnable.run()));
+    public void whenCompleted(Consumer<TerminationMode> runnable) {
+        future.whenComplete(withTryCatch(logger, (result, throwable) -> {
+            assert throwable == null : "throwable=" + throwable;
+            runnable.accept(result);
+        }));
     }
 }
