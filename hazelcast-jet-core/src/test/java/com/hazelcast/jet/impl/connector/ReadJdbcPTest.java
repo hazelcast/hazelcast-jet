@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
 import com.hazelcast.jet.pipeline.Sources;
 import org.h2.tools.DeleteDbFiles;
@@ -49,8 +50,16 @@ public class ReadJdbcPTest extends PipelineTestSupport {
     public void testPartitionedQuery() {
         p.drawFrom(Sources.jdbc(
                 () -> uncheckCall(() -> DriverManager.getConnection(DB_CONNECTION_URL)),
-                con -> uncheckCall(con::createStatement),
-                (parallelism, index) -> "select * from PERSON where mod(id," + parallelism + ")=" + index,
+                (con, parallelism, index) -> {
+                    try {
+                        PreparedStatement statement = con.prepareStatement("select * from PERSON where mod(id,?)=?");
+                        statement.setInt(1, parallelism);
+                        statement.setInt(2, index);
+                        return statement.executeQuery();
+                    } catch (SQLException e) {
+                        throw ExceptionUtil.rethrow(e);
+                    }
+                },
                 resultSet -> uncheckCall(() -> new Person(resultSet.getInt(1), resultSet.getString(2)))))
          .drainTo(sink);
 
