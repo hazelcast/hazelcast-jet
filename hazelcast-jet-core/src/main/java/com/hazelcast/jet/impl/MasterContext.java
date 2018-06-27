@@ -117,8 +117,7 @@ public class MasterContext {
         this.logger = nodeEngine.getLogger(getClass());
         this.jobRecord = jobRecord;
         this.jobId = jobRecord.getJobId();
-        this.jobName = jobRecord.getConfig().getName();
-        assert jobName != null : "null job name";
+        this.jobName = jobRecord.getJobNameOrId();
         this.cancellationToken = new CompletionToken(logger);
     }
 

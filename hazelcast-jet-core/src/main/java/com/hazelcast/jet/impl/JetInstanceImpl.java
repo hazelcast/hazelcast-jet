@@ -58,7 +58,6 @@ public class JetInstanceImpl extends AbstractJetInstance {
     @Nonnull @Override
     public Job newJob(@Nonnull DAG dag, @Nonnull JobConfig config) {
         long jobId = uploadResourcesAndAssignId(config);
-        updateJobConfigName(config, jobId);
         return new JobProxy((NodeEngineImpl) nodeEngine, jobId, dag, config);
     }
 

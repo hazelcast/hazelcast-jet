@@ -48,9 +48,7 @@ public class JobConfig implements Serializable {
     private JobClassLoaderFactory classLoaderFactory;
 
     /**
-     * Returns the name of the job or {@code null} if no name was given. At job
-     * submission time if no name is assigned, the assigned jobId will be set
-     * as the name.
+     * Returns the name of the job or {@code null} if no name was given.
      */
     @Nullable
     public String getName() {
@@ -62,8 +60,7 @@ public class JobConfig implements Serializable {
      * good to keep them unique to be able to distinguish them in logs or
      * Management Center.
      * <p>
-     * Default value is {@code null}, in this case a random job ID will be
-     * assigned at job submission time.
+     * Default value is {@code null}.
      *
      * @return {@code this} instance for fluent API
      */

@@ -38,6 +38,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
+import static com.hazelcast.jet.Util.idToString;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableList;
@@ -93,6 +94,9 @@ public class ExecutionContext {
 
     public ExecutionContext initialize(ExecutionPlan plan) {
         jobName = plan.getJobConfig().getName();
+        if (jobName == null) {
+            jobName = idToString(jobId);
+        }
         // Must be populated early, so all processor suppliers are
         // available to be completed in the case of init failure
         procSuppliers = unmodifiableList(plan.getProcessorSuppliers());

@@ -540,8 +540,8 @@ public class JobCoordinationService {
             SnapshotStatus status = isSuccess ? SUCCESSFUL : FAILED;
             long elapsed = snapshotRepository.setSnapshotComplete(jobId, snapshotId, status, numBytes, numKeys,
                     numChunks);
-            logger.info(String.format("Snapshot %s for job %s completed with status %s in %dms, " +
-                            "%,d bytes, %,d keys in %,d chunks", snapshotId, idToString(jobId), status, elapsed,
+            logger.info(String.format("Snapshot %d for %s completed with status %s in %dms, " +
+                            "%,d bytes, %,d keys in %,d chunks", snapshotId, masterContext.jobIdString(), status, elapsed,
                             numBytes, numKeys, numChunks));
         } catch (Exception e) {
             logger.warning("Cannot update snapshot status for " + masterContext.jobIdString() + " snapshot "

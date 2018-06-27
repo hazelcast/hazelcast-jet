@@ -54,6 +54,10 @@ public class JobRecord implements IdentifiedDataSerializable {
         return jobId;
     }
 
+    public String getJobNameOrId() {
+        return config.getName() != null ? config.getName() : idToString(jobId);
+    }
+
     public long getCreationTime() {
         return creationTime;
     }
