@@ -21,20 +21,21 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 
 /**
- * Represents a function that accepts the JDBC connection to the database,
- * the total parallelism and the global processor index as arguments and
- * produces a result set. This result set should be a part of the whole
+ * Represents a function that accepts a JDBC connection to the database,
+ * a total parallelism and a processor index as arguments and
+ * produces a result set. This result set should return a part of the whole
  * result set specific to this processor.
  */
 @FunctionalInterface
 public interface ResultSetForPartitionFunction extends Serializable {
 
     /**
-     * Returns a result set which is specific to the given processor
+     * Creates a result set which returns a part of the rows pertaining to the
+     * given processor.
      *
      * @param connection the JDBC connection
      * @param parallelism the total parallelism for the processor
      * @param index the global processor index
      */
-    ResultSet resultSet(Connection connection, int parallelism, int index);
+    ResultSet createResultSet(Connection connection, int parallelism, int index);
 }

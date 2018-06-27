@@ -879,10 +879,10 @@ public final class Sources {
 
     /**
      * Returns a source which connects to the specified database using the given
-     * {@code connectionSupplier}, queries the database and returns a result set
+     * {@code connectionSupplier}, queries the database and creates a result set
      * using the the given {@code resultSetFn}. It creates output objects from the
-     * produced {@link ResultSet} using given {@code mapOutputFn} and emits them
-     * to downstream.
+     * {@link ResultSet} using given {@code mapOutputFn} and emits them to
+     * downstream.
      * <p>
      * {@code resultSetFn} gets the created connection, total parallelism (local
      * parallelism * member count) and global processor index as arguments and
@@ -917,7 +917,7 @@ public final class Sources {
      *         },
      *         (con, parallelism, index) -> {
      *             try {
-     *                 return con.prepareStatement("select * from TABLE where mod(id,%d)=%d);
+     *                 return con.prepareStatement("select * from TABLE where mod(id, ?) = ?);
      *                 stmt.setInt(1, parallelism);
      *                 stmt.setInt(2, index);
      *                 return stmt.executeQuery();
