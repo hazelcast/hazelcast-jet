@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.core.IMap;
+import com.hazelcast.core.ReplicatedMap;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Processor;
@@ -59,7 +61,7 @@ public interface StreamStage<T> extends GeneralStage<T> {
     StreamStage<T> merge(@Nonnull StreamStage<? extends T> other);
 
     @Nonnull @Override
-    <K> StreamStageWithGrouping<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);
+    <K> StreamStageWithKey<T, K> addKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);
 
     @Nonnull @Override
     <R> StreamStage<R> map(@Nonnull DistributedFunction<? super T, ? extends R> mapFn);
@@ -88,8 +90,40 @@ public interface StreamStage<T> extends GeneralStage<T> {
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     );
 
+    @Override @Nonnull
+    default <K, V, R> StreamStage<R> mapUsingReplicatedMap(
+            @Nonnull String mapName,
+            @Nonnull DistributedBiFunction<? super ReplicatedMap<K, V>, ? super T, ? extends R> mapFn
+    ) {
+        return (StreamStage<R>) GeneralStage.super.<K, V, R>mapUsingReplicatedMap(mapName, mapFn);
+    }
+
+    @Override @Nonnull
+    default <K, V, R> StreamStage<R> mapUsingReplicatedMap(
+            @Nonnull ReplicatedMap<K, V> replicatedMap,
+            @Nonnull DistributedBiFunction<? super ReplicatedMap<K, V>, ? super T, ? extends R> mapFn
+    ) {
+        return (StreamStage<R>) GeneralStage.super.<K, V, R>mapUsingReplicatedMap(replicatedMap, mapFn);
+    }
+
+    @Override @Nonnull
+    default <K, V, R> StreamStage<R> mapUsingIMap(
+            @Nonnull String mapName,
+            @Nonnull DistributedBiFunction<? super IMap<K, V>, ? super T, ? extends R> mapFn
+    ) {
+        return (StreamStage<R>) GeneralStage.super.<K, V, R>mapUsingIMap(mapName, mapFn);
+    }
+
+    @Override @Nonnull
+    default <K, V, R> StreamStage<R> mapUsingIMap(
+            @Nonnull IMap<K, V> iMap,
+            @Nonnull DistributedBiFunction<? super IMap<K, V>, ? super T, ? extends R> mapFn
+    ) {
+        return (StreamStage<R>) GeneralStage.super.<K, V, R>mapUsingIMap(iMap, mapFn);
+    }
+
     @Nonnull @Override
-    <R> StreamStage<R> aggregateRolling(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp);
+    <R> StreamStage<R> rollingAggregate(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp);
 
     @Nonnull @Override
     <K, T1_IN, T1, R> StreamStage<R> hashJoin(

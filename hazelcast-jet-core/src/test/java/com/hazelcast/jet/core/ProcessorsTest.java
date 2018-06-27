@@ -145,13 +145,13 @@ public class ProcessorsTest {
         TestSupport
                 .verifyProcessor(flatMapUsingContextP(
                         ContextFactory.withCreateFn(procContext -> context)
-                                      .withDestroyFn(c -> c[0]++),
+                                      .withDestroyFn(c -> c[0] = 0),
                         (int[] c, Integer item) -> Traverser.over(item, c[0] += item)))
                 .disableSnapshots()
                 .input(asList(1, 2, 3))
                 .expectOutput(asList(1, 1, 2, 3, 3, 6));
 
-        assertEquals(7, context[0]);
+        assertEquals(0, context[0]);
     }
 
     @Test
@@ -259,6 +259,6 @@ public class ProcessorsTest {
                 .<List<T>>withCreate(ArrayList::new)
                 .<T>andAccumulate(List::add)
                 .andCombine(List::addAll)
-                .andFinish(Object::toString);
+                .andExportFinish(Object::toString);
     }
 }

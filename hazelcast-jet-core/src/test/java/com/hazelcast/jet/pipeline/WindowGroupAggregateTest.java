@@ -19,10 +19,12 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.aggregate.CoAggregateOperationBuilder;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.DistributedTriFunction;
@@ -30,6 +32,7 @@ import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.pipeline.BatchAggregateTest.QuadFunction;
 import org.junit.Test;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -51,6 +54,8 @@ import static com.hazelcast.jet.pipeline.WindowDefinition.session;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
 import static java.lang.Math.min;
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
 import static org.junit.Assert.assertEquals;
@@ -60,8 +65,8 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
     @Test
     public void windowDefinition() {
         SlidingWindowDef tumbling = tumbling(2);
-        StageWithGroupingAndWindow<Integer, Integer> stage =
-                mapJournalSrcStage.groupingKey(wholeItem()).window(tumbling);
+        StageWithKeyAndWindow<Integer, Integer> stage =
+                srcStage.addKey(wholeItem()).window(tumbling);
         assertEquals(tumbling, stage.windowDefinition());
     }
 
@@ -77,7 +82,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
         Map<String, Integer> srcMap2 = jet().getMap(srcName2);
 
         StreamStage<Entry<String, Integer>> stage0() {
-            return addKeys(mapJournalSrcStage);
+            return addKeys(srcStage);
         }
 
         StreamStage<Entry<String, Integer>> stage1() {
@@ -105,7 +110,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
         final int winSize = 4;
         DistributedTriFunction<Long, String, String, String> formatFn = fx.formatFn;
         StreamStage<String> aggregated = fx.stage0()
-                .groupingKey(Entry::getKey)
+                .addKey(Entry::getKey)
                 .window(tumbling(winSize))
                 .aggregate(summingLong(Entry::getValue),
                         (start, end, key, sum) -> formatFn.apply(end, key, sum.toString()));
@@ -142,7 +147,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
         DistributedTriFunction<Long, String, String, String> formatFn = fx.formatFn;
         StreamStage<String> aggregated = fx.stage0()
                 .window(sliding(winSize, slideBy))
-                .groupingKey(Entry::getKey)
+                .addKey(Entry::getKey)
                 .aggregate(summingLong(Entry::getValue), (start, end, key, sum) ->
                         formatFn.apply(end, key, sum.toString()));
 
@@ -180,6 +185,38 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
     }
 
     @Test
+    public void slidingWindow_twoAggregations() {
+        // Given
+        for (int i = 0; i < 3; i++) {
+            srcMap.put("key", i);
+        }
+        addToSrcMapJournal(closingItems);
+        // When
+        srcStage
+                .addTimestamps(i -> i, 0)
+                .flatMap(i -> Traverser.over(entry("a", "a" + i), entry("b", "b" + i)))
+                .addKey(Entry::getKey)
+                .window(sliding(2, 1))
+                .aggregate(AggregateOperations.mapping(Entry::getValue, AggregateOperations.toList()))
+                .map(TimestampedEntry::getValue)
+                .window(tumbling(1))
+                .aggregate(AggregateOperations.toSet())
+                .drainTo(sink);
+
+        // Then
+        jet().newJob(p);
+        assertTrueEventually(() -> assertEquals(
+                asList(
+                        new TimestampedItem<>(1, new HashSet<>(asList(singletonList("a0"), singletonList("b0")))),
+                        new TimestampedItem<>(2, new HashSet<>(asList(asList("a0", "a1"), asList("b0", "b1")))),
+                        new TimestampedItem<>(3, new HashSet<>(asList(asList("a1", "a2"), asList("b1", "b2")))),
+                        new TimestampedItem<>(4, new HashSet<>(asList(singletonList("a2"), singletonList("b2"))))
+                ),
+                asList(sinkList.toArray())
+        ), 5);
+    }
+
+    @Test
     public void sessionWindow() {
         // Given
         WindowTestFixture fx = new WindowTestFixture();
@@ -196,7 +233,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
         DistributedTriFunction<Long, String, String, String> formatFn = fx.formatFn;
         StreamStage<String> aggregated = fx.stage0()
                 .window(session(sessionTimeout))
-                .groupingKey(Entry::getKey)
+                .addKey(Entry::getKey)
                 .aggregate(summingLong(Entry::getValue), (start, end, key, sum) ->
                         formatFn.apply(start, key, sum.toString()));
 
@@ -233,8 +270,8 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
 
     private void testAggregate2(
             BiFunction<
-                    StageWithGroupingAndWindow<Entry<String, Integer>, String>,
-                    StreamStageWithGrouping<Entry<String, Integer>, String>,
+                    StageWithKeyAndWindow<Entry<String, Integer>, String>,
+                    StreamStageWithKey<Entry<String, Integer>, String>,
                     StreamStage<TimestampedEntry<String, Tuple2<Long, Long>>>>
                 attachAggregatingStageFn
     ) {
@@ -248,13 +285,13 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
 
         // When
         final int winSize = 4;
-        StageWithGroupingAndWindow<Entry<String, Integer>, String> stage0 =
+        StageWithKeyAndWindow<Entry<String, Integer>, String> stage0 =
                 fx.stage0()
                   .window(tumbling(winSize))
-                  .groupingKey(Entry::getKey);
-        StreamStageWithGrouping<Entry<String, Integer>, String> stage1 =
+                  .addKey(Entry::getKey);
+        StreamStageWithKey<Entry<String, Integer>, String> stage1 =
                 fx.stage1()
-                  .groupingKey(Entry::getKey);
+                  .addKey(Entry::getKey);
         StreamStage<TimestampedEntry<String, Tuple2<Long, Long>>> aggregated =
                 attachAggregatingStageFn.apply(stage0, stage1);
 
@@ -295,8 +332,8 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
 
     private void testAggregate2_withOutputFn(
             TriFunction<
-                    StageWithGroupingAndWindow<Entry<String, Integer>, String>,
-                    StreamStageWithGrouping<Entry<String, Integer>, String>,
+                    StageWithKeyAndWindow<Entry<String, Integer>, String>,
+                    StreamStageWithKey<Entry<String, Integer>, String>,
                     DistributedTriFunction<Long, String, String, String>,
                     StreamStage<String>
                 > attachAggregatingStageFn
@@ -314,10 +351,10 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
         // When
         final int winSize = 4;
 
-        StageWithGroupingAndWindow<Entry<String, Integer>, String> stage0 = fx.stage0()
-                .window(tumbling(winSize))
-                .groupingKey(Entry::getKey);
-        StreamStageWithGrouping<Entry<String, Integer>, String> stage1 = fx.stage1().groupingKey(Entry::getKey);
+        StageWithKeyAndWindow<Entry<String, Integer>, String> stage0 = fx.stage0()
+                                                                         .window(tumbling(winSize))
+                                                                         .addKey(Entry::getKey);
+        StreamStageWithKey<Entry<String, Integer>, String> stage1 = fx.stage1().addKey(Entry::getKey);
 
         StreamStage<String> aggregated = attachAggregatingStageFn.apply(stage0, stage1, formatFn);
 
@@ -356,9 +393,9 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
 
     private void testAggregate3(
             TriFunction<
-                    StageWithGroupingAndWindow<Entry<String, Integer>, String>,
-                    StreamStageWithGrouping<Entry<String, Integer>, String>,
-                    StreamStageWithGrouping<Entry<String, Integer>, String>,
+                    StageWithKeyAndWindow<Entry<String, Integer>, String>,
+                    StreamStageWithKey<Entry<String, Integer>, String>,
+                    StreamStageWithKey<Entry<String, Integer>, String>,
                     StreamStage<TimestampedEntry<String, Tuple3<Long, Long, Long>>>>
                 attachAggregatingStageFn
     ) {
@@ -375,16 +412,16 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
 
         // When
         final int winSize = 4;
-        StageWithGroupingAndWindow<Entry<String, Integer>, String> stage0 =
+        StageWithKeyAndWindow<Entry<String, Integer>, String> stage0 =
                 fx.stage0()
                   .window(tumbling(winSize))
-                  .groupingKey(Entry::getKey);
-        StreamStageWithGrouping<Entry<String, Integer>, String> stage1 =
+                  .addKey(Entry::getKey);
+        StreamStageWithKey<Entry<String, Integer>, String> stage1 =
                 fx.stage1()
-                  .groupingKey(Entry::getKey);
-        StreamStageWithGrouping<Entry<String, Integer>, String> stage2 =
+                  .addKey(Entry::getKey);
+        StreamStageWithKey<Entry<String, Integer>, String> stage2 =
                 fx.stage2()
-                  .groupingKey(Entry::getKey);
+                  .addKey(Entry::getKey);
         StreamStage<TimestampedEntry<String, Tuple3<Long, Long, Long>>> aggregated =
                 attachAggregatingStageFn.apply(stage0, stage1, stage2);
 
@@ -425,9 +462,9 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
 
     private void testAggregate3_withOutputFn(
             QuadFunction<
-                    StageWithGroupingAndWindow<Entry<String, Integer>, String>,
-                    StreamStageWithGrouping<Entry<String, Integer>, String>,
-                    StreamStageWithGrouping<Entry<String, Integer>, String>,
+                    StageWithKeyAndWindow<Entry<String, Integer>, String>,
+                    StreamStageWithKey<Entry<String, Integer>, String>,
+                    StreamStageWithKey<Entry<String, Integer>, String>,
                     DistributedTriFunction<Long, String, String, String>,
                     StreamStage<String>
                 > attachAggregatingStageFn
@@ -447,16 +484,16 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
 
         // When
         final int winSize = 4;
-        StageWithGroupingAndWindow<Entry<String, Integer>, String> stage0 = fx
+        StageWithKeyAndWindow<Entry<String, Integer>, String> stage0 = fx
                 .stage0()
                 .window(tumbling(winSize))
-                .groupingKey(Entry::getKey);
-        StreamStageWithGrouping<Entry<String, Integer>, String> stage1 = fx
+                .addKey(Entry::getKey);
+        StreamStageWithKey<Entry<String, Integer>, String> stage1 = fx
                 .stage1()
-                .groupingKey(Entry::getKey);
-        StreamStageWithGrouping<Entry<String, Integer>, String> stage2 = fx
+                .addKey(Entry::getKey);
+        StreamStageWithKey<Entry<String, Integer>, String> stage2 = fx
                 .stage2()
-                .groupingKey(Entry::getKey);
+                .addKey(Entry::getKey);
         StreamStage<String> aggregated = attachAggregatingStageFn.apply(stage0, stage1, stage2, formatFn);
 
         //Then
@@ -485,7 +522,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
         String srcName1 = journaledMapName();
         Map<String, Integer> srcMap1 = jet().getMap(srcName1);
 
-        StreamStage<Entry<String, Integer>> stage0 = addKeys(mapJournalSrcStage);
+        StreamStage<Entry<String, Integer>> stage0 = addKeys(srcStage);
         StreamStage<Entry<String, Integer>> stage1 = addKeys(drawEventJournalValues(srcName1));
         {
             addToSrcMapJournal(input);
@@ -507,8 +544,8 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
 
         // When
         final int winSize = 4;
-        StreamStageWithGrouping<Entry<String, Integer>, String> stage0 = fx.stage0.groupingKey(Entry::getKey);
-        StreamStageWithGrouping<Entry<String, Integer>, String> stage1 = fx.stage1.groupingKey(Entry::getKey);
+        StreamStageWithKey<Entry<String, Integer>, String> stage0 = fx.stage0.addKey(Entry::getKey);
+        StreamStageWithKey<Entry<String, Integer>, String> stage1 = fx.stage1.addKey(Entry::getKey);
 
         AggregateOperation1<Entry<String, Integer>, LongAccumulator, Long> aggrOp = summingLong(Entry::getValue);
         WindowGroupAggregateBuilder<String, Long> b = stage0.window(tumbling(winSize)).aggregateBuilder(aggrOp);
@@ -530,8 +567,8 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
 
         // When
         final int winSize = 4;
-        StreamStageWithGrouping<Entry<String, Integer>, String> stage0 = fx.stage0.groupingKey(Entry::getKey);
-        StreamStageWithGrouping<Entry<String, Integer>, String> stage1 = fx.stage1.groupingKey(Entry::getKey);
+        StreamStageWithKey<Entry<String, Integer>, String> stage0 = fx.stage0.addKey(Entry::getKey);
+        StreamStageWithKey<Entry<String, Integer>, String> stage1 = fx.stage1.addKey(Entry::getKey);
 
         WindowGroupAggregateBuilder1<Entry<String, Integer>, String> b = stage0
                 .window(tumbling(winSize))
@@ -579,10 +616,5 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
                 .collect(toList());
         Map<String, Integer> expectedBag = toBag(expected);
         assertTrueEventually(() -> assertEquals(expectedBag, sinkToBag()));
-    }
-
-    static <T> T log(String msg, T item) {
-        System.out.println(msg + ": " + item);
-        return item;
     }
 }
