@@ -27,7 +27,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeBufferedP;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
@@ -46,9 +45,9 @@ public final class WriteJdbcP {
      */
     public static <T> ProcessorMetaSupplier metaSupplier(
             @Nonnull DistributedSupplier<Connection> connectionSupplier,
-            @Nonnull DistributedFunction<Connection, Statement> statementFn,
-            @Nonnull DistributedBiConsumer<Statement, T> updateFn,
-            @Nonnull DistributedBiConsumer<Connection, Statement> flushFn
+            @Nonnull DistributedFunction<Connection, PreparedStatement> statementFn,
+            @Nonnull DistributedBiConsumer<PreparedStatement, T> updateFn,
+            @Nonnull DistributedBiConsumer<Connection, PreparedStatement> flushFn
 
     ) {
         return ProcessorMetaSupplier.preferLocalParallelismOne(writeBufferedP(
@@ -73,18 +72,17 @@ public final class WriteJdbcP {
             connection.setAutoCommit(false);
             return connection;
         });
-        DistributedFunction<Connection, Statement> statementFn =
+        DistributedFunction<Connection, PreparedStatement> statementFn =
                 connection -> uncheckCall(() -> connection.prepareStatement(updateQuery));
         return ProcessorMetaSupplier.preferLocalParallelismOne(writeBufferedP(
                 context -> new JdbcContext(connectionSupplier, statementFn),
                 (jdbcContext, o) -> {
-                    PreparedStatement stmt = (PreparedStatement) jdbcContext.statement;
-                    bindFn.accept(stmt, (T) o);
+                    bindFn.accept(jdbcContext.statement, (T) o);
                     uncheckRun(() -> {
                         if (jdbcContext.supportsBatch) {
-                            stmt.addBatch();
+                            jdbcContext.statement.addBatch();
                         } else {
-                            stmt.executeUpdate();
+                            jdbcContext.statement.executeUpdate();
                         }
                     });
                 },
@@ -103,11 +101,11 @@ public final class WriteJdbcP {
     private static final class JdbcContext {
 
         private final Connection connection;
-        private final Statement statement;
+        private final PreparedStatement statement;
         private final boolean supportsBatch;
 
         JdbcContext(DistributedSupplier<Connection> connectionSupplier,
-                    DistributedFunction<Connection, Statement> statementFn) {
+                    DistributedFunction<Connection, PreparedStatement> statementFn) {
             this.connection = connectionSupplier.get();
             this.statement = statementFn.apply(connection);
             supportsBatch = uncheckCall(() -> connection.getMetaData().supportsBatchUpdates());

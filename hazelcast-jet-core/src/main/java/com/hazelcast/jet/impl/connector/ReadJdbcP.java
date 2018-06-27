@@ -20,14 +20,16 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
-import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.impl.util.ExceptionUtil;
+import com.hazelcast.jet.pipeline.ResultSetForPartitionFunction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -41,24 +43,22 @@ import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 public final class ReadJdbcP<T> extends AbstractProcessor {
 
     private final DistributedSupplier<Connection> connectionSupplier;
-    private final DistributedFunction<Connection, Statement> statementFn;
-    private final DistributedBiFunction<Integer, Integer, String> sqlFn;
+    private final ResultSetForPartitionFunction resultSetFn;
     private final DistributedFunction<ResultSet, T> mapOutputFn;
 
     private Connection connection;
-    private Statement statement;
-    private String sql;
+    private ResultSet resultSet;
     private Traverser traverser;
+    private int parallelism;
+    private int index;
 
     private ReadJdbcP(
             @Nonnull DistributedSupplier<Connection> connectionSupplier,
-            @Nonnull DistributedFunction<Connection, Statement> statementFn,
-            @Nonnull DistributedBiFunction<Integer, Integer, String> sqlFn,
+            @Nonnull ResultSetForPartitionFunction resultSetFn,
             @Nonnull DistributedFunction<ResultSet, T> mapOutputFn
     ) {
         this.connectionSupplier = connectionSupplier;
-        this.statementFn = statementFn;
-        this.sqlFn = sqlFn;
+        this.resultSetFn = resultSetFn;
         this.mapOutputFn = mapOutputFn;
         setCooperative(false);
     }
@@ -68,11 +68,10 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
      */
     public static <T> ProcessorSupplier supplier(
             @Nonnull DistributedSupplier<Connection> connectionSupplier,
-            @Nonnull DistributedFunction<Connection, Statement> statementFn,
-            @Nonnull DistributedBiFunction<Integer, Integer, String> sqlFn,
+            @Nonnull ResultSetForPartitionFunction resultSetFn,
             @Nonnull DistributedFunction<ResultSet, T> mapOutputFn
     ) {
-        return ProcessorSupplier.of(() -> new ReadJdbcP<>(connectionSupplier, statementFn, sqlFn, mapOutputFn));
+        return ProcessorSupplier.of(() -> new ReadJdbcP<>(connectionSupplier, resultSetFn, mapOutputFn));
     }
 
     public static <T> ProcessorSupplier supplier(
@@ -82,43 +81,66 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
     ) {
         return ProcessorSupplier.of(() -> new ReadJdbcP<>(
                 () -> uncheckCall(() -> DriverManager.getConnection(connectionURL)),
-                connection -> uncheckCall(connection::createStatement),
-                (parallelism, index) -> query, mapOutputFn));
+                resultSetFunction(query), mapOutputFn));
     }
 
     @Override
     protected void init(@Nonnull Context context) {
         connection = connectionSupplier.get();
-        statement = statementFn.apply(connection);
-        sql = sqlFn.apply(context.totalParallelism(), context.globalProcessorIndex());
+        this.parallelism = context.totalParallelism();
+        this.index = context.globalProcessorIndex();
     }
 
     @Override
     public boolean complete() {
         if (traverser == null) {
-            ResultSet resultSet = uncheckCall(() -> statement.executeQuery(sql));
+            resultSet = resultSetFn.resultSet(connection, parallelism, index);
             traverser = ((Traverser<ResultSet>) () -> uncheckCall(() -> resultSet.next() ? resultSet : null))
-                    .map(mapOutputFn)
-                    .onFirstNull(() -> uncheckRun(resultSet::close));
+                    .map(mapOutputFn);
         }
         return emitFromTraverser(traverser);
     }
 
     @Override
-    public void close(@Nullable Throwable error) throws SQLException {
-        SQLException statementException = null;
-        try {
+    public void close(@Nullable Throwable error) throws Exception {
+        Exception resultSetException = null;
+        Exception statementException = null;
+        if (resultSet != null) {
+            Statement statement = resultSet.getStatement();
+            resultSetException = close(resultSet);
             if (statement != null) {
-                statement.close();
+                statementException = close(statement);
             }
-        } catch (SQLException e) {
-            statementException = e;
         }
         if (connection != null) {
             connection.close();
         }
+        if (resultSetException != null) {
+            throw resultSetException;
+        }
         if (statementException != null) {
             throw statementException;
         }
+    }
+
+    private static Exception close(AutoCloseable closeable) {
+        try {
+            closeable.close();
+        } catch (Exception e) {
+            return e;
+        }
+        return null;
+    }
+
+    private static ResultSetForPartitionFunction resultSetFunction(String query) {
+        return (connection, parallelism, index) -> {
+            PreparedStatement statement = uncheckCall(() -> connection.prepareStatement(query));
+            try {
+                return statement.executeQuery();
+            } catch (SQLException e) {
+                uncheckRun(statement::close);
+                throw ExceptionUtil.rethrow(e);
+            }
+        };
     }
 }

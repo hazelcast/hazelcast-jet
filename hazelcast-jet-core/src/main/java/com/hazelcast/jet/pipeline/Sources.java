@@ -26,7 +26,6 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.core.WatermarkSourceUtil;
 import com.hazelcast.jet.core.processor.SourceProcessors;
-import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -44,7 +43,6 @@ import javax.jms.Message;
 import java.nio.charset.Charset;
 import java.sql.Connection;
 import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
@@ -880,19 +878,23 @@ public final class Sources {
     }
 
     /**
-     * Returns a source which connects to the specified database using the
-     * given {@code connectionSupplier}, queries the database using the the
-     * given {@code statementFn} and {@code sqlFn}. It creates output objects
-     * from the {@link ResultSet} using given {@code createOutputFn} and emits
-     * them downstream.
+     * Returns a source which connects to the specified database using the given
+     * {@code connectionSupplier}, queries the database and returns a result set
+     * using the the given {@code resultSetFn}. It creates output objects from the
+     * produced {@link ResultSet} using given {@code mapOutputFn} and emits them
+     * to downstream.
      * <p>
-     * The {@code sqlFn} gets total parallelism (local parallelism * member
-     * count) and global processor index as arguments (in this order) and
-     * produces an SQL query which fetches a part of the whole result. For
-     * example:
+     * {@code resultSetFn} gets the created connection, total parallelism (local
+     * parallelism * member count) and global processor index as arguments and
+     * produces a result set. The parallelism and processor index arguments
+     * should be used to fetch a part of the whole result set specific to the
+     * processor. For example:
      * <pre> {@code
-     *  (parallelism, index) ->
-     *      String.format("select * from TABLE where mod(id,%d)=%d", parallelism, index)
+     *  (connection, parallelism, index) ->
+     *      PreparedStatement stmt = connection.prepareStatement("select * from TABLE where mod(id,%d)=%d)
+     *      stmt.setInt(1, parallelism);
+     *      stmt.setInt(2, index);
+     *      return stmt.executeQuery();
      * }</pre>
      * If the table itself isn't partitioned by the same key, then running
      * multiple queries might not really be faster than using the {@linkplain
@@ -913,15 +915,16 @@ public final class Sources {
      *                 throw ExceptionUtil.rethrow(e);
      *             }
      *         },
-     *         con -> {
+     *         (con, parallelism, index) -> {
      *             try {
-     *                 return con.createStatement();
+     *                 return con.prepareStatement("select * from TABLE where mod(id,%d)=%d);
+     *                 stmt.setInt(1, parallelism);
+     *                 stmt.setInt(2, index);
+     *                 return stmt.executeQuery();
      *             } catch (SQLException e) {
      *                 throw ExceptionUtil.rethrow(e);
      *             }
      *         },
-     *         (parallelism, index) -> "select ID, NAME from PERSON "
-     *                + "where mod(id," + parallelism + ")=" + index,
      *         resultSet -> {
      *             try {
      *                 return new Person(resultSet.getInt(1), resultSet.getString(2));
@@ -939,24 +942,23 @@ public final class Sources {
      * The default local parallelism for this processor is 1.
      *
      * @param connectionSupplier creates the connection
-     * @param statementFn creates {@link Statement} from the connection
-     * @param sqlFn creates SQL string from total parallelism and index
+     * @param resultSetFn creates a {@link ResultSet} using the connection,
+     *                    total parallelism and index
      * @param createOutputFn creates output objects from {@link ResultSet}
      * @param <T> type of output objects
      */
     public static <T> BatchSource<T> jdbc(
             @Nonnull DistributedSupplier<Connection> connectionSupplier,
-            @Nonnull DistributedFunction<Connection, Statement> statementFn,
-            @Nonnull DistributedBiFunction<Integer, Integer, String> sqlFn,
+            @Nonnull ResultSetForPartitionFunction resultSetFn,
             @Nonnull DistributedFunction<ResultSet, T> createOutputFn
     ) {
         return batchFromProcessor("jdbcSource",
-                SourceProcessors.readJdbcP(connectionSupplier, statementFn, sqlFn, createOutputFn));
+                SourceProcessors.readJdbcP(connectionSupplier, resultSetFn, createOutputFn));
     }
 
     /**
      * Convenience for {@link Sources#jdbc(DistributedSupplier,
-     * DistributedFunction, DistributedBiFunction, DistributedFunction)}.
+     * ResultSetForPartitionFunction, DistributedFunction)}.
      * A non-distributed, single-worker source which fetches the whole resultSet
      * with a single query.
      * <p>

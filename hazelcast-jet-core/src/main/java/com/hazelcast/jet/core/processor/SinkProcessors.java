@@ -45,7 +45,6 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.nio.charset.Charset;
 import java.sql.PreparedStatement;
-import java.sql.Statement;
 
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
@@ -335,9 +334,9 @@ public final class SinkProcessors {
     @Nonnull
     public static <T> ProcessorMetaSupplier writeJdbcP(
             @Nonnull DistributedSupplier<java.sql.Connection> connectionSupplier,
-            @Nonnull DistributedFunction<java.sql.Connection, Statement> statementFn,
-            @Nonnull DistributedBiConsumer<Statement, T> updateFn,
-            @Nonnull DistributedBiConsumer<java.sql.Connection, Statement> flushFn
+            @Nonnull DistributedFunction<java.sql.Connection, PreparedStatement> statementFn,
+            @Nonnull DistributedBiConsumer<PreparedStatement, T> updateFn,
+            @Nonnull DistributedBiConsumer<java.sql.Connection, PreparedStatement> flushFn
     ) {
         checkSerializable(connectionSupplier, "connectionSupplier");
         checkSerializable(statementFn, "statementFn");
