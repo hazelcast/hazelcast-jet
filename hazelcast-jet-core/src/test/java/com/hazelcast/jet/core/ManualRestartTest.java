@@ -42,14 +42,15 @@ import static org.junit.Assert.fail;
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class ManualRestartTest extends JetTestSupport {
+
     private static final int NODE_COUNT = 2;
     private static final int LOCAL_PARALLELISM = 1;
 
-    private DAG dag;
-    private JetInstance[] instances;
-
     @Rule
     public ExpectedException exception = ExpectedException.none();
+
+    private DAG dag;
+    private JetInstance[] instances;
 
     @Before
     public void setup() {

@@ -84,6 +84,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.jobNameAndExecutionId;
 import static java.util.Collections.emptyList;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.partitioningBy;
 import static java.util.stream.Collectors.toList;
 
@@ -104,13 +105,36 @@ public class MasterContext {
     private final NonCompletableFuture completionFuture = new NonCompletableFuture();
     private final AtomicReference<JobStatus> jobStatus = new AtomicReference<>(NOT_STARTED);
     private final SnapshotRepository snapshotRepository;
-    private final AtomicReference<TerminationMode> terminationMode = new AtomicReference<>();
     private volatile Set<Vertex> vertices;
 
     private volatile long executionId;
-    private volatile long jobStartTime;
+    private volatile long executionStartTime;
     private volatile Map<MemberInfo, ExecutionPlan> executionPlanMap;
     private volatile ExecutionInvocationCallback executionInvocationCallback;
+
+    /**
+     * Null initially. When a job termination is requested, it is assigned a
+     * termination mode. It's reset back to null when execute operations
+     * complete.
+     */
+    private final AtomicReference<TerminationMode> terminationMode = new AtomicReference<>();
+
+    /**
+     * It's true while a snapshot is in progress. It's used to prevent
+     * concurrent snapshots.
+     */
+    private final AtomicBoolean snapshotInProgress = new AtomicBoolean();
+
+    /**
+     * If {@code true}, the snapshot that will be executed next will be
+     * terminal (a graceful shutdown). It is set to true when a graceful
+     * shutdown or restart is requested and reset back to false when such a
+     * snapshot is initiated.
+     *
+     * <p>If it's true at snapshot completion time, the next snapshot is not
+     * scheduled after a delay but run immediately.
+     */
+    private volatile boolean nextSnapshotIsTerminal;
 
     MasterContext(NodeEngineImpl nodeEngine, JobCoordinationService coordinationService, JobRecord jobRecord) {
         this.nodeEngine = nodeEngine;
@@ -147,8 +171,9 @@ public class MasterContext {
     }
 
     void terminateJob(TerminationMode mode) {
-        if (jobStatus() != RUNNING && mode != CANCEL) {
-            throw new IllegalStateException("Cannot " + mode + ", job is not " + RUNNING.name());
+        JobStatus jobStatus = jobStatus();
+        if (jobStatus != RUNNING && mode != CANCEL) {
+            throw new IllegalStateException("Cannot " + mode + ", job status is " + jobStatus + ", should be " + RUNNING);
         }
         if (terminationMode.compareAndSet(null, mode)) {
             handleTermination(mode);
@@ -189,6 +214,10 @@ public class MasterContext {
         vertices = new HashSet<>();
         dag.iterator().forEachRemaining(vertices::add);
         executionId = executionIdSupplier.apply(jobId);
+
+        snapshotInProgress.set(false);
+        terminationMode.set(null);
+        nextSnapshotIsTerminal = false;
 
         // last started snapshot, completed or not. The next started snapshot must be greater than this number
         long lastSnapshotId = NO_SNAPSHOT;
@@ -274,12 +303,11 @@ public class MasterContext {
                 logger.fine("Cannot init job '" + jobName + "': someone else is just starting it");
                 return false;
             }
-
-            jobStartTime = System.currentTimeMillis();
         }
 
+        executionStartTime = System.nanoTime();
         status = jobStatus();
-        if (!(status == STARTING || status == RESTARTING)) {
+        if (status != STARTING && status != RESTARTING) {
             logger.severe("Cannot init job '" + jobName + "': status is " + status);
             return false;
         }
@@ -405,7 +433,7 @@ public class MasterContext {
         Function<ExecutionPlan, Operation> operationCtor = plan -> new StartExecutionOperation(jobId, executionId);
         Consumer<Map<MemberInfo, Object>> completionCallback = results -> {
             onExecuteStepCompleted(results);
-            // reset the token for the next execution
+            // reset the termination mode for the next execution
             terminationMode.set(null);
             executionInvocationCallback = null;
         };
@@ -421,12 +449,13 @@ public class MasterContext {
 
     private void handleTermination(@Nonnull TerminationMode mode) {
         // this method can be called multiple times to handle the termination, it must be safe against it.
-        if (!mode.isStopWithSnapshot()) {
+        if (mode.isStopWithSnapshot()) {
+            nextSnapshotIsTerminal = true;
+            beginSnapshot(executionId);
+        } else {
             if (executionInvocationCallback != null) {
                 executionInvocationCallback.cancelInvocations();
             }
-        } else {
-            // TODO [viliam] initiate final snapshot
         }
     }
 
@@ -445,29 +474,55 @@ public class MasterContext {
             return;
         }
 
+        if (!snapshotInProgress.compareAndSet(false, true)) {
+            logger.fine("Not beginning snapshot since one is already in progress " + jobIdString());
+            return;
+        }
+
+        boolean isTerminal = nextSnapshotIsTerminal;
+        nextSnapshotIsTerminal = false;
+
         List<String> vertexNames = vertices.stream().map(Vertex::getName).collect(Collectors.toList());
         long newSnapshotId = snapshotRepository.registerSnapshot(jobId, vertexNames);
 
         logger.info(String.format("Starting snapshot %s for %s", newSnapshotId, jobIdString()));
         Function<ExecutionPlan, Operation> factory =
-                plan -> new SnapshotOperation(jobId, executionId, newSnapshotId);
+                plan -> new SnapshotOperation(jobId, executionId, newSnapshotId, isTerminal);
 
-        invoke(factory, responses -> onSnapshotCompleted(responses, executionId, newSnapshotId), null);
+        invoke(factory, responses -> onSnapshotCompleted(responses, executionId, newSnapshotId, isTerminal), null);
     }
 
-    private void onSnapshotCompleted(Map<MemberInfo, Object> responses, long executionId, long snapshotId) {
+    private void onSnapshotCompleted(Map<MemberInfo, Object> responses, long executionId, long snapshotId,
+                                     boolean wasTerminal) {
         SnapshotOperationResult mergedResult = new SnapshotOperationResult();
         for (Object response : responses.values()) {
+            // the response either SnapshotOperationResult or an exception, see #invoke() method
+            if (response instanceof Throwable) {
+                response = new SnapshotOperationResult(0, 0, 0, (Throwable) response);
+            }
             mergedResult.merge((SnapshotOperationResult) response);
         }
 
         boolean isSuccess = mergedResult.getError() == null;
         if (!isSuccess) {
-            logger.warning(jobIdString() + " snapshot " + snapshotId + " has failure, " +
-                    "first failure: " + mergedResult.getError());
+            logger.warning(jobIdString() + " snapshot " + snapshotId + " failed on some member(s), " +
+                    "one of the failures: " + mergedResult.getError());
         }
-        coordinationService.completeSnapshot(jobId, executionId, snapshotId, isSuccess,
+        coordinationService.completeSnapshot(jobId, snapshotId, isSuccess,
                 mergedResult.getNumBytes(), mergedResult.getNumKeys(), mergedResult.getNumChunks());
+        snapshotInProgress.compareAndSet(true, false);
+
+        if (nextSnapshotIsTerminal) {
+            // If the next snapshot is terminal, start it right away.
+            coordinationService.beginSnapshot(jobId, executionId);
+        } else if (!wasTerminal || !isSuccess) {
+            // If the snapshot wasn't terminal or if it was, but not a successful one,
+            // schedule a next snapshot.
+            // If this snapshot was terminal, the next one will be also.
+            nextSnapshotIsTerminal = wasTerminal;
+            // schedule next snapshot after a delay
+            coordinationService.scheduleSnapshot(jobId, executionId);
+        }
     }
 
     // Called as callback when all ExecuteOperation invocations are done
@@ -553,20 +608,23 @@ public class MasterContext {
 
         completeVertices(failure);
 
-        if (shouldRestart(failure)) {
-            scheduleRestart();
-            return;
-        }
-
-        long elapsed = System.currentTimeMillis() - jobStartTime;
-        if (isSuccess(failure)) {
+        long elapsed = NANOSECONDS.toMillis(System.nanoTime() - executionStartTime);
+        boolean isSuccess = failure == null
+                || failure instanceof CancellationException
+                || failure instanceof JobRestartRequestedException
+                || failure instanceof JobSuspendRequestedException;
+        if (isSuccess) {
             logger.info(String.format("Execution of %s completed in %,d ms", jobIdString(), elapsed));
         } else {
             logger.warning(String.format("Execution of %s failed after %,d ms", jobIdString(), elapsed), failure);
         }
 
-        JobStatus status = isSuccess(failure) ? COMPLETED : FAILED;
-        jobStatus.set(status);
+        if (shouldRestart(failure)) {
+            scheduleRestart();
+            return;
+        }
+
+        jobStatus.set(isSuccess ? COMPLETED : FAILED);
 
         try {
             coordinationService.completeJob(this, System.currentTimeMillis(), failure);
@@ -618,10 +676,12 @@ public class MasterContext {
         }
     }
 
-    private boolean isSuccess(Throwable failure) {
-        return (failure == null || failure instanceof CancellationException);
-    }
-
+    /**
+     * @param completionCallback a consumer that will receive a map of
+     *                           responses, one for each member. The value will
+     *                           be either the response or an exception thrown
+     *                           from the operation.
+     */
     private void invoke(Function<ExecutionPlan, Operation> operationCtor,
                         Consumer<Map<MemberInfo, Object>> completionCallback,
                         ExecutionCallback<Object> callback) {

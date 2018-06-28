@@ -32,15 +32,17 @@ public class SnapshotOperation extends AsyncJobOperation {
 
     private long executionId;
     private long snapshotId;
+    private boolean isTerminal;
 
     // for deserialization
     public SnapshotOperation() {
     }
 
-    public SnapshotOperation(long jobId, long executionId, long snapshotId) {
+    public SnapshotOperation(long jobId, long executionId, long snapshotId, boolean isTerminal) {
         super(jobId);
         this.executionId = executionId;
         this.snapshotId = snapshotId;
+        this.isTerminal = isTerminal;
     }
 
     @Override
@@ -49,7 +51,7 @@ public class SnapshotOperation extends AsyncJobOperation {
         ExecutionContext ctx = service.getJobExecutionService().assertExecutionContext(
                 getCallerAddress(), jobId(), executionId, this
         );
-        ctx.beginSnapshot(snapshotId).thenAccept(result -> {
+        ctx.beginSnapshot(snapshotId, isTerminal).thenAccept(result -> {
             if (result.getError() == null) {
                 logFine(getLogger(),
                         "Snapshot %s for %s finished successfully on member",
@@ -75,6 +77,7 @@ public class SnapshotOperation extends AsyncJobOperation {
         super.writeInternal(out);
         out.writeLong(executionId);
         out.writeLong(snapshotId);
+        out.writeBoolean(isTerminal);
     }
 
     @Override
@@ -82,6 +85,7 @@ public class SnapshotOperation extends AsyncJobOperation {
         super.readInternal(in);
         executionId = in.readLong();
         snapshotId = in.readLong();
+        isTerminal = in.readBoolean();
     }
 
     /**

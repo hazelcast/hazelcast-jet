@@ -495,7 +495,7 @@ public class JobCoordinationService {
                 snapshotInterval, MILLISECONDS);
     }
 
-    private void beginSnapshot(long jobId, long executionId) {
+    void beginSnapshot(long jobId, long executionId) {
         MasterContext masterContext = masterContexts.get(jobId);
         if (masterContext == null) {
             logger.warning("MasterContext not found to schedule snapshot of " + idToString(jobId));
@@ -515,9 +515,7 @@ public class JobCoordinationService {
         masterContext.beginSnapshot(executionId);
     }
 
-    void completeSnapshot(long jobId, long executionId, long snapshotId, boolean isSuccess,
-                          long numBytes, long numKeys, long numChunks
-    ) {
+    void completeSnapshot(long jobId, long snapshotId, boolean isSuccess, long numBytes, long numKeys, long numChunks) {
         MasterContext masterContext = masterContexts.get(jobId);
         if (masterContext == null) {
             logger.warning("MasterContext not found to finalize snapshot of " + idToString(jobId)
@@ -545,7 +543,6 @@ public class JobCoordinationService {
         } catch (Exception e) {
             logger.warning("Cannot delete old snapshots for " + masterContext.jobIdString());
         }
-        scheduleSnapshot(jobId, executionId);
     }
 
     boolean shouldStartJobs() {

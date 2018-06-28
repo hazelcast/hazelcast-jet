@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.config.ProcessingGuarantee;
+import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
 import com.hazelcast.logging.ILogger;
 
@@ -44,6 +45,11 @@ public class SnapshotContext {
     private final AtomicLong lastSnapshotId;
 
     /**
+     * If true, the job should terminate after the snapshot is processed.
+     */
+    private volatile boolean isTerminal;
+
+    /**
      * Current number of {@link StoreSnapshotTasklet}s in the job. It's
      * decremented as the tasklets complete (this is when they receive
      * DONE_ITEM and after all pending async ops completed).
@@ -62,7 +68,7 @@ public class SnapshotContext {
      * snapshot. When it is decremented to 0, the snapshot is complete and new
      * one can start.
      * <p>
-     * It can have negative value in case described in {@link #startNewSnapshot(long)}.
+     * It can have negative value in case described in {@link #startNewSnapshot}.
      */
     private final AtomicInteger numRemainingTasklets = new AtomicInteger();
 
@@ -101,6 +107,10 @@ public class SnapshotContext {
         return lastSnapshotId.get();
     }
 
+    boolean isTerminalSnapshot() {
+        return isTerminal;
+    }
+
     ProcessingGuarantee processingGuarantee() {
         return guarantee;
     }
@@ -127,11 +137,12 @@ public class SnapshotContext {
      * {@code SnapshotOperation} and send barriers to such processor before
      * the {@code SnapshotOperation} is called on this member.
      */
-    synchronized CompletableFuture<SnapshotOperationResult> startNewSnapshot(long snapshotId) {
+    synchronized CompletableFuture<SnapshotOperationResult> startNewSnapshot(long snapshotId, boolean isTerminal) {
         assert snapshotId == lastSnapshotId.get() + 1
                 : "new snapshotId not incremented by 1. Previous=" + lastSnapshotId + ", new=" + snapshotId;
         assert numTasklets >= 0 : "numTasklets=" + numTasklets;
 
+        this.isTerminal = isTerminal;
         int newNumRemainingTasklets = numRemainingTasklets.addAndGet(numTasklets);
         assert newNumRemainingTasklets - numTasklets <= 0 :
                 "previous snapshot was not finished, numRemainingTasklets=" + (newNumRemainingTasklets - numTasklets);
@@ -191,10 +202,9 @@ public class SnapshotContext {
      * operations are done).
      * <p>
      * This method can be called before the snapshot was started with {@link
-     * #startNewSnapshot(long)}. This can happen, if the processor only has
-     * input queues from remote members, from which it can possibly receive
-     * barriers before {@link com.hazelcast.jet.impl.operation.SnapshotOperation}
-     * is handled on this member.
+     * #startNewSnapshot}. This can happen, if the processor only has input
+     * queues from remote members, from which it can possibly receive barriers
+     * before {@link SnapshotOperation} is handled on this member.
      */
     void snapshotDoneForTasklet(long numBytes, long numKeys, long numChunks) {
         totalBytes.addAndGet(numBytes);

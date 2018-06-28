@@ -51,12 +51,15 @@ import org.junit.runner.RunWith;
 import javax.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
@@ -375,6 +378,36 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
     }
 
     @Test
+    public void when_jobRestartedGracefully_then_noOutputDuplicated() {
+        DAG dag = new DAG();
+        SequencesInPartitionsMetaSupplier sup = new SequencesInPartitionsMetaSupplier(3, 100, true);
+        Vertex generator = dag.newVertex("generator", throttle(sup, 30))
+                              .localParallelism(1);
+        Vertex sink = dag.newVertex("sink", writeListP("sink"));
+        dag.edge(between(generator, sink));
+
+        JobConfig config = new JobConfig();
+        config.setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
+        config.setSnapshotIntervalMillis(3600_000); // set long interval so that the first snapshot does not execute
+        Job job = instance1.newJob(dag, config);
+
+        // wait for the job to start producing output
+        List<Entry<Integer, Integer>> sinkList = instance1.getList("sink");
+        assertTrueEventually(() -> assertTrue(sinkList.size() > 10));
+
+        // When
+        job.restart(true);
+        job.join();
+
+        // Then
+        Set<Entry<Integer, Integer>> expected = IntStream.range(0, sup.elementsInPartition)
+                 .boxed()
+                 .flatMap(i -> IntStream.range(0, 3).mapToObj(p -> entry(p, i)))
+                 .collect(Collectors.toSet());
+        assertEquals(expected, new HashSet<>(sinkList));
+    }
+
+    @Test
     @Ignore("This is a \"test of a test\" - it checks, that SequencesInPartitionsGeneratorP generates correct output")
     public void test_SequencesInPartitionsGeneratorP() throws Exception {
         SequencesInPartitionsMetaSupplier pms = new SequencesInPartitionsMetaSupplier(3, 2, true);
@@ -418,9 +451,10 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         spawn(() -> {
             for (int i = 0; i < 10; i++) {
                 job.restart(false);
-                waitForFirstSnapshot(snapshotRepository, job.getId(), 3);
+                // Sleep a little because the snapshot that started before restart was requested
+                // can complete after this happens.
+                Thread.sleep(1000);
                 waitForNextSnapshot(snapshotRepository, job.getId(), 5);
-                Thread.sleep(500);
             }
             return null;
         }).get();

@@ -183,12 +183,12 @@ public class ExecutionContext {
     /**
      * Starts a new snapshot by incrementing the current snapshot id
      */
-    public CompletionStage<SnapshotOperationResult> beginSnapshot(long snapshotId) {
+    public CompletionStage<SnapshotOperationResult> beginSnapshot(long snapshotId, boolean isTerminal) {
         synchronized (executionLock) {
             if (cancellationFuture.isDone() || executionFuture != null && executionFuture.isDone()) {
                 throw new CancellationException();
             }
-            return snapshotContext.startNewSnapshot(snapshotId);
+            return snapshotContext.startNewSnapshot(snapshotId, isTerminal);
         }
     }
 

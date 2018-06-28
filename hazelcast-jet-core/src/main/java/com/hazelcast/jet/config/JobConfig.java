@@ -214,7 +214,7 @@ public class JobConfig implements Serializable {
      * Limiting the watermark retention time allows it to advance, and therefore
      * the processing to continue, in the face of exceedingly large stream skew.
      * However, since any event with a timestamp less than the current watermark
-     * is categorized as a <em>late event </em> and dropped, this limit can
+     * is categorized as a <em>late event</em> and dropped, this limit can
      * result in data loss.
      *
      * @param retainMillis maximum time to retain watermarks for delayed queues
