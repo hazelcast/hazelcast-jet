@@ -121,6 +121,9 @@ public interface AggregateOperation<A, R> extends Serializable {
      * primitive is defined, the accumulator object <strong>must</strong>
      * properly implement {@code equals()}. See {@link #deductFn()} for an
      * explanation.
+     * <p>
+     * The returned accumulator must be serializable. For performance, you
+     * should prefer Hazelcast custom serialization.
      */
     @Nonnull
     DistributedSupplier<A> createFn();
