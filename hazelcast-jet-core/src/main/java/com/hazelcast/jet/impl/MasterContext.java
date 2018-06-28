@@ -37,7 +37,6 @@ import com.hazelcast.jet.impl.operation.InitExecutionOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
 import com.hazelcast.jet.impl.operation.StartExecutionOperation;
-import com.hazelcast.jet.impl.util.CompletionToken;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.NonCompletableFuture;
 import com.hazelcast.logging.ILogger;
@@ -46,6 +45,7 @@ import com.hazelcast.spi.InternalCompletableFuture;
 import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.HashMap;
@@ -76,8 +76,6 @@ import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.SnapshotRepository.snapshotDataMapName;
 import static com.hazelcast.jet.impl.TerminationMode.CANCEL;
-import static com.hazelcast.jet.impl.TerminationMode.RESTART_FORCEFUL;
-import static com.hazelcast.jet.impl.TerminationMode.RESTART_GRACEFUL;
 import static com.hazelcast.jet.impl.execution.SnapshotContext.NO_SNAPSHOT;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder.createExecutionPlans;
@@ -106,12 +104,13 @@ public class MasterContext {
     private final NonCompletableFuture completionFuture = new NonCompletableFuture();
     private final AtomicReference<JobStatus> jobStatus = new AtomicReference<>(NOT_STARTED);
     private final SnapshotRepository snapshotRepository;
-    private volatile CompletionToken terminationToken;
+    private final AtomicReference<TerminationMode> terminationMode = new AtomicReference<>();
     private volatile Set<Vertex> vertices;
 
     private volatile long executionId;
     private volatile long jobStartTime;
     private volatile Map<MemberInfo, ExecutionPlan> executionPlanMap;
+    private volatile ExecutionInvocationCallback executionInvocationCallback;
 
     MasterContext(NodeEngineImpl nodeEngine, JobCoordinationService coordinationService, JobRecord jobRecord) {
         this.nodeEngine = nodeEngine;
@@ -147,19 +146,19 @@ public class MasterContext {
         return completionFuture;
     }
 
-    void cancelJob() {
-        CompletionToken token = this.terminationToken;
-        if (token == null) {
-            throw new IllegalStateException("Job is not running");
+    void terminateJob(TerminationMode mode) {
+        if (jobStatus() != RUNNING && mode != CANCEL) {
+            throw new IllegalStateException("Cannot " + mode + ", job is not " + RUNNING.name());
         }
-        if (!token.complete(TerminationMode.CANCEL)) {
-            throw new IllegalStateException("Termination already requested: " + token.get());
+        if (terminationMode.compareAndSet(null, mode)) {
+            handleTermination(mode);
+        } else {
+            throw new IllegalStateException("Termination already requested: " + terminationMode.get());
         }
     }
 
     boolean isCancelled() {
-        CompletionToken token = this.terminationToken;
-        return token != null && token.get() == TerminationMode.CANCEL;
+        return terminationMode.get() == CANCEL;
     }
 
     /**
@@ -398,30 +397,36 @@ public class MasterContext {
 
         long executionId = this.executionId;
 
-        ExecutionInvocationCallback callback = new ExecutionInvocationCallback(executionId);
-
-        terminationToken = new CompletionToken(logger);
-        terminationToken.whenCompleted(t -> {
-            if (!t.isStopWithSnapshot()) {
-                callback.cancelInvocations();
-            } else {
-                // TODO [viliam] initiate final snapshot
-            }
-        });
+        executionInvocationCallback = new ExecutionInvocationCallback(executionId);
+        if (terminationMode.get() != null) {
+            handleTermination(terminationMode.get());
+        }
 
         Function<ExecutionPlan, Operation> operationCtor = plan -> new StartExecutionOperation(jobId, executionId);
         Consumer<Map<MemberInfo, Object>> completionCallback = results -> {
             onExecuteStepCompleted(results);
             // reset the token for the next execution
-            terminationToken = null;
+            terminationMode.set(null);
+            executionInvocationCallback = null;
         };
 
         jobStatus.set(RUNNING);
 
-        invoke(operationCtor, completionCallback, callback);
+        invoke(operationCtor, completionCallback, executionInvocationCallback);
 
         if (isSnapshottingEnabled()) {
             coordinationService.scheduleSnapshot(jobId, executionId);
+        }
+    }
+
+    private void handleTermination(@Nonnull TerminationMode mode) {
+        // this method can be called multiple times to handle the termination, it must be safe against it.
+        if (!mode.isStopWithSnapshot()) {
+            if (executionInvocationCallback != null) {
+                executionInvocationCallback.cancelInvocations();
+            }
+        } else {
+            // TODO [viliam] initiate final snapshot
         }
     }
 
@@ -430,23 +435,6 @@ public class MasterContext {
             Function<ExecutionPlan, Operation> operationCtor = plan -> new CancelExecutionOperation(jobId, executionId);
             invoke(operationCtor, responses -> { }, null);
         });
-    }
-
-    /**
-     * Cancels the job execution invocations in order to restart it afterwards
-     * if the job is currently being executed.
-     */
-    void restartExecution(boolean graceful) {
-        CompletionToken token = this.terminationToken;
-        if (token == null) {
-            throw new IllegalStateException("Job is not running");
-        }
-        if (token.complete(graceful ? RESTART_GRACEFUL : RESTART_FORCEFUL)) {
-            logger.info("Job " + idToString(jobId) + " is going to be restarted "
-                    + (graceful ? "gracefully" : "forcefully"));
-        } else {
-            throw new IllegalStateException("Termination already requested: " + token.get());
-        }
     }
 
     void beginSnapshot(long executionId) {
@@ -499,13 +487,13 @@ public class MasterContext {
      * </ul>
      */
     private Throwable getExecuteResult(Map<MemberInfo, Object> responses) {
-        TerminationMode terminationMode = terminationToken.get();
-        // terminationMode is null if the job completed or failed without a job-control action
-        if (terminationMode != null) {
-            if (terminationMode == CANCEL) {
+        TerminationMode mode = terminationMode.get();
+        // mode is null if the job completed or failed without a job-control action
+        if (mode != null) {
+            if (mode == CANCEL) {
                 logger.fine(jobIdString() + " to be cancelled after execute");
                 return new CancellationException();
-            } else if (terminationMode.isRestart()) {
+            } else if (mode.isRestart()) {
                 return new JobRestartRequestedException();
             } else {
                 return new JobSuspendRequestedException();

@@ -35,7 +35,6 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 
 import static com.hazelcast.test.PacketFiltersUtil.rejectOperationsBetween;
-import static com.hazelcast.test.PacketFiltersUtil.resetPacketFiltersFrom;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
@@ -109,12 +108,9 @@ public class ManualRestartTest extends JetTestSupport {
         assertTrueEventually(() -> assertSame(job.getStatus(), JobStatus.STARTING), 10);
 
         // Then, the job cannot restart
-        try {
-            job.restart(false);
-            fail("Restart should have failed");
-        } catch (IllegalStateException ignored) { }
-
-        resetPacketFiltersFrom(instances[0].getHazelcastInstance());
+        exception.expect(IllegalStateException.class);
+        exception.expectMessage("Cannot RESTART_FORCEFUL, job is not RUNNING");
+        job.restart(false);
     }
 
     @Test
@@ -122,7 +118,6 @@ public class ManualRestartTest extends JetTestSupport {
         // Given that the job is completed
         JetInstance client = createJetClient();
         Job job = client.newJob(dag);
-        assertTrueEventually(() -> assertEquals(JobStatus.RUNNING, job.getStatus()), 10);
         job.cancel();
 
         try {
@@ -133,6 +128,7 @@ public class ManualRestartTest extends JetTestSupport {
 
         // Then, the job cannot restart
         exception.expect(IllegalStateException.class);
+        exception.expectMessage("Cannot restart job");
         job.restart(false);
     }
 }

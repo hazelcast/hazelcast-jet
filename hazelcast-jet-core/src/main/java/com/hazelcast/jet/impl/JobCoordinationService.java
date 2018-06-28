@@ -54,6 +54,8 @@ import static com.hazelcast.cluster.memberselector.MemberSelectors.DATA_MEMBER_S
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.core.JobStatus.NOT_STARTED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
+import static com.hazelcast.jet.impl.TerminationMode.RESTART_FORCEFUL;
+import static com.hazelcast.jet.impl.TerminationMode.RESTART_GRACEFUL;
 import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.FAILED;
 import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.SUCCESSFUL;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
@@ -99,7 +101,7 @@ public class JobCoordinationService {
     }
 
     public void reset() {
-        masterContexts.values().forEach(MasterContext::cancelJob);
+        masterContexts.values().forEach(mc -> mc.terminateJob(TerminationMode.CANCEL));
     }
 
     public ClassLoader getClassLoader(long jobId) {
@@ -316,7 +318,7 @@ public class JobCoordinationService {
             throw new RetryableHazelcastException("No MasterContext found for Job " + idToString(jobId) + " to cancel");
         }
 
-        masterContext.cancelJob();
+        masterContext.terminateJob(TerminationMode.CANCEL);
     }
 
     public Set<Long> getAllJobIds() {
@@ -432,7 +434,7 @@ public class JobCoordinationService {
                     "found");
         }
 
-        masterContext.restartExecution(graceful);
+        masterContext.terminateJob(graceful ? RESTART_GRACEFUL : RESTART_FORCEFUL);
     }
 
     SnapshotRepository snapshotRepository() {
