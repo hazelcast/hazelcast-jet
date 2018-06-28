@@ -33,7 +33,9 @@ import javax.annotation.Nonnull;
 import javax.jms.ConnectionFactory;
 import java.nio.charset.Charset;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.SQLNonTransientException;
 import java.util.Map;
 
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
@@ -52,6 +54,7 @@ import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteMapP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeSocketP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
+import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -685,27 +688,20 @@ public final class Sinks {
 
     /**
      * Returns a sink that connects to the specified database using the given
-     * {@code connectionSupplier} and writes to it using the given {@code
-     * statementFn} and {@code updateFn}. After a batch of items is written,
-     * {@code flushFn} is called to flush the changes.
+     * {@code connectionSupplier}, prepares a statement using the given {@code
+     * updateQuery} and inserts/updates the items in batches.
      * <p>
-     * This is a more generic version, using the {@linkplain #jdbc(String,
-     * String, DistributedBiConsumer) simpler one} might work for you.
+     * The {@code updateQuery} should contain a parametrized query. The {@code
+     * bindFn} will receive a {@code PreparedStatement} created for this query
+     * and should only bind parameters to it. The statement will be executed in
+     * batch mode.
      * <p>
      * Example:<pre>{@code
      *     p.drainTo(Sinks.jdbc(
+     *             "REPLACE into table (id, name) values(?, ?)",
      *             () -> {
      *                 try {
-     *                     Connection conn = DriverManager.getConnection("jdbc:...");
-     *                     conn.setAutoCommit(false);
-     *                     return conn;
-     *                 } catch (SQLException e) {
-     *                     throw ExceptionUtil.rethrow(e);
-     *                 }
-     *             },
-     *             conn -> {
-     *                 try {
-     *                     return conn.prepareStatement("REPLACE into table (id, name) values(?, ?)");
+     *                     return DriverManager.getConnection("jdbc:...");
      *                 } catch (SQLException e) {
      *                     throw ExceptionUtil.rethrow(e);
      *                 }
@@ -714,16 +710,6 @@ public final class Sinks {
      *                 try {
      *                     stmt.setInt(1, item.id);
      *                     stmt.setInt(2, item.name);
-     *                     stmt.addBatch();
-     *                 } catch (SQLException e) {
-     *                     throw ExceptionUtil.rethrow(e);
-     *                 }
-     *
-     *             },
-     *             (conn, stmt) -> {
-     *                 try {
-     *                     stmt.executeBatch();
-     *                     conn.commit();
      *                 } catch (SQLException e) {
      *                     throw ExceptionUtil.rethrow(e);
      *                 }
@@ -737,76 +723,35 @@ public final class Sinks {
      * which can fail on duplicate primary key. Rather use an
      * <em>insert-or-update</em> statement that can tolerate duplicate writes.
      * <p>
-     * Any error from the JDBC operations will cause the job to fail. The
-     * default local parallelism for this sink is 1.
+     * The sink will try to reconnect in case of a {@link
+     * SQLNonTransientException}, any other error from the JDBC operations will
+     * cause the job to fail. The default local parallelism for this sink is 1.
      *
+     * @param updateQuery the sql which will do the insert/update
      * @param connectionSupplier the supplier of database connection
-     * @param statementFn the function to prepare the statement
-     * @param updateFn the function to set the parameters of the statement for
-     *                 each item received and execute the update query. Instead
-     *                 of updating for each item, it can be used to add to batch
-     *                 via {@link PreparedStatement#addBatch()}
-     * @param flushFn the function to flush the changes. Gets {@code connection}
-     *                and {@code statement} as arguments. It can be used to
-     *                commit the connection if it is not {@code autoCommit} mode
-     *                or execute the batch
+     * @param bindFn the function to set the parameters of the statement for
+     *                 each item received
      * @param <T> type of the items the sink accepts
      */
     @Nonnull
     public static <T> Sink<T> jdbc(
+            @Nonnull String updateQuery,
             @Nonnull DistributedSupplier<Connection> connectionSupplier,
-            @Nonnull DistributedFunction<Connection, PreparedStatement> statementFn,
-            @Nonnull DistributedBiConsumer<PreparedStatement, T> updateFn,
-            @Nonnull DistributedBiConsumer<Connection, PreparedStatement> flushFn
+            @Nonnull DistributedBiConsumer<PreparedStatement, T> bindFn
     ) {
         return Sinks.fromProcessor("jdbcSink",
-                SinkProcessors.writeJdbcP(connectionSupplier, statementFn, updateFn, flushFn));
+                SinkProcessors.writeJdbcP(updateQuery, connectionSupplier, bindFn));
     }
 
     /**
-     * Simpler version of {@link Sinks#jdbc(DistributedSupplier,
-     * DistributedFunction, DistributedBiConsumer, DistributedBiConsumer)}.
-     * <p>
-     * The {@code updateQuery} should contain a parametrized query. The {@code
-     * bindFn} will receive a {@code PreparedStatement} created for this query
-     * and should only bind parameters to it. The statement will be executed in
-     * batch mode (if the driver supports it) and will be committed after each
-     * batch.
-     * <p>
-     * Example:<pre>{@code
-     *     stage.drainTo(Sinks.jdbc(
-     *         "jdbc:...",
-     *         "REPLACE into table (id, name) values(?, ?)",
-     *         (stmt, item) -> {
-     *             try {
-     *                 stmt.setInt(1, item.id);
-     *                 stmt.setString(2, item.name);
-     *             } catch (SQLException e) {
-     *                 throw ExceptionUtil.rethrow(e);
-     *             }
-     *         }
-     *     ));
-     * }</pre>
-     * <p>
-     * No state is saved to snapshot for this sink. After the job is restarted,
-     * the items will likely be duplicated, providing an <i>at-least-once</i>
-     * guarantee. For this reason you should not use {@code INSERT} statement
-     * which can fail on duplicate primary key. Rather use an
-     * <em>insert-or-update</em> statement that can tolerate duplicate writes.
-     * <p>
-     * Any error from the JDBC operations will cause the job to fail. The
-     * default local parallelism for this sink is 1.
-     *
-     * @param connectionUrl the database connection url
-     * @param updateQuery the sql which will do the insert/update
-     * @param bindFn the function to set the parameters of the statement for
-     *               each item received.
+     * Convenience for {@link Sinks#jdbc(String, DistributedSupplier,
+     * DistributedBiConsumer)}. The connection will be created from {@code
+     * connectionUrl}.
      */
     @Nonnull
-    public static <T> Sink<T> jdbc(@Nonnull String connectionUrl,
-                                   @Nonnull String updateQuery,
+    public static <T> Sink<T> jdbc(@Nonnull String updateQuery,
+                                   @Nonnull String connectionUrl,
                                    @Nonnull DistributedBiConsumer<PreparedStatement, T> bindFn) {
-        return Sinks.fromProcessor("jdbcSink",
-                SinkProcessors.writeJdbcP(connectionUrl, updateQuery, bindFn));
+        return Sinks.jdbc(updateQuery, () -> uncheckCall(() -> DriverManager.getConnection(connectionUrl)), bindFn);
     }
 }

@@ -330,33 +330,16 @@ public final class SinkProcessors {
 
     /**
      * Returns a supplier of processors for {@link
-     * Sinks#jdbc(DistributedSupplier, DistributedFunction,
-     * DistributedBiConsumer, DistributedBiConsumer)}.
+     * Sinks#jdbc(String, DistributedSupplier, DistributedBiConsumer)}.
      */
     @Nonnull
     public static <T> ProcessorMetaSupplier writeJdbcP(
-            @Nonnull DistributedSupplier<java.sql.Connection> connectionSupplier,
-            @Nonnull DistributedFunction<java.sql.Connection, PreparedStatement> statementFn,
-            @Nonnull DistributedBiConsumer<PreparedStatement, T> updateFn,
-            @Nonnull DistributedBiConsumer<java.sql.Connection, PreparedStatement> flushFn
-    ) {
-        checkSerializable(connectionSupplier, "connectionSupplier");
-        checkSerializable(statementFn, "statementFn");
-        checkSerializable(updateFn, "updateFn");
-        checkSerializable(flushFn, "flushFn");
-        return WriteJdbcP.metaSupplier(connectionSupplier, statementFn, updateFn, flushFn);
-    }
-
-    /**
-     * Returns a supplier of processors for {@link
-     * Sinks#jdbc(String, String, DistributedBiConsumer)}.
-     */
-    public static <T> ProcessorMetaSupplier writeJdbcP(
-            @Nonnull String connectionUrl,
             @Nonnull String updateQuery,
+            @Nonnull DistributedSupplier<java.sql.Connection> connectionSupplier,
             @Nonnull DistributedBiConsumer<PreparedStatement, T> bindFn
     ) {
+        checkSerializable(connectionSupplier, "connectionSupplier");
         checkSerializable(bindFn, "bindFn");
-        return WriteJdbcP.metaSupplier(connectionUrl, updateQuery, bindFn);
+        return WriteJdbcP.metaSupplier(updateQuery, connectionSupplier, bindFn);
     }
 }

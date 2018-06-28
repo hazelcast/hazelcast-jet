@@ -16,20 +16,25 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
 import com.hazelcast.jet.pipeline.Sinks;
 import org.h2.tools.DeleteDbFiles;
 import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 
 import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLNonTransientException;
 import java.sql.Statement;
+import java.util.concurrent.ExecutionException;
 
+import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static org.junit.Assert.assertEquals;
 
 public class WriteJdbcPTest extends PipelineTestSupport {
@@ -39,9 +44,18 @@ public class WriteJdbcPTest extends PipelineTestSupport {
     private static final String DB_CONNECTION_URL = "jdbc:h2:" + DIR + "/" + DB;
     private static final int PERSON_COUNT = 100;
 
+    @Rule public TestName testName = new TestName();
+
+    private String tableName;
+
+    @BeforeClass
+    public static void setupClass() {
+        DeleteDbFiles.execute(DIR, DB, true);
+    }
+
     @Before
     public void setup() throws SQLException {
-        DeleteDbFiles.execute(DIR, DB, true);
+        tableName = testName.getMethodName().replaceAll("\\[.*?\\]", "") + "_" + testMode.toString();
         createTable();
     }
 
@@ -50,14 +64,13 @@ public class WriteJdbcPTest extends PipelineTestSupport {
         addToSrcList(sequence(PERSON_COUNT));
         p.drawFrom(source)
          .map(item -> new Person((Integer) item, item.toString()))
-         .drainTo(Sinks.jdbc(DB_CONNECTION_URL,
-                 "INSERT INTO PERSON(id, name) VALUES(?, ?)",
+         .drainTo(Sinks.jdbc("INSERT INTO " + tableName + "(id, name) VALUES(?, ?)", DB_CONNECTION_URL,
                  (stmt, item) -> {
                      try {
                          stmt.setInt(1, item.id);
                          stmt.setString(2, item.name);
                      } catch (SQLException e) {
-                         throw ExceptionUtil.rethrow(e);
+                         throw rethrow(e);
                      }
                  }
          ));
@@ -67,17 +80,29 @@ public class WriteJdbcPTest extends PipelineTestSupport {
         assertEquals(PERSON_COUNT, rowCount());
     }
 
-    private static void createTable() throws SQLException {
+    @Test(expected = ExecutionException.class)
+    public void testFailJob_withNonTransientException() {
+        addToSrcList(sequence(PERSON_COUNT));
+        p.drawFrom(source)
+         .map(item -> new Person((Integer) item, item.toString()))
+         .drainTo(Sinks.jdbc("INSERT INTO " + tableName + "(id, name) VALUES(?, ?)", DB_CONNECTION_URL,
+                 (stmt, item) -> rethrow(new SQLNonTransientException())
+         ));
+
+        execute();
+    }
+
+    private void createTable() throws SQLException {
         try (Connection connection = DriverManager.getConnection(DB_CONNECTION_URL);
              Statement statement = connection.createStatement()) {
-            statement.execute("CREATE TABLE PERSON(id int primary key, name varchar(255))");
+            statement.execute("CREATE TABLE " + tableName + "(id int primary key, name varchar(255))");
         }
     }
 
-    private static int rowCount() throws SQLException {
+    private int rowCount() throws SQLException {
         try (Connection connection = DriverManager.getConnection(DB_CONNECTION_URL);
              Statement statement = connection.createStatement()) {
-            ResultSet resultSet = statement.executeQuery("SELECT COUNT(id) FROM PERSON");
+            ResultSet resultSet = statement.executeQuery("SELECT COUNT(id) FROM " + tableName);
             resultSet.next();
             return resultSet.getInt(1);
         }

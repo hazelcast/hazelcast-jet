@@ -22,7 +22,6 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.DistributedBiConsumer;
-import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
@@ -31,14 +30,11 @@ import com.hazelcast.util.concurrent.IdleStrategy;
 
 import javax.annotation.Nonnull;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLNonTransientException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.hazelcast.jet.impl.util.Util.uncheckCall;
-import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -48,12 +44,11 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public final class WriteJdbcP<T> implements Processor {
 
     private static final IdleStrategy IDLER =
-            new BackoffIdleStrategy(0, 0, MILLISECONDS.toNanos(1), SECONDS.toNanos(10));
+            new BackoffIdleStrategy(0, 0, MILLISECONDS.toNanos(1), SECONDS.toNanos(1));
 
     private final DistributedSupplier<Connection> connectionSupplier;
-    private final DistributedFunction<Connection, PreparedStatement> statementFn;
-    private final DistributedBiConsumer<PreparedStatement, T> updateFn;
-    private final DistributedBiConsumer<Connection, PreparedStatement> flushFn;
+    private final DistributedBiConsumer<PreparedStatement, T> bindFn;
+    private final String updateQuery;
 
     private ILogger logger;
     private Connection connection;
@@ -61,23 +56,33 @@ public final class WriteJdbcP<T> implements Processor {
     private List<T> itemList = new ArrayList<>();
     private int idleCount;
 
-    public WriteJdbcP(
+    private WriteJdbcP(
+            @Nonnull String updateQuery,
             @Nonnull DistributedSupplier<Connection> connectionSupplier,
-            @Nonnull DistributedFunction<Connection, PreparedStatement> statementFn,
-            @Nonnull DistributedBiConsumer<PreparedStatement, T> updateFn,
-            @Nonnull DistributedBiConsumer<Connection, PreparedStatement> flushFn
+            @Nonnull DistributedBiConsumer<PreparedStatement, T> bindFn
     ) {
+        this.updateQuery = updateQuery;
         this.connectionSupplier = connectionSupplier;
-        this.statementFn = statementFn;
-        this.updateFn = updateFn;
-        this.flushFn = flushFn;
+        this.bindFn = bindFn;
+    }
+
+    /**
+     * Private API, use {@link SinkProcessors#writeJdbcP}.
+     */
+    public static <T> ProcessorMetaSupplier metaSupplier(
+            @Nonnull String updateQuery,
+            @Nonnull DistributedSupplier<Connection> connectionSupplier,
+            @Nonnull DistributedBiConsumer<PreparedStatement, T> bindFn
+
+    ) {
+        return ProcessorMetaSupplier.preferLocalParallelismOne(() ->
+                new WriteJdbcP<>(updateQuery, connectionSupplier, bindFn));
     }
 
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         logger = context.logger();
-        connection = connectionSupplier.get();
-        statement = statementFn.apply(connection);
+        prepareStatement();
     }
 
     @Override
@@ -89,15 +94,19 @@ public final class WriteJdbcP<T> implements Processor {
             inbox.drainTo(itemList);
         }
         try {
-            itemList.forEach(item -> updateFn.accept(statement, item));
-            flushFn.accept(connection, statement);
+            for (T item : itemList) {
+                bindFn.accept(statement, item);
+                statement.addBatch();
+            }
+            statement.executeBatch();
             itemList.clear();
         } catch (Exception e) {
-            if (e.getCause() instanceof SQLNonTransientException) {
+            if (e instanceof SQLNonTransientException ||
+                    e.getCause() instanceof SQLNonTransientException) {
+                throw ExceptionUtil.rethrow(e);
+            } else {
                 logger.warning("Exception during update", e.getCause());
                 idleCount++;
-            } else {
-                throw ExceptionUtil.rethrow(e);
             }
         }
         idleCount = 0;
@@ -120,27 +129,31 @@ public final class WriteJdbcP<T> implements Processor {
         }
     }
 
-    private boolean reconnectIfNecessary() {
-        if (idleCount == 0) {
-            return true;
-        }
-        IDLER.idle(idleCount);
-
-        closeSilently(statement);
-        closeSilently(connection);
-
+    private boolean prepareStatement() {
         try {
             connection = connectionSupplier.get();
-            statement = statementFn.apply(connection);
+            statement = connection.prepareStatement(updateQuery);
         } catch (Exception e) {
-            logger.warning("Exception during reconnection", e);
+            logger.warning("Exception during preparing the statement", e);
             idleCount++;
             return false;
         }
         return true;
     }
 
-    private void closeSilently(AutoCloseable closeable) {
+    private boolean reconnectIfNecessary() {
+        if (idleCount == 0) {
+            return true;
+        }
+        IDLER.idle(idleCount);
+
+        closeWithLogging(logger, statement);
+        closeWithLogging(logger, connection);
+
+        return prepareStatement();
+    }
+
+    private static void closeWithLogging(ILogger logger, AutoCloseable closeable) {
         try {
             closeable.close();
         } catch (Exception e) {
@@ -155,47 +168,5 @@ public final class WriteJdbcP<T> implements Processor {
             return e;
         }
         return null;
-    }
-
-    /**
-     * Private API, use {@link SinkProcessors#writeJdbcP}.
-     */
-    public static <T> ProcessorMetaSupplier metaSupplier(
-            @Nonnull DistributedSupplier<Connection> connectionSupplier,
-            @Nonnull DistributedFunction<Connection, PreparedStatement> statementFn,
-            @Nonnull DistributedBiConsumer<PreparedStatement, T> updateFn,
-            @Nonnull DistributedBiConsumer<Connection, PreparedStatement> flushFn
-
-    ) {
-        return ProcessorMetaSupplier.preferLocalParallelismOne(() ->
-                new WriteJdbcP<>(connectionSupplier, statementFn, updateFn, flushFn));
-    }
-
-    /**
-     * Private API, use {@link
-     * SinkProcessors#writeJdbcP(String, String, DistributedBiConsumer)}.
-     */
-    public static <T> ProcessorMetaSupplier metaSupplier(
-            @Nonnull String connectionUrl,
-            @Nonnull String updateQuery,
-            @Nonnull DistributedBiConsumer<PreparedStatement, T> bindFn
-    ) {
-        DistributedSupplier<Connection> connectionSupplier = () -> uncheckCall(() -> {
-            Connection connection = DriverManager.getConnection(connectionUrl);
-            connection.setAutoCommit(false);
-            return connection;
-        });
-        DistributedFunction<Connection, PreparedStatement> statementFn =
-                connection -> uncheckCall(() -> connection.prepareStatement(updateQuery));
-        return ProcessorMetaSupplier.preferLocalParallelismOne(() -> new WriteJdbcP<>(connectionSupplier, statementFn,
-                (stmt, item) -> {
-                    bindFn.accept(stmt, (T) item);
-                    uncheckRun(stmt::addBatch);
-                },
-                (connection, stmt) -> uncheckRun(() -> {
-                    stmt.executeBatch();
-                    connection.commit();
-                })
-        ));
     }
 }
