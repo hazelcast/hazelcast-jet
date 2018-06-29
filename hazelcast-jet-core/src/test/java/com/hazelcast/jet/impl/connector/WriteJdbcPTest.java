@@ -42,7 +42,7 @@ public class WriteJdbcPTest extends PipelineTestSupport {
     private static final String DIR = "~";
     private static final String DB = WriteJdbcPTest.class.getSimpleName();
     private static final String DB_CONNECTION_URL = "jdbc:h2:" + DIR + "/" + DB;
-    private static final int PERSON_COUNT = 100;
+    private static final int PERSON_COUNT = 10;
 
     @Rule public TestName testName = new TestName();
 
@@ -67,6 +67,30 @@ public class WriteJdbcPTest extends PipelineTestSupport {
          .drainTo(Sinks.jdbc("INSERT INTO " + tableName + "(id, name) VALUES(?, ?)", DB_CONNECTION_URL,
                  (stmt, item) -> {
                      try {
+                         stmt.setInt(1, item.id);
+                         stmt.setString(2, item.name);
+                     } catch (SQLException e) {
+                         throw rethrow(e);
+                     }
+                 }
+         ));
+
+        execute();
+
+        assertEquals(PERSON_COUNT, rowCount());
+    }
+
+    @Test
+    public void testReconnect() throws SQLException {
+        addToSrcList(sequence(PERSON_COUNT));
+        p.drawFrom(source)
+         .map(item -> new Person((Integer) item, item.toString()))
+         .drainTo(Sinks.jdbc("INSERT INTO " + tableName + "(id, name) VALUES(?, ?)", DB_CONNECTION_URL,
+                 (stmt, item) -> {
+                     try {
+                         if (stmt.hashCode() % 2 == 0) {
+                             throw new SQLException();
+                         }
                          stmt.setInt(1, item.id);
                          stmt.setString(2, item.name);
                      } catch (SQLException e) {

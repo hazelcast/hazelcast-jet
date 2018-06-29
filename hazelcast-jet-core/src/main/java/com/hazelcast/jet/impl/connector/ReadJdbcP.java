@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -65,31 +66,34 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
     /**
      * Private API, use {@link SourceProcessors#readJdbcP}.
      */
-    public static <T> ProcessorSupplier supplier(
+    public static <T> ProcessorMetaSupplier supplier(
             @Nonnull DistributedSupplier<Connection> connectionSupplier,
             @Nonnull ResultSetForPartitionFunction resultSetFn,
             @Nonnull DistributedFunction<ResultSet, T> mapOutputFn
     ) {
-        return ProcessorSupplier.of(() -> new ReadJdbcP<>(connectionSupplier, resultSetFn, mapOutputFn));
+        return ProcessorMetaSupplier.preferLocalParallelismOne(() ->
+                new ReadJdbcP<>(connectionSupplier, resultSetFn, mapOutputFn));
     }
 
-    public static <T> ProcessorSupplier supplier(
+    public static <T> ProcessorMetaSupplier supplier(
             @Nonnull String connectionURL,
             @Nonnull String query,
             @Nonnull DistributedFunction<ResultSet, T> mapOutputFn
     ) {
-        return ProcessorSupplier.of(() -> new ReadJdbcP<>(
-                () -> uncheckCall(() -> DriverManager.getConnection(connectionURL)),
-                (connection, parallelism, index) -> {
-                    PreparedStatement statement = uncheckCall(() -> connection.prepareStatement(query));
-                    try {
-                        return statement.executeQuery();
-                    } catch (SQLException e) {
-                        uncheckRun(statement::close);
-                        throw ExceptionUtil.rethrow(e);
-                    }
-                },
-                mapOutputFn));
+        return ProcessorMetaSupplier.forceTotalParallelismOne(ProcessorSupplier.of(() ->
+                new ReadJdbcP<>(
+                        () -> uncheckCall(() -> DriverManager.getConnection(connectionURL)),
+                        (connection, parallelism, index) -> {
+                            PreparedStatement statement = uncheckCall(() -> connection.prepareStatement(query));
+                            try {
+                                return statement.executeQuery();
+                            } catch (SQLException e) {
+                                uncheckRun(statement::close);
+                                throw ExceptionUtil.rethrow(e);
+                            }
+                        },
+                        mapOutputFn)
+        ));
     }
 
     @Override

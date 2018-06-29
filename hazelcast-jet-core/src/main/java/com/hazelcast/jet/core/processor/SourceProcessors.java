@@ -399,8 +399,7 @@ public final class SourceProcessors {
         checkSerializable(connectionSupplier, "connectionSupplier");
         checkSerializable(resultSetFn, "resultSetFn");
         checkSerializable(mapOutputFn, "mapOutputFn");
-        return ProcessorMetaSupplier.preferLocalParallelismOne(
-                ReadJdbcP.supplier(connectionSupplier, resultSetFn, mapOutputFn));
+        return ReadJdbcP.supplier(connectionSupplier, resultSetFn, mapOutputFn);
     }
 
     /**
@@ -412,7 +411,7 @@ public final class SourceProcessors {
             @Nonnull String query,
             @Nonnull DistributedFunction<ResultSet, T> mapOutputFn
     ) {
-        return ProcessorMetaSupplier.forceTotalParallelismOne(ReadJdbcP.supplier(connectionURL, query, mapOutputFn));
+        return ReadJdbcP.supplier(connectionURL, query, mapOutputFn);
     }
 
     private static <I, O> Projection<I, O> toProjection(DistributedFunction<I, O> projectionFn) {

@@ -31,11 +31,11 @@ import com.hazelcast.util.concurrent.IdleStrategy;
 import javax.annotation.Nonnull;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.sql.SQLNonTransientException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
@@ -44,7 +44,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public final class WriteJdbcP<T> implements Processor {
 
     private static final IdleStrategy IDLER =
-            new BackoffIdleStrategy(0, 0, MILLISECONDS.toNanos(1), SECONDS.toNanos(1));
+            new BackoffIdleStrategy(0, 0, SECONDS.toNanos(1), SECONDS.toNanos(10));
+    private static final int BATCH_LIMIT = 50;
 
     private final DistributedSupplier<Connection> connectionSupplier;
     private final DistributedBiConsumer<PreparedStatement, T> bindFn;
@@ -55,6 +56,8 @@ public final class WriteJdbcP<T> implements Processor {
     private PreparedStatement statement;
     private List<T> itemList = new ArrayList<>();
     private int idleCount;
+    private boolean supportsBatch;
+    private int batchCount;
 
     private WriteJdbcP(
             @Nonnull String updateQuery,
@@ -82,34 +85,35 @@ public final class WriteJdbcP<T> implements Processor {
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         logger = context.logger();
-        prepareStatement();
+        connectAndPrepareStatement();
     }
 
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
-        if (!reconnectIfNecessary()) {
-            return;
-        }
-        if (itemList.isEmpty()) {
-            inbox.drainTo(itemList);
-        }
-        try {
-            for (T item : itemList) {
-                bindFn.accept(statement, item);
-                statement.addBatch();
+        inbox.drainTo(itemList);
+        while (!itemList.isEmpty()) {
+            if (!reconnectIfNecessary()) {
+                return;
             }
-            statement.executeBatch();
-            itemList.clear();
-        } catch (Exception e) {
-            if (e instanceof SQLNonTransientException ||
-                    e.getCause() instanceof SQLNonTransientException) {
-                throw ExceptionUtil.rethrow(e);
-            } else {
-                logger.warning("Exception during update", e.getCause());
-                idleCount++;
+            try {
+                for (T item : itemList) {
+                    bindFn.accept(statement, item);
+                    addBatchOrExecute();
+                }
+                executeBatch();
+                connection.commit();
+                itemList.clear();
+                idleCount = 0;
+            } catch (Exception e) {
+                if (e instanceof SQLNonTransientException ||
+                        e.getCause() instanceof SQLNonTransientException) {
+                    throw ExceptionUtil.rethrow(e);
+                } else {
+                    logger.warning("Exception during update", e.getCause());
+                    idleCount++;
+                }
             }
         }
-        idleCount = 0;
     }
 
     @Override
@@ -118,27 +122,43 @@ public final class WriteJdbcP<T> implements Processor {
     }
 
     @Override
-    public void close() throws Exception {
-        Exception stmtException = close(statement);
-        Exception connectionException = close(connection);
-        if (stmtException != null) {
-            throw stmtException;
-        }
-        if (connectionException != null) {
-            throw connectionException;
-        }
+    public void close() {
+        closeWithLogging(statement);
+        closeWithLogging(connection);
     }
 
-    private boolean prepareStatement() {
+    private boolean connectAndPrepareStatement() {
         try {
             connection = connectionSupplier.get();
+            connection.setAutoCommit(false);
+            supportsBatch = connection.getMetaData().supportsBatchUpdates();
             statement = connection.prepareStatement(updateQuery);
         } catch (Exception e) {
-            logger.warning("Exception during preparing the statement", e);
+            logger.warning("Exception during connecting and preparing the statement", e);
             idleCount++;
             return false;
         }
         return true;
+    }
+
+    private void addBatchOrExecute() throws SQLException {
+        if (!supportsBatch) {
+            statement.executeUpdate();
+            return;
+        }
+        statement.addBatch();
+        if (++batchCount == BATCH_LIMIT) {
+            statement.executeBatch();
+            batchCount = 0;
+        }
+
+    }
+
+    private void executeBatch() throws SQLException {
+        if (supportsBatch) {
+            statement.executeBatch();
+            batchCount = 0;
+        }
     }
 
     private boolean reconnectIfNecessary() {
@@ -147,26 +167,19 @@ public final class WriteJdbcP<T> implements Processor {
         }
         IDLER.idle(idleCount);
 
-        closeWithLogging(logger, statement);
-        closeWithLogging(logger, connection);
+        close();
 
-        return prepareStatement();
+        return connectAndPrepareStatement();
     }
 
-    private static void closeWithLogging(ILogger logger, AutoCloseable closeable) {
+    private void closeWithLogging(AutoCloseable closeable) {
+        if (closeable == null) {
+            return;
+        }
         try {
             closeable.close();
         } catch (Exception e) {
             logger.warning("Exception during closing " + closeable, e);
         }
-    }
-
-    private static Exception close(AutoCloseable closeable) {
-        try {
-            closeable.close();
-        } catch (Exception e) {
-            return e;
-        }
-        return null;
     }
 }
