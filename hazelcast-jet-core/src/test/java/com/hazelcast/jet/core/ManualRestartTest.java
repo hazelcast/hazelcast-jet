@@ -110,7 +110,7 @@ public class ManualRestartTest extends JetTestSupport {
 
         // Then, the job cannot restart
         exception.expect(IllegalStateException.class);
-        exception.expectMessage("Cannot RESTART_FORCEFUL, job is not RUNNING");
+        exception.expectMessage("Cannot RESTART_FORCEFUL");
         job.restart(false);
     }
 
