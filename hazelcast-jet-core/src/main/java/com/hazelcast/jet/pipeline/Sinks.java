@@ -35,6 +35,7 @@ import java.nio.charset.Charset;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.sql.SQLNonTransientException;
 import java.util.Map;
 
@@ -689,12 +690,16 @@ public final class Sinks {
     /**
      * Returns a sink that connects to the specified database using the given
      * {@code connectionSupplier}, prepares a statement using the given {@code
-     * updateQuery} and inserts/updates the items in batches.
+     * updateQuery} and inserts/updates the items.
      * <p>
      * The {@code updateQuery} should contain a parametrized query. The {@code
      * bindFn} will receive a {@code PreparedStatement} created for this query
-     * and should only bind parameters to it. The statement will be executed in
-     * batch mode.
+     * and should bind parameters to it. It should not execute the query,
+     * call commit or any other method.
+     * <p>
+     * The records will be committed after each batch of records and a batch
+     * mode will be used (if the driver supports it). Auto-commit will be
+     * disabled on the connection.
      * <p>
      * Example:<pre>{@code
      *     p.drainTo(Sinks.jdbc(
@@ -717,17 +722,18 @@ public final class Sinks {
      *     ));
      * }</pre>
      * <p>
+     * In case of an {@link SQLException} the processor will automatically try
+     * to reconnect and the job won't fail, except for the {@link
+     * SQLNonTransientException} subclass. The default local parallelism for
+     * this sink is 1.
+     * <p>
      * No state is saved to snapshot for this sink. After the job is restarted,
      * the items will likely be duplicated, providing an <i>at-least-once</i>
      * guarantee. For this reason you should not use {@code INSERT} statement
      * which can fail on duplicate primary key. Rather use an
      * <em>insert-or-update</em> statement that can tolerate duplicate writes.
-     * <p>
-     * The sink will try to reconnect in case of a {@link
-     * SQLNonTransientException}, any other error from the JDBC operations will
-     * cause the job to fail. The default local parallelism for this sink is 1.
      *
-     * @param updateQuery the sql which will do the insert/update
+     * @param updateQuery the SQL query which will do the insert/update
      * @param connectionSupplier the supplier of database connection
      * @param bindFn the function to set the parameters of the statement for
      *                 each item received
