@@ -93,7 +93,7 @@ public final class WriteJdbcP<T> implements Processor {
         inbox.drainTo(itemList);
         while (!itemList.isEmpty()) {
             if (!reconnectIfNecessary()) {
-                return;
+                continue;
             }
             try {
                 for (T item : itemList) {

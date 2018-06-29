@@ -16,6 +16,9 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.jet.function.DistributedBiConsumer;
+import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
 import com.hazelcast.jet.pipeline.Sinks;
 import org.h2.tools.DeleteDbFiles;
@@ -28,6 +31,7 @@ import org.junit.rules.TestName;
 import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLNonTransientException;
@@ -85,18 +89,8 @@ public class WriteJdbcPTest extends PipelineTestSupport {
         addToSrcList(sequence(PERSON_COUNT));
         p.drawFrom(source)
          .map(item -> new Person((Integer) item, item.toString()))
-         .drainTo(Sinks.jdbc("INSERT INTO " + tableName + "(id, name) VALUES(?, ?)", DB_CONNECTION_URL,
-                 (stmt, item) -> {
-                     try {
-                         if (stmt.hashCode() % 2 == 0) {
-                             throw new SQLException();
-                         }
-                         stmt.setInt(1, item.id);
-                         stmt.setString(2, item.name);
-                     } catch (SQLException e) {
-                         throw rethrow(e);
-                     }
-                 }
+         .drainTo(Sinks.jdbc("INSERT INTO " + tableName + "(id, name) VALUES(?, ?)",
+                 failOnceConnectionSupplier(), failOnceBindFn()
          ));
 
         execute();
@@ -130,6 +124,43 @@ public class WriteJdbcPTest extends PipelineTestSupport {
             resultSet.next();
             return resultSet.getInt(1);
         }
+    }
+
+    private static DistributedSupplier<Connection> failOnceConnectionSupplier() {
+        return new DistributedSupplier<Connection>() {
+            boolean exceptionThrown;
+            @Override
+            public Connection get() {
+                try {
+                    if (exceptionThrown) {
+                        exceptionThrown = true;
+                        throw new SQLException();
+                    }
+                    return DriverManager.getConnection(DB_CONNECTION_URL);
+                } catch (SQLException e) {
+                    throw ExceptionUtil.rethrow(e);
+                }
+            }
+        };
+    }
+
+    private static DistributedBiConsumer<PreparedStatement, Person> failOnceBindFn() {
+        return new DistributedBiConsumer<PreparedStatement, Person>() {
+            boolean exceptionThrown;
+            @Override
+            public void accept(PreparedStatement stmt, Person item) {
+                try {
+                    if (exceptionThrown) {
+                        exceptionThrown = true;
+                        throw new SQLException();
+                    }
+                    stmt.setInt(1, item.id);
+                    stmt.setString(2, item.name);
+                } catch (SQLException e) {
+                    throw rethrow(e);
+                }
+            }
+        };
     }
 
     private static final class Person implements Serializable {
