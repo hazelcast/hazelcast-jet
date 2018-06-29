@@ -23,7 +23,6 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.pipeline.ResultSetForPartitionFunction;
 
 import javax.annotation.Nonnull;
@@ -35,10 +34,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
-import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 
 /**
- * Private API, use {@link SourceProcessors#readJdbcP}.
+ * Use {@link SourceProcessors#readJdbcP}.
  */
 public final class ReadJdbcP<T> extends AbstractProcessor {
 
@@ -64,7 +62,7 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
     }
 
     /**
-     * Private API, use {@link SourceProcessors#readJdbcP}.
+     * Use {@link SourceProcessors#readJdbcP}.
      */
     public static <T> ProcessorMetaSupplier supplier(
             @Nonnull DistributedSupplier<Connection> connectionSupplier,
@@ -84,12 +82,12 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
                 new ReadJdbcP<>(
                         () -> uncheckCall(() -> DriverManager.getConnection(connectionURL)),
                         (connection, parallelism, index) -> {
-                            PreparedStatement statement = uncheckCall(() -> connection.prepareStatement(query));
+                            PreparedStatement statement = connection.prepareStatement(query);
                             try {
                                 return statement.executeQuery();
                             } catch (SQLException e) {
-                                uncheckRun(statement::close);
-                                throw ExceptionUtil.rethrow(e);
+                                statement.close();
+                                throw e;
                             }
                         },
                         mapOutputFn)
@@ -98,7 +96,7 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) {
-        connection = connectionSupplier.get();
+        this.connection = connectionSupplier.get();
         this.parallelism = context.totalParallelism();
         this.index = context.globalProcessorIndex();
     }
@@ -106,7 +104,7 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
     @Override
     public boolean complete() {
         if (traverser == null) {
-            resultSet = resultSetFn.createResultSet(connection, parallelism, index);
+            resultSet = uncheckCall(() -> resultSetFn.createResultSet(connection, parallelism, index));
             traverser = ((Traverser<ResultSet>) () -> uncheckCall(() -> resultSet.next() ? resultSet : null))
                     .map(mapOutputFn);
         }

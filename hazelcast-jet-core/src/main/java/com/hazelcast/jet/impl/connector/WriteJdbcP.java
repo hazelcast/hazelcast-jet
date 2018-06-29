@@ -39,7 +39,7 @@ import java.util.List;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
- * Private API, use {@link SinkProcessors#writeJdbcP}.
+ * Use {@link SinkProcessors#writeJdbcP}.
  */
 public final class WriteJdbcP<T> implements Processor {
 
@@ -70,7 +70,7 @@ public final class WriteJdbcP<T> implements Processor {
     }
 
     /**
-     * Private API, use {@link SinkProcessors#writeJdbcP}.
+     * Use {@link SinkProcessors#writeJdbcP}.
      */
     public static <T> ProcessorMetaSupplier metaSupplier(
             @Nonnull String updateQuery,

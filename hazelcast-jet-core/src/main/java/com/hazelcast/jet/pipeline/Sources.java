@@ -888,18 +888,10 @@ public final class Sources {
      * parallelism * member count) and global processor index as arguments and
      * produces a result set. The parallelism and processor index arguments
      * should be used to fetch a part of the whole result set specific to the
-     * processor. For example:
-     * <pre> {@code
-     *  (connection, parallelism, index) ->
-     *      PreparedStatement stmt = connection.prepareStatement("select * from TABLE where mod(id,%d)=%d)
-     *      stmt.setInt(1, parallelism);
-     *      stmt.setInt(2, index);
-     *      return stmt.executeQuery();
-     * }</pre>
-     * If the table itself isn't partitioned by the same key, then running
-     * multiple queries might not really be faster than using the {@linkplain
-     * #jdbc(String, String, DistributedFunction) simpler version} of this
-     * method, do your own testing.
+     * processor. If the table itself isn't partitioned by the same key, then
+     * running multiple queries might not really be faster than using the
+     * {@linkplain #jdbc(String, String, DistributedFunction) simpler
+     * version} of this method, do your own testing.
      * <p>
      * {@code createOutputFn} gets the {@link ResultSet} and creates desired
      * output object. The function is called for each row of the result set,
@@ -917,7 +909,7 @@ public final class Sources {
      *         },
      *         (con, parallelism, index) -> {
      *             try {
-     *                 return con.prepareStatement("select * from TABLE where mod(id, ?) = ?);
+     *                 return con.prepareStatement("SELECT * FROM TABLE WHERE MOD(id, ?) = ?);
      *                 stmt.setInt(1, parallelism);
      *                 stmt.setInt(2, index);
      *                 return stmt.executeQuery();

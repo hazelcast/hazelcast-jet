@@ -19,12 +19,13 @@ package com.hazelcast.jet.pipeline;
 import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 
 /**
  * Represents a function that accepts a JDBC connection to the database,
- * a total parallelism and a processor index as arguments and
- * produces a result set. This result set should return a part of the whole
- * result set specific to this processor.
+ * the total parallelism and processor index as arguments and produces a
+ * result set. This result set should return a part of the whole result
+ * set specific to this processor.
  */
 @FunctionalInterface
 public interface ResultSetForPartitionFunction extends Serializable {
@@ -37,5 +38,5 @@ public interface ResultSetForPartitionFunction extends Serializable {
      * @param parallelism the total parallelism for the processor
      * @param index the global processor index
      */
-    ResultSet createResultSet(Connection connection, int parallelism, int index);
+    ResultSet createResultSet(Connection connection, int parallelism, int index) throws SQLException;
 }

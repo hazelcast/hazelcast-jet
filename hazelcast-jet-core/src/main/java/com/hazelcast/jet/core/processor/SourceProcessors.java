@@ -411,6 +411,7 @@ public final class SourceProcessors {
             @Nonnull String query,
             @Nonnull DistributedFunction<ResultSet, T> mapOutputFn
     ) {
+        checkSerializable(mapOutputFn, "mapOutputFn");
         return ReadJdbcP.supplier(connectionURL, query, mapOutputFn);
     }
 
