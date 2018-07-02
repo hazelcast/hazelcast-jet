@@ -28,7 +28,7 @@ import java.sql.SQLException;
  * set specific to this processor.
  */
 @FunctionalInterface
-public interface ResultSetForPartitionFunction extends Serializable {
+public interface ToResultSetFunction extends Serializable {
 
     /**
      * Creates a result set which returns a part of the rows pertaining to the

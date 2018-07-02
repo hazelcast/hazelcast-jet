@@ -941,7 +941,7 @@ public final class Sources {
      */
     public static <T> BatchSource<T> jdbc(
             @Nonnull DistributedSupplier<Connection> connectionSupplier,
-            @Nonnull ResultSetForPartitionFunction resultSetFn,
+            @Nonnull ToResultSetFunction resultSetFn,
             @Nonnull DistributedFunction<ResultSet, T> createOutputFn
     ) {
         return batchFromProcessor("jdbcSource",
@@ -950,7 +950,7 @@ public final class Sources {
 
     /**
      * Convenience for {@link Sources#jdbc(DistributedSupplier,
-     * ResultSetForPartitionFunction, DistributedFunction)}.
+     * ToResultSetFunction, DistributedFunction)}.
      * A non-distributed, single-worker source which fetches the whole resultSet
      * with a single query.
      * <p>

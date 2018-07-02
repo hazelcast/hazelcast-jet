@@ -23,7 +23,7 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.pipeline.ResultSetForPartitionFunction;
+import com.hazelcast.jet.pipeline.ToResultSetFunction;
 
 import javax.annotation.Nonnull;
 import java.sql.Connection;
@@ -41,7 +41,7 @@ import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 public final class ReadJdbcP<T> extends AbstractProcessor {
 
     private final DistributedSupplier<Connection> connectionSupplier;
-    private final ResultSetForPartitionFunction resultSetFn;
+    private final ToResultSetFunction resultSetFn;
     private final DistributedFunction<ResultSet, T> mapOutputFn;
 
     private Connection connection;
@@ -52,7 +52,7 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
 
     private ReadJdbcP(
             @Nonnull DistributedSupplier<Connection> connectionSupplier,
-            @Nonnull ResultSetForPartitionFunction resultSetFn,
+            @Nonnull ToResultSetFunction resultSetFn,
             @Nonnull DistributedFunction<ResultSet, T> mapOutputFn
     ) {
         this.connectionSupplier = connectionSupplier;
@@ -66,7 +66,7 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
      */
     public static <T> ProcessorMetaSupplier supplier(
             @Nonnull DistributedSupplier<Connection> connectionSupplier,
-            @Nonnull ResultSetForPartitionFunction resultSetFn,
+            @Nonnull ToResultSetFunction resultSetFn,
             @Nonnull DistributedFunction<ResultSet, T> mapOutputFn
     ) {
         return ProcessorMetaSupplier.preferLocalParallelismOne(() ->

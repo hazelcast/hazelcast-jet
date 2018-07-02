@@ -36,7 +36,7 @@ import com.hazelcast.jet.impl.connector.StreamSocketP;
 import com.hazelcast.jet.pipeline.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.pipeline.ResultSetForPartitionFunction;
+import com.hazelcast.jet.pipeline.ToResultSetFunction;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.query.Predicate;
@@ -388,12 +388,12 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for {@link
-     * Sources#jdbc(DistributedSupplier, ResultSetForPartitionFunction,
+     * Sources#jdbc(DistributedSupplier, ToResultSetFunction,
      * DistributedFunction)}.
      */
     public static <T> ProcessorMetaSupplier readJdbcP(
             @Nonnull DistributedSupplier<java.sql.Connection> connectionSupplier,
-            @Nonnull ResultSetForPartitionFunction resultSetFn,
+            @Nonnull ToResultSetFunction resultSetFn,
             @Nonnull DistributedFunction<ResultSet, T> mapOutputFn
     ) {
         checkSerializable(connectionSupplier, "connectionSupplier");
