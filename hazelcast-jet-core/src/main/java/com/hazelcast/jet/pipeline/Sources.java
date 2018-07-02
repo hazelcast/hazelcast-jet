@@ -908,14 +908,10 @@ public final class Sources {
      *             }
      *         },
      *         (con, parallelism, index) -> {
-     *             try {
-     *                 return con.prepareStatement("SELECT * FROM TABLE WHERE MOD(id, ?) = ?);
-     *                 stmt.setInt(1, parallelism);
-     *                 stmt.setInt(2, index);
-     *                 return stmt.executeQuery();
-     *             } catch (SQLException e) {
-     *                 throw ExceptionUtil.rethrow(e);
-     *             }
+     *             return con.prepareStatement("SELECT * FROM TABLE WHERE MOD(id, ?) = ?);
+     *             stmt.setInt(1, parallelism);
+     *             stmt.setInt(2, index);
+     *             return stmt.executeQuery();
      *         },
      *         resultSet -> {
      *             try {
