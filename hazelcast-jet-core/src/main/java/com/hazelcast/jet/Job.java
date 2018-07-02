@@ -82,19 +82,8 @@ public interface Job {
     CompletableFuture<Void> getFuture();
 
     /**
-     * Attempts to cancel execution of this job. The job will be completed
-     * after the job has been stopped on all the nodes.
-     *
-     * Starting from version 0.6, <code>job.getFuture().cancel()</code> fails
-     * with an exception.
-     *
-     * @throws IllegalStateException if the job is not running: is restarting, completed...
-     */
-    boolean cancel();
-
-    /**
      * Waits for the job to complete and throws exception if job is completed
-     * with an error.
+     * with an error. Does not return if the job is suspended. (TODO [viliam] check)
      *
      * Shorthand for <code>job.getFuture().get()</code>
      */
@@ -103,16 +92,57 @@ public interface Job {
     }
 
     /**
-     * Cancels the current execution if the job is currently running and
-     * schedules a new execution with the current member list of the Jet
-     * cluster.
+     * Gracefully stops the current execution and schedules a new execution
+     * with the current member list of the Jet cluster. Can be called to
+     * manually make use of added members.
      *
-     * @param graceful If true, sources will stop emitting more items, all
-     *                 in-flight items will be processed, snapshot will be
-     *                 taken and the job will be restarted from that snapshot.
+     * <p>Conceptually is equivalent to {@link #suspend()} & {@link #resume()}.
      *
      * @throws IllegalStateException if the job has been already completed,
      * job is not yet running, is already restarting etc.
      */
-    void restart(boolean graceful);
+    void restart();
+
+    /**
+     * Gracefully suspend the current execution. Job status will become {@link
+     * JobStatus#SUSPENDED}. To resume the job, call {@link #resume()}.
+     *
+     * <p>If the job does not do {@linkplain JobConfig#setProcessingGuarantee
+     * state snapshots}, it will be stopped anyway. When resumed, it will start
+     * with empty state.
+     *
+     * <p>This call returns quickly and a suspension process is initiated. This
+     * process starts with creating a terminal state snapshot. If the terminal
+     * snapshot should fail, the job will stop anyway, but the previous
+     * snapshot (if there was one) won't be deleted. When the job is resumed, a
+     * reprocessing since the last state snapshot was taken will take place. It
+     * can also happen that if a restartable exceptions happens concurrently to
+     * suspension process (such as a member leaving), the job might not suspend
+     * but restart. Call the {@link #getStatus()} to find out and possibly
+     * suspend again.
+     *
+     * @throws IllegalStateException if the job is not running
+     */
+    void suspend();
+
+    /**
+     * Resumes a {@linkplain #suspend stopped} job.
+     */
+    void resume();
+
+    /**
+     * Attempts to cancel execution of this job. The job will be completed
+     * after the job has been stopped on all the nodes.
+     *
+     * <p>You can also cancel a {@linkplain #suspend() suspended} job, this
+     * will cause the deletion of job resources.
+     * TODO [viliam] test this
+     *
+     * <p>Starting from version 0.6, <code>job.getFuture().cancel()</code>
+     * fails with an exception.
+     *
+     * @throws IllegalStateException if the job is not running: is restarting,
+     * completed...
+     */
+    void cancel();
 }

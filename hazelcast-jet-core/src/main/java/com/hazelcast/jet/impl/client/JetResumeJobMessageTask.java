@@ -17,27 +17,26 @@
 package com.hazelcast.jet.impl.client;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
-import com.hazelcast.client.impl.protocol.codec.JetRestartJobCodec;
-import com.hazelcast.client.impl.protocol.codec.JetRestartJobCodec.RequestParameters;
+import com.hazelcast.client.impl.protocol.codec.JetResumeJobCodec;
 import com.hazelcast.instance.Node;
-import com.hazelcast.jet.impl.operation.RestartJobOperation;
+import com.hazelcast.jet.impl.operation.ResumeJobOperation;
 import com.hazelcast.nio.Connection;
 import com.hazelcast.spi.Operation;
 
-public class JetRestartJobMessageTask extends AbstractJetMessageTask<RequestParameters> {
-    protected JetRestartJobMessageTask(ClientMessage clientMessage, Node node, Connection connection) {
-        super(clientMessage, node, connection, JetRestartJobCodec::decodeRequest,
-                o -> JetRestartJobCodec.encodeResponse());
+public class JetResumeJobMessageTask extends AbstractJetMessageTask<JetResumeJobCodec.RequestParameters> {
+    protected JetResumeJobMessageTask(ClientMessage clientMessage, Node node, Connection connection) {
+        super(clientMessage, node, connection, JetResumeJobCodec::decodeRequest,
+                o -> JetResumeJobCodec.encodeResponse());
     }
 
     @Override
     protected Operation prepareOperation() {
-        return new RestartJobOperation(parameters.jobId, parameters.graceful);
+        return new ResumeJobOperation(parameters.jobId);
     }
 
     @Override
     public String getMethodName() {
-        return "restartJob";
+        return "resumeJob";
     }
 
     @Override

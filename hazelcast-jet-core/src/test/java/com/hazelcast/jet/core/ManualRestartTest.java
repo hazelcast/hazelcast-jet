@@ -22,7 +22,6 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.TestProcessors.MockPS;
 import com.hazelcast.jet.core.TestProcessors.StuckForeverSourceP;
-import com.hazelcast.jet.core.TestProcessors.StuckProcessor;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
@@ -32,7 +31,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.CountDownLatch;
 
 import static com.hazelcast.test.PacketFiltersUtil.rejectOperationsBetween;
 import static java.util.Collections.singletonList;
@@ -54,12 +52,7 @@ public class ManualRestartTest extends JetTestSupport {
 
     @Before
     public void setup() {
-        MockPS.closeCount.set(0);
-        MockPS.initCount.set(0);
-        MockPS.receivedCloseErrors.clear();
-
-        StuckProcessor.proceedLatch = new CountDownLatch(1);
-        StuckProcessor.executionStarted = new CountDownLatch(NODE_COUNT * LOCAL_PARALLELISM);
+        TestProcessors.reset(NODE_COUNT * LOCAL_PARALLELISM);
 
         dag = new DAG().vertex(new Vertex("test", new MockPS(StuckForeverSourceP::new, NODE_COUNT)));
         instances = createJetMembers(new JetConfig(), NODE_COUNT);
@@ -90,7 +83,7 @@ public class ManualRestartTest extends JetTestSupport {
 
         assertTrueAllTheTime(() -> assertEquals(NODE_COUNT, MockPS.initCount.get()), 3);
 
-        job.restart(false);
+        job.restart();
 
         // Then, the job restarts
         int initCount = NODE_COUNT * 2 + newMemberCount;
@@ -110,8 +103,8 @@ public class ManualRestartTest extends JetTestSupport {
 
         // Then, the job cannot restart
         exception.expect(IllegalStateException.class);
-        exception.expectMessage("Cannot RESTART_FORCEFUL");
-        job.restart(false);
+        exception.expectMessage("Cannot RESTART");
+        job.restart();
     }
 
     @Test
@@ -125,11 +118,12 @@ public class ManualRestartTest extends JetTestSupport {
             job.join();
             fail();
         } catch (CancellationException ignored) {
+            System.out.println("Cancellation exception caught");
         }
 
         // Then, the job cannot restart
         exception.expect(IllegalStateException.class);
-        exception.expectMessage("Cannot restart job");
-        job.restart(false);
+        exception.expectMessage("Cannot RESTART");
+        job.restart();
     }
 }

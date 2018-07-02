@@ -18,13 +18,13 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.client.impl.HazelcastClientInstanceImpl;
 import com.hazelcast.client.impl.protocol.ClientMessage;
-import com.hazelcast.client.impl.protocol.codec.JetCancelJobCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobConfigCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobStatusCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobSubmissionTimeCodec;
 import com.hazelcast.client.impl.protocol.codec.JetJoinSubmittedJobCodec;
-import com.hazelcast.client.impl.protocol.codec.JetRestartJobCodec;
+import com.hazelcast.client.impl.protocol.codec.JetResumeJobCodec;
 import com.hazelcast.client.impl.protocol.codec.JetSubmitJobCodec;
+import com.hazelcast.client.impl.protocol.codec.JetTerminateJobCodec;
 import com.hazelcast.client.spi.impl.ClientInvocation;
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.ICompletableFuture;
@@ -45,8 +45,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 
 /**
@@ -73,16 +73,6 @@ public class ClientJobProxy extends AbstractJobProxy<HazelcastClientInstanceImpl
     }
 
     @Override
-    public void restart(boolean graceful) {
-        try {
-            ClientMessage request = JetRestartJobCodec.encodeRequest(getId(), graceful);
-            invocation(request, masterAddress()).invoke().get();
-        } catch (ExecutionException | InterruptedException e) {
-            throw rethrow(e);
-        }
-    }
-
-    @Override
     protected ICompletableFuture<Void> invokeSubmitJob(Data dag, JobConfig config) {
         Data configData = serializationService().toData(config);
         ClientMessage request = JetSubmitJobCodec.encodeRequest(getId(), dag, configData);
@@ -96,9 +86,19 @@ public class ClientJobProxy extends AbstractJobProxy<HazelcastClientInstanceImpl
     }
 
     @Override
-    protected ICompletableFuture<Void> invokeCancelJob() {
-        ClientMessage request = JetCancelJobCodec.encodeRequest(getId());
+    protected ICompletableFuture<Void> invokeTerminateJob(TerminationMode mode) {
+        ClientMessage request = JetTerminateJobCodec.encodeRequest(getId(), mode.ordinal());
         return new CancellableFuture<>(invocation(request, masterAddress()).invoke());
+    }
+
+    @Override
+    public void resume() {
+        ClientMessage request = JetResumeJobCodec.encodeRequest(getId());
+        try {
+            new CancellableFuture<>(invocation(request, masterAddress()).invoke()).get();
+        } catch (Exception e) {
+            throw rethrow(e);
+        }
     }
 
     @Override

@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.impl.TerminationMode;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -25,39 +26,40 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import java.io.IOException;
 
 /**
- * Cancels the current execution of the job and restarts it
+ * Terminates the current job execution with the specified terminationMode.
  */
-public class RestartJobOperation extends AbstractJobOperation implements IdentifiedDataSerializable {
-    private boolean graceful;
+public class TerminateJobOperation extends AbstractJobOperation implements IdentifiedDataSerializable {
 
-    public RestartJobOperation() {
+    private TerminationMode terminationMode;
+
+    public TerminateJobOperation() {
     }
 
-    public RestartJobOperation(long jobId, boolean graceful) {
+    public TerminateJobOperation(long jobId, TerminationMode mode) {
         super(jobId);
-        this.graceful = graceful;
+        this.terminationMode = mode;
     }
 
     @Override
     public void run() {
         JetService service = getService();
-        service.getJobCoordinationService().restartJobExecution(jobId(), graceful);
+        service.getJobCoordinationService().terminateJob(jobId(), terminationMode);
     }
 
     @Override
     public int getId() {
-        return JetInitDataSerializerHook.RESTART_JOB_OP;
+        return JetInitDataSerializerHook.TERMINATE_JOB_OP;
     }
 
     @Override
     protected void writeInternal(ObjectDataOutput out) throws IOException {
         super.writeInternal(out);
-        out.writeBoolean(graceful);
+        out.writeByte(terminationMode.ordinal());
     }
 
     @Override
     protected void readInternal(ObjectDataInput in) throws IOException {
         super.readInternal(in);
-        graceful = in.readBoolean();
+        terminationMode = TerminationMode.values()[in.readByte()];
     }
 }

@@ -117,7 +117,7 @@ public class MasterContext {
      * termination mode. It's reset back to null when execute operations
      * complete.
      */
-    private final AtomicReference<TerminationMode> terminationMode = new AtomicReference<>();
+    private final AtomicReference<TerminationMode> requestedTerminationMode = new AtomicReference<>();
 
     /**
      * It's true while a snapshot is in progress. It's used to prevent
@@ -170,20 +170,30 @@ public class MasterContext {
         return completionFuture;
     }
 
-    void terminateJob(TerminationMode mode) {
+    void requestTermination(TerminationMode mode) {
+        if (!isSnapshottingEnabled()) {
+            // switch graceful method to forceful if we don't do snapshots
+            mode = mode.withoutStopWithSnapshot();
+        }
+
         JobStatus jobStatus = jobStatus();
+        // we can cancel in any status, other terminations are allowed only when running
         if (jobStatus != RUNNING && mode != CANCEL) {
             throw new IllegalStateException("Cannot " + mode + ", job status is " + jobStatus + ", should be " + RUNNING);
         }
-        if (terminationMode.compareAndSet(null, mode)) {
+        if (requestedTerminationMode.compareAndSet(null, mode)) {
             handleTermination(mode);
         } else {
-            throw new IllegalStateException("Termination already requested: " + terminationMode.get());
+            throw new IllegalStateException("Termination already requested: " + requestedTerminationMode.get());
         }
     }
 
     boolean isCancelled() {
-        return terminationMode.get() == CANCEL;
+        return requestedTerminationMode.get() == CANCEL;
+    }
+
+    boolean terminationRequested() {
+        return requestedTerminationMode.get() != null;
     }
 
     /**
@@ -216,7 +226,6 @@ public class MasterContext {
         executionId = executionIdSupplier.apply(jobId);
 
         snapshotInProgress.set(false);
-        terminationMode.set(null);
         nextSnapshotIsTerminal = false;
 
         // last started snapshot, completed or not. The next started snapshot must be greater than this number
@@ -426,15 +435,15 @@ public class MasterContext {
         long executionId = this.executionId;
 
         executionInvocationCallback = new ExecutionInvocationCallback(executionId);
-        if (terminationMode.get() != null) {
-            handleTermination(terminationMode.get());
+        if (requestedTerminationMode.get() != null) {
+            handleTermination(requestedTerminationMode.get());
         }
 
         Function<ExecutionPlan, Operation> operationCtor = plan -> new StartExecutionOperation(jobId, executionId);
         Consumer<Map<MemberInfo, Object>> completionCallback = results -> {
             onExecuteStepCompleted(results);
             // reset the termination mode for the next execution
-            terminationMode.set(null);
+            requestedTerminationMode.set(null);
             executionInvocationCallback = null;
         };
 
@@ -448,7 +457,8 @@ public class MasterContext {
     }
 
     private void handleTermination(@Nonnull TerminationMode mode) {
-        // this method can be called multiple times to handle the termination, it must be safe against it.
+        // this method can be called multiple times to handle the termination, it must
+        // be safe against it (idempotent).
         if (mode.isStopWithSnapshot()) {
             nextSnapshotIsTerminal = true;
             beginSnapshot(executionId);
@@ -485,7 +495,8 @@ public class MasterContext {
         List<String> vertexNames = vertices.stream().map(Vertex::getName).collect(Collectors.toList());
         long newSnapshotId = snapshotRepository.registerSnapshot(jobId, vertexNames);
 
-        logger.info(String.format("Starting snapshot %s for %s", newSnapshotId, jobIdString()));
+        logger.info(String.format("Starting%s snapshot %s for %s",
+                isTerminal ? " terminal" : "", newSnapshotId, jobIdString()));
         Function<ExecutionPlan, Operation> factory =
                 plan -> new SnapshotOperation(jobId, executionId, newSnapshotId, isTerminal);
 
@@ -542,39 +553,46 @@ public class MasterContext {
      * </ul>
      */
     private Throwable getExecuteResult(Map<MemberInfo, Object> responses) {
-        TerminationMode mode = terminationMode.get();
-        // mode is null if the job completed or failed without a job-control action
-        if (mode != null) {
-            if (mode == CANCEL) {
-                logger.fine(jobIdString() + " to be cancelled after execute");
-                return new CancellationException();
-            } else if (mode.isRestart()) {
-                return new JobRestartRequestedException();
-            } else {
-                return new JobSuspendRequestedException();
-            }
+        if (isCancelled()) {
+            logger.fine(jobIdString() + " to be cancelled after execute");
+            return new CancellationException();
         }
 
         Map<Boolean, List<Entry<MemberInfo, Object>>> grouped = groupResponses(responses);
         Collection<MemberInfo> successfulMembers = grouped.get(false).stream().map(Entry::getKey).collect(toList());
 
+        // there was no user exception. If the termination was requested, return appropriate exception
         if (successfulMembers.size() == executionPlanMap.size()) {
-            logger.fine("Execute of " + jobIdString() + " is successful.");
+            logger.fine("Execution of " + jobIdString() + " was successful");
+
+            TerminationMode mode = requestedTerminationMode.get();
+            // mode is null if the job completed or failed without a job-control action
+            if (mode != null) {
+                if (mode == CANCEL) {
+                    logger.fine(jobIdString() + " to be cancelled after execute");
+                    return new CancellationException();
+                } else if (mode.isRestart()) {
+                    return new JobRestartRequestedException();
+                } else {
+                    return new JobSuspendRequestedException();
+                }
+            }
+
             return null;
         }
 
         List<Entry<MemberInfo, Object>> failures = grouped.get(true);
-        logger.fine("Execute of " + jobIdString() + " has failures: " + failures);
+        logger.fine("Execution of " + jobIdString() + " has failures: " + failures);
 
         // If there is no user-code exception, it means at least one job participant has left the cluster.
         // In that case, all remaining participants return a CancellationException.
         return failures
                 .stream()
                 .map(e -> (Throwable) e.getValue())
-                .filter(t -> !(t instanceof CancellationException || isRestartableException(t)))
+                .filter(t -> !isRestartableException(t))
                 .findFirst()
                 .map(ExceptionUtil::peel)
-                .orElse(new TopologyChangedException());
+                .orElseGet(TopologyChangedException::new);
     }
 
     private void invokeCompleteExecution(Throwable error) {
@@ -606,6 +624,11 @@ public class MasterContext {
             return;
         }
 
+        // Don't look at this.requestedTerminationMode in this method. Some way
+        // of termination might have been requested, but another might actually
+        // happen. For example, we might requested a graceful restart, but the
+        // job failed before members received the operation to restart.
+
         completeVertices(failure);
 
         long elapsed = NANOSECONDS.toMillis(System.nanoTime() - executionStartTime);
@@ -619,13 +642,22 @@ public class MasterContext {
             logger.warning(String.format("Execution of %s failed after %,d ms", jobIdString(), elapsed), failure);
         }
 
-        if (shouldRestart(failure)) {
+        if (failure instanceof JobRestartRequestedException
+                || (failure instanceof RestartableException || failure instanceof TopologyChangedException)
+                        && jobRecord.getConfig().isAutoRestartOnMemberFailureEnabled()
+        ) {
             scheduleRestart();
             return;
         }
 
-        jobStatus.set(isSuccess ? COMPLETED : FAILED);
+        if (failure instanceof JobSuspendRequestedException
+                || (failure instanceof RestartableException || failure instanceof TopologyChangedException)
+                && !jobRecord.getConfig().isAutoRestartOnMemberFailureEnabled()) {
+            coordinationService.suspendJob(this);
+            return;
+        }
 
+        jobStatus.set(isSuccess ? COMPLETED : FAILED);
         try {
             coordinationService.completeJob(this, System.currentTimeMillis(), failure);
         } catch (RuntimeException e) {
@@ -660,12 +692,6 @@ public class MasterContext {
                 }
             }
         }
-    }
-
-    private boolean shouldRestart(Throwable t) {
-        return t instanceof JobRestartRequestedException
-                || (t instanceof RestartableException || t instanceof TopologyChangedException)
-                        && jobRecord.getConfig().isAutoRestartOnMemberFailureEnabled();
     }
 
     void setFinalResult(Throwable failure) {

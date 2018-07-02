@@ -58,6 +58,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.locks.LockSupport;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -82,6 +84,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
@@ -396,7 +399,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         assertTrueEventually(() -> assertTrue(sinkList.size() > 10));
 
         // When
-        job.restart(true);
+        job.restart();
         job.join();
 
         // Then
@@ -436,7 +439,26 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
     }
 
     @Test
-    public void stressTest() throws Exception {
+    public void stressTest_restart() throws Exception {
+        stressTest(job -> {
+            job.restart();
+            // Sleep a little because the snapshot that started before restart was requested
+            // can complete after this happens.
+            LockSupport.parkNanos(SECONDS.toNanos(1));
+        });
+    }
+
+    @Test
+    public void stressTest_stopAndResume() throws Exception {
+        stressTest(job -> {
+            job.suspend();
+            assertTrueEventually(() -> assertEquals(JobStatus.SUSPENDED, job.getStatus()), 5);
+            job.resume();
+            assertTrueEventually(() -> assertEquals(JobStatus.RUNNING, job.getStatus()), 5);
+        });
+    }
+
+    private void stressTest(Consumer<Job> action) throws Exception {
         SnapshotRepository snapshotRepository = new SnapshotRepository(instance1);
 
         DAG dag = new DAG();
@@ -450,20 +472,22 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         waitForFirstSnapshot(snapshotRepository, job.getId(), 5);
         spawn(() -> {
             for (int i = 0; i < 10; i++) {
-                job.restart(false);
-                // Sleep a little because the snapshot that started before restart was requested
-                // can complete after this happens.
-                Thread.sleep(1000);
+                action.accept(job);
                 waitForNextSnapshot(snapshotRepository, job.getId(), 5);
             }
             return null;
         }).get();
 
+        System.out.println("aaa, cancelling");
         job.cancel();
         try {
+            System.out.println("aaa, joining");
             job.join();
+
         } catch (CancellationException expected) {
+            System.out.println("aaa, " + expected + " caught");
         }
+        System.out.println("aaa, cancelled");
     }
 
     private static class SnapshotStressSourceP extends AbstractProcessor {

@@ -122,10 +122,12 @@ public class JobConfig implements Serializable {
     /**
      * Sets whether the job should automatically restart after a
      * participating member leaves the cluster. When enabled and a member
-     * fails, the job will automatically restart on the remaining members.
+     * fails, the job will automatically restart on the remaining members. When
+     * disabled, the job will be suspended instead and must be resumed.
+     * TODO [viliam] implement the above
      * <p>
      * If snapshotting is enabled, the job state will be restored from the
-     * latest snapshot.
+     * latest snapshot. Otherwise it will be started with empty state.
      * <p>
      * By default, auto-restart is enabled.
      *

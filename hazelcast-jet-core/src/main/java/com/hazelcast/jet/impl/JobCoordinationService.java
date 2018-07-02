@@ -54,8 +54,7 @@ import static com.hazelcast.cluster.memberselector.MemberSelectors.DATA_MEMBER_S
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.core.JobStatus.NOT_STARTED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
-import static com.hazelcast.jet.impl.TerminationMode.RESTART_FORCEFUL;
-import static com.hazelcast.jet.impl.TerminationMode.RESTART_GRACEFUL;
+import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.FAILED;
 import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.SUCCESSFUL;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
@@ -101,7 +100,7 @@ public class JobCoordinationService {
     }
 
     public void reset() {
-        masterContexts.values().forEach(mc -> mc.terminateJob(TerminationMode.CANCEL));
+        masterContexts.values().forEach(mc -> mc.requestTermination(TerminationMode.CANCEL));
     }
 
     public ClassLoader getClassLoader(long jobId) {
@@ -184,13 +183,13 @@ public class JobCoordinationService {
 
         int quorumSize = config.isSplitBrainProtectionEnabled() ? getQuorumSize() : 0;
         String dagJson = dagToJson(jobId, config, dag);
-        JobRecord jobRecord = new JobRecord(jobId, Clock.currentTimeMillis(), dag, dagJson, config, quorumSize);
+        JobRecord jobRecord = new JobRecord(jobId, Clock.currentTimeMillis(), dag, dagJson, config, quorumSize, false);
         MasterContext masterContext = new MasterContext(nodeEngine, this, jobRecord);
 
         // just try to initiate the coordination
         MasterContext prev = masterContexts.putIfAbsent(jobId, masterContext);
         if (prev != null) {
-            logger.fine("Joining to already started job " + prev.jobIdString());
+            logger.fine("Joining to already started " + prev.jobIdString());
             return prev.completionFuture();
         }
 
@@ -237,9 +236,10 @@ public class JobCoordinationService {
     // Tries to automatically start a job if it is not already running or completed
     private void startJobIfNotStartedOrCompleted(JobRecord jobRecord) {
         // the order of operations is important.
-
         long jobId = jobRecord.getJobId();
-        if (jobRepository.getJobResult(jobId) != null || masterContexts.containsKey(jobId)) {
+        if (jobRepository.getJobResult(jobId) != null
+                || masterContexts.containsKey(jobId)
+                || jobRecord.isSuspended()) {
             return;
         }
 
@@ -302,23 +302,24 @@ public class JobCoordinationService {
         return clusterService.getMembers(DATA_MEMBER_SELECTOR).size();
     }
 
-    public void cancelJob(long jobId) {
+    public void terminateJob(long jobId, TerminationMode terminationMode) {
         if (!isMaster()) {
-            throw new JetException("Cannot cancel Job " + idToString(jobId) + ". Master address: "
+            throw new JetException("Cannot " + terminationMode + " job " + idToString(jobId) + ". Master address: "
                     + nodeEngine.getClusterService().getMasterAddress());
         }
 
         if (jobRepository.getJobResult(jobId) != null) {
-            logger.fine("Cannot cancel Job " + idToString(jobId) + " because it already has a result");
-            return;
+            throw new IllegalStateException("Cannot " + terminationMode + " job " + idToString(jobId)
+                    + " because it already has a result");
         }
 
         MasterContext masterContext = masterContexts.get(jobId);
         if (masterContext == null) {
-            throw new RetryableHazelcastException("No MasterContext found for Job " + idToString(jobId) + " to cancel");
+            throw new RetryableHazelcastException("No MasterContext found for job " + idToString(jobId)
+                    + " for " + terminationMode);
         }
 
-        masterContext.terminateJob(TerminationMode.CANCEL);
+        masterContext.requestTermination(terminationMode);
     }
 
     public Set<Long> getAllJobIds() {
@@ -349,7 +350,7 @@ public class JobCoordinationService {
         if (currentMasterContext != null) {
             JobStatus jobStatus = currentMasterContext.jobStatus();
             if (jobStatus == JobStatus.RUNNING) {
-                return currentMasterContext.isCancelled() ? JobStatus.COMPLETING : JobStatus.RUNNING;
+                return currentMasterContext.terminationRequested() ? JobStatus.COMPLETING : JobStatus.RUNNING;
             }
 
             return jobStatus;
@@ -357,7 +358,9 @@ public class JobCoordinationService {
 
         // no master context found, job might be just submitted
         JobRecord jobRecord = jobRepository.getJobRecord(jobId);
-        if (jobRecord == null) {
+        if (jobRecord != null) {
+            return jobRecord.isSuspended() ? SUSPENDED : NOT_STARTED;
+        } else {
             // no job record found, but check job results again
             // since job might have been completed meanwhile.
             jobResult = jobRepository.getJobResult(jobId);
@@ -365,8 +368,6 @@ public class JobCoordinationService {
                 return jobResult.getJobStatus();
             }
             throw new JobNotFoundException(jobId);
-        } else {
-            return NOT_STARTED;
         }
     }
 
@@ -411,32 +412,6 @@ public class JobCoordinationService {
         throw new JobNotFoundException(jobId);
     }
 
-    /**
-     * Restarts execution of the given job.
-     *
-     * @throws IllegalStateException if job is not in a state to be restarted
-     */
-    public void restartJobExecution(long jobId, boolean graceful) {
-        MasterContext masterContext = masterContexts.get(jobId);
-        if (masterContext == null) {
-            JobResult jobResult = jobRepository.getJobResult(jobId);
-            if (jobResult != null) {
-                throw new IllegalStateException("Cannot restart job " + idToString(jobId) + " because it is already "
-                        + jobResult.getJobStatus());
-            }
-
-            if (jobRepository.getJobRecord(jobId) != null) {
-                throw new IllegalStateException("Cannot restart job " + idToString(jobId)
-                        + " because it is not initialized yet");
-            }
-
-            throw new IllegalStateException("Cannot restart job " + idToString(jobId) + " because JobRecord was not " +
-                    "found");
-        }
-
-        masterContext.terminateJob(graceful ? RESTART_GRACEFUL : RESTART_FORCEFUL);
-    }
-
     SnapshotRepository snapshotRepository() {
         return snapshotRepository;
     }
@@ -449,9 +424,11 @@ public class JobCoordinationService {
 
         long jobId = masterContext.jobId();
         String coordinator = nodeEngine.getNode().getThisUuid();
-
         jobRepository.completeJob(jobId, coordinator, completionTime, error);
+        removeMasterContext(masterContext, jobId);
+    }
 
+    private void removeMasterContext(MasterContext masterContext, long jobId) {
         if (masterContexts.remove(masterContext.jobId(), masterContext)) {
             logger.fine(masterContext.jobIdString() + " is completed");
         } else {
@@ -461,6 +438,21 @@ public class JobCoordinationService {
                         + ", master context execution " + idToString(existing.getExecutionId()));
             } else {
                 logger.severe("No master context found to complete " + masterContext.jobIdString());
+            }
+        }
+    }
+
+    void suspendJob(MasterContext masterContext) {
+        long jobId = masterContext.jobId();
+        jobRepository.updateJobSuspendedStatus(jobId, true);
+        removeMasterContext(masterContext, jobId);
+    }
+
+    public void resumeJob(long jobId) {
+        if (jobRepository.updateJobSuspendedStatus(jobId, false)) {
+            JobRecord jobRecord = jobRepository.getJobRecord(jobId);
+            if (jobRecord != null) {
+                startJobIfNotStartedOrCompleted(jobRecord);
             }
         }
     }
@@ -592,11 +584,9 @@ public class JobCoordinationService {
             return;
         }
 
-        if (masterContext.isCancelled()) {
+        if (!masterContext.isCancelled()) {
             tryStartJob(masterContext);
-            return;
         }
-        tryStartJob(masterContext);
     }
 
     // runs periodically to restart jobs on coordinator failure and perform gc

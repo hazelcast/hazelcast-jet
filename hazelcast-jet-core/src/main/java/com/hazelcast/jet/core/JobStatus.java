@@ -44,6 +44,11 @@ public enum JobStatus {
     RESTARTING,
 
     /**
+     * The job was manually suspended and it can be manually resumed.
+     */
+    SUSPENDED,
+
+    /**
      * The job is currently being completed.
      */
     COMPLETING,

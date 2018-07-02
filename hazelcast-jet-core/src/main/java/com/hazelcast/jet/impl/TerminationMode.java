@@ -43,7 +43,7 @@ public enum TerminationMode {
     }
 
     /**
-     * If true, the job should restart after termination.
+     * If true, the job should restart just after termination.
      */
     public boolean isRestart() {
         return restart;
@@ -51,9 +51,21 @@ public enum TerminationMode {
 
     /**
      * If true, job resources and snapshots should be deleted after
-     * termination.
+     * termination. Otherwise the job will remain ready to be restarted. It's
+     * true only for cancellation.
      */
     public boolean isDeleteData() {
         return deleteData;
+    }
+
+    public TerminationMode withoutStopWithSnapshot() {
+        TerminationMode res = this;
+        if (this == SUSPEND_GRACEFUL) {
+            res = SUSPEND_FORCEFUL;
+        } else if (this == RESTART_GRACEFUL) {
+            res = RESTART_FORCEFUL;
+        }
+        assert !res.isStopWithSnapshot() : "mode has still stopWithSnapshot=true: " + res;
+        return res;
     }
 }

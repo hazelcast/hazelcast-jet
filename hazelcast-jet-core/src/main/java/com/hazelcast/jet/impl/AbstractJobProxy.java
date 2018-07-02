@@ -61,7 +61,6 @@ public abstract class AbstractJobProxy<T> implements Job {
 
     // Flag which indicates if this proxy has sent a request to join the job result or not
     private final AtomicBoolean joinedJob = new AtomicBoolean();
-    private final AtomicBoolean cancelledJob = new AtomicBoolean();
     private final ExecutionCallback<Void> joinJobCallback = new JoinJobCallback();
 
     private volatile JobConfig jobConfig;
@@ -136,23 +135,33 @@ public abstract class AbstractJobProxy<T> implements Job {
     }
 
     @Override
-    public boolean cancel() {
-        boolean cancelled = cancelledJob.compareAndSet(false, true);
-        if (cancelled) {
-            logger.fine("Sending cancel request for job " + idAndName() + " request");
-            while (true) {
-                try {
-                    invokeCancelJob().get();
-                    break;
-                } catch (Exception e) {
-                    if (!isRestartable(e)) {
-                        throw rethrow(e);
-                    }
-                    logger.fine("Re-sending cancel request for job " + idAndName());
+    public void cancel() {
+        terminate(TerminationMode.CANCEL);
+    }
+
+    @Override
+    public void restart() {
+        terminate(TerminationMode.RESTART_GRACEFUL);
+    }
+
+    @Override
+    public void suspend() {
+        terminate(TerminationMode.SUSPEND_GRACEFUL);
+    }
+
+    private void terminate(TerminationMode mode) {
+        logger.fine("Sending " + mode + " request for job " + idAndName());
+        while (true) {
+            try {
+                invokeTerminateJob(mode).get();
+                break;
+            } catch (Exception e) {
+                if (!isRestartable(e)) {
+                    throw rethrow(e);
                 }
+                logger.fine("Re-sending " + mode + " request for job " + idAndName());
             }
         }
-        return cancelled;
     }
 
     @Override
@@ -174,7 +183,7 @@ public abstract class AbstractJobProxy<T> implements Job {
      */
     protected abstract ICompletableFuture<Void> invokeJoinJob();
 
-    protected abstract ICompletableFuture<Void> invokeCancelJob();
+    protected abstract ICompletableFuture<Void> invokeTerminateJob(TerminationMode mode);
 
     protected abstract long doGetJobSubmissionTime();
 

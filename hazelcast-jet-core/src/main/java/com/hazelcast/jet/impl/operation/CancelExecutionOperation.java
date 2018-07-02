@@ -31,8 +31,8 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.isRestartableException;
 import static com.hazelcast.spi.ExceptionAction.THROW_EXCEPTION;
 
 /**
- * Operation sent from master to members to cancel their execution.
- * See also {@link CancelJobOperation}.
+ * Operation sent from master to members to terminate their execution.
+ * See also {@link TerminateJobOperation}.
  */
 public class CancelExecutionOperation extends AbstractJobOperation {
 
