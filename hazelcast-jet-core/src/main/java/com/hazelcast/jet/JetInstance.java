@@ -178,7 +178,9 @@ public interface JetInstance {
     JetCacheManager getCacheManager();
 
     /**
-     * Shuts down the current instance.
+     * Shuts down the current instance. If this is a member instance, the jobs
+     * running on it will be gracefully suspended, see {@link Job#suspend()}.
+     * TODO [viliam] implement this
      */
     void shutdown();
 

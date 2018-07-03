@@ -65,11 +65,13 @@ public class ClientJobProxy extends AbstractJobProxy<HazelcastClientInstanceImpl
     @Nonnull @Override
     public JobStatus getStatus() {
         ClientMessage request = JetGetJobStatusCodec.encodeRequest(getId());
-        return uncheckCall(() -> {
+        try {
             ClientMessage response = invocation(request, masterAddress()).invoke().get();
             Data statusData = JetGetJobStatusCodec.decodeResponse(response).response;
             return serializationService().toObject(statusData);
-        });
+        } catch (Exception e) {
+            throw rethrow(e);
+        }
     }
 
     @Override

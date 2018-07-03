@@ -273,13 +273,9 @@ public class JobCoordinationService {
 
         if (!masterContext.getJobConfig().isAutoRestartOnMemberFailureEnabled()
                 && jobRepository.getExecutionIdCount(jobId) > 0) {
-            String coordinator = nodeEngine.getNode().getThisUuid();
-            Throwable result = new TopologyChangedException();
-            logger.info("Completing job " + masterContext.jobIdString() + " with " + result
+            logger.info("Suspending job " + masterContext.jobIdString()
                     + " since auto-restart is disabled and the job has been executed before");
-            jobRepository.completeJob(jobId, coordinator, System.currentTimeMillis(), result);
-            masterContext.setFinalResult(result);
-            return masterContexts.remove(jobId, masterContext);
+            masterContext.finalizeJob(new TopologyChangedException());
         }
 
         return false;
@@ -577,10 +573,7 @@ public class JobCoordinationService {
             logger.severe("Master context for job " + idToString(jobId) + " not found to restart");
             return;
         }
-
-        if (!masterContext.isCancelled()) {
-            tryStartJob(masterContext);
-        }
+        tryStartJob(masterContext);
     }
 
     // runs periodically to restart jobs on coordinator failure and perform gc

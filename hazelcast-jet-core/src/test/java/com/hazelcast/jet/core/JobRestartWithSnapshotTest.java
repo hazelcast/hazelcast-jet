@@ -91,6 +91,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class JobRestartWithSnapshotTest extends JetTestSupport {
@@ -478,16 +479,12 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
             return null;
         }).get();
 
-        System.out.println("aaa, cancelling");
         job.cancel();
         try {
-            System.out.println("aaa, joining");
             job.join();
-
+            fail("CancellationException was expected");
         } catch (CancellationException expected) {
-            System.out.println("aaa, " + expected + " caught");
         }
-        System.out.println("aaa, cancelled");
     }
 
     private static class SnapshotStressSourceP extends AbstractProcessor {

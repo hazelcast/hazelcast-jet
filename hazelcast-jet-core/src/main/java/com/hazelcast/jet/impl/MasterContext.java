@@ -541,8 +541,7 @@ public class MasterContext {
 
     // Called as callback when all ExecuteOperation invocations are done
     private void onExecuteStepCompleted(Map<MemberInfo, Object> responses) {
-        Throwable executeResult = getExecuteResult(responses);
-        invokeCompleteExecution(executeResult);
+        invokeCompleteExecution(getExecuteResult(responses));
     }
 
     /**
@@ -623,7 +622,7 @@ public class MasterContext {
     }
 
     // Called as callback when all CompleteOperation invocations are done
-    private void finalizeJob(@Nullable Throwable failure) {
+    void finalizeJob(@Nullable Throwable failure) {
         if (assertJobNotAlreadyDone(failure)) {
             return;
         }

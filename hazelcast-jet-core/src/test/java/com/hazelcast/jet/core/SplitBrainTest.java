@@ -54,14 +54,9 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
 
-
     @Override
     protected void onBeforeSetup() {
-        MockPS.closeCount.set(0);
-        MockPS.initCount.set(0);
-        MockPS.receivedCloseErrors.clear();
-
-        StuckProcessor.proceedLatch = new CountDownLatch(1);
+        TestProcessors.reset(1);
     }
 
     @Override
@@ -81,7 +76,7 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
             MockPS processorSupplier = new MockPS(StuckProcessor::new, clusterSize);
             DAG dag = new DAG().vertex(new Vertex("test", processorSupplier));
             jobRef[0] = instances[0].newJob(dag, new JobConfig().setSplitBrainProtection(true));
-            assertOpenEventually(StuckProcessor.executionStarted);
+            assertOpenEventually(StuckProcessor.executionStarted, 10);
         };
 
         Future[] minorityJobFutureRef = new Future[1];
@@ -90,20 +85,20 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
             StuckProcessor.proceedLatch.countDown();
 
             assertTrueEventually(() ->
-                    assertEquals(clusterSize + firstSubClusterSize, MockPS.initCount.get()));
+                    assertEquals(clusterSize + firstSubClusterSize, MockPS.initCount.get()), 10);
 
             long jobId = jobRef[0].getId();
 
             assertTrueEventually(() -> {
                 JetService service = getJetService(firstSubCluster[0]);
                 assertEquals(COMPLETED, service.getJobCoordinationService().getJobStatus(jobId));
-            });
+            }, 10);
 
             JetService service2 = getJetService(secondSubCluster[0]);
 
             assertTrueEventually(() -> {
                 assertEquals(STARTING, service2.getJobCoordinationService().getJobStatus(jobId));
-            });
+            }, 10);
 
             MasterContext masterContext = service2.getJobCoordinationService().getMasterContext(jobId);
             assertNotNull(masterContext);
@@ -118,7 +113,7 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
             assertTrueEventually(() -> {
                 assertEquals(clusterSize + firstSubClusterSize, MockPS.initCount.get());
                 assertEquals(clusterSize + firstSubClusterSize, MockPS.closeCount.get());
-            });
+            }, 10);
 
             assertEquals(clusterSize, MockPS.receivedCloseErrors.size());
             MockPS.receivedCloseErrors.forEach(t -> assertTrue(t instanceof TopologyChangedException));
@@ -126,7 +121,7 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
             try {
                 minorityJobFutureRef[0].get();
                 fail();
-            } catch (CancellationException ignored) {
+            } catch (CancellationException expected) {
             } catch (Exception e) {
                 throw new AssertionError(e);
             }

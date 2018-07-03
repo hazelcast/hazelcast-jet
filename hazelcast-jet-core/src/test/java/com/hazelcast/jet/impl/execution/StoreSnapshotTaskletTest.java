@@ -195,7 +195,7 @@ public class StoreSnapshotTaskletTest extends JetTestSupport {
     }
 
     private HeapData serialize(String o) {
-        // "aaaa" is here to create 8 bytes for HeapData header (we use UTF-16)
+        // "abcd" is here to create 8 bytes for HeapData header (we use UTF-16)
         return new HeapData(("abcd" + o).getBytes(StandardCharsets.UTF_16));
     }
 }
