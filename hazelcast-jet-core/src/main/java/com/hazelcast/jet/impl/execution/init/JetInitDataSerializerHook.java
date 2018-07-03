@@ -27,7 +27,7 @@ import com.hazelcast.jet.impl.JobRepository.UpdateJobRecordEntryBackupProcessor;
 import com.hazelcast.jet.impl.JobRepository.UpdateJobRecordEntryProcessor;
 import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
-import com.hazelcast.jet.impl.operation.CancelExecutionOperation;
+import com.hazelcast.jet.impl.operation.TerminateExecutionOperation;
 import com.hazelcast.jet.impl.operation.CompleteExecutionOperation;
 import com.hazelcast.jet.impl.operation.GetJobConfigOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsByNameOperation;
@@ -73,7 +73,7 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
     public static final int JOIN_SUBMITTED_JOB = 17;
     public static final int UPDATE_JOB_RECORD = 18;
     public static final int UPDATE_JOB_QUORUM_BACKUP = 19;
-    public static final int CANCEL_EXECUTION_OP = 20;
+    public static final int TERMINATE_EXECUTION_OP = 20;
     public static final int FILTER_JOB_RECORD_BY_NAME = 21;
     public static final int FILTER_JOB_RESULT_BY_NAME = 22;
     public static final int GET_JOB_IDS_BY_NAME_OP = 23;
@@ -143,8 +143,8 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
                     return new UpdateJobRecordEntryProcessor();
                 case UPDATE_JOB_QUORUM_BACKUP:
                     return new UpdateJobRecordEntryBackupProcessor();
-                case CANCEL_EXECUTION_OP:
-                    return new CancelExecutionOperation();
+                case TERMINATE_EXECUTION_OP:
+                    return new TerminateExecutionOperation();
                 case FILTER_JOB_RECORD_BY_NAME:
                     return new FilterJobRecordByNamePredicate();
                 case FILTER_JOB_RESULT_BY_NAME:

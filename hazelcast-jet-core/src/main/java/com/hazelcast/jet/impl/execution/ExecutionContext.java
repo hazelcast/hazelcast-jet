@@ -20,6 +20,7 @@ import com.hazelcast.internal.metrics.MetricsRegistry;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.impl.TerminationMode;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
 import com.hazelcast.jet.impl.util.Util;
@@ -118,7 +119,7 @@ public class ExecutionContext {
      * Returns a future which is completed only when all tasklets are completed. If
      * execution was already cancelled before this method is called then the returned
      * future is completed immediately. The future returned can't be cancelled,
-     * instead {@link #cancelExecution()} should be used.
+     * instead {@link #terminateExecution} should be used.
      */
     public CompletableFuture<Void> beginExecution() {
         synchronized (executionLock) {
@@ -166,12 +167,17 @@ public class ExecutionContext {
     }
 
     /**
-     * Cancels local execution of tasklets and returns a future which is only completed
-     * when all tasklets are completed and contains the result of the execution.
+     * Terminates the local execution of tasklets and returns a future which is
+     * only completed when all tasklets are completed and contains the result
+     * of the execution.
      */
-    public CompletableFuture<Void> cancelExecution() {
+    public CompletableFuture<Void> terminateExecution(@Nullable TerminationMode mode) {
         synchronized (executionLock) {
-            cancellationFuture.cancel(true);
+            if (mode == null) {
+                cancellationFuture.cancel(true);
+            } else {
+                cancellationFuture.completeExceptionally(mode.createException());
+            }
             if (executionFuture == null) {
                 // if cancelled before execution started, then assign the already completed future.
                 executionFuture = cancellationFuture;

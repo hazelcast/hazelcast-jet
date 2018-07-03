@@ -16,22 +16,30 @@
 
 package com.hazelcast.jet.impl;
 
+import com.hazelcast.jet.impl.exception.JobRestartRequestedException;
+import com.hazelcast.jet.impl.exception.JobSuspendRequestedException;
+
+import java.util.concurrent.CancellationException;
+import java.util.function.Supplier;
+
 public enum TerminationMode {
 
-    RESTART_GRACEFUL(true, true, false),
-    RESTART_FORCEFUL(false, true, false),
-    SUSPEND_GRACEFUL(true, false, false),
-    SUSPEND_FORCEFUL(false, false, false),
-    CANCEL(false, false, true);
+    RESTART_GRACEFUL(true, true, false, JobRestartRequestedException::new),
+    RESTART_FORCEFUL(false, true, false, JobRestartRequestedException::new),
+    SUSPEND_GRACEFUL(true, false, false, JobSuspendRequestedException::new),
+    SUSPEND_FORCEFUL(false, false, false, JobSuspendRequestedException::new),
+    CANCEL(false, false, true, CancellationException::new);
 
     private final boolean stopWithSnapshot;
     private final boolean restart;
     private final boolean deleteData;
+    private final Supplier<Exception> exceptionFactory;
 
-    TerminationMode(boolean stopWithSnapshot, boolean restart, boolean deleteData) {
+    TerminationMode(boolean stopWithSnapshot, boolean restart, boolean deleteData, Supplier<Exception> exceptionFactory) {
         this.stopWithSnapshot = stopWithSnapshot;
         this.restart = restart;
         this.deleteData = deleteData;
+        this.exceptionFactory = exceptionFactory;
     }
 
     /**
@@ -67,5 +75,9 @@ public enum TerminationMode {
         }
         assert !res.isStopWithSnapshot() : "mode has still stopWithSnapshot=true: " + res;
         return res;
+    }
+
+    public Exception createException() {
+        return exceptionFactory.get();
     }
 }

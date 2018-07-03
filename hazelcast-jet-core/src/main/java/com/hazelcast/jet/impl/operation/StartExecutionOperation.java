@@ -48,8 +48,7 @@ public class StartExecutionOperation extends AsyncJobOperation {
                 + execCtx.jobNameAndExecutionId() + " from coordinator " + coordinator);
         execCtx.beginExecution().whenComplete(withTryCatch(getLogger(), (i, e) -> {
             if (e instanceof CancellationException) {
-                getLogger().fine("Execution of " + execCtx.jobNameAndExecutionId()
-                        + " was cancelled");
+                getLogger().fine("Execution of " + execCtx.jobNameAndExecutionId() + " was cancelled");
             } else if (e != null) {
                 getLogger().fine("Execution of " + execCtx.jobNameAndExecutionId()
                         + " completed with failure", e);

@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -48,6 +47,7 @@ import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.lang.Thread.currentThread;
+import static java.util.Collections.emptyList;
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -369,20 +369,14 @@ public class TaskletExecutionService {
     private final class ExecutionTracker {
 
         final NonCompletableFuture future = new NonCompletableFuture();
-        List<Future> blockingFutures;
+        volatile List<Future> blockingFutures = emptyList();
 
         private final AtomicInteger completionLatch;
         private final AtomicReference<Throwable> executionException = new AtomicReference<>();
 
         ExecutionTracker(int taskletCount, CompletableFuture<Void> cancellationFuture) {
             this.completionLatch = new AtomicInteger(taskletCount);
-
             cancellationFuture.whenComplete(withTryCatch(logger, (r, e) -> {
-                if (!(e instanceof CancellationException)) {
-                    exception(new IllegalStateException("cancellationFuture was completed with something " +
-                            "other than CancellationException: " + e, e));
-                    return;
-                }
                 exception(e);
                 blockingFutures.forEach(f -> f.cancel(true)); // CompletableFuture.cancel ignores the flag
             }));

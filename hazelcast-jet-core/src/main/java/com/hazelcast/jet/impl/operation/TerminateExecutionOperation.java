@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobExecutionService;
+import com.hazelcast.jet.impl.TerminationMode;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.Address;
@@ -25,6 +26,7 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.spi.ExceptionAction;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isRestartableException;
@@ -34,16 +36,18 @@ import static com.hazelcast.spi.ExceptionAction.THROW_EXCEPTION;
  * Operation sent from master to members to terminate their execution.
  * See also {@link TerminateJobOperation}.
  */
-public class CancelExecutionOperation extends AbstractJobOperation {
+public class TerminateExecutionOperation extends AbstractJobOperation {
 
     private long executionId;
+    private TerminationMode mode;
 
-    public CancelExecutionOperation() {
+    public TerminateExecutionOperation() {
     }
 
-    public CancelExecutionOperation(long jobId, long executionId) {
+    public TerminateExecutionOperation(long jobId, long executionId, @Nullable TerminationMode mode) {
         super(jobId);
         this.executionId = executionId;
+        this.mode = mode;
     }
 
     @Override
@@ -52,7 +56,7 @@ public class CancelExecutionOperation extends AbstractJobOperation {
         JobExecutionService executionService = service.getJobExecutionService();
         Address callerAddress = getCallerAddress();
         ExecutionContext ctx = executionService.assertExecutionContext(callerAddress, jobId(), executionId, this);
-        ctx.cancelExecution();
+        ctx.terminateExecution(mode);
     }
 
     @Override
@@ -62,19 +66,21 @@ public class CancelExecutionOperation extends AbstractJobOperation {
 
     @Override
     public int getId() {
-        return JetInitDataSerializerHook.CANCEL_EXECUTION_OP;
+        return JetInitDataSerializerHook.TERMINATE_EXECUTION_OP;
     }
 
     @Override
     protected void writeInternal(ObjectDataOutput out) throws IOException {
         super.writeInternal(out);
         out.writeLong(executionId);
+        out.writeByte(mode != null ? mode.ordinal() : -1);
     }
 
     @Override
     protected void readInternal(ObjectDataInput in) throws IOException {
         super.readInternal(in);
         executionId = in.readLong();
+        byte modeOrdinal = in.readByte();
+        mode = modeOrdinal < 0 ? null : TerminationMode.values()[modeOrdinal];
     }
-
 }

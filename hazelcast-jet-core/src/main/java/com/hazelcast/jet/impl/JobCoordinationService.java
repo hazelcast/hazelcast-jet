@@ -52,6 +52,7 @@ import java.util.function.Function;
 
 import static com.hazelcast.cluster.memberselector.MemberSelectors.DATA_MEMBER_SELECTOR;
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.core.JobStatus.COMPLETING;
 import static com.hazelcast.jet.core.JobStatus.NOT_STARTED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
@@ -237,15 +238,14 @@ public class JobCoordinationService {
     private void startJobIfNotStartedOrCompleted(JobRecord jobRecord) {
         // the order of operations is important.
         long jobId = jobRecord.getJobId();
-        if (jobRepository.getJobResult(jobId) != null
-                || masterContexts.containsKey(jobId)
-                || jobRecord.isSuspended()) {
+        if (jobRepository.getJobResult(jobId) != null) {
             return;
         }
 
         MasterContext masterContext = new MasterContext(nodeEngine, this, jobRecord);
         MasterContext prev = masterContexts.putIfAbsent(jobId, masterContext);
         if (prev != null) {
+            prev.resumeJob(jobRepository::newExecutionId);
             return;
         }
 
@@ -349,10 +349,9 @@ public class JobCoordinationService {
         MasterContext currentMasterContext = masterContexts.get(jobId);
         if (currentMasterContext != null) {
             JobStatus jobStatus = currentMasterContext.jobStatus();
-            if (jobStatus == JobStatus.RUNNING) {
-                return currentMasterContext.terminationRequested() ? JobStatus.COMPLETING : JobStatus.RUNNING;
+            if (jobStatus == RUNNING && currentMasterContext.terminationRequested()) {
+                jobStatus = COMPLETING;
             }
-
             return jobStatus;
         }
 
@@ -425,10 +424,6 @@ public class JobCoordinationService {
         long jobId = masterContext.jobId();
         String coordinator = nodeEngine.getNode().getThisUuid();
         jobRepository.completeJob(jobId, coordinator, completionTime, error);
-        removeMasterContext(masterContext, jobId);
-    }
-
-    private void removeMasterContext(MasterContext masterContext, long jobId) {
         if (masterContexts.remove(masterContext.jobId(), masterContext)) {
             logger.fine(masterContext.jobIdString() + " is completed");
         } else {
@@ -445,7 +440,6 @@ public class JobCoordinationService {
     void suspendJob(MasterContext masterContext) {
         long jobId = masterContext.jobId();
         jobRepository.updateJobSuspendedStatus(jobId, true);
-        removeMasterContext(masterContext, jobId);
     }
 
     public void resumeJob(long jobId) {
@@ -597,7 +591,9 @@ public class JobCoordinationService {
 
         try {
             Collection<JobRecord> jobs = jobRepository.getJobRecords();
-            jobs.forEach(this::startJobIfNotStartedOrCompleted);
+            jobs.stream()
+                .filter(jobRecord -> !jobRecord.isSuspended())
+                .forEach(this::startJobIfNotStartedOrCompleted);
 
             performCleanup();
         } catch (Exception e) {

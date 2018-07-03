@@ -44,6 +44,7 @@ import java.util.function.Supplier;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
+import static com.hazelcast.jet.impl.TerminationMode.CANCEL;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.jobIdAndExecutionId;
 import static java.util.Collections.newSetFromMap;
@@ -125,7 +126,7 @@ public class JobExecutionService {
      */
     private void cancelAndComplete(ExecutionContext exeCtx, String message, Throwable t) {
         try {
-            exeCtx.cancelExecution().whenComplete(withTryCatch(logger, (r, e) -> {
+            exeCtx.terminateExecution(CANCEL).whenComplete(withTryCatch(logger, (r, e) -> {
                 long executionId = exeCtx.executionId();
                 logger.fine(message);
                 completeExecution(executionId, t);

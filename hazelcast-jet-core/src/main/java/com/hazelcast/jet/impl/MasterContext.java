@@ -31,7 +31,7 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.exception.JobRestartRequestedException;
 import com.hazelcast.jet.impl.exception.JobSuspendRequestedException;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
-import com.hazelcast.jet.impl.operation.CancelExecutionOperation;
+import com.hazelcast.jet.impl.operation.TerminateExecutionOperation;
 import com.hazelcast.jet.impl.operation.CompleteExecutionOperation;
 import com.hazelcast.jet.impl.operation.InitExecutionOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
@@ -72,6 +72,7 @@ import static com.hazelcast.jet.core.JobStatus.NOT_STARTED;
 import static com.hazelcast.jet.core.JobStatus.RESTARTING;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.STARTING;
+import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.SnapshotRepository.snapshotDataMapName;
@@ -144,6 +145,9 @@ public class MasterContext {
         this.jobRecord = jobRecord;
         this.jobId = jobRecord.getJobId();
         this.jobName = jobRecord.getJobNameOrId();
+        if (jobRecord.isSuspended()) {
+            jobStatus.set(SUSPENDED);
+        }
     }
 
     public long jobId() {
@@ -296,8 +300,8 @@ public class MasterContext {
      */
     private boolean setJobStatusToStarting() {
         JobStatus status = jobStatus();
-        if (status == COMPLETED || status == FAILED) {
-            logger.severe("Cannot init job '" + jobName + "': it is already " + status);
+        if (status == COMPLETED || status == FAILED || status == SUSPENDED) {
+            logger.severe("Cannot init job '" + jobName + "': it is " + status);
             return false;
         }
 
@@ -464,15 +468,14 @@ public class MasterContext {
             beginSnapshot(executionId);
         } else {
             if (executionInvocationCallback != null) {
-                executionInvocationCallback.cancelInvocations();
+                executionInvocationCallback.cancelInvocations(mode);
             }
         }
     }
 
-    private void cancelExecutionInvocations(long jobId, long executionId) {
+    private void cancelExecutionInvocations(long jobId, long executionId, TerminationMode mode) {
         nodeEngine.getExecutionService().execute(ExecutionService.ASYNC_EXECUTOR, () -> {
-            Function<ExecutionPlan, Operation> operationCtor = plan -> new CancelExecutionOperation(jobId, executionId);
-            invoke(operationCtor, responses -> { }, null);
+            invoke(plan -> new TerminateExecutionOperation(jobId, executionId, mode), responses -> { }, null);
         });
     }
 
@@ -538,7 +541,8 @@ public class MasterContext {
 
     // Called as callback when all ExecuteOperation invocations are done
     private void onExecuteStepCompleted(Map<MemberInfo, Object> responses) {
-        invokeCompleteExecution(getExecuteResult(responses));
+        Throwable executeResult = getExecuteResult(responses);
+        invokeCompleteExecution(executeResult);
     }
 
     /**
@@ -589,7 +593,7 @@ public class MasterContext {
         return failures
                 .stream()
                 .map(e -> (Throwable) e.getValue())
-                .filter(t -> !isRestartableException(t))
+                .filter(t -> !(t instanceof CancellationException || isRestartableException(t)))
                 .findFirst()
                 .map(ExceptionUtil::peel)
                 .orElseGet(TopologyChangedException::new);
@@ -653,6 +657,7 @@ public class MasterContext {
         if (failure instanceof JobSuspendRequestedException
                 || (failure instanceof RestartableException || failure instanceof TopologyChangedException)
                 && !jobRecord.getConfig().isAutoRestartOnMemberFailureEnabled()) {
+            jobStatus.set(SUSPENDED);
             coordinationService.suspendJob(this);
             return;
         }
@@ -772,6 +777,12 @@ public class MasterContext {
         return contextClassLoader;
     }
 
+    void resumeJob(Function<Long, Long> executionIdSupplier) {
+        if (jobStatus.compareAndSet(SUSPENDED, NOT_STARTED)) {
+            tryStartJob(executionIdSupplier);
+        }
+    }
+
     /**
      * Specific type of edge to be used when restoring snapshots
      */
@@ -809,12 +820,12 @@ public class MasterContext {
 
         @Override
         public void onFailure(Throwable t) {
-            cancelInvocations();
+            cancelInvocations(null);
         }
 
-        void cancelInvocations() {
+        void cancelInvocations(TerminationMode mode) {
             if (invocationsCancelled.compareAndSet(false, true)) {
-                cancelExecutionInvocations(jobId, executionId);
+                cancelExecutionInvocations(jobId, executionId, mode);
             }
         }
     }
