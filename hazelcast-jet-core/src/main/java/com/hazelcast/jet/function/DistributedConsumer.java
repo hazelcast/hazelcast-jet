@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.function;
 
+import com.hazelcast.jet.impl.util.ExceptionUtil;
+
 import java.io.Serializable;
 import java.util.function.Consumer;
 
@@ -27,6 +29,22 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
  */
 @FunctionalInterface
 public interface DistributedConsumer<T> extends Consumer<T>, Serializable {
+
+    /**
+     * Performs this operation on the given argument.
+     *
+     * @param t the input argument
+     */
+    void acceptEx(T t) throws Exception;
+
+    @Override
+    default void accept(T t) {
+        try {
+            acceptEx(t);
+        } catch (Exception e) {
+            throw ExceptionUtil.rethrow(e);
+        }
+    }
 
     /**
      * {@code Serializable} variant of {@link Consumer#andThen(Consumer)

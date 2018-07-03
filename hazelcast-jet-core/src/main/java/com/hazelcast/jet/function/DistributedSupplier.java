@@ -16,13 +16,32 @@
 
 package com.hazelcast.jet.function;
 
+import com.hazelcast.jet.impl.util.ExceptionUtil;
+
 import java.io.Serializable;
 import java.util.function.Supplier;
 
 /**
  * {@code Serializable} variant of {@link Supplier
- * java.util.function.Supplier}.
+ * java.util.function.Supplier} which throws checked exception.
  */
 @FunctionalInterface
 public interface DistributedSupplier<T> extends Supplier<T>, Serializable {
+
+    /**
+     * Gets a result.
+     *
+     * @return a result
+     */
+    T getEx() throws Exception;
+
+    @Override
+    default T get() {
+        try {
+            return getEx();
+        } catch (Exception e) {
+            throw ExceptionUtil.rethrow(e);
+        }
+    }
+
 }

@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.function;
 
+import com.hazelcast.jet.impl.util.ExceptionUtil;
+
 import java.io.Serializable;
 import java.util.function.BiFunction;
 
@@ -27,6 +29,24 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
  */
 @FunctionalInterface
 public interface DistributedBiFunction<T, U, R> extends BiFunction<T, U, R>, Serializable {
+
+    /**
+     * Applies this function to the given arguments.
+     *
+     * @param t the first function argument
+     * @param u the second function argument
+     * @return the function result
+     */
+    R applyEx(T t, U u) throws Exception;
+
+    @Override
+    default R apply(T t, U u) {
+        try {
+            return applyEx(t, u);
+        } catch (Exception e) {
+            throw ExceptionUtil.rethrow(e);
+        }
+    }
 
     /**
      * {@code Serializable} variant of {@link

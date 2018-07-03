@@ -80,7 +80,7 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
     ) {
         return ProcessorMetaSupplier.forceTotalParallelismOne(ProcessorSupplier.of(() ->
                 new ReadJdbcP<>(
-                        () -> uncheckCall(() -> DriverManager.getConnection(connectionURL)),
+                        () -> DriverManager.getConnection(connectionURL),
                         (connection, parallelism, index) -> {
                             PreparedStatement statement = connection.prepareStatement(query);
                             try {
@@ -95,7 +95,7 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
     }
 
     @Override
-    protected void init(@Nonnull Context context) {
+    protected void init(@Nonnull Context context) throws Exception {
         this.connection = connectionSupplier.get();
         this.parallelism = context.totalParallelism();
         this.index = context.globalProcessorIndex();
@@ -106,7 +106,7 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
         if (traverser == null) {
             resultSet = uncheckCall(() -> resultSetFn.createResultSet(connection, parallelism, index));
             traverser = ((Traverser<ResultSet>) () -> uncheckCall(() -> resultSet.next() ? resultSet : null))
-                    .map(mapOutputFn);
+                    .map(rs -> uncheckCall(() -> mapOutputFn.apply(rs)));
         }
         return emitFromTraverser(traverser);
     }

@@ -418,7 +418,7 @@ public final class SourceProcessors {
     private static <I, O> Projection<I, O> toProjection(DistributedFunction<I, O> projectionFn) {
         return new Projection<I, O>() {
             @Override public O transform(I input) {
-                return projectionFn.apply(input);
+                return uncheckCall(() -> projectionFn.apply(input));
             }
         };
     }

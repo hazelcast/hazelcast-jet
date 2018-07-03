@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.function;
 
+import com.hazelcast.jet.impl.util.ExceptionUtil;
+
 import java.io.Serializable;
 import java.util.function.Function;
 
@@ -23,7 +25,7 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * {@code Serializable} variant of {@link Function
- * java.util.function.Function}.
+ * java.util.function.Function} which throws checked exception.
  */
 @FunctionalInterface
 public interface DistributedFunction<T, R> extends Function<T, R>, Serializable {
@@ -34,6 +36,23 @@ public interface DistributedFunction<T, R> extends Function<T, R>, Serializable 
      */
     static <T> DistributedFunction<T, T> identity() {
         return t -> t;
+    }
+
+    /**
+     * Applies this function to the given argument.
+     *
+     * @param t the function argument
+     * @return the function result
+     */
+    R applyEx(T t) throws Exception;
+
+    @Override
+    default R apply(T t) {
+        try {
+            return applyEx(t);
+        } catch (Exception e) {
+            throw ExceptionUtil.rethrow(e);
+        }
     }
 
     /**

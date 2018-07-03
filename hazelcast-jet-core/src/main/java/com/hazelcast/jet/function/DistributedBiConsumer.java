@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.function;
 
+import com.hazelcast.jet.impl.util.ExceptionUtil;
+
 import java.io.Serializable;
 import java.util.function.BiConsumer;
 
@@ -23,10 +25,28 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * {@code Serializable} variant of {@link BiConsumer
- * java.util.function.BiConsumer}.
+ * java.util.function.BiConsumer} which throws checked exception.
  */
 @FunctionalInterface
 public interface DistributedBiConsumer<T, U> extends BiConsumer<T, U>, Serializable {
+
+
+    /**
+     * Performs this operation on the given arguments.
+     *
+     * @param t the first input argument
+     * @param u the second input argument
+     */
+    void acceptEx(T t, U u) throws Exception;
+
+    @Override
+    default void accept(T t, U u) {
+        try {
+            acceptEx(t, u);
+        } catch (Exception e) {
+            throw ExceptionUtil.rethrow(e);
+        }
+    }
 
     /**
      * {@code Serializable} variant of
