@@ -65,7 +65,7 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
     }
 
     @Test
-    public void when_quorumIsLostOnMinority_then_jobRestartsUntilMerge() {
+    public void when_quorumIsLostOnMinority_then_jobDoesNotRestartOnMinorityAndCancelledAfterMerge() {
         int firstSubClusterSize = 3;
         int secondSubClusterSize = 2;
         int clusterSize = firstSubClusterSize + secondSubClusterSize;

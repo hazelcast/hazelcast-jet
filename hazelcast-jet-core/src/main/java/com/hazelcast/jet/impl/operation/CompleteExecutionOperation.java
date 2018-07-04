@@ -51,8 +51,8 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
         JetService service = getService();
 
         Address callerAddress = getCallerAddress();
-        logger.fine("Completing execution " + idToString(executionId) + " from caller: " + callerAddress
-                + " with " + error);
+        logger.fine("Completing execution " + idToString(executionId) + " from caller " + callerAddress
+                + ", error=" + error);
 
         Address masterAddress = getNodeEngine().getMasterAddress();
         if (!callerAddress.equals(masterAddress)) {

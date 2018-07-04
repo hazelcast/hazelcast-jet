@@ -304,9 +304,10 @@ public class JobCoordinationService {
                     + nodeEngine.getClusterService().getMasterAddress());
         }
 
-        if (jobRepository.getJobResult(jobId) != null) {
+        JobResult jobResult = jobRepository.getJobResult(jobId);
+        if (jobResult != null) {
             throw new IllegalStateException("Cannot " + terminationMode + " job " + idToString(jobId)
-                    + " because it already has a result");
+                    + " because it already has a result: " + jobResult);
         }
 
         MasterContext masterContext = masterContexts.get(jobId);

@@ -338,9 +338,10 @@ public class TaskletExecutionServiceTest extends JetTestSupport {
         final MockTasklet t = new MockTasklet().callsBeforeDone(Integer.MAX_VALUE);
         CompletableFuture<Void> f = es.beginExecute(singletonList(t), cancellationFuture, classLoaderMock);
 
-        // When - Then
+        // When
         cancellationFuture.complete(null);
 
+        // Then
         exceptionRule.expect(IllegalStateException.class);
         try {
             f.join();
