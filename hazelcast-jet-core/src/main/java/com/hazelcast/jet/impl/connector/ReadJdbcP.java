@@ -106,7 +106,7 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
         if (traverser == null) {
             resultSet = uncheckCall(() -> resultSetFn.createResultSet(connection, parallelism, index));
             traverser = ((Traverser<ResultSet>) () -> uncheckCall(() -> resultSet.next() ? resultSet : null))
-                    .map(rs -> uncheckCall(() -> mapOutputFn.apply(rs)));
+                    .map(mapOutputFn);
         }
         return emitFromTraverser(traverser);
     }
