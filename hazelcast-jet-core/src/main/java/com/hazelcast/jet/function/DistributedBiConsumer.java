@@ -32,10 +32,7 @@ public interface DistributedBiConsumer<T, U> extends BiConsumer<T, U>, Serializa
 
 
     /**
-     * Performs this operation on the given arguments.
-     *
-     * @param t the first input argument
-     * @param u the second input argument
+     * Exception-declaring version of {@link BiConsumer#accept}
      */
     void acceptEx(T t, U u) throws Exception;
 

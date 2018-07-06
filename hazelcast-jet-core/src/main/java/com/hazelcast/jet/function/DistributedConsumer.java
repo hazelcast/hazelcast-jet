@@ -31,9 +31,7 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 public interface DistributedConsumer<T> extends Consumer<T>, Serializable {
 
     /**
-     * Performs this operation on the given argument.
-     *
-     * @param t the input argument
+     * Exception-declaring version of {@link Consumer#accept}
      */
     void acceptEx(T t) throws Exception;
 

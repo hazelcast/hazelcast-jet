@@ -31,11 +31,7 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 public interface DistributedBiFunction<T, U, R> extends BiFunction<T, U, R>, Serializable {
 
     /**
-     * Applies this function to the given arguments.
-     *
-     * @param t the first function argument
-     * @param u the second function argument
-     * @return the function result
+     * Exception-declaring version of {@link BiFunction#apply}
      */
     R applyEx(T t, U u) throws Exception;
 

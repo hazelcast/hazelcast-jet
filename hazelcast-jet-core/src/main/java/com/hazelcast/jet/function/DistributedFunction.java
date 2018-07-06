@@ -39,10 +39,7 @@ public interface DistributedFunction<T, R> extends Function<T, R>, Serializable 
     }
 
     /**
-     * Applies this function to the given argument.
-     *
-     * @param t the function argument
-     * @return the function result
+     * Exception-declaring version of {@link Function#apply}
      */
     R applyEx(T t) throws Exception;
 
