@@ -234,11 +234,13 @@ public class JobCoordinationService {
         throw new JobNotFoundException(jobId);
     }
 
-    // Tries to automatically start a job if it is not already running or completed
+    // Tries to start a job if it is not already running or completed
     private void startJobIfNotStartedOrCompleted(JobRecord jobRecord) {
         // the order of operations is important.
         long jobId = jobRecord.getJobId();
-        if (jobRepository.getJobResult(jobId) != null) {
+        JobResult jobResult = jobRepository.getJobResult(jobId);
+        if (jobResult != null) {
+            logger.fine("Not starting job " + idToString(jobId) + ", already has result: " + jobResult);
             return;
         }
 
@@ -249,14 +251,14 @@ public class JobCoordinationService {
             return;
         }
 
-        // If job is not currently running, it might be that it is just completed.
-        // Since we put the MasterContext into the masterContexts map, someone else could be joined to the job
-        // so we should notify its future
+        // If job is not currently running, it might be that it just completed.
+        // Since we've put the MasterContext into the masterContexts map, someone else could
+        // have joined to the job in the meantime so we should notify its future.
         if (completeMasterContextIfJobAlreadyCompleted(masterContext)) {
             return;
         }
 
-        logger.info("Starting job " + masterContext.jobIdString() + " discovered by scanning of JobRecords");
+        logger.info("Starting job " + idToString(masterContext.jobId()) + " discovered by scanning of JobRecords");
         tryStartJob(masterContext);
     }
 

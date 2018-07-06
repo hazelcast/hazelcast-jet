@@ -111,9 +111,10 @@ public class JobExecutionService {
      */
     void onMemberLeave(Address address) {
         executionContexts.values().stream()
+             // note, coordinator might not be a participant (in case it is a lite member)
              .filter(exeCtx -> exeCtx.coordinator().equals(address) || exeCtx.hasParticipant(address))
              .forEach(exeCtx -> {
-                 String message = String.format("Completing %s locally. Reason: Coordinator %s left the cluster",
+                 String message = String.format("Completing %s locally. Reason: Member %s left the cluster",
                          exeCtx.jobNameAndExecutionId(),
                          address);
                  cancelAndComplete(exeCtx, message, new TopologyChangedException("Topology has been changed."));

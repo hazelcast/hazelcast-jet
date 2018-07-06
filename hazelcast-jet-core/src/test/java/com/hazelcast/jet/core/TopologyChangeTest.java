@@ -48,7 +48,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -109,13 +108,7 @@ public class TopologyChangeTest extends JetTestSupport {
                 nodeCount++;
             }
         }
-
-        MockPS.closeCount.set(0);
-        MockPS.initCount.set(0);
-        MockPS.receivedCloseErrors.clear();
-
-        StuckProcessor.proceedLatch = new CountDownLatch(1);
-        StuckProcessor.executionStarted = new CountDownLatch(nodeCount * PARALLELISM);
+        TestProcessors.reset(nodeCount * PARALLELISM);
 
         config = new JetConfig();
         config.getInstanceConfig().setCooperativeThreadCount(PARALLELISM);
@@ -407,7 +400,6 @@ public class TopologyChangeTest extends JetTestSupport {
         }
 
         resetPacketFiltersFrom(instances[0].getHazelcastInstance());
-
 
         // Then
         job.join();

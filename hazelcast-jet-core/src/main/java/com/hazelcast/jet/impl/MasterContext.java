@@ -174,7 +174,7 @@ public class MasterContext {
         return completionFuture;
     }
 
-    void requestTermination(TerminationMode mode) {
+    synchronized void requestTermination(TerminationMode mode) {
         if (!isSnapshottingEnabled()) {
             // switch graceful method to forceful if we don't do snapshots
             mode = mode.withoutStopWithSnapshot();
@@ -187,6 +187,12 @@ public class MasterContext {
         }
         if (requestedTerminationMode.compareAndSet(null, mode)) {
             handleTermination(mode);
+            // handle cancelling a suspended job
+            if (jobStatus == SUSPENDED) {
+                assert mode == CANCEL : "mode is not CANCEL, but " + mode;
+                coordinationService.completeJob(this, System.currentTimeMillis(), new CancellationException());
+                this.jobStatus.set(COMPLETED);
+            }
         } else {
             throw new IllegalStateException("Termination already requested: " + requestedTerminationMode.get());
         }
@@ -207,7 +213,7 @@ public class MasterContext {
      * If there was a membership change and the partition table is not completely
      * fixed yet, job restart is rescheduled.
      */
-    void tryStartJob(Function<Long, Long> executionIdSupplier) {
+    synchronized void tryStartJob(Function<Long, Long> executionIdSupplier) {
         if (!setJobStatusToStarting()) {
             return;
         }
@@ -350,6 +356,7 @@ public class MasterContext {
     }
 
     private void scheduleRestart() {
+        // if status is RUNNING, set it to RESTARTING. If it's STARTING, let it be.
         jobStatus.compareAndSet(RUNNING, RESTARTING);
         coordinationService.scheduleRestart(jobId);
     }
@@ -365,7 +372,7 @@ public class MasterContext {
     }
 
     // Called as callback when all InitOperation invocations are done
-    private void onInitStepCompleted(Map<MemberInfo, Object> responses) {
+    private synchronized void onInitStepCompleted(Map<MemberInfo, Object> responses) {
         Throwable error = getInitResult(responses);
 
         if (error == null) {
@@ -444,12 +451,7 @@ public class MasterContext {
         }
 
         Function<ExecutionPlan, Operation> operationCtor = plan -> new StartExecutionOperation(jobId, executionId);
-        Consumer<Map<MemberInfo, Object>> completionCallback = results -> {
-            onExecuteStepCompleted(results);
-            // reset the termination mode for the next execution
-            requestedTerminationMode.set(null);
-            executionInvocationCallback = null;
-        };
+        Consumer<Map<MemberInfo, Object>> completionCallback = this::onExecuteStepCompleted;
 
         jobStatus.set(RUNNING);
 
@@ -474,12 +476,11 @@ public class MasterContext {
     }
 
     private void cancelExecutionInvocations(long jobId, long executionId, TerminationMode mode) {
-        nodeEngine.getExecutionService().execute(ExecutionService.ASYNC_EXECUTOR, () -> {
-            invoke(plan -> new TerminateExecutionOperation(jobId, executionId, mode), responses -> { }, null);
-        });
+        nodeEngine.getExecutionService().execute(ExecutionService.ASYNC_EXECUTOR, () ->
+                invoke(plan -> new TerminateExecutionOperation(jobId, executionId, mode), responses -> { }, null));
     }
 
-    void beginSnapshot(long executionId) {
+    synchronized void beginSnapshot(long executionId) {
         if (this.executionId != executionId) {
             // current execution is completed and probably a new execution has started
             logger.warning("Not beginning snapshot since unexpected execution ID received for " + jobIdString()
@@ -506,7 +507,7 @@ public class MasterContext {
         invoke(factory, responses -> onSnapshotCompleted(responses, executionId, newSnapshotId, isTerminal), null);
     }
 
-    private void onSnapshotCompleted(Map<MemberInfo, Object> responses, long executionId, long snapshotId,
+    private synchronized void onSnapshotCompleted(Map<MemberInfo, Object> responses, long executionId, long snapshotId,
                                      boolean wasTerminal) {
         SnapshotOperationResult mergedResult = new SnapshotOperationResult();
         for (Object response : responses.values()) {
@@ -540,7 +541,7 @@ public class MasterContext {
     }
 
     // Called as callback when all ExecuteOperation invocations are done
-    private void onExecuteStepCompleted(Map<MemberInfo, Object> responses) {
+    private synchronized void onExecuteStepCompleted(Map<MemberInfo, Object> responses) {
         invokeCompleteExecution(getExecuteResult(responses));
     }
 
@@ -622,7 +623,7 @@ public class MasterContext {
     }
 
     // Called as callback when all CompleteOperation invocations are done
-    void finalizeJob(@Nullable Throwable failure) {
+    synchronized void finalizeJob(@Nullable Throwable failure) {
         if (assertJobNotAlreadyDone(failure)) {
             return;
         }
@@ -645,9 +646,13 @@ public class MasterContext {
             logger.warning(String.format("Execution of %s failed after %,d ms", jobIdString(), elapsed), failure);
         }
 
+        // reset the termination mode for the next execution
+        requestedTerminationMode.set(null);
+        executionInvocationCallback = null;
+
         if (failure instanceof JobRestartRequestedException
                 || (failure instanceof RestartableException || failure instanceof TopologyChangedException)
-                        && jobRecord.getConfig().isAutoRestartOnMemberFailureEnabled()
+                && jobRecord.getConfig().isAutoRestartOnMemberFailureEnabled()
         ) {
             scheduleRestart();
             return;
@@ -750,13 +755,13 @@ public class MasterContext {
             MemberInfo member = e.getKey();
             Operation op = opCtor.apply(e.getValue());
             InternalCompletableFuture<Object> future = nodeEngine.getOperationService()
-                 .createInvocationBuilder(JetService.SERVICE_NAME, op, member.getAddress())
-                 .setDoneCallback(() -> {
-                     if (remainingCount.decrementAndGet() == 0) {
-                         doneFuture.complete(null);
-                     }
-                 })
-                 .invoke();
+                                                                 .createInvocationBuilder(JetService.SERVICE_NAME, op, member.getAddress())
+                                                                 .setDoneCallback(() -> {
+                                                                     if (remainingCount.decrementAndGet() == 0) {
+                                                                         doneFuture.complete(null);
+                                                                     }
+                                                                 })
+                                                                 .invoke();
             futures.put(member, future);
         }
     }
@@ -776,8 +781,9 @@ public class MasterContext {
         return contextClassLoader;
     }
 
-    void resumeJob(Function<Long, Long> executionIdSupplier) {
+    synchronized void resumeJob(Function<Long, Long> executionIdSupplier) {
         if (jobStatus.compareAndSet(SUSPENDED, NOT_STARTED)) {
+            logger.fine("Resuming " + jobIdString());
             tryStartJob(executionIdSupplier);
         }
     }

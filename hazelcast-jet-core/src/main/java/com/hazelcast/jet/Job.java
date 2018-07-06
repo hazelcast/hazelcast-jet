@@ -83,9 +83,10 @@ public interface Job {
 
     /**
      * Waits for the job to complete and throws exception if job is completed
-     * with an error. Does not return if the job is suspended. (TODO [viliam] check)
+     * with an error. Does not return if the job is suspended. Never returns
+     * for streaming (unbounded) jobs unless they fail.
      *
-     * Shorthand for <code>job.getFuture().get()</code>
+     * <p>Shorthand for <code>job.getFuture().get()</code>.
      */
     default void join() {
         Util.uncheckRun(() -> getFuture().get());
@@ -136,7 +137,6 @@ public interface Job {
      *
      * <p>You can also cancel a {@linkplain #suspend() suspended} job, this
      * will cause the deletion of job resources.
-     * TODO [viliam] test this
      *
      * <p>Starting from version 0.6, <code>job.getFuture().cancel()</code>
      * fails with an exception.

@@ -109,7 +109,7 @@ public class JobRepository {
     /**
      * @param snapshotRepository Can be {@code null} if used on client to upload resources.
      */
-    JobRepository(JetInstance jetInstance, @Nullable SnapshotRepository snapshotRepository) {
+    public JobRepository(JetInstance jetInstance, @Nullable SnapshotRepository snapshotRepository) {
         this.instance = jetInstance.getHazelcastInstance();
         this.snapshotRepository = snapshotRepository;
 
