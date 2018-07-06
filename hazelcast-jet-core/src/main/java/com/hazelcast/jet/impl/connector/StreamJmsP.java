@@ -139,9 +139,9 @@ public class StreamJmsP<T> extends AbstractProcessor {
         }
 
         @Override
-        public void close(@Nullable Throwable error) {
+        public void close(@Nullable Throwable error) throws Exception {
             if (connection != null) {
-                uncheckRun(() -> connection.close());
+                connection.close();
             }
         }
 

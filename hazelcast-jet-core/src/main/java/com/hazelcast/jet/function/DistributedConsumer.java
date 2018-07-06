@@ -40,7 +40,7 @@ public interface DistributedConsumer<T> extends Consumer<T>, Serializable {
         try {
             acceptEx(t);
         } catch (Exception e) {
-            throw ExceptionUtil.rethrow(e);
+            throw ExceptionUtil.sneakyThrow(e);
         }
     }
 

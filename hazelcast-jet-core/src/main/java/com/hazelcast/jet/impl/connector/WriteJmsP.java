@@ -127,8 +127,10 @@ public final class WriteJmsP {
         }
 
         @Override
-        public void close(Throwable error) {
-            uncheckRun(() -> connection.close());
+        public void close(Throwable error) throws Exception {
+            if (connection != null) {
+                connection.close();
+            }
         }
 
         class JmsContext {

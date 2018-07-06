@@ -24,14 +24,14 @@ import java.util.function.BiFunction;
 import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
- * {@code Serializable} variant of {@link
- * BiFunction java.util.function.BiFunction}.
+ * {@code Serializable} variant of {@link BiFunction
+ * java.util.function.BiFunction} which throws checked exception.
  */
 @FunctionalInterface
 public interface DistributedBiFunction<T, U, R> extends BiFunction<T, U, R>, Serializable {
 
     /**
-     * Exception-declaring version of {@link BiFunction#apply}
+     * Exception-declaring version of {@link BiFunction#apply}.
      */
     R applyEx(T t, U u) throws Exception;
 
@@ -40,7 +40,7 @@ public interface DistributedBiFunction<T, U, R> extends BiFunction<T, U, R>, Ser
         try {
             return applyEx(t, u);
         } catch (Exception e) {
-            throw ExceptionUtil.rethrow(e);
+            throw ExceptionUtil.sneakyThrow(e);
         }
     }
 

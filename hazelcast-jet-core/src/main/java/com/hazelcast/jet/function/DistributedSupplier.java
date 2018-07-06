@@ -29,7 +29,7 @@ import java.util.function.Supplier;
 public interface DistributedSupplier<T> extends Supplier<T>, Serializable {
 
     /**
-     * Exception-declaring version of {@link Supplier#get}
+     * Exception-declaring version of {@link Supplier#get}.
      */
     T getEx() throws Exception;
 
@@ -38,7 +38,7 @@ public interface DistributedSupplier<T> extends Supplier<T>, Serializable {
         try {
             return getEx();
         } catch (Exception e) {
-            throw ExceptionUtil.rethrow(e);
+            throw ExceptionUtil.sneakyThrow(e);
         }
     }
 

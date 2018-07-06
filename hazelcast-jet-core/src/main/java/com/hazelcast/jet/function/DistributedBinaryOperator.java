@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.function;
 
+import com.hazelcast.jet.impl.util.ExceptionUtil;
+
 import java.io.Serializable;
 import java.util.Comparator;
 import java.util.function.BinaryOperator;
@@ -28,6 +30,20 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
  */
 @FunctionalInterface
 public interface DistributedBinaryOperator<T> extends BinaryOperator<T>, Serializable {
+
+    /**
+     * Exception-declaring version of {@link BinaryOperator#apply}.
+     */
+    T applyEx(T t1, T t2) throws Exception;
+
+    @Override
+    default T apply(T t1, T t2) {
+        try {
+            return applyEx(t1, t2);
+        } catch (Exception e) {
+            throw ExceptionUtil.sneakyThrow(e);
+        }
+    }
 
     /**
      * {@code Serializable} variant of {@link

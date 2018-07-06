@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.function;
 
+import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.stream.impl.distributed.DistributedComparators;
 import com.hazelcast.jet.stream.impl.distributed.DistributedComparators.NullComparator;
 
@@ -31,10 +32,24 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * {@code Serializable} variant of {@link Comparator
- * java.util.Comparator}.
+ * java.util.Comparator} which throws checked exception.
  */
 @FunctionalInterface
 public interface DistributedComparator<T> extends Comparator<T>, Serializable {
+
+    /**
+     * Exception-declaring version of {@link Comparator#compare}.
+     */
+    int compareEx(T o1, T o2) throws Exception;
+
+    @Override
+    default int compare(T o1, T o2) {
+        try {
+            return compareEx(o1, o2);
+        } catch (Exception e) {
+            throw ExceptionUtil.sneakyThrow(e);
+        }
+    }
 
     /**
      * {@code Serializable} variant of {@link

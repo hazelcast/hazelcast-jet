@@ -39,7 +39,7 @@ public interface DistributedFunction<T, R> extends Function<T, R>, Serializable 
     }
 
     /**
-     * Exception-declaring version of {@link Function#apply}
+     * Exception-declaring version of {@link Function#apply}.
      */
     R applyEx(T t) throws Exception;
 
@@ -48,7 +48,7 @@ public interface DistributedFunction<T, R> extends Function<T, R>, Serializable 
         try {
             return applyEx(t);
         } catch (Exception e) {
-            throw ExceptionUtil.rethrow(e);
+            throw ExceptionUtil.sneakyThrow(e);
         }
     }
 

@@ -30,9 +30,8 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 @FunctionalInterface
 public interface DistributedBiConsumer<T, U> extends BiConsumer<T, U>, Serializable {
 
-
     /**
-     * Exception-declaring version of {@link BiConsumer#accept}
+     * Exception-declaring version of {@link BiConsumer#accept}.
      */
     void acceptEx(T t, U u) throws Exception;
 
@@ -41,7 +40,7 @@ public interface DistributedBiConsumer<T, U> extends BiConsumer<T, U>, Serializa
         try {
             acceptEx(t, u);
         } catch (Exception e) {
-            throw ExceptionUtil.rethrow(e);
+            throw ExceptionUtil.sneakyThrow(e);
         }
     }
 
