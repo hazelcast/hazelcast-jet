@@ -24,9 +24,10 @@ import java.io.Serializable;
 import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
- * {@code Serializable} variant of {@link TriPredicate}
- * which throws checked exception.
+ * {@code Serializable} variant of {@link TriPredicate} which declares checked
+ * exception.
  */
+@FunctionalInterface
 public interface DistributedTriPredicate<T, U, V> extends TriPredicate<T, U, V>, Serializable {
 
     /**

@@ -25,7 +25,7 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * {@code Serializable} variant of {@link LongPredicate
- * java.util.function.LongPredicate} which throws checked exception.
+ * java.util.function.LongPredicate} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedLongPredicate extends LongPredicate, Serializable {

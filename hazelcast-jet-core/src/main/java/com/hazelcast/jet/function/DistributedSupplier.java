@@ -22,8 +22,8 @@ import java.io.Serializable;
 import java.util.function.Supplier;
 
 /**
- * {@code Serializable} variant of {@link Supplier
- * java.util.function.Supplier} which throws checked exception.
+ * {@code Serializable} variant of {@link Supplier java.util.function.Supplier}
+ * which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedSupplier<T> extends Supplier<T>, Serializable {

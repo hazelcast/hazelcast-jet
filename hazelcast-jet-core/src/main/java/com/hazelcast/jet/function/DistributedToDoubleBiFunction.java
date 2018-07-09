@@ -23,7 +23,7 @@ import java.util.function.ToDoubleBiFunction;
 
 /**
  * {@code Serializable} variant of {@link ToDoubleBiFunction
- * java.util.function.ToDoubleBiFunction} which throws checked exception.
+ * java.util.function.ToDoubleBiFunction} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedToDoubleBiFunction<T, U> extends ToDoubleBiFunction<T, U>, Serializable {

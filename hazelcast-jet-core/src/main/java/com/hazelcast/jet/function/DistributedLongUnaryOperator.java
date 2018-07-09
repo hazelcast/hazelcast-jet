@@ -25,7 +25,7 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * {@code Serializable} variant of {@link LongUnaryOperator
- * java.util.function.LongUnaryOperator} which throws checked exception.
+ * java.util.function.LongUnaryOperator} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedLongUnaryOperator extends LongUnaryOperator, Serializable {

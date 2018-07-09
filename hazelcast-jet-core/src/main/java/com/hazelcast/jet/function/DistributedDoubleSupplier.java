@@ -23,7 +23,7 @@ import java.util.function.DoubleSupplier;
 
 /**
  * {@code Serializable} variant of {@link DoubleSupplier
- * java.util.function.DoubleSupplier} which throws checked exception.
+ * java.util.function.DoubleSupplier} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedDoubleSupplier extends DoubleSupplier, Serializable {

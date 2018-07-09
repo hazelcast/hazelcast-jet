@@ -25,7 +25,7 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * {@code Serializable} variant of {@link LongConsumer
- * java.util.function.LongConsumer} which throws checked exception.
+ * java.util.function.LongConsumer} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedLongConsumer extends LongConsumer, Serializable {

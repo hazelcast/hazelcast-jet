@@ -23,7 +23,7 @@ import java.util.function.DoubleToIntFunction;
 
 /**
  * {@code Serializable} variant of {@link DoubleToIntFunction
- * java.util.function.DoubleToIntFunction} which throws checked exception.
+ * java.util.function.DoubleToIntFunction} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedDoubleToIntFunction extends DoubleToIntFunction, Serializable {

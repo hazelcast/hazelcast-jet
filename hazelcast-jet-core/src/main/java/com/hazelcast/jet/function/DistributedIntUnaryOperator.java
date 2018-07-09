@@ -25,7 +25,7 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * {@code Serializable} variant of {@link IntUnaryOperator
- * java.util.function.IntUnaryOperator} which throws checked exception.
+ * java.util.function.IntUnaryOperator} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedIntUnaryOperator extends IntUnaryOperator, Serializable {

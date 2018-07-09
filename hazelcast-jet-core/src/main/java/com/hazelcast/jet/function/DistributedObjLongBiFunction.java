@@ -21,10 +21,10 @@ import com.hazelcast.jet.impl.util.ExceptionUtil;
 import java.io.Serializable;
 
 /**
- * {@code Serializable} variant of {@link ObjLongBiFunction}
- *  which throws checked exception.
- *
- **/
+ * {@code Serializable} variant of {@link ObjLongBiFunction
+ * com.hazelcast.jet.function.ObjLongBiFunction} declares throws checked
+ * exception.
+ */
 @FunctionalInterface
 public interface DistributedObjLongBiFunction<T, R> extends ObjLongBiFunction<T, R>, Serializable {
 

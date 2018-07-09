@@ -23,7 +23,7 @@ import java.util.function.ToIntFunction;
 
 /**
  * {@code Serializable} variant of {@link ToIntFunction
- * java.util.function.ToIntFunction} which throws checked exception.
+ * java.util.function.ToIntFunction} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedToIntFunction<T> extends ToIntFunction<T>, Serializable {

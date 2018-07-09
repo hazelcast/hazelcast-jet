@@ -23,11 +23,10 @@ import java.util.function.IntFunction;
 
 /**
  * {@code Serializable} variant of {@link IntFunction
- * java.util.function.IntFunction} which throws checked exception.
+ * java.util.function.IntFunction} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedIntFunction<R> extends IntFunction<R>, Serializable {
-
 
     /**
      * Exception-declaring version of {@link IntFunction#apply}.

@@ -25,7 +25,7 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * {@code Serializable} variant of {@link BiFunction
- * java.util.function.BiFunction} which throws checked exception.
+ * java.util.function.BiFunction} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedBiFunction<T, U, R> extends BiFunction<T, U, R>, Serializable {

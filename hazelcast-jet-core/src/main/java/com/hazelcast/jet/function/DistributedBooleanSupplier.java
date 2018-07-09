@@ -23,7 +23,7 @@ import java.util.function.BooleanSupplier;
 
 /**
  * {@code Serializable} variant of {@link BooleanSupplier
- * java.util.function.BooleanSupplier} which throws checked exception.
+ * java.util.function.BooleanSupplier} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedBooleanSupplier extends BooleanSupplier, Serializable {

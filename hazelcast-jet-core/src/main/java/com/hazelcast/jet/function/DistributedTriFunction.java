@@ -21,10 +21,9 @@ import com.hazelcast.jet.impl.util.ExceptionUtil;
 import java.io.Serializable;
 
 /**
- * {@code Serializable} variant of {@link TriFunction}
- * which throws checked exception.
- *
- **/
+ * {@code Serializable} variant of {@link TriFunction} which declares checked
+ * exception.
+ */
 @FunctionalInterface
 public interface DistributedTriFunction<T, U, V, R> extends TriFunction<T, U, V, R>, Serializable {
 

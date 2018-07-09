@@ -23,7 +23,7 @@ import java.util.function.ObjLongConsumer;
 
 /**
  * {@code Serializable} variant of {@link ObjLongConsumer
- * java.util.function.ObjLongConsumer} which throws checked exception.
+ * java.util.function.ObjLongConsumer} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedObjLongConsumer<T> extends ObjLongConsumer<T>, Serializable {

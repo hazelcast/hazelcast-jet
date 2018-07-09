@@ -23,7 +23,7 @@ import java.util.function.LongSupplier;
 
 /**
  * {@code Serializable} variant of {@link LongSupplier
- * java.util.function.LongSupplier} which throws checked exception.
+ * java.util.function.LongSupplier} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedLongSupplier extends LongSupplier, Serializable {

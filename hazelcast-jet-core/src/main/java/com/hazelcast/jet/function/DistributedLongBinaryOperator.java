@@ -23,7 +23,7 @@ import java.util.function.LongBinaryOperator;
 
 /**
  * {@code Serializable} variant of {@link LongBinaryOperator
- * java.util.function.LongBinaryOperator} which throws checked exception.
+ * java.util.function.LongBinaryOperator} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedLongBinaryOperator extends LongBinaryOperator, Serializable {

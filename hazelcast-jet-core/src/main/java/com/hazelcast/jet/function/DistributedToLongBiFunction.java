@@ -23,7 +23,7 @@ import java.util.function.ToLongBiFunction;
 
 /**
  * {@code Serializable} variant of {@link ToLongBiFunction
- * java.util.function.ToLongBiFunction} which throws checked exception.
+ * java.util.function.ToLongBiFunction} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedToLongBiFunction<T, U> extends ToLongBiFunction<T, U>, Serializable {

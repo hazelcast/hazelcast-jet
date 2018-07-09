@@ -23,7 +23,7 @@ import java.util.function.LongToIntFunction;
 
 /**
  * {@code Serializable} variant of {@link LongToIntFunction
- * java.util.function.LongToIntFunction} which throws checked exception.
+ * java.util.function.LongToIntFunction} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedLongToIntFunction extends LongToIntFunction, Serializable {

@@ -25,7 +25,7 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * {@code Serializable} variant of {@link IntPredicate
- * java.util.function.IntPredicate} which throws checked exception.
+ * java.util.function.IntPredicate} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedIntPredicate extends IntPredicate, Serializable {

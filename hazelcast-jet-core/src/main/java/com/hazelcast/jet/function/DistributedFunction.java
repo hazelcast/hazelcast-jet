@@ -24,19 +24,11 @@ import java.util.function.Function;
 import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
- * {@code Serializable} variant of {@link Function
- * java.util.function.Function} which throws checked exception.
+ * {@code Serializable} variant of {@link Function java.util.function.Function}
+ * which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedFunction<T, R> extends Function<T, R>, Serializable {
-
-    /**
-     * {@code Serializable} variant of {@link Function#identity()
-     * java.util.function.Function#identity()}.
-     */
-    static <T> DistributedFunction<T, T> identity() {
-        return t -> t;
-    }
 
     /**
      * Exception-declaring version of {@link Function#apply}.
@@ -50,6 +42,14 @@ public interface DistributedFunction<T, R> extends Function<T, R>, Serializable 
         } catch (Exception e) {
             throw ExceptionUtil.sneakyThrow(e);
         }
+    }
+
+    /**
+     * {@code Serializable} variant of {@link Function#identity()
+     * java.util.function.Function#identity()}.
+     */
+    static <T> DistributedFunction<T, T> identity() {
+        return t -> t;
     }
 
     /**

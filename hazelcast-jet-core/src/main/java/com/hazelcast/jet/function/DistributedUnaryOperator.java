@@ -23,7 +23,7 @@ import java.util.function.UnaryOperator;
 
 /**
  * {@code Serializable} variant of {@link UnaryOperator
- * java.util.function.UnaryOperator} which throws checked exception.
+ * java.util.function.UnaryOperator} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedUnaryOperator<T>

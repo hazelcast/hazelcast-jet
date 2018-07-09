@@ -23,7 +23,7 @@ import java.util.function.LongToDoubleFunction;
 
 /**
  * {@code Serializable} variant of {@link LongToDoubleFunction
- * java.util.function.LongToDoubleFunction} which throws checked exception.
+ * java.util.function.LongToDoubleFunction} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedLongToDoubleFunction extends LongToDoubleFunction, Serializable {

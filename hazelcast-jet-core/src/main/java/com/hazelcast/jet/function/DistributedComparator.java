@@ -31,8 +31,8 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
- * {@code Serializable} variant of {@link Comparator
- * java.util.Comparator} which throws checked exception.
+ * {@code Serializable} variant of {@link Comparator java.util.Comparator}
+ * which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedComparator<T> extends Comparator<T>, Serializable {

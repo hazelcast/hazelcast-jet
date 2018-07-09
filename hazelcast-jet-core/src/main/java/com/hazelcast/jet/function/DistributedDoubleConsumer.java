@@ -25,7 +25,7 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * {@code Serializable} variant of {@link DoubleConsumer
- * java.util.function.DoubleConsumer} which throws checked exception.
+ * java.util.function.DoubleConsumer} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedDoubleConsumer extends DoubleConsumer, Serializable {

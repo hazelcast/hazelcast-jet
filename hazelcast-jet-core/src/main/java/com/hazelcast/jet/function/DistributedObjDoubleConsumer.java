@@ -23,7 +23,7 @@ import java.util.function.ObjDoubleConsumer;
 
 /**
  * {@code Serializable} variant of {@link ObjDoubleConsumer
- * java.util.function.ObjDoubleConsumer} which throws checked exception.
+ * java.util.function.ObjDoubleConsumer} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedObjDoubleConsumer<T> extends ObjDoubleConsumer<T>, Serializable {

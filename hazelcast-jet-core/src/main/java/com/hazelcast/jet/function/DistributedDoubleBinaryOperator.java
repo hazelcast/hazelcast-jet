@@ -23,7 +23,7 @@ import java.util.function.DoubleBinaryOperator;
 
 /**
  * {@code Serializable} variant of {@link DoubleBinaryOperator
- * java.util.function.DoubleBinaryOperator} which throws checked exception.
+ * java.util.function.DoubleBinaryOperator} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedDoubleBinaryOperator extends DoubleBinaryOperator, Serializable {

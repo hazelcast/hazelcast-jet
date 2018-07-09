@@ -23,7 +23,7 @@ import java.util.function.IntSupplier;
 
 /**
  * {@code Serializable} variant of {@link IntSupplier
- * java.util.function.IntSupplier} which throws checked exception.
+ * java.util.function.IntSupplier} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedIntSupplier extends IntSupplier, Serializable {

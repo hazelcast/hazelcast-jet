@@ -24,8 +24,8 @@ import java.util.function.Consumer;
 import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
- * {@code Serializable} variant of {@link Consumer
- * java.util.function.Consumer}.
+ * {@code Serializable} variant of {@link Consumer java.util.function.Consumer}
+ * which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedConsumer<T> extends Consumer<T>, Serializable {

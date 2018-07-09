@@ -23,7 +23,7 @@ import java.util.function.ObjIntConsumer;
 
 /**
  * {@code Serializable} variant of {@link ObjIntConsumer
- * java.util.function.ObjIntConsumer} which throws checked exception.
+ * java.util.function.ObjIntConsumer} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedObjIntConsumer<T> extends ObjIntConsumer<T>, Serializable {
