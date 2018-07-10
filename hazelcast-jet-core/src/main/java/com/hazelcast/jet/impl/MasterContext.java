@@ -755,13 +755,13 @@ public class MasterContext {
             MemberInfo member = e.getKey();
             Operation op = opCtor.apply(e.getValue());
             InternalCompletableFuture<Object> future = nodeEngine.getOperationService()
-                                                                 .createInvocationBuilder(JetService.SERVICE_NAME, op, member.getAddress())
-                                                                 .setDoneCallback(() -> {
-                                                                     if (remainingCount.decrementAndGet() == 0) {
-                                                                         doneFuture.complete(null);
-                                                                     }
-                                                                 })
-                                                                 .invoke();
+                    .createInvocationBuilder(JetService.SERVICE_NAME, op, member.getAddress())
+                    .setDoneCallback(() -> {
+                        if (remainingCount.decrementAndGet() == 0) {
+                            doneFuture.complete(null);
+                        }
+                    })
+                    .invoke();
             futures.put(member, future);
         }
     }
