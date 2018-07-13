@@ -43,12 +43,12 @@ public final class AvroSources {
      *
      * @param directory           parent directory of the files
      * @param recordClass         the class to read
-     * @param <R>                 the type of the records
+     * @param <D>                 the type of the datum
      */
     @Nonnull
-    public static <R> AvroSourceBuilder<R> filesBuilder(
+    public static <D> AvroSourceBuilder<D> filesBuilder(
             @Nonnull String directory,
-            @Nonnull Class<R> recordClass
+            @Nonnull Class<D> recordClass
     ) {
         return filesBuilder(directory, () -> SpecificRecord.class.isAssignableFrom(recordClass) ?
                 new SpecificDatumReader<>(recordClass) : new ReflectDatumReader<>(recordClass));
@@ -62,12 +62,12 @@ public final class AvroSources {
      * @param directory           parent directory of the files
      * @param datumReaderSupplier the supplier of datum reader which reads
      *                            records from the files
-     * @param <R>                 the type of the records
+     * @param <D>                 the type of the datum
      */
     @Nonnull
-    public static <R> AvroSourceBuilder<R> filesBuilder(
+    public static <D> AvroSourceBuilder<D> filesBuilder(
             @Nonnull String directory,
-            @Nonnull DistributedSupplier<? extends DatumReader<R>> datumReaderSupplier
+            @Nonnull DistributedSupplier<? extends DatumReader<D>> datumReaderSupplier
     ) {
         return new AvroSourceBuilder<>(directory, datumReaderSupplier);
     }
@@ -75,13 +75,13 @@ public final class AvroSources {
     /**
      * Convenience for {@link #filesBuilder(String, Class)} which
      * reads all the files in the supplied directory as specific records using
-     * supplied {@code recordClass}. If {@code recordClass} implements {@link
+     * supplied {@code datumClass}. If {@code datumClass} implements {@link
      * SpecificRecord}, {@link SpecificDatumReader} is used to read the records,
      * {@link ReflectDatumReader} is used otherwise.
      */
     @Nonnull
-    public static <R> BatchSource<R> files(@Nonnull String directory, @Nonnull Class<R> recordClass) {
-        return filesBuilder(directory, recordClass).build();
+    public static <D> BatchSource<D> files(@Nonnull String directory, @Nonnull Class<D> datumClass) {
+        return filesBuilder(directory, datumClass).build();
     }
 
     /**
@@ -91,9 +91,9 @@ public final class AvroSources {
      * mapping function.
      */
     @Nonnull
-    public static <R> BatchSource<R> files(
+    public static <D> BatchSource<D> files(
             @Nonnull String directory,
-            @Nonnull DistributedBiFunction<String, GenericRecord, R> mapOutputFn
+            @Nonnull DistributedBiFunction<String, GenericRecord, D> mapOutputFn
     ) {
         return filesBuilder(directory, GenericDatumReader<GenericRecord>::new)
                 .build(mapOutputFn);
