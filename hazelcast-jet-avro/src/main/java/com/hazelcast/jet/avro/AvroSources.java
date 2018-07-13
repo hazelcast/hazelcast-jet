@@ -42,20 +42,38 @@ public final class AvroSources {
      * from Apache Avro files in a directory (but not its subdirectories).
      *
      * @param directory           parent directory of the files
-     * @param datumReaderSupplier the supplier of datum reader which reads
-     *                            records from the files
-     * @param <T>                 the type of the records
+     * @param recordClass         the class to read
+     * @param <R>                 the type of the records
      */
     @Nonnull
-    public static <T> AvroSourceBuilder<T> filesBuilder(
+    public static <R> AvroSourceBuilder<R> filesBuilder(
             @Nonnull String directory,
-            @Nonnull DistributedSupplier<DatumReader<T>> datumReaderSupplier
+            @Nonnull Class<R> recordClass
+    ) {
+        return filesBuilder(directory, () -> SpecificRecord.class.isAssignableFrom(recordClass) ?
+                new SpecificDatumReader<>(recordClass) : new ReflectDatumReader<>(recordClass));
+    }
+
+    /**
+     * Returns a builder object that offers a step-by-step fluent API to build
+     * a custom Avro file source for the Pipeline API. The source reads records
+     * from Apache Avro files in a directory (but not its subdirectories).
+     *
+     * @param directory           parent directory of the files
+     * @param datumReaderSupplier the supplier of datum reader which reads
+     *                            records from the files
+     * @param <R>                 the type of the records
+     */
+    @Nonnull
+    public static <R> AvroSourceBuilder<R> filesBuilder(
+            @Nonnull String directory,
+            @Nonnull DistributedSupplier<? extends DatumReader<R>> datumReaderSupplier
     ) {
         return new AvroSourceBuilder<>(directory, datumReaderSupplier);
     }
 
     /**
-     * Convenience for {@link #filesBuilder(String, DistributedSupplier)} which
+     * Convenience for {@link #filesBuilder(String, Class)} which
      * reads all the files in the supplied directory as specific records using
      * supplied {@code recordClass}. If {@code recordClass} implements {@link
      * SpecificRecord}, {@link SpecificDatumReader} is used to read the records,
@@ -63,8 +81,7 @@ public final class AvroSources {
      */
     @Nonnull
     public static <R> BatchSource<R> files(@Nonnull String directory, @Nonnull Class<R> recordClass) {
-        return filesBuilder(directory, () -> SpecificRecord.class.isAssignableFrom(recordClass) ?
-                new SpecificDatumReader<>(recordClass) : new ReflectDatumReader<>(recordClass)).build();
+        return filesBuilder(directory, recordClass).build();
     }
 
     /**
