@@ -30,10 +30,6 @@
 
     <properties>
         <main.basedir>${project.parent.basedir}</main.basedir>
-
-        <!-- optional dependencies of hazelcast, required for Javadoc plugin to work -->
-        <log4j2.version>2.3</log4j2.version>
-        <slf4j.api.version>1.6.6</slf4j.api.version>
     </properties>
 
     <build>
@@ -97,12 +93,12 @@
                         <additionalDependency>
                             <groupId>com.hazelcast</groupId>
                             <artifactId>hazelcast-code-generator</artifactId>
-                            <version>1.4.0</version>
+                            <version>${hazelcast.protocol.version}</version>
                         </additionalDependency>
                         <additionalDependency>
                             <groupId>com.hazelcast</groupId>
                             <artifactId>hazelcast-aws</artifactId>
-                            <version>2.0.0</version>
+                            <version>${hazelcast.aws.version}</version>
                         </additionalDependency>
                         <additionalDependency>
                             <groupId>log4j</groupId>
@@ -127,12 +123,12 @@
                         <additionalDependency>
                             <groupId>javax.annotation</groupId>
                             <artifactId>javax.annotation-api</artifactId>
-                            <version>1.2</version>
+                            <version>${jsr250.api.version}</version>
                         </additionalDependency>
                         <additionalDependency>
                             <groupId>org.osgi</groupId>
                             <artifactId>org.osgi.core</artifactId>
-                            <version>4.2.0</version>
+                            <version>${osgi.version}</version>
                         </additionalDependency>
                         <additionalDependency>
                             <groupId>javax.jms</groupId>

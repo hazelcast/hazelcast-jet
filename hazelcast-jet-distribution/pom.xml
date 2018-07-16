@@ -30,19 +30,36 @@
     </parent>
 
     <properties>
-        <hazelcast.protocol.version>1.4.0-SNAPSHOT</hazelcast.protocol.version>
         <main.basedir>${project.parent.basedir}</main.basedir>
-        <resource.dir>${project.parent.basedir}/hazelcast-jet-core/src/main/resources</resource.dir>
+        <config.directory>${project.build.directory}/config</config.directory>
+        <hazelcast.jet.artifact>hazelcast-jet</hazelcast.jet.artifact>
     </properties>
 
     <build>
-        <resources>
-            <resource>
-                <directory>src/main/resources/bin</directory>
-                <filtering>true</filtering>
-            </resource>
-        </resources>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>unpack</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>com.hazelcast.jet</groupId>
+                                    <artifactId>hazelcast-jet</artifactId>
+                                    <outputDirectory>${config.directory}</outputDirectory>
+                                    <includes>**/*.xml</includes>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>${maven.assembly.plugin.version}</version>
