@@ -279,8 +279,7 @@ public class TaskletExecutionService {
             while (true) {
                 Boolean gracefulShutdownLocal = gracefulShutdown.get();
                 // exit condition
-                if (gracefulShutdownLocal == Boolean.FALSE
-                        || gracefulShutdownLocal == Boolean.TRUE && trackers.isEmpty()) {
+                if (gracefulShutdownLocal != null && (!gracefulShutdownLocal || trackers.isEmpty())) {
                     break;
                 }
                 boolean madeProgress = false;
