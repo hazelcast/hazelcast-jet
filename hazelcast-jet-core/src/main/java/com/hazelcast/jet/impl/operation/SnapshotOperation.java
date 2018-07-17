@@ -49,7 +49,7 @@ public class SnapshotOperation extends AsyncJobOperation {
     protected void doRun() {
         JetService service = getService();
         ExecutionContext ctx = service.getJobExecutionService().assertExecutionContext(
-                getCallerAddress(), jobId(), executionId, this
+                getCallerAddress(), jobId(), executionId, getClass().getSimpleName()
         );
         ctx.beginSnapshot(snapshotId, isTerminal).thenAccept(result -> {
             if (result.getError() == null) {

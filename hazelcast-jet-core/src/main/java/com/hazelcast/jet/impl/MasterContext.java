@@ -20,6 +20,7 @@ import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.cluster.impl.MembersView;
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.RestartableException;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
@@ -28,15 +29,18 @@ import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate;
 import com.hazelcast.jet.impl.exception.JobRestartRequestedException;
 import com.hazelcast.jet.impl.exception.JobSuspendRequestedException;
+import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
+import com.hazelcast.jet.impl.exception.ShutdownInProgressException;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
-import com.hazelcast.jet.impl.operation.TerminateExecutionOperation;
 import com.hazelcast.jet.impl.operation.CompleteExecutionOperation;
 import com.hazelcast.jet.impl.operation.InitExecutionOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
 import com.hazelcast.jet.impl.operation.StartExecutionOperation;
+import com.hazelcast.jet.impl.operation.TerminateExecutionOperation;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.NonCompletableFuture;
 import com.hazelcast.logging.ILogger;
@@ -103,7 +107,6 @@ public class MasterContext {
     private final JobRecord jobRecord;
     private final long jobId;
     private final String jobName;
-    private final NonCompletableFuture completionFuture = new NonCompletableFuture();
     private final AtomicReference<JobStatus> jobStatus = new AtomicReference<>(NOT_STARTED);
     private final SnapshotRepository snapshotRepository;
     private volatile Set<Vertex> vertices;
@@ -112,6 +115,13 @@ public class MasterContext {
     private volatile long executionStartTime;
     private volatile Map<MemberInfo, ExecutionPlan> executionPlanMap;
     private volatile ExecutionInvocationCallback executionInvocationCallback;
+
+    /**
+     * A future completed when the job fully completes. It's not completed when
+     * the job is suspended or when it is going to be restarted. It's used for
+     * {@link Job#join()}.
+     */
+    private final NonCompletableFuture completionFuture = new NonCompletableFuture();
 
     /**
      * Null initially. When a job termination is requested, it is assigned a
@@ -182,6 +192,7 @@ public class MasterContext {
 
         JobStatus jobStatus = jobStatus();
         // we can cancel in any status, other terminations are allowed only when running
+        // TODO [viliam] we must be able to request a restart in any state
         if (jobStatus != RUNNING && mode != CANCEL) {
             throw new IllegalStateException("Cannot " + mode + ", job status is " + jobStatus + ", should be " + RUNNING);
         }
@@ -214,23 +225,22 @@ public class MasterContext {
      * fixed yet, job restart is rescheduled.
      */
     synchronized void tryStartJob(Function<Long, Long> executionIdSupplier) {
-        if (!setJobStatusToStarting()) {
+        if (!setJobStatusToStarting()
+                || scheduleRestartIfQuorumAbsent()
+                || scheduleRestartIfClusterIsNotSafe()) {
             return;
         }
 
-        if (scheduleRestartIfQuorumAbsent() || scheduleRestartIfClusterIsNotSafe()) {
-            return;
-        }
-
+        ClassLoader classLoader = coordinationService.getJetService().getClassLoader(jobId);
         DAG dag;
         try {
-            dag = deserializeDAG();
+            dag = deserializeWithCustomClassLoader(nodeEngine.getSerializationService(), classLoader, jobRecord.getDag());
         } catch (Exception e) {
             logger.warning("DAG deserialization failed", e);
             finalizeJob(e);
             return;
         }
-        // save a copy of the vertex list, because it is going to change
+        // save a copy of the vertex list because it is going to change
         vertices = new HashSet<>();
         dag.iterator().forEachRemaining(vertices::add);
         executionId = executionIdSupplier.apply(jobId);
@@ -257,14 +267,14 @@ public class MasterContext {
         }
 
         MembersView membersView = getMembersView();
-        ClassLoader previousCL = swapContextClassLoader(coordinationService.getClassLoader(jobId));
+        ClassLoader previousCL = swapContextClassLoader(classLoader);
         try {
             logger.info("Start executing " + jobIdString() + ", status " + jobStatus()
                     + ", execution graph in DOT format:\n" + dag.toDotString()
                     + "\nHINT: You can use graphviz or http://viz-js.com to visualize the printed graph.");
             logger.fine("Building execution plan for " + jobIdString());
-            executionPlanMap = createExecutionPlans(nodeEngine, membersView, dag, jobId, executionId, getJobConfig(),
-                    lastSnapshotId);
+            executionPlanMap = createExecutionPlans(nodeEngine, membersView, coordinationService.getShuttingDownMembers(),
+                    dag, jobId, executionId, getJobConfig(), lastSnapshotId);
         } catch (Exception e) {
             logger.severe("Exception creating execution plan for " + jobIdString(), e);
             finalizeJob(e);
@@ -366,11 +376,6 @@ public class MasterContext {
         return clusterService.getMembershipManager().getMembersView();
     }
 
-    private DAG deserializeDAG() {
-        ClassLoader cl = coordinationService.getClassLoader(jobId);
-        return deserializeWithCustomClassLoader(nodeEngine.getSerializationService(), cl, jobRecord.getDag());
-    }
-
     // Called as callback when all InitOperation invocations are done
     private synchronized void onInitStepCompleted(Map<MemberInfo, Object> responses) {
         Throwable error = getInitResult(responses);
@@ -418,6 +423,11 @@ public class MasterContext {
         // otherwise, return TopologyChangedException so that the job will be restarted
         return failures
                 .stream()
+                .peek(e -> {
+                    if (e.getValue() instanceof ShutdownInProgressException) {
+                        coordinationService.addShuttingDownMember(e.getKey().getUuid());
+                    }
+                })
                 .map(e -> (Throwable) e.getValue())
                 .filter(t -> !isRestartableException(t))
                 .findFirst()
@@ -569,16 +579,25 @@ public class MasterContext {
         if (successfulMembers.size() == executionPlanMap.size()) {
             logger.fine("Execution of " + jobIdString() + " was successful");
 
+            // TODO [viliam] This is a race:
+            // If the job completed normally and a termination was requested, we assume that it
+            // completed normally due to the termination. Make the members return the exception
+            // in case a termination was requested
+
             TerminationMode mode = requestedTerminationMode.get();
             // mode is null if the job completed or failed without a job-control action
             if (mode != null) {
                 if (mode == CANCEL) {
                     logger.fine(jobIdString() + " to be cancelled after execute");
                     return new CancellationException();
-                } else if (mode.isRestart()) {
+                } else if (mode.actionAfterTerminate() == ActionAfterTerminate.RESTART) {
                     return new JobRestartRequestedException();
-                } else {
+                } else if (mode.actionAfterTerminate() == ActionAfterTerminate.SUSPEND) {
                     return new JobSuspendRequestedException();
+                } else {
+                    assert mode.actionAfterTerminate() == ActionAfterTerminate.TERMINATE :
+                            "actionAfterTerminate=" + mode.actionAfterTerminate();
+                    return new JobTerminateRequestedException();
                 }
             }
 
@@ -592,6 +611,11 @@ public class MasterContext {
         // In that case, all remaining participants return a CancellationException.
         return failures
                 .stream()
+                .peek(e -> {
+                    if (e.getValue() instanceof ShutdownInProgressException) {
+                        coordinationService.addShuttingDownMember(e.getKey().getUuid());
+                    }
+                })
                 .map(e -> (Throwable) e.getValue())
                 .filter(t -> !(t instanceof CancellationException || isRestartableException(t)))
                 .findFirst()
@@ -627,19 +651,14 @@ public class MasterContext {
         if (assertJobNotAlreadyDone(failure)) {
             return;
         }
-
-        // Don't look at this.requestedTerminationMode in this method. Some way
-        // of termination might have been requested, but another might actually
-        // happen. For example, we might requested a graceful restart, but the
-        // job failed before members received the operation to restart.
-
         completeVertices(failure);
 
         long elapsed = NANOSECONDS.toMillis(System.nanoTime() - executionStartTime);
         boolean isSuccess = failure == null
                 || failure instanceof CancellationException
                 || failure instanceof JobRestartRequestedException
-                || failure instanceof JobSuspendRequestedException;
+                || failure instanceof JobSuspendRequestedException
+                || failure instanceof JobTerminateRequestedException;
         if (isSuccess) {
             logger.info(String.format("Execution of %s completed in %,d ms", jobIdString(), elapsed));
         } else {
@@ -650,10 +669,17 @@ public class MasterContext {
         requestedTerminationMode.set(null);
         executionInvocationCallback = null;
 
-        if (failure instanceof JobRestartRequestedException
-                || (failure instanceof RestartableException || failure instanceof TopologyChangedException)
-                && jobRecord.getConfig().isAutoRestartOnMemberFailureEnabled()
-        ) {
+        // if restart was requested, restart immediately
+        if (failure instanceof JobRestartRequestedException) {
+            // if status is RUNNING, set it to RESTARTING. If it's STARTING, let it be.
+            jobStatus.compareAndSet(RUNNING, RESTARTING);
+            coordinationService.restartJob(jobId);
+            return;
+        }
+
+        // if restart is due to a failure, restart with a delay
+        if ((failure instanceof RestartableException || failure instanceof TopologyChangedException)
+                && jobRecord.getConfig().isAutoRestartOnMemberFailureEnabled()) {
             scheduleRestart();
             return;
         }
@@ -663,6 +689,11 @@ public class MasterContext {
                 && !jobRecord.getConfig().isAutoRestartOnMemberFailureEnabled()) {
             jobStatus.set(SUSPENDED);
             coordinationService.suspendJob(this);
+            return;
+        }
+
+        if (failure instanceof JobTerminateRequestedException) {
+            // leave the job not-suspended, not-restarted. New master will pick it up.
             return;
         }
 
@@ -786,6 +817,10 @@ public class MasterContext {
             logger.fine("Resuming " + jobIdString());
             tryStartJob(executionIdSupplier);
         }
+    }
+
+    boolean hasParticipant(String uuid) {
+        return executionPlanMap.keySet().stream().anyMatch(mi -> mi.getUuid().equals(uuid));
     }
 
     /**

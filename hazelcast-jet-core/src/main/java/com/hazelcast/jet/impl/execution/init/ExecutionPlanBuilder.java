@@ -40,6 +40,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.core.Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
@@ -54,14 +55,14 @@ public final class ExecutionPlanBuilder {
     }
 
     public static Map<MemberInfo, ExecutionPlan> createExecutionPlans(
-            NodeEngine nodeEngine, MembersView membersView, DAG dag, long jobId, long executionId,
-            JobConfig jobConfig, long lastSnapshotId
+            NodeEngine nodeEngine, MembersView membersView, Set<String> shuttingDownMembers, DAG dag,
+            long jobId, long executionId, JobConfig jobConfig, long lastSnapshotId
     ) {
         final JetInstance instance = getJetInstance(nodeEngine);
         final int defaultParallelism = instance.getConfig().getInstanceConfig().getCooperativeThreadCount();
         final Collection<MemberInfo> members = new HashSet<>(membersView.size());
         final Address[] partitionOwners = new Address[nodeEngine.getPartitionService().getPartitionCount()];
-        initPartitionOwnersAndMembers(nodeEngine, membersView, members, partitionOwners);
+        initPartitionOwnersAndMembers(nodeEngine, membersView, shuttingDownMembers, members, partitionOwners);
 
         final List<Address> addresses = members.stream().map(MemberInfo::getAddress).collect(toList());
         final int clusterSize = members.size();
@@ -132,6 +133,7 @@ public final class ExecutionPlanBuilder {
 
     private static void initPartitionOwnersAndMembers(NodeEngine nodeEngine,
                                                       MembersView membersView,
+                                                      Set<String> shuttingDownMembers,
                                                       Collection<MemberInfo> members,
                                                       Address[] partitionOwners) {
         IPartitionService partitionService = nodeEngine.getPartitionService();
@@ -141,7 +143,7 @@ public final class ExecutionPlanBuilder {
             MemberInfo member;
             if ((member = membersView.getMember(address)) == null) {
                 // Address in partition table doesn't exist in member list,
-                // it has just left the cluster.
+                // it has just joined the cluster.
                 throw new TopologyChangedException("Topology changed, " + address + " is not in original member list");
             }
 

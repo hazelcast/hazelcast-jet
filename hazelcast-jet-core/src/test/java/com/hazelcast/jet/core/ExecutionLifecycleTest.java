@@ -60,6 +60,7 @@ import static com.hazelcast.jet.core.processor.Processors.nonCooperativeP;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
 import static com.hazelcast.jet.impl.execution.SnapshotContext.NO_SNAPSHOT;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
+import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -380,8 +381,8 @@ public class ExecutionLifecycleTest extends TestInClusterSupport {
 
         JetService jetService = getJetService(member);
         final Map<MemberInfo, ExecutionPlan> executionPlans =
-                ExecutionPlanBuilder.createExecutionPlans(nodeEngineImpl, membersView, dag, 1, 1, new JobConfig(),
-                        NO_SNAPSHOT);
+                ExecutionPlanBuilder.createExecutionPlans(nodeEngineImpl, membersView, emptySet(), dag, 1, 1,
+                        new JobConfig(), NO_SNAPSHOT);
         ExecutionPlan executionPlan = executionPlans.get(membersView.getMember(localAddress));
         long jobId = 0;
         long executionId = 1;

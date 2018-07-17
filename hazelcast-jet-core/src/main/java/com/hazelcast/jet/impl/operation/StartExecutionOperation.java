@@ -17,14 +17,11 @@
 package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.JetService;
-import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
-import com.hazelcast.nio.Address;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 
 import java.io.IOException;
-import java.util.concurrent.CancellationException;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 
@@ -42,28 +39,9 @@ public class StartExecutionOperation extends AsyncJobOperation {
 
     @Override
     protected void doRun() {
-        ExecutionContext execCtx = getExecutionCtx();
-        Address coordinator = getCallerAddress();
-        getLogger().info("Start execution of "
-                + execCtx.jobNameAndExecutionId() + " from coordinator " + coordinator);
-        execCtx.beginExecution().whenComplete(withTryCatch(getLogger(), (i, e) -> {
-            if (e instanceof CancellationException) {
-                getLogger().fine("Execution of " + execCtx.jobNameAndExecutionId() + " was cancelled");
-            } else if (e != null) {
-                getLogger().fine("Execution of " + execCtx.jobNameAndExecutionId()
-                        + " completed with failure", e);
-            } else {
-                getLogger().fine("Execution of " + execCtx.jobNameAndExecutionId() + " completed");
-            }
-            doSendResponse(e);
-        }));
-    }
-
-    private ExecutionContext getExecutionCtx() {
         JetService service = getService();
-        return service.getJobExecutionService().assertExecutionContext(
-                getCallerAddress(), jobId(), executionId, this
-        );
+        service.getJobExecutionService().beginExecution(getCallerAddress(), jobId(), executionId)
+                .whenComplete(withTryCatch(getLogger(), (i, e) -> doSendResponse(e)));
     }
 
     @Override

@@ -24,6 +24,7 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.RestartableException;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.TopologyChangedException;
+import com.hazelcast.jet.impl.exception.ShutdownInProgressException;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.exception.CallerNotMemberException;
 import com.hazelcast.spi.exception.TargetNotMemberException;
@@ -53,6 +54,7 @@ public final class ExceptionUtil {
                 || t instanceof CallerNotMemberException
                 || t instanceof HazelcastInstanceNotActiveException
                 || t instanceof RestartableException
+                || t instanceof ShutdownInProgressException
                 || t instanceof JetException && t.getCause() instanceof RestartableException;
     }
 

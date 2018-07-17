@@ -26,7 +26,9 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import java.io.IOException;
 
 /**
- * Terminates the current job execution with the specified terminationMode.
+ * Operation sent from client to coordinator member to terminate particular
+ * job. See also {@link TerminateExecutionOperation}, which is sent from
+ * coordinator to members to terminate execution.
  */
 public class TerminateJobOperation extends AbstractJobOperation implements IdentifiedDataSerializable {
 

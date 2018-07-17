@@ -209,7 +209,7 @@ public class SuspendResumeTest extends JetTestSupport {
         // check that job resources are deleted
         SnapshotRepository snapshotRepository = new SnapshotRepository(instances[0]);
         JobRepository jobRepository = new JobRepository(instances[0], snapshotRepository);
-        assertNull(jobRepository.getJobRecord(job.getId()));
-        assertTrue(jobRepository.getJobResult(job.getId()).isSuccessful());
+        assertNull("JobRecord", jobRepository.getJobRecord(job.getId()));
+        assertTrue("Job result not successful", jobRepository.getJobResult(job.getId()).isSuccessful());
     }
 }

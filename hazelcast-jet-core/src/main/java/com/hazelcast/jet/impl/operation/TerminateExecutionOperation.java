@@ -33,8 +33,9 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.isRestartableException;
 import static com.hazelcast.spi.ExceptionAction.THROW_EXCEPTION;
 
 /**
- * Operation sent from master to members to terminate their execution.
- * See also {@link TerminateJobOperation}.
+ * Operation sent from master to members to terminate execution of particular
+ * job. See also {@link TerminateJobOperation}, which is sent from client to
+ * coordinator to initiate the termination.
  */
 public class TerminateExecutionOperation extends AbstractJobOperation {
 
@@ -55,7 +56,8 @@ public class TerminateExecutionOperation extends AbstractJobOperation {
         JetService service = getService();
         JobExecutionService executionService = service.getJobExecutionService();
         Address callerAddress = getCallerAddress();
-        ExecutionContext ctx = executionService.assertExecutionContext(callerAddress, jobId(), executionId, this);
+        ExecutionContext ctx = executionService.assertExecutionContext(callerAddress, jobId(), executionId,
+                getClass().getSimpleName());
         ctx.terminateExecution(mode);
     }
 

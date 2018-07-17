@@ -18,26 +18,42 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.jet.impl.exception.JobRestartRequestedException;
 import com.hazelcast.jet.impl.exception.JobSuspendRequestedException;
+import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
 
 import java.util.concurrent.CancellationException;
 import java.util.function.Supplier;
 
+import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.RESTART;
+import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.SUSPEND;
+import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.TERMINATE;
+
 public enum TerminationMode {
 
-    RESTART_GRACEFUL(true, true, false, JobRestartRequestedException::new),
-    RESTART_FORCEFUL(false, true, false, JobRestartRequestedException::new),
-    SUSPEND_GRACEFUL(true, false, false, JobSuspendRequestedException::new),
-    SUSPEND_FORCEFUL(false, false, false, JobSuspendRequestedException::new),
-    CANCEL(false, false, true, CancellationException::new);
+    // terminate and restart the job
+    RESTART_GRACEFUL(true, RESTART, false, JobRestartRequestedException::new),
+    RESTART_FORCEFUL(false, RESTART, false, JobRestartRequestedException::new),
+
+    // terminate and mark the job as suspended
+    SUSPEND_GRACEFUL(true, SUSPEND, false, JobSuspendRequestedException::new),
+    SUSPEND_FORCEFUL(false, SUSPEND, false, JobSuspendRequestedException::new),
+
+    // only terminate, don't restart and don't mark it as suspended. Used when
+    // master is gracefully shut down.
+    TERMINATE_GRACEFUL(true, TERMINATE, false, JobTerminateRequestedException::new),
+    TERMINATE_FORCEFUL(false, TERMINATE, false, JobTerminateRequestedException::new),
+
+    // terminate and complete the job
+    CANCEL(false, TERMINATE, true, CancellationException::new);
 
     private final boolean stopWithSnapshot;
-    private final boolean restart;
+    private final ActionAfterTerminate actionAfterTerminate;
     private final boolean deleteData;
     private final Supplier<Exception> exceptionFactory;
 
-    TerminationMode(boolean stopWithSnapshot, boolean restart, boolean deleteData, Supplier<Exception> exceptionFactory) {
+    TerminationMode(boolean stopWithSnapshot, ActionAfterTerminate actionAfterTerminate, boolean deleteData,
+                    Supplier<Exception> exceptionFactory) {
         this.stopWithSnapshot = stopWithSnapshot;
-        this.restart = restart;
+        this.actionAfterTerminate = actionAfterTerminate;
         this.deleteData = deleteData;
         this.exceptionFactory = exceptionFactory;
     }
@@ -51,10 +67,10 @@ public enum TerminationMode {
     }
 
     /**
-     * If true, the job should restart just after termination.
+     * Returns the action that should be done after the job terminates.
      */
-    public boolean isRestart() {
-        return restart;
+    public ActionAfterTerminate actionAfterTerminate() {
+        return actionAfterTerminate;
     }
 
     /**
@@ -79,5 +95,14 @@ public enum TerminationMode {
 
     public Exception createException() {
         return exceptionFactory.get();
+    }
+
+    public enum ActionAfterTerminate {
+        /** Start the job again. */
+        RESTART,
+        /** Don't start the job again, mark the job as suspended. */
+        SUSPEND,
+        /** Don't start the job again, don't mark the job as suspended - used when shutting down a member. */
+        TERMINATE
     }
 }

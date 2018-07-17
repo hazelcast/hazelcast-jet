@@ -93,7 +93,7 @@ public class TaskletExecutionServiceTest extends JetTestSupport {
 
     @After
     public void after() {
-        es.shutdown();
+        es.shutdown(false);
     }
 
     @Test
@@ -166,7 +166,7 @@ public class TaskletExecutionServiceTest extends JetTestSupport {
         es.beginExecute(singletonList(new MockTasklet()), new CompletableFuture<>(), classLoaderMock);
 
         // When
-        es.shutdown();
+        es.shutdown(false);
 
         // Then
         exceptionRule.expect(IllegalStateException.class);

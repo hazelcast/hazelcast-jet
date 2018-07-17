@@ -16,9 +16,9 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.internal.metrics.MetricsRegistry;
 import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.impl.exception.ShutdownInProgressException;
 import com.hazelcast.jet.impl.util.NonCompletableFuture;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.logging.ILogger;
@@ -37,11 +37,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 
+import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
@@ -70,21 +72,35 @@ public class TaskletExecutionService {
     private final String hzInstanceName;
     private final ILogger logger;
     private final AtomicInteger cooperativeThreadIndex = new AtomicInteger();
-    private final MetricsRegistry metricsRegistry;
     @Probe
     private final AtomicInteger blockingWorkerCount = new AtomicInteger();
 
-    private volatile boolean isShutdown;
+    // tri-state boolean:
+    // - null: not shut down
+    // - FALSE: shut down forcefully: break the execution loop, don't wait for tasklets to finish
+    // - TRUE: shut down gracefully: run normally, don't accept more tasklets
+    private final AtomicReference<Boolean> gracefulShutdown = new AtomicReference<>(null);
 
     public TaskletExecutionService(NodeEngineImpl nodeEngine, int threadCount) {
         this.hzInstanceName = nodeEngine.getHazelcastInstance().getName();
         this.cooperativeWorkers = new CooperativeWorker[threadCount];
         this.cooperativeThreadPool = new Thread[threadCount];
         this.logger = nodeEngine.getLoggingService().getLogger(TaskletExecutionService.class);
-        this.metricsRegistry = nodeEngine.getMetricsRegistry();
-        metricsRegistry.newProbeBuilder()
+
+        nodeEngine.getMetricsRegistry().newProbeBuilder()
                        .withTag("module", "jet")
                        .scanAndRegister(this);
+
+        Arrays.setAll(cooperativeWorkers, i -> new CooperativeWorker(cooperativeWorkers));
+        Arrays.setAll(cooperativeThreadPool, i -> new Thread(cooperativeWorkers[i],
+                String.format("hz.%s.jet.cooperative.thread-%d", hzInstanceName, i)));
+        Arrays.stream(cooperativeThreadPool).forEach(Thread::start);
+        for (int i = 0; i < cooperativeWorkers.length; i++) {
+            nodeEngine.getMetricsRegistry().newProbeBuilder()
+                           .withTag("module", "jet")
+                           .withTag("cooperativeWorker", String.valueOf(i))
+                           .scanAndRegister(cooperativeWorkers[i]);
+        }
     }
 
     /**
@@ -116,14 +132,25 @@ public class TaskletExecutionService {
         return executionTracker.future;
     }
 
-    public void shutdown() {
-        isShutdown = true;
-        blockingTaskletExecutor.shutdownNow();
+    public void shutdown(boolean graceful) {
+        if (graceful) {
+            if (!gracefulShutdown.compareAndSet(null, true)) {
+                throw new IllegalStateException("Already shut down");
+            }
+        } else {
+            // forceful shutdown is possible from both other states (null or TRUE)
+            gracefulShutdown.set(Boolean.FALSE);
+        }
+        if (graceful) {
+            blockingTaskletExecutor.shutdown();
+        } else {
+            blockingTaskletExecutor.shutdownNow();
+        }
     }
 
     private void ensureStillRunning() {
-        if (isShutdown) {
-            throw new IllegalStateException("Execution service was already ordered to shut down");
+        if (gracefulShutdown.get() != null) {
+            throw new ShutdownInProgressException();
         }
     }
 
@@ -145,7 +172,6 @@ public class TaskletExecutionService {
     private void submitCooperativeTasklets(
             ExecutionTracker executionTracker, ClassLoader jobClassLoader, List<Tasklet> tasklets
     ) {
-        ensureThreadsStarted();
         final List<TaskletTracker>[] trackersByThread = new List[cooperativeWorkers.length];
         Arrays.setAll(trackersByThread, i -> new ArrayList());
         for (Tasklet t : tasklets) {
@@ -159,22 +185,6 @@ public class TaskletExecutionService {
         Arrays.stream(cooperativeThreadPool).forEach(LockSupport::unpark);
     }
 
-    private synchronized void ensureThreadsStarted() {
-        if (cooperativeWorkers[0] != null) {
-            return;
-        }
-        Arrays.setAll(cooperativeWorkers, i -> new CooperativeWorker(cooperativeWorkers));
-        Arrays.setAll(cooperativeThreadPool, i -> new Thread(cooperativeWorkers[i],
-                String.format("hz.%s.jet.cooperative.thread-%d", hzInstanceName, i)));
-        Arrays.stream(cooperativeThreadPool).forEach(Thread::start);
-        for (int i = 0; i < cooperativeWorkers.length; i++) {
-            metricsRegistry.newProbeBuilder()
-                           .withTag("module", "jet")
-                           .withTag("cooperativeWorker", String.valueOf(i))
-                           .scanAndRegister(cooperativeWorkers[i]);
-        }
-    }
-
     private String trackersToString() {
         return Arrays.stream(cooperativeWorkers)
                      .flatMap(w -> w.trackers.stream())
@@ -182,6 +192,21 @@ public class TaskletExecutionService {
                      .sorted()
                      .collect(joining("\n"))
                 + "\n-----------------";
+    }
+
+    /**
+     * Blocks until all workers terminate (cooperative & blocking).
+     */
+    public void awaitWorkerTermination() {
+        assert gracefulShutdown.get() != null : "Not shut down";
+        try {
+            blockingTaskletExecutor.awaitTermination(1, TimeUnit.DAYS);
+            for (Thread t : cooperativeThreadPool) {
+                t.join();
+            }
+        } catch (InterruptedException e) {
+            sneakyThrow(e);
+        }
     }
 
     private final class BlockingWorker implements Runnable {
@@ -219,7 +244,7 @@ public class TaskletExecutionService {
                     }
                 } while (!result.isDone()
                         && !tracker.executionTracker.executionCompletedExceptionally()
-                        && !isShutdown);
+                        && gracefulShutdown.get() == null);
             } catch (Throwable e) {
                 logger.warning("Exception in " + t, e);
                 tracker.executionTracker.exception(new JetException("Exception in " + t + ": " + e, e));
@@ -251,7 +276,13 @@ public class TaskletExecutionService {
             final Thread thread = currentThread();
             final ClassLoader clBackup = thread.getContextClassLoader();
             long idleCount = 0;
-            while (!isShutdown) {
+            while (true) {
+                Boolean gracefulShutdownLocal = gracefulShutdown.get();
+                // exit condition
+                if (gracefulShutdownLocal == Boolean.FALSE
+                        || gracefulShutdownLocal == Boolean.TRUE && trackers.isEmpty()) {
+                    break;
+                }
                 boolean madeProgress = false;
                 for (TaskletTracker t : trackers) {
                     long start = 0;

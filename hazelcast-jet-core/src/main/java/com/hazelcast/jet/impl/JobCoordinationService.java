@@ -27,7 +27,7 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
-import com.hazelcast.jet.impl.deployment.JetClassLoader;
+import com.hazelcast.jet.impl.exception.ShutdownInProgressException;
 import com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.serialization.Data;
@@ -37,8 +37,8 @@ import com.hazelcast.spi.impl.executionservice.InternalExecutionService;
 import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.util.Clock;
 
-import java.security.PrivilegedAction;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -56,6 +56,8 @@ import static com.hazelcast.jet.core.JobStatus.COMPLETING;
 import static com.hazelcast.jet.core.JobStatus.NOT_STARTED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
+import static com.hazelcast.jet.impl.TerminationMode.RESTART_GRACEFUL;
+import static com.hazelcast.jet.impl.TerminationMode.TERMINATE_GRACEFUL;
 import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.FAILED;
 import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.SUCCESSFUL;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
@@ -67,27 +69,33 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 
+/**
+ * Service to handle MasterContexts on coordinator member. Job-control
+ * operations from client are handled here.
+ */
 public class JobCoordinationService {
 
     private static final String COORDINATOR_EXECUTOR_NAME = "jet:coordinator";
     private static final long RETRY_DELAY_IN_MILLIS = SECONDS.toMillis(2);
 
     private final NodeEngineImpl nodeEngine;
+    private final JetService jetService;
     private final JetConfig config;
     private final ILogger logger;
     private final JobRepository jobRepository;
-    private final JobExecutionService jobExecutionService;
     private final SnapshotRepository snapshotRepository;
     private final ConcurrentMap<Long, MasterContext> masterContexts = new ConcurrentHashMap<>();
+    private final Set<String> shuttingDownMembers = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Object lock = new Object();
+    private volatile boolean isShutdown;
 
-    JobCoordinationService(NodeEngineImpl nodeEngine, JetConfig config,
-                           JobRepository jobRepository, JobExecutionService jobExecutionService,
-                           SnapshotRepository snapshotRepository) {
+    JobCoordinationService(NodeEngineImpl nodeEngine, JetService jetService, JetConfig config,
+                           JobRepository jobRepository, SnapshotRepository snapshotRepository) {
         this.nodeEngine = nodeEngine;
+        this.jetService = jetService;
         this.config = config;
         this.logger = nodeEngine.getLogger(getClass());
         this.jobRepository = jobRepository;
-        this.jobExecutionService = jobExecutionService;
         this.snapshotRepository = snapshotRepository;
     }
 
@@ -100,23 +108,18 @@ public class JobCoordinationService {
                 jobScanPeriodInMillis, jobScanPeriodInMillis, MILLISECONDS);
     }
 
+    public void shutdown() {
+        synchronized (lock) {
+            isShutdown = true;
+        }
+    }
+
+    public void terminateAlJobs() {
+        masterContexts.forEach((k, v) -> v.requestTermination(TERMINATE_GRACEFUL));
+    }
+
     public void reset() {
         masterContexts.values().forEach(mc -> mc.requestTermination(TerminationMode.CANCEL));
-    }
-
-    public ClassLoader getClassLoader(long jobId) {
-        JobConfig jobConfig = getJobConfig(jobId);
-        return getClassLoader(jobConfig, jobId);
-    }
-
-    public ClassLoader getClassLoader(JobConfig config, long jobId) {
-        PrivilegedAction<JetClassLoader> action = () -> {
-            ClassLoader parent = config.getClassLoaderFactory() != null
-                    ? config.getClassLoaderFactory().getJobClassLoader()
-                    : null;
-            return new JetClassLoader(parent, jobRepository.getJobResources(jobId));
-        };
-        return jobExecutionService.getClassLoader(jobId, action);
     }
 
     // only for testing
@@ -172,6 +175,10 @@ public class JobCoordinationService {
                     + nodeEngine.getClusterService().getMasterAddress());
         }
 
+        if (isShutdown) {
+            throw new ShutdownInProgressException();
+        }
+
         // the order of operations is important.
 
         // first, check if the job is already completed
@@ -187,11 +194,17 @@ public class JobCoordinationService {
         JobRecord jobRecord = new JobRecord(jobId, Clock.currentTimeMillis(), dag, dagJson, config, quorumSize, false);
         MasterContext masterContext = new MasterContext(nodeEngine, this, jobRecord);
 
-        // just try to initiate the coordination
-        MasterContext prev = masterContexts.putIfAbsent(jobId, masterContext);
-        if (prev != null) {
-            logger.fine("Joining to already started " + prev.jobIdString());
-            return prev.completionFuture();
+        synchronized (lock) {
+            if (isShutdown) {
+                throw new ShutdownInProgressException();
+            }
+
+            // just try to initiate the coordination
+            MasterContext prev = masterContexts.putIfAbsent(jobId, masterContext);
+            if (prev != null) {
+                logger.fine("Joining to already started " + prev.jobIdString());
+                return prev.completionFuture();
+            }
         }
 
         // If job is not currently running, it might be that it is just completed
@@ -209,7 +222,7 @@ public class JobCoordinationService {
     }
 
     private String dagToJson(long jobId, JobConfig jobConfig, Data dagData) {
-        ClassLoader classLoader = getClassLoader(jobConfig, jobId);
+        ClassLoader classLoader = jetService.getJobExecutionService().getClassLoader(jobConfig, jobId);
         DAG dag = deserializeWithCustomClassLoader(nodeEngine.getSerializationService(), classLoader, dagData);
         int coopThreadCount = getJetInstance(nodeEngine).getConfig().getInstanceConfig().getCooperativeThreadCount();
         return dag.toJson(coopThreadCount).toString();
@@ -219,6 +232,10 @@ public class JobCoordinationService {
         if (!isMaster()) {
             throw new JetException("Cannot join job " + idToString(jobId) + ". Master address: "
                     + nodeEngine.getClusterService().getMasterAddress());
+        }
+
+        if (isShutdown) {
+            throw new ShutdownInProgressException();
         }
 
         JobRecord jobRecord = jobRepository.getJobRecord(jobId);
@@ -244,11 +261,18 @@ public class JobCoordinationService {
             return;
         }
 
-        MasterContext masterContext = new MasterContext(nodeEngine, this, jobRecord);
-        MasterContext prev = masterContexts.putIfAbsent(jobId, masterContext);
-        if (prev != null) {
-            prev.resumeJob(jobRepository::newExecutionId);
-            return;
+        MasterContext masterContext;
+        synchronized (lock) {
+            if (isShutdown) {
+                throw new ShutdownInProgressException();
+            }
+
+            masterContext = new MasterContext(nodeEngine, this, jobRecord);
+            MasterContext prev = masterContexts.putIfAbsent(jobId, masterContext);
+            if (prev != null) {
+                prev.resumeJob(jobRepository::newExecutionId);
+                return;
+            }
         }
 
         // If job is not currently running, it might be that it just completed.
@@ -329,7 +353,7 @@ public class JobCoordinationService {
 
     /**
      * Returns the job status or fails with {@link JobNotFoundException}
-     * if the requested job is not found
+     * if the requested job is not found.
      */
     public JobStatus getJobStatus(long jobId) {
         if (!isMaster()) {
@@ -387,24 +411,6 @@ public class JobCoordinationService {
         JobResult jobResult = jobRepository.getJobResult(jobId);
         if (jobResult != null) {
             return jobResult.getCreationTime();
-        }
-
-        throw new JobNotFoundException(jobId);
-    }
-
-    /**
-     * Returns the job config or fails with {@link JobNotFoundException}
-     * if the requested job is not found.
-     */
-    public JobConfig getJobConfig(long jobId) {
-        JobRecord jobRecord = jobRepository.getJobRecord(jobId);
-        if (jobRecord != null) {
-            return jobRecord.getConfig();
-        }
-
-        JobResult jobResult = jobRepository.getJobResult(jobId);
-        if (jobResult != null) {
-            return jobResult.getJobConfig();
         }
 
         throw new JobNotFoundException(jobId);
@@ -531,7 +537,12 @@ public class JobCoordinationService {
     }
 
     boolean shouldStartJobs() {
-        if (!(isMaster() && nodeEngine.isRunning())) {
+        if (!isMaster() || !nodeEngine.isRunning()) {
+            return false;
+        }
+
+        if (nodeEngine.getClusterService().getMembers().stream()
+                      .anyMatch(m -> shuttingDownMembers.contains(m.getUuid()))) {
             return false;
         }
 
@@ -570,7 +581,7 @@ public class JobCoordinationService {
      * Restarts a job for a new execution if the cluster is stable.
      * Otherwise, it reschedules the restart task.
      */
-    private void restartJob(long jobId) {
+    void restartJob(long jobId) {
         MasterContext masterContext = masterContexts.get(jobId);
         if (masterContext == null) {
             logger.severe("Master context for job " + idToString(jobId) + " not found to restart");
@@ -608,5 +619,24 @@ public class JobCoordinationService {
 
     private boolean isMaster() {
         return nodeEngine.getClusterService().isMaster();
+    }
+
+    JetService getJetService() {
+        return jetService;
+    }
+
+    public void addShuttingDownMember(String uuid) {
+        shuttingDownMembers.add(uuid);
+        masterContexts.values().stream()
+                      .filter(mc -> mc.hasParticipant(uuid))
+                      .forEach(mc -> mc.requestTermination(RESTART_GRACEFUL));
+    }
+
+    Set<String> getShuttingDownMembers() {
+        return shuttingDownMembers;
+    }
+
+    void onMemberLeave(String uuid) {
+        shuttingDownMembers.remove(uuid);
     }
 }

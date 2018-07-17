@@ -178,10 +178,19 @@ public interface JetInstance {
     JetCacheManager getCacheManager();
 
     /**
-     * Shuts down the current instance. If this is a member instance, the jobs
-     * running on it will be gracefully suspended, see {@link Job#suspend()}.
+     * Shuts down the current instance. If this is a client instance, it will
+     * disconnect the client. If this is a member instance, the jobs running on
+     * it will be gracefully terminated and {@linkplain
+     * JobConfig#setAutoRestartOnMemberFailure(boolean) if configured}, they
+     * will also be restarted. If you want to shut down entire cluster it is
+     * better to first {@linkplain Job#suspend suspend} all jobs so that they
+     * are not quickly restarted multiple times.
+     *
+     * <p><b>Note:</b> Don't call {@code
+     * this.getHazelcastInstance().shutdown()}, it will forcefully terminate
+     * jobs run by this member.
+     *
      * TODO [viliam] implement this
      */
     void shutdown();
-
 }

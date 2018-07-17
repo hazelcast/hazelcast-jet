@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.metrics.MetricsRegistry;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.JetService;
@@ -31,7 +32,6 @@ import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nullable;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,23 +78,25 @@ public class ExecutionContext {
     private final CompletableFuture<Void> cancellationFuture = new CompletableFuture<>();
 
     private final NodeEngine nodeEngine;
-    private final TaskletExecutionService execService;
+    private final TaskletExecutionService taskletExecService;
     private SnapshotContext snapshotContext;
+    private JobConfig jobConfig;
 
-    public ExecutionContext(NodeEngine nodeEngine, TaskletExecutionService execService,
+    public ExecutionContext(NodeEngine nodeEngine, TaskletExecutionService taskletExecService,
                             long jobId, long executionId, Address coordinator, Set<Address> participants) {
         this.jobId = jobId;
         this.executionId = executionId;
         this.coordinator = coordinator;
-        this.participants = new HashSet<>(participants);
-        this.execService = execService;
+        this.participants = participants;
+        this.taskletExecService = taskletExecService;
         this.nodeEngine = nodeEngine;
 
         logger = nodeEngine.getLogger(getClass());
     }
 
     public ExecutionContext initialize(ExecutionPlan plan) {
-        jobName = plan.getJobConfig().getName();
+        jobConfig = plan.getJobConfig();
+        jobName = jobConfig.getName();
         if (jobName == null) {
             jobName = idToString(jobId);
         }
@@ -103,7 +105,7 @@ public class ExecutionContext {
         procSuppliers = unmodifiableList(plan.getProcessorSuppliers());
         processors = plan.getProcessors();
         snapshotContext = new SnapshotContext(nodeEngine.getLogger(SnapshotContext.class), jobNameAndExecutionId(),
-                plan.lastSnapshotId(), plan.getJobConfig().getProcessingGuarantee());
+                plan.lastSnapshotId(), jobConfig.getProcessingGuarantee());
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext);
         snapshotContext.initTaskletCount(plan.getStoreSnapshotTaskletCount(), plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
@@ -129,8 +131,8 @@ public class ExecutionContext {
             } else {
                 // begin job execution
                 JetService service = nodeEngine.getService(JetService.SERVICE_NAME);
-                ClassLoader cl = service.getClassLoader(jobId);
-                executionFuture = execService.beginExecute(tasklets, cancellationFuture, cl);
+                ClassLoader cl = service.getJobExecutionService().getClassLoader(jobConfig, jobId);
+                executionFuture = taskletExecService.beginExecute(tasklets, cancellationFuture, cl);
             }
             return executionFuture;
         }

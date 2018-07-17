@@ -16,35 +16,34 @@
 
 package com.hazelcast.jet.impl.operation;
 
-import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
+import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
+import com.hazelcast.spi.Operation;
 
-public class GetJobConfigOperation extends AbstractJobOperation {
+/**
+ * Operation sent from a non-master member to master to notify it that the
+ * caller is about to shut down. The master should request termination of all
+ * jobs running on caller and then the caller will actually shut down.
+ */
+public class NotifyMemberShutdownOperation extends Operation implements IdentifiedDataSerializable {
 
-    private JobConfig response;
-
-    public GetJobConfigOperation() {
-    }
-
-    public GetJobConfigOperation(long jobId) {
-        super(jobId);
+    public NotifyMemberShutdownOperation() {
     }
 
     @Override
     public void run() {
         JetService service = getService();
-        response = service.getJobConfig(jobId());
+        service.getJobCoordinationService().addShuttingDownMember(getCallerUuid());
     }
 
     @Override
-    public Object getResponse() {
-        return response;
+    public final int getFactoryId() {
+        return JetInitDataSerializerHook.FACTORY_ID;
     }
 
     @Override
     public int getId() {
-        return JetInitDataSerializerHook.GET_JOB_CONFIG_OP;
+        return JetInitDataSerializerHook.NOTIFY_MEMBER_SHUTDOWN_OP;
     }
-
 }

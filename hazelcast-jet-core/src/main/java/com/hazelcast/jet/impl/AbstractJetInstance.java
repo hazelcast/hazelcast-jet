@@ -85,5 +85,4 @@ abstract class AbstractJetInstance implements JetInstance {
     long uploadResourcesAndAssignId(JobConfig config) {
         return jobRepository.get().uploadJobResources(config);
     }
-
 }

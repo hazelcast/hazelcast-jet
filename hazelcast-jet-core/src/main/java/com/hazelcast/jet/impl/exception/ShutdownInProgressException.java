@@ -17,11 +17,14 @@
 package com.hazelcast.jet.impl.exception;
 
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.impl.TerminationMode;
+import com.hazelcast.jet.impl.operation.InitExecutionOperation;
+import com.hazelcast.jet.impl.operation.StartExecutionOperation;
 
 /**
- * The exception class thrown and handled internally when a job suspension is
- * requested, see {@link TerminationMode#SUSPEND_GRACEFUL}.
+ * An exception thrown internally for {@link InitExecutionOperation} and {@link
+ * StartExecutionOperation} to indicate that the member is being shut down and
+ * doesn't accept new jobs. When caught, the job will be restarted ignoring the
+ * member it was received from.
  */
-public class JobSuspendRequestedException extends JetException {
+public class ShutdownInProgressException extends JetException {
 }
