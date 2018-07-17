@@ -56,6 +56,7 @@ import static com.hazelcast.jet.core.JobStatus.COMPLETING;
 import static com.hazelcast.jet.core.JobStatus.NOT_STARTED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
+import static com.hazelcast.jet.impl.TerminationMode.CANCEL;
 import static com.hazelcast.jet.impl.TerminationMode.RESTART_GRACEFUL;
 import static com.hazelcast.jet.impl.TerminationMode.TERMINATE_GRACEFUL;
 import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.FAILED;
@@ -114,8 +115,10 @@ public class JobCoordinationService {
         }
     }
 
-    public void terminateAlJobs() {
-        masterContexts.forEach((k, v) -> v.requestTermination(TERMINATE_GRACEFUL));
+    void terminateAlJobs() {
+        synchronized (lock) {
+            masterContexts.forEach((k, v) -> v.requestTermination(TERMINATE_GRACEFUL));
+        }
     }
 
     public void reset() {
@@ -342,7 +345,19 @@ public class JobCoordinationService {
                     + " for " + terminationMode);
         }
 
-        masterContext.requestTermination(terminationMode);
+        // User can cancel in any state, other terminations are allowed only when running.
+        // This is not technically required (we request termination in any state in case of graceful
+        // shutdown), but this method is only called from client. It would be weird for the client to
+        // request a restart if the job didn't start yet etc.
+        JobStatus jobStatus = masterContext.jobStatus();
+        if (jobStatus != RUNNING && terminationMode != CANCEL) {
+            throw new IllegalStateException("Cannot " + terminationMode + ", job status is " + jobStatus
+                    + ", should be " + RUNNING);
+        }
+
+        if (!masterContext.requestTermination(terminationMode)) {
+            throw new IllegalStateException("Termination was already requested");
+        }
     }
 
     public Set<Long> getAllJobIds() {

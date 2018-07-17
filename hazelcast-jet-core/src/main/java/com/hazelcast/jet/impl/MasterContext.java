@@ -117,7 +117,7 @@ public class MasterContext {
     private volatile ExecutionInvocationCallback executionInvocationCallback;
 
     /**
-     * A future completed when the job fully completes. It's not completed when
+     * A future completed when the job fully completes. It's NOT completed when
      * the job is suspended or when it is going to be restarted. It's used for
      * {@link Job#join()}.
      */
@@ -184,18 +184,16 @@ public class MasterContext {
         return completionFuture;
     }
 
-    synchronized void requestTermination(TerminationMode mode) {
+    /**
+     * @return false, if termination was already requested
+     */
+    synchronized boolean requestTermination(TerminationMode mode) {
         if (!isSnapshottingEnabled()) {
             // switch graceful method to forceful if we don't do snapshots
             mode = mode.withoutStopWithSnapshot();
         }
 
         JobStatus jobStatus = jobStatus();
-        // we can cancel in any status, other terminations are allowed only when running
-        // TODO [viliam] we must be able to request a restart in any state
-        if (jobStatus != RUNNING && mode != CANCEL) {
-            throw new IllegalStateException("Cannot " + mode + ", job status is " + jobStatus + ", should be " + RUNNING);
-        }
         if (requestedTerminationMode.compareAndSet(null, mode)) {
             handleTermination(mode);
             // handle cancelling a suspended job
@@ -205,8 +203,9 @@ public class MasterContext {
                 this.jobStatus.set(COMPLETED);
             }
         } else {
-            throw new IllegalStateException("Termination already requested: " + requestedTerminationMode.get());
+            return false;
         }
+        return true;
     }
 
     boolean isCancelled() {
@@ -582,7 +581,8 @@ public class MasterContext {
             // TODO [viliam] This is a race:
             // If the job completed normally and a termination was requested, we assume that it
             // completed normally due to the termination. Make the members return the exception
-            // in case a termination was requested
+            // in case a termination was requested.
+            // We ignore this for now.
 
             TerminationMode mode = requestedTerminationMode.get();
             // mode is null if the job completed or failed without a job-control action
@@ -674,36 +674,26 @@ public class MasterContext {
             // if status is RUNNING, set it to RESTARTING. If it's STARTING, let it be.
             jobStatus.compareAndSet(RUNNING, RESTARTING);
             coordinationService.restartJob(jobId);
-            return;
-        }
-
-        // if restart is due to a failure, restart with a delay
-        if ((failure instanceof RestartableException || failure instanceof TopologyChangedException)
+        } else if ((failure instanceof RestartableException || failure instanceof TopologyChangedException)
                 && jobRecord.getConfig().isAutoRestartOnMemberFailureEnabled()) {
+            // if restart is due to a failure, restart with a delay
             scheduleRestart();
-            return;
-        }
-
-        if (failure instanceof JobSuspendRequestedException
+        } else if (failure instanceof JobSuspendRequestedException
                 || (failure instanceof RestartableException || failure instanceof TopologyChangedException)
                 && !jobRecord.getConfig().isAutoRestartOnMemberFailureEnabled()) {
             jobStatus.set(SUSPENDED);
             coordinationService.suspendJob(this);
-            return;
-        }
-
-        if (failure instanceof JobTerminateRequestedException) {
+        } else if (failure instanceof JobTerminateRequestedException) {
             // leave the job not-suspended, not-restarted. New master will pick it up.
-            return;
-        }
-
-        jobStatus.set(isSuccess ? COMPLETED : FAILED);
-        try {
-            coordinationService.completeJob(this, System.currentTimeMillis(), failure);
-        } catch (RuntimeException e) {
-            logger.warning("Completion of " + jobIdString() + " failed", e);
-        } finally {
-            setFinalResult(failure);
+        } else {
+            jobStatus.set(isSuccess ? COMPLETED : FAILED);
+            try {
+                coordinationService.completeJob(this, System.currentTimeMillis(), failure);
+            } catch (RuntimeException e) {
+                logger.warning("Completion of " + jobIdString() + " failed", e);
+            } finally {
+                setFinalResult(failure);
+            }
         }
     }
 

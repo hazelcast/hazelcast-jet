@@ -219,7 +219,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         // wait a little more to emit something, so that it will be overwritten in the sink map
         Thread.sleep(300);
 
-        instance2.shutdown();
+        instance2.getHazelcastInstance().getLifecycleService().terminate();
 
         // Now the job should detect member shutdown and restart from snapshot.
         // Let's wait until the next snapshot appears.

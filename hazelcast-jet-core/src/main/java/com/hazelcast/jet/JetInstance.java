@@ -189,8 +189,6 @@ public interface JetInstance {
      * <p><b>Note:</b> Don't call {@code
      * this.getHazelcastInstance().shutdown()}, it will forcefully terminate
      * jobs run by this member.
-     *
-     * TODO [viliam] implement this
      */
     void shutdown();
 }

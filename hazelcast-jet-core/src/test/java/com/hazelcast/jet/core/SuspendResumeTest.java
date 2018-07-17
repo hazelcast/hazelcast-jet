@@ -22,6 +22,7 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.TestProcessors.MockPS;
 import com.hazelcast.jet.core.TestProcessors.StuckProcessor;
 import com.hazelcast.jet.impl.JobRepository;
+import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.exception.JobSuspendRequestedException;
 import org.junit.Before;
@@ -29,6 +30,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.core.JobStatus.COMPLETED;
@@ -115,7 +117,7 @@ public class SuspendResumeTest extends JetTestSupport {
         StuckProcessor.executionStarted.await();
         job.suspend();
         assertEqualsEventually(job::getStatus, SUSPENDED);
-        instances[2].shutdown();
+        instances[2].getHazelcastInstance().getLifecycleService().terminate();
         job.resume();
         assertEqualsEventually(job::getStatus, RUNNING);
         StuckProcessor.proceedLatch.countDown();
@@ -138,7 +140,7 @@ public class SuspendResumeTest extends JetTestSupport {
         StuckProcessor.executionStarted.await();
         job.suspend();
         assertEqualsEventually(job::getStatus, SUSPENDED);
-        instances[0].shutdown();
+        instances[0].getHazelcastInstance().getLifecycleService().terminate();
         job.resume();
         assertEqualsEventually(job::getStatus, RUNNING);
         StuckProcessor.proceedLatch.countDown();
@@ -210,6 +212,8 @@ public class SuspendResumeTest extends JetTestSupport {
         SnapshotRepository snapshotRepository = new SnapshotRepository(instances[0]);
         JobRepository jobRepository = new JobRepository(instances[0], snapshotRepository);
         assertNull("JobRecord", jobRepository.getJobRecord(job.getId()));
-        assertTrue("Job result not successful", jobRepository.getJobResult(job.getId()).isSuccessful());
+        JobResult jobResult = jobRepository.getJobResult(job.getId());
+        assertInstanceOf(CancellationException.class, jobResult.getFailure());
+        assertFalse("Job result successful", jobResult.isSuccessful());
     }
 }

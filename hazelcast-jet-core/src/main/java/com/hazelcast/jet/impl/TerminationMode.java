@@ -88,8 +88,10 @@ public enum TerminationMode {
             res = SUSPEND_FORCEFUL;
         } else if (this == RESTART_GRACEFUL) {
             res = RESTART_FORCEFUL;
+        } else if (this == TERMINATE_GRACEFUL) {
+            res = TERMINATE_FORCEFUL;
         }
-        assert !res.isStopWithSnapshot() : "mode has still stopWithSnapshot=true: " + res;
+        assert !res.isStopWithSnapshot() : "mode still has (stopWithSnapshot == true): " + res;
         return res;
     }
 
