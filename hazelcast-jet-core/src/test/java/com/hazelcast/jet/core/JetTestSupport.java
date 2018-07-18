@@ -27,6 +27,8 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.Logger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.test.AssertTask;
@@ -47,6 +49,7 @@ import java.util.stream.IntStream;
 public abstract class JetTestSupport extends HazelcastTestSupport {
 
     private JetTestInstanceFactory instanceFactory;
+    protected ILogger logger = Logger.getLogger(getClass());
 
     @After
     public void shutdownFactory() {

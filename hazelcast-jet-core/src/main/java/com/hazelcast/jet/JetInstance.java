@@ -186,6 +186,8 @@ public interface JetInstance {
      * better to first {@linkplain Job#suspend suspend} all jobs so that they
      * are not quickly restarted multiple times.
      *
+     * <p>The call blocks until the instance is actually down.
+     *
      * <p><b>Note:</b> Don't call {@code
      * this.getHazelcastInstance().shutdown()}, it will forcefully terminate
      * jobs run by this member.
