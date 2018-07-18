@@ -20,6 +20,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.impl.MetricsRegistryImpl;
 import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.impl.exception.ShutdownInProgressException;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
@@ -169,7 +170,7 @@ public class TaskletExecutionServiceTest extends JetTestSupport {
         es.shutdown(false);
 
         // Then
-        exceptionRule.expect(IllegalStateException.class);
+        exceptionRule.expect(ShutdownInProgressException.class);
         es.beginExecute(singletonList(new MockTasklet()), new CompletableFuture<>(), classLoaderMock);
     }
 

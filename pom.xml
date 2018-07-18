@@ -318,6 +318,7 @@
                     <runOrder>failedfirst</runOrder>
                     <forkCount>4</forkCount>
                     <failIfNoTests>false</failIfNoTests>
+                    <trimStackTrace>false</trimStackTrace>
                     <argLine>
                         ${argLine}
                     </argLine>
