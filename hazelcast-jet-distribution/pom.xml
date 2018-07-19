@@ -84,15 +84,17 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <phase>prepare-package</phase>
+                    </execution>
+                </executions>
                 <configuration>
                     <includeDependencySources>true</includeDependencySources>
-                    <includeTransitiveDependencySources>true</includeTransitiveDependencySources>
                     <dependencySourceIncludes>
-                        <dependencySourceInclude>com.hazelcast:hazelcast</dependencySourceInclude>
-                        <dependencySourceInclude>com.hazelcast:hazelcast-client</dependencySourceInclude>
                         <dependencySourceInclude>com.hazelcast:hazelcast-spring</dependencySourceInclude>
                         <dependencySourceInclude>com.hazelcast.jet:hazelcast-jet</dependencySourceInclude>
-                        <dependencySourceInclude>com.hazelcast.jet:hazelcast-jet-core</dependencySourceInclude>
                         <dependencySourceInclude>com.hazelcast.jet:hazelcast-jet-avro</dependencySourceInclude>
                         <dependencySourceInclude>com.hazelcast.jet:hazelcast-jet-kafka</dependencySourceInclude>
                         <dependencySourceInclude>com.hazelcast.jet:hazelcast-jet-hadoop</dependencySourceInclude>
@@ -136,11 +138,6 @@
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-spring</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
 
@@ -202,7 +199,7 @@
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
-        <!-- hazelcast-jet-hadoop -->
+        <!-- required for hazelcast-jet-hadoop -->
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-mapreduce-client-core</artifactId>
@@ -215,7 +212,7 @@
             <version>${hadoop.version}</version>
             <scope>provided</scope>
         </dependency>
-        <!-- for hazelcast-jet-spring -->
+        <!-- required for hazelcast-jet-spring -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>

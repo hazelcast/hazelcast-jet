@@ -82,7 +82,6 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
                     <includeDependencySources>true</includeDependencySources>
-                    <includeTransitiveDependencySources>true</includeTransitiveDependencySources>
                     <dependencySourceIncludes>
                         <dependencySourceInclude>com.hazelcast:hazelcast</dependencySourceInclude>
                         <dependencySourceInclude>com.hazelcast:hazelcast-client</dependencySourceInclude>
@@ -185,7 +184,7 @@
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
-        
+
         <!-- logging -->
         <dependency>
             <groupId>log4j</groupId>
