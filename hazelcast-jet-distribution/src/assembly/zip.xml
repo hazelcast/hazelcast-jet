@@ -35,15 +35,7 @@
             <outputDirectory>lib</outputDirectory>
             <outputFileNameMapping>${artifact.artifactId}-${artifact.baseVersion}.${artifact.extension}</outputFileNameMapping>
         </dependencySet>
-        <dependencySet>
-            <includes>
-                <include>*:javadoc</include>
-            </includes>
-            <unpack>true</unpack>
-            <outputDirectory>docs/javadoc</outputDirectory>
-        </dependencySet>
     </dependencySets>
-
     <files>
         <file>
             <source>${config.directory}/hazelcast-jet-default.xml</source>
@@ -81,6 +73,10 @@
         </file>
     </files>
     <fileSets>
+        <fileSet>
+            <directory>${project.build.directory}/apidocs</directory>
+            <outputDirectory>docs/javadoc</outputDirectory>
+        </fileSet>
         <fileSet>
             <directory>${project.build.outputDirectory}/bin</directory>
             <includes>
