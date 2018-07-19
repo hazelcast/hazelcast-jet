@@ -58,11 +58,6 @@
         </dependency>
         <dependency>
             <groupId>com.hazelcast</groupId>
-            <artifactId>hazelcast-client-protocol</artifactId>
-            <version>${hazelcast.protocol.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.hazelcast</groupId>
             <artifactId>hazelcast-code-generator</artifactId>
             <version>${hazelcast.protocol.version}</version>
             <scope>provided</scope>
