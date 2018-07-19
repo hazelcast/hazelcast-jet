@@ -241,7 +241,7 @@ public class TaskletExecutionService {
                     }
                 } while (!result.isDone()
                         && !tracker.executionTracker.executionCompletedExceptionally()
-                        && gracefulShutdown.get() != Boolean.FALSE);
+                        && !Boolean.FALSE.equals(gracefulShutdown.get()));
             } catch (Throwable e) {
                 logger.warning("Exception in " + t, e);
                 tracker.executionTracker.exception(new JetException("Exception in " + t + ": " + e, e));
