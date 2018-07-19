@@ -48,8 +48,8 @@ import java.util.stream.IntStream;
 
 public abstract class JetTestSupport extends HazelcastTestSupport {
 
-    private JetTestInstanceFactory instanceFactory;
     protected ILogger logger = Logger.getLogger(getClass());
+    private JetTestInstanceFactory instanceFactory;
 
     @After
     public void shutdownFactory() {
