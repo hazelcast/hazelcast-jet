@@ -133,18 +133,12 @@ public class TaskletExecutionService {
     }
 
     public void shutdown(boolean graceful) {
-        if (graceful) {
-            if (!gracefulShutdown.compareAndSet(null, true)) {
-                throw new IllegalStateException("Already shut down");
+        if (gracefulShutdown.compareAndSet(null, graceful)) {
+            if (graceful) {
+                blockingTaskletExecutor.shutdown();
+            } else {
+                blockingTaskletExecutor.shutdownNow();
             }
-        } else {
-            // forceful shutdown is possible from both other states (null or TRUE)
-            gracefulShutdown.set(Boolean.FALSE);
-        }
-        if (graceful) {
-            blockingTaskletExecutor.shutdown();
-        } else {
-            blockingTaskletExecutor.shutdownNow();
         }
     }
 
@@ -172,6 +166,9 @@ public class TaskletExecutionService {
     private void submitCooperativeTasklets(
             ExecutionTracker executionTracker, ClassLoader jobClassLoader, List<Tasklet> tasklets
     ) {
+        if (gracefulShutdown.get() != null) {
+            throw new IllegalStateException("shutdown in progress");
+        }
         final List<TaskletTracker>[] trackersByThread = new List[cooperativeWorkers.length];
         Arrays.setAll(trackersByThread, i -> new ArrayList());
         for (Tasklet t : tasklets) {
@@ -244,7 +241,7 @@ public class TaskletExecutionService {
                     }
                 } while (!result.isDone()
                         && !tracker.executionTracker.executionCompletedExceptionally()
-                        && gracefulShutdown.get() == null);
+                        && gracefulShutdown.get() != Boolean.FALSE);
             } catch (Throwable e) {
                 logger.warning("Exception in " + t, e);
                 tracker.executionTracker.exception(new JetException("Exception in " + t + ": " + e, e));

@@ -205,7 +205,7 @@ public class JobCoordinationService {
             // just try to initiate the coordination
             MasterContext prev = masterContexts.putIfAbsent(jobId, masterContext);
             if (prev != null) {
-                logger.fine("Joining to already started " + prev.jobIdString());
+                logger.fine("Joining to already existing masterContext " + prev.jobIdString());
                 return prev.completionFuture();
             }
         }
@@ -218,7 +218,7 @@ public class JobCoordinationService {
         // If there is no master context and job result at the same time, it means this is the first submission
         jobRepository.putNewJobRecord(jobRecord);
 
-        logger.info("Starting " + masterContext.jobIdString() + " based on submit request from client");
+        logger.info("Starting job " + idToString(masterContext.jobId()) + " based on submit request from client");
         nodeEngine.getExecutionService().execute(COORDINATOR_EXECUTOR_NAME, () -> tryStartJob(masterContext));
 
         return masterContext.completionFuture();
@@ -537,7 +537,7 @@ public class JobCoordinationService {
                             numBytes, numKeys, numChunks));
         } catch (Exception e) {
             logger.warning("Cannot update snapshot status for " + masterContext.jobIdString() + " snapshot "
-                    + snapshotId + " isSuccess: " + isSuccess);
+                    + snapshotId + " isSuccess: " + isSuccess, e);
             return;
         }
         try {

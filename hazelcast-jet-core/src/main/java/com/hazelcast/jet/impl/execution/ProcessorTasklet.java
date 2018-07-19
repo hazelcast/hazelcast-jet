@@ -143,7 +143,7 @@ public class ProcessorTasklet implements Tasklet {
             justification = "jetInstance() can be null in TestProcessorContext")
     private ILogger getLogger(@Nonnull Context context) {
         return context.jetInstance() != null
-                ? context.jetInstance().getHazelcastInstance().getLoggingService().getLogger(getClass())
+                ? context.jetInstance().getHazelcastInstance().getLoggingService().getLogger(getClass() + "." + toString())
                 : Logger.getLogger(getClass());
     }
 
