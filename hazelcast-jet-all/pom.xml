@@ -148,6 +148,8 @@
             <artifactId>hazelcast-jet-core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
+
+        <!-- optional dependencies -->
         <dependency>
             <groupId>com.hazelcast</groupId>
             <artifactId>hazelcast-aws</artifactId>
@@ -183,6 +185,7 @@
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
+        
         <!-- logging -->
         <dependency>
             <groupId>log4j</groupId>
