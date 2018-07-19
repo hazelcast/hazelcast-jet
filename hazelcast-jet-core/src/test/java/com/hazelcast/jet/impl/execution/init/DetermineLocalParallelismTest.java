@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.execution.SnapshotContext.NO_SNAPSHOT;
-import static java.util.Collections.emptySet;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastParallelClassRunner.class)
@@ -90,7 +89,6 @@ public class DetermineLocalParallelismTest extends JetTestSupport {
         ExecutionPlanBuilder.createExecutionPlans(
                 nodeEngine,
                 ((ClusterServiceImpl) nodeEngine.getClusterService()).getMembershipManager().getMembersView(),
-                emptySet(),
                 dag, 1, 1, new JobConfig(), NO_SNAPSHOT);
     }
 

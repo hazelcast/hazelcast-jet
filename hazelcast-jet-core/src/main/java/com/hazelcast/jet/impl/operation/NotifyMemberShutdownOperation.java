@@ -21,6 +21,10 @@ import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.Operation;
 
+import java.util.concurrent.CompletableFuture;
+
+import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
+
 /**
  * Operation sent from a non-master member to master to notify it that the
  * caller is about to shut down. The master should request termination of all
@@ -34,12 +38,18 @@ public class NotifyMemberShutdownOperation extends Operation implements Identifi
     @Override
     public void run() {
         JetService service = getService();
-        service.getJobCoordinationService().addShuttingDownMember(getCallerUuid());
+        CompletableFuture<Void> future = service.getJobCoordinationService().addShuttingDownMember(getCallerUuid());
+        future.whenComplete(withTryCatch(getLogger(), (r, e) -> sendResponse(null)));
     }
 
     @Override
     public final int getFactoryId() {
         return JetInitDataSerializerHook.FACTORY_ID;
+    }
+
+    @Override
+    public boolean returnsResponse() {
+        return false;
     }
 
     @Override

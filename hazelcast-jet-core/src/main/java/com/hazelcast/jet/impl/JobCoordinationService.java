@@ -29,6 +29,7 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.impl.exception.ShutdownInProgressException;
 import com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus;
+import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
@@ -37,6 +38,7 @@ import com.hazelcast.spi.impl.executionservice.InternalExecutionService;
 import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.util.Clock;
 
+import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -44,6 +46,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -57,11 +60,11 @@ import static com.hazelcast.jet.core.JobStatus.NOT_STARTED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.impl.TerminationMode.CANCEL;
-import static com.hazelcast.jet.impl.TerminationMode.RESTART_GRACEFUL;
 import static com.hazelcast.jet.impl.TerminationMode.TERMINATE_GRACEFUL;
 import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.FAILED;
 import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.SUCCESSFUL;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 import static com.hazelcast.util.executor.ExecutorType.CACHED;
@@ -90,6 +93,14 @@ public class JobCoordinationService {
     private final Object lock = new Object();
     private volatile boolean isShutdown;
 
+    /**
+     * On this object we will synchronize in {@link #addShuttingDownMember} and
+     * in {@link #completeSnapshot}.
+     */
+    private final Object memberShutDownLock = new Object();
+    private int awaitedTerminalSnapshotCount;
+    private CompletableFuture<Void> terminalSnapshotsFuture;
+
     JobCoordinationService(NodeEngineImpl nodeEngine, JetService jetService, JetConfig config,
                            JobRepository jobRepository, SnapshotRepository snapshotRepository) {
         this.nodeEngine = nodeEngine;
@@ -115,7 +126,7 @@ public class JobCoordinationService {
         }
     }
 
-    void terminateAlJobs() {
+    void terminateAllJobs() {
         synchronized (lock) {
             masterContexts.forEach((k, v) -> v.requestTermination(TERMINATE_GRACEFUL));
         }
@@ -555,12 +566,12 @@ public class JobCoordinationService {
         if (!isMaster() || !nodeEngine.isRunning()) {
             return false;
         }
-
+        // if any of the members is in shutdown process, don't start jobs
         if (nodeEngine.getClusterService().getMembers().stream()
                       .anyMatch(m -> shuttingDownMembers.contains(m.getUuid()))) {
+            LoggingUtil.logFine(logger, "Not starting jobs because members are shutting down: %s", shuttingDownMembers);
             return false;
         }
-
         InternalPartitionServiceImpl partitionService = getInternalPartitionService();
         return partitionService.getPartitionStateManager().isInitialized()
                 && partitionService.isMigrationAllowed()
@@ -640,15 +651,39 @@ public class JobCoordinationService {
         return jetService;
     }
 
-    public void addShuttingDownMember(String uuid) {
-        shuttingDownMembers.add(uuid);
-        masterContexts.values().stream()
-                      .filter(mc -> mc.hasParticipant(uuid))
-                      .forEach(mc -> mc.requestTermination(RESTART_GRACEFUL));
-    }
-
-    Set<String> getShuttingDownMembers() {
-        return shuttingDownMembers;
+    @Nonnull
+    public CompletableFuture<Void> addShuttingDownMember(String uuid) {
+        /*
+        We come to this method when either ShutdownInProgressException or
+        NotifyMemberShutdownOperation is received. The
+        NotifyMemberShutdownOperation sends response only after all jobs the
+        shutting-down member runs have the terminal snapshot completed.
+         */
+        synchronized (memberShutDownLock) {
+            CompletableFuture<Void> result = this.terminalSnapshotsFuture;
+            if (result == null) {
+                this.terminalSnapshotsFuture = result = new CompletableFuture<>();
+                assert shuttingDownMembers.isEmpty() : "shuttingDownMembers not empty: " + shuttingDownMembers;
+            }
+            if (shuttingDownMembers.add(uuid)) {
+                CompletableFuture<Void>[] futures = masterContexts.values().stream()
+                        .filter(mc -> mc.hasParticipant(uuid))
+                        .map(MasterContext::onParticipantShutDown)
+                        .filter(Objects::nonNull)
+                        .toArray(CompletableFuture[]::new);
+                awaitedTerminalSnapshotCount++;
+                CompletableFuture.allOf(futures)
+                                 .whenComplete(withTryCatch(logger, (r, e) -> {
+                                     synchronized (memberShutDownLock) {
+                                         if (--awaitedTerminalSnapshotCount == 0) {
+                                             terminalSnapshotsFuture.complete(null);
+                                             terminalSnapshotsFuture = null;
+                                         }
+                                     }
+                                 }));
+            }
+            return result;
+        }
     }
 
     void onMemberLeave(String uuid) {

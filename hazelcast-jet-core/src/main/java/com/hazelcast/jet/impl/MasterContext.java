@@ -80,7 +80,9 @@ import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.SnapshotRepository.snapshotDataMapName;
+import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.RESTART;
 import static com.hazelcast.jet.impl.TerminationMode.CANCEL;
+import static com.hazelcast.jet.impl.TerminationMode.RESTART_GRACEFUL;
 import static com.hazelcast.jet.impl.execution.SnapshotContext.NO_SNAPSHOT;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder.createExecutionPlans;
@@ -115,6 +117,13 @@ public class MasterContext {
     private volatile long executionStartTime;
     private volatile Map<MemberInfo, ExecutionPlan> executionPlanMap;
     private volatile ExecutionInvocationCallback executionInvocationCallback;
+
+    /**
+     * A future created when the job is started, completed when terminal
+     * snapshot is completed (successfully or not) and nulled when execution is
+     * completed.
+     */
+    private CompletableFuture<Void> terminalSnapshotFuture;
 
     /**
      * A future completed when the job fully completes. It's NOT completed when
@@ -230,6 +239,17 @@ public class MasterContext {
             return;
         }
 
+        TerminationMode terminationMode = requestedTerminationMode.get();
+        if (terminationMode != null) {
+            if (terminationMode.actionAfterTerminate() == RESTART) {
+                // ignore restart, we are just starting
+                requestedTerminationMode.set(null);
+            } else {
+                finalizeJob(terminationMode.createException());
+                return;
+            }
+        }
+
         ClassLoader classLoader = coordinationService.getJetService().getClassLoader(jobId);
         DAG dag;
         try {
@@ -246,6 +266,7 @@ public class MasterContext {
 
         snapshotInProgress.set(false);
         nextSnapshotIsTerminal = false;
+        terminalSnapshotFuture = new CompletableFuture<>();
 
         // last started snapshot, completed or not. The next started snapshot must be greater than this number
         long lastSnapshotId = NO_SNAPSHOT;
@@ -272,7 +293,7 @@ public class MasterContext {
                     + ", execution graph in DOT format:\n" + dag.toDotString()
                     + "\nHINT: You can use graphviz or http://viz-js.com to visualize the printed graph.");
             logger.fine("Building execution plan for " + jobIdString());
-            executionPlanMap = createExecutionPlans(nodeEngine, membersView, coordinationService.getShuttingDownMembers(),
+            executionPlanMap = createExecutionPlans(nodeEngine, membersView,
                     dag, jobId, executionId, getJobConfig(), lastSnapshotId);
         } catch (Exception e) {
             logger.severe("Exception creating execution plan for " + jobIdString(), e);
@@ -377,7 +398,7 @@ public class MasterContext {
 
     // Called as callback when all InitOperation invocations are done
     private synchronized void onInitStepCompleted(Map<MemberInfo, Object> responses) {
-        Throwable error = getInitResult(responses);
+        Throwable error = getResult("Init", responses);
 
         if (error == null) {
             JobStatus status = jobStatus();
@@ -393,45 +414,6 @@ public class MasterContext {
         } else {
             invokeCompleteExecution(error);
         }
-    }
-
-    /**
-     * If there is no failure, then returns null. If the job is cancelled, then returns CancellationException.
-     * If there is at least one non-restartable failure, such as an exception in user code, then returns that failure.
-     * Otherwise, the failure is because a job participant has left the cluster.
-     * In that case, TopologyChangeException is returned so that the job will be restarted.
-     */
-    private Throwable getInitResult(Map<MemberInfo, Object> responses) {
-        if (isCancelled()) {
-            logger.fine(jobIdString() + " to be cancelled after init");
-            return new CancellationException();
-        }
-
-        Map<Boolean, List<Entry<MemberInfo, Object>>> grouped = groupResponses(responses);
-        Collection<MemberInfo> successfulMembers = grouped.get(false).stream().map(Entry::getKey).collect(toList());
-
-        if (successfulMembers.size() == executionPlanMap.size()) {
-            logger.fine("Init of " + jobIdString() + " is successful.");
-            return null;
-        }
-
-        List<Entry<MemberInfo, Object>> failures = grouped.get(true);
-        logger.fine("Init of " + jobIdString() + " failed with: " + failures);
-
-        // if there is at least one non-restartable failure, such as a user code failure, then fail the job
-        // otherwise, return TopologyChangedException so that the job will be restarted
-        return failures
-                .stream()
-                .peek(e -> {
-                    if (e.getValue() instanceof ShutdownInProgressException) {
-                        coordinationService.addShuttingDownMember(e.getKey().getUuid());
-                    }
-                })
-                .map(e -> (Throwable) e.getValue())
-                .filter(t -> !isRestartableException(t))
-                .findFirst()
-                .map(ExceptionUtil::peel)
-                .orElse(new TopologyChangedException());
     }
 
     // true -> failures, false -> success responses
@@ -504,6 +486,7 @@ public class MasterContext {
 
         boolean isTerminal = nextSnapshotIsTerminal;
         nextSnapshotIsTerminal = false;
+        terminalSnapshotFuture = new CompletableFuture<>();
 
         List<String> vertexNames = vertices.stream().map(Vertex::getName).collect(Collectors.toList());
         long newSnapshotId = snapshotRepository.registerSnapshot(jobId, vertexNames);
@@ -517,7 +500,7 @@ public class MasterContext {
     }
 
     private synchronized void onSnapshotCompleted(Map<MemberInfo, Object> responses, long executionId, long snapshotId,
-                                     boolean wasTerminal) {
+                                                  boolean wasTerminal) {
         SnapshotOperationResult mergedResult = new SnapshotOperationResult();
         for (Object response : responses.values()) {
             // the response either SnapshotOperationResult or an exception, see #invoke() method
@@ -535,23 +518,25 @@ public class MasterContext {
         coordinationService.completeSnapshot(jobId, snapshotId, isSuccess,
                 mergedResult.getNumBytes(), mergedResult.getNumKeys(), mergedResult.getNumChunks());
         snapshotInProgress.compareAndSet(true, false);
+        if (wasTerminal) {
+            boolean result = terminalSnapshotFuture.complete(null);
+            assert result : "terminalSnapshotFuture was already completed";
+        }
 
         if (nextSnapshotIsTerminal) {
             // If the next snapshot is terminal, start it right away.
             coordinationService.beginSnapshot(jobId, executionId);
-        } else if (!wasTerminal || !isSuccess) {
-            // If the snapshot wasn't terminal or if it was, but not a successful one,
-            // schedule a next snapshot.
-            // If this snapshot was terminal, the next one will be also.
-            nextSnapshotIsTerminal = wasTerminal;
-            // schedule next snapshot after a delay
+        } else if (!wasTerminal) {
+            // If the snapshot wasn't terminal, schedule next snapshot after a delay.
+            // If it was terminal, no need to schedule next snapshot even if it wasn't successful,
+            // because the execution already terminated.
             coordinationService.scheduleSnapshot(jobId, executionId);
         }
     }
 
     // Called as callback when all ExecuteOperation invocations are done
     private synchronized void onExecuteStepCompleted(Map<MemberInfo, Object> responses) {
-        invokeCompleteExecution(getExecuteResult(responses));
+        invokeCompleteExecution(getResult("Execution", responses));
     }
 
     /**
@@ -565,9 +550,9 @@ public class MasterContext {
      *   In that case, {@code TopologyChangeException} is returned so that the job will be restarted.
      * </ul>
      */
-    private Throwable getExecuteResult(Map<MemberInfo, Object> responses) {
+    private Throwable getResult(String opName, Map<MemberInfo, Object> responses) {
         if (isCancelled()) {
-            logger.fine(jobIdString() + " to be cancelled after execute");
+            logger.fine(jobIdString() + " to be cancelled after " + opName);
             return new CancellationException();
         }
 
@@ -582,7 +567,6 @@ public class MasterContext {
             // If the job completed normally and a termination was requested, we assume that it
             // completed normally due to the termination. Make the members return the exception
             // in case a termination was requested.
-            // We ignore this for now.
 
             TerminationMode mode = requestedTerminationMode.get();
             // mode is null if the job completed or failed without a job-control action
@@ -590,7 +574,7 @@ public class MasterContext {
                 if (mode == CANCEL) {
                     logger.fine(jobIdString() + " to be cancelled after execute");
                     return new CancellationException();
-                } else if (mode.actionAfterTerminate() == ActionAfterTerminate.RESTART) {
+                } else if (mode.actionAfterTerminate() == RESTART) {
                     return new JobRestartRequestedException();
                 } else if (mode.actionAfterTerminate() == ActionAfterTerminate.SUSPEND) {
                     return new JobSuspendRequestedException();
@@ -605,7 +589,7 @@ public class MasterContext {
         }
 
         List<Entry<MemberInfo, Object>> failures = grouped.get(true);
-        logger.fine("Execution of " + jobIdString() + " has failures: " + failures);
+        logger.fine(opName + " of " + jobIdString() + " has failures: " + failures);
 
         // If there is no user-code exception, it means at least one job participant has left the cluster.
         // In that case, all remaining participants return a CancellationException.
@@ -665,9 +649,10 @@ public class MasterContext {
             logger.warning(String.format("Execution of %s failed after %,d ms", jobIdString(), elapsed), failure);
         }
 
-        // reset the termination mode for the next execution
+        // reset state for the next execution
         requestedTerminationMode.set(null);
         executionInvocationCallback = null;
+        terminalSnapshotFuture = null;
 
         // if restart was requested, restart immediately
         if (failure instanceof JobRestartRequestedException) {
@@ -685,6 +670,7 @@ public class MasterContext {
             coordinationService.suspendJob(this);
         } else if (failure instanceof JobTerminateRequestedException) {
             // leave the job not-suspended, not-restarted. New master will pick it up.
+            jobStatus.set(NOT_STARTED);
         } else {
             jobStatus.set(isSuccess ? COMPLETED : FAILED);
             try {
@@ -811,6 +797,29 @@ public class MasterContext {
 
     boolean hasParticipant(String uuid) {
         return executionPlanMap.keySet().stream().anyMatch(mi -> mi.getUuid().equals(uuid));
+    }
+
+    /**
+     * Called when job participant is going to gracefully shut down. Will
+     * initiate terminal snapshot and when it's done, will complete the
+     * returned future.
+     *
+     * @return a future to wait for or null if there's no need to wait
+     */
+    @Nullable
+    synchronized CompletableFuture<Void> onParticipantShutDown() {
+        if (jobStatus() == SUSPENDED) {
+            return null;
+        }
+
+        if (requestedTerminationMode.get() == null) {
+            requestTermination(RESTART_GRACEFUL);
+        }
+        if (requestedTerminationMode.get().isStopWithSnapshot()) {
+            // this future is null if job is not running, which is ok
+            return terminalSnapshotFuture;
+        }
+        return null; // nothing to wait for
     }
 
     /**

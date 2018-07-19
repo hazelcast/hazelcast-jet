@@ -45,6 +45,7 @@ import com.hazelcast.spi.impl.PacketHandler;
 
 import java.io.IOException;
 import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -138,24 +139,29 @@ public class JetService
         }
         // this will prevent accepting more jobs
         taskletExecutionService.shutdown(true);
+        CompletableFuture<Void> future;
         if (nodeEngine.getClusterService().isMaster()) {
             getJobCoordinationService().shutdown();
-            getJobCoordinationService().terminateAlJobs();
+            future = getJobCoordinationService().addShuttingDownMember(nodeEngine.getLocalMember().getUuid());
+            getJobCoordinationService().terminateAllJobs();
         } else {
-            NotifyMemberShutdownOperation op = new NotifyMemberShutdownOperation();
-            notifyMasterWeAreShuttingDown(op);
+            future = notifyMasterWeAreShuttingDown(new NotifyMemberShutdownOperation());
         }
         // We initiated shutdown on this member, it won't accept any new jobs. After all
         // tasklets running locally are done, we can continue the shutdown.
         taskletExecutionService.awaitWorkerTermination();
+        future.join();
     }
 
-    private void notifyMasterWeAreShuttingDown(NotifyMemberShutdownOperation op) {
+    private CompletableFuture<Void> notifyMasterWeAreShuttingDown(NotifyMemberShutdownOperation op) {
+        CompletableFuture<Void> result = new CompletableFuture<>();
         nodeEngine.getOperationService()
                   .invokeOnTarget(JetService.SERVICE_NAME, op, nodeEngine.getClusterService().getMasterAddress())
                   .andThen(new ExecutionCallback<Object>() {
                       @Override
-                      public void onResponse(Object response) { }
+                      public void onResponse(Object response) {
+                          result.complete(null);
+                      }
 
                       @Override
                       public void onFailure(Throwable t) {
@@ -166,6 +172,7 @@ public class JetService
                                   () -> notifyMasterWeAreShuttingDown(op), NOTIFY_MEMBER_SHUTDOWN_DELAY, SECONDS);
                       }
                   });
+        return result;
     }
 
     public boolean isShutdownInitiated() {
