@@ -93,8 +93,11 @@
                 <configuration>
                     <includeDependencySources>true</includeDependencySources>
                     <dependencySourceIncludes>
+                        <dependencySourceInclude>com.hazelcast:hazelcast</dependencySourceInclude>
+                        <dependencySourceInclude>com.hazelcast:hazelcast-client</dependencySourceInclude>
                         <dependencySourceInclude>com.hazelcast:hazelcast-spring</dependencySourceInclude>
                         <dependencySourceInclude>com.hazelcast.jet:hazelcast-jet</dependencySourceInclude>
+                        <dependencySourceInclude>com.hazelcast.jet:hazelcast-jet-core</dependencySourceInclude>
                         <dependencySourceInclude>com.hazelcast.jet:hazelcast-jet-avro</dependencySourceInclude>
                         <dependencySourceInclude>com.hazelcast.jet:hazelcast-jet-kafka</dependencySourceInclude>
                         <dependencySourceInclude>com.hazelcast.jet:hazelcast-jet-hadoop</dependencySourceInclude>

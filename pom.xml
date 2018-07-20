@@ -234,12 +234,6 @@
             <version>${log4j.version}</version>
             <scope>test</scope>
         </dependency>
-        <dependency> <!-- required for mockito -->
-            <groupId>javax.cache</groupId>
-            <artifactId>cache-api</artifactId>
-            <version>1.0.0</version>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>net.bytebuddy</groupId>
             <artifactId>byte-buddy</artifactId>
