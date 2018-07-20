@@ -101,8 +101,8 @@
 
         <!-- optional dependencies -->
         <jms.api.version>2.0.1</jms.api.version>
-        <jsr107.api.version>1.0.0</jsr107.api.version>
-        <jsr250.api.version>1.2</jsr250.api.version>
+        <jsr107.api.version>1.0.0</jsr107.api.version> <!-- JCache -->
+        <jsr250.api.version>1.2</jsr250.api.version> <!-- javax.annotations -->
         <log4j.version>1.2.12</log4j.version>
         <log4j2.version>2.3</log4j2.version>
         <slf4j.api.version>1.6.6</slf4j.api.version>
@@ -238,6 +238,12 @@
             <groupId>net.bytebuddy</groupId>
             <artifactId>byte-buddy</artifactId>
             <version>${bytebuddy.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency> <!-- required for mockito -->
+            <groupId>javax.cache</groupId>
+            <artifactId>cache-api</artifactId>
+            <version>${jsr107.api.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
