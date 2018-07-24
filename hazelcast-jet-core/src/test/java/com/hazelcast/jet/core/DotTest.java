@@ -90,8 +90,6 @@ public class DotTest {
         dag.edge(from(snapshotA, 0).to(a, 0).partitioned(wholeItem()));
         dag.edge(from(snapshotB, 0).to(b, 1).broadcast().distributed());
 
-
-        // can't assert, contains multiple subgraphs, order isn't stable
         assertFalse("snapshot vertex should not be in output", dag.toDotString().contains("snapshot"));
     }
 

@@ -233,8 +233,12 @@ public class MasterContext {
             // Processor.finishSnapshotRestore() method is always called on all vertices in
             // a job which is restored from a snapshot.
             String mapName = snapshotDataMapName(jobId, snapshotId, vertex.getName());
-            Vertex readSnapshotVertex = dag.newVertex(SNAPSHOT_VERTEX_PREFIX + "read." + vertex.getName(), readMapP(mapName));
-            Vertex explodeVertex = dag.newVertex(SNAPSHOT_VERTEX_PREFIX + "explode." + vertex.getName(), ExplodeSnapshotP::new);
+            Vertex readSnapshotVertex = dag.newVertex(
+                    SNAPSHOT_VERTEX_PREFIX + "read." + vertex.getName(), readMapP(mapName)
+            );
+            Vertex explodeVertex = dag.newVertex(
+                    SNAPSHOT_VERTEX_PREFIX + "explode." + vertex.getName(), ExplodeSnapshotP::new
+            );
 
             readSnapshotVertex.localParallelism(vertex.getLocalParallelism());
             explodeVertex.localParallelism(vertex.getLocalParallelism());
