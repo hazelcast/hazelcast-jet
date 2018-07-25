@@ -60,7 +60,6 @@ import static com.hazelcast.jet.core.JobStatus.NOT_STARTED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.impl.TerminationMode.CANCEL;
-import static com.hazelcast.jet.impl.TerminationMode.TERMINATE_GRACEFUL;
 import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.FAILED;
 import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.SUCCESSFUL;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
@@ -92,12 +91,6 @@ public class JobCoordinationService {
     private final Set<String> shuttingDownMembers = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Object lock = new Object();
     private volatile boolean isShutdown;
-
-    /**
-     * On this object we will synchronize in {@link #addShuttingDownMember} and
-     * in {@link #completeSnapshot}.
-     */
-    private final Object memberShutDownLock = new Object();
     private int awaitedTerminalSnapshotCount;
     private CompletableFuture<Void> terminalSnapshotsFuture;
 
@@ -123,12 +116,6 @@ public class JobCoordinationService {
     public void shutdown() {
         synchronized (lock) {
             isShutdown = true;
-        }
-    }
-
-    void terminateAllJobs() {
-        synchronized (lock) {
-            masterContexts.forEach((k, v) -> v.requestTermination(TERMINATE_GRACEFUL));
         }
     }
 
@@ -659,14 +646,19 @@ public class JobCoordinationService {
         NotifyMemberShutdownOperation sends response only after all jobs the
         shutting-down member runs have the terminal snapshot completed.
          */
-        synchronized (memberShutDownLock) {
+        synchronized (lock) {
+            if (uuid.equals(nodeEngine.getClusterService().getLocalMember().getUuid())) {
+                shutdown();
+            }
+
             CompletableFuture<Void> result = this.terminalSnapshotsFuture;
             if (result == null) {
                 this.terminalSnapshotsFuture = result = new CompletableFuture<>();
                 assert shuttingDownMembers.isEmpty() : "shuttingDownMembers not empty: " + shuttingDownMembers;
             }
+
             if (shuttingDownMembers.add(uuid)) {
-                CompletableFuture<Void>[] futures = masterContexts.values().stream()
+                CompletableFuture[] futures = masterContexts.values().stream()
                         .filter(mc -> mc.hasParticipant(uuid))
                         .map(MasterContext::onParticipantShutDown)
                         .filter(Objects::nonNull)
@@ -674,7 +666,7 @@ public class JobCoordinationService {
                 awaitedTerminalSnapshotCount++;
                 CompletableFuture.allOf(futures)
                                  .whenComplete(withTryCatch(logger, (r, e) -> {
-                                     synchronized (memberShutDownLock) {
+                                     synchronized (lock) {
                                          if (--awaitedTerminalSnapshotCount == 0) {
                                              terminalSnapshotsFuture.complete(null);
                                              terminalSnapshotsFuture = null;

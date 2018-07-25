@@ -40,6 +40,7 @@ import com.hazelcast.spi.MemberAttributeServiceEvent;
 import com.hazelcast.spi.MembershipAwareService;
 import com.hazelcast.spi.MembershipServiceEvent;
 import com.hazelcast.spi.NodeEngine;
+import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.PacketHandler;
 
@@ -139,22 +140,17 @@ public class JetService
         }
         // this will prevent accepting more jobs
         taskletExecutionService.shutdown(true);
-        CompletableFuture<Void> future;
-        if (nodeEngine.getClusterService().isMaster()) {
-            getJobCoordinationService().shutdown();
-            future = getJobCoordinationService().addShuttingDownMember(nodeEngine.getLocalMember().getUuid());
-            getJobCoordinationService().terminateAllJobs();
-        } else {
-            future = notifyMasterWeAreShuttingDown(new NotifyMemberShutdownOperation());
-        }
+
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        notifyMasterWeAreShuttingDown(future);
         // We initiated shutdown on this member, it won't accept any new jobs. After all
         // tasklets running locally are done, we can continue the shutdown.
         taskletExecutionService.awaitWorkerTermination();
         future.join();
     }
 
-    private CompletableFuture<Void> notifyMasterWeAreShuttingDown(NotifyMemberShutdownOperation op) {
-        CompletableFuture<Void> result = new CompletableFuture<>();
+    private void notifyMasterWeAreShuttingDown(CompletableFuture<Void> result) {
+        Operation op = new NotifyMemberShutdownOperation();
         nodeEngine.getOperationService()
                   .invokeOnTarget(JetService.SERVICE_NAME, op, nodeEngine.getClusterService().getMasterAddress())
                   .andThen(new ExecutionCallback<Object>() {
@@ -169,10 +165,9 @@ public class JetService
                                   + NOTIFY_MEMBER_SHUTDOWN_DELAY + " seconds");
                           // recursive call
                           nodeEngine.getExecutionService().schedule(
-                                  () -> notifyMasterWeAreShuttingDown(op), NOTIFY_MEMBER_SHUTDOWN_DELAY, SECONDS);
+                                  () -> notifyMasterWeAreShuttingDown(result), NOTIFY_MEMBER_SHUTDOWN_DELAY, SECONDS);
                       }
                   });
-        return result;
     }
 
     @Override
