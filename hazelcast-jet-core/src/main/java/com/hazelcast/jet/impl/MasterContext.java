@@ -119,9 +119,8 @@ public class MasterContext {
     private volatile ExecutionInvocationCallback executionInvocationCallback;
 
     /**
-     * A future created when the job is started, completed when terminal
-     * snapshot is completed (successfully or not) and nulled when execution is
-     * completed.
+     * A future (re)created when the job is started and completed when terminal
+     * snapshot is completed (successfully or not).
      */
     private CompletableFuture<Void> terminalSnapshotFuture;
 
@@ -486,7 +485,6 @@ public class MasterContext {
 
         boolean isTerminal = nextSnapshotIsTerminal;
         nextSnapshotIsTerminal = false;
-        terminalSnapshotFuture = new CompletableFuture<>();
 
         List<String> vertexNames = vertices.stream().map(Vertex::getName).collect(Collectors.toList());
         long newSnapshotId = snapshotRepository.registerSnapshot(jobId, vertexNames);
@@ -652,7 +650,6 @@ public class MasterContext {
         // reset state for the next execution
         requestedTerminationMode.set(null);
         executionInvocationCallback = null;
-        terminalSnapshotFuture = null;
 
         // if restart was requested, restart immediately
         if (failure instanceof JobRestartRequestedException) {
