@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.execution.init;
 import com.hazelcast.internal.metrics.LongProbeFunction;
 import com.hazelcast.internal.metrics.ProbeBuilder;
 import com.hazelcast.internal.metrics.ProbeLevel;
+import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.internal.util.concurrent.ConcurrentConveyor;
 import com.hazelcast.internal.util.concurrent.OneToOneConcurrentArrayQueue;
 import com.hazelcast.internal.util.concurrent.QueuedPipe;
@@ -178,7 +179,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                         .withTag("exec", idToString(executionId))
                         .withTag("vertex", vertex.name());
 
-                if (vertex.inboundEdges().size() == 0) {
+                // ignore vertices which are only used for snapshot restore and do not
+                // consider snapshot restore edges for determining source tag
+                if (vertex.inboundEdges().stream().allMatch(EdgeDef::isSnapshotRestoreEdge)
+                        && !vertex.isSnapshotVertex()) {
                     probeBuilder = probeBuilder.withTag("source", "true");
                 }
                 if (vertex.outboundEdges().size() == 0) {
@@ -392,9 +396,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             // and don't use the reference to source, but we use the source to deregister the metrics when the job
             // finishes.
             if (firstTasklet != null) {
-                probeBuilder.register(firstTasklet, "distributedBytesOut", ProbeLevel.INFO,
+                probeBuilder.register(firstTasklet, "distributedBytesOut", ProbeLevel.INFO, ProbeUnit.BYTES,
                         addCountersProbeFunction(bytesCounters));
-                probeBuilder.register(firstTasklet, "distributedItemsOut", ProbeLevel.INFO,
+                probeBuilder.register(firstTasklet, "distributedItemsOut", ProbeLevel.INFO, ProbeUnit.BYTES,
                         addCountersProbeFunction(itemsCounters));
             }
             return addrToConveyor;
@@ -542,9 +546,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                            // We register the metrics to the first tasklet. The metrics itself aggregate counters from
                            // all tasklets and don't use the reference to source, but we use the source to deregister
                            // the metrics when the job finishes.
-                           probeBuilder.register(firstTasklet, "distributedItemsIn", ProbeLevel.INFO,
+                           probeBuilder.register(firstTasklet, "distributedItemsIn", ProbeLevel.INFO, ProbeUnit.COUNT,
                                    addCountersProbeFunction(itemCounters));
-                           probeBuilder.register(firstTasklet, "distributedBytesIn", ProbeLevel.INFO,
+                           probeBuilder.register(firstTasklet, "distributedBytesIn", ProbeLevel.INFO, ProbeUnit.COUNT,
                                    addCountersProbeFunction(bytesCounters));
                        }
                        return addrToTasklet;
