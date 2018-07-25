@@ -48,6 +48,7 @@ import com.hazelcast.spi.ExecutionService;
 import com.hazelcast.spi.InternalCompletableFuture;
 import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.impl.NodeEngineImpl;
+import com.hazelcast.spi.serialization.SerializationService;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -255,11 +256,11 @@ public class MasterContext {
                 }
             }
 
+            SerializationService serializationService = nodeEngine.getSerializationService();
             ClassLoader classLoader = coordinationService.getJetService().getClassLoader(jobId);
             DAG dag;
             try {
-                dag = deserializeWithCustomClassLoader(nodeEngine.getSerializationService(), classLoader,
-                        jobRecord.getDag());
+                dag = deserializeWithCustomClassLoader(serializationService, classLoader, jobRecord.getDag());
             } catch (Exception e) {
                 logger.warning("DAG deserialization failed", e);
                 finalizeJob(e);
@@ -313,7 +314,7 @@ public class MasterContext {
             Set<MemberInfo> participants = executionPlanMap.keySet();
             Function<ExecutionPlan, Operation> operationCtor = plan ->
                     new InitExecutionOperation(jobId, executionId, membersView.getVersion(), participants,
-                            nodeEngine.getSerializationService().toData(plan));
+                            serializationService.toData(plan));
             invoke(operationCtor, this::onInitStepCompleted, null);
         }
     }
