@@ -182,15 +182,17 @@ public interface JetInstance {
      * disconnect the client. If this is a member instance, the jobs running on
      * it will be gracefully terminated and {@linkplain
      * JobConfig#setAutoRestartOnMemberFailure(boolean) if configured}, they
-     * will also be restarted. If you want to shut down entire cluster it is
-     * better to first {@linkplain Job#suspend suspend} all jobs so that they
-     * are not quickly restarted multiple times.
+     * will also be restarted. If you want to shut down the entire cluster it
+     * is better to first {@linkplain Job#suspend suspend} all jobs so that
+     * they are not briefly restarted multiple times.
      *
      * <p>The call blocks until the instance is actually down.
      *
-     * <p><b>Note:</b> Don't call {@code
+     * <p><b>Note:</b> If you call {@code
      * this.getHazelcastInstance().shutdown()}, it will forcefully terminate
-     * jobs run by this member.
+     * jobs run by this member. That is, jobs will be terminated without
+     * creating a terminal snapshot and they will be restarted from the last
+     * snapshot that was created some time ago.
      */
     void shutdown();
 }

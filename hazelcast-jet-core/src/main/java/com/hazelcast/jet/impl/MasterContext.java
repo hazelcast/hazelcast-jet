@@ -504,6 +504,7 @@ public class MasterContext {
 
     private synchronized void onSnapshotCompleted(Map<MemberInfo, Object> responses, long executionId, long snapshotId,
                                                   boolean wasTerminal) {
+        // Note: this method can be called after finalizeJob() is called
         SnapshotOperationResult mergedResult = new SnapshotOperationResult();
         for (Object response : responses.values()) {
             // the response either SnapshotOperationResult or an exception, see #invoke() method
