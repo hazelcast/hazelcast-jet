@@ -97,10 +97,12 @@ public interface Job {
      * with the current member list of the Jet cluster. Can be called to
      * manually make use of added members.
      *
-     * <p>Conceptually is equivalent to {@link #suspend()} & {@link #resume()}.
+     * <p>Conceptually it's equivalent to {@link #suspend()} & {@link
+     * #resume()}.
      *
-     * @throws IllegalStateException if the job has been already completed,
-     * job is not yet running, is already restarting etc.
+     * @throws IllegalStateException if the job is not running, for example it
+     * has been already completed, is not yet running, is already restarting,
+     * suspended etc.
      */
     void restart();
 

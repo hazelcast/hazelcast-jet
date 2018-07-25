@@ -175,10 +175,6 @@ public class JetService
         return result;
     }
 
-    public boolean isShutdownInitiated() {
-        return shutdownInitiated.get();
-    }
-
     @Override
     public void shutdown(boolean forceful) {
         jobCoordinationService.shutdown();

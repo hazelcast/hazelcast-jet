@@ -216,4 +216,38 @@ public class SuspendResumeTest extends JetTestSupport {
         assertInstanceOf(CancellationException.class, jobResult.getFailure());
         assertFalse("Job result successful", jobResult.isSuccessful());
     }
+
+    @Test
+    public void when_restartSuspendedJob_then_fail() throws Exception {
+        Job job = instances[0].newJob(dag);
+        StuckProcessor.executionStarted.await();
+        job.suspend();
+        assertEqualsEventually(job::getStatus, SUSPENDED);
+        // Then
+        expectedException.expect(IllegalStateException.class);
+        expectedException.expectMessage("Cannot RESTART_GRACEFUL, job status is SUSPENDED");
+        // When
+        job.restart();
+    }
+
+    @Test
+    public void when_suspendSuspendedJob_then_fail() throws Exception {
+        Job job = instances[0].newJob(dag);
+        StuckProcessor.executionStarted.await();
+        job.suspend();
+        assertEqualsEventually(job::getStatus, SUSPENDED);
+        // Then
+        expectedException.expect(IllegalStateException.class);
+        expectedException.expectMessage("Cannot SUSPEND_GRACEFUL, job status is SUSPENDED");
+        // When
+        job.suspend();
+    }
+
+    @Test
+    public void when_jobSuspendedAndCoordinatorShutDown_then_jobDoesNotRestart() throws Exception {
+        Job job = instances[0].newJob(dag);
+        StuckProcessor.executionStarted.await();
+        job.suspend();
+        assertEqualsEventually(job::getStatus, SUSPENDED);
+    }
 }
