@@ -258,7 +258,8 @@ public class MasterContext {
             ClassLoader classLoader = coordinationService.getJetService().getClassLoader(jobId);
             DAG dag;
             try {
-                dag = deserializeWithCustomClassLoader(nodeEngine.getSerializationService(), classLoader, jobRecord.getDag());
+                dag = deserializeWithCustomClassLoader(nodeEngine.getSerializationService(), classLoader,
+                        jobRecord.getDag());
             } catch (Exception e) {
                 logger.warning("DAG deserialization failed", e);
                 finalizeJob(e);
