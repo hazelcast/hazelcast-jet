@@ -188,7 +188,7 @@ public class MasterContext {
         return jobRecord.getConfig();
     }
 
-    public JobRecord getJobRecord() {
+    JobRecord getJobRecord() {
         return jobRecord;
     }
 
@@ -207,7 +207,8 @@ public class MasterContext {
             }
 
             JobStatus jobStatus = jobStatus();
-            if (requestedTerminationMode.compareAndSet(null, mode)) {
+            boolean success = requestedTerminationMode.compareAndSet(null, mode);
+            if (success) {
                 handleTermination(mode);
                 // handle cancelling a suspended job
                 if (jobStatus == SUSPENDED) {
@@ -215,10 +216,8 @@ public class MasterContext {
                     coordinationService.completeJob(this, System.currentTimeMillis(), new CancellationException());
                     this.jobStatus.set(COMPLETED);
                 }
-            } else {
-                return false;
             }
-            return true;
+            return success;
         }
     }
 
@@ -226,8 +225,8 @@ public class MasterContext {
         return requestedTerminationMode.get() == CANCEL;
     }
 
-    boolean terminationRequested() {
-        return requestedTerminationMode.get() != null;
+    TerminationMode requestedTerminationMode() {
+        return requestedTerminationMode.get();
     }
 
     /**

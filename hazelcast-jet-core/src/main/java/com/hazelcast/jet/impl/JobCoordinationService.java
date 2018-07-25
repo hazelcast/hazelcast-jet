@@ -91,7 +91,7 @@ public class JobCoordinationService {
     private final Set<String> shuttingDownMembers = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Object lock = new Object();
     private volatile boolean isShutdown;
-    private int awaitedTerminalSnapshotCount;
+    private int awaitedTerminatingMembersCount;
     private CompletableFuture<Void> terminalSnapshotsFuture;
 
     JobCoordinationService(NodeEngineImpl nodeEngine, JetService jetService, JetConfig config,
@@ -344,9 +344,12 @@ public class JobCoordinationService {
         }
 
         // User can cancel in any state, other terminations are allowed only when running.
-        // This is not technically required (we request termination in any state in case of graceful
-        // shutdown), but this method is only called from client. It would be weird for the client to
+        // This is not technically required (we can request termination in any state),
+        // but this method is only called from client. It would be weird for the client to
         // request a restart if the job didn't start yet etc.
+        // Also, it would be weird to restart the job during STARTING: as soon as it will start,
+        // it will restart.
+        // In any case, it doesn't make sense to restart a suspended job.
         JobStatus jobStatus = masterContext.jobStatus();
         if (jobStatus != RUNNING && terminationMode != CANCEL) {
             throw new IllegalStateException("Cannot " + terminationMode + ", job status is " + jobStatus
@@ -354,7 +357,8 @@ public class JobCoordinationService {
         }
 
         if (!masterContext.requestTermination(terminationMode)) {
-            throw new IllegalStateException("Termination was already requested");
+            throw new IllegalStateException("Cannot " + terminationMode + ", job is already terminating in mode:"
+                    + masterContext.requestedTerminationMode());
         }
     }
 
@@ -385,8 +389,8 @@ public class JobCoordinationService {
         MasterContext currentMasterContext = masterContexts.get(jobId);
         if (currentMasterContext != null) {
             JobStatus jobStatus = currentMasterContext.jobStatus();
-            if (jobStatus == RUNNING && currentMasterContext.terminationRequested()) {
-                jobStatus = COMPLETING;
+            if (jobStatus == RUNNING && currentMasterContext.requestedTerminationMode() != null) {
+                return COMPLETING;
             }
             return jobStatus;
         }
@@ -456,8 +460,7 @@ public class JobCoordinationService {
     }
 
     void suspendJob(MasterContext masterContext) {
-        long jobId = masterContext.jobId();
-        jobRepository.updateJobSuspendedStatus(jobId, true);
+        jobRepository.updateJobSuspendedStatus(masterContext.jobId(), true);
     }
 
     public void resumeJob(long jobId) {
@@ -603,7 +606,7 @@ public class JobCoordinationService {
         tryStartJob(masterContext);
     }
 
-    // runs periodically to restart jobs on coordinator failure and perform gc
+    // runs periodically to restart jobs on coordinator failure and perform GC
     private void scanJobs() {
         if (!shouldStartJobs()) {
             return;
@@ -644,10 +647,15 @@ public class JobCoordinationService {
         We come to this method when either ShutdownInProgressException or
         NotifyMemberShutdownOperation is received. The
         NotifyMemberShutdownOperation sends response only after all jobs the
-        shutting-down member runs have the terminal snapshot completed.
-         */
+        shutting-down member runs have completed the terminal snapshot.
+
+        If before completing the terminalSnapshotsFuture another member shuts
+        down, we'll complete the future after all snapshots for both members
+        complete. This is accomplished by counting the awaitedTerminatingMembersCount
+        and using single future for all terminations.
+        */
         synchronized (lock) {
-            if (uuid.equals(nodeEngine.getClusterService().getLocalMember().getUuid())) {
+            if (uuid.equals(nodeEngine.getLocalMember().getUuid())) {
                 shutdown();
             }
 
@@ -663,11 +671,12 @@ public class JobCoordinationService {
                         .map(MasterContext::onParticipantShutDown)
                         .filter(Objects::nonNull)
                         .toArray(CompletableFuture[]::new);
-                awaitedTerminalSnapshotCount++;
+                awaitedTerminatingMembersCount++;
+                // need to do this even if futures.length==0, we need to perform the action in whenComplete
                 CompletableFuture.allOf(futures)
                                  .whenComplete(withTryCatch(logger, (r, e) -> {
                                      synchronized (lock) {
-                                         if (--awaitedTerminalSnapshotCount == 0) {
+                                         if (--awaitedTerminatingMembersCount == 0) {
                                              terminalSnapshotsFuture.complete(null);
                                              terminalSnapshotsFuture = null;
                                          }

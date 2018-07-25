@@ -138,7 +138,7 @@ public class JobExecutionService {
      */
     void onMemberLeave(Address address) {
         executionContexts.values().stream()
-             // note, coordinator might not be a participant (in case it is a lite member)
+             // note that coordinator might not be a participant (in case it is a lite member)
              .filter(exeCtx -> exeCtx.coordinator().equals(address) || exeCtx.hasParticipant(address))
              .forEach(exeCtx -> {
                  String message = String.format("Completing %s locally. Reason: Member %s left the cluster",
@@ -211,9 +211,9 @@ public class JobExecutionService {
             throw new RetryableHazelcastException();
         }
 
-        Set<Address> participantUuids = participants.stream().map(MemberInfo::getAddress).collect(toSet());
+        Set<Address> addresses = participants.stream().map(MemberInfo::getAddress).collect(toSet());
         ExecutionContext created = new ExecutionContext(nodeEngine, taskletExecutionService,
-                jobId, executionId, coordinator, participantUuids);
+                jobId, executionId, coordinator, addresses);
         try {
             created.initialize(plan);
         } finally {
@@ -330,7 +330,7 @@ public class JobExecutionService {
         }
     }
 
-    public synchronized CompletableFuture<Void> beginExecution(Address coordinator, long jobId, long executionId) {
+    public CompletableFuture<Void> beginExecution(Address coordinator, long jobId, long executionId) {
         if (isShutdown) {
             throw new ShutdownInProgressException();
         }
