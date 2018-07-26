@@ -20,6 +20,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.core.TestProcessors.MockP;
 import com.hazelcast.jet.core.TestProcessors.StuckProcessor;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -50,6 +51,9 @@ import static com.hazelcast.test.PacketFiltersUtil.delayOperationsFrom;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class GracefulShutdownTest extends JetTestSupport {
@@ -165,7 +169,7 @@ public class GracefulShutdownTest extends JetTestSupport {
     @Test
     public void when_shutDownInProgressFromInit_then_restarts() {
         setDelayTime(4000);
-        // delay the NotifyMemberShutdownOperation, this will prevent the shutdown from completing
+        // delay the NotifyMemberShutdownOperation, this will delay the shutdown completion
         delayOperationsFrom(hz(instances[1]), JetInitDataSerializerHook.FACTORY_ID,
                 singletonList(JetInitDataSerializerHook.NOTIFY_MEMBER_SHUTDOWN_OP));
 
@@ -181,16 +185,54 @@ public class GracefulShutdownTest extends JetTestSupport {
         while (true) {
             JobStatus status = job.getStatus();
             // While the future is not done, the job should remain in STARTING state.
-            if (!future.isDone()) {
-                assertEquals(JobStatus.STARTING, status);
-            } else {
+            if (future.isDone()) {
                 break;
+            } else {
+                assertEquals(JobStatus.STARTING, status);
             }
             sleepMillis(200);
         }
 
         // after that, the job should become RUNNING
         assertTrueEventually(() -> assertEquals(RUNNING, job.getStatus()), 5);
+    }
+
+    @Test
+    public void when_shutDownInProgressFromExecute_then_restarts() {
+        setDelayTime(4000);
+        // delay the NotifyMemberShutdownOperation, this will delay the shutdown completion
+        delayOperationsFrom(hz(instances[1]), JetInitDataSerializerHook.FACTORY_ID,
+                singletonList(JetInitDataSerializerHook.NOTIFY_MEMBER_SHUTDOWN_OP));
+        // also delay the StartExecutionOperation, this will delay the job start
+        delayOperationsFrom(hz(instances[0]), JetInitDataSerializerHook.FACTORY_ID,
+                singletonList(JetInitDataSerializerHook.START_EXECUTION_OP));
+
+        // submit a job, the execution will be delayed
+        DAG dag = new DAG();
+        dag.newVertex("v", MockP::new);
+        Future jobFuture = spawn(() -> instances[0].newJob(dag).join());
+
+        // initiate a shutdown in the background, the delayed StartExecutionOperation, once processed,
+        // will throw ShutdownInProgressException
+        sleepSeconds(1);
+        Future shutdownFuture = spawn(() -> instances[1].shutdown());
+
+        while (true) {
+            // Normally, the job completes immediately. But it should not complete before the
+            // shutdown completes.
+            boolean jobDone = jobFuture.isDone();
+            boolean shutdownDone = shutdownFuture.isDone();
+            if (shutdownDone) {
+                break;
+            } else {
+                assertFalse(jobDone);
+            }
+            System.out.println("aaa");
+            sleepMillis(200);
+        }
+
+        // after that, the job should eventually complete
+        assertTrueEventually(() -> assertTrue(jobFuture.isDone()), 5);
     }
 
     private void setDelayTime(long ms) {

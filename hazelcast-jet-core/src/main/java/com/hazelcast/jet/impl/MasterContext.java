@@ -576,7 +576,7 @@ public class MasterContext {
 
         // there was no user exception. If the termination was requested, return appropriate exception
         if (successfulMembers.size() == executionPlanMap.size()) {
-            logger.fine("Execution of " + jobIdString() + " was successful");
+            logger.fine(opName + " of " + jobIdString() + " was successful");
 
             // TODO [viliam] This is a race:
             // If the job completed normally and a termination was requested, we assume that it
