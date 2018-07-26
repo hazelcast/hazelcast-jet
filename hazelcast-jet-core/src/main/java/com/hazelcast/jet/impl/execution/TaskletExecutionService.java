@@ -119,7 +119,9 @@ public class TaskletExecutionService {
             @Nonnull CompletableFuture<Void> cancellationFuture,
             @Nonnull ClassLoader jobClassLoader
     ) {
-        ensureStillRunning();
+        if (gracefulShutdown.get() != null) {
+            throw new ShutdownInProgressException();
+        }
         final ExecutionTracker executionTracker = new ExecutionTracker(tasklets.size(), cancellationFuture);
         try {
             final Map<Boolean, List<Tasklet>> byCooperation =
@@ -142,12 +144,6 @@ public class TaskletExecutionService {
         }
     }
 
-    private void ensureStillRunning() {
-        if (gracefulShutdown.get() != null) {
-            throw new ShutdownInProgressException();
-        }
-    }
-
     private void submitBlockingTasklets(ExecutionTracker executionTracker, ClassLoader jobClassLoader,
                                         List<Tasklet> tasklets) {
         CountDownLatch startedLatch = new CountDownLatch(tasklets.size());
@@ -166,9 +162,6 @@ public class TaskletExecutionService {
     private void submitCooperativeTasklets(
             ExecutionTracker executionTracker, ClassLoader jobClassLoader, List<Tasklet> tasklets
     ) {
-        if (gracefulShutdown.get() != null) {
-            throw new IllegalStateException("shutdown in progress");
-        }
         final List<TaskletTracker>[] trackersByThread = new List[cooperativeWorkers.length];
         Arrays.setAll(trackersByThread, i -> new ArrayList());
         for (Tasklet t : tasklets) {

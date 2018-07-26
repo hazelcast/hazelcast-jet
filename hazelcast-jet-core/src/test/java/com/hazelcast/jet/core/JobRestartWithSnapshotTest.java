@@ -450,7 +450,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
     }
 
     @Test
-    public void stressTest_stopAndResume() throws Exception {
+    public void stressTest_suspendAndResume() throws Exception {
         stressTest(job -> {
             job.suspend();
             assertTrueEventually(() -> assertEquals(JobStatus.SUSPENDED, job.getStatus()), 5);

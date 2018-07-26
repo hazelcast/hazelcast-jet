@@ -37,7 +37,7 @@ import static java.lang.Math.max;
 
 /**
  * Extends {@link JetTestSupport} in such a way that one cluster is used for
- * the entire test.
+ * all tests in the class.
  */
 @RunWith(Parameterized.class)
 @Category(ParallelTest.class)

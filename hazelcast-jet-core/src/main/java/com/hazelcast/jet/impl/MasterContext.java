@@ -123,12 +123,6 @@ public class MasterContext {
     private volatile ExecutionInvocationCallback executionInvocationCallback;
 
     /**
-     * A future (re)created when the job is started and completed when terminal
-     * snapshot is completed (successfully or not).
-     */
-    private CompletableFuture<Void> terminalSnapshotFuture;
-
-    /**
      * A future completed when the job fully completes. It's NOT completed when
      * the job is suspended or when it is going to be restarted. It's used for
      * {@link Job#join()}.
@@ -158,6 +152,12 @@ public class MasterContext {
      * scheduled after a delay but run immediately.
      */
     private volatile boolean nextSnapshotIsTerminal;
+
+    /**
+     * A future (re)created when the job is started and completed when terminal
+     * snapshot is completed (successfully or not).
+     */
+    private CompletableFuture<Void> terminalSnapshotFuture;
 
     MasterContext(NodeEngineImpl nodeEngine, JobCoordinationService coordinationService, JobRecord jobRecord) {
         this.nodeEngine = nodeEngine;
@@ -210,7 +210,7 @@ public class MasterContext {
             boolean success = requestedTerminationMode.compareAndSet(null, mode);
             if (success) {
                 handleTermination(mode);
-                // handle cancelling a suspended job
+                // handle cancellation of a suspended job
                 if (jobStatus == SUSPENDED) {
                     assert mode == CANCEL : "mode is not CANCEL, but " + mode;
                     coordinationService.completeJob(this, System.currentTimeMillis(), new CancellationException());
@@ -397,7 +397,7 @@ public class MasterContext {
     }
 
     private void scheduleRestart() {
-        // if status is RUNNING, set it to RESTARTING. If it's STARTING, let it be.
+        // if status is RUNNING, set it to RESTARTING. If it's STARTING, leave it
         jobStatus.compareAndSet(RUNNING, RESTARTING);
         coordinationService.scheduleRestart(jobId);
     }
@@ -533,8 +533,8 @@ public class MasterContext {
                     mergedResult.getNumBytes(), mergedResult.getNumKeys(), mergedResult.getNumChunks());
             snapshotInProgress.compareAndSet(true, false);
             if (wasTerminal) {
-                boolean result = terminalSnapshotFuture.complete(null);
-                assert result : "terminalSnapshotFuture was already completed";
+                boolean completedNow = terminalSnapshotFuture.complete(null);
+                assert completedNow : "terminalSnapshotFuture was already completed";
             }
 
             if (nextSnapshotIsTerminal) {
@@ -778,13 +778,13 @@ public class MasterContext {
             MemberInfo member = e.getKey();
             Operation op = opCtor.apply(e.getValue());
             InternalCompletableFuture<Object> future = nodeEngine.getOperationService()
-                    .createInvocationBuilder(JetService.SERVICE_NAME, op, member.getAddress())
-                    .setDoneCallback(() -> {
-                        if (remainingCount.decrementAndGet() == 0) {
-                            doneFuture.complete(null);
-                        }
-                    })
-                    .invoke();
+                 .createInvocationBuilder(JetService.SERVICE_NAME, op, member.getAddress())
+                 .setDoneCallback(() -> {
+                     if (remainingCount.decrementAndGet() == 0) {
+                         doneFuture.complete(null);
+                     }
+                 })
+                 .invoke();
             futures.put(member, future);
         }
     }
@@ -865,7 +865,6 @@ public class MasterContext {
     private class ExecutionInvocationCallback implements ExecutionCallback<Object> {
 
         private final AtomicBoolean invocationsCancelled = new AtomicBoolean();
-
         private final long executionId;
 
         ExecutionInvocationCallback(long executionId) {

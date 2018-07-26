@@ -20,6 +20,7 @@ import com.hazelcast.jet.impl.exception.JobRestartRequestedException;
 import com.hazelcast.jet.impl.exception.JobSuspendRequestedException;
 import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
 
+import javax.annotation.CheckReturnValue;
 import java.util.concurrent.CancellationException;
 import java.util.function.Supplier;
 
@@ -82,6 +83,7 @@ public enum TerminationMode {
         return deleteData;
     }
 
+    @CheckReturnValue
     public TerminationMode withoutStopWithSnapshot() {
         TerminationMode res = this;
         if (this == SUSPEND_GRACEFUL) {

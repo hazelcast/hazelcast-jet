@@ -54,7 +54,7 @@ public class GracefulShutdownTest extends JetTestSupport {
     public void setup() {
         instances = createJetMembers(new JetConfig(), NODE_COUNT);
         client = createJetClient();
-        MyProcessor.savedCounters.clear();
+        EmitIntegersP.savedCounters.clear();
     }
 
     @Test
@@ -70,7 +70,7 @@ public class GracefulShutdownTest extends JetTestSupport {
     private void when_shutDown_then_gracefully(boolean shutdownCoordinator) {
         DAG dag = new DAG();
         final int numItems = 50_000;
-        Vertex source = dag.newVertex("source", throttle(() -> new MyProcessor(numItems), 10_000)).localParallelism(1);
+        Vertex source = dag.newVertex("source", throttle(() -> new EmitIntegersP(numItems), 10_000)).localParallelism(1);
         Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP("sink"));
         dag.edge(between(source, sink));
 
@@ -93,10 +93,10 @@ public class GracefulShutdownTest extends JetTestSupport {
 
         // Then
         // If the shutdown was graceful, output items must not be duplicated
-        assertEquals(MyProcessor.savedCounters.toString(), 2, MyProcessor.savedCounters.size());
-        int minCounter = MyProcessor.savedCounters.values().stream().mapToInt(Integer::intValue).min().getAsInt();
+        assertEquals(EmitIntegersP.savedCounters.toString(), 2, EmitIntegersP.savedCounters.size());
+        int minCounter = EmitIntegersP.savedCounters.values().stream().mapToInt(Integer::intValue).min().getAsInt();
 
-        logger.info("savedCounters=" + MyProcessor.savedCounters);
+        logger.info("savedCounters=" + EmitIntegersP.savedCounters);
 
         Map<Integer, Integer> actual = new ArrayList<>(instances[liveInstance].<Integer>getList("sink")).stream()
                 .collect(Collectors.toMap(Function.identity(), item -> 1, Integer::sum));
@@ -106,15 +106,15 @@ public class GracefulShutdownTest extends JetTestSupport {
         assertEquals(expected, actual);
     }
 
-    // TODO [viliam] rename
-    private static final class MyProcessor extends AbstractProcessor {
+    private static final class EmitIntegersP extends AbstractProcessor {
         static final ConcurrentMap<Integer, Integer> savedCounters = new ConcurrentHashMap<>();
 
         private int counter;
         private int globalIndex;
         private int numItems;
+        private Integer pendingItem;
 
-        MyProcessor(int numItems) {
+        EmitIntegersP(int numItems) {
             this.numItems = numItems;
         }
 
@@ -125,14 +125,21 @@ public class GracefulShutdownTest extends JetTestSupport {
 
         @Override
         public boolean complete() {
+            pendingItem = null;
             if (tryEmit(counter)) {
                 counter++;
+            } else {
+                pendingItem = counter;
             }
             return counter == numItems;
         }
 
         @Override
         public boolean saveToSnapshot() {
+            if (pendingItem != null && !tryEmit(pendingItem)) {
+                return false;
+            }
+            pendingItem = null;
             savedCounters.put(globalIndex, counter);
             return tryEmitToSnapshot(broadcastKey(globalIndex), counter);
         }
