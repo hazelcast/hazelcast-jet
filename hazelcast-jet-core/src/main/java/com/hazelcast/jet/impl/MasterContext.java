@@ -813,8 +813,9 @@ public class MasterContext {
         }
     }
 
-    boolean hasParticipant(String uuid) {
-        return executionPlanMap.keySet().stream().anyMatch(mi -> mi.getUuid().equals(uuid));
+    private boolean hasParticipant(String uuid) {
+        return executionPlanMap != null
+                && executionPlanMap.keySet().stream().anyMatch(mi -> mi.getUuid().equals(uuid));
     }
 
     /**
@@ -825,8 +826,12 @@ public class MasterContext {
      * @return a future to wait for or null if there's no need to wait
      */
     @Nullable
-    CompletableFuture<Void> onParticipantShutDown() {
+    CompletableFuture<Void> onParticipantShutDown(String uuid) {
         synchronized (lock) {
+            if (!hasParticipant(uuid)) {
+                return null;
+            }
+
             if (jobStatus() == SUSPENDED) {
                 return null;
             }

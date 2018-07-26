@@ -666,8 +666,7 @@ public class JobCoordinationService {
                 }
                 logger.fine("Added a shutting-down member: " + uuid);
                 CompletableFuture[] futures = masterContexts.values().stream()
-                        .filter(mc -> mc.hasParticipant(uuid))
-                        .map(MasterContext::onParticipantShutDown)
+                        .map(mc -> mc.onParticipantShutDown(uuid))
                         .filter(Objects::nonNull)
                         .toArray(CompletableFuture[]::new);
                 awaitedTerminatingMembersCount++;

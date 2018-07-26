@@ -111,9 +111,11 @@ public class JobExecutionService {
         return ctx != null ? ctx.senderMap() : null;
     }
 
-    public synchronized void shutdown() {
+    public synchronized void shutdown(boolean graceful) {
         isShutdown = true;
-        cancelAllExecutions("shutdown", HazelcastInstanceNotActiveException::new);
+        if (!graceful) {
+            cancelAllExecutions("shutdown", HazelcastInstanceNotActiveException::new);
+        }
     }
 
     public void reset() {
