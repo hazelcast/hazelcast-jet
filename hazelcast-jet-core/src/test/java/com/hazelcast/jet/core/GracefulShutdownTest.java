@@ -23,6 +23,8 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.TestProcessors.StuckProcessor;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
+import com.hazelcast.nio.tcp.FirewallingConnectionManager;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,8 +46,11 @@ import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.TestUtil.throttle;
+import static com.hazelcast.test.PacketFiltersUtil.delayOperationsFrom;
+import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class GracefulShutdownTest extends JetTestSupport {
@@ -158,7 +163,43 @@ public class GracefulShutdownTest extends JetTestSupport {
         future.get();
     }
 
+    @Test
+    public void when_shutDownInProgressFromInit_then_restarts() {
+        setDelayTime(4000);
+        // delay the NotifyMemberShutdownOperation, this will prevent the shutdown from completing
+        delayOperationsFrom(hz(instances[1]), JetInitDataSerializerHook.FACTORY_ID,
+                singletonList(JetInitDataSerializerHook.NOTIFY_MEMBER_SHUTDOWN_OP));
 
+        // initiate a shutdown in the background
+        Future future = spawn(() -> instances[1].shutdown());
+
+        // submit a job, the init operation should fail with a ShutdownInProgressOperation.
+        // Unfortunately, we can't assert that.
+        DAG dag = new DAG();
+        dag.newVertex("v", (DistributedSupplier<Processor>) StuckProcessor::new);
+        Job job = instances[0].newJob(dag);
+
+        while (true) {
+            JobStatus status = job.getStatus();
+            // While the future is not done, the job should remain in STARTING state.
+            if (!future.isDone()) {
+                assertEquals(JobStatus.STARTING, status);
+            } else {
+                break;
+            }
+            sleepMillis(200);
+        }
+
+        // after that, the job should become RUNNING
+        assertTrueEventually(() -> assertEquals(RUNNING, job.getStatus()), 5);
+    }
+
+    private void setDelayTime(long ms) {
+        for (JetInstance instance : instances) {
+            FirewallingConnectionManager cm = (FirewallingConnectionManager) getNode(instance).getConnectionManager();
+            cm.setDelayMillis(ms, ms);
+        }
+    }
 
     private static final class EmitIntegersP extends AbstractProcessor {
         static final ConcurrentMap<Integer, Integer> savedCounters = new ConcurrentHashMap<>();

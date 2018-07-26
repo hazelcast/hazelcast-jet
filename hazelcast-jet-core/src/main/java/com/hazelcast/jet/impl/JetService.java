@@ -139,6 +139,8 @@ public class JetService
             return;
         }
         // this will prevent accepting more jobs
+        jobCoordinationService.shutdown();
+        jobExecutionService.shutdown();
         taskletExecutionService.shutdown(true);
 
         CompletableFuture<Void> future = new CompletableFuture<>();
@@ -174,8 +176,8 @@ public class JetService
     public void shutdown(boolean forceful) {
         jobCoordinationService.shutdown();
         jobExecutionService.shutdown();
-        networking.shutdown();
         taskletExecutionService.shutdown(!forceful);
+        networking.shutdown();
     }
 
     @Override

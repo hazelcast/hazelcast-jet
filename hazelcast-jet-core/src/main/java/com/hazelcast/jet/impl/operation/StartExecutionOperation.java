@@ -25,6 +25,10 @@ import java.io.IOException;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 
+/**
+ * Operation sent from master to members to start execution of a job. It is
+ * sent after {@link InitExecutionOperation} was successful on all members.
+ */
 public class StartExecutionOperation extends AsyncJobOperation {
 
     private long executionId;

@@ -660,12 +660,11 @@ public class JobCoordinationService {
             }
 
             CompletableFuture<Void> result = this.terminalSnapshotsFuture;
-            if (result == null) {
-                this.terminalSnapshotsFuture = result = new CompletableFuture<>();
-                assert shuttingDownMembers.isEmpty() : "shuttingDownMembers not empty: " + shuttingDownMembers;
-            }
-
             if (shuttingDownMembers.add(uuid)) {
+                if (result == null) {
+                    this.terminalSnapshotsFuture = result = new CompletableFuture<>();
+                }
+                logger.fine("Added a shutting-down member: " + uuid);
                 CompletableFuture[] futures = masterContexts.values().stream()
                         .filter(mc -> mc.hasParticipant(uuid))
                         .map(MasterContext::onParticipantShutDown)
@@ -682,12 +681,21 @@ public class JobCoordinationService {
                                          }
                                      }
                                  }));
+            } else {
+                if (result == null) {
+                    // The member was already added and the future that was created for it
+                    // was already completed and nulled out -> we return a new, completed future.
+                    result = CompletableFuture.completedFuture(null);
+                }
             }
             return result;
         }
     }
 
     void onMemberLeave(String uuid) {
-        shuttingDownMembers.remove(uuid);
+        if (shuttingDownMembers.remove(uuid)) {
+            LoggingUtil.logFine(logger, "Removed a shutting-down member: %s, now shuttingDownMembers=%s",
+                    uuid, shuttingDownMembers);
+        }
     }
 }
