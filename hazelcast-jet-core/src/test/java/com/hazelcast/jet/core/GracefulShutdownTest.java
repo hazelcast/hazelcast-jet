@@ -50,7 +50,6 @@ import static com.hazelcast.test.PacketFiltersUtil.delayOperationsFrom;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class GracefulShutdownTest extends JetTestSupport {
