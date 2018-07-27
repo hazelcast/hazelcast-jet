@@ -29,10 +29,9 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.core.test.TestProcessorMetaSupplierContext;
-import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
@@ -42,7 +41,6 @@ import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.Address;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -52,7 +50,6 @@ import javax.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -86,9 +83,7 @@ import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -161,7 +156,10 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         IMap<List<Long>, Long> result = instance1.getMap("result");
         result.clear();
 
-        SequencesInPartitionsMetaSupplier sup = new SequencesInPartitionsMetaSupplier(3, 200, true);
+        int numPartitions = 3;
+        int elementsInPartition = 200;
+        DistributedSupplier<Processor> sup = () ->
+                new SequencesInPartitionsGeneratorP(numPartitions, elementsInPartition, true);
         Vertex generator = dag.newVertex("generator", throttle(sup, 30))
                               .localParallelism(1);
         Vertex insWm = dag.newVertex("insWm", insertWatermarksP(wmGenParams(
@@ -231,9 +229,9 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
 
         // compute expected result
         Map<List<Long>, Long> expectedMap = new HashMap<>();
-        for (long partition = 0; partition < sup.numPartitions; partition++) {
+        for (long partition = 0; partition < numPartitions; partition++) {
             long cnt = 0;
-            for (long value = 1; value <= sup.elementsInPartition; value++) {
+            for (long value = 1; value <= elementsInPartition; value++) {
                 cnt++;
                 if (value % wDef.frameSize() == 0) {
                     expectedMap.put(asList(value, partition), cnt);
@@ -241,7 +239,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                 }
             }
             if (cnt > 0) {
-                expectedMap.put(asList(wDef.higherFrameTs(sup.elementsInPartition - 1), partition), cnt);
+                expectedMap.put(asList(wDef.higherFrameTs(elementsInPartition - 1), partition), cnt);
             }
         }
 
@@ -384,7 +382,9 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
     @Test
     public void when_jobRestartedGracefully_then_noOutputDuplicated() {
         DAG dag = new DAG();
-        SequencesInPartitionsMetaSupplier sup = new SequencesInPartitionsMetaSupplier(3, 100, true);
+        int elementsInPartition = 100;
+        DistributedSupplier<Processor> sup = () ->
+                new SequencesInPartitionsGeneratorP(3, elementsInPartition, true);
         Vertex generator = dag.newVertex("generator", throttle(sup, 30))
                               .localParallelism(1);
         Vertex sink = dag.newVertex("sink", writeListP("sink"));
@@ -404,39 +404,11 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         job.join();
 
         // Then
-        Set<Entry<Integer, Integer>> expected = IntStream.range(0, sup.elementsInPartition)
+        Set<Entry<Integer, Integer>> expected = IntStream.range(0, elementsInPartition)
                  .boxed()
                  .flatMap(i -> IntStream.range(0, 3).mapToObj(p -> entry(p, i)))
                  .collect(Collectors.toSet());
         assertEquals(expected, new HashSet<>(sinkList));
-    }
-
-    @Test
-    @Ignore("This is a \"test of a test\" - it checks, that SequencesInPartitionsGeneratorP generates correct output")
-    public void test_SequencesInPartitionsGeneratorP() throws Exception {
-        SequencesInPartitionsMetaSupplier pms = new SequencesInPartitionsMetaSupplier(3, 2, true);
-        pms.init(new TestProcessorMetaSupplierContext().setLocalParallelism(1).setTotalParallelism(2));
-        Address a1 = new Address("127.0.0.1", 0);
-        Address a2 = new Address("127.0.0.2", 0);
-        Function<Address, ProcessorSupplier> supplierFunction = pms.get(asList(a1, a2));
-        Iterator<? extends Processor> processors1 = supplierFunction.apply(a1).get(1).iterator();
-        Processor p1 = processors1.next();
-        assertFalse(processors1.hasNext());
-        Iterator<? extends Processor> processors2 = supplierFunction.apply(a2).get(1).iterator();
-        Processor p2 = processors2.next();
-        assertFalse(processors2.hasNext());
-
-        TestSupport.verifyProcessor(() -> p1).expectOutput(asList(
-                entry(0, 0),
-                entry(2, 0),
-                entry(0, 1),
-                entry(2, 1)
-        ));
-
-        TestSupport.verifyProcessor(() -> p2).expectOutput(asList(
-                entry(1, 0),
-                entry(1, 1)
-        ));
     }
 
     @Test
@@ -531,10 +503,12 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
      */
     static class SequencesInPartitionsGeneratorP extends AbstractProcessor {
 
-        private final int[] assignedPtions;
-        private final int[] ptionOffsets;
+        private final int numPartitions;
         private final int elementsInPartition;
         private final boolean assertJobRestart;
+
+        private int[] assignedPtions;
+        private int[] ptionOffsets;
 
         private int ptionCursor;
         private MyTraverser traverser;
@@ -542,9 +516,8 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         private Entry<Integer, Integer> pendingItem;
         private boolean wasRestored;
 
-        SequencesInPartitionsGeneratorP(int[] assignedPtions, int elementsInPartition, boolean assertJobRestart) {
-            this.assignedPtions = assignedPtions;
-            this.ptionOffsets = new int[assignedPtions.length];
+        SequencesInPartitionsGeneratorP(int numPartitions, int elementsInPartition, boolean assertJobRestart) {
+            this.numPartitions = numPartitions;
             this.elementsInPartition = elementsInPartition;
             this.assertJobRestart = assertJobRestart;
 
@@ -553,6 +526,12 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
 
         @Override
         protected void init(@Nonnull Context context) {
+            this.assignedPtions = IntStream.range(0, numPartitions)
+                                           .filter(i -> i % context.totalParallelism() == context.globalProcessorIndex())
+                                           .toArray();
+            assert assignedPtions.length > 0 : "no assigned partitions";
+            this.ptionOffsets = new int[assignedPtions.length];
+
             getLogger().info("assignedPtions=" + Arrays.toString(assignedPtions));
         }
 
@@ -646,47 +625,6 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                     advanceCursor();
                 }
             }
-        }
-    }
-
-    static class SequencesInPartitionsMetaSupplier implements ProcessorMetaSupplier {
-
-        private final int numPartitions;
-        private final int elementsInPartition;
-        private final boolean assertJobRestart;
-
-        private int totalParallelism;
-        private int localParallelism;
-
-        SequencesInPartitionsMetaSupplier(int numPartitions, int elementsInPartition, boolean assertJobRestart) {
-            this.numPartitions = numPartitions;
-            this.elementsInPartition = elementsInPartition;
-            this.assertJobRestart = assertJobRestart;
-        }
-
-        @Override
-        public void init(@Nonnull Context context) {
-            totalParallelism = context.totalParallelism();
-            localParallelism = context.localParallelism();
-        }
-
-        @Nonnull
-        @Override
-        public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-            return address -> {
-                int startIndex = addresses.indexOf(address) * localParallelism;
-                return count -> IntStream.range(0, count)
-                                         .mapToObj(index -> new SequencesInPartitionsGeneratorP(
-                                                 assignedPtions(startIndex + index, totalParallelism, numPartitions),
-                                                 elementsInPartition, assertJobRestart))
-                                         .collect(toList());
-            };
-        }
-
-        private int[] assignedPtions(int processorIndex, int totalProcessors, int numPartitions) {
-            return IntStream.range(0, numPartitions)
-                            .filter(i -> i % totalProcessors == processorIndex)
-                            .toArray();
         }
     }
 

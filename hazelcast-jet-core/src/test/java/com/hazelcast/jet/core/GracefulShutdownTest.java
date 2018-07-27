@@ -32,6 +32,7 @@ import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.tcp.FirewallingConnectionManager;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -67,9 +68,10 @@ public class GracefulShutdownTest extends JetTestSupport {
     private JetInstance[] instances;
     private JetInstance client;
 
-    public void setup(JetConfig config) {
+    @Before
+    public void setup() {
         TestProcessors.reset(0);
-        instances = createJetMembers(config == null ? new JetConfig() : config, NODE_COUNT);
+        instances = createJetMembers(new JetConfig(), NODE_COUNT);
         client = createJetClient();
         EmitIntegersP.savedCounters.clear();
     }
@@ -95,7 +97,6 @@ public class GracefulShutdownTest extends JetTestSupport {
     }
 
     private void when_shutDown_then_gracefully(boolean shutdownCoordinator, boolean snapshotted) {
-        setup(null);
         DAG dag = new DAG();
         final int numItems = 50_000;
         Vertex source = dag.newVertex("source", throttle(() -> new EmitIntegersP(numItems), 10_000)).localParallelism(1);
@@ -143,7 +144,6 @@ public class GracefulShutdownTest extends JetTestSupport {
 
     @Test
     public void when_liteMemberShutDown_then_jobKeepsRunning() throws Exception {
-        setup(null);
         JetConfig liteMemberConfig = new JetConfig();
         liteMemberConfig.getHazelcastConfig().setLiteMember(true);
         JetInstance liteMember = createJetMember(liteMemberConfig);
@@ -158,7 +158,6 @@ public class GracefulShutdownTest extends JetTestSupport {
 
     @Test
     public void when_nonParticipatingMemberShutDown_then_jobKeepsRunning() throws Exception {
-        setup(null);
         DAG dag = new DAG();
         dag.newVertex("v", (DistributedSupplier<Processor>) StuckProcessor::new);
         Job job = instances[0].newJob(dag);
@@ -174,7 +173,6 @@ public class GracefulShutdownTest extends JetTestSupport {
 
     @Test
     public void when_shutDownInProgressFromInit_then_restarts() {
-        setup(null);
         setDelayTime(4000);
         // delay the NotifyMemberShutdownOperation, this will delay the shutdown completion
         delayOperationsFrom(hz(instances[1]), JetInitDataSerializerHook.FACTORY_ID,
@@ -206,7 +204,6 @@ public class GracefulShutdownTest extends JetTestSupport {
 
     @Test
     public void when_shutDownInProgressFromExecute_then_restarts() {
-        setup(null);
         setDelayTime(4000);
         // delay the NotifyMemberShutdownOperation, this will delay the shutdown completion
         delayOperationsFrom(hz(instances[1]), JetInitDataSerializerHook.FACTORY_ID,
@@ -245,14 +242,14 @@ public class GracefulShutdownTest extends JetTestSupport {
 
     @Test
     public void when_shutdownGracefulWhileRestartGraceful_then_restartsFromTerminalSnapshot() throws Exception {
-        JetConfig config = new JetConfig();
         MapConfig mapConfig = new MapConfig(SnapshotRepository.SNAPSHOT_DATA_NAME_PREFIX + "*");
         mapConfig.getMapStoreConfig()
                  .setClassName(BlockingMapStore.class.getName())
                  .setEnabled(true);
-        config.getHazelcastConfig().addMapConfig(mapConfig);
-        setup(config);
-        BlockingMapStore.blocked = false;
+        instances[0].getConfig().getHazelcastConfig().addMapConfig(mapConfig);
+        BlockingMapStore.shouldBlock = false;
+        BlockingMapStore.wasBlocked = false;
+
 
         DAG dag = new DAG();
         int numItems = 5000;
@@ -264,19 +261,19 @@ public class GracefulShutdownTest extends JetTestSupport {
                 .setProcessingGuarantee(EXACTLY_ONCE)
                 .setSnapshotIntervalMillis(2000));
 
+        // wait for the first snapshot
         JetService jetService = getNode(instances[0]).nodeEngine.getService(JetService.SERVICE_NAME);
         SnapshotRepository snapshotRepository = jetService.getJobCoordinationService().snapshotRepository();
         assertTrueEventually(() -> assertTrue(
                 snapshotRepository.getAllSnapshotRecords(job.getId()).stream().anyMatch(SnapshotRecord::isSuccessful)));
 
         // When
-        BlockingMapStore.blocked = true;
+        BlockingMapStore.shouldBlock = true;
         job.restart();
-        // restart should be blocked due to the blocking mapStore, let's sleep a while so that it can initiate.
-        sleepSeconds(1);
+        assertTrueEventually(() -> assertTrue("blocking did not happen", BlockingMapStore.wasBlocked), 5);
 
         Future shutdownFuture = spawn(() -> instances[1].shutdown());
-        BlockingMapStore.blocked = false;
+        BlockingMapStore.shouldBlock = false;
         shutdownFuture.get();
 
         // Then
@@ -345,7 +342,8 @@ public class GracefulShutdownTest extends JetTestSupport {
      * A MapStore that will block map operations until unblocked.
      */
     private static class BlockingMapStore implements MapStore {
-        private static volatile boolean blocked;
+        private static volatile boolean shouldBlock;
+        private static volatile boolean wasBlocked;
 
         @Override
         public void store(Object key, Object value) {
@@ -383,7 +381,8 @@ public class GracefulShutdownTest extends JetTestSupport {
         }
 
         private void block() {
-            while (blocked) {
+            while (shouldBlock) {
+                wasBlocked = true;
                 sleepMillis(100);
             }
         }

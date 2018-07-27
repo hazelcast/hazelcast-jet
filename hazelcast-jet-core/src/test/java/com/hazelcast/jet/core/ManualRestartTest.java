@@ -16,26 +16,45 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.client.map.helpers.AMapStore;
+import com.hazelcast.config.MapConfig;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.core.JobRestartWithSnapshotTest.SequencesInPartitionsGeneratorP;
 import com.hazelcast.jet.core.TestProcessors.MockPS;
 import com.hazelcast.jet.core.TestProcessors.StuckForeverSourceP;
+import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.impl.SnapshotRepository;
+import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import com.hazelcast.test.annotation.Repeat;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.concurrent.CancellationException;
+import java.util.stream.Collectors;
 
+import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
+import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.TestUtil.throttle;
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
 import static com.hazelcast.test.PacketFiltersUtil.rejectOperationsBetween;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 @RunWith(HazelcastSerialClassRunner.class)
@@ -125,5 +144,79 @@ public class ManualRestartTest extends JetTestSupport {
         exception.expect(IllegalStateException.class);
         exception.expectMessage("Cannot RESTART");
         job.restart();
+    }
+
+    @Test
+    public void when_terminalSnapshotFails_then_previousSnapshotUsed() {
+        MapConfig mapConfig = new MapConfig(SnapshotRepository.SNAPSHOT_DATA_NAME_PREFIX + "*");
+        mapConfig.getMapStoreConfig()
+                 .setClassName(FailingMapStore.class.getName())
+                 .setEnabled(true);
+        instances[0].getConfig().getHazelcastConfig().addMapConfig(mapConfig);
+        FailingMapStore.fail = false;
+        FailingMapStore.failed = false;
+
+        DAG dag = new DAG();
+        Vertex source = dag.newVertex("source",
+                throttle(() -> new SequencesInPartitionsGeneratorP(2, 10000, true), 1000));
+        Vertex sink = dag.newVertex("sink", writeListP("sink"));
+        dag.edge(between(source, sink));
+        source.localParallelism(1);
+        Job job = instances[0].newJob(dag, new JobConfig()
+                .setProcessingGuarantee(EXACTLY_ONCE)
+                .setSnapshotIntervalMillis(2000));
+
+        // wait for the first snapshot
+        JetService jetService = getNode(instances[0]).nodeEngine.getService(JetService.SERVICE_NAME);
+        SnapshotRepository snapshotRepository = jetService.getJobCoordinationService().snapshotRepository();
+        assertTrueEventually(() -> assertTrue(
+                snapshotRepository.getAllSnapshotRecords(job.getId()).stream().anyMatch(SnapshotRecord::isSuccessful)));
+
+        // When
+        sleepMillis(100);
+        FailingMapStore.fail = true;
+        job.restart();
+        assertTrueEventually(() -> assertTrue(FailingMapStore.failed), 5);
+        FailingMapStore.fail = false;
+
+        job.join();
+
+        Map<Integer, Integer> actual = new ArrayList<>(instances[0].<Entry<Integer, Integer>>getList("sink")).stream()
+                .filter(e -> e.getKey() == 0)
+                .map(Entry::getValue)
+                .collect(Collectors.toMap(e -> e, e -> 1, (o, n) -> o + n, TreeMap::new));
+
+        assertEquals(actual.toString(), (Integer) 1, actual.get(0));
+        assertEquals(actual.toString(), (Integer) 1, actual.get(9999));
+        // the result should be some ones, then some twos and then some ones. The ones should be from the time
+        // when the source was replayed from last snapshot.
+        boolean sawTwo = false;
+        boolean sawOneAgain = false;
+        for (Integer v : actual.values()) {
+            if (v == 1) {
+                if (sawTwo) {
+                    sawOneAgain = true;
+                }
+            } else if (v == 2) {
+                assertFalse("got a 2 in another group", sawOneAgain);
+                sawTwo = true;
+            } else {
+                fail("v=" + v);
+            }
+        }
+        assertTrue("didn't see any 2s", sawTwo);
+    }
+
+    public static class FailingMapStore extends AMapStore implements Serializable {
+        private static volatile boolean fail;
+        private static volatile boolean failed;
+
+        @Override
+        public void store(Object o, Object o2) {
+            if (fail) {
+                failed = true;
+                throw new RuntimeException();
+            }
+        }
     }
 }
