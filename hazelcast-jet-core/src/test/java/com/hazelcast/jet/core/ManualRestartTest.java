@@ -30,7 +30,6 @@ import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import com.hazelcast.test.annotation.Repeat;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;

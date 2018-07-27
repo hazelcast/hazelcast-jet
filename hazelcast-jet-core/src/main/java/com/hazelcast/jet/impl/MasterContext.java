@@ -582,7 +582,6 @@ public class MasterContext {
             // If the job completed normally and a termination was requested, we assume that it
             // completed normally due to the termination. Make the members return the exception
             // in case a termination was requested.
-
             TerminationMode mode = requestedTerminationMode.get();
             // mode is null if the job completed or failed without a job-control action
             if (mode != null) {
