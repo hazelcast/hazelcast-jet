@@ -433,7 +433,7 @@ public class JobCoordinationService {
         throw new JobNotFoundException(jobId);
     }
 
-    SnapshotRepository snapshotRepository() {
+    public SnapshotRepository snapshotRepository() {
         return snapshotRepository;
     }
 
@@ -495,8 +495,7 @@ public class JobCoordinationService {
         long snapshotInterval = masterContext.getJobConfig().getSnapshotIntervalMillis();
         InternalExecutionService executionService = nodeEngine.getExecutionService();
         if (logger.isFineEnabled()) {
-            logger.fine(masterContext.jobIdString() + " snapshot is scheduled in "
-                    + snapshotInterval + "ms");
+            logger.fine(masterContext.jobIdString() + " snapshot is scheduled in " + snapshotInterval + "ms");
         }
         executionService.schedule(COORDINATOR_EXECUTOR_NAME, () -> beginSnapshot(jobId, executionId),
                 snapshotInterval, MILLISECONDS);
@@ -670,9 +669,11 @@ public class JobCoordinationService {
                         .filter(Objects::nonNull)
                         .toArray(CompletableFuture[]::new);
                 awaitedTerminatingMembersCount++;
-                // need to do this even if futures.length==0, we need to perform the action in whenComplete
+                // Need to do this even if futures.length==0, we need to perform the action in whenComplete.
+                // We use async version because we acquire a lock in the action: the completing thread could
+                // hold another locks, opening the possibility of a deadlock.
                 CompletableFuture.allOf(futures)
-                                 .whenComplete(withTryCatch(logger, (r, e) -> {
+                                 .whenCompleteAsync(withTryCatch(logger, (r, e) -> {
                                      synchronized (lock) {
                                          if (--awaitedTerminatingMembersCount == 0) {
                                              terminalSnapshotsFuture.complete(null);
