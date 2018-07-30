@@ -87,12 +87,12 @@ public class GracefulShutdownTest extends JetTestSupport {
     }
 
     @Test
-    public void when_nonSnapshottedJob_coordinatorShutDown_then_() {
+    public void when_nonSnapshottedJob_coordinatorShutDown_then_restarts() {
         when_shutDown_then_gracefully(true, false);
     }
 
     @Test
-    public void when_nonSnapshottedJob_nonCoordinatorShutDown_then_() {
+    public void when_nonSnapshottedJob_nonCoordinatorShutDown_then_restarts() {
         when_shutDown_then_gracefully(false, false);
     }
 
