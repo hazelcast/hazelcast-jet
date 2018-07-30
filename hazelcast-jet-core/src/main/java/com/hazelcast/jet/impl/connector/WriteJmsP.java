@@ -20,19 +20,11 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.function.DistributedBiConsumer;
-import com.hazelcast.jet.function.DistributedBiFunction;
-import com.hazelcast.jet.function.DistributedConsumer;
-import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.function.*;
 
-import javax.jms.Connection;
-import javax.jms.Destination;
-import javax.jms.Message;
-import javax.jms.MessageProducer;
-import javax.jms.Session;
 import java.util.Collection;
 import java.util.stream.Stream;
+import javax.jms.*;
 
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeBufferedP;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
@@ -112,14 +104,14 @@ public final class WriteJmsP {
                 MessageProducer producer = session.createProducer(destination);
                 return new JmsContext(session, producer);
             };
-            DistributedBiConsumer<JmsContext, T> onReceiveFn = (buffer, item) -> {
-                Message message = messageFn.apply(buffer.session, item);
-                sendFn.accept(buffer.producer, message);
+            DistributedBiConsumer<JmsContext, T> onReceiveFn = (jmsContext, item) -> {
+                Message message = messageFn.apply(jmsContext.session, item);
+                sendFn.accept(jmsContext.producer, message);
             };
-            DistributedConsumer<JmsContext> flushF = buffer -> flushFn.accept(buffer.session);
-            DistributedConsumer<JmsContext> destroyFn = buffer -> {
-                buffer.producer.close();
-                buffer.session.close();
+            DistributedConsumer<JmsContext> flushF = jmsContext -> flushFn.accept(jmsContext.session);
+            DistributedConsumer<JmsContext> destroyFn = jmsContext -> {
+                jmsContext.producer.close();
+                jmsContext.session.close();
             };
             DistributedSupplier<Processor> supplier = writeBufferedP(createFn, onReceiveFn, flushF, destroyFn);
 
