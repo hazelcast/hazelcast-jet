@@ -100,6 +100,9 @@ public interface Job {
      * <p>Conceptually it's equivalent to {@link #suspend()} & {@link
      * #resume()}.
      *
+     * <p>You cannot restart a suspended job, to do that, call {@link
+     * #resume()}.
+     *
      * @throws IllegalStateException if the job is not running, for example it
      * has been already completed, is not yet running, is already restarting,
      * suspended etc.
@@ -111,12 +114,12 @@ public interface Job {
      * JobStatus#SUSPENDED}. To resume the job, call {@link #resume()}.
      *
      * <p>If the job does not do {@linkplain JobConfig#setProcessingGuarantee
-     * state snapshots}, it will be stopped anyway. When resumed, it will start
-     * with empty state.
+     * state snapshots}, it will be suspended anyway. When resumed, it will
+     * start with an empty state.
      *
      * <p>This call returns quickly and a suspension process is initiated. This
-     * process starts with creating a terminal state snapshot. If the terminal
-     * snapshot should fail, the job will stop anyway, but the previous
+     * process starts with creating a terminal state snapshot. Should the
+     * terminal snapshot fail, the job will suspend anyway, but the previous
      * snapshot (if there was one) won't be deleted. When the job is resumed, a
      * reprocessing since the last state snapshot was taken will take place. It
      * can also happen that if a restartable exceptions happens concurrently to

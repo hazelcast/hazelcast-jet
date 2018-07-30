@@ -89,7 +89,7 @@ public class ManualRestartTest extends JetTestSupport {
     private void testJobRestartWhenJobIsRunning(boolean autoRestartOnMemberFailureEnabled) {
         // Given that the job is running
         JetInstance client = createJetClient();
-        Job job = client.newJob(dag, new JobConfig().setAutoRestartOnMemberFailure(autoRestartOnMemberFailureEnabled));
+        Job job = client.newJob(dag, new JobConfig().setAutoScaling(autoRestartOnMemberFailureEnabled));
 
         assertTrueEventually(() -> assertEquals(NODE_COUNT, MockPS.initCount.get()), 10);
 

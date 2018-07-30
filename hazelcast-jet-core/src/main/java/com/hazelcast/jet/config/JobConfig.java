@@ -30,21 +30,21 @@ import java.util.List;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.util.Preconditions.checkNotNull;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Contains the configuration specific to one Hazelcast Jet job.
  */
 public class JobConfig implements Serializable {
 
-    private static final int SNAPSHOT_INTERVAL_MILLIS_DEFAULT = 10_000;
+    private static final long SNAPSHOT_INTERVAL_MILLIS_DEFAULT = SECONDS.toMillis(10);
 
     private String name;
     private ProcessingGuarantee processingGuarantee = ProcessingGuarantee.NONE;
     private long snapshotIntervalMillis = SNAPSHOT_INTERVAL_MILLIS_DEFAULT;
-
+    private boolean autoScaling = true;
     private boolean splitBrainProtectionEnabled;
     private final List<ResourceConfig> resourceConfigs = new ArrayList<>();
-    private boolean autoRestartEnabled = true;
     private int maxWatermarkRetainMillis = -1;
     private JobClassLoaderFactory classLoaderFactory;
 
@@ -100,9 +100,9 @@ public class JobConfig implements Serializable {
      * <p>
      * Split-brain protection is disabled by default.
      * <p>
-     * This setting has no effect if
-     * {@link #setAutoRestartOnMemberFailure(boolean) auto restart on member
-     * failure} is disabled.
+     * If {@linkplain #setAutoScaling(boolean) auto scaling} is disabled and
+     * you manually {@link Job#resume} the job, the job won't start until the
+     * quorum is met, but will remain resumed.
      *
      * @return {@code this} instance for fluent API
      */
@@ -113,31 +113,33 @@ public class JobConfig implements Serializable {
     }
 
     /**
-     * Tells whether {@link #setAutoRestartOnMemberFailure(boolean) auto
-     * restart after member failure} is enabled.
-     */
-    public boolean isAutoRestartOnMemberFailureEnabled() {
-        return this.autoRestartEnabled;
-    }
-
-    /**
-     * Sets whether the job should automatically restart after a participating
-     * member leaves the cluster. When enabled and a member fails, the job will
-     * automatically restart on the remaining members. When disabled, the job
-     * will be suspended instead and must be manually {@linkplain Job#resume
-     * resumed}.
+     * Sets whether the job will be scaled up or down when a member is added to
+     * or removed from the cluster.
      *
-     * <p>If snapshotting is enabled, the job state will be restored from the
-     * latest snapshot. Otherwise it will be started with empty state.
+     * <p>If enabled and a member is added or removed, the job will
+     * automatically restart, see {@link Job#restart} for more details.
+     *
+     * <p>If disabled and a <em>member is added</em>, no action will be taken
+     * and the job will not use the added member; you have to manually
+     * {@linkplain Job#restart() restart} it. If a <em>member is removed</em>
+     * (after a shut down or a failure), the job will be suspended; you have to
+     * manually {@linkplain Job#resume() resume} it.
      *
      * <p>By default, auto-restart is enabled.
      *
      * @return {@code this} instance for fluent API
      */
-    @Nonnull
-    public JobConfig setAutoRestartOnMemberFailure(boolean isEnabled) {
-        this.autoRestartEnabled = isEnabled;
+    public JobConfig setAutoScaling(boolean enabled) {
+        this.autoScaling = enabled;
         return this;
+    }
+
+    /**
+     * Returns whether auto scaling is enabled, see {@link
+     * #setAutoScaling(boolean)}.
+     */
+    public boolean isAutoScaling() {
+        return autoScaling;
     }
 
     /**

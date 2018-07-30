@@ -17,6 +17,8 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
+import com.hazelcast.core.Member;
+import com.hazelcast.instance.MemberImpl;
 import com.hazelcast.instance.Node;
 import com.hazelcast.internal.cluster.ClusterService;
 import com.hazelcast.internal.partition.impl.InternalPartitionServiceImpl;
@@ -51,6 +53,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import static com.hazelcast.cluster.memberselector.MemberSelectors.DATA_MEMBER_SELECTOR;
@@ -79,6 +83,10 @@ import static java.util.stream.Collectors.toList;
 public class JobCoordinationService {
 
     private static final String COORDINATOR_EXECUTOR_NAME = "jet:coordinator";
+
+    /**
+     * A delay to retry job start or job upscaling if we cannot do so now.
+     */
     private static final long RETRY_DELAY_IN_MILLIS = SECONDS.toMillis(2);
 
     private final NodeEngineImpl nodeEngine;
@@ -93,6 +101,8 @@ public class JobCoordinationService {
     private volatile boolean isShutdown;
     private int awaitedTerminatingMembersCount;
     private CompletableFuture<Void> terminalSnapshotsFuture;
+
+    private final AtomicInteger upscaleScheduleCount = new AtomicInteger();
 
     JobCoordinationService(NodeEngineImpl nodeEngine, JetService jetService, JetConfig config,
                            JobRepository jobRepository, SnapshotRepository snapshotRepository) {
@@ -133,11 +143,47 @@ public class JobCoordinationService {
         return masterContexts.get(jobId);
     }
 
+    void onMemberAdded(MemberImpl addedMember) {
+        if (addedMember.isLiteMember()) {
+            return;
+        }
+
+        updateQuorumValues();
+        scheduleUpscale(config.getInstanceConfig().getUpscaleDelayMillis());
+    }
+
+    private void scheduleUpscale(long delay) {
+        int counter = upscaleScheduleCount.incrementAndGet();
+        nodeEngine.getExecutionService().schedule(() -> upscaleJobsNow(counter), delay, TimeUnit.MILLISECONDS);
+    }
+
+    private void upscaleJobsNow(int counter) {
+        // if another upscale was scheduled after this one, let's ignore this upscale
+        if (upscaleScheduleCount.get() != counter) {
+            return;
+        }
+        // if we can't start jobs yet, we also won't tear them down
+        if (!shouldStartJobs()) {
+            scheduleUpscale(RETRY_DELAY_IN_MILLIS);
+        }
+
+        int count = 0;
+        Collection<Member> dataMembers = nodeEngine.getClusterService().getMembers(DATA_MEMBER_SELECTOR);
+        for (MasterContext mc : masterContexts.values()) {
+            if (mc.maybeUpscale(dataMembers)) {
+                count++;
+            }
+        }
+        if (count > 0) {
+            logger.info("Restarted " + count + " job(s) to make use of added members");
+        }
+    }
+
     /**
      * Scans all job records and updates quorum size of a split-brain protection enabled
      * job with current cluster quorum size if the current cluster quorum size is larger
      */
-    void updateQuorumValues() {
+    private void updateQuorumValues() {
         if (!shouldCheckQuorumValues()) {
             return;
         }
@@ -298,8 +344,7 @@ public class JobCoordinationService {
             return masterContexts.remove(jobId, masterContext);
         }
 
-        if (!masterContext.getJobConfig().isAutoRestartOnMemberFailureEnabled()
-                && jobRepository.getExecutionIdCount(jobId) > 0) {
+        if (!masterContext.getJobConfig().isAutoScaling() && jobRepository.getExecutionIdCount(jobId) > 0) {
             logger.info("Suspending job " + masterContext.jobIdString()
                     + " since auto-restart is disabled and the job has been executed before");
             masterContext.finalizeJob(new TopologyChangedException());

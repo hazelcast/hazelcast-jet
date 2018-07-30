@@ -200,7 +200,7 @@ public class TopologyChangeTest extends JetTestSupport {
     public void when_nonCoordinatorLeavesDuringExecutionAndNoRestartConfigured_then_jobSuspended() throws Throwable {
         // Given
         DAG dag = new DAG().vertex(new Vertex("test", new MockPS(StuckProcessor::new, nodeCount)));
-        JobConfig config = new JobConfig().setAutoRestartOnMemberFailure(false);
+        JobConfig config = new JobConfig().setAutoScaling(false);
 
         // When
         Job job = instances[0].newJob(dag, config);
@@ -281,7 +281,7 @@ public class TopologyChangeTest extends JetTestSupport {
         // Given
         JetInstance client = createJetClient();
         DAG dag = new DAG().vertex(new Vertex("test", new MockPS(StuckProcessor::new, nodeCount)));
-        JobConfig config = new JobConfig().setAutoRestartOnMemberFailure(false);
+        JobConfig config = new JobConfig().setAutoScaling(false);
 
         // When
         Job job = client.newJob(dag, config);

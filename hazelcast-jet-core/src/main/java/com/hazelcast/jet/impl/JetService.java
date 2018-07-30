@@ -241,7 +241,7 @@ public class JetService
 
     @Override
     public void memberAdded(MembershipServiceEvent event) {
-        jobCoordinationService.updateQuorumValues();
+        jobCoordinationService.onMemberAdded(event.getMember());
     }
 
     @Override

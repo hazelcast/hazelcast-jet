@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.ExecutionCallback;
+import com.hazelcast.core.Member;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.cluster.impl.MembersView;
@@ -42,6 +43,7 @@ import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResul
 import com.hazelcast.jet.impl.operation.StartExecutionOperation;
 import com.hazelcast.jet.impl.operation.TerminateExecutionOperation;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
+import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.NonCompletableFuture;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.ExecutionService;
@@ -674,12 +676,12 @@ public class MasterContext {
                 jobStatus.compareAndSet(RUNNING, RESTARTING);
                 coordinationService.restartJob(jobId);
             } else if ((failure instanceof RestartableException || failure instanceof TopologyChangedException)
-                    && jobRecord.getConfig().isAutoRestartOnMemberFailureEnabled()) {
+                    && jobRecord.getConfig().isAutoScaling()) {
                 // if restart is due to a failure, restart with a delay
                 scheduleRestart();
             } else if (failure instanceof JobSuspendRequestedException
                     || (failure instanceof RestartableException || failure instanceof TopologyChangedException)
-                    && !jobRecord.getConfig().isAutoRestartOnMemberFailureEnabled()) {
+                    && !jobRecord.getConfig().isAutoScaling()) {
                 jobStatus.set(SUSPENDED);
                 coordinationService.suspendJob(this);
             } else if (failure instanceof JobTerminateRequestedException) {
@@ -843,6 +845,24 @@ public class MasterContext {
                 return terminalSnapshotFuture;
             }
             return null; // nothing to wait for
+        }
+    }
+
+    boolean maybeUpscale(Collection<Member> currentDataMembers) {
+        if (!getJobConfig().isAutoScaling()) {
+            return false;
+        }
+
+        synchronized (lock) {
+            // We only compare the number of our participating members and current members.
+            // If there is any member in our participants that is not among current data members,
+            // this job will be restarted anyway. If it's the other way, then the sizes won't match.
+            if (executionPlanMap == null || executionPlanMap.size() == currentDataMembers.size()) {
+                LoggingUtil.logFine(logger, "Not up-scaling job %s: already running on all members", jobIdString());
+                return false;
+            }
+
+            return requestTermination(TerminationMode.RESTART_GRACEFUL);
         }
     }
 

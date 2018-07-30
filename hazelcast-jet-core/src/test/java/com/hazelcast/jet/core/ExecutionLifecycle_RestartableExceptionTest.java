@@ -46,7 +46,7 @@ public class ExecutionLifecycle_RestartableExceptionTest extends TestInClusterSu
     private static final RestartableException RESTARTABLE_EXCEPTION =
             new RestartableException("mock restartable exception");
 
-    private static JobConfig jobConfigWithRestart = new JobConfig().setAutoRestartOnMemberFailure(true);
+    private static JobConfig jobConfigWithAutoScaling = new JobConfig().setAutoScaling(true);
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
@@ -95,7 +95,7 @@ public class ExecutionLifecycle_RestartableExceptionTest extends TestInClusterSu
         Vertex src = dag.newVertex("src", () -> new ListSource(1));
         Vertex v = dag.newVertex("v", new MockPS(supplier, MEMBER_COUNT));
         dag.edge(between(src, v));
-        member.newJob(dag, jobConfigWithRestart);
+        member.newJob(dag, jobConfigWithAutoScaling);
         assertTrueEventually(() ->
                 assertTrue("MockPS.init not called enough times", MockPS.initCount.get() >= 2 * MEMBER_COUNT), 10);
     }
@@ -104,7 +104,7 @@ public class ExecutionLifecycle_RestartableExceptionTest extends TestInClusterSu
     public void when_inProcessorSupplierInit_then_jobRestarted() {
         DAG dag = new DAG();
         dag.newVertex("v", new MockPS(noopP(), MEMBER_COUNT).setInitError(RESTARTABLE_EXCEPTION));
-        member.newJob(dag, jobConfigWithRestart);
+        member.newJob(dag, jobConfigWithAutoScaling);
         assertTrueEventually(() ->
                 assertTrue("MockPS.init not called enough times", MockPS.initCount.get() >= 2 * MEMBER_COUNT), 10);
     }
@@ -113,7 +113,7 @@ public class ExecutionLifecycle_RestartableExceptionTest extends TestInClusterSu
     public void when_inProcessorSupplierGet_then_jobRestarted() {
         DAG dag = new DAG();
         dag.newVertex("v", new MockPS(noopP(), MEMBER_COUNT).setGetError(RESTARTABLE_EXCEPTION));
-        member.newJob(dag, jobConfigWithRestart);
+        member.newJob(dag, jobConfigWithAutoScaling);
         assertTrueEventually(() ->
                 assertTrue("MockPS.close not called enough times", MockPS.closeCount.get() >= 2 * MEMBER_COUNT), 10);
     }
@@ -122,7 +122,7 @@ public class ExecutionLifecycle_RestartableExceptionTest extends TestInClusterSu
     public void when_inProcessorMetaSupplierInit_then_jobRestarted() {
         DAG dag = new DAG();
         dag.newVertex("v", new RestartableMockPMS().setInitError(RESTARTABLE_EXCEPTION));
-        member.newJob(dag, jobConfigWithRestart);
+        member.newJob(dag, jobConfigWithAutoScaling);
         assertTrueEventually(() ->
                 assertTrue("MockPMS.init not called enough times", RestartableMockPMS.initCount.get() > 2), 10);
     }
@@ -131,7 +131,7 @@ public class ExecutionLifecycle_RestartableExceptionTest extends TestInClusterSu
     public void when_inProcessorMetaSupplierGet_then_jobRestarted() {
         DAG dag = new DAG();
         dag.newVertex("v", new RestartableMockPMS().setGetError(RESTARTABLE_EXCEPTION));
-        member.newJob(dag, jobConfigWithRestart);
+        member.newJob(dag, jobConfigWithAutoScaling);
         assertTrueEventually(() ->
                 assertTrue("MockPMS.init not called enough times", RestartableMockPMS.initCount.get() > 2), 10);
     }

@@ -21,7 +21,9 @@ import com.hazelcast.config.MapConfig;
 import javax.annotation.Nonnull;
 
 import static com.hazelcast.util.Preconditions.checkBackupCount;
+import static com.hazelcast.util.Preconditions.checkNotNegative;
 import static com.hazelcast.util.Preconditions.checkPositive;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * General configuration options pertaining to a Jet instance.
@@ -38,9 +40,12 @@ public class InstanceConfig {
      */
     public static final int DEFAULT_BACKUP_COUNT = MapConfig.DEFAULT_BACKUP_COUNT;
 
+    private static final long UPSCALE_DELAY_MILLIS_DEFAULT = SECONDS.toMillis(10);
+
     private int cooperativeThreadCount = Runtime.getRuntime().availableProcessors();
     private int flowControlPeriodMs = DEFAULT_FLOW_CONTROL_PERIOD_MS;
     private int backupCount = DEFAULT_BACKUP_COUNT;
+    private long upscaleDelayMillis = UPSCALE_DELAY_MILLIS_DEFAULT;
 
     /**
      * Sets the number of threads each cluster member will use to execute Jet
@@ -104,5 +109,26 @@ public class InstanceConfig {
      */
     public int getBackupCount() {
         return backupCount;
+    }
+
+    /**
+     * Sets the delay after which the jobs will restart if a new member is
+     * added to the cluster. Defaults to 10 seconds. Has no effect on jobs with
+     * {@linkplain JobConfig#setAutoScaling(boolean) auto scaling} disabled.
+     *
+     * @param millis The delay, in milliseconds.
+     * @return this instance for fluent API
+     */
+    public InstanceConfig setUpscaleDelayMillis(long millis) {
+        checkNotNegative(millis, "The delay must be >=0");
+        this.upscaleDelayMillis = millis;
+        return this;
+    }
+
+    /**
+     * Returns the upscale delay, see {@link #setUpscaleDelayMillis(long)}.
+     */
+    public long getUpscaleDelayMillis() {
+        return upscaleDelayMillis;
     }
 }
