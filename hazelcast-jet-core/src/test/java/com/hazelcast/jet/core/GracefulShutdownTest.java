@@ -32,6 +32,7 @@ import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.tcp.FirewallingConnectionManager;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import com.hazelcast.test.annotation.Repeat;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -241,6 +242,7 @@ public class GracefulShutdownTest extends JetTestSupport {
     }
 
     @Test
+    @Repeat(10)
     public void when_shutdownGracefulWhileRestartGraceful_then_restartsFromTerminalSnapshot() throws Exception {
         MapConfig mapConfig = new MapConfig(SnapshotRepository.SNAPSHOT_DATA_NAME_PREFIX + "*");
         mapConfig.getMapStoreConfig()
@@ -279,6 +281,7 @@ public class GracefulShutdownTest extends JetTestSupport {
         // Then
         job.join();
 
+        logger.info("savedCounters=" + EmitIntegersP.savedCounters);
         int minCounter = EmitIntegersP.savedCounters.values().stream().mapToInt(Integer::intValue).min().getAsInt();
         Map<Integer, Integer> actual = new ArrayList<>(instances[0].<Integer>getList("sink")).stream()
                 .collect(Collectors.toMap(Function.identity(), item -> 1, Integer::sum));
