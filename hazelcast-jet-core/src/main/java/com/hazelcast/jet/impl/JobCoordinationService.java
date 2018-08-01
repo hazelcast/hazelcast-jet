@@ -216,7 +216,7 @@ public class JobCoordinationService {
      * Starts the job if it is not already started or completed. Returns a future
      * which represents result of the job.
      */
-    public CompletableFuture<Void> submitOrJoinJob(long jobId, Data dag, JobConfig config) {
+    public CompletableFuture<Void> submitJob(long jobId, Data dag, JobConfig config) {
         if (!isMaster()) {
             throw new JetException("Cannot submit job " + idToString(jobId) + ". Master address: "
                     + nodeEngine.getClusterService().getMasterAddress());
@@ -287,7 +287,7 @@ public class JobCoordinationService {
 
         JobRecord jobRecord = jobRepository.getJobRecord(jobId);
         if (jobRecord != null) {
-            return submitOrJoinJob(jobId, jobRecord.getDag(), jobRecord.getConfig());
+            return startJobIfNotStartedOrCompleted(jobRecord);
         }
 
         JobResult jobResult = jobRepository.getJobResult(jobId);
@@ -299,13 +299,13 @@ public class JobCoordinationService {
     }
 
     // Tries to start a job if it is not already running or completed
-    private void startJobIfNotStartedOrCompleted(JobRecord jobRecord) {
+    private CompletableFuture<Void> startJobIfNotStartedOrCompleted(JobRecord jobRecord) {
         // the order of operations is important.
         long jobId = jobRecord.getJobId();
         JobResult jobResult = jobRepository.getJobResult(jobId);
         if (jobResult != null) {
             logger.fine("Not starting job " + idToString(jobId) + ", already has result: " + jobResult);
-            return;
+            return jobResult.asCompletableFuture();
         }
 
         MasterContext masterContext;
@@ -317,8 +317,10 @@ public class JobCoordinationService {
             masterContext = new MasterContext(nodeEngine, this, jobRecord);
             MasterContext prev = masterContexts.putIfAbsent(jobId, masterContext);
             if (prev != null) {
-                prev.resumeJob(jobRepository::newExecutionId);
-                return;
+                if (!jobRecord.isSuspended() && prev.jobStatus() == SUSPENDED) {
+                    prev.resumeJob(jobRepository::newExecutionId);
+                }
+                return prev.completionFuture();
             }
         }
 
@@ -326,11 +328,13 @@ public class JobCoordinationService {
         // Since we've put the MasterContext into the masterContexts map, someone else could
         // have joined to the job in the meantime so we should notify its future.
         if (completeMasterContextIfJobAlreadyCompleted(masterContext)) {
-            return;
+            return masterContext.completionFuture();
         }
 
         logger.info("Starting job " + idToString(masterContext.jobId()) + " discovered by scanning of JobRecords");
         tryStartJob(masterContext);
+
+        return masterContext.completionFuture();
     }
 
     // If a job result is present, it completes the master context using the job result

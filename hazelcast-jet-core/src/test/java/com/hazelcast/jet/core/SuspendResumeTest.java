@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.internal.cluster.ClusterService;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
@@ -244,10 +245,26 @@ public class SuspendResumeTest extends JetTestSupport {
     }
 
     @Test
-    public void when_jobSuspendedAndCoordinatorShutDown_then_jobDoesNotRestart() throws Exception {
-        Job job = instances[0].newJob(dag);
+    public void when_jobSuspendedAndCoordinatorShutDown_then_jobStaysSuspended() throws Exception {
+        when_jobSuspendedAndCoordinatorGone_then_jobStaysSuspended(true);
+    }
+
+    @Test
+    public void when_jobSuspendedAndCoordinatorTerminated_then_jobStaysSuspended() throws Exception {
+        when_jobSuspendedAndCoordinatorGone_then_jobStaysSuspended(false);
+    }
+
+    private void when_jobSuspendedAndCoordinatorGone_then_jobStaysSuspended(boolean graceful) throws Exception {
+        assertTrue(((ClusterService) instances[0].getCluster()).isMaster());
+        Job job = instances[1].newJob(dag);
         StuckProcessor.executionStarted.await();
         job.suspend();
         assertEqualsEventually(job::getStatus, SUSPENDED);
+        if (graceful) {
+            instances[0].shutdown();
+        } else {
+            instances[0].getHazelcastInstance().getLifecycleService().terminate();
+        }
+        assertTrueAllTheTime(() -> assertEquals(SUSPENDED, job.getStatus()), 10);
     }
 }
