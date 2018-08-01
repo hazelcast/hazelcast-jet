@@ -117,15 +117,19 @@ public interface Job {
      * state snapshots}, it will be suspended anyway. When resumed, it will
      * start with an empty state.
      *
-     * <p>This call returns quickly and a suspension process is initiated. This
-     * process starts with creating a terminal state snapshot. Should the
-     * terminal snapshot fail, the job will suspend anyway, but the previous
-     * snapshot (if there was one) won't be deleted. When the job is resumed, a
-     * reprocessing since the last state snapshot was taken will take place. It
-     * can also happen that if a restartable exceptions happens concurrently to
-     * suspension process (such as a member leaving), the job might not suspend
-     * but restart. Call the {@link #getStatus()} to find out and possibly
-     * suspend again.
+     * <p>This call returns quickly and a suspension process is initiated in
+     * the cluster. This process starts with creating a terminal state
+     * snapshot. Should the terminal snapshot fail, the job will suspend
+     * anyway, but the previous snapshot (if there was one) won't be deleted.
+     * When the job is resumed, a reprocessing since the last state snapshot
+     * was taken will take place. It can also happen that if a restartable
+     * exception happens concurrently to suspension process (such as a member
+     * leaving), the job might not suspend but restart. Call the {@link
+     * #getStatus()} to find out and possibly suspend again.
+     *
+     * <em>Note:</em> If the coordinator fails before the suspend is done, it
+     * might happen that even though the call was successful, the job will not
+     * suspend, but restart.
      *
      * @throws IllegalStateException if the job is not running
      */
@@ -146,6 +150,10 @@ public interface Job {
      * <p>Starting from version 0.6, <code>job.getFuture().cancel()</code>
      * fails with an exception.
      *
+     * <em>Note:</em> If the coordinator fails before the cancellation is done,
+     * it might happen that even though the call was successful, the job will
+     * not cancel, but restart and continue.
+
      * @throws IllegalStateException if the job is not running: is restarting,
      * completed...
      */

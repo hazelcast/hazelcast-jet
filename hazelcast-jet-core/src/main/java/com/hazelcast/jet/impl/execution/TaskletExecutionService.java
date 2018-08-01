@@ -190,7 +190,9 @@ public class TaskletExecutionService {
     public void awaitWorkerTermination() {
         assert gracefulShutdown.get() != null : "Not shut down";
         try {
-            blockingTaskletExecutor.awaitTermination(1, TimeUnit.DAYS);
+            while (!blockingTaskletExecutor.awaitTermination(1, TimeUnit.MINUTES)) {
+                logger.warning("Blocking tasklet executor did not terminate in 1 minute");
+            }
             for (Thread t : cooperativeThreadPool) {
                 t.join();
             }
@@ -212,15 +214,15 @@ public class TaskletExecutionService {
         public void run() {
             final ClassLoader clBackup = currentThread().getContextClassLoader();
             final Tasklet t = tracker.tasklet;
+            final String oldName = currentThread().getName();
             currentThread().setContextClassLoader(tracker.jobClassLoader);
 
             // swap the thread name by replacing the ".thread-NN" part at the end
-            final String oldName = currentThread().getName();
-            currentThread().setName(oldName.replaceAll(".thread-[0-9]+$", quoteReplacement("." + tracker.tasklet)));
-            assert !oldName.equals(currentThread().getName()) : "unexpected thread name pattern: " + oldName;
-            blockingWorkerCount.incrementAndGet();
-
             try {
+                currentThread().setName(oldName.replaceAll(".thread-[0-9]+$", quoteReplacement("." + tracker.tasklet)));
+                assert !oldName.equals(currentThread().getName()) : "unexpected thread name pattern: " + oldName;
+                blockingWorkerCount.incrementAndGet();
+
                 startedLatch.countDown();
                 t.init();
                 long idleCount = 0;
@@ -264,7 +266,6 @@ public class TaskletExecutionService {
         @Override
         public void run() {
             final Thread thread = currentThread();
-            final ClassLoader clBackup = thread.getContextClassLoader();
             long idleCount = 0;
             while (true) {
                 Boolean gracefulShutdownLocal = gracefulShutdown.get();
@@ -314,7 +315,6 @@ public class TaskletExecutionService {
                 if (madeProgress) {
                     idleCount = 0;
                 } else {
-                    thread.setContextClassLoader(clBackup);
                     IDLER_COOPERATIVE.idle(++idleCount);
                 }
             }

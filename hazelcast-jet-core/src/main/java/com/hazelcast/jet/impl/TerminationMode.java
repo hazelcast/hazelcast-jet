@@ -46,25 +46,25 @@ public enum TerminationMode {
     // terminate and complete the job
     CANCEL(false, TERMINATE, true, CancellationException::new);
 
-    private final boolean stopWithSnapshot;
+    private final boolean withTerminalSnapshot;
     private final ActionAfterTerminate actionAfterTerminate;
     private final boolean deleteData;
     private final Supplier<Exception> exceptionFactory;
 
-    TerminationMode(boolean stopWithSnapshot, ActionAfterTerminate actionAfterTerminate, boolean deleteData,
+    TerminationMode(boolean withTerminalSnapshot, ActionAfterTerminate actionAfterTerminate, boolean deleteData,
                     Supplier<Exception> exceptionFactory) {
-        this.stopWithSnapshot = stopWithSnapshot;
+        this.withTerminalSnapshot = withTerminalSnapshot;
         this.actionAfterTerminate = actionAfterTerminate;
         this.deleteData = deleteData;
         this.exceptionFactory = exceptionFactory;
     }
 
     /**
-     * If true, the job should be terminated with a snapshot. If false, it
-     * should be interrupted.
+     * If true, the job should be terminated with a terminal snapshot. If
+     * false, it should be interrupted.
      */
-    public boolean isStopWithSnapshot() {
-        return stopWithSnapshot;
+    public boolean isWithTerminalSnapshot() {
+        return withTerminalSnapshot;
     }
 
     /**
@@ -83,8 +83,11 @@ public enum TerminationMode {
         return deleteData;
     }
 
+    /**
+     * Returns a copy of this TerminationMode with terminal snapshot disabled.
+     */
     @CheckReturnValue
-    public TerminationMode withoutStopWithSnapshot() {
+    public TerminationMode withoutTerminalSnapshot() {
         TerminationMode res = this;
         if (this == SUSPEND_GRACEFUL) {
             res = SUSPEND_FORCEFUL;
@@ -93,7 +96,7 @@ public enum TerminationMode {
         } else if (this == TERMINATE_GRACEFUL) {
             res = TERMINATE_FORCEFUL;
         }
-        assert !res.isStopWithSnapshot() : "mode still has (stopWithSnapshot == true): " + res;
+        assert !res.isWithTerminalSnapshot() : "mode still has (withTerminalSnapshot == true): " + res;
         return res;
     }
 

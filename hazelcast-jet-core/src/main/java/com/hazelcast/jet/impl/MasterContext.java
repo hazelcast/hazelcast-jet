@@ -205,7 +205,7 @@ public class MasterContext {
         synchronized (lock) {
             if (!isSnapshottingEnabled()) {
                 // switch graceful method to forceful if we don't do snapshots
-                mode = mode.withoutStopWithSnapshot();
+                mode = mode.withoutTerminalSnapshot();
             }
 
             JobStatus jobStatus = jobStatus();
@@ -469,7 +469,7 @@ public class MasterContext {
     private void handleTermination(@Nonnull TerminationMode mode) {
         // this method can be called multiple times to handle the termination, it must
         // be safe against it (idempotent).
-        if (mode.isStopWithSnapshot()) {
+        if (mode.isWithTerminalSnapshot()) {
             nextSnapshotIsTerminal = true;
             beginSnapshot(executionId);
         } else {
@@ -580,10 +580,10 @@ public class MasterContext {
         if (successfulMembers.size() == executionPlanMap.size()) {
             logger.fine(opName + " of " + jobIdString() + " was successful");
 
-            // TODO [viliam] This is a race:
+            // TODO This is a race:
             // If the job completed normally and a termination was requested, we assume that it
-            // completed normally due to the termination. Make the members return the exception
-            // in case a termination was requested.
+            // completed normally due to the termination. We should make the members return
+            // the exception in case a termination was requested and not complete normally.
             TerminationMode mode = requestedTerminationMode.get();
             // mode is null if the job completed or failed without a job-control action
             if (mode != null) {
@@ -800,9 +800,9 @@ public class MasterContext {
 
     private static ClassLoader swapContextClassLoader(ClassLoader jobClassLoader) {
         Thread currentThread = Thread.currentThread();
-        ClassLoader contextClassLoader = currentThread.getContextClassLoader();
+        ClassLoader previous = currentThread.getContextClassLoader();
         currentThread.setContextClassLoader(jobClassLoader);
-        return contextClassLoader;
+        return previous;
     }
 
     void resumeJob(Function<Long, Long> executionIdSupplier) {
@@ -810,6 +810,8 @@ public class MasterContext {
             if (jobStatus.compareAndSet(SUSPENDED, NOT_STARTED)) {
                 logger.fine("Resuming " + jobIdString());
                 tryStartJob(executionIdSupplier);
+            } else {
+                logger.info("Not resuming " + jobIdString() + ": not " + SUSPENDED + ", but " + jobStatus.get());
             }
         }
     }
@@ -840,7 +842,7 @@ public class MasterContext {
             if (requestedTerminationMode.get() == null) {
                 requestTermination(RESTART_GRACEFUL);
             }
-            if (requestedTerminationMode.get().isStopWithSnapshot()) {
+            if (requestedTerminationMode.get().isWithTerminalSnapshot()) {
                 // this future is null if job is not running, which is ok
                 return terminalSnapshotFuture;
             }
