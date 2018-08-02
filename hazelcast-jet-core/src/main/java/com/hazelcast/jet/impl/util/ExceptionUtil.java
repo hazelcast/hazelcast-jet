@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.util;
 
 import com.hazelcast.client.impl.protocol.ClientExceptionFactory;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
-import com.hazelcast.core.LocalMemberResetException;
 import com.hazelcast.core.MemberLeftException;
 import com.hazelcast.instance.OutOfMemoryErrorDispatcher;
 import com.hazelcast.jet.JetException;
@@ -49,10 +48,6 @@ public final class ExceptionUtil {
      */
     @SuppressWarnings("checkstyle:booleanexpressioncomplexity")
     public static boolean isRestartableException(Throwable t) {
-        if (t instanceof MemberLeftException && t.getCause() instanceof LocalMemberResetException) {
-            return false;
-        }
-
         return t instanceof TopologyChangedException
                 || t instanceof MemberLeftException
                 || t instanceof TargetNotMemberException
