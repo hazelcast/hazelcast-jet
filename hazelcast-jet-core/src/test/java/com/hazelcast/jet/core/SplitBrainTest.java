@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.core.LocalMemberResetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
@@ -27,6 +28,7 @@ import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.MasterContext;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import com.hazelcast.test.annotation.Repeat;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -48,6 +50,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+@Repeat(1)
 @RunWith(HazelcastSerialClassRunner.class)
 public class SplitBrainTest extends JetSplitBrainTestSupport {
 

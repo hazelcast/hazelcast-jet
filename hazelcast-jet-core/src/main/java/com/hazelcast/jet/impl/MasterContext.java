@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.ExecutionCallback;
+import com.hazelcast.core.LocalMemberResetException;
 import com.hazelcast.core.Member;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
@@ -689,6 +690,13 @@ public class MasterContext {
                 jobStatus.set(NOT_STARTED);
             } else {
                 jobStatus.set(isSuccess ? COMPLETED : FAILED);
+
+                if (failure instanceof LocalMemberResetException) {
+                    setFinalResult(new CancellationException());
+                    logger.severe("local member reset");
+                    return;
+                }
+
                 try {
                     coordinationService.completeJob(this, System.currentTimeMillis(), failure);
                 } catch (RuntimeException e) {

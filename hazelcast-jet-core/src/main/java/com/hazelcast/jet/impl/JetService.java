@@ -182,8 +182,8 @@ public class JetService
 
     @Override
     public void reset() {
-        jobCoordinationService.reset();
         jobExecutionService.reset();
+        jobCoordinationService.reset();
     }
 
     public JetInstance getJetInstance() {
