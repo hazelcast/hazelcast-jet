@@ -50,6 +50,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -130,7 +131,8 @@ public class JobCoordinationService {
     }
 
     public void reset() {
-        masterContexts.values().forEach(mc -> mc.requestTermination(TerminationMode.CANCEL));
+        masterContexts.values().forEach(ctx -> ctx.setFinalResult(new CancellationException()));
+        masterContexts.clear();
     }
 
     // only for testing
