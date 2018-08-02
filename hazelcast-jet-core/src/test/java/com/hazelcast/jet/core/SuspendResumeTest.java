@@ -26,10 +26,12 @@ import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.exception.JobSuspendRequestedException;
+import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Future;
@@ -42,6 +44,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+@RunWith(HazelcastSerialClassRunner.class)
 public class SuspendResumeTest extends JetTestSupport {
 
     private static final int NODE_COUNT = 3;

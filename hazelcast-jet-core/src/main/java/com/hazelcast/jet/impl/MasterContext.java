@@ -76,8 +76,7 @@ import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.JobStatus.COMPLETED;
 import static com.hazelcast.jet.core.JobStatus.FAILED;
-import static com.hazelcast.jet.core.JobStatus.NOT_STARTED;
-import static com.hazelcast.jet.core.JobStatus.RESTARTING;
+import static com.hazelcast.jet.core.JobStatus.NOT_RUNNING;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.STARTING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
@@ -116,7 +115,7 @@ public class MasterContext {
     private final JobRecord jobRecord;
     private final long jobId;
     private final String jobName;
-    private final AtomicReference<JobStatus> jobStatus = new AtomicReference<>(NOT_STARTED);
+    private final AtomicReference<JobStatus> jobStatus = new AtomicReference<>(NOT_RUNNING);
     private final SnapshotRepository snapshotRepository;
     private volatile Set<Vertex> vertices;
 
@@ -350,8 +349,8 @@ public class MasterContext {
      */
     private boolean setJobStatusToStarting() {
         JobStatus status = jobStatus();
-        if (status == COMPLETED || status == FAILED || status == SUSPENDED) {
-            logger.severe("Cannot init job '" + jobName + "': it is " + status);
+        if (status != NOT_RUNNING) {
+            logger.fine("Not starting job '" + jobName + "': status is " + status);
             return false;
         }
 
@@ -361,20 +360,9 @@ public class MasterContext {
             return false;
         }
 
-        if (status == NOT_STARTED) {
-            if (!jobStatus.compareAndSet(NOT_STARTED, STARTING)) {
-                logger.fine("Cannot init job '" + jobName + "': someone else is just starting it");
-                return false;
-            }
-        }
-
+        boolean success = jobStatus.compareAndSet(NOT_RUNNING, STARTING);
+        assert success : "a race setting job status";
         executionStartTime = System.nanoTime();
-        status = jobStatus();
-        if (status != STARTING && status != RESTARTING) {
-            logger.severe("Cannot init job '" + jobName + "': status is " + status);
-            return false;
-        }
-
         return true;
     }
 
@@ -400,8 +388,12 @@ public class MasterContext {
     }
 
     private void scheduleRestart() {
-        // if status is RUNNING, set it to RESTARTING. If it's STARTING, leave it
-        jobStatus.compareAndSet(RUNNING, RESTARTING);
+        jobStatus.updateAndGet(status -> {
+            if (status != NOT_RUNNING && status != STARTING && status != RUNNING) {
+                throw new IllegalStateException("Restart scheduled in an unexpected state: " + status);
+            }
+            return NOT_RUNNING;
+        });
         coordinationService.scheduleRestart(jobId);
     }
 
@@ -417,9 +409,8 @@ public class MasterContext {
         if (error == null) {
             JobStatus status = jobStatus();
 
-            if (!(status == STARTING || status == RESTARTING)) {
-                error = new IllegalStateException("Cannot execute " + jobIdString()
-                        + ": status is " + status);
+            if (status != STARTING) {
+                error = new IllegalStateException("Cannot execute " + jobIdString() + ": status is " + status);
             }
         }
 
@@ -628,7 +619,7 @@ public class MasterContext {
         JobStatus status = jobStatus();
 
         Throwable finalError;
-        if (status == STARTING || status == RESTARTING || status == RUNNING) {
+        if (status == STARTING || status == RUNNING) {
             logger.fine("Completing " + jobIdString());
             finalError = error;
         } else {
@@ -674,7 +665,7 @@ public class MasterContext {
             // if restart was requested, restart immediately
             if (failure instanceof JobRestartRequestedException) {
                 // if status is RUNNING, set it to RESTARTING. If it's STARTING, let it be.
-                jobStatus.compareAndSet(RUNNING, RESTARTING);
+                jobStatus.compareAndSet(RUNNING, NOT_RUNNING);
                 coordinationService.restartJob(jobId);
             } else if ((failure instanceof RestartableException || failure instanceof TopologyChangedException)
                     && jobRecord.getConfig().isAutoScaling()) {
@@ -687,7 +678,7 @@ public class MasterContext {
                 coordinationService.suspendJob(this);
             } else if (failure instanceof JobTerminateRequestedException) {
                 // leave the job not-suspended, not-restarted. New master will pick it up.
-                jobStatus.set(NOT_STARTED);
+                jobStatus.set(NOT_RUNNING);
             } else {
                 jobStatus.set(isSuccess ? COMPLETED : FAILED);
 
@@ -815,8 +806,8 @@ public class MasterContext {
 
     void resumeJob(Function<Long, Long> executionIdSupplier) {
         synchronized (lock) {
-            if (jobStatus.compareAndSet(SUSPENDED, NOT_STARTED)) {
-                logger.fine("Resuming " + jobIdString());
+            if (jobStatus.compareAndSet(SUSPENDED, NOT_RUNNING)) {
+                logger.fine("Resuming job " + jobName);
                 tryStartJob(executionIdSupplier);
             } else {
                 logger.info("Not resuming " + jobIdString() + ": not " + SUSPENDED + ", but " + jobStatus.get());

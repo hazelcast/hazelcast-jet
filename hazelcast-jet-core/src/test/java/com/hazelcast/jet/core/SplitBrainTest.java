@@ -28,7 +28,6 @@ import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.MasterContext;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import com.hazelcast.test.annotation.Repeat;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -42,16 +41,14 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static com.hazelcast.jet.core.JobStatus.COMPLETED;
-import static com.hazelcast.jet.core.JobStatus.RESTARTING;
+import static com.hazelcast.jet.core.JobStatus.NOT_RUNNING;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
-import static com.hazelcast.jet.core.JobStatus.STARTING;
 import static com.hazelcast.spi.partition.IPartition.MAX_BACKUP_COUNT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-@Repeat(1)
 @RunWith(HazelcastSerialClassRunner.class)
 public class SplitBrainTest extends JetSplitBrainTestSupport {
 
@@ -101,15 +98,13 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
             JetService service2 = getJetService(secondSubCluster[0]);
 
             assertTrueEventually(() -> {
-                assertEquals(STARTING, service2.getJobCoordinationService().getJobStatus(jobId));
+                MasterContext masterContext = service2.getJobCoordinationService().getMasterContext(jobId);
+                assertNotNull(masterContext);
+                minorityJobFutureRef[0] = masterContext.completionFuture();
             });
 
-            MasterContext masterContext = service2.getJobCoordinationService().getMasterContext(jobId);
-            assertNotNull(masterContext);
-            minorityJobFutureRef[0] = masterContext.completionFuture();
-
             assertTrueAllTheTime(() -> {
-                assertEquals(STARTING, service2.getJobCoordinationService().getJobStatus(jobId));
+                assertEquals(NOT_RUNNING, service2.getJobCoordinationService().getJobStatus(jobId));
             }, 20);
         };
 
@@ -157,15 +152,17 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
             assertTrueEventually(() -> {
                 JetService service1 = getJetService(firstSubCluster[0]);
                 JetService service2 = getJetService(secondSubCluster[0]);
-                assertEquals(RESTARTING, service1.getJobCoordinationService().getJobStatus(jobId));
-                assertEquals(STARTING, service2.getJobCoordinationService().getJobStatus(jobId));
+                MasterContext masterContext = service1.getJobCoordinationService().getMasterContext(jobId);
+                assertNotNull(masterContext);
+                masterContext = service2.getJobCoordinationService().getMasterContext(jobId);
+                assertNotNull(masterContext);
             });
 
             assertTrueAllTheTime(() -> {
                 JetService service1 = getJetService(firstSubCluster[0]);
                 JetService service2 = getJetService(secondSubCluster[0]);
-                assertEquals(RESTARTING, service1.getJobCoordinationService().getJobStatus(jobId));
-                assertEquals(STARTING, service2.getJobCoordinationService().getJobStatus(jobId));
+                assertEquals(NOT_RUNNING, service1.getJobCoordinationService().getJobStatus(jobId));
+                assertEquals(NOT_RUNNING, service2.getJobCoordinationService().getJobStatus(jobId));
             }, 20);
         };
 
@@ -300,11 +297,11 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
 
         StuckProcessor.proceedLatch.countDown();
 
-        assertTrueEventually(() -> assertEquals(RESTARTING, job.getStatus()), 10);
+        assertTrueEventually(() -> assertEquals(NOT_RUNNING, job.getStatus()), 10);
 
         createJetMember(jetConfig);
 
-        assertTrueAllTheTime(() -> assertEquals(RESTARTING, job.getStatus()), 5);
+        assertTrueAllTheTime(() -> assertEquals(NOT_RUNNING, job.getStatus()), 5);
     }
 
     @Test

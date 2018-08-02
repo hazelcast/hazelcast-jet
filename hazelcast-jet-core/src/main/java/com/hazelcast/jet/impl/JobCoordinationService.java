@@ -61,7 +61,7 @@ import java.util.function.Function;
 import static com.hazelcast.cluster.memberselector.MemberSelectors.DATA_MEMBER_SELECTOR;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.core.JobStatus.COMPLETING;
-import static com.hazelcast.jet.core.JobStatus.NOT_STARTED;
+import static com.hazelcast.jet.core.JobStatus.NOT_RUNNING;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.impl.TerminationMode.CANCEL;
@@ -289,7 +289,7 @@ public class JobCoordinationService {
 
         JobRecord jobRecord = jobRepository.getJobRecord(jobId);
         if (jobRecord != null) {
-            return startJobIfNotStartedOrCompleted(jobRecord);
+            return startJobIfNotStartedOrCompleted(jobRecord, "join request from client");
         }
 
         JobResult jobResult = jobRepository.getJobResult(jobId);
@@ -301,7 +301,7 @@ public class JobCoordinationService {
     }
 
     // Tries to start a job if it is not already running or completed
-    private CompletableFuture<Void> startJobIfNotStartedOrCompleted(JobRecord jobRecord) {
+    private CompletableFuture<Void> startJobIfNotStartedOrCompleted(JobRecord jobRecord, String reason) {
         // the order of operations is important.
         long jobId = jobRecord.getJobId();
         JobResult jobResult = jobRepository.getJobResult(jobId);
@@ -333,7 +333,7 @@ public class JobCoordinationService {
             return masterContext.completionFuture();
         }
 
-        logger.info("Starting job " + idToString(masterContext.jobId()) + " discovered by scanning of JobRecords");
+        logger.info("Starting job " + idToString(masterContext.jobId()) + ": " + reason);
         tryStartJob(masterContext);
 
         return masterContext.completionFuture();
@@ -449,7 +449,7 @@ public class JobCoordinationService {
         // no master context found, job might be just submitted
         JobRecord jobRecord = jobRepository.getJobRecord(jobId);
         if (jobRecord != null) {
-            return jobRecord.isSuspended() ? SUSPENDED : NOT_STARTED;
+            return jobRecord.isSuspended() ? SUSPENDED : NOT_RUNNING;
         } else {
             // no job record found, but check job results again
             // since job might have been completed meanwhile.
@@ -518,7 +518,7 @@ public class JobCoordinationService {
         if (jobRepository.updateJobSuspendedStatus(jobId, false)) {
             JobRecord jobRecord = jobRepository.getJobRecord(jobId);
             if (jobRecord != null) {
-                startJobIfNotStartedOrCompleted(jobRecord);
+                startJobIfNotStartedOrCompleted(jobRecord, "resume request");
             }
         }
     }
@@ -666,7 +666,7 @@ public class JobCoordinationService {
             Collection<JobRecord> jobs = jobRepository.getJobRecords();
             jobs.stream()
                 .filter(jobRecord -> !jobRecord.isSuspended())
-                .forEach(this::startJobIfNotStartedOrCompleted);
+                .forEach(jobRecord -> startJobIfNotStartedOrCompleted(jobRecord, "discovered by scanning of JobRecords"));
 
             performCleanup();
         } catch (Exception e) {
