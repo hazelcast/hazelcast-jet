@@ -43,6 +43,7 @@ import java.util.function.Consumer;
 import static com.hazelcast.jet.core.JobStatus.COMPLETED;
 import static com.hazelcast.jet.core.JobStatus.NOT_RUNNING;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
+import static com.hazelcast.jet.core.JobStatus.STARTING;
 import static com.hazelcast.spi.partition.IPartition.MAX_BACKUP_COUNT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -130,7 +131,7 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
     }
 
     @Test
-    public void when_quorumIsLostOnBothSides_then_jobRestartsUntilMerge() {
+    public void when_quorumIsLostOnBothSides_then_jobRestartsAfterMerge() {
         int firstSubClusterSize = 2;
         int secondSubClusterSize = 2;
         int clusterSize = firstSubClusterSize + secondSubClusterSize;
@@ -161,8 +162,10 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
             assertTrueAllTheTime(() -> {
                 JetService service1 = getJetService(firstSubCluster[0]);
                 JetService service2 = getJetService(secondSubCluster[0]);
-                assertEquals(NOT_RUNNING, service1.getJobCoordinationService().getJobStatus(jobId));
-                assertEquals(NOT_RUNNING, service2.getJobCoordinationService().getJobStatus(jobId));
+                JobStatus status1 = service1.getJobCoordinationService().getJobStatus(jobId);
+                JobStatus status2 = service2.getJobCoordinationService().getJobStatus(jobId);
+                assertTrue("status1=" + status1, status1 == NOT_RUNNING || status1 == STARTING);
+                assertTrue("status2=" + status2, status2 == NOT_RUNNING || status2 == STARTING);
             }, 20);
         };
 
