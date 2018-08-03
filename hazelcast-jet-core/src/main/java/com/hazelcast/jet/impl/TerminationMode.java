@@ -21,6 +21,7 @@ import com.hazelcast.jet.impl.exception.JobSuspendRequestedException;
 import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
 
 import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
 import java.util.concurrent.CancellationException;
 import java.util.function.Supplier;
 
@@ -100,6 +101,7 @@ public enum TerminationMode {
         return res;
     }
 
+    @Nonnull
     public Exception createException() {
         return exceptionFactory.get();
     }
@@ -109,7 +111,8 @@ public enum TerminationMode {
         RESTART,
         /** Don't start the job again, mark the job as suspended. */
         SUSPEND,
-        /** Don't start the job again, don't mark the job as suspended - used when shutting down a member. */
+        /** Don't start the job again, don't mark the job as suspended - used when
+         * shutting down a member or cancelling. */
         TERMINATE
     }
 }

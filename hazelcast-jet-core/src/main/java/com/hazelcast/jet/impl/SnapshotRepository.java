@@ -103,13 +103,12 @@ public class SnapshotRepository {
     /**
      * Updates status of the given snapshot. Returns the elapsed time for the snapshot.
      */
-    long setSnapshotStatus(long jobId, long snapshotId, SnapshotStatus status) {
+    private void setSnapshotStatus(long jobId, long snapshotId, SnapshotStatus status) {
         IMap<Long, SnapshotRecord> snapshots = getSnapshotMap(jobId);
-        SnapshotRecord record = compute(snapshots, snapshotId, (k, r) -> {
+        compute(snapshots, snapshotId, (k, r) -> {
             r.setStatus(status);
-            return r;
+            return null;
         });
-        return System.currentTimeMillis() - record.startTime();
     }
 
     /**

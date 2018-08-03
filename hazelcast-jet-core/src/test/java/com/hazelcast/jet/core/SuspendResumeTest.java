@@ -43,6 +43,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class SuspendResumeTest extends JetTestSupport {
@@ -210,15 +211,21 @@ public class SuspendResumeTest extends JetTestSupport {
         // When
         job.cancel();
         // Then
+        try {
+            job.join();
+            fail("job.join() should have failed");
+        } catch (CancellationException ignored) { }
         assertEqualsEventually(job::getStatus, COMPLETED);
 
         // check that job resources are deleted
         SnapshotRepository snapshotRepository = new SnapshotRepository(instances[0]);
         JobRepository jobRepository = new JobRepository(instances[0], snapshotRepository);
-        assertNull("JobRecord", jobRepository.getJobRecord(job.getId()));
-        JobResult jobResult = jobRepository.getJobResult(job.getId());
-        assertInstanceOf(CancellationException.class, jobResult.getFailure());
-        assertFalse("Job result successful", jobResult.isSuccessful());
+        assertTrueEventually(() -> {
+            assertNull("JobRecord", jobRepository.getJobRecord(job.getId()));
+            JobResult jobResult = jobRepository.getJobResult(job.getId());
+            assertInstanceOf(CancellationException.class, jobResult.getFailure());
+            assertFalse("Job result successful", jobResult.isSuccessful());
+        });
     }
 
     @Test

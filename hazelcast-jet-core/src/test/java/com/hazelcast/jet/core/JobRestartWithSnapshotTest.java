@@ -81,7 +81,6 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -417,7 +416,8 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
             job.restart();
             // Sleep a little because the snapshot that started before restart was requested
             // can complete after this happens.
-            LockSupport.parkNanos(SECONDS.toNanos(1));
+            LockSupport.parkNanos(MILLISECONDS.toNanos(500));
+            assertTrueEventually(() -> assertEquals(JobStatus.RUNNING, job.getStatus()));
         });
     }
 

@@ -212,8 +212,8 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
 
         Consumer<JetInstance[]> afterMerge = instances -> {
             assertTrueEventually(() -> {
-                assertEquals(clusterSize * 2, MockPS.initCount.get());
-                assertEquals(clusterSize * 2, MockPS.closeCount.get());
+                assertEquals("init count", clusterSize * 2, MockPS.initCount.get());
+                assertEquals("close count", clusterSize * 2, MockPS.closeCount.get());
             });
 
             assertEquals(clusterSize, MockPS.receivedCloseErrors.size());

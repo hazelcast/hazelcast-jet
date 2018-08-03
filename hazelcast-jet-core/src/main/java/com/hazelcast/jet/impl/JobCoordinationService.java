@@ -311,19 +311,21 @@ public class JobCoordinationService {
         }
 
         MasterContext masterContext;
+        MasterContext oldMasterContext;
         synchronized (lock) {
             if (isShutdown) {
                 throw new ShutdownInProgressException();
             }
 
             masterContext = new MasterContext(nodeEngine, this, jobRecord);
-            MasterContext prev = masterContexts.putIfAbsent(jobId, masterContext);
-            if (prev != null) {
-                if (!jobRecord.isSuspended() && prev.jobStatus() == SUSPENDED) {
-                    prev.resumeJob(jobRepository::newExecutionId);
-                }
-                return prev.completionFuture();
+            oldMasterContext = masterContexts.putIfAbsent(jobId, masterContext);
+        }
+
+        if (oldMasterContext != null) {
+            if (!jobRecord.isSuspended() && oldMasterContext.jobStatus() == SUSPENDED) {
+                oldMasterContext.resumeJob(jobRepository::newExecutionId);
             }
+            return oldMasterContext.completionFuture();
         }
 
         // If job is not currently running, it might be that it just completed.
@@ -716,7 +718,7 @@ public class JobCoordinationService {
                 }
                 logger.fine("Added a shutting-down member: " + uuid);
                 CompletableFuture[] futures = masterContexts.values().stream()
-                        .map(mc -> mc.onParticipantShutDown(uuid))
+                        .map(mc -> mc.onParticipantGracefulShutdown(uuid))
                         .filter(Objects::nonNull)
                         .toArray(CompletableFuture[]::new);
                 awaitedTerminatingMembersCount++;

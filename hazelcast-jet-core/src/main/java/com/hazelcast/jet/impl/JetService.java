@@ -177,6 +177,7 @@ public class JetService
         jobCoordinationService.shutdown();
         jobExecutionService.shutdown(false);
         taskletExecutionService.shutdown(false);
+        taskletExecutionService.awaitWorkerTermination();
         networking.shutdown();
     }
 

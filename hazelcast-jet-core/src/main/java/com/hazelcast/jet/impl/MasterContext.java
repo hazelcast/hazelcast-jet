@@ -51,7 +51,6 @@ import com.hazelcast.spi.ExecutionService;
 import com.hazelcast.spi.InternalCompletableFuture;
 import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.impl.NodeEngineImpl;
-import com.hazelcast.spi.serialization.SerializationService;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -68,6 +67,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -94,6 +94,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.jobNameAndExecutionId;
 import static java.util.Collections.emptyList;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.partitioningBy;
 import static java.util.stream.Collectors.toList;
@@ -202,25 +203,36 @@ public class MasterContext {
      * @return false, if termination was already requested
      */
     boolean requestTermination(TerminationMode mode) {
+        JobStatus localStatus;
+        assertLockNotHeld();
         synchronized (lock) {
             if (!isSnapshottingEnabled()) {
                 // switch graceful method to forceful if we don't do snapshots
                 mode = mode.withoutTerminalSnapshot();
             }
 
-            JobStatus jobStatus = jobStatus();
-            boolean success = requestedTerminationMode.compareAndSet(null, mode);
-            if (success) {
-                handleTermination(mode);
-                // handle cancellation of a suspended job
-                if (jobStatus == SUSPENDED) {
-                    assert mode == CANCEL : "mode is not CANCEL, but " + mode;
-                    coordinationService.completeJob(this, System.currentTimeMillis(), new CancellationException());
-                    this.jobStatus.set(COMPLETED);
-                }
+            localStatus = jobStatus();
+            if (localStatus == SUSPENDED && mode != CANCEL) {
+                // if suspended, we can only cancel the job. Other terminations have no effect.
+                return false;
             }
-            return success;
+            if (!requestedTerminationMode.compareAndSet(null, mode)) {
+                return false;
+            }
+            // handle cancellation of a suspended job
+            if (localStatus == SUSPENDED) {
+                this.jobStatus.set(COMPLETED);
+                setFinalResult(new CancellationException());
+            }
         }
+
+        if (localStatus == SUSPENDED) {
+            coordinationService.completeJob(this, System.currentTimeMillis(), new CancellationException());
+        } else {
+            handleTermination(mode);
+        }
+
+        return true;
     }
 
     boolean isCancelled() {
@@ -239,7 +251,20 @@ public class MasterContext {
      * fixed yet, job restart is rescheduled.
      */
     void tryStartJob(Function<Long, Long> executionIdSupplier) {
+        ClassLoader classLoader = null;
+        DAG dag = null;
+        Throwable exception = null;
+        String dotString = null;
+
+        assertLockNotHeld();
+        synchronized_block:
         synchronized (lock) {
+            if (isCancelled()) {
+                logger.fine("Skipping init job '" + jobName + "': is already cancelled.");
+                exception = new CancellationException();
+                break synchronized_block;
+            }
+
             if (!setJobStatusToStarting()
                     || scheduleRestartIfQuorumAbsent()
                     || scheduleRestartIfClusterIsNotSafe()) {
@@ -252,72 +277,78 @@ public class MasterContext {
                     // ignore restart, we are just starting
                     requestedTerminationMode.set(null);
                 } else {
-                    finalizeJob(terminationMode.createException());
-                    return;
+                    exception = terminationMode.createException();
+                    break synchronized_block;
                 }
             }
 
-            SerializationService serializationService = nodeEngine.getSerializationService();
-            ClassLoader classLoader = coordinationService.getJetService().getClassLoader(jobId);
-            DAG dag;
+            classLoader = coordinationService.getJetService().getClassLoader(jobId);
             try {
-                dag = deserializeWithCustomClassLoader(serializationService, classLoader, jobRecord.getDag());
+                dag = deserializeWithCustomClassLoader(nodeEngine.getSerializationService(), classLoader,
+                        jobRecord.getDag());
             } catch (Exception e) {
                 logger.warning("DAG deserialization failed", e);
-                finalizeJob(e);
-                return;
+                exception = e;
+                break synchronized_block;
             }
             // save a copy of the vertex list because it is going to change
             vertices = new HashSet<>();
+            dotString = dag.toDotString();
             dag.iterator().forEachRemaining(vertices::add);
             executionId = executionIdSupplier.apply(jobId);
 
             snapshotInProgress.set(false);
             nextSnapshotIsTerminal = false;
             terminalSnapshotFuture = new CompletableFuture<>();
-
-            // last started snapshot, completed or not. The next started snapshot must be greater than this number
-            long lastSnapshotId = NO_SNAPSHOT;
-            if (isSnapshottingEnabled()) {
-                Long snapshotIdToRestore = snapshotRepository.latestCompleteSnapshot(jobId);
-                snapshotRepository.deleteAllSnapshotsExceptOne(jobId, snapshotIdToRestore);
-                Long lastStartedSnapshot = snapshotRepository.latestStartedSnapshot(jobId);
-                if (snapshotIdToRestore != null) {
-                    logger.info("State of " + jobIdString() + " will be restored from snapshot "
-                            + snapshotIdToRestore);
-                    rewriteDagWithSnapshotRestore(dag, snapshotIdToRestore);
-                } else {
-                    logger.info("No previous snapshot for " + jobIdString() + " found.");
-                }
-                if (lastStartedSnapshot != null) {
-                    lastSnapshotId = lastStartedSnapshot;
-                }
-            }
-
-            MembersView membersView = getMembersView();
-            ClassLoader previousCL = swapContextClassLoader(classLoader);
-            try {
-                logger.info("Start executing " + jobIdString() + ", status " + jobStatus()
-                        + ", execution graph in DOT format:\n" + dag.toDotString()
-                        + "\nHINT: You can use graphviz or http://viz-js.com to visualize the printed graph.");
-                logger.fine("Building execution plan for " + jobIdString());
-                executionPlanMap = createExecutionPlans(nodeEngine, membersView,
-                        dag, jobId, executionId, getJobConfig(), lastSnapshotId);
-            } catch (Exception e) {
-                logger.severe("Exception creating execution plan for " + jobIdString(), e);
-                finalizeJob(e);
-                return;
-            } finally {
-                Thread.currentThread().setContextClassLoader(previousCL);
-            }
-
-            logger.fine("Built execution plans for " + jobIdString());
-            Set<MemberInfo> participants = executionPlanMap.keySet();
-            Function<ExecutionPlan, Operation> operationCtor = plan ->
-                    new InitExecutionOperation(jobId, executionId, membersView.getVersion(), participants,
-                            serializationService.toData(plan));
-            invoke(operationCtor, this::onInitStepCompleted, null);
         }
+
+        if (exception != null) {
+            // run the finalizeJob outside of the synchronized block
+            finalizeJob(exception);
+            return;
+        }
+
+        // last started snapshot, completed or not. The next started snapshot must be greater than this number
+        long lastSnapshotId = NO_SNAPSHOT;
+        if (isSnapshottingEnabled()) {
+            Long snapshotIdToRestore = snapshotRepository.latestCompleteSnapshot(jobId);
+            snapshotRepository.deleteAllSnapshotsExceptOne(jobId, snapshotIdToRestore);
+            Long lastStartedSnapshot = snapshotRepository.latestStartedSnapshot(jobId);
+            if (snapshotIdToRestore != null) {
+                logger.info("State of " + jobIdString() + " will be restored from snapshot "
+                        + snapshotIdToRestore);
+                rewriteDagWithSnapshotRestore(dag, snapshotIdToRestore);
+            } else {
+                logger.info("No previous snapshot for " + jobIdString() + " found.");
+            }
+            if (lastStartedSnapshot != null) {
+                lastSnapshotId = lastStartedSnapshot;
+            }
+        }
+
+        MembersView membersView = getMembersView();
+        ClassLoader previousCL = swapContextClassLoader(classLoader);
+        try {
+            logger.info("Start executing " + jobIdString() + ", status " + jobStatus()
+                    + ", execution graph in DOT format:\n" + dotString
+                    + "\nHINT: You can use graphviz or http://viz-js.com to visualize the printed graph.");
+            logger.fine("Building execution plan for " + jobIdString());
+            executionPlanMap = createExecutionPlans(nodeEngine, membersView,
+                    dag, jobId, executionId, getJobConfig(), lastSnapshotId);
+        } catch (Exception e) {
+            logger.severe("Exception creating execution plan for " + jobIdString(), e);
+            finalizeJob(e);
+            return;
+        } finally {
+            Thread.currentThread().setContextClassLoader(previousCL);
+        }
+
+        logger.fine("Built execution plans for " + jobIdString());
+        Set<MemberInfo> participants = executionPlanMap.keySet();
+        Function<ExecutionPlan, Operation> operationCtor = plan ->
+                new InitExecutionOperation(jobId, executionId, membersView.getVersion(), participants,
+                        nodeEngine.getSerializationService().toData(plan));
+        invoke(operationCtor, this::onInitStepCompleted, null);
     }
 
     private void rewriteDagWithSnapshotRestore(DAG dag, long snapshotId) {
@@ -351,12 +382,6 @@ public class MasterContext {
         JobStatus status = jobStatus();
         if (status != NOT_RUNNING) {
             logger.fine("Not starting job '" + jobName + "': status is " + status);
-            return false;
-        }
-
-        if (isCancelled()) {
-            logger.fine("Skipping init job '" + jobName + "': is already cancelled.");
-            finalizeJob(new CancellationException());
             return false;
         }
 
@@ -477,6 +502,8 @@ public class MasterContext {
     }
 
     void beginSnapshot(long executionId) {
+        boolean isTerminal;
+        assertLockNotHeld();
         synchronized (lock) {
             if (this.executionId != executionId) {
                 // current execution is completed and probably a new execution has started
@@ -490,51 +517,55 @@ public class MasterContext {
                 return;
             }
 
-            boolean isTerminal = nextSnapshotIsTerminal;
-            nextSnapshotIsTerminal = false;
-
-            List<String> vertexNames = vertices.stream().map(Vertex::getName).collect(Collectors.toList());
-            long newSnapshotId = snapshotRepository.registerSnapshot(jobId, vertexNames);
-
-            logger.info(String.format("Starting%s snapshot %s for %s",
-                    isTerminal ? " terminal" : "", newSnapshotId, jobIdString()));
-            Function<ExecutionPlan, Operation> factory =
-                    plan -> new SnapshotOperation(jobId, executionId, newSnapshotId, isTerminal);
-
-            invoke(factory, responses -> onSnapshotCompleted(responses, executionId, newSnapshotId, isTerminal), null);
+            isTerminal = nextSnapshotIsTerminal;
         }
+
+        List<String> vertexNames = vertices.stream().map(Vertex::getName).collect(Collectors.toList());
+        long newSnapshotId = snapshotRepository.registerSnapshot(jobId, vertexNames);
+
+        logger.info(String.format("Starting%s snapshot %s for %s",
+                isTerminal ? " terminal" : "", newSnapshotId, jobIdString()));
+        Function<ExecutionPlan, Operation> factory =
+                plan -> new SnapshotOperation(jobId, executionId, newSnapshotId, isTerminal);
+
+        invoke(factory, responses -> onSnapshotCompleted(responses, executionId, newSnapshotId, isTerminal), null);
     }
 
     private void onSnapshotCompleted(Map<MemberInfo, Object> responses, long executionId, long snapshotId,
                                                   boolean wasTerminal) {
-        synchronized (lock) {
-            // Note: this method can be called after finalizeJob() is called
-            SnapshotOperationResult mergedResult = new SnapshotOperationResult();
-            for (Object response : responses.values()) {
-                // the response either SnapshotOperationResult or an exception, see #invoke() method
-                if (response instanceof Throwable) {
-                    response = new SnapshotOperationResult(0, 0, 0, (Throwable) response);
-                }
-                mergedResult.merge((SnapshotOperationResult) response);
+        // Note: this method can be called after finalizeJob() is called
+        SnapshotOperationResult mergedResult = new SnapshotOperationResult();
+        for (Object response : responses.values()) {
+            // the response either SnapshotOperationResult or an exception, see #invoke() method
+            if (response instanceof Throwable) {
+                response = new SnapshotOperationResult(0, 0, 0, (Throwable) response);
             }
+            mergedResult.merge((SnapshotOperationResult) response);
+        }
 
-            boolean isSuccess = mergedResult.getError() == null;
-            if (!isSuccess) {
-                logger.warning(jobIdString() + " snapshot " + snapshotId + " failed on some member(s), " +
-                        "one of the failures: " + mergedResult.getError());
+        boolean isSuccess = mergedResult.getError() == null;
+        if (!isSuccess) {
+            logger.warning(jobIdString() + " snapshot " + snapshotId + " failed on some member(s), " +
+                    "one of the failures: " + mergedResult.getError());
+        }
+        LockSupport.parkNanos(MILLISECONDS.toNanos(500));
+        coordinationService.completeSnapshot(jobId, snapshotId, isSuccess,
+                mergedResult.getNumBytes(), mergedResult.getNumKeys(), mergedResult.getNumChunks());
+        snapshotInProgress.compareAndSet(true, false);
+        if (wasTerminal) {
+            // after a terminal snapshots no more snapshots are scheduled in this execution
+            boolean completedNow = terminalSnapshotFuture.complete(null);
+            // TODO [viliam] remove
+            logger.info("terminal snapshotId=" + snapshotId);
+            if (!completedNow) {
+                System.exit(0);
             }
-            coordinationService.completeSnapshot(jobId, snapshotId, isSuccess,
-                    mergedResult.getNumBytes(), mergedResult.getNumKeys(), mergedResult.getNumChunks());
-            snapshotInProgress.compareAndSet(true, false);
-            if (wasTerminal) {
-                boolean completedNow = terminalSnapshotFuture.complete(null);
-                assert completedNow : "terminalSnapshotFuture was already completed";
-            }
-
+            assert completedNow : "terminalSnapshotFuture was already completed";
+        } else {
             if (nextSnapshotIsTerminal) {
                 // If the next snapshot is terminal, start it right away.
                 coordinationService.beginSnapshot(jobId, executionId);
-            } else if (!wasTerminal) {
+            } else {
                 // If the snapshot wasn't terminal, schedule next snapshot after a delay.
                 // If it was terminal, no need to schedule next snapshot even if it wasn't successful,
                 // because the execution already terminated.
@@ -640,8 +671,10 @@ public class MasterContext {
 
     // Called as callback when all CompleteOperation invocations are done
     void finalizeJob(@Nullable Throwable failure) {
+        Runnable nonSynchronizedAction = () -> { };
+        assertLockNotHeld();
         synchronized (lock) {
-            if (assertJobNotAlreadyDone(failure)) {
+            if (!checkJobNotDone(failure)) {
                 return;
             }
             completeVertices(failure);
@@ -666,7 +699,7 @@ public class MasterContext {
             if (failure instanceof JobRestartRequestedException) {
                 // if status is RUNNING, set it to RESTARTING. If it's STARTING, let it be.
                 jobStatus.compareAndSet(RUNNING, NOT_RUNNING);
-                coordinationService.restartJob(jobId);
+                nonSynchronizedAction = () -> coordinationService.restartJob(jobId);
             } else if ((failure instanceof RestartableException || failure instanceof TopologyChangedException)
                     && jobRecord.getConfig().isAutoScaling()) {
                 // if restart is due to a failure, restart with a delay
@@ -675,7 +708,7 @@ public class MasterContext {
                     || (failure instanceof RestartableException || failure instanceof TopologyChangedException)
                     && !jobRecord.getConfig().isAutoScaling()) {
                 jobStatus.set(SUSPENDED);
-                coordinationService.suspendJob(this);
+                nonSynchronizedAction = () -> coordinationService.suspendJob(this);
             } else if (failure instanceof JobTerminateRequestedException) {
                 // leave the job not-suspended, not-restarted. New master will pick it up.
                 jobStatus.set(NOT_RUNNING);
@@ -683,23 +716,30 @@ public class MasterContext {
                 jobStatus.set(isSuccess ? COMPLETED : FAILED);
 
                 if (failure instanceof LocalMemberResetException) {
+                    logger.fine("Cancelling job " + jobIdString() + " locally: member (local or remote) reset. " +
+                            "We don't delete job metadata: job will restart on majority cluster");
                     setFinalResult(new CancellationException());
-                    logger.severe("local member reset");
                     return;
                 }
 
-                try {
-                    coordinationService.completeJob(this, System.currentTimeMillis(), failure);
-                } catch (RuntimeException e) {
-                    logger.warning("Completion of " + jobIdString() + " failed", e);
-                } finally {
-                    setFinalResult(failure);
-                }
+                nonSynchronizedAction = () -> {
+                    try {
+                        coordinationService.completeJob(this, System.currentTimeMillis(), failure);
+                    } catch (RuntimeException e) {
+                        logger.warning("Completion of " + jobIdString() + " failed", e);
+                    } finally {
+                        setFinalResult(failure);
+                    }
+                };
             }
         }
+        nonSynchronizedAction.run();
     }
 
-    private boolean assertJobNotAlreadyDone(@Nullable Throwable failure) {
+    /**
+     * @return true, if job is not done
+     */
+    private boolean checkJobNotDone(@Nullable Throwable failure) {
         JobStatus status = jobStatus();
         if (status == COMPLETED || status == FAILED) {
             if (failure != null) {
@@ -708,9 +748,9 @@ public class MasterContext {
             } else {
                 logger.severe("Ignoring completion of " + idToString(jobId) + " because status is " + status);
             }
-            return true;
+            return false;
         }
-        return false;
+        return true;
     }
 
     private void completeVertices(@Nullable Throwable failure) {
@@ -805,13 +845,11 @@ public class MasterContext {
     }
 
     void resumeJob(Function<Long, Long> executionIdSupplier) {
-        synchronized (lock) {
-            if (jobStatus.compareAndSet(SUSPENDED, NOT_RUNNING)) {
-                logger.fine("Resuming job " + jobName);
-                tryStartJob(executionIdSupplier);
-            } else {
-                logger.info("Not resuming " + jobIdString() + ": not " + SUSPENDED + ", but " + jobStatus.get());
-            }
+        if (jobStatus.compareAndSet(SUSPENDED, NOT_RUNNING)) {
+            logger.fine("Resuming job " + jobName);
+            tryStartJob(executionIdSupplier);
+        } else {
+            logger.info("Not resuming " + jobIdString() + ": not " + SUSPENDED + ", but " + jobStatus.get());
         }
     }
 
@@ -828,25 +866,22 @@ public class MasterContext {
      * @return a future to wait for or null if there's no need to wait
      */
     @Nullable
-    CompletableFuture<Void> onParticipantShutDown(String uuid) {
-        synchronized (lock) {
-            if (!hasParticipant(uuid)) {
-                return null;
-            }
-
-            if (jobStatus() == SUSPENDED) {
-                return null;
-            }
-
-            if (requestedTerminationMode.get() == null) {
-                requestTermination(RESTART_GRACEFUL);
-            }
-            if (requestedTerminationMode.get().isWithTerminalSnapshot()) {
-                // this future is null if job is not running, which is ok
-                return terminalSnapshotFuture;
-            }
-            return null; // nothing to wait for
+    CompletableFuture<Void> onParticipantGracefulShutdown(String uuid) {
+        if (!hasParticipant(uuid)) {
+            return null;
         }
+
+        if (jobStatus() == SUSPENDED) {
+            return null;
+        }
+
+        requestTermination(RESTART_GRACEFUL);
+        TerminationMode terminationMode = requestedTerminationMode.get();
+        if (terminationMode != null && terminationMode.isWithTerminalSnapshot()) {
+            // this future is null if job is not running, which is ok
+            return terminalSnapshotFuture;
+        }
+        return null; // nothing to wait for
     }
 
     boolean maybeUpscale(Collection<Member> currentDataMembers) {
@@ -854,17 +889,19 @@ public class MasterContext {
             return false;
         }
 
-        synchronized (lock) {
-            // We only compare the number of our participating members and current members.
-            // If there is any member in our participants that is not among current data members,
-            // this job will be restarted anyway. If it's the other way, then the sizes won't match.
-            if (executionPlanMap == null || executionPlanMap.size() == currentDataMembers.size()) {
-                LoggingUtil.logFine(logger, "Not up-scaling job %s: already running on all members", jobIdString());
-                return false;
-            }
-
-            return requestTermination(TerminationMode.RESTART_GRACEFUL);
+        // We only compare the number of our participating members and current members.
+        // If there is any member in our participants that is not among current data members,
+        // this job will be restarted anyway. If it's the other way, then the sizes won't match.
+        if (executionPlanMap == null || executionPlanMap.size() == currentDataMembers.size()) {
+            LoggingUtil.logFine(logger, "Not up-scaling job %s: already running on all members", jobIdString());
+            return false;
         }
+
+        return requestTermination(TerminationMode.RESTART_GRACEFUL);
+    }
+
+    private void assertLockNotHeld() {
+        assert !Thread.holdsLock(lock) : "the lock should not be held at this place";
     }
 
     /**
