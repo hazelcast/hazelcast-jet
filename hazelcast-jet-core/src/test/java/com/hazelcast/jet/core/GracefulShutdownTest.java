@@ -51,7 +51,9 @@ import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.JobStatus.NOT_RUNNING;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
+import static com.hazelcast.jet.core.JobStatus.STARTING;
 import static com.hazelcast.jet.core.TestUtil.throttle;
 import static com.hazelcast.test.PacketFiltersUtil.delayOperationsFrom;
 import static java.util.Collections.singletonList;
@@ -189,11 +191,11 @@ public class GracefulShutdownTest extends JetTestSupport {
 
         while (true) {
             JobStatus status = job.getStatus();
-            // While the future is not done, the job should remain in STARTING state.
+            // While the future is not done, the job should remain in NOT_RUNNING or STARTING state.
             if (future.isDone()) {
                 break;
             } else {
-                assertEquals(JobStatus.STARTING, status);
+                assertTrue("status=" + status, status == NOT_RUNNING || status == STARTING);
             }
             sleepMillis(200);
         }
