@@ -86,6 +86,10 @@ public class JobRecord implements IdentifiedDataSerializable {
     }
 
     public JobRecord withQuorumSize(int newQuorumSize) {
+        if (newQuorumSize <= quorumSize) {
+            throw new IllegalArgumentException("New quorum size: " + newQuorumSize
+                    + " must be bigger than current quorum size of " + this);
+        }
         return new JobRecord(getJobId(), getCreationTime(), getDag(), getDagJson(), getConfig(), newQuorumSize,
                 isSuspended());
     }

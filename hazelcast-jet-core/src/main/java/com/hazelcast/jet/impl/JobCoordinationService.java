@@ -54,7 +54,6 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
@@ -156,7 +155,7 @@ public class JobCoordinationService {
 
     private void scheduleUpscale(long delay) {
         int counter = upscaleScheduleCount.incrementAndGet();
-        nodeEngine.getExecutionService().schedule(() -> upscaleJobsNow(counter), delay, TimeUnit.MILLISECONDS);
+        nodeEngine.getExecutionService().schedule(() -> upscaleJobsNow(counter), delay, MILLISECONDS);
     }
 
     private void upscaleJobsNow(int counter) {
@@ -193,19 +192,30 @@ public class JobCoordinationService {
         try {
             int currentQuorumSize = getQuorumSize();
             for (JobRecord jobRecord : jobRepository.getJobRecords()) {
-                if (jobRecord.getConfig().isSplitBrainProtectionEnabled()) {
-                    if (currentQuorumSize > jobRecord.getQuorumSize()) {
-                        boolean updated = jobRepository.updateJobQuorumSizeIfLargerThanCurrent(jobRecord.getJobId(),
-                                currentQuorumSize);
-                        if (updated) {
-                            logger.info("Current quorum size: " + jobRecord.getQuorumSize() + " of job "
-                                    + idToString(jobRecord.getJobId()) + " is updated to: " + currentQuorumSize);
+                if (!jobRecord.getConfig().isSplitBrainProtectionEnabled()
+                        || currentQuorumSize <= jobRecord.getQuorumSize()) {
+                    continue;
+                }
+
+                boolean updated = jobRepository.updateJobQuorumSizeIfLargerThanCurrent(jobRecord.getJobId(),
+                        currentQuorumSize);
+                if (updated) {
+                    try {
+                        MasterContext masterContext = masterContexts.get(jobRecord.getJobId());
+                        if (masterContext != null) {
+                            masterContext.updateQuorumSize(currentQuorumSize);
                         }
+                        logger.info("Current quorum size: " + jobRecord.getQuorumSize() + " of job "
+                                + idToString(jobRecord.getJobId()) + " is updated to: " + currentQuorumSize);
+                    } catch (Exception e) {
+                        logger.severe("Quorum of job " + idToString(jobRecord.getJobId())
+                                + " could not be updated to " + currentQuorumSize
+                                + " in its master context object");
                     }
                 }
             }
         } catch (Exception e) {
-            logger.fine("check quorum values task failed", e);
+            logger.severe("update quorum values task failed", e);
         }
     }
 
@@ -350,7 +360,7 @@ public class JobCoordinationService {
             return masterContexts.remove(jobId, masterContext);
         }
 
-        if (!masterContext.getJobConfig().isAutoScaling() && jobRepository.getExecutionIdCount(jobId) > 0) {
+        if (!masterContext.jobConfig().isAutoScaling() && jobRepository.getExecutionIdCount(jobId) > 0) {
             logger.info("Suspending job " + masterContext.jobIdString()
                     + " since auto-restart is disabled and the job has been executed before");
             masterContext.finalizeJob(new TopologyChangedException());
@@ -503,7 +513,7 @@ public class JobCoordinationService {
             MasterContext existing = masterContexts.get(jobId);
             if (existing != null) {
                 logger.severe("Different master context found to complete " + masterContext.jobIdString()
-                        + ", master context execution " + idToString(existing.getExecutionId()));
+                        + ", master context execution " + idToString(existing.executionId()));
             } else {
                 logger.severe("No master context found to complete " + masterContext.jobIdString());
             }
@@ -543,7 +553,7 @@ public class JobCoordinationService {
             logger.warning("MasterContext not found to schedule snapshot of " + idToString(jobId));
             return;
         }
-        long snapshotInterval = masterContext.getJobConfig().getSnapshotIntervalMillis();
+        long snapshotInterval = masterContext.jobConfig().getSnapshotIntervalMillis();
         InternalExecutionService executionService = nodeEngine.getExecutionService();
         if (logger.isFineEnabled()) {
             logger.fine(masterContext.jobIdString() + " snapshot is scheduled in " + snapshotInterval + "ms");
@@ -627,8 +637,8 @@ public class JobCoordinationService {
         jobRepository.getJobRecords(name).forEach(r -> jobs.put(r.getJobId(), r.getCreationTime()));
 
         masterContexts.values().stream()
-                      .filter(ctx -> name.equals(ctx.getJobConfig().getName()))
-                      .forEach(ctx -> jobs.put(ctx.jobId(), ctx.getJobRecord().getCreationTime()));
+                      .filter(ctx -> name.equals(ctx.jobConfig().getName()))
+                      .forEach(ctx -> jobs.put(ctx.jobId(), ctx.jobRecord().getCreationTime()));
 
         jobRepository.getJobResults(name)
                   .forEach(r -> jobs.put(r.getJobId(), r.getCreationTime()));

@@ -112,11 +112,11 @@ public class MasterContext {
     private final NodeEngineImpl nodeEngine;
     private final JobCoordinationService coordinationService;
     private final ILogger logger;
-    private final JobRecord jobRecord;
     private final long jobId;
     private final String jobName;
-    private final AtomicReference<JobStatus> jobStatus = new AtomicReference<>(NOT_RUNNING);
     private final SnapshotRepository snapshotRepository;
+    private volatile JobRecord jobRecord;
+    private volatile JobStatus jobStatus = NOT_RUNNING;
     private volatile Set<Vertex> vertices;
 
     private volatile long executionId;
@@ -170,7 +170,7 @@ public class MasterContext {
         this.jobId = jobRecord.getJobId();
         this.jobName = jobRecord.getJobNameOrId();
         if (jobRecord.isSuspended()) {
-            jobStatus.set(SUSPENDED);
+            jobStatus = SUSPENDED;
         }
     }
 
@@ -178,19 +178,19 @@ public class MasterContext {
         return jobId;
     }
 
-    public long getExecutionId() {
+    public long executionId() {
         return executionId;
     }
 
     public JobStatus jobStatus() {
-        return jobStatus.get();
+        return jobStatus;
     }
 
-    public JobConfig getJobConfig() {
+    public JobConfig jobConfig() {
         return jobRecord.getConfig();
     }
 
-    JobRecord getJobRecord() {
+    public JobRecord jobRecord() {
         return jobRecord;
     }
 
@@ -208,7 +208,6 @@ public class MasterContext {
                 mode = mode.withoutTerminalSnapshot();
             }
 
-            JobStatus jobStatus = jobStatus();
             boolean success = requestedTerminationMode.compareAndSet(null, mode);
             if (success) {
                 handleTermination(mode);
@@ -216,7 +215,7 @@ public class MasterContext {
                 if (jobStatus == SUSPENDED) {
                     assert mode == CANCEL : "mode is not CANCEL, but " + mode;
                     coordinationService.completeJob(this, System.currentTimeMillis(), new CancellationException());
-                    this.jobStatus.set(COMPLETED);
+                    jobStatus = COMPLETED;
                 }
             }
             return success;
@@ -302,7 +301,7 @@ public class MasterContext {
                         + "\nHINT: You can use graphviz or http://viz-js.com to visualize the printed graph.");
                 logger.fine("Building execution plan for " + jobIdString());
                 executionPlanMap = createExecutionPlans(nodeEngine, membersView,
-                        dag, jobId, executionId, getJobConfig(), lastSnapshotId);
+                        dag, jobId, executionId, jobConfig(), lastSnapshotId);
             } catch (Exception e) {
                 logger.severe("Exception creating execution plan for " + jobIdString(), e);
                 finalizeJob(e);
@@ -360,9 +359,12 @@ public class MasterContext {
             return false;
         }
 
-        boolean success = jobStatus.compareAndSet(NOT_RUNNING, STARTING);
-        assert success : "a race setting job status";
+        boolean success = jobStatus == NOT_RUNNING;
+        assert success : "cannot start job " + idToString(jobId) + " with status: " + jobStatus;
+        jobStatus = STARTING;
         executionStartTime = System.nanoTime();
+        jobRecord = jobRecord.withSuspended(false);
+
         return true;
     }
 
@@ -387,13 +389,12 @@ public class MasterContext {
         return true;
     }
 
+    // called when the MasterContext lock is held
     private void scheduleRestart() {
-        jobStatus.updateAndGet(status -> {
-            if (status != NOT_RUNNING && status != STARTING && status != RUNNING) {
-                throw new IllegalStateException("Restart scheduled in an unexpected state: " + status);
-            }
-            return NOT_RUNNING;
-        });
+        if (jobStatus != NOT_RUNNING && jobStatus != STARTING && jobStatus != RUNNING) {
+            throw new IllegalStateException("Restart scheduled in an unexpected state: " + jobStatus);
+        }
+        jobStatus = NOT_RUNNING;
         coordinationService.scheduleRestart(jobId);
     }
 
@@ -449,7 +450,7 @@ public class MasterContext {
         Function<ExecutionPlan, Operation> operationCtor = plan -> new StartExecutionOperation(jobId, executionId);
         Consumer<Map<MemberInfo, Object>> completionCallback = this::onExecuteStepCompleted;
 
-        jobStatus.set(RUNNING);
+        jobStatus = RUNNING;
 
         invoke(operationCtor, completionCallback, executionInvocationCallback);
 
@@ -644,6 +645,7 @@ public class MasterContext {
             if (assertJobNotAlreadyDone(failure)) {
                 return;
             }
+
             completeVertices(failure);
 
             long elapsed = NANOSECONDS.toMillis(System.nanoTime() - executionStartTime);
@@ -664,8 +666,7 @@ public class MasterContext {
 
             // if restart was requested, restart immediately
             if (failure instanceof JobRestartRequestedException) {
-                // if status is RUNNING, set it to RESTARTING. If it's STARTING, let it be.
-                jobStatus.compareAndSet(RUNNING, NOT_RUNNING);
+                jobStatus = NOT_RUNNING;
                 coordinationService.restartJob(jobId);
             } else if ((failure instanceof RestartableException || failure instanceof TopologyChangedException)
                     && jobRecord.getConfig().isAutoScaling()) {
@@ -674,13 +675,14 @@ public class MasterContext {
             } else if (failure instanceof JobSuspendRequestedException
                     || (failure instanceof RestartableException || failure instanceof TopologyChangedException)
                     && !jobRecord.getConfig().isAutoScaling()) {
-                jobStatus.set(SUSPENDED);
+                jobStatus = SUSPENDED;
+                jobRecord = jobRecord.withSuspended(true);
                 coordinationService.suspendJob(this);
             } else if (failure instanceof JobTerminateRequestedException) {
                 // leave the job not-suspended, not-restarted. New master will pick it up.
-                jobStatus.set(NOT_RUNNING);
+                jobStatus = NOT_RUNNING;
             } else {
-                jobStatus.set(isSuccess ? COMPLETED : FAILED);
+                jobStatus = (isSuccess ? COMPLETED : FAILED);
 
                 if (failure instanceof LocalMemberResetException) {
                     setFinalResult(new CancellationException());
@@ -731,6 +733,12 @@ public class MasterContext {
             completionFuture.internalComplete();
         } else {
             completionFuture.internalCompleteExceptionally(failure);
+        }
+    }
+
+    void updateQuorumSize(int newQuorumSize) {
+        synchronized (lock) {
+            jobRecord = jobRecord.withQuorumSize(newQuorumSize);
         }
     }
 
@@ -790,7 +798,7 @@ public class MasterContext {
     }
 
     private boolean isSnapshottingEnabled() {
-        return getJobConfig().getProcessingGuarantee() != ProcessingGuarantee.NONE;
+        return jobConfig().getProcessingGuarantee() != ProcessingGuarantee.NONE;
     }
 
     String jobIdString() {
@@ -806,11 +814,12 @@ public class MasterContext {
 
     void resumeJob(Function<Long, Long> executionIdSupplier) {
         synchronized (lock) {
-            if (jobStatus.compareAndSet(SUSPENDED, NOT_RUNNING)) {
+            if (jobStatus == SUSPENDED) {
+                jobStatus = NOT_RUNNING;
                 logger.fine("Resuming job " + jobName);
                 tryStartJob(executionIdSupplier);
             } else {
-                logger.info("Not resuming " + jobIdString() + ": not " + SUSPENDED + ", but " + jobStatus.get());
+                logger.info("Not resuming " + jobIdString() + ": not " + SUSPENDED + ", but " + jobStatus);
             }
         }
     }
@@ -850,7 +859,7 @@ public class MasterContext {
     }
 
     boolean maybeUpscale(Collection<Member> currentDataMembers) {
-        if (!getJobConfig().isAutoScaling()) {
+        if (!jobConfig().isAutoScaling()) {
             return false;
         }
 

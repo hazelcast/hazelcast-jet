@@ -271,9 +271,12 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
         createJetMember(jetConfig);
 
         assertTrueEventually(() -> {
-            JobRepository jobRepository = getJetService(instances[0]).getJobRepository();
+            JetService service = getJetService(instances[0]);
+            JobRepository jobRepository = service.getJobRepository();
             JobRecord jobRecord = jobRepository.getJobRecord(job.getId());
             assertEquals(3, jobRecord.getQuorumSize());
+            MasterContext masterContext = service.getJobCoordinationService().getMasterContext(job.getId());
+            assertEquals(3, masterContext.jobRecord().getQuorumSize());
         });
 
         StuckProcessor.proceedLatch.countDown();
