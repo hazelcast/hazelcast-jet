@@ -34,7 +34,6 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.test.AssertTask;
 import com.hazelcast.test.HazelcastTestSupport;
 import org.junit.After;
-import org.junit.Assume;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -108,14 +107,6 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
 
     protected static <E> IListJet<E> getList(JetInstance instance) {
         return instance.getList(randomName());
-    }
-
-    protected static void assumeNotWindows() {
-        Assume.assumeFalse(isWindows());
-    }
-
-    protected static boolean isWindows() {
-        return System.getProperty("os.name").toLowerCase().contains("windows");
     }
 
     protected static void appendToFile(File file, String... lines) throws IOException {

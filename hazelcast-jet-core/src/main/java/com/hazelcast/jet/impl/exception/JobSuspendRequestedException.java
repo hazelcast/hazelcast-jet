@@ -16,12 +16,14 @@
 
 package com.hazelcast.jet.impl.exception;
 
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.impl.TerminationMode;
 
 /**
  * The exception class thrown and handled internally when a job suspension is
  * requested, see {@link TerminationMode#SUSPEND_GRACEFUL}.
  */
-public class JobSuspendRequestedException extends JetException {
+public class JobSuspendRequestedException extends JobTerminateRequestedBaseException {
+    public JobSuspendRequestedException(boolean withTerminalSnapshot) {
+        super(withTerminalSnapshot);
+    }
 }

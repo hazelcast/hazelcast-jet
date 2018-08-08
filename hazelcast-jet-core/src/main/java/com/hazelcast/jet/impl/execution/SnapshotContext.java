@@ -21,6 +21,7 @@ import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
 import com.hazelcast.logging.ILogger;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -84,12 +85,16 @@ public class SnapshotContext {
      */
     private boolean snapshotPostponed;
 
-    /** Future which will be completed when the current snapshot completes. */
+    /**
+     * Future which will be created when a snapshot starts and completed and
+     * nulled out when the snapshot completes.
+     */
     private volatile CompletableFuture<SnapshotOperationResult> future;
 
     private final AtomicLong totalBytes = new AtomicLong();
     private final AtomicLong totalKeys = new AtomicLong();
     private final AtomicLong totalChunks = new AtomicLong();
+    private boolean isCancelled;
 
     SnapshotContext(ILogger logger, String jobNameAndExecutionId, long lastSnapshotId,
                     ProcessingGuarantee guarantee
@@ -141,7 +146,9 @@ public class SnapshotContext {
         assert snapshotId == lastSnapshotId.get() + 1
                 : "new snapshotId not incremented by 1. Previous=" + lastSnapshotId + ", new=" + snapshotId;
         assert numTasklets >= 0 : "numTasklets=" + numTasklets;
-
+        if (isCancelled) {
+            throw new CancellationException("SnapshotContext cancelled");
+        }
         this.isTerminal = isTerminal;
         int newNumRemainingTasklets = numRemainingTasklets.addAndGet(numTasklets);
         assert newNumRemainingTasklets - numTasklets <= 0 :
@@ -156,8 +163,8 @@ public class SnapshotContext {
             snapshotPostponed = true;
         }
         if (numTasklets == 0) {
-            // member is already done with the job and master didn't know it yet - we are immediately done.
-            return completedFuture(null);
+            // member is already done with the job and master didn't know it yet - we are immediately successful
+            return completedFuture(new SnapshotOperationResult(0, 0, 0, null));
         }
         CompletableFuture<SnapshotOperationResult> res = future = new CompletableFuture<>();
         if (newNumRemainingTasklets == 0) {
@@ -212,6 +219,19 @@ public class SnapshotContext {
         totalChunks.addAndGet(numChunks);
         // note that numRemainingTasklets can get negative values here.
         if (numRemainingTasklets.decrementAndGet() == 0) {
+            handleSnapshotDone();
+        }
+    }
+
+    /**
+     * Method is called when execution is cancelled/terminated. The existing
+     * ongoing snapshot will be completed with failure and no more snapshots
+     * will be allowed to start.
+     */
+    synchronized void cancel() {
+        isCancelled = true;
+        if (future != null) {
+            reportError(new CancellationException("execution cancelled"));
             handleSnapshotDone();
         }
     }

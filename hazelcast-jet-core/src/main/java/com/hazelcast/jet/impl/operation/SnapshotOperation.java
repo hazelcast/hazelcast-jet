@@ -51,7 +51,10 @@ public class SnapshotOperation extends AsyncJobOperation {
         ExecutionContext ctx = service.getJobExecutionService().assertExecutionContext(
                 getCallerAddress(), jobId(), executionId, getClass().getSimpleName()
         );
-        ctx.beginSnapshot(snapshotId, isTerminal).thenAccept(result -> {
+        ctx.beginSnapshot(snapshotId, isTerminal).whenComplete((result, exc) -> {
+            if (exc != null) {
+                result = new SnapshotOperationResult(0, 0, 0, exc);
+            }
             if (result.getError() == null) {
                 logFine(getLogger(),
                         "Snapshot %s for %s finished successfully on member",

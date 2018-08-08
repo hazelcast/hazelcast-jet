@@ -16,12 +16,16 @@
 
 package com.hazelcast.jet.impl.exception;
 
-/**
- * The exception class thrown and handled internally when a job restart is
- * requested.
- */
-public class JobRestartRequestedException extends JobTerminateRequestedBaseException {
-    public JobRestartRequestedException(boolean withTerminalSnapshot) {
-        super(withTerminalSnapshot);
+import com.hazelcast.jet.JetException;
+
+public class JobTerminateRequestedBaseException extends JetException {
+    private final boolean withTerminalSnapshot;
+
+    JobTerminateRequestedBaseException(boolean withTerminalSnapshot) {
+        this.withTerminalSnapshot = withTerminalSnapshot;
+    }
+
+    public boolean isWithTerminalSnapshot() {
+        return withTerminalSnapshot;
     }
 }

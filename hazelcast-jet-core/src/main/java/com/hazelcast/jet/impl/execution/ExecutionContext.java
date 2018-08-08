@@ -174,6 +174,9 @@ public class ExecutionContext {
      * of the execution.
      */
     public CompletableFuture<Void> terminateExecution(@Nullable TerminationMode mode) {
+        assert mode == null || !mode.isWithTerminalSnapshot()
+                : "terminating with a mode that should do a terminal snapshot";
+
         synchronized (executionLock) {
             if (mode == null) {
                 cancellationFuture.cancel(true);
@@ -184,6 +187,7 @@ public class ExecutionContext {
                 // if cancelled before execution started, then assign the already completed future.
                 executionFuture = cancellationFuture;
             }
+            snapshotContext().cancel();
             return executionFuture;
         }
     }

@@ -14,14 +14,23 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.exception;
+package com.hazelcast.jet.impl.execution;
 
-/**
- * The exception class thrown and handled internally when a job restart is
- * requested.
- */
-public class JobRestartRequestedException extends JobTerminateRequestedBaseException {
-    public JobRestartRequestedException(boolean withTerminalSnapshot) {
-        super(withTerminalSnapshot);
+import com.hazelcast.test.HazelcastSerialClassRunner;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+@RunWith(HazelcastSerialClassRunner.class)
+public class SnapshotContextSimpleTest {
+
+    @Test
+    public void when_cancelled_then_cannotStartNewSnapshot() {
+        // TODO [viliam] add the test
+    }
+
+    @Test
+    public void when_cancelled_then_taskletDoneSucceeds() {
+        // TODO [viliam] add the test
+        // taskletDone should succeed for cancelled snapshots
     }
 }

@@ -207,6 +207,9 @@ public class Edge implements IdentifiedDataSerializable {
      * AT_LEAST_ONCE} jobs, because the snapshot won't complete until after all
      * higher priority edges are completed and will increase the number of
      * duplicately processed items.
+     *
+     * TODO [viliam] document what happens if the items sent through higher
+     *  priority edge are not used to just enrich the normal-priority items.
      */
     @Nonnull
     public Edge priority(int priority) {

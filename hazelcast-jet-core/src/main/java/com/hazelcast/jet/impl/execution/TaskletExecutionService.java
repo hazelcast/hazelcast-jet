@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.impl.exception.TerminatedWithSnapshotException;
 import com.hazelcast.jet.impl.exception.ShutdownInProgressException;
 import com.hazelcast.jet.impl.util.NonCompletableFuture;
 import com.hazelcast.jet.impl.util.ProgressState;
@@ -244,7 +245,7 @@ public class TaskletExecutionService {
                 blockingWorkerCount.decrementAndGet();
                 currentThread().setContextClassLoader(clBackup);
                 currentThread().setName(oldName);
-                tracker.executionTracker.taskletDone();
+                tracker.executionTracker.taskletDone(tracker.tasklet.doneAfterTerminalSnapshot());
             }
         }
     }
@@ -320,12 +321,12 @@ public class TaskletExecutionService {
             }
             // Best-effort attempt to release all tasklets. A tasklet can still be added
             // to a dead worker through work stealing.
-            trackers.forEach(t -> t.executionTracker.taskletDone());
+            trackers.forEach(t -> t.executionTracker.taskletDone(t.tasklet.doneAfterTerminalSnapshot()));
             trackers.clear();
         }
 
         private void dismissTasklet(TaskletTracker t) {
-            t.executionTracker.taskletDone();
+            t.executionTracker.taskletDone(t.tasklet.doneAfterTerminalSnapshot());
             trackers.remove(t);
             stealWork();
         }
@@ -393,6 +394,7 @@ public class TaskletExecutionService {
 
         private final AtomicInteger completionLatch;
         private final AtomicReference<Throwable> executionException = new AtomicReference<>();
+        private volatile boolean someProcessorTerminatedAfterSnapshot;
 
         ExecutionTracker(int taskletCount, CompletableFuture<Void> cancellationFuture) {
             this.completionLatch = new AtomicInteger(taskletCount);
@@ -409,11 +411,18 @@ public class TaskletExecutionService {
             executionException.compareAndSet(null, t);
         }
 
-        void taskletDone() {
+        void taskletDone(boolean terminatedAfterSnapshot) {
+            if (terminatedAfterSnapshot) {
+                someProcessorTerminatedAfterSnapshot = true;
+            }
             if (completionLatch.decrementAndGet() == 0) {
                 Throwable ex = executionException.get();
                 if (ex == null) {
-                    future.internalComplete();
+                    if (someProcessorTerminatedAfterSnapshot) {
+                        future.internalCompleteExceptionally(new TerminatedWithSnapshotException());
+                    } else {
+                        future.internalComplete();
+                    }
                 } else {
                     future.internalCompleteExceptionally(ex);
                 }

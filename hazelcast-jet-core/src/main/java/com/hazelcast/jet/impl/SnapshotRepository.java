@@ -118,9 +118,17 @@ public class SnapshotRepository {
                                long numBytes, long numKeys, long numChunks) {
         IMap<Long, SnapshotRecord> snapshots = getSnapshotMap(jobId);
         SnapshotRecord record = compute(snapshots, snapshotId, (k, r) -> {
+            // It's possible that the SnapshotRecord is deleted at this time if the job didn't terminate with a
+            // terminal snapshot, but one was just being completed at the time job completed. We ignore this.
+            if (r == null) {
+                return null;
+            }
             r.snapshotComplete(status, numBytes, numKeys, numChunks);
             return r;
         });
+        if (record == null) {
+            return -1;
+        }
         return System.currentTimeMillis() - record.startTime();
     }
 

@@ -164,8 +164,8 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
                 JetService service2 = getJetService(secondSubCluster[0]);
                 JobStatus status1 = service1.getJobCoordinationService().getJobStatus(jobId);
                 JobStatus status2 = service2.getJobCoordinationService().getJobStatus(jobId);
-                assertTrue("status1=" + status1, status1 == NOT_RUNNING || status1 == STARTING);
-                assertTrue("status2=" + status2, status2 == NOT_RUNNING || status2 == STARTING);
+                assertStatusNotRunningOrStarting(status1);
+                assertStatusNotRunningOrStarting(status2);
             }, 20);
         };
 
@@ -307,7 +307,11 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
 
         createJetMember(jetConfig);
 
-        assertTrueAllTheTime(() -> assertEquals(NOT_RUNNING, job.getStatus()), 5);
+        assertTrueAllTheTime(() -> assertStatusNotRunningOrStarting(job.getStatus()), 5);
+    }
+
+    private void assertStatusNotRunningOrStarting(JobStatus status) {
+        assertTrue("status=" + status, status == NOT_RUNNING || status == STARTING);
     }
 
     @Test

@@ -100,6 +100,7 @@ public class ProcessorTasklet implements Tasklet {
     private final AtomicLongArray emittedCounts;
     private final AtomicLong queuesSize = new AtomicLong();
     private final AtomicLong queuesCapacity = new AtomicLong();
+    private boolean doneAfterTerminalSnapshot;
 
     public ProcessorTasklet(@Nonnull Processor.Context context,
                             @Nonnull SerializationService serializationService,
@@ -313,6 +314,7 @@ public class ProcessorTasklet implements Tasklet {
                 if (outbox.offerToEdgesAndSnapshot(new SnapshotBarrier(pendingSnapshotId))) {
                     progTracker.madeProgress();
                     if (ssContext.isTerminalSnapshot()) {
+                        doneAfterTerminalSnapshot = true;
                         state = EMIT_DONE_ITEM;
                     } else {
                         receivedBarriers.clear();
@@ -353,6 +355,11 @@ public class ProcessorTasklet implements Tasklet {
                 // note ProcessorState.END goes here
                 throw new JetException("Unexpected state: " + state);
         }
+    }
+
+    @Override
+    public boolean doneAfterTerminalSnapshot() {
+        return doneAfterTerminalSnapshot;
     }
 
     private void fillInbox(long now) {

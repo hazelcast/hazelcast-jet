@@ -23,7 +23,7 @@ import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import java.util.concurrent.CancellationException;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.RESTART;
 import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.SUSPEND;
@@ -45,15 +45,15 @@ public enum TerminationMode {
     TERMINATE_FORCEFUL(false, TERMINATE, false, JobTerminateRequestedException::new),
 
     // terminate and complete the job
-    CANCEL(false, TERMINATE, true, CancellationException::new);
+    CANCEL(false, TERMINATE, true, withTerminalSnapshot -> new CancellationException());
 
     private final boolean withTerminalSnapshot;
     private final ActionAfterTerminate actionAfterTerminate;
     private final boolean deleteData;
-    private final Supplier<Exception> exceptionFactory;
+    private final Function<Boolean, Exception> exceptionFactory;
 
     TerminationMode(boolean withTerminalSnapshot, ActionAfterTerminate actionAfterTerminate, boolean deleteData,
-                    Supplier<Exception> exceptionFactory) {
+                    Function<Boolean, Exception> exceptionFactory) {
         this.withTerminalSnapshot = withTerminalSnapshot;
         this.actionAfterTerminate = actionAfterTerminate;
         this.deleteData = deleteData;
@@ -103,7 +103,7 @@ public enum TerminationMode {
 
     @Nonnull
     public Exception createException() {
-        return exceptionFactory.get();
+        return exceptionFactory.apply(withTerminalSnapshot);
     }
 
     public enum ActionAfterTerminate {
