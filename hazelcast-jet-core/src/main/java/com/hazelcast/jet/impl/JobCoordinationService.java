@@ -210,7 +210,7 @@ public class JobCoordinationService {
                     } catch (Exception e) {
                         logger.severe("Quorum of job " + idToString(jobRecord.getJobId())
                                 + " could not be updated to " + currentQuorumSize
-                                + " in its master context object");
+                                + " in its MasterContext object");
                     }
                 }
             }
@@ -228,7 +228,7 @@ public class JobCoordinationService {
      * Starts the job if it is not already started or completed. Returns a future
      * which represents result of the job.
      */
-    public CompletableFuture<Void> submitJob(long jobId, Data dag, JobConfig config) {
+    public void submitJob(long jobId, Data dag, JobConfig config) {
         if (!isMaster()) {
             throw new JetException("Cannot submit job " + idToString(jobId) + ". Master address: "
                     + nodeEngine.getClusterService().getMasterAddress());
@@ -245,7 +245,7 @@ public class JobCoordinationService {
         if (jobResult != null) {
             logger.fine("Not starting job " + idToString(jobId) + " since already completed with result: " +
                     jobResult);
-            return jobResult.asCompletableFuture();
+            return;
         }
 
         int quorumSize = config.isSplitBrainProtectionEnabled() ? getQuorumSize() : 0;
@@ -262,13 +262,13 @@ public class JobCoordinationService {
             MasterContext prev = masterContexts.putIfAbsent(jobId, masterContext);
             if (prev != null) {
                 logger.fine("Joining to already existing masterContext " + prev.jobIdString());
-                return prev.completionFuture();
+                return;
             }
         }
 
         // If job is not currently running, it might be that it is just completed
         if (completeMasterContextIfJobAlreadyCompleted(masterContext)) {
-            return masterContext.completionFuture();
+            return;
         }
 
         // If there is no master context and job result at the same time, it means this is the first submission
@@ -276,8 +276,6 @@ public class JobCoordinationService {
 
         logger.info("Starting job " + idToString(masterContext.jobId()) + " based on submit request from client");
         nodeEngine.getExecutionService().execute(COORDINATOR_EXECUTOR_NAME, () -> tryStartJob(masterContext));
-
-        return masterContext.completionFuture();
     }
 
     private String dagToJson(long jobId, JobConfig jobConfig, Data dagData) {

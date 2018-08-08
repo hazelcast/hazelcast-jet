@@ -386,10 +386,10 @@ public class MasterContext {
             return false;
         }
 
-        boolean success = jobStatus == NOT_RUNNING;
-        assert success : "cannot start job " + idToString(jobId) + " with status: " + jobStatus;
+        assert jobStatus == NOT_RUNNING : "cannot start job " + idToString(jobId) + " with status: " + jobStatus;
         jobStatus = STARTING;
         executionStartTime = System.nanoTime();
+        //noinspection NonAtomicOperationOnVolatileField - lock is held
         jobRecord = jobRecord.withSuspended(false);
 
         return true;
@@ -416,8 +416,8 @@ public class MasterContext {
         return true;
     }
 
-    // called when the MasterContext lock is held
     private void scheduleRestart() {
+        assertLockHeld();
         if (jobStatus != NOT_RUNNING && jobStatus != STARTING && jobStatus != RUNNING) {
             throw new IllegalStateException("Restart scheduled in an unexpected state: " + jobStatus);
         }
@@ -855,13 +855,13 @@ public class MasterContext {
     }
 
     void resumeJob(Function<Long, Long> executionIdSupplier) {
-        if (jobStatus == SUSPENDED) {
-            jobStatus = NOT_RUNNING;
-            logger.fine("Resuming job " + jobName);
-            tryStartJob(executionIdSupplier);
-        } else {
+        if (jobStatus != SUSPENDED) {
             logger.info("Not resuming " + jobIdString() + ": not " + SUSPENDED + ", but " + jobStatus);
+            return;
         }
+        jobStatus = NOT_RUNNING;
+        logger.fine("Resuming job " + jobName);
+        tryStartJob(executionIdSupplier);
     }
 
     private boolean hasParticipant(String uuid) {
