@@ -113,11 +113,11 @@ public class MasterContext {
     private final NodeEngineImpl nodeEngine;
     private final JobCoordinationService coordinationService;
     private final ILogger logger;
-    private final JobRecord jobRecord;
     private final long jobId;
     private final String jobName;
-    private final AtomicReference<JobStatus> jobStatus = new AtomicReference<>(NOT_RUNNING);
     private final SnapshotRepository snapshotRepository;
+    private volatile JobRecord jobRecord;
+    private volatile JobStatus jobStatus = NOT_RUNNING;
     private volatile Set<Vertex> vertices;
 
     private volatile long executionId;
@@ -171,7 +171,7 @@ public class MasterContext {
         this.jobId = jobRecord.getJobId();
         this.jobName = jobRecord.getJobNameOrId();
         if (jobRecord.isSuspended()) {
-            jobStatus.set(SUSPENDED);
+            jobStatus = SUSPENDED;
         }
     }
 
@@ -179,19 +179,19 @@ public class MasterContext {
         return jobId;
     }
 
-    public long getExecutionId() {
+    public long executionId() {
         return executionId;
     }
 
     public JobStatus jobStatus() {
-        return jobStatus.get();
+        return jobStatus;
     }
 
-    public JobConfig getJobConfig() {
+    public JobConfig jobConfig() {
         return jobRecord.getConfig();
     }
 
-    JobRecord getJobRecord() {
+    public JobRecord jobRecord() {
         return jobRecord;
     }
 
@@ -221,7 +221,7 @@ public class MasterContext {
             }
             // handle cancellation of a suspended job
             if (localStatus == SUSPENDED) {
-                this.jobStatus.set(COMPLETED);
+                this.jobStatus = COMPLETED;
                 setFinalResult(new CancellationException());
             }
         }
@@ -334,7 +334,7 @@ public class MasterContext {
                     + "\nHINT: You can use graphviz or http://viz-js.com to visualize the printed graph.");
             logger.fine("Building execution plan for " + jobIdString());
             executionPlanMap = createExecutionPlans(nodeEngine, membersView,
-                    dag, jobId, executionId, getJobConfig(), lastSnapshotId);
+                    dag, jobId, executionId, jobConfig(), lastSnapshotId);
         } catch (Exception e) {
             logger.severe("Exception creating execution plan for " + jobIdString(), e);
             finalizeJob(e);
@@ -379,15 +379,19 @@ public class MasterContext {
      * Returns false if the job start process cannot proceed.
      */
     private boolean setJobStatusToStarting() {
+        assertLockHeld();
         JobStatus status = jobStatus();
         if (status != NOT_RUNNING) {
             logger.fine("Not starting job '" + jobName + "': status is " + status);
             return false;
         }
 
-        boolean success = jobStatus.compareAndSet(NOT_RUNNING, STARTING);
-        assert success : "a race setting job status";
+        boolean success = jobStatus == NOT_RUNNING;
+        assert success : "cannot start job " + idToString(jobId) + " with status: " + jobStatus;
+        jobStatus = STARTING;
         executionStartTime = System.nanoTime();
+        jobRecord = jobRecord.withSuspended(false);
+
         return true;
     }
 
@@ -412,13 +416,12 @@ public class MasterContext {
         return true;
     }
 
+    // called when the MasterContext lock is held
     private void scheduleRestart() {
-        jobStatus.updateAndGet(status -> {
-            if (status != NOT_RUNNING && status != STARTING && status != RUNNING) {
-                throw new IllegalStateException("Restart scheduled in an unexpected state: " + status);
-            }
-            return NOT_RUNNING;
-        });
+        if (jobStatus != NOT_RUNNING && jobStatus != STARTING && jobStatus != RUNNING) {
+            throw new IllegalStateException("Restart scheduled in an unexpected state: " + jobStatus);
+        }
+        jobStatus = NOT_RUNNING;
         coordinationService.scheduleRestart(jobId);
     }
 
@@ -474,7 +477,7 @@ public class MasterContext {
         Function<ExecutionPlan, Operation> operationCtor = plan -> new StartExecutionOperation(jobId, executionId);
         Consumer<Map<MemberInfo, Object>> completionCallback = this::onExecuteStepCompleted;
 
-        jobStatus.set(RUNNING);
+        jobStatus = RUNNING;
 
         invoke(operationCtor, completionCallback, executionInvocationCallback);
 
@@ -677,6 +680,7 @@ public class MasterContext {
             if (!checkJobNotDone(failure)) {
                 return;
             }
+
             completeVertices(failure);
 
             long elapsed = NANOSECONDS.toMillis(System.nanoTime() - executionStartTime);
@@ -697,8 +701,7 @@ public class MasterContext {
 
             // if restart was requested, restart immediately
             if (failure instanceof JobRestartRequestedException) {
-                // if status is RUNNING, set it to RESTARTING. If it's STARTING, let it be.
-                jobStatus.compareAndSet(RUNNING, NOT_RUNNING);
+                jobStatus = NOT_RUNNING;
                 nonSynchronizedAction = () -> coordinationService.restartJob(jobId);
             } else if ((failure instanceof RestartableException || failure instanceof TopologyChangedException)
                     && jobRecord.getConfig().isAutoScaling()) {
@@ -707,13 +710,14 @@ public class MasterContext {
             } else if (failure instanceof JobSuspendRequestedException
                     || (failure instanceof RestartableException || failure instanceof TopologyChangedException)
                     && !jobRecord.getConfig().isAutoScaling()) {
-                jobStatus.set(SUSPENDED);
+                jobStatus = SUSPENDED;
+                jobRecord = jobRecord.withSuspended(true);
                 nonSynchronizedAction = () -> coordinationService.suspendJob(this);
             } else if (failure instanceof JobTerminateRequestedException) {
                 // leave the job not-suspended, not-restarted. New master will pick it up.
-                jobStatus.set(NOT_RUNNING);
+                jobStatus = NOT_RUNNING;
             } else {
-                jobStatus.set(isSuccess ? COMPLETED : FAILED);
+                jobStatus = (isSuccess ? COMPLETED : FAILED);
 
                 if (failure instanceof LocalMemberResetException) {
                     logger.fine("Cancelling job " + jobIdString() + " locally: member (local or remote) reset. " +
@@ -774,6 +778,12 @@ public class MasterContext {
         }
     }
 
+    void updateQuorumSize(int newQuorumSize) {
+        synchronized (lock) {
+            jobRecord = jobRecord.withQuorumSize(newQuorumSize);
+        }
+    }
+
     /**
      * @param completionCallback a consumer that will receive a map of
      *                           responses, one for each member. The value will
@@ -830,7 +840,7 @@ public class MasterContext {
     }
 
     private boolean isSnapshottingEnabled() {
-        return getJobConfig().getProcessingGuarantee() != ProcessingGuarantee.NONE;
+        return jobConfig().getProcessingGuarantee() != ProcessingGuarantee.NONE;
     }
 
     String jobIdString() {
@@ -845,11 +855,12 @@ public class MasterContext {
     }
 
     void resumeJob(Function<Long, Long> executionIdSupplier) {
-        if (jobStatus.compareAndSet(SUSPENDED, NOT_RUNNING)) {
+        if (jobStatus == SUSPENDED) {
+            jobStatus = NOT_RUNNING;
             logger.fine("Resuming job " + jobName);
             tryStartJob(executionIdSupplier);
         } else {
-            logger.info("Not resuming " + jobIdString() + ": not " + SUSPENDED + ", but " + jobStatus.get());
+            logger.info("Not resuming " + jobIdString() + ": not " + SUSPENDED + ", but " + jobStatus);
         }
     }
 
@@ -885,7 +896,7 @@ public class MasterContext {
     }
 
     boolean maybeUpscale(Collection<Member> currentDataMembers) {
-        if (!getJobConfig().isAutoScaling()) {
+        if (!jobConfig().isAutoScaling()) {
             return false;
         }
 
@@ -898,6 +909,10 @@ public class MasterContext {
         }
 
         return requestTermination(TerminationMode.RESTART_GRACEFUL);
+    }
+
+    private void assertLockHeld() {
+        assert Thread.holdsLock(lock) : "the lock should be held at this place";
     }
 
     private void assertLockNotHeld() {

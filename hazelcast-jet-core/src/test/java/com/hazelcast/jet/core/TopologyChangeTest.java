@@ -379,11 +379,11 @@ public class TopologyChangeTest extends JetTestSupport {
 
         assertTrueEventually(() -> {
             assertEquals(STARTING, masterContext.jobStatus());
-            assertNotEquals(0, masterContext.getExecutionId());
+            assertNotEquals(0, masterContext.executionId());
         });
 
         // When
-        long executionId = masterContext.getExecutionId();
+        long executionId = masterContext.executionId();
 
         assertTrueEventually(() -> {
             Arrays.stream(instances)
@@ -403,7 +403,7 @@ public class TopologyChangeTest extends JetTestSupport {
 
         // Then
         job.join();
-        assertNotEquals(executionId, masterContext.getExecutionId());
+        assertNotEquals(executionId, masterContext.executionId());
     }
 
     @Test
