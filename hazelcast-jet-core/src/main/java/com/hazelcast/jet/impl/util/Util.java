@@ -48,7 +48,6 @@ import java.io.NotSerializableException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.lang.reflect.Field;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -159,13 +158,6 @@ public final class Util {
             }
         } while (!value.compareAndSet(prev, next));
         return true;
-    }
-
-    public static void setPrivateField(Object instance, Class<?> clazz, String name, Object val)
-            throws NoSuchFieldException, IllegalAccessException {
-        Field field = clazz.getDeclaredField(name);
-        field.setAccessible(true);
-        field.set(instance, val);
     }
 
     public interface RunnableExc {
