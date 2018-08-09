@@ -121,13 +121,13 @@ public class SnapshotRepository {
             // It's possible that the SnapshotRecord is deleted at this time if the job didn't terminate with a
             // terminal snapshot, but one was just being completed at the time job completed. We ignore this.
             if (r == null) {
-                logger.fine("Not marking SnapshotRecord as complete, already deleted");
                 return null;
             }
             r.snapshotComplete(status, numBytes, numKeys, numChunks);
             return r;
         });
         if (record == null) {
+            logger.fine("Not marking SnapshotRecord as complete, already deleted");
             return -1;
         }
         return System.currentTimeMillis() - record.startTime();

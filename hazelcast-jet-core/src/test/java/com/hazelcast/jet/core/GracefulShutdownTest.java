@@ -80,25 +80,25 @@ public class GracefulShutdownTest extends JetTestSupport {
 
     @Test
     public void when_snapshottedJob_coordinatorShutDown_then_gracefully() {
-        when_shutDown_then_gracefully(true, true);
+        when_shutDown(true, true);
     }
 
     @Test
     public void when_snapshottedJob_nonCoordinatorShutDown_then_gracefully() {
-        when_shutDown_then_gracefully(false, true);
+        when_shutDown(false, true);
     }
 
     @Test
     public void when_nonSnapshottedJob_coordinatorShutDown_then_restarts() {
-        when_shutDown_then_gracefully(true, false);
+        when_shutDown(true, false);
     }
 
     @Test
     public void when_nonSnapshottedJob_nonCoordinatorShutDown_then_restarts() {
-        when_shutDown_then_gracefully(false, false);
+        when_shutDown(false, false);
     }
 
-    private void when_shutDown_then_gracefully(boolean shutdownCoordinator, boolean snapshotted) {
+    private void when_shutDown(boolean shutdownCoordinator, boolean snapshotted) {
         DAG dag = new DAG();
         final int numItems = 50_000;
         Vertex source = dag.newVertex("source", throttle(() -> new EmitIntegersP(numItems), 10_000)).localParallelism(1);
