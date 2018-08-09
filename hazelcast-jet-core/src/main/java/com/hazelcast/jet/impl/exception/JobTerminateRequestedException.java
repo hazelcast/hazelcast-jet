@@ -16,14 +16,20 @@
 
 package com.hazelcast.jet.impl.exception;
 
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.impl.TerminationMode;
 
-/**
- * The exception thrown and handled internally when a job termination is
- * requested, see {@link TerminationMode#TERMINATE_GRACEFUL}.
- */
-public class JobTerminateRequestedException extends JobTerminateRequestedBaseException {
-    public JobTerminateRequestedException(boolean withTerminalSnapshot) {
-        super(withTerminalSnapshot);
+import javax.annotation.Nonnull;
+
+public class JobTerminateRequestedException extends JetException {
+    private final TerminationMode mode;
+
+    public JobTerminateRequestedException(@Nonnull TerminationMode mode) {
+        this.mode = mode;
+    }
+
+    @Nonnull
+    public TerminationMode mode() {
+        return mode;
     }
 }

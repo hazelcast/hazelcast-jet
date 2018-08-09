@@ -31,9 +31,7 @@ import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.impl.exception.JobRestartRequestedException;
-import com.hazelcast.jet.impl.exception.JobSuspendRequestedException;
-import com.hazelcast.jet.impl.exception.JobTerminateRequestedBaseException;
+import com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate;
 import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
 import com.hazelcast.jet.impl.exception.ShutdownInProgressException;
 import com.hazelcast.jet.impl.exception.TerminatedWithSnapshotException;
@@ -83,6 +81,8 @@ import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.SnapshotRepository.snapshotDataMapName;
 import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.RESTART;
+import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.SUSPEND;
+import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.TERMINATE;
 import static com.hazelcast.jet.impl.TerminationMode.CANCEL;
 import static com.hazelcast.jet.impl.TerminationMode.RESTART_GRACEFUL;
 import static com.hazelcast.jet.impl.execution.SnapshotContext.NO_SNAPSHOT;
@@ -672,8 +672,8 @@ public class MasterContext {
     }
 
     private void onCompleteExecutionCompleted(Throwable error) {
-        if (error instanceof JobTerminateRequestedBaseException
-                && ((JobTerminateRequestedBaseException) error).isWithTerminalSnapshot()) {
+        if (error instanceof JobTerminateRequestedException
+                && ((JobTerminateRequestedException) error).mode().isWithTerminalSnapshot()) {
             // have to use Async version, the future is completed inside a synchronized block
             terminalSnapshotFuture.whenCompleteAsync(withTryCatch(logger, (r, e) -> finalizeJob(error)));
         } else {
@@ -695,8 +695,6 @@ public class MasterContext {
             long elapsed = NANOSECONDS.toMillis(System.nanoTime() - executionStartTime);
             boolean isSuccess = failure == null
                     || failure instanceof CancellationException
-                    || failure instanceof JobRestartRequestedException
-                    || failure instanceof JobSuspendRequestedException
                     || failure instanceof JobTerminateRequestedException;
             if (isSuccess) {
                 logger.info(String.format("Execution of %s completed in %,d ms", jobIdString(), elapsed));
@@ -707,22 +705,24 @@ public class MasterContext {
             // reset state for the next execution
             requestedTerminationMode = null;
             executionInvocationCallback = null;
+            ActionAfterTerminate terminationModeAction = failure instanceof JobTerminateRequestedException
+                    ? ((JobTerminateRequestedException) failure).mode().actionAfterTerminate() : null;
 
             // if restart was requested, restart immediately
-            if (failure instanceof JobRestartRequestedException) {
+            if (terminationModeAction == RESTART) {
                 jobStatus = NOT_RUNNING;
                 nonSynchronizedAction = () -> coordinationService.restartJob(jobId);
             } else if ((failure instanceof RestartableException || failure instanceof TopologyChangedException)
                     && jobRecord.getConfig().isAutoScaling()) {
                 // if restart is due to a failure, restart with a delay
                 scheduleRestart();
-            } else if (failure instanceof JobSuspendRequestedException
+            } else if (terminationModeAction == SUSPEND
                     || (failure instanceof RestartableException || failure instanceof TopologyChangedException)
                     && !jobRecord.getConfig().isAutoScaling()) {
                 jobStatus = SUSPENDED;
                 jobRecord = jobRecord.withSuspended(true);
                 nonSynchronizedAction = () -> coordinationService.suspendJob(this);
-            } else if (failure instanceof JobTerminateRequestedException) {
+            } else if (terminationModeAction == TERMINATE) {
                 // leave the job not-suspended, not-restarted. New master will pick it up.
                 jobStatus = NOT_RUNNING;
             } else {
@@ -964,7 +964,9 @@ public class MasterContext {
 
         @Override
         public void onFailure(Throwable t) {
-            cancelInvocations(null);
+            if (!(t instanceof TerminatedWithSnapshotException)) {
+                cancelInvocations(null);
+            }
         }
 
         void cancelInvocations(TerminationMode mode) {

@@ -25,7 +25,7 @@ import com.hazelcast.jet.core.TestProcessors.StuckProcessor;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.SnapshotRepository;
-import com.hazelcast.jet.impl.exception.JobSuspendRequestedException;
+import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Rule;
@@ -39,6 +39,7 @@ import java.util.concurrent.Future;
 import static com.hazelcast.jet.core.JobStatus.COMPLETED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
+import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.SUSPEND;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -88,7 +89,7 @@ public class SuspendResumeTest extends JetTestSupport {
         assertTrueEventually(() -> {
             assertEquals(2 * NODE_COUNT, MockPS.closeCount.get());
             assertEquals(NODE_COUNT, MockPS.receivedCloseErrors.size());
-            assertTrue(MockPS.receivedCloseErrors.stream().allMatch(e -> e instanceof JobSuspendRequestedException));
+            assertTrue(MockPS.receivedCloseErrors.stream().allMatch(this::isSuspend));
         }, 5);
     }
 
@@ -111,7 +112,7 @@ public class SuspendResumeTest extends JetTestSupport {
         assertTrueEventually(() -> {
             assertEquals(2 * NODE_COUNT + 1, MockPS.closeCount.get());
             assertEquals(NODE_COUNT, MockPS.receivedCloseErrors.size());
-            assertTrue(MockPS.receivedCloseErrors.stream().allMatch(e -> e instanceof JobSuspendRequestedException));
+            assertTrue(MockPS.receivedCloseErrors.stream().allMatch(this::isSuspend));
         }, 5);
     }
 
@@ -134,7 +135,7 @@ public class SuspendResumeTest extends JetTestSupport {
         assertTrueEventually(() -> {
             assertEquals(2 * NODE_COUNT - 1, MockPS.closeCount.get());
             assertEquals(NODE_COUNT, MockPS.receivedCloseErrors.size());
-            assertTrue(MockPS.receivedCloseErrors.stream().allMatch(e -> e instanceof JobSuspendRequestedException));
+            assertTrue(MockPS.receivedCloseErrors.stream().allMatch(this::isSuspend));
         }, 5);
     }
 
@@ -157,7 +158,7 @@ public class SuspendResumeTest extends JetTestSupport {
         assertTrueEventually(() -> {
             assertEquals(2 * NODE_COUNT - 1, MockPS.closeCount.get());
             assertEquals(NODE_COUNT, MockPS.receivedCloseErrors.size());
-            assertTrue(MockPS.receivedCloseErrors.stream().allMatch(e -> e instanceof JobSuspendRequestedException));
+            assertTrue(MockPS.receivedCloseErrors.stream().allMatch(this::isSuspend));
         }, 5);
     }
 
@@ -276,5 +277,10 @@ public class SuspendResumeTest extends JetTestSupport {
             instances[0].getHazelcastInstance().getLifecycleService().terminate();
         }
         assertTrueAllTheTime(() -> assertEquals(SUSPENDED, job.getStatus()), 10);
+    }
+
+    private boolean isSuspend(Throwable e) {
+        return e instanceof JobTerminateRequestedException
+                && ((JobTerminateRequestedException) e).mode().actionAfterTerminate() == SUSPEND;
     }
 }

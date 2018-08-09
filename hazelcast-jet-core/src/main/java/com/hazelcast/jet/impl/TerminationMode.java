@@ -16,8 +16,6 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.jet.impl.exception.JobRestartRequestedException;
-import com.hazelcast.jet.impl.exception.JobSuspendRequestedException;
 import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
 
 import javax.annotation.CheckReturnValue;
@@ -32,12 +30,12 @@ import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.TERMIN
 public enum TerminationMode {
 
     // terminate and restart the job
-    RESTART_GRACEFUL(true, RESTART, false, JobRestartRequestedException::new),
-    RESTART_FORCEFUL(false, RESTART, false, JobRestartRequestedException::new),
+    RESTART_GRACEFUL(true, RESTART, false, JobTerminateRequestedException::new),
+    RESTART_FORCEFUL(false, RESTART, false, JobTerminateRequestedException::new),
 
     // terminate and mark the job as suspended
-    SUSPEND_GRACEFUL(true, SUSPEND, false, JobSuspendRequestedException::new),
-    SUSPEND_FORCEFUL(false, SUSPEND, false, JobSuspendRequestedException::new),
+    SUSPEND_GRACEFUL(true, SUSPEND, false, JobTerminateRequestedException::new),
+    SUSPEND_FORCEFUL(false, SUSPEND, false, JobTerminateRequestedException::new),
 
     // only terminate, don't restart and don't mark it as suspended. Used when
     // master is gracefully shut down.
@@ -45,15 +43,15 @@ public enum TerminationMode {
     TERMINATE_FORCEFUL(false, TERMINATE, false, JobTerminateRequestedException::new),
 
     // terminate and complete the job
-    CANCEL(false, TERMINATE, true, withTerminalSnapshot -> new CancellationException());
+    CANCEL(false, TERMINATE, true, terminationMode -> new CancellationException());
 
     private final boolean withTerminalSnapshot;
     private final ActionAfterTerminate actionAfterTerminate;
     private final boolean deleteData;
-    private final Function<Boolean, Exception> exceptionFactory;
+    private final Function<TerminationMode, Exception> exceptionFactory;
 
     TerminationMode(boolean withTerminalSnapshot, ActionAfterTerminate actionAfterTerminate, boolean deleteData,
-                    Function<Boolean, Exception> exceptionFactory) {
+                    Function<TerminationMode, Exception> exceptionFactory) {
         this.withTerminalSnapshot = withTerminalSnapshot;
         this.actionAfterTerminate = actionAfterTerminate;
         this.deleteData = deleteData;
@@ -103,7 +101,7 @@ public enum TerminationMode {
 
     @Nonnull
     public Exception createException() {
-        return exceptionFactory.apply(withTerminalSnapshot);
+        return exceptionFactory.apply(this);
     }
 
     public enum ActionAfterTerminate {

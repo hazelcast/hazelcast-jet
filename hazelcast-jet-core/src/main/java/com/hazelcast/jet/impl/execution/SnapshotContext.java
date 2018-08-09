@@ -147,7 +147,7 @@ public class SnapshotContext {
                 : "new snapshotId not incremented by 1. Previous=" + lastSnapshotId + ", new=" + snapshotId;
         assert numTasklets >= 0 : "numTasklets=" + numTasklets;
         if (isCancelled) {
-            throw new CancellationException("SnapshotContext cancelled");
+            throw new CancellationException("execution cancelled");
         }
         this.isTerminal = isTerminal;
         int newNumRemainingTasklets = numRemainingTasklets.addAndGet(numTasklets);
@@ -229,14 +229,18 @@ public class SnapshotContext {
      * will be allowed to start.
      */
     synchronized void cancel() {
-        isCancelled = true;
         if (future != null) {
             reportError(new CancellationException("execution cancelled"));
             handleSnapshotDone();
         }
+        isCancelled = true;
     }
 
-    private void handleSnapshotDone() {
+    private synchronized void handleSnapshotDone() {
+        if (isCancelled) {
+            assert future == null : "future=" + future;
+            return;
+        }
         future.complete(
                 new SnapshotOperationResult(totalBytes.get(), totalKeys.get(), totalChunks.get(), snapshotError.get()));
 
