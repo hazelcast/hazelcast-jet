@@ -25,7 +25,7 @@ public class HdfsTestSupport extends JetTestSupport {
     public void before() {
         // Tests fail on windows. If you want to run them, comment out this line and
         // follow this instructions: https://stackoverflow.com/a/35652866/952135
-        assumeNotWindows();
+        assumeThatNoWindowsOS();
     }
 
 }
