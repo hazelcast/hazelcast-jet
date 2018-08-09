@@ -124,7 +124,7 @@ public class ReadHdfsPTest extends HdfsTestSupport {
         assertEquals(expectedSinkSize(), list.size());
         assertTrue(list.get(0).toString().contains("value"));
     }
-    
+
     private int expectedSinkSize() {
         return mapperType == EMapperType.CUSTOM_WITH_NULLS ? 8 : 16;
     }
