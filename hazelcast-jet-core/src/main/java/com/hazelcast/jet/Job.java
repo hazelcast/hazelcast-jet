@@ -95,7 +95,8 @@ public interface Job {
     /**
      * Gracefully stops the current execution and schedules a new execution
      * with the current member list of the Jet cluster. Can be called to
-     * manually make use of added members.
+     * manually make use of added members, if {@linkplain
+     * JobConfig#setAutoScaling auto scaling} is disabled.
      *
      * <p>Conceptually it's equivalent to {@link #suspend()} & {@link
      * #resume()}.

@@ -125,11 +125,6 @@ public class SnapshotFailureTest extends JetTestSupport {
         assertFalse("no failed snapshot appeared in snapshotsMap", instance1.getList("failed_snapshot_records").isEmpty());
     }
 
-    @Test
-    public void when_jobCancelledDuringSnapshot_then_snapshotFutureCompleted() {
-        // TODO [viliam] add the test
-    }
-
     public static class FailingMapStore extends AMapStore implements Serializable {
         @Override
         public void store(Object o, Object o2) {

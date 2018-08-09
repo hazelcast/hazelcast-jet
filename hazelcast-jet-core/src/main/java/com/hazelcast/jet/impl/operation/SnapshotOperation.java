@@ -25,10 +25,16 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 
 public class SnapshotOperation extends AsyncJobOperation {
+
+    /** If set to true, responses to SnapshotOperation will be postponed until set back to false. */
+    // for test
+    public static volatile boolean postponeResponses;
+    private static final int RETRY_MS = 100;
 
     private long executionId;
     private long snapshotId;
@@ -65,9 +71,18 @@ public class SnapshotOperation extends AsyncJobOperation {
                 // wrap the exception
                 result.error = new JetException("Exception during snapshot: " + result.error, result.error);
             }
-            doSendResponse(result);
+            maybeSendResponse(result);
         });
+    }
 
+    private void maybeSendResponse(SnapshotOperationResult result) {
+        if (postponeResponses) {
+            getNodeEngine().getExecutionService()
+                           .schedule(() -> maybeSendResponse(result), RETRY_MS, TimeUnit.MILLISECONDS);
+            return;
+        }
+
+        doSendResponse(result);
     }
 
     @Override
