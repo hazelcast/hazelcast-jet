@@ -178,21 +178,21 @@ public interface JetInstance {
     JetCacheManager getCacheManager();
 
     /**
-     * Shuts down the current instance. If this is a client instance, it will
-     * disconnect the client. If this is a member instance, the jobs running on
-     * it will be gracefully terminated and {@linkplain
-     * JobConfig#setAutoRestartOnMemberFailure(boolean) if configured}, they
-     * will also be restarted. If you want to shut down the entire cluster it
-     * is better to first {@linkplain Job#suspend suspend} all jobs so that
-     * they are not briefly restarted multiple times.
-     *
-     * <p>The call blocks until the instance is actually down.
-     *
-     * <p><b>Note:</b> If you call {@code
-     * this.getHazelcastInstance().shutdown()}, it will forcefully terminate
-     * jobs run by this member. That is, jobs will be terminated without
-     * creating a terminal snapshot and they will be restarted from the last
-     * snapshot that was created some time ago.
+     * Shuts down the current instance. If this is a client instance, it
+     * disconnects the client. If this is a member instance, it suspends the
+     * jobs running on it and, {@linkplain JobConfig#setAutoScaling(boolean)
+     * if so configured}, resumes them after this instance has shut down. When
+     * shutting down the entire cluster, it is a good practice to manually
+     * {@linkplain Job#suspend suspend} all the jobs so that they don't get
+     * suspended/resumed multiple times as each member shuts down.
+     * <p>
+     * The call blocks until the instance is actually down.
+     * <p>
+     * <b>Note:</b> If you call {@code this.getHazelcastInstance().shutdown()},
+     * it will cause all the jobs that run on this member to be forcefully
+     * terminated, without creating a terminal snapshot. After the cluster
+     * stabilizes again, Jet will restart them from the last snapshot that was
+     * created some time ago.
      */
     void shutdown();
 }

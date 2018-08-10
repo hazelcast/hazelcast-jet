@@ -131,7 +131,7 @@ public class JetService
     }
 
     /**
-     * Gracefully shut down jobs on this member. Block until all are down.
+     * Gracefully shuts down jobs on this member. Blocks until all are down.
      */
     void shutDownJobs() {
         if (!shutdownInitiated.compareAndSet(false, true)) {

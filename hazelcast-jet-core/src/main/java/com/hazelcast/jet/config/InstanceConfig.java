@@ -81,20 +81,24 @@ public class InstanceConfig {
     }
 
     /**
-     * Returns the {@link #setFlowControlPeriodMs(int) flow-control period} in milliseconds.
+     * Returns the {@link #setFlowControlPeriodMs(int) flow-control period} in
+     * milliseconds.
      */
     public int getFlowControlPeriodMs() {
         return flowControlPeriodMs;
     }
 
     /**
-     * Sets the number of synchronous backups for storing job metadata and
-     * snapshots. Maximum allowed value is 6, default value is 1.
+     * Sets the number of backups that Jet will maintain for the job metadata
+     * and snapshots. Each backup is on another cluster member; all backup
+     * write operations must complete before the overall write operation can
+     * complete. The maximum allowed number of backups is 6 and the default is
+     * 1.
      * <p>
-     * For example, if backup count is set to 2, all job metadata and snapshot data
-     * will be replicated to two other members. If snapshots are enabled
-     * in the case that at most two members fail simultaneously the job can be restarted
-     * and continued from latest snapshot.
+     * For example, if you set the backup count to 2, Jet will replicate all
+     * the job metadata and snapshot data to two other members. If one or two
+     * members of the cluster fail, Jet can recover the data from the snapshot
+     * and continue executing the job on the remaining members without loss.
      */
     @Nonnull
     public InstanceConfig setBackupCount(int newBackupCount) {
@@ -104,17 +108,18 @@ public class InstanceConfig {
     }
 
     /**
-     * Returns the {@link #setBackupCount(int) backup-count} used for job metadata
-     * and snapshots
+     * Returns the {@link #setBackupCount(int) number of backups} used for job
+     * metadata and snapshots.
      */
     public int getBackupCount() {
         return backupCount;
     }
 
     /**
-     * Sets the delay after which the jobs will restart if a new member is
-     * added to the cluster. Defaults to 10 seconds. Has no effect on jobs with
-     * {@linkplain JobConfig#setAutoScaling(boolean) auto scaling} disabled.
+     * Sets the delay after which the auto-scaled jobs will restart if a new
+     * member is added to the cluster. The default is 10 seconds. Has no effect
+     * on jobs with {@linkplain JobConfig#setAutoScaling(boolean) auto scaling}
+     * disabled.
      *
      * @param millis The delay, in milliseconds.
      * @return this instance for fluent API

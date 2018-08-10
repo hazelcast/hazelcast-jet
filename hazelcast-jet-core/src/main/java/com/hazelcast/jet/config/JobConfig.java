@@ -58,10 +58,10 @@ public class JobConfig implements Serializable {
 
     /**
      * Sets the name for the job. Job names do not have to be unique but it's
-     * good to keep them unique to be able to distinguish them in logs or
+     * good to keep them unique to be able to distinguish them in logs and the
      * Management Center.
      * <p>
-     * Default value is {@code null}.
+     * The default value is {@code null}.
      *
      * @return {@code this} instance for fluent API
      */
@@ -101,8 +101,8 @@ public class JobConfig implements Serializable {
      * Split-brain protection is disabled by default.
      * <p>
      * If {@linkplain #setAutoScaling(boolean) auto scaling} is disabled and
-     * you manually {@link Job#resume} the job, the job won't start until the
-     * quorum is met, but will remain resumed.
+     * you manually {@link Job#resume} the job, the job won't start executing
+     * until the quorum is met, but will remain in the resumed state.
      *
      * @return {@code this} instance for fluent API
      */
@@ -113,19 +113,19 @@ public class JobConfig implements Serializable {
     }
 
     /**
-     * Sets whether the job will be scaled up or down when a member is added to
-     * or removed from the cluster.
-     *
-     * <p>If enabled and a member is added or removed, the job will
-     * automatically restart, see {@link Job#restart} for more details.
-     *
-     * <p>If disabled and a <em>member is added</em>, no action will be taken
-     * and the job will not use the added member; you have to manually
-     * {@linkplain Job#restart() restart} it. If a <em>member is removed</em>
-     * (after a shut down or a failure), the job will be suspended; you have to
-     * manually {@linkplain Job#resume() resume} it.
-     *
-     * <p>By default, auto-restart is enabled.
+     * Sets whether Jet will scale the job up/down when a member is
+     * added/removed from the cluster.
+     * <p>
+     * If enabled and a member is added or removed, the job will automatically
+     * restart, see {@link Job#restart} for more details.
+     * <p>
+     * If disabled and a <em>member is added</em>, Jet taks no action and the
+     * job will not use the added member; you have to manually {@linkplain
+     * Job#restart() restart} it. If a <em>member is removed</em> (after a
+     * shutdown or a failure), Jet suspends the job. You have to manually
+     * {@linkplain Job#resume() resume} it.
+     * <p>
+     * By default, auto-restart is enabled.
      *
      * @return {@code this} instance for fluent API
      */
@@ -178,9 +178,9 @@ public class JobConfig implements Serializable {
 
     /**
      * Sets the snapshot interval in milliseconds &mdash; the interval between
-     * the completion of the previous snapshot and the start of a new one.
-     * Must be set to a positive value. This setting is only relevant when
-     * <i>>at-least-once</i> or <i>exactly-once</i> processing guarantees are used.
+     * the completion of the previous snapshot and the start of a new one. Must
+     * be set to a positive value. This setting is only relevant with
+     * <i>at-least-once</i> or <i>exactly-once</i> processing guarantees.
      * <p>
      * Default value is set to 10 seconds.
      *

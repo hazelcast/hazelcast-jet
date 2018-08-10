@@ -82,11 +82,11 @@ public interface Job {
     CompletableFuture<Void> getFuture();
 
     /**
-     * Waits for the job to complete and throws exception if job is completed
-     * with an error. Does not return if the job is suspended. Never returns
-     * for streaming (unbounded) jobs unless they fail.
-     *
-     * <p>Shorthand for <code>job.getFuture().get()</code>.
+     * Waits for the job to complete and throws an exception if the job
+     * completes with an error. Does not return if the job gets suspended.
+     * Never returns for streaming (unbounded) jobs unless they fail.
+     * <p>
+     * Shorthand for <code>job.getFuture().get()</code>.
      */
     default void join() {
         Util.uncheckRun(() -> getFuture().get());
@@ -96,41 +96,37 @@ public interface Job {
      * Gracefully stops the current execution and schedules a new execution
      * with the current member list of the Jet cluster. Can be called to
      * manually make use of added members, if {@linkplain
-     * JobConfig#setAutoScaling auto scaling} is disabled.
-     *
-     * <p>Conceptually it's equivalent to {@link #suspend()} & {@link
-     * #resume()}.
-     *
-     * <p>You cannot restart a suspended job, to do that, call {@link
+     * JobConfig#setAutoScaling auto scaling} is disabled. Only a running job
+     * can be restarted; a suspended job must be {@linkplain #resume() resumed}.
+     * <p>
+     * Conceptually this call is equivalent to {@link #suspend()} & {@link
      * #resume()}.
      *
      * @throws IllegalStateException if the job is not running, for example it
-     * has been already completed, is not yet running, is already restarting,
+     * has already completed, is not yet running, is already restarting,
      * suspended etc.
      */
     void restart();
 
     /**
-     * Gracefully suspend the current execution. Job status will become {@link
-     * JobStatus#SUSPENDED}. To resume the job, call {@link #resume()}.
-     *
-     * <p>If the job does not do {@linkplain JobConfig#setProcessingGuarantee
-     * state snapshots}, it will be suspended anyway. When resumed, it will
-     * start with an empty state.
-     *
-     * <p>This call returns quickly and a suspension process is initiated in
-     * the cluster. This process starts with creating a terminal state
-     * snapshot. Should the terminal snapshot fail, the job will suspend
-     * anyway, but the previous snapshot (if there was one) won't be deleted.
-     * When the job is resumed, a reprocessing since the last state snapshot
-     * was taken will take place. It can also happen that if a restartable
-     * exception happens concurrently to suspension process (such as a member
-     * leaving), the job might not suspend but restart. Call the {@link
-     * #getStatus()} to find out and possibly suspend again.
-     *
-     * <em>Note:</em> If the coordinator fails before the suspend is done, it
-     * might happen that even though the call was successful, the job will not
-     * suspend, but restart.
+     * Gracefully suspends the current execution of the job. The job's status
+     * will become {@link JobStatus#SUSPENDED}. To resume the job, call {@link
+     * #resume()}.
+     * <p>
+     * You can suspend a job even if it's not configured for {@linkplain
+     * JobConfig#setProcessingGuarantee snapshotting}. Such a job will resume
+     * with empty state, as if it has just been started.
+     * <p>
+     * This call just initiates the suspension process and doesn't wait for it
+     * to complete. Suspension starts with creating a terminal state snapshot.
+     * Should the terminal snapshot fail, the job will suspend anyway, but the
+     * previous snapshot (if there was one) won't be deleted. When the job
+     * resumes, its processing starts from the point of the last snapshot.
+     * <p>
+     * <strong>NOTE:</strong> if the cluster becomes unstable (a member leaves or
+     * similar) while the job is in the process of being suspended, it may end up
+     * getting immediately restarted. Call {@link #getStatus()} to find out and
+     * possibly try to suspend again.
      *
      * @throws IllegalStateException if the job is not running
      */
@@ -142,21 +138,18 @@ public interface Job {
     void resume();
 
     /**
-     * Attempts to cancel execution of this job. The job will be completed
-     * after the job has been stopped on all the nodes.
+     * Makes a request to cancel this job and returns. The job will complete
+     * after its execution has stopped on all the nodes. If the job is
+     * already suspended, Jet will delete its runtime state so it can't be
+     * resumed.
+     * <p>
+     * <strong>NOTE:</strong> if the cluster becomes unstable (a member leaves or
+     * similar) while the job is in the process of being cancelled, it may end up
+     * getting restarted after the cluster has stabilized. Call {@link
+     * #getStatus()} to find out and possibly try to cancel again.
      *
-     * <p>You can also cancel a {@linkplain #suspend() suspended} job, this
-     * will cause the deletion of job resources.
-     *
-     * <p>Starting from version 0.6, <code>job.getFuture().cancel()</code>
-     * fails with an exception.
-     *
-     * <em>Note:</em> If the coordinator fails before the cancellation is done,
-     * it might happen that even though the call was successful, the job will
-     * not cancel, but restart and continue.
-
      * @throws IllegalStateException if the job is not running: is restarting,
-     * completed...
+     * completed, etc.
      */
     void cancel();
 }

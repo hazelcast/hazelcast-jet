@@ -77,15 +77,15 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 
 /**
- * Service to handle MasterContexts on coordinator member. Job-control
- * operations from client are handled here.
+ * A service that handles MasterContexts on the coordinator member.
+ * Job-control operations from client are handled here.
  */
 public class JobCoordinationService {
 
     private static final String COORDINATOR_EXECUTOR_NAME = "jet:coordinator";
 
     /**
-     * A delay to retry job start or job upscaling if we cannot do so now.
+     * The delay before retrying to start/scale up a job.
      */
     private static final long RETRY_DELAY_IN_MILLIS = SECONDS.toMillis(2);
 
@@ -96,7 +96,7 @@ public class JobCoordinationService {
     private final JobRepository jobRepository;
     private final SnapshotRepository snapshotRepository;
     private final ConcurrentMap<Long, MasterContext> masterContexts = new ConcurrentHashMap<>();
-    private final Set<String> shuttingDownMembers = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Set<String> membersShuttingDown = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Object lock = new Object();
     private volatile boolean isShutdown;
     private int awaitedTerminatingMembersCount;
@@ -618,8 +618,8 @@ public class JobCoordinationService {
         }
         // if any of the members is in shutdown process, don't start jobs
         if (nodeEngine.getClusterService().getMembers().stream()
-                      .anyMatch(m -> shuttingDownMembers.contains(m.getUuid()))) {
-            LoggingUtil.logFine(logger, "Not starting jobs because members are shutting down: %s", shuttingDownMembers);
+                      .anyMatch(m -> membersShuttingDown.contains(m.getUuid()))) {
+            LoggingUtil.logFine(logger, "Not starting jobs because members are shutting down: %s", membersShuttingDown);
             return false;
         }
         InternalPartitionServiceImpl partitionService = getInternalPartitionService();
@@ -720,7 +720,7 @@ public class JobCoordinationService {
             }
 
             CompletableFuture<Void> result = this.terminalSnapshotsFuture;
-            if (shuttingDownMembers.add(uuid)) {
+            if (membersShuttingDown.add(uuid)) {
                 if (result == null) {
                     this.terminalSnapshotsFuture = result = new CompletableFuture<>();
                 }
@@ -754,9 +754,9 @@ public class JobCoordinationService {
     }
 
     void onMemberLeave(String uuid) {
-        if (shuttingDownMembers.remove(uuid)) {
+        if (membersShuttingDown.remove(uuid)) {
             LoggingUtil.logFine(logger, "Removed a shutting-down member: %s, now shuttingDownMembers=%s",
-                    uuid, shuttingDownMembers);
+                    uuid, membersShuttingDown);
         }
     }
 }
