@@ -46,6 +46,7 @@ public class ConvenientSourceP<S, T> extends AbstractProcessor {
          * items automatically removes them from the buffer.
          */
         Traverser<T> traverse();
+        boolean isEmpty();
         boolean isClosed();
     }
 
@@ -86,10 +87,10 @@ public class ConvenientSourceP<S, T> extends AbstractProcessor {
     public boolean complete() {
         if (batchToEmit == null) {
             fillBufferFn.accept(src, buffer);
-            Traverser<? extends T> newBatch = buffer.traverse();
-            batchToEmit = wsu != null
-                    ? newBatch.flatMap(t -> wsu.handleEvent(t, 0))
-                    : newBatch;
+            batchToEmit =
+                    wsu == null ? buffer.traverse()
+                    : buffer.isEmpty() ? wsu.handleNoEvent()
+                    : buffer.traverse().flatMap(t -> wsu.handleEvent(t, 0));
         }
         boolean batchEmitted = emitFromTraverser(batchToEmit);
         if (batchEmitted) {

@@ -41,13 +41,17 @@ public class SourceBufferImpl<T> implements SourceBufferConsumerSide<T> {
         buffer.add(item);
     }
 
-    public final void close() {
-        this.isClosed = true;
-    }
-
     @Override
     public final Traverser<T> traverse() {
         return buffer::poll;
+    }
+
+    public final boolean isEmpty() {
+        return buffer.isEmpty();
+    }
+
+    public final void close() {
+        this.isClosed = true;
     }
 
     @Override
