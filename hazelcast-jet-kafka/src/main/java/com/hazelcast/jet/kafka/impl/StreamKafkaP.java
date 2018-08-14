@@ -65,8 +65,8 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
 
     private final Properties properties;
     private final List<String> topics;
-    private final DistributedFunction<ConsumerRecord<K, V>, T> projectionFn;
-    private final WatermarkSourceUtil<T> watermarkSourceUtil;
+    private final DistributedFunction<? super ConsumerRecord<K, V>, ? extends T> projectionFn;
+    private final WatermarkSourceUtil<? super T> watermarkSourceUtil;
     private int totalParallelism;
     private boolean snapshottingEnabled;
 
@@ -87,7 +87,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
     StreamKafkaP(
             @Nonnull Properties properties,
             @Nonnull List<String> topics,
-            @Nonnull DistributedFunction<ConsumerRecord<K, V>, T> projectionFn,
+            @Nonnull DistributedFunction<? super ConsumerRecord<K, V>, ? extends T> projectionFn,
             @Nonnull WatermarkGenerationParams<? super T> wmGenParams
     ) {
         this.properties = properties;
@@ -270,8 +270,8 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
     public static <K, V, T> DistributedSupplier<Processor> processorSupplier(
             @Nonnull Properties properties,
             @Nonnull List<String> topics,
-            @Nonnull DistributedFunction<ConsumerRecord<K, V>, T> projectionFn,
-            @Nonnull WatermarkGenerationParams<T> wmGenParams
+            @Nonnull DistributedFunction<? super ConsumerRecord<K, V>, ? extends T> projectionFn,
+            @Nonnull WatermarkGenerationParams<? super T> wmGenParams
     ) {
         return () -> new StreamKafkaP<>(properties, topics, projectionFn, wmGenParams);
     }

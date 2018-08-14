@@ -91,7 +91,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     @Nonnull
     private final int[] partitionIds;
     @Nonnull
-    private final WatermarkSourceUtil<T> watermarkSourceUtil;
+    private final WatermarkSourceUtil<? super T> watermarkSourceUtil;
 
     private final boolean isRemoteReader;
 
@@ -475,7 +475,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projection,
             @Nonnull JournalInitialPosition initialPos,
-            WatermarkGenerationParams<? super T> wmGenParams
+            @Nonnull WatermarkGenerationParams<? super T> wmGenParams
     ) {
         checkSerializable(predicate, "predicate");
         checkSerializable(projection, "projection");
@@ -492,7 +492,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull DistributedPredicate<EventJournalMapEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalMapEvent<K, V>, T> projection,
             @Nonnull JournalInitialPosition initialPos,
-            @Nonnull WatermarkGenerationParams<T> wmGenParams) {
+            @Nonnull WatermarkGenerationParams<? super T> wmGenParams) {
         checkSerializable(predicate, "predicate");
         checkSerializable(projection, "projection");
 
@@ -507,7 +507,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projection,
             @Nonnull JournalInitialPosition initialPos,
-            @Nonnull WatermarkGenerationParams<T> wmGenParams) {
+            @Nonnull WatermarkGenerationParams<? super T> wmGenParams) {
         checkSerializable(predicate, "predicate");
         checkSerializable(projection, "projection");
 
@@ -523,7 +523,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull DistributedPredicate<EventJournalCacheEvent<K, V>> predicate,
             @Nonnull DistributedFunction<EventJournalCacheEvent<K, V>, T> projection,
             @Nonnull JournalInitialPosition initialPos,
-            @Nonnull WatermarkGenerationParams<T> wmGenParams) {
+            @Nonnull WatermarkGenerationParams<? super T> wmGenParams) {
         checkSerializable(predicate, "predicate");
         checkSerializable(projection, "projection");
 

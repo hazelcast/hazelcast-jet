@@ -95,7 +95,7 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
     }
 
     @Override
-    protected void init(@Nonnull Context context) throws Exception {
+    protected void init(@Nonnull Context context) {
         this.connection = connectionSupplier.get();
         this.parallelism = context.totalParallelism();
         this.index = context.globalProcessorIndex();

@@ -69,7 +69,7 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
 
     private final Traverser<T> outputTraverser;
 
-    ReadWithPartitionIteratorP(Function<Integer, Iterator<T>> partitionToIterator,
+     ReadWithPartitionIteratorP(Function<Integer, Iterator<T>> partitionToIterator,
                                List<Integer> partitions) {
         final CircularListCursor<Iterator<T>> iteratorCursor = new CircularListCursor<>(
                 partitions.stream().map(partitionToIterator).collect(toList())
