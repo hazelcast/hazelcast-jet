@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.pipeline;
+package com.hazelcast.jet.core;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

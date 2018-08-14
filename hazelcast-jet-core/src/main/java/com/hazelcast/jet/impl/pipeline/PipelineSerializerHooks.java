@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.jet.core.JetEvent;
 import com.hazelcast.jet.impl.serialization.SerializerHookConstants;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -25,7 +26,7 @@ import com.hazelcast.nio.serialization.StreamSerializer;
 
 import java.io.IOException;
 
-import static com.hazelcast.jet.impl.pipeline.JetEvent.jetEvent;
+import static com.hazelcast.jet.core.JetEvent.jetEvent;
 
 /**
  * Hazelcast serializer hooks for the classes in the {@code
