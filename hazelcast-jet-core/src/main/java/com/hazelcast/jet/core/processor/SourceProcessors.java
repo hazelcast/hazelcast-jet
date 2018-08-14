@@ -18,13 +18,19 @@ package com.hazelcast.jet.core.processor;
 
 import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.jet.core.JetEvent;
+import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
+import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.impl.connector.ConvenientSourceP;
+import com.hazelcast.jet.impl.connector.ConvenientSourceP.SourceBufferConsumerSide;
 import com.hazelcast.jet.impl.connector.ReadFilesP;
 import com.hazelcast.jet.impl.connector.ReadIListP;
 import com.hazelcast.jet.impl.connector.ReadJdbcP;
@@ -33,8 +39,11 @@ import com.hazelcast.jet.impl.connector.StreamEventJournalP;
 import com.hazelcast.jet.impl.connector.StreamFilesP;
 import com.hazelcast.jet.impl.connector.StreamJmsP;
 import com.hazelcast.jet.impl.connector.StreamSocketP;
+import com.hazelcast.jet.impl.pipeline.SourceBufferImpl;
 import com.hazelcast.jet.pipeline.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.JournalInitialPosition;
+import com.hazelcast.jet.pipeline.SourceBuilder.SourceBuffer;
+import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.ToResultSetFunction;
 import com.hazelcast.map.journal.EventJournalMapEvent;
@@ -42,6 +51,7 @@ import com.hazelcast.projection.Projection;
 import com.hazelcast.query.Predicate;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.jms.Connection;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
@@ -50,12 +60,14 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.sql.ResultSet;
 import java.util.Map.Entry;
+import java.util.function.BiConsumer;
 
 import static com.hazelcast.jet.Util.cacheEventToEntry;
 import static com.hazelcast.jet.Util.cachePutEvents;
 import static com.hazelcast.jet.Util.mapEventToEntry;
 import static com.hazelcast.jet.Util.mapPutEvents;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
+import static com.hazelcast.util.Preconditions.checkNotNegative;
 
 /**
  * Static utility class with factories of source processors (the DAG
@@ -422,4 +434,80 @@ public final class SourceProcessors {
             }
         };
     }
+
+    /**
+     * Returns a supplier of processors for a source that the user can create
+     * using the {@link com.hazelcast.jet.pipeline.SourceBuilder}. This variant
+     * creates a source that emits items without timestamps.
+     *
+     * @param createFn function that creates the source's state object
+     * @param fillBufferFn function that fills Jet's buffer with items to emit
+     * @param destroyFn function that cleans up the resources held by the state object
+     * @param preferredLocalParallelism preferred local parallelism of the source vertex
+     * @param <S> type of the source's state object
+     * @param <T> type of items the source emits
+     */
+    @Nonnull
+    @SuppressWarnings("unchecked")
+    public static <S, T> ProcessorMetaSupplier convenientSourceP(
+            @Nonnull DistributedFunction<? super Processor.Context, ? extends S> createFn,
+            @Nonnull DistributedBiConsumer<? super S, ? super SourceBuffer<T>> fillBufferFn,
+            @Nullable DistributedConsumer<? super S> destroyFn,
+            int preferredLocalParallelism
+    ) {
+        checkSerializable(createFn, "createFn");
+        checkSerializable(fillBufferFn, "fillBufferFn");
+        checkSerializable(destroyFn, "destroyFn");
+        checkNotNegative(preferredLocalParallelism, "preferredLocalParallelism must not be negative");
+        ProcessorSupplier procSup = ProcessorSupplier.of(
+                () -> new ConvenientSourceP<S, T>(
+                        createFn,
+                        (BiConsumer<? super S, ? super SourceBufferConsumerSide<? extends T>>) fillBufferFn,
+                        destroyFn != null ? destroyFn : DistributedConsumer.noop(),
+                        new SourceBufferImpl.Plain<>(),
+                        null));
+        return preferredLocalParallelism > 0
+                ? ProcessorMetaSupplier.of(procSup, preferredLocalParallelism)
+                : ProcessorMetaSupplier.forceTotalParallelismOne(procSup);
+    }
+
+    /**
+     * Returns a supplier of processors for a source that the user can create
+     * using the {@link com.hazelcast.jet.pipeline.SourceBuilder}. This variant
+     * creates a source that emits timestamped events.
+     *
+     * @param createFn function that creates the source's state object
+     * @param fillBufferFn function that fills Jet's buffer with items to emit
+     * @param destroyFn function that cleans up the resources held by the state object
+     * @param preferredLocalParallelism preferred local parallelism of the source vertex
+     * @param <S> type of the source's state object
+     * @param <T> type of items the source emits
+     */
+    @Nonnull
+    @SuppressWarnings("unchecked")
+    public static <S, T> ProcessorMetaSupplier convenientTimestampedSourceP(
+            @Nonnull DistributedFunction<? super Processor.Context, ? extends S> createFn,
+            @Nonnull DistributedBiConsumer<? super S, ? super TimestampedSourceBuffer<T>> fillBufferFn,
+            @Nonnull WatermarkGenerationParams<? super JetEvent<T>> wmParams,
+            @Nullable DistributedConsumer<? super S> destroyFn,
+            int preferredLocalParallelism
+    ) {
+        checkSerializable(createFn, "createFn");
+        checkSerializable(fillBufferFn, "fillBufferFn");
+        checkSerializable(destroyFn, "destroyFn");
+        checkNotNegative(preferredLocalParallelism, "preferredLocalParallelism must not be negative");
+        ProcessorSupplier procSup = ProcessorSupplier.of(
+                () -> new ConvenientSourceP<>(
+                        createFn,
+                        (BiConsumer<? super S, ? super SourceBufferConsumerSide<? extends JetEvent<T>>>) fillBufferFn,
+                        destroyFn != null ? destroyFn : DistributedConsumer.noop(),
+                        new SourceBufferImpl.Timestamped<>(),
+                        wmParams
+                ));
+        return preferredLocalParallelism > 0
+                ? ProcessorMetaSupplier.of(procSup, preferredLocalParallelism)
+                : ProcessorMetaSupplier.forceTotalParallelismOne(procSup);
+    }
+
+
 }
