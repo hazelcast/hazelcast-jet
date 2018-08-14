@@ -133,7 +133,8 @@ public interface Job {
     void suspend();
 
     /**
-     * Resumes a {@linkplain #suspend stopped} job.
+     * Resumes a {@linkplain #suspend suspended} job. The job will resume from
+     * the last known successful snapshot, if there is one.
      */
     void resume();
 

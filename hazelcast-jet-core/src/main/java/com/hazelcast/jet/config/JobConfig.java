@@ -119,7 +119,7 @@ public class JobConfig implements Serializable {
      * If enabled and a member is added or removed, the job will automatically
      * restart, see {@link Job#restart} for more details.
      * <p>
-     * If disabled and a <em>member is added</em>, Jet taks no action and the
+     * If disabled and a <em>member is added</em>, Jet takes no action and the
      * job will not use the added member; you have to manually {@linkplain
      * Job#restart() restart} it. If a <em>member is removed</em> (after a
      * shutdown or a failure), Jet suspends the job. You have to manually
