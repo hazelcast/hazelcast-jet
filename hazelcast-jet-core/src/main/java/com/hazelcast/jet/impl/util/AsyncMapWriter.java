@@ -34,6 +34,7 @@ import com.hazelcast.spi.impl.operationservice.impl.operations.PartitionIteratin
 import com.hazelcast.spi.partition.IPartitionService;
 import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.util.CollectionUtil;
+import com.hazelcast.util.Preconditions;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -118,20 +119,27 @@ public class AsyncMapWriter {
      */
     public boolean tryFlushAsync(CompletableFuture<Void> completionFuture) {
         Map<Address, List<Integer>> memberPartitionsMap = partitionService.getMemberPartitionsMap();
+        AtomicInteger doneLatch = new AtomicInteger(0);
         List<PartitionOpBuilder> ops = memberPartitionsMap.entrySet()
                                                           .stream()
                                                           .map(e -> opForMember(e.getKey(), e.getValue(), outputBuffers))
                                                           .filter(Objects::nonNull)
                                                           .collect(Collectors.toList());
 
-        if (!invokeOnCluster(ops, completionFuture, true)) {
+        if (ops.isEmpty()) {
+            completionFuture.complete(null);
+            return true;
+        }
+
+        if (!invokeOnCluster(ops, doneLatch, completionFuture, true)) {
             return false;
         }
         resetBuffers();
         return true;
     }
 
-    private boolean tryRetry(int[] partitions, MapEntries[] entriesPerPtion, CompletableFuture<Void> completionFuture) {
+    private boolean tryRetry(int[] partitions, MapEntries[] entriesPerPtion, AtomicInteger doneLatch,
+                             CompletableFuture<Void> completionFuture) {
         assert partitions.length == entriesPerPtion.length;
         Map<Address, Entry<List<Integer>, List<MapEntries>>> addrToEntries = new HashMap<>();
         for (int index = 0; index < partitions.length; index++) {
@@ -151,12 +159,12 @@ public class AsyncMapWriter {
                 .map(e -> {
                     PartitionOpBuilder h = new PartitionOpBuilder(e.getKey());
                     List<MapEntries> entries = e.getValue().getValue();
-                    h.entries = entries.toArray(new MapEntries[entries.size()]);
+                    h.entries = entries.toArray(new MapEntries[0]);
                     h.partitions = CollectionUtil.toIntArray(e.getValue().getKey());
                     return h;
                 }).collect(Collectors.toList());
 
-        return invokeOnCluster(retryOps, completionFuture, false);
+        return invokeOnCluster(retryOps, doneLatch, completionFuture, false);
     }
 
     private PartitionOpBuilder opForMember(Address member, List<Integer> partitions, MapEntries[] partitionToEntries) {
@@ -184,23 +192,19 @@ public class AsyncMapWriter {
         return builder;
     }
 
-
     private void resetBuffers() {
         Arrays.fill(outputBuffers, null);
     }
 
     private boolean invokeOnCluster(List<PartitionOpBuilder> opBuilders,
+                                    AtomicInteger doneLatch,
                                     CompletableFuture<Void> completionFuture,
                                     boolean shouldRetry) {
-        if (opBuilders.isEmpty()) {
-            completionFuture.complete(null);
-            return true;
-        }
-
+        Preconditions.checkFalse(opBuilders.isEmpty(), "opBuilders is empty");
         if (!tryIncrement(numConcurrentOps, opBuilders.size(), MAX_PARALLEL_ASYNC_OPS)) {
             return false;
         }
-        AtomicInteger doneLatch = new AtomicInteger(opBuilders.size());
+        doneLatch.addAndGet(opBuilders.size());
         for (PartitionOpBuilder builder : opBuilders) {
             ExecutionCallback<PartitionResponse> callback = callbackOf(r -> {
                 numConcurrentOps.decrementAndGet();
@@ -230,15 +234,17 @@ public class AsyncMapWriter {
                     }
 
                     // retry once
-                    final MapEntries[] entries = failedEntries.toArray(new MapEntries[failedEntries.size()]);
+                    final MapEntries[] entries = failedEntries.toArray(new MapEntries[0]);
                     final int[] partitions = toIntArray(failedPartitions);
                     final Throwable originalErr = error;
                     executionService.schedule(() -> {
                         try {
-                            if (!tryRetry(partitions, entries, completionFuture)) {
+                            if (!tryRetry(partitions, entries, doneLatch, completionFuture)) {
                                 completionFuture.completeExceptionally(originalErr);
+                                return;
                             }
-
+                            int value = doneLatch.decrementAndGet();
+                            assert value > 0 : "value=" + value;
                         } catch (Exception e) {
                             logger.severe("Exception during retry", e);
                             completionFuture.completeExceptionally(originalErr);
@@ -255,7 +261,7 @@ public class AsyncMapWriter {
                 if (throwable instanceof RetryableException) {
                     // the whole operation to the member failed, so we need to retry
                     // all of the partitions in the operation
-                    if (!tryRetry(builder.partitions, builder.entries, completionFuture)) {
+                    if (!tryRetry(builder.partitions, builder.entries, doneLatch, completionFuture)) {
                         completionFuture.completeExceptionally(throwable);
                     }
                 } else {
@@ -299,4 +305,3 @@ public class AsyncMapWriter {
         }
     }
 }
-
