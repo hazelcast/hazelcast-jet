@@ -32,6 +32,9 @@ import static com.hazelcast.util.Preconditions.checkPositive;
 @FunctionalInterface
 public interface WatermarkEmissionPolicy extends Serializable {
 
+    /**
+     * The null-object. Its method throws an exception.
+     */
     WatermarkEmissionPolicy NULL_EMIT_POLICY = (currentWm, lastEmittedWm) -> {
         throw new UnsupportedOperationException("Tried to use the NULL watermark emission policy");
     };

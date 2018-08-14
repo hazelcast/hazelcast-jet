@@ -255,7 +255,7 @@ public class SourceBuilderTest extends PipelineTestSupport {
             Job job = jet().newJob(p);
 
             List<TimestampedItem<Long>> expected = LongStream.range(1, itemCount + 1)
-                    .mapToObj(i -> new TimestampedItem<>(i, (long)PREFERRED_LOCAL_PARALLELISM * MEMBER_COUNT))
+                    .mapToObj(i -> new TimestampedItem<>(i, (long) PREFERRED_LOCAL_PARALLELISM * MEMBER_COUNT))
                     .collect(toList());
 
             assertTrueEventually(() -> {
