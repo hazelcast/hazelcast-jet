@@ -129,6 +129,8 @@ public class SourceBuilderTest extends PipelineTestSupport {
                         String line = in.readLine();
                         if (line != null) {
                             buf.add(line);
+                        } else {
+                            buf.close();
                         }
                     })
                     .destroyFn(BufferedReader::close)
@@ -138,10 +140,9 @@ public class SourceBuilderTest extends PipelineTestSupport {
             Pipeline p = Pipeline.create();
             p.drawFrom(socketSource)
                     .drainTo(sinkList());
-            Job job = jet().newJob(p);
+            jet().newJob(p).join();
             List<String> expected = IntStream.range(0, itemCount).mapToObj(i -> "line" + i).collect(toList());
             assertTrueEventually(() -> assertEquals(expected, new ArrayList<>(sinkList)), 10);
-            job.cancel();
         }
     }
 
@@ -159,6 +160,8 @@ public class SourceBuilderTest extends PipelineTestSupport {
                         String line = in.readLine();
                         if (line != null) {
                             buf.add(line);
+                        } else {
+                            buf.close();
                         }
                     })
                     .destroyFn(BufferedReader::close)
@@ -169,14 +172,13 @@ public class SourceBuilderTest extends PipelineTestSupport {
             Pipeline p = Pipeline.create();
             p.drawFrom(socketSource)
                     .drainTo(sinkList());
-            Job job = jet().newJob(p);
+            jet().newJob(p).join();
 
             Map<String, Integer> expected = IntStream.range(0, itemCount)
                     .boxed()
                     .collect(Collectors.toMap(i -> "line" + i, i -> PREFERRED_LOCAL_PARALLELISM * MEMBER_COUNT));
 
             assertTrueEventually(() -> assertEquals(expected, sinkToBag()), 10);
-            job.cancel();
         }
     }
 
@@ -210,14 +212,13 @@ public class SourceBuilderTest extends PipelineTestSupport {
                     .aggregate(AggregateOperations.counting())
                     .drainTo(sinkList());
 
-            Job job = jet().newJob(p);
+            jet().newJob(p).join();
 
             List<TimestampedItem<Long>> expected = LongStream.range(1, itemCount + 1)
                     .mapToObj(i -> new TimestampedItem<>(i, 1L))
                     .collect(toList());
 
             assertTrueEventually(() -> assertEquals(expected, new ArrayList<>(sinkList)), 10);
-            job.cancel();
         }
     }
 
@@ -252,7 +253,7 @@ public class SourceBuilderTest extends PipelineTestSupport {
                     .aggregate(AggregateOperations.counting())
                     .drainTo(sinkList());
 
-            Job job = jet().newJob(p);
+            jet().newJob(p).join();
 
             List<TimestampedItem<Long>> expected = LongStream.range(1, itemCount + 1)
                     .mapToObj(i -> new TimestampedItem<>(i, (long) PREFERRED_LOCAL_PARALLELISM * MEMBER_COUNT))
@@ -261,7 +262,6 @@ public class SourceBuilderTest extends PipelineTestSupport {
             assertTrueEventually(() -> {
                 assertEquals(expected, new ArrayList<>(sinkList));
             }, 10);
-            job.cancel();
         }
     }
 
