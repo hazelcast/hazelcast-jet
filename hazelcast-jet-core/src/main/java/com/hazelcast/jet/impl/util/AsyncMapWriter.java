@@ -119,7 +119,7 @@ public class AsyncMapWriter {
      */
     public boolean tryFlushAsync(CompletableFuture<Void> completionFuture) {
         Map<Address, List<Integer>> memberPartitionsMap = partitionService.getMemberPartitionsMap();
-        AtomicInteger doneLatch = new AtomicInteger(0);
+        AtomicInteger pendingOps = new AtomicInteger(0);
         List<PartitionOpBuilder> ops = memberPartitionsMap.entrySet()
                                                           .stream()
                                                           .map(e -> opForMember(e.getKey(), e.getValue(), outputBuffers))
@@ -131,14 +131,14 @@ public class AsyncMapWriter {
             return true;
         }
 
-        if (!invokeOnCluster(ops, doneLatch, completionFuture, true)) {
+        if (!invokeOnCluster(ops, pendingOps, completionFuture, true)) {
             return false;
         }
         resetBuffers();
         return true;
     }
 
-    private boolean tryRetry(int[] partitions, MapEntries[] entriesPerPtion, AtomicInteger doneLatch,
+    private boolean tryRetry(int[] partitions, MapEntries[] entriesPerPtion, AtomicInteger pendingOps,
                              CompletableFuture<Void> completionFuture) {
         assert partitions.length == entriesPerPtion.length;
         Map<Address, Entry<List<Integer>, List<MapEntries>>> addrToEntries = new HashMap<>();
@@ -164,7 +164,7 @@ public class AsyncMapWriter {
                     return h;
                 }).collect(Collectors.toList());
 
-        return invokeOnCluster(retryOps, doneLatch, completionFuture, false);
+        return invokeOnCluster(retryOps, pendingOps, completionFuture, false);
     }
 
     private PartitionOpBuilder opForMember(Address member, List<Integer> partitions, MapEntries[] partitionToEntries) {
@@ -197,14 +197,14 @@ public class AsyncMapWriter {
     }
 
     private boolean invokeOnCluster(List<PartitionOpBuilder> opBuilders,
-                                    AtomicInteger doneLatch,
+                                    AtomicInteger pendingOps,
                                     CompletableFuture<Void> completionFuture,
                                     boolean shouldRetry) {
         Preconditions.checkFalse(opBuilders.isEmpty(), "opBuilders is empty");
         if (!tryIncrement(numConcurrentOps, opBuilders.size(), MAX_PARALLEL_ASYNC_OPS)) {
             return false;
         }
-        doneLatch.addAndGet(opBuilders.size());
+        pendingOps.addAndGet(opBuilders.size());
         for (PartitionOpBuilder builder : opBuilders) {
             ExecutionCallback<PartitionResponse> callback = callbackOf(r -> {
                 numConcurrentOps.decrementAndGet();
@@ -239,12 +239,12 @@ public class AsyncMapWriter {
                     final Throwable originalErr = error;
                     executionService.schedule(() -> {
                         try {
-                            if (!tryRetry(partitions, entries, doneLatch, completionFuture)) {
+                            // We should not handle pendingOps getting to 0 here, it will be increased again by
+                            // the retry operations.
+                            pendingOps.decrementAndGet();
+                            if (!tryRetry(partitions, entries, pendingOps, completionFuture)) {
                                 completionFuture.completeExceptionally(originalErr);
-                                return;
                             }
-                            int value = doneLatch.decrementAndGet();
-                            assert value > 0 : "value=" + value;
                         } catch (Exception e) {
                             logger.severe("Exception during retry", e);
                             completionFuture.completeExceptionally(originalErr);
@@ -252,7 +252,7 @@ public class AsyncMapWriter {
                     }, TRY_PAUSE_MILLIS, TimeUnit.MILLISECONDS);
                     return;
                 }
-                if (doneLatch.decrementAndGet() == 0) {
+                if (pendingOps.decrementAndGet() == 0) {
                     completionFuture.complete(null);
                 }
 
@@ -261,7 +261,7 @@ public class AsyncMapWriter {
                 if (throwable instanceof RetryableException) {
                     // the whole operation to the member failed, so we need to retry
                     // all of the partitions in the operation
-                    if (!tryRetry(builder.partitions, builder.entries, doneLatch, completionFuture)) {
+                    if (!tryRetry(builder.partitions, builder.entries, pendingOps, completionFuture)) {
                         completionFuture.completeExceptionally(throwable);
                     }
                 } else {

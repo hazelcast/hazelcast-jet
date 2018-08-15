@@ -56,7 +56,6 @@ public class AsyncMapWriterTest extends JetTestSupport {
     private IMapJet<Object, Object> map;
     private NodeEngineImpl nodeEngine;
 
-
     @Before
     public void setup() {
         JetConfig jetConfig = new JetConfig();
