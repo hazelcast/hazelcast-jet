@@ -242,6 +242,10 @@ public class AsyncMapWriter {
                             // We should not handle pendingOps getting to 0 here, it will be increased again by
                             // the retry operations.
                             pendingOps.decrementAndGet();
+                            // TODO do more robust retry
+                            // On second try we should do individual partition-specific ops that can be retried on
+                            // different members as the partition migrates, not a PartitionIteratingOp.
+                            // See InvokeOnPartitions.retryFailedPartitions.
                             if (!tryRetry(partitions, entries, pendingOps, completionFuture)) {
                                 completionFuture.completeExceptionally(originalErr);
                             }
