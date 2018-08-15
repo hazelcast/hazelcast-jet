@@ -57,7 +57,7 @@ public class ConvenientSourceP<S, T> extends AbstractProcessor {
     private final WatermarkSourceUtil<T> wsu;
 
     private S src;
-    private Traverser<?> batchToEmit;
+    private Traverser<?> traverser;
 
     public ConvenientSourceP(
             @Nonnull Function<? super Context, ? extends S> createFn,
@@ -85,18 +85,18 @@ public class ConvenientSourceP<S, T> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
-        if (batchToEmit == null) {
+        if (traverser == null) {
             fillBufferFn.accept(src, buffer);
-            batchToEmit =
+            traverser =
                     wsu == null ? buffer.traverse()
                     : buffer.isEmpty() ? wsu.handleNoEvent()
                     : buffer.traverse().flatMap(t -> wsu.handleEvent(t, 0));
         }
-        boolean batchEmitted = emitFromTraverser(batchToEmit);
-        if (batchEmitted) {
-            batchToEmit = null;
+        boolean bufferEmpty = emitFromTraverser(traverser);
+        if (bufferEmpty) {
+            traverser = null;
         }
-        return batchEmitted && buffer.isClosed();
+        return bufferEmpty && buffer.isClosed();
     }
 
     @Override

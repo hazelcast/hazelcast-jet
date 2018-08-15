@@ -21,6 +21,7 @@ com.hazelcast.jet.accumulator.AccumulatorSerializerHooks$LinTrendAccHook
 com.hazelcast.jet.accumulator.AccumulatorSerializerHooks$LongLongAccHook
 com.hazelcast.jet.accumulator.AccumulatorSerializerHooks$LongDoubleAccHook
 com.hazelcast.jet.core.CoreSerializerHooks$WatermarkHook
+com.hazelcast.jet.core.CoreSerializerHooks$JetEventHook
 com.hazelcast.jet.datamodel.DataModelSerializerHooks$TimestampedEntryHook
 com.hazelcast.jet.datamodel.DataModelSerializerHooks$TimestampedItemHook
 com.hazelcast.jet.datamodel.DataModelSerializerHooks$WindowResultHook
@@ -34,7 +35,6 @@ com.hazelcast.jet.impl.execution.ExecutionSerializerHooks$SnapshotBarrierHook
 com.hazelcast.jet.impl.execution.ExecutionSerializerHooks$BroadcastEntryHook
 com.hazelcast.jet.impl.execution.ExecutionSerializerHooks$BroadcastKeyReferenceHook
 com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject$Hook
-com.hazelcast.jet.impl.pipeline.PipelineSerializerHooks$JetEventHook
 com.hazelcast.jet.impl.serialization.HashMapHook
 com.hazelcast.jet.impl.serialization.HashSetHook
 com.hazelcast.jet.impl.serialization.MapEntryHook

@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.Job;
 import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.function.DistributedFunction;

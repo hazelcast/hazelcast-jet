@@ -34,7 +34,7 @@ public class SourceBufferImpl<T> implements SourceBufferConsumerSide<T> {
     private SourceBufferImpl() {
     }
 
-    final void add0(T item) {
+    final void addInternal(T item) {
         if (isClosed) {
             throw new IllegalStateException("Buffer is closed, can't add more items");
         }
@@ -62,14 +62,14 @@ public class SourceBufferImpl<T> implements SourceBufferConsumerSide<T> {
     public static class Plain<T> extends SourceBufferImpl<T> implements SourceBuffer<T> {
         @Override
         public void add(T item) {
-            add0(item);
+            addInternal(item);
         }
     }
 
     public static class Timestamped<T> extends SourceBufferImpl<JetEvent<T>> implements TimestampedSourceBuffer<T> {
         @Override
         public void add(T item, long timestamp) {
-            add0(jetEvent(item, timestamp));
+            addInternal(jetEvent(item, timestamp));
         }
     }
 

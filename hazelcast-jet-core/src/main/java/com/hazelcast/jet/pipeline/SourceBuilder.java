@@ -107,12 +107,16 @@ public final class SourceBuilder<S> {
      * Each parallel worker that drives your source has its private instance of
      * a state object it gets from your {@code createFn}. To get the data items
      * to emit to the pipeline, the worker repeatedly calls your {@code
-     * fillBufferFn} with the state object and a buffer object. Your function
-     * should add some items to the buffer, ideally those it has ready without
-     * having to block. It shouldn't add too much data at once (64 KB is enough,
-     * but there is no hard limit). If it doesn't have any items ready, it may
-     * also return without adding anything. Once it has added all the data, it
-     * must call {@link SourceBuffer#close() buffer.close()}.
+     * fillBufferFn} with the state object and a buffer object.
+     * <p>
+     * Your function should add some items to the buffer, ideally those it has
+     * ready without having to block. It shouldn't add more than a thousand
+     * items at once, but there is no limit enforced. If it doesn't have any
+     * items ready, it may also return without adding anything. In any case the
+     * function should not take more than a second or so to complete, otherwise
+     * you risk interfering with Jet's coordination mechanisms and getting bad
+     * performance. Once it has added all the data, the function must call
+     * {@link SourceBuffer#close() buffer.close()}.
      * <p>
      * Unless you call {@link SourceBuilder.Batch#distributed(int) builder.distributed()},
      * Jet will create just a single worker that should emit all the data. If
@@ -145,10 +149,11 @@ public final class SourceBuilder<S> {
      *         .build();
      * }</pre>
      *
-     * @param name a descriptive name for the source (for diagnostic purposes)
+     * @param name     a descriptive name for the source (for diagnostic purposes)
      * @param createFn a function that creates the state object
-     * @param <S> type of the state object
+     * @param <S>      type of the state object
      */
+    @Nonnull
     public static <S> SourceBuilder<S>.Batch<Void> batch(
             @Nonnull String name, @Nonnull DistributedFunction<? super Processor.Context, ? extends S> createFn
     ) {
@@ -162,11 +167,15 @@ public final class SourceBuilder<S> {
      * Each parallel worker that drives your source has its private instance of
      * a state object it gets from your {@code createFn}. To get the data items
      * to emit to the pipeline, the worker repeatedly calls your {@code
-     * fillBufferFn} with the state object and a buffer object. Your function
-     * should add some items to the buffer, ideally those it has ready without
-     * having to block. It shouldn't add too much data at once (64 KB is enough,
-     * but there is no hard limit). If it doesn't have any items ready, it may
-     * also return without adding anything.
+     * fillBufferFn} with the state object and a buffer object.
+     * <p>
+     * Your function should add some items to the buffer, ideally those it has
+     * ready without having to block. It shouldn't add more than a thousand
+     * items at once, but there is no limit enforced. If it doesn't have any
+     * items ready, it may also return without adding anything. In any case the
+     * function should not take more than a second or so to complete, otherwise
+     * you risk interfering with Jet's coordination mechanisms and getting bad
+     * performance.
      * <p>
      * Unless you call {@link SourceBuilder.Stream#distributed(int) builder.distributed()},
      * Jet will create just a single worker that should emit all the data. If
@@ -182,12 +191,24 @@ public final class SourceBuilder<S> {
      * reads lines of text from a TCP/IP socket. The source emits one line per
      * {@code fillBufferFn} call, or nothing if there's no data ready.
      * <pre>{@code
+     * StreamSource<String> socketSource = SourceBuilder
+     *         .stream("socket-source", ctx -> new BufferedReader(
+     *                 new InputStreamReader(
+     *                         new Socket("localhost", 7001).getInputStream())))
+     *         .<String>fillBufferFn((in, buf) -> {
+     *             if (in.ready()) {
+     *                 buf.add(in.readLine());
+     *             }
+     *         })
+     *         .destroyFn(BufferedReader::close)
+     *         .build();
      * }</pre>
      *
-     * @param name a descriptive name for the source (for diagnostic purposes)
+     * @param name     a descriptive name for the source (for diagnostic purposes)
      * @param createFn a function that creates the state object
-     * @param <S> type of the state object
+     * @param <S>      type of the state object
      */
+    @Nonnull
     public static <S> SourceBuilder<S>.Stream<Void> stream(
             @Nonnull String name, @Nonnull DistributedFunction<? super Processor.Context, ? extends S> createFn
     ) {
@@ -205,11 +226,15 @@ public final class SourceBuilder<S> {
      * to emit to the pipeline, the worker repeatedly calls your {@code
      * fillBufferFn} with the state object and a buffer object. The buffer's
      * {@link SourceBuilder.TimestampedSourceBuffer#add add()} method takes two
-     * argument: the item and the timestamp in milliseconds. Your function
-     * should add some items to the buffer, ideally those it has ready without
-     * having to block. It shouldn't add too much data at once (64 KB is enough,
-     * but there is no hard limit). If it doesn't have any items ready, it may
-     * also return without adding anything.
+     * argument: the item and the timestamp in milliseconds.
+     * <p>
+     * Your function should add some items to the buffer, ideally those it has
+     * ready without having to block. It shouldn't add more than a thousand
+     * items at once, but there is no limit enforced. If it doesn't have any
+     * items ready, it may also return without adding anything. In any case the
+     * function should not take more than a second or so to complete, otherwise
+     * you risk interfering with Jet's coordination mechanisms and getting bad
+     * performance.
      * <p>
      * Unless you call {@link SourceBuilder.TimestampedStream#distributed(int)
      * builder.distributed()}, Jet will create just a single worker that should
@@ -246,6 +271,7 @@ public final class SourceBuilder<S> {
      * @param createFn a function that creates the state object
      * @param <S> type of the state object
      */
+    @Nonnull
     public static <S> SourceBuilder<S>.TimestampedStream<Void> timestampedStream(
             @Nonnull String name, @Nonnull DistributedFunction<? super Processor.Context, ? extends S> createFn
     ) {
@@ -282,6 +308,7 @@ public final class SourceBuilder<S> {
          * @return this builder with the item type reset to the one inferred from
          *         {@code fillBufferFn}
          */
+        @Nonnull
         @SuppressWarnings("unchecked")
         public <T_NEW> SourceBuilder<S>.Batch<T_NEW> fillBufferFn(
                 @Nonnull DistributedBiConsumer<? super S, ? super SourceBuffer<T_NEW>> fillBufferFn
@@ -296,6 +323,7 @@ public final class SourceBuilder<S> {
          * ended. It gives you the opportunity to release any resources held by the
          * state object.
          */
+        @Nonnull
         public Batch<T> destroyFn(@Nonnull DistributedConsumer<? super S> destroyFn) {
             mDestroyFn = destroyFn;
             return this;
@@ -315,6 +343,7 @@ public final class SourceBuilder<S> {
          *
          * @param preferredLocalParallelism requested number of workers on each cluster member
          */
+        @Nonnull
         public Batch<T> distributed(int preferredLocalParallelism) {
             mPreferredLocalParallelism = preferredLocalParallelism;
             return this;
@@ -323,6 +352,7 @@ public final class SourceBuilder<S> {
         /**
          * Builds and returns the batch source.
          */
+        @Nonnull
         public BatchSource<T> build() {
             Preconditions.checkNotNull(fillBufferFn, "fillBufferFn must be non-null");
             return new BatchSourceTransform<>(mName,
@@ -357,6 +387,7 @@ public final class SourceBuilder<S> {
          * @return this builder with the item type reset to the one inferred from
          *         {@code fillBufferFn}
          */
+        @Nonnull
         @SuppressWarnings("unchecked")
         public <T_NEW> Stream<T_NEW> fillBufferFn(
                 @Nonnull DistributedBiConsumer<? super S, ? super SourceBuffer<T_NEW>> fillBufferFn
@@ -371,6 +402,7 @@ public final class SourceBuilder<S> {
          * ended. It gives you the opportunity to release any resources held by the
          * state object.
          */
+        @Nonnull
         public Stream<T> destroyFn(@Nonnull DistributedConsumer<? super S> pDestroyFn) {
             mDestroyFn = pDestroyFn;
             return this;
@@ -390,6 +422,7 @@ public final class SourceBuilder<S> {
          *
          * @param preferredLocalParallelism requested number of workers on each cluster member
          */
+        @Nonnull
         public Stream<T> distributed(int preferredLocalParallelism) {
             mPreferredLocalParallelism = preferredLocalParallelism;
             return this;
@@ -398,6 +431,7 @@ public final class SourceBuilder<S> {
         /**
          * Builds and returns the unbounded stream source.
          */
+        @Nonnull
         public StreamSource<T> build() {
             return new StreamSourceTransform<>(
                     mName,
@@ -437,6 +471,7 @@ public final class SourceBuilder<S> {
          * @return this builder with the item type reset to the one inferred from
          *         {@code fillBufferFn}
          */
+        @Nonnull
         @SuppressWarnings("unchecked")
         public <T_NEW> TimestampedStream<T_NEW> fillBufferFn(
                 @Nonnull DistributedBiConsumer<? super S, ? super TimestampedSourceBuffer<T_NEW>> fillBufferFn
@@ -451,6 +486,7 @@ public final class SourceBuilder<S> {
          * ended. It gives you the opportunity to release any resources held by the
          * state object.
          */
+        @Nonnull
         public TimestampedStream<T> destroyFn(@Nonnull DistributedConsumer<? super S> pDestroyFn) {
             mDestroyFn = pDestroyFn;
             return this;
@@ -470,6 +506,7 @@ public final class SourceBuilder<S> {
          *
          * @param preferredLocalParallelism requested number of workers on each cluster member
          */
+        @Nonnull
         public TimestampedStream<T> distributed(int preferredLocalParallelism) {
             mPreferredLocalParallelism = preferredLocalParallelism;
             return this;
@@ -485,6 +522,7 @@ public final class SourceBuilder<S> {
          * @param allowedLateness limit on how much the timestamp of an event being emitted can lag behind
          *                        the highest emitted timestamp so far
          */
+        @Nonnull
         public TimestampedStream<T> allowedLateness(int allowedLateness) {
             this.maxLag = allowedLateness;
             return this;
@@ -493,6 +531,7 @@ public final class SourceBuilder<S> {
         /**
          * Builds and returns the timestamped stream source.
          */
+        @Nonnull
         @SuppressWarnings("unchecked")
         public StreamSource<T> build() {
             Preconditions.checkNotNull(fillBufferFn, "fillBufferFn must be set");
