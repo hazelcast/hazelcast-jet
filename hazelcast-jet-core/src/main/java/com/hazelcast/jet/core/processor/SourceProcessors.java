@@ -443,7 +443,9 @@ public final class SourceProcessors {
      * @param createFn function that creates the source's state object
      * @param fillBufferFn function that fills Jet's buffer with items to emit
      * @param destroyFn function that cleans up the resources held by the state object
-     * @param preferredLocalParallelism preferred local parallelism of the source vertex
+     * @param preferredLocalParallelism preferred local parallelism of the source vertex. Special values:
+     *                                  0 -> create a single processor for the entire cluster (total parallelism = 1);
+     *                                  -1 -> use the cluster's default local parallelism
      * @param <S> type of the source's state object
      * @param <T> type of items the source emits
      */
@@ -458,7 +460,7 @@ public final class SourceProcessors {
         checkSerializable(createFn, "createFn");
         checkSerializable(fillBufferFn, "fillBufferFn");
         checkSerializable(destroyFn, "destroyFn");
-        checkNotNegative(preferredLocalParallelism, "preferredLocalParallelism must not be negative");
+        checkNotNegative(preferredLocalParallelism + 1, "preferredLocalParallelism must >= -1");
         ProcessorSupplier procSup = ProcessorSupplier.of(
                 () -> new ConvenientSourceP<S, T>(
                         createFn,
@@ -466,7 +468,7 @@ public final class SourceProcessors {
                         destroyFn != null ? destroyFn : DistributedConsumer.noop(),
                         new SourceBufferImpl.Plain<>(),
                         null));
-        return preferredLocalParallelism > 0
+        return preferredLocalParallelism != 0
                 ? ProcessorMetaSupplier.of(procSup, preferredLocalParallelism)
                 : ProcessorMetaSupplier.forceTotalParallelismOne(procSup);
     }
@@ -479,7 +481,9 @@ public final class SourceProcessors {
      * @param createFn function that creates the source's state object
      * @param fillBufferFn function that fills Jet's buffer with items to emit
      * @param destroyFn function that cleans up the resources held by the state object
-     * @param preferredLocalParallelism preferred local parallelism of the source vertex
+     * @param preferredLocalParallelism preferred local parallelism of the source vertex. Special values:
+     *                                  0 -> create a single processor for the entire cluster (total parallelism = 1);
+     *                                  -1 -> use the cluster's default local parallelism
      * @param <S> type of the source's state object
      * @param <T> type of items the source emits
      */
@@ -495,7 +499,7 @@ public final class SourceProcessors {
         checkSerializable(createFn, "createFn");
         checkSerializable(fillBufferFn, "fillBufferFn");
         checkSerializable(destroyFn, "destroyFn");
-        checkNotNegative(preferredLocalParallelism, "preferredLocalParallelism must not be negative");
+        checkNotNegative(preferredLocalParallelism + 1, "preferredLocalParallelism must >= -1");
         ProcessorSupplier procSup = ProcessorSupplier.of(
                 () -> new ConvenientSourceP<>(
                         createFn,

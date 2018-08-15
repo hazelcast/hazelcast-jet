@@ -33,6 +33,7 @@ import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientSourceP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientTimestampedSourceP;
+import static com.hazelcast.util.Preconditions.checkPositive;
 
 /**
  * Top-level class for Jet source builders. Refer to the builder
@@ -147,6 +148,8 @@ public final class SourceBuilder<S> {
      *         })
      *         .destroyFn(BufferedReader::close)
      *         .build();
+     * Pipeline p = Pipeline.create();
+     * BatchStage<String> srcStage = p.drawFrom(fileSource);
      * }</pre>
      *
      * @param name     a descriptive name for the source (for diagnostic purposes)
@@ -202,6 +205,8 @@ public final class SourceBuilder<S> {
      *         })
      *         .destroyFn(BufferedReader::close)
      *         .build();
+     * Pipeline p = Pipeline.create();
+     * StreamStage<String> srcStage = p.drawFrom(fileSource);
      * }</pre>
      *
      * @param name     a descriptive name for the source (for diagnostic purposes)
@@ -226,7 +231,7 @@ public final class SourceBuilder<S> {
      * to emit to the pipeline, the worker repeatedly calls your {@code
      * fillBufferFn} with the state object and a buffer object. The buffer's
      * {@link SourceBuilder.TimestampedSourceBuffer#add add()} method takes two
-     * argument: the item and the timestamp in milliseconds.
+     * arguments: the item and the timestamp in milliseconds.
      * <p>
      * Your function should add some items to the buffer, ideally those it has
      * ready without having to block. It shouldn't add more than a thousand
@@ -265,6 +270,8 @@ public final class SourceBuilder<S> {
      *     })
      *     .destroyFn(BufferedReader::close)
      *     .build();
+     * Pipeline p = Pipeline.create();
+     * StreamStage<String> srcStage = p.drawFrom(fileSource);
      * }</pre>
      *
      * @param name a descriptive name for the source (for diagnostic purposes)
@@ -345,6 +352,7 @@ public final class SourceBuilder<S> {
          */
         @Nonnull
         public Batch<T> distributed(int preferredLocalParallelism) {
+            checkPositive(preferredLocalParallelism, "Preferred local parallelism must be positive");
             mPreferredLocalParallelism = preferredLocalParallelism;
             return this;
         }
@@ -424,6 +432,7 @@ public final class SourceBuilder<S> {
          */
         @Nonnull
         public Stream<T> distributed(int preferredLocalParallelism) {
+            checkPositive(preferredLocalParallelism, "Preferred local parallelism must be positive");
             mPreferredLocalParallelism = preferredLocalParallelism;
             return this;
         }
@@ -508,6 +517,7 @@ public final class SourceBuilder<S> {
          */
         @Nonnull
         public TimestampedStream<T> distributed(int preferredLocalParallelism) {
+            checkPositive(preferredLocalParallelism, "Preferred local parallelism must be positive");
             mPreferredLocalParallelism = preferredLocalParallelism;
             return this;
         }
