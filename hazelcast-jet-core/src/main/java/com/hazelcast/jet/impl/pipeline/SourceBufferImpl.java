@@ -22,6 +22,7 @@ import com.hazelcast.jet.impl.connector.ConvenientSourceP.SourceBufferConsumerSi
 import com.hazelcast.jet.pipeline.SourceBuilder.SourceBuffer;
 import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
@@ -61,14 +62,14 @@ public class SourceBufferImpl<T> implements SourceBufferConsumerSide<T> {
 
     public static class Plain<T> extends SourceBufferImpl<T> implements SourceBuffer<T> {
         @Override
-        public void add(T item) {
+        public void add(@Nonnull T item) {
             addInternal(item);
         }
     }
 
     public static class Timestamped<T> extends SourceBufferImpl<JetEvent<T>> implements TimestampedSourceBuffer<T> {
         @Override
-        public void add(T item, long timestamp) {
+        public void add(@Nonnull T item, long timestamp) {
             addInternal(jetEvent(item, timestamp));
         }
     }

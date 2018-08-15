@@ -40,6 +40,7 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
     private int localParallelism = 1;
     private String vertexName = "testVertex";
 
+    @Nonnull
     @Override
     public JetInstance jetInstance() {
         return jetInstance;

@@ -65,7 +65,7 @@ public final class SourceBuilder<S> {
         /**
          * Adds an item to the buffer.
          */
-        void add(T item);
+        void add(@Nonnull T item);
 
         /**
          * Closes the buffer, signaling that all items have been emitted.
@@ -85,7 +85,7 @@ public final class SourceBuilder<S> {
          * Adds an item to the buffer, assigning a timestamp to it. The timestamp
          * is in milliseconds.
          */
-        void add(T item, long timestamp);
+        void add(@Nonnull T item, long timestamp);
 
         /**
          * Closes the buffer, signaling that all items have been emitted.
