@@ -57,7 +57,7 @@ public interface AggregateOperation1<T, A, R> extends AggregateOperation<A, R> {
     <R_NEW> AggregateOperation1<T, A, R_NEW> andThen(DistributedFunction<? super R, ? extends R_NEW> thenFn);
 
     /**
-     * Turns this aggregate operation into a collector which can be passed to
+     * Adapts this aggregate operation to a collector which can be passed to
      * {@link java.util.stream.Stream#collect(Collector)}.
      */
     @Nonnull
