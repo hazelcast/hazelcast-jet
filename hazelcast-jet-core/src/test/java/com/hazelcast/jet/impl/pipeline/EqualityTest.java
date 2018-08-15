@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
-import com.hazelcast.jet.core.JetEvent;
+import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Test;

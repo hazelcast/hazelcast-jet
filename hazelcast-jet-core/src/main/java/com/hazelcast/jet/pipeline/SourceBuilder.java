@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.core.JetEvent;
+import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedConsumer;

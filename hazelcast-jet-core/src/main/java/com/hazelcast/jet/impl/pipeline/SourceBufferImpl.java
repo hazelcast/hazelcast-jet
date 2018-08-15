@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.core.JetEvent;
+import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.connector.ConvenientSourceP.SourceBufferConsumerSide;
 import com.hazelcast.jet.pipeline.SourceBuilder.SourceBuffer;
 import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
@@ -25,7 +25,7 @@ import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
-import static com.hazelcast.jet.core.JetEvent.jetEvent;
+import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 
 public class SourceBufferImpl<T> implements SourceBufferConsumerSide<T> {
     private final Queue<T> buffer = new ArrayDeque<>();
