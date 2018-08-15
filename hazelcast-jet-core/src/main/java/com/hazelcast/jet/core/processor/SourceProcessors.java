@@ -399,9 +399,8 @@ public final class SourceProcessors {
     }
 
     /**
-     * Returns a supplier of processors for {@link
-     * Sources#jdbc(DistributedSupplier, ToResultSetFunction,
-     * DistributedFunction)}.
+     * Returns a supplier of processors for {@link Sources#jdbc(
+     * DistributedSupplier, ToResultSetFunction, DistributedFunction)}.
      */
     public static <T> ProcessorMetaSupplier readJdbcP(
             @Nonnull DistributedSupplier<java.sql.Connection> connectionSupplier,
@@ -444,8 +443,9 @@ public final class SourceProcessors {
      * @param fillBufferFn function that fills Jet's buffer with items to emit
      * @param destroyFn function that cleans up the resources held by the state object
      * @param preferredLocalParallelism preferred local parallelism of the source vertex. Special values:
-     *                                  0 -> create a single processor for the entire cluster (total parallelism = 1);
-     *                                  -1 -> use the cluster's default local parallelism
+     *                                  {@value com.hazelcast.jet.core.Vertex#LOCAL_PARALLELISM_USE_DEFAULT} ->
+     *                                  use the cluster's default local parallelism;
+     *                                  0 -> create a single processor for the entire cluster (total parallelism = 1)
      * @param <S> type of the source's state object
      * @param <T> type of items the source emits
      */
@@ -482,8 +482,9 @@ public final class SourceProcessors {
      * @param fillBufferFn function that fills Jet's buffer with items to emit
      * @param destroyFn function that cleans up the resources held by the state object
      * @param preferredLocalParallelism preferred local parallelism of the source vertex. Special values:
-     *                                  0 -> create a single processor for the entire cluster (total parallelism = 1);
-     *                                  -1 -> use the cluster's default local parallelism
+     *                                  {@value com.hazelcast.jet.core.Vertex#LOCAL_PARALLELISM_USE_DEFAULT} ->
+     *                                  use the cluster's default local parallelism;
+     *                                  0 -> create a single processor for the entire cluster (total parallelism = 1)
      * @param <S> type of the source's state object
      * @param <T> type of items the source emits
      */

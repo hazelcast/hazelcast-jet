@@ -103,7 +103,8 @@ public final class SourceBuilder<S> {
 
     /**
      * Returns a fluent-API builder with which you can create a {@linkplain
-     * BatchSource batch source} for a Jet pipeline.
+     * BatchSource batch source} for a Jet pipeline. The source will use
+     * {@linkplain Processor#isCooperative() non-cooperative} processors.
      * <p>
      * Each parallel worker that drives your source has its private instance of
      * a state object it gets from your {@code createFn}. To get the data items
@@ -165,7 +166,8 @@ public final class SourceBuilder<S> {
 
     /**
      * Returns a fluent-API builder with which you can create an {@linkplain
-     * StreamSource unbounded stream source} for a Jet pipeline.
+     * StreamSource unbounded stream source} for a Jet pipeline. The source will
+     * use {@linkplain Processor#isCooperative() non-cooperative} processors.
      * <p>
      * Each parallel worker that drives your source has its private instance of
      * a state object it gets from your {@code createFn}. To get the data items
@@ -225,6 +227,8 @@ public final class SourceBuilder<S> {
      * StreamSource unbounded stream source} for a Jet pipeline. The source
      * emits items that already have timestamps attached so you don't have to
      * call {@link StreamStage#addTimestamps} when constructing your pipeline.
+     * It will use {@linkplain Processor#isCooperative() non-cooperative}
+     * processors.
      * <p>
      * Each parallel worker that drives your source has its private instance of
      * a state object it gets from your {@code createFn}. To get the data items
@@ -468,7 +472,7 @@ public final class SourceBuilder<S> {
          * {@code createFn} and Jet's buffer object. It should add some items
          * to the buffer, ideally those it can produce without making any blocking
          * calls. The buffer's {@link SourceBuilder.TimestampedSourceBuffer#add add()}
-         * method takes two argument: the item and the timestamp in milliseconds.
+         * method takes two arguments: the item and the timestamp in milliseconds.
          * <p>
          * On any given invocation the function may also choose not to add
          * any items. Jet will automatically employ an exponential backoff strategy
