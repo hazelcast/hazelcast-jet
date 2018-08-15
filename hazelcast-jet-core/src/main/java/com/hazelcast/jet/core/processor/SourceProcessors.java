@@ -18,6 +18,7 @@ package com.hazelcast.jet.core.processor;
 
 import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -443,7 +444,7 @@ public final class SourceProcessors {
      * @param fillBufferFn function that fills Jet's buffer with items to emit
      * @param destroyFn function that cleans up the resources held by the state object
      * @param preferredLocalParallelism preferred local parallelism of the source vertex. Special values:
-     *                                  {@value com.hazelcast.jet.core.Vertex#LOCAL_PARALLELISM_USE_DEFAULT} ->
+     *                                  {@value Vertex#LOCAL_PARALLELISM_USE_DEFAULT} ->
      *                                  use the cluster's default local parallelism;
      *                                  0 -> create a single processor for the entire cluster (total parallelism = 1)
      * @param <S> type of the source's state object
@@ -482,7 +483,7 @@ public final class SourceProcessors {
      * @param fillBufferFn function that fills Jet's buffer with items to emit
      * @param destroyFn function that cleans up the resources held by the state object
      * @param preferredLocalParallelism preferred local parallelism of the source vertex. Special values:
-     *                                  {@value com.hazelcast.jet.core.Vertex#LOCAL_PARALLELISM_USE_DEFAULT} ->
+     *                                  {@value Vertex#LOCAL_PARALLELISM_USE_DEFAULT} ->
      *                                  use the cluster's default local parallelism;
      *                                  0 -> create a single processor for the entire cluster (total parallelism = 1)
      * @param <S> type of the source's state object
@@ -513,6 +514,4 @@ public final class SourceProcessors {
                 ? ProcessorMetaSupplier.of(procSup, preferredLocalParallelism)
                 : ProcessorMetaSupplier.forceTotalParallelismOne(procSup);
     }
-
-
 }

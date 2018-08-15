@@ -16,11 +16,11 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.util.Preconditions;
@@ -289,44 +289,8 @@ public final class SourceBuilder<S> {
         return new SourceBuilder<S>(name, createFn).new TimestampedStream<Void>();
     }
 
-    /**
-     * A builder of a batch stream source.
-     * @see SourceBuilder#batch(String, DistributedFunction)
-     *
-     * @param <T>
-     */
-    public final class Batch<T> {
-        private DistributedBiConsumer<? super S, ? super SourceBuffer<T>> fillBufferFn;
-
-        private Batch() {
-        }
-
-        /**
-         * Sets the function that Jet will call whenever it needs more data from
-         * your source. The function receives the state object obtained from
-         * {@code createFn} and Jet's buffer object. It should add some items
-         * to the buffer, ideally those it can produce without making any blocking
-         * calls. On any given invocation the function may also choose not to add
-         * any items. Jet will automatically employ an exponential backoff strategy
-         * to avoid calling your function in a tight loop during a period when
-         * there's no data ready to be emitted.
-         * <p>
-         * Once it has emitted all the data, the function must call {@link
-         * SourceBuffer#close}.
-         *
-         * @param fillBufferFn function that fills the buffer with source data
-         * @param <T_NEW> type of the emitted items
-         * @return this builder with the item type reset to the one inferred from
-         *         {@code fillBufferFn}
-         */
-        @Nonnull
-        @SuppressWarnings("unchecked")
-        public <T_NEW> SourceBuilder<S>.Batch<T_NEW> fillBufferFn(
-                @Nonnull DistributedBiConsumer<? super S, ? super SourceBuffer<T_NEW>> fillBufferFn
-        ) {
-            Batch<T_NEW> newThis = (Batch<T_NEW>) this;
-            newThis.fillBufferFn = fillBufferFn;
-            return newThis;
+    private abstract class Base<T> {
+        private Base() {
         }
 
         /**
@@ -335,7 +299,7 @@ public final class SourceBuilder<S> {
          * state object.
          */
         @Nonnull
-        public Batch<T> destroyFn(@Nonnull DistributedConsumer<? super S> destroyFn) {
+        public Base<T> destroyFn(@Nonnull DistributedConsumer<? super S> destroyFn) {
             mDestroyFn = destroyFn;
             return this;
         }
@@ -355,33 +319,17 @@ public final class SourceBuilder<S> {
          * @param preferredLocalParallelism requested number of workers on each cluster member
          */
         @Nonnull
-        public Batch<T> distributed(int preferredLocalParallelism) {
+        public Base<T> distributed(int preferredLocalParallelism) {
             checkPositive(preferredLocalParallelism, "Preferred local parallelism must be positive");
             mPreferredLocalParallelism = preferredLocalParallelism;
             return this;
         }
-
-        /**
-         * Builds and returns the batch source.
-         */
-        @Nonnull
-        public BatchSource<T> build() {
-            Preconditions.checkNotNull(fillBufferFn, "fillBufferFn must be non-null");
-            return new BatchSourceTransform<>(mName,
-                    convenientSourceP(mCreateFn, fillBufferFn, mDestroyFn, mPreferredLocalParallelism));
-        }
     }
 
-    /**
-     * A builder of an unbounded stream source.
-     * @see SourceBuilder#stream(String, DistributedFunction)
-     *
-     * @param <T>
-     */
-    public final class Stream<T> {
-        private DistributedBiConsumer<? super S, ? super SourceBuffer<T>> fillBufferFn;
+    private abstract class BaseNoTimestamps<T> extends Base<T> {
+        DistributedBiConsumer<? super S, ? super SourceBuffer<T>> fillBufferFn;
 
-        private Stream() {
+        private BaseNoTimestamps() {
         }
 
         /**
@@ -401,44 +349,84 @@ public final class SourceBuilder<S> {
          */
         @Nonnull
         @SuppressWarnings("unchecked")
-        public <T_NEW> Stream<T_NEW> fillBufferFn(
+        public <T_NEW> BaseNoTimestamps<T_NEW> fillBufferFn(
                 @Nonnull DistributedBiConsumer<? super S, ? super SourceBuffer<T_NEW>> fillBufferFn
         ) {
-            Stream<T_NEW> newThis = (Stream<T_NEW>) this;
+            BaseNoTimestamps<T_NEW> newThis = (BaseNoTimestamps<T_NEW>) this;
             newThis.fillBufferFn = fillBufferFn;
             return newThis;
         }
+    }
 
-        /**
-         * Sets the function that Jet will call when cleaning up after a job has
-         * ended. It gives you the opportunity to release any resources held by the
-         * state object.
-         */
-        @Nonnull
-        public Stream<T> destroyFn(@Nonnull DistributedConsumer<? super S> pDestroyFn) {
-            mDestroyFn = pDestroyFn;
-            return this;
+    /**
+     * A builder of a batch stream source.
+     * @see SourceBuilder#batch(String, DistributedFunction)
+     *
+     * @param <T>
+     */
+    public final class Batch<T> extends BaseNoTimestamps<T> {
+        private Batch() {
         }
 
         /**
-         * Declares that you're creating a distributed source. On each member of
-         * the cluster Jet will create as many workers as you specify with the
-         * {@code preferredLocalParallelism} parameter. If you call this, you must
-         * ensure that all the source workers are coordinated and not emitting
-         * duplicated data. The {@code createFn} can consult {@link Processor.Context#totalParallelism()
-         * procContext.totalParallelism()} and {@link Processor.Context#globalProcessorIndex()
-         * procContext.globalProcessorIndex()}. Jet calls {@code createFn} exactly
-         * once with each {@code globalProcessorIndex} from 0 to {@code
-         * totalParallelism - 1}, this can help all the instances agree on which
-         * part of the data to emit.
-         *
-         * @param preferredLocalParallelism requested number of workers on each cluster member
+         * {@inheritDoc}
+         * <p>
+         * Once it has emitted all the data, the function must call {@link
+         * SourceBuffer#close}.
+         */
+        @Override @Nonnull
+        public <T_NEW> SourceBuilder<S>.Batch<T_NEW> fillBufferFn(
+                @Nonnull DistributedBiConsumer<? super S, ? super SourceBuffer<T_NEW>> fillBufferFn
+        ) {
+            return (Batch<T_NEW>) super.fillBufferFn(fillBufferFn);
+        }
+
+        @Override @Nonnull
+        public Batch<T> destroyFn(@Nonnull DistributedConsumer<? super S> destroyFn) {
+            return (Batch<T>) super.destroyFn(destroyFn);
+        }
+
+        @Override @Nonnull
+        public Batch<T> distributed(int preferredLocalParallelism) {
+            return (Batch<T>) super.distributed(preferredLocalParallelism);
+        }
+
+        /**
+         * Builds and returns the batch source.
          */
         @Nonnull
+        public BatchSource<T> build() {
+            Preconditions.checkNotNull(fillBufferFn, "fillBufferFn must be non-null");
+            return new BatchSourceTransform<>(mName,
+                    convenientSourceP(mCreateFn, fillBufferFn, mDestroyFn, mPreferredLocalParallelism));
+        }
+    }
+
+    /**
+     * A builder of an unbounded stream source.
+     * @see SourceBuilder#stream(String, DistributedFunction)
+     *
+     * @param <T>
+     */
+    public final class Stream<T> extends BaseNoTimestamps<T> {
+        private Stream() {
+        }
+
+        @Override @Nonnull
+        public <T_NEW> Stream<T_NEW> fillBufferFn(
+                @Nonnull DistributedBiConsumer<? super S, ? super SourceBuffer<T_NEW>> fillBufferFn
+        ) {
+            return (Stream<T_NEW>) super.fillBufferFn(fillBufferFn);
+        }
+
+        @Override @Nonnull
+        public Stream<T> destroyFn(@Nonnull DistributedConsumer<? super S> pDestroyFn) {
+            return (Stream<T>) super.destroyFn(pDestroyFn);
+        }
+
+        @Override @Nonnull
         public Stream<T> distributed(int preferredLocalParallelism) {
-            checkPositive(preferredLocalParallelism, "Preferred local parallelism must be positive");
-            mPreferredLocalParallelism = preferredLocalParallelism;
-            return this;
+            return (Stream<T>) super.distributed(preferredLocalParallelism);
         }
 
         /**
@@ -446,6 +434,7 @@ public final class SourceBuilder<S> {
          */
         @Nonnull
         public StreamSource<T> build() {
+            Preconditions.checkNotNull(fillBufferFn, "fillBufferFn must be non-null");
             return new StreamSourceTransform<>(
                     mName,
                     wmParams -> convenientSourceP(mCreateFn, fillBufferFn, mDestroyFn, mPreferredLocalParallelism),
@@ -459,7 +448,7 @@ public final class SourceBuilder<S> {
      *
      * @param <T>
      */
-    public final class TimestampedStream<T> {
+    public final class TimestampedStream<T> extends Base<T> {
         private DistributedBiConsumer<? super S, ? super TimestampedSourceBuffer<T>> fillBufferFn;
         private long maxLag;
 
@@ -494,36 +483,14 @@ public final class SourceBuilder<S> {
             return newThis;
         }
 
-        /**
-         * Sets the function that Jet will call when cleaning up after a job has
-         * ended. It gives you the opportunity to release any resources held by the
-         * state object.
-         */
-        @Nonnull
+        @Override @Nonnull
         public TimestampedStream<T> destroyFn(@Nonnull DistributedConsumer<? super S> pDestroyFn) {
-            mDestroyFn = pDestroyFn;
-            return this;
+            return (TimestampedStream<T>) super.destroyFn(pDestroyFn);
         }
 
-        /**
-         * Declares that you're creating a distributed source. On each member of
-         * the cluster Jet will create as many workers as you specify with the
-         * {@code preferredLocalParallelism} parameter. If you call this, you must
-         * ensure that all the source workers are coordinated and not emitting
-         * duplicated data. The {@code createFn} can consult {@link Processor.Context#totalParallelism()
-         * procContext.totalParallelism()} and {@link Processor.Context#globalProcessorIndex()
-         * procContext.globalProcessorIndex()}. Jet calls {@code createFn} exactly
-         * once with each {@code globalProcessorIndex} from 0 to {@code
-         * totalParallelism - 1}, this can help all the instances agree on which
-         * part of the data to emit.
-         *
-         * @param preferredLocalParallelism requested number of workers on each cluster member
-         */
-        @Nonnull
+        @Override @Nonnull
         public TimestampedStream<T> distributed(int preferredLocalParallelism) {
-            checkPositive(preferredLocalParallelism, "Preferred local parallelism must be positive");
-            mPreferredLocalParallelism = preferredLocalParallelism;
-            return this;
+            return (TimestampedStream<T>) super.distributed(preferredLocalParallelism);
         }
 
         /**
