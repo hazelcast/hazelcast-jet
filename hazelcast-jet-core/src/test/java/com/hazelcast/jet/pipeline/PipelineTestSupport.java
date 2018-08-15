@@ -44,7 +44,7 @@ import static java.util.stream.Collectors.toList;
 
 public abstract class PipelineTestSupport extends TestInClusterSupport {
 
-    protected int itemCount = 1000;
+    protected int itemCount = 1_000;
     protected final String srcName = journaledMapName();
     protected final String sinkName = randomName();
 

@@ -141,7 +141,7 @@ public class SourceBuilderTest extends PipelineTestSupport {
                     .drainTo(sinkList());
             jet().newJob(p).join();
             List<String> expected = IntStream.range(0, itemCount).mapToObj(i -> "line" + i).collect(toList());
-            assertTrueEventually(() -> assertEquals(expected, new ArrayList<>(sinkList)), 10);
+            assertEquals(expected, new ArrayList<>(sinkList));
         }
     }
 
@@ -177,7 +177,7 @@ public class SourceBuilderTest extends PipelineTestSupport {
                     .boxed()
                     .collect(Collectors.toMap(i -> "line" + i, i -> PREFERRED_LOCAL_PARALLELISM * MEMBER_COUNT));
 
-            assertTrueEventually(() -> assertEquals(expected, sinkToBag()), 10);
+            assertEquals(expected, sinkToBag());
         }
     }
 
@@ -214,6 +214,46 @@ public class SourceBuilderTest extends PipelineTestSupport {
             jet().newJob(p).join();
 
             List<TimestampedItem<Long>> expected = LongStream.range(1, itemCount + 1)
+                    .mapToObj(i -> new TimestampedItem<>(i, 1L))
+                    .collect(toList());
+
+            assertEquals(expected, new ArrayList<>(sinkList));
+        }
+    }
+
+    @Test
+    public void stream_socketSource_withTimestamps_andLateness() throws IOException {
+        // Given
+        try (ServerSocket serverSocket = new ServerSocket(0)) {
+            startServer(serverSocket);
+
+            // When
+            int localPort = serverSocket.getLocalPort();
+            DistributedFunction<String, Long> timestampFn = line -> Long.valueOf(line.substring(LINE_PREFIX.length()));
+
+            int lateness = 10;
+            StreamSource<String> socketSource = SourceBuilder
+                    .timestampedStream("socket-source-with-timestamps", ctx -> socketReader(localPort))
+                    .<String>fillBufferFn((in, buf) -> {
+                        String line = in.readLine();
+                        if (line != null) {
+                            buf.add(line, timestampFn.apply(line));
+                        }
+                    })
+                    .allowedLateness(lateness)
+                    .destroyFn(BufferedReader::close)
+                    .build();
+
+            // Then
+            Pipeline p = Pipeline.create();
+            p.drawFrom(socketSource)
+                    .window(tumbling(1))
+                    .aggregate(AggregateOperations.counting())
+                    .drainTo(sinkList());
+
+            jet().newJob(p);
+
+            List<TimestampedItem<Long>> expected = LongStream.range(1, itemCount - lateness)
                     .mapToObj(i -> new TimestampedItem<>(i, 1L))
                     .collect(toList());
 
@@ -258,9 +298,7 @@ public class SourceBuilderTest extends PipelineTestSupport {
                     .mapToObj(i -> new TimestampedItem<>(i, (long) PREFERRED_LOCAL_PARALLELISM * MEMBER_COUNT))
                     .collect(toList());
 
-            assertTrueEventually(() -> {
-                assertEquals(expected, new ArrayList<>(sinkList));
-            }, 10);
+            assertEquals(expected, new ArrayList<>(sinkList));
         }
     }
 
