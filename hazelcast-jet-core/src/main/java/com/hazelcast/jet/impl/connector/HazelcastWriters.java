@@ -482,8 +482,7 @@ public final class HazelcastWriters {
     }
 
     public static class ApplyFnEntryProcessor<K, V, T>
-            implements EntryProcessor<K, V>, EntryBackupProcessor<K, V>, IdentifiedDataSerializable
-    {
+    implements EntryProcessor<K, V>, EntryBackupProcessor<K, V>, IdentifiedDataSerializable {
         private Map<K, T> keysToUpdate;
         private DistributedBiFunction<? super V, ? super T, ? extends V> updateFn;
 
