@@ -66,6 +66,7 @@ public class ConvenientSourceP<S, T> extends AbstractProcessor {
             @Nonnull SourceBufferConsumerSide<? extends T> buffer,
             @Nullable WatermarkGenerationParams<? super T> wmParams
     ) {
+        setCooperative(false);
         this.createFn = createFn;
         this.fillBufferFn = fillBufferFn;
         this.destroyFn = destroyFn;

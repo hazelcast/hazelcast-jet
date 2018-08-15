@@ -55,10 +55,10 @@ public final class ReadJdbcP<T> extends AbstractProcessor {
             @Nonnull ToResultSetFunction resultSetFn,
             @Nonnull DistributedFunction<ResultSet, T> mapOutputFn
     ) {
+        setCooperative(false);
         this.connectionSupplier = connectionSupplier;
         this.resultSetFn = resultSetFn;
         this.mapOutputFn = mapOutputFn;
-        setCooperative(false);
     }
 
     /**

@@ -90,6 +90,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
             @Nonnull DistributedFunction<? super ConsumerRecord<K, V>, ? extends T> projectionFn,
             @Nonnull WatermarkGenerationParams<? super T> wmGenParams
     ) {
+        setCooperative(false);
         this.properties = properties;
         this.topics = topics;
         this.projectionFn = projectionFn;
@@ -206,11 +207,6 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
             } catch (InterruptException ignored) {
             }
         }
-    }
-
-    @Override
-    public boolean isCooperative() {
-        return false;
     }
 
     @Override
