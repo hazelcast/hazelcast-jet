@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.spring;
 
-import com.hazelcast.core.IQueue;
 import com.hazelcast.jet.IListJet;
+import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -40,7 +40,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 @RunWith(CustomSpringJUnit4ClassRunner.class)
-@ContextConfiguration(locations = {"application-context-jet.xml"})
+@ContextConfiguration(locations = {"application-context-processor.xml"})
 public class TestCustomProcessor {
 
     @Resource(name = "jet-instance")
@@ -81,12 +81,12 @@ public class TestCustomProcessor {
     @SpringAware
     private static class CustomSinkP extends AbstractProcessor {
 
-        @Resource(name = "my-queue-bean")
-        private IQueue queue;
+        @Resource(name = "my-map-bean")
+        private IMapJet map;
 
         @Override
-        protected void init(@Nonnull Context context) throws Exception {
-            assertNotNull(queue);
+        protected void init(@Nonnull Context context) {
+            assertNotNull(map);
         }
 
         @Override
