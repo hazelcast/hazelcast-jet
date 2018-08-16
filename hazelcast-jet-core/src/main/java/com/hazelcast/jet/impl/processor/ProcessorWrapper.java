@@ -28,10 +28,15 @@ import javax.annotation.Nonnull;
  * processor.
  */
 public class ProcessorWrapper implements Processor {
-    protected final Processor wrapped;
+
+    private final Processor wrapped;
 
     protected ProcessorWrapper(Processor wrapped) {
         this.wrapped = wrapped;
+    }
+
+    public Processor getWrapped() {
+        return wrapped;
     }
 
     @Override
