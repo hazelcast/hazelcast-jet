@@ -102,7 +102,7 @@ public final class WatermarkGenerationParams<T> implements Serializable {
      * @param timestampFn       function that extracts the timestamp from the event
      * @param wrapFn            function that transforms the received item and its timestamp into the
      *                          emitted item
-     * @param newWmPolicyFn          factory of the watermark policy objects
+     * @param newWmPolicyFn     factory of the watermark policy objects
      * @param wmEmitPolicy      watermark emission policy (decides how to suppress redundant watermarks)
      * @param idleTimeoutMillis the timeout after which a partition will be marked as <em>idle</em>.
      *                          If <= 0, partitions will never be marked as idle.

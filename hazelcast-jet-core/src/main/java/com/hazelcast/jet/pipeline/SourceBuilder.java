@@ -112,7 +112,7 @@ public final class SourceBuilder<S> {
      * fillBufferFn} with the state object and a buffer object.
      * <p>
      * Your function should add some items to the buffer, ideally those it has
-     * ready without having to block. It shouldn't add more than a thousand
+     * ready without having to block. It shouldn't add more than a hundred
      * items at once, but there is no limit enforced. If it doesn't have any
      * items ready, it may also return without adding anything. In any case the
      * function should not take more than a second or so to complete, otherwise
@@ -175,7 +175,7 @@ public final class SourceBuilder<S> {
      * fillBufferFn} with the state object and a buffer object.
      * <p>
      * Your function should add some items to the buffer, ideally those it has
-     * ready without having to block. It shouldn't add more than a thousand
+     * ready without having to block. It shouldn't add more than a hundred
      * items at once, but there is no limit enforced. If it doesn't have any
      * items ready, it may also return without adding anything. In any case the
      * function should not take more than a second or so to complete, otherwise
@@ -238,7 +238,7 @@ public final class SourceBuilder<S> {
      * arguments: the item and the timestamp in milliseconds.
      * <p>
      * Your function should add some items to the buffer, ideally those it has
-     * ready without having to block. It shouldn't add more than a thousand
+     * ready without having to block. It shouldn't add more than a hundred
      * items at once, but there is no limit enforced. If it doesn't have any
      * items ready, it may also return without adding anything. In any case the
      * function should not take more than a second or so to complete, otherwise
