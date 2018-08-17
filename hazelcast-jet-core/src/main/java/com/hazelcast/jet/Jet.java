@@ -40,8 +40,10 @@ import com.hazelcast.map.merge.IgnoreMergingEntryMapMergePolicy;
 
 import java.util.Properties;
 
+import static com.hazelcast.jet.impl.JobRepository.JOB_RESULTS_MAP_NAME;
 import static com.hazelcast.jet.impl.config.XmlJetConfigBuilder.getClientConfig;
 import static com.hazelcast.jet.impl.metrics.JetMetricsService.applyMetricsConfig;
+import static java.util.concurrent.TimeUnit.DAYS;
 
 /**
  * Entry point to the Jet product.
@@ -53,6 +55,8 @@ public final class Jet {
      * metadata, snapshots etc.)
      */
     public static final String INTERNAL_JET_OBJECTS_PREFIX = "__jet.";
+
+    private static final int JOB_RESULTS_TTL_SECONDS = (int) DAYS.toSeconds(7);
 
     private Jet() {
     }
@@ -130,6 +134,9 @@ public final class Jet {
                         .setStatisticsEnabled(false)
                         .setMergePolicyConfig(
                                 new MergePolicyConfig().setPolicy(IgnoreMergingEntryMapMergePolicy.class.getName()))
+                )
+                .addMapConfig(new MapConfig(JOB_RESULTS_MAP_NAME)
+                        .setTimeToLiveSeconds(JOB_RESULTS_TTL_SECONDS)
                 );
 
         MetricsConfig metricsConfig = jetConfig.getMetricsConfig();
@@ -140,5 +147,4 @@ public final class Jet {
             hzConfig.getProperties().setProperty(prop, jetProps.getProperty(prop));
         }
     }
-
 }
