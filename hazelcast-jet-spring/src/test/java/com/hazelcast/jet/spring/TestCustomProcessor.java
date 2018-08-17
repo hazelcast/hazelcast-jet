@@ -52,7 +52,7 @@ public class TestCustomProcessor {
         Jet.shutdownAll();
     }
 
-    @Test
+    @Test(timeout = 20000)
     public void test() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.batchFromProcessor("source", preferLocalParallelismOne(CustomSourceP::new)))
