@@ -318,7 +318,8 @@ public class SinksTest extends PipelineTestSupport {
         p.drawFrom(Sources.<String, Integer>map(srcName))
          .drainTo(Sinks.mapWithUpdating(srcName,
                  Entry::getKey,
-                 (Integer value, Entry<String, Integer> item) -> value + 10));
+                 (Integer value, Entry<String, Integer> item) -> value + 10))
+         .setLocalParallelism(2);
         execute();
 
         // Then
