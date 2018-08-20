@@ -64,7 +64,6 @@ public class SinksTest extends PipelineTestSupport {
         Hazelcast.shutdownAll();
     }
 
-
     @Test
     public void setName() {
         //Given
@@ -96,7 +95,6 @@ public class SinksTest extends PipelineTestSupport {
         //Then
         assertEquals(localParallelism, transformOf(stage).localParallelism());
     }
-
 
     @Test
     public void whenDrainToMultipleStagesToSingleSink_thenAllItemsShouldBeOnSink() {
@@ -135,7 +133,6 @@ public class SinksTest extends PipelineTestSupport {
         assertEquals(expected.size(), cache.size());
         expected.forEach(entry -> assertEquals(entry.getValue(), cache.get(entry.getKey())));
     }
-
 
     @Test
     public void remoteCache() {
@@ -176,7 +173,6 @@ public class SinksTest extends PipelineTestSupport {
         assertEquals(expected.size(), actual.size());
         expected.forEach(entry -> assertTrue(actual.contains(entry)));
     }
-
 
     @Test
     public void remoteMap() {
@@ -455,7 +451,6 @@ public class SinksTest extends PipelineTestSupport {
         expected.forEach(entry -> assertTrue(actual.contains(entry)));
     }
 
-
     @Test
     public void mapWithEntryProcessor() {
         // Given
@@ -495,7 +490,6 @@ public class SinksTest extends PipelineTestSupport {
         Set<Entry<Object, Object>> actual = remoteHz.getMap(srcName).entrySet();
         assertEquals(expected.size(), actual.size());
         expected.forEach(entry -> assertTrue(actual.contains(entry)));
-
     }
 
     @Test
@@ -580,7 +574,6 @@ public class SinksTest extends PipelineTestSupport {
             this.value = value;
         }
 
-
         @Override
         public Object process(Entry<K, Integer> entry) {
             entry.setValue(entry.getValue() == null ? value : entry.getValue() + value);
@@ -627,5 +620,4 @@ public class SinksTest extends PipelineTestSupport {
             return value;
         }
     }
-
 }
