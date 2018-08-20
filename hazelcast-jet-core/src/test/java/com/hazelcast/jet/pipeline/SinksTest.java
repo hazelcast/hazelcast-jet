@@ -272,7 +272,6 @@ public class SinksTest extends PipelineTestSupport {
         assertEquals(((itemCount - 1) * itemCount) / 2, actual.get("listSum"));
     }
 
-
     @Test
     public void remoteMapWithMerging() {
         // Given
@@ -312,7 +311,6 @@ public class SinksTest extends PipelineTestSupport {
         Set<Entry<Object, Object>> actual = remoteHz.getMap(srcName).entrySet();
         assertEquals(0, actual.size());
     }
-
 
     @Test
     public void mapWithUpdating() {
