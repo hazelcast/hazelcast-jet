@@ -685,7 +685,8 @@ public class JobCoordinationService {
             Collection<JobRecord> jobs = jobRepository.getJobRecords();
             jobs.stream()
                 .filter(jobRecord -> !jobRecord.isSuspended())
-                .forEach(jobRecord -> startJobIfNotStartedOrCompleted(jobRecord, "discovered by scanning of JobRecords", false));
+                .forEach(jobRecord ->
+                        startJobIfNotStartedOrCompleted(jobRecord, "discovered by scanning of JobRecords", false));
 
             performCleanup();
         } catch (Exception e) {
