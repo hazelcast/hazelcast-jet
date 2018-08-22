@@ -81,8 +81,12 @@ public final class SinkBuilder<W, T> {
      *     {@code destroyFn} destroys the writer. This component is optional.
      * </li></ol>
      * The returned sink will be non-cooperative and will have preferred local
-     * parallelism of 2. It also cannot participate in state snapshot saving
-     * (fault-tolerance): it will behave as an at-least-once sink.
+     * parallelism of 2. It doesn't participate in the fault-tolerance protocol,
+     * which means you can't remember across a job restart which items you
+     * already received. The sink will still receive each item at least once,
+     * thus complying with the <em>at-least-once</em> processing guarantee. If
+     * the sink is idempotent (suppresses duplicate items), it will also be
+     * compatible with the <em>exactly-once</em> guarantee.
      *
      * @param <W> type of the writer object
      */
