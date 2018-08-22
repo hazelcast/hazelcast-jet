@@ -426,6 +426,10 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         stressTest(job -> {
             job.suspend();
             assertTrueEventually(() -> assertEquals(JobStatus.SUSPENDED, job.getStatus()), 5);
+            // The Job.resume() call might overtake the suspension.
+            // resume() does nothing when job is not suspended. Without
+            // the sleep, the job might remain suspended.
+            sleepSeconds(1);
             job.resume();
             assertTrueEventually(() -> assertEquals(JobStatus.RUNNING, job.getStatus()), 5);
         });

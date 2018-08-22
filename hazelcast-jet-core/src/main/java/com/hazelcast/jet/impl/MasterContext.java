@@ -697,7 +697,12 @@ public class MasterContext {
                     || failure instanceof CancellationException
                     || failure instanceof JobTerminateRequestedException;
             if (isSuccess) {
-                logger.info(String.format("Execution of %s completed in %,d ms", jobIdString(), elapsed));
+                if (failure != null) {
+                    logger.info(String.format("Execution of %s completed in %,d ms, reason=%s",
+                            jobIdString(), elapsed, failure));
+                } else {
+                    logger.info(String.format("Execution of %s completed in %,d ms", jobIdString(), elapsed));
+                }
             } else {
                 logger.warning(String.format("Execution of %s failed after %,d ms", jobIdString(), elapsed), failure);
             }
