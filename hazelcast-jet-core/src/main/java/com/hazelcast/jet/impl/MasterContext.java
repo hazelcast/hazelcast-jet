@@ -310,7 +310,11 @@ public class MasterContext {
         long lastSnapshotId = NO_SNAPSHOT;
         if (isSnapshottingEnabled()) {
             Long snapshotIdToRestore = snapshotRepository.latestCompleteSnapshot(jobId);
-            snapshotRepository.deleteAllSnapshotsExceptOne(jobId, snapshotIdToRestore);
+            try {
+                snapshotRepository.deleteAllSnapshotsExceptOne(jobId, snapshotIdToRestore);
+            } catch (Exception e) {
+                logger.warning("Cannot delete old snapshots for " + jobName, e);
+            }
             Long lastStartedSnapshot = snapshotRepository.latestStartedSnapshot(jobId);
             if (snapshotIdToRestore != null) {
                 logger.info("State of " + jobIdString() + " will be restored from snapshot "
