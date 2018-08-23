@@ -155,9 +155,15 @@ public final class SinkBuilder<W, T> {
     }
 
     /**
-     * Sets the local parallelism of the sink, default value is {@code 2}
-     *
-     * @param preferredLocalParallelism the local parallelism of the sink
+     * Sets the local parallelism of the sink. On each member of the cluster
+     * Jet will create this many parallel processors for the sink. To identify
+     * each processor instance, your {@code createFn} can consult {@link
+     * Processor.Context#totalParallelism() procContext.totalParallelism()} and {@link
+     * Processor.Context#globalProcessorIndex() procContext.globalProcessorIndex()}.
+     * Jet calls {@code createFn} exactly once with each {@code
+     * globalProcessorIndex} from 0 to {@code totalParallelism - 1}.
+     * <p>
+     * The default value of this property is 2.
      */
     @Nonnull
     public SinkBuilder<W, T> preferredLocalParallelism(int preferredLocalParallelism) {
