@@ -18,11 +18,14 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.cache.ICache;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.client.proxy.ClientMapProxy;
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
+import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
+import com.hazelcast.core.PartitionService;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.RestartableException;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -38,6 +41,7 @@ import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.SerializationConstants;
 import com.hazelcast.map.EntryBackupProcessor;
 import com.hazelcast.map.EntryProcessor;
+import com.hazelcast.map.impl.proxy.MapProxyImpl;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -54,6 +58,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
@@ -111,62 +116,129 @@ public final class HazelcastWriters {
         boolean isLocal = clientConfig == null;
         return preferLocalParallelismOne(new HazelcastWriterSupplier<UpdateMapContext<K, V, T>, T>(
                 serializableConfig(clientConfig),
-                procContext -> new UpdateMapContext<>(mapName, toKeyFn, updateFn, isLocal),
+                instance -> procContext -> new UpdateMapContext<>(instance, mapName, toKeyFn, updateFn, isLocal),
                 UpdateMapContext::add,
-                instance -> context -> context.flush(instance),
-                DistributedConsumer.noop()
+                instance -> UpdateMapContext::flush,
+                UpdateMapContext::finish
         ));
     }
 
     private static final class UpdateMapContext<K, V, T> {
-        private final String mapName;
-        private final DistributedFunction<? super T, ? extends K> toKeyFn;
-        private final boolean isLocal;
-        private final ApplyFnEntryProcessor<K, V, T> entryProcessor;
+        private static final int MAX_PARALLEL_ASYNC_OPS = 1000;
 
-        private IMap map;
-        private final List<T> buffer = new ArrayList<>();
-        private final Map<K, T> tmpMap = new HashMap<>();
+        private final DistributedFunction<? super T, ? extends K> toKeyFn;
+        private final DistributedBiFunction<? super V, ? super T, ? extends V> updateFn;
+        private final boolean isLocal;
+        private final PartitionService partitionService;
+
+        private final Semaphore concurrentAsyncOpsSemaphore = new Semaphore(MAX_PARALLEL_ASYNC_OPS);
+        private final AtomicReference<Throwable> firstError = new AtomicReference<>();
+        private final IMap map;
+        private final Map<K, Object>[] tmpMaps;
 
         UpdateMapContext(
+                HazelcastInstance instance,
                 String mapName,
                 @Nonnull DistributedFunction<? super T, ? extends K> toKeyFn,
                 @Nonnull DistributedBiFunction<? super V, ? super T, ? extends V> updateFn,
                 boolean isLocal) {
-            this.mapName = mapName;
             this.toKeyFn = toKeyFn;
+            this.updateFn = updateFn;
             this.isLocal = isLocal;
-            entryProcessor = new ApplyFnEntryProcessor<>(tmpMap, updateFn);
+
+            map = instance.getMap(mapName);
+            partitionService = instance.getPartitionService();
+            int partitionCount = partitionService.getPartitions().size();
+            tmpMaps = new Map[partitionCount];
+            for (int i = 0; i < partitionCount; i++) {
+                tmpMaps[i] = new HashMap<>();
+            }
         }
 
         void add(T item) {
-            buffer.add(item);
+            K key = toKeyFn.apply(item);
+            // Calculating partitionId requires serializing - we serialize the key twice unnecessarily, but I don't
+            // know a way to avoid it.
+            int partitionId = partitionService.getPartition(key).getPartitionId();
+            tmpMaps[partitionId].merge(key, item, MultiItem::merge);
         }
 
-        void flush(HazelcastInstance instance) {
-            if (map == null) {
-                map = instance.getMap(mapName);
-            }
+        void flush() {
             try {
-                if (buffer.isEmpty()) {
-                    return;
-                }
-                for (Object object : buffer) {
-                    T item = (T) object;
-                    K key = toKeyFn.apply(item);
-                    // on duplicate key, we'll flush immediately
-                    if (tmpMap.containsKey(key)) {
-                        map.executeOnKeys(tmpMap.keySet(), entryProcessor);
-                        tmpMap.clear();
+                if (firstError.get() != null) {
+                    if (firstError.get() instanceof HazelcastInstanceNotActiveException) {
+                        throw handleInstanceNotActive((HazelcastInstanceNotActiveException) firstError.get(), isLocal);
                     }
-                    tmpMap.put(key, item);
+                    throw sneakyThrow(firstError.get());
                 }
-                map.executeOnKeys(tmpMap.keySet(), entryProcessor);
-                tmpMap.clear();
+                for (int partitionId = 0; partitionId < tmpMaps.length; partitionId++) {
+                    if (tmpMaps[partitionId].isEmpty()) {
+                        continue;
+                    }
+                    ApplyFnEntryProcessor entryProcessor = new ApplyFnEntryProcessor(tmpMaps[partitionId], updateFn);
+                    try {
+                        // block until we get a permit
+                        concurrentAsyncOpsSemaphore.acquire();
+                    } catch (InterruptedException e) {
+                        return;
+                    }
+                    submitToKeys(map, tmpMaps[partitionId].keySet(), entryProcessor)
+                            .andThen(new ExecutionCallback() {
+                                @Override
+                                public void onResponse(Object response) {
+                                    concurrentAsyncOpsSemaphore.release();
+                                }
+
+                                @Override
+                                public void onFailure(Throwable t) {
+                                    firstError.compareAndSet(null, t);
+                                    concurrentAsyncOpsSemaphore.release();
+                                }
+                            });
+                    tmpMaps[partitionId] = new HashMap<>();
+                }
             } catch (HazelcastInstanceNotActiveException e) {
                 throw handleInstanceNotActive(e, isLocal);
             }
-            buffer.clear();
+        }
+
+        public void finish() {
+            try {
+                // Acquire all initial permits. These won't be available until all async ops finish.
+                concurrentAsyncOpsSemaphore.acquire(MAX_PARALLEL_ASYNC_OPS);
+            } catch (InterruptedException ignored) {
+            }
+        }
+    }
+
+    private static <K> ICompletableFuture<Map<K, Object>> submitToKeys(
+            IMap<K, ?> map, Set<K> keys, EntryProcessor entryProcessor) {
+        // TODO remove this method once submitToKeys is public API
+        if (map instanceof MapProxyImpl) {
+            return ((MapProxyImpl) map).submitToKeys(keys, entryProcessor);
+        } else if (map instanceof ClientMapProxy) {
+            return ((ClientMapProxy) map).submitToKeys(keys, entryProcessor);
+        } else {
+            throw new RuntimeException("Unexpected map class: " + map.getClass().getName());
+        }
+    }
+
+    /**
+     * This is just a plain java.util.ArrayList. We extend it in order
+     * to distinguish it from other stream items, which could be
+     * ArrayList themselves.
+     */
+    private static class MultiItem<E> extends ArrayList<E> {
+        public static <E> MultiItem<E> merge(Object o, E n) {
+            MultiItem<E> multiItem;
+            if (o instanceof MultiItem) {
+                multiItem = (MultiItem<E>) o;
+            } else {
+                multiItem = new MultiItem<>();
+                multiItem.add((E) o);
+            }
+            multiItem.add(n);
+            return multiItem;
         }
     }
 
@@ -198,7 +270,7 @@ public final class HazelcastWriters {
         boolean isLocal = clientConfig == null;
         return preferLocalParallelismOne(new HazelcastWriterSupplier<>(
                 serializableConfig(clientConfig),
-                index -> new ArrayMap(),
+                instance -> procContext -> new ArrayMap(),
                 ArrayMap::add,
                 instance -> {
                     IMap map = instance.getMap(name);
@@ -220,7 +292,7 @@ public final class HazelcastWriters {
         boolean isLocal = clientConfig == null;
         return preferLocalParallelismOne(new HazelcastWriterSupplier<>(
                 serializableConfig(clientConfig),
-                index -> new ArrayMap(),
+                instance -> procContext -> new ArrayMap(),
                 ArrayMap::add,
                 CacheFlush.flushToCache(name, isLocal),
                 DistributedConsumer.noop()
@@ -232,7 +304,7 @@ public final class HazelcastWriters {
         boolean isLocal = clientConfig == null;
         return preferLocalParallelismOne(new HazelcastWriterSupplier<>(
                 serializableConfig(clientConfig),
-                index -> new ArrayList<>(),
+                instance -> procContext -> new ArrayList<>(),
                 ArrayList::add,
                 instance -> {
                     IList<Object> list = instance.getList(name);
@@ -459,23 +531,25 @@ public final class HazelcastWriters {
 
         private final SerializableClientConfig clientConfig;
         private final DistributedFunction<HazelcastInstance, DistributedConsumer<B>> instanceToFlushBufferFn;
-        private final DistributedFunction<Processor.Context, B> newBufferFn;
+        private final DistributedFunction<HazelcastInstance, DistributedFunction<Processor.Context, B>>
+                instanceToNewBufferFn;
         private final DistributedBiConsumer<B, T> addToBufferFn;
         private final DistributedConsumer<B> disposeBufferFn;
 
+        private transient DistributedFunction<Processor.Context, B> newBufferFn;
         private transient DistributedConsumer<B> flushBufferFn;
         private transient HazelcastInstance client;
 
         HazelcastWriterSupplier(
                 SerializableClientConfig clientConfig,
-                DistributedFunction<Processor.Context, B> newBufferFn,
+                DistributedFunction<HazelcastInstance, DistributedFunction<Processor.Context, B>> instanceToNewBufferFn,
                 DistributedBiConsumer<B, T> addToBufferFn,
                 DistributedFunction<HazelcastInstance, DistributedConsumer<B>> instanceToFlushBufferFn,
                 DistributedConsumer<B> disposeBufferFn
         ) {
             this.clientConfig = clientConfig;
             this.instanceToFlushBufferFn = instanceToFlushBufferFn;
-            this.newBufferFn = newBufferFn;
+            this.instanceToNewBufferFn = instanceToNewBufferFn;
             this.addToBufferFn = addToBufferFn;
             this.disposeBufferFn = disposeBufferFn;
         }
@@ -489,6 +563,7 @@ public final class HazelcastWriters {
                 instance = context.jetInstance().getHazelcastInstance();
             }
             flushBufferFn = instanceToFlushBufferFn.apply(instance);
+            newBufferFn = instanceToNewBufferFn.apply(instance);
         }
 
         @Override
@@ -511,14 +586,14 @@ public final class HazelcastWriters {
 
     public static class ApplyFnEntryProcessor<K, V, T>
             implements EntryProcessor<K, V>, EntryBackupProcessor<K, V>, IdentifiedDataSerializable {
-        private Map<K, T> keysToUpdate;
+        private Map<K, Object> keysToUpdate;
         private DistributedBiFunction<? super V, ? super T, ? extends V> updateFn;
 
         public ApplyFnEntryProcessor() {
         }
 
         ApplyFnEntryProcessor(
-                Map<K, T> keysToUpdate,
+                Map<K, Object> keysToUpdate,
                 DistributedBiFunction<? super V, ? super T, ? extends V> updateFn
         ) {
             this.keysToUpdate = keysToUpdate;
@@ -527,8 +602,7 @@ public final class HazelcastWriters {
 
         @Override
         public Object process(Entry<K, V> entry) {
-            V oldValue = entry.getValue();
-            T item = keysToUpdate.get(entry.getKey());
+            Object item = keysToUpdate.get(entry.getKey());
             if (item == null && !keysToUpdate.containsKey(entry.getKey())) {
                 // Implementing equals/hashCode is not required for IMap keys since serialized version is used
                 // instead. After serializing/deserializing the keys they will have different identity. And since they
@@ -536,9 +610,20 @@ public final class HazelcastWriters {
                 throw new JetException("The new item not found in the map - is equals/hashCode " +
                         "correctly implemented for the key? Key type: " + entry.getKey().getClass().getName());
             }
+            if (item instanceof MultiItem) {
+                for (T o : ((MultiItem<T>) item)) {
+                    handle(entry, o);
+                }
+            } else {
+                handle(entry, (T) item);
+            }
+            return null;
+        }
+
+        private void handle(Entry<K, V> entry, T item) {
+            V oldValue = entry.getValue();
             V newValue = updateFn.apply(oldValue, item);
             entry.setValue(newValue);
-            return null;
         }
 
         @Override

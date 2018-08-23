@@ -23,7 +23,16 @@ import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
+import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.core.test.TestInbox;
+import com.hazelcast.jet.core.test.TestOutbox;
+import com.hazelcast.jet.core.test.TestProcessorContext;
+import com.hazelcast.jet.core.test.TestProcessorSupplierContext;
+import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.map.AbstractEntryProcessor;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -333,6 +342,30 @@ public class SinksTest extends PipelineTestSupport {
         IMap<Object, Object> actual = jet().getMap(srcName);
         assertEquals(1, actual.size());
         assertEquals(((itemCount - 1) * itemCount) / 2, actual.get("listSum"));
+    }
+
+    @Test
+    public void mapWithMerging_when_multipleValuesForSingleKeyInABatch() throws Exception {
+        ProcessorMetaSupplier metaSupplier = SinkProcessors.<Entry<String, Integer>, String, Integer>mergeMapP(
+                sinkName, Entry::getKey, Entry::getValue, Integer::sum);
+
+        TestProcessorSupplierContext psContext = new TestProcessorSupplierContext().setJetInstance(jet());
+        Processor p = TestSupport.supplierFrom(metaSupplier, psContext).get();
+
+        TestOutbox outbox = new TestOutbox();
+        p.init(outbox, new TestProcessorContext().setJetInstance(jet()));
+        TestInbox inbox = new TestInbox();
+        inbox.add(entry("k", 1));
+        inbox.add(entry("k", 2));
+        p.process(0, inbox);
+        assertTrue(inbox.isEmpty());
+        assertTrue(p.complete());
+        p.close();
+
+        // assert the output map contents
+        IMapJet<Object, Object> actual = jet().getMap(sinkName);
+        assertEquals(1, actual.size());
+        assertEquals(3, actual.get("k"));
     }
 
     @Test
