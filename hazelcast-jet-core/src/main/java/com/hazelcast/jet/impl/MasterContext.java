@@ -104,15 +104,15 @@ import static java.util.stream.Collectors.toList;
  */
 public class MasterContext {
 
+    public static final int SNAPSHOT_RESTORE_EDGE_PRIORITY = Integer.MIN_VALUE;
+    public static final String SNAPSHOT_VERTEX_PREFIX = "__snapshot_";
+
     private static final Object NULL_OBJECT = new Object() {
         @Override
         public String toString() {
             return "NULL_OBJECT";
         }
     };
-
-    public static final int SNAPSHOT_RESTORE_EDGE_PRIORITY = Integer.MIN_VALUE;
-    public static final String SNAPSHOT_VERTEX_PREFIX = "__snapshot_";
 
     private final Object lock = new Object();
 
@@ -513,8 +513,7 @@ public class MasterContext {
 
     private void cancelExecutionInvocations(long jobId, long executionId, TerminationMode mode) {
         nodeEngine.getExecutionService().execute(ExecutionService.ASYNC_EXECUTOR, () ->
-                invokeOnParticipants(plan -> new TerminateExecutionOperation(jobId, executionId, mode),
-                        null, null));
+                invokeOnParticipants(plan -> new TerminateExecutionOperation(jobId, executionId, mode), null, null));
     }
 
     void beginSnapshot(long executionId) {
