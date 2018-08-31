@@ -828,21 +828,7 @@ public class MasterContext {
         for (MemberInfo member : executionPlanMap.keySet()) {
             responses.put(member, new AtomicReference<>());
         }
-
-        // we'll expect two callbacks for each member
-        AtomicInteger remainingCount = new AtomicInteger(2 * executionPlanMap.size());
-
-        Runnable handleDone = () -> {
-            if (remainingCount.decrementAndGet() == 0) {
-                Map<MemberInfo, Object> responses2 = new HashMap<>();
-                // unwrap the AtomicReferences. Can't use stream api because toMap doesn't support null values...
-                for (Entry<MemberInfo, AtomicReference<Object>> entry : responses.entrySet()) {
-                    responses2.put(entry.getKey(), entry.getValue().get());
-                }
-                completionCallback.accept(responses2);
-            }
-        };
-
+        AtomicInteger remainingCount = new AtomicInteger(executionPlanMap.size());
         for (Entry<MemberInfo, AtomicReference<Object>> e : responses.entrySet()) {
             MemberInfo member = e.getKey();
             AtomicReference<Object> response = e.getValue();
@@ -850,11 +836,18 @@ public class MasterContext {
             InternalCompletableFuture<Object> future =
                     nodeEngine.getOperationService()
                               .createInvocationBuilder(JetService.SERVICE_NAME, op, member.getAddress())
-                              .setDoneCallback(handleDone)
                               .setExecutionCallback(callbackOf((r, throwable) -> {
                                   boolean success = response.compareAndSet(null, r == null ? throwable : r);
                                   assert success : "response=" + response.get();
-                                  handleDone.run();
+                                  if (remainingCount.decrementAndGet() == 0) {
+                                      // unwrap the AtomicReferences. Can't use stream api because toMap doesn't support null values...
+                                      Map<MemberInfo, Object> responses2 = new HashMap<>();
+                                      for (Entry<MemberInfo, AtomicReference<Object>> entry : responses.entrySet()) {
+                                          responses2.put(entry.getKey(), entry.getValue().get());
+                                      }
+                                      completionCallback.accept(responses2);
+                                  }
+
                               }))
                               .invoke();
             if (callback != null) {
