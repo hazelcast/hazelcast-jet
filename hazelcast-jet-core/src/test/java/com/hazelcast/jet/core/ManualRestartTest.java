@@ -1,4 +1,4 @@
-    /*
+/*
  * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,8 +18,6 @@ package com.hazelcast.jet.core;
 
 import com.hazelcast.client.map.helpers.AMapStore;
 import com.hazelcast.config.MapConfig;
-import com.hazelcast.config.PartitioningStrategyConfig;
-import com.hazelcast.core.PartitioningStrategy;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;

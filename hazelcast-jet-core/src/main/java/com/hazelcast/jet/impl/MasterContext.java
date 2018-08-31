@@ -505,7 +505,8 @@ public class MasterContext {
 
     private void cancelExecutionInvocations(long jobId, long executionId, TerminationMode mode) {
         nodeEngine.getExecutionService().execute(ExecutionService.ASYNC_EXECUTOR, () ->
-                invokeOnParticipants(plan -> new TerminateExecutionOperation(jobId, executionId, mode), responses -> { }, null));
+                invokeOnParticipants(plan -> new TerminateExecutionOperation(jobId, executionId, mode),
+                        responses -> { }, null));
     }
 
     void beginSnapshot(long executionId) {
@@ -541,7 +542,8 @@ public class MasterContext {
         Function<ExecutionPlan, Operation> factory =
                 plan -> new SnapshotOperation(jobId, executionId, newSnapshotId, isTerminal);
 
-        invokeOnParticipants(factory, responses -> onSnapshotCompleted(responses, executionId, newSnapshotId, isTerminal), null);
+        invokeOnParticipants(factory,
+                responses -> onSnapshotCompleted(responses, executionId, newSnapshotId, isTerminal), null);
     }
 
     private void onSnapshotCompleted(Map<MemberInfo, Object> responses, long executionId, long snapshotId,
