@@ -54,7 +54,6 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -62,9 +61,10 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -89,6 +89,7 @@ import static com.hazelcast.jet.impl.execution.SnapshotContext.NO_SNAPSHOT;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder.createExecutionPlans;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isRestartableException;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.callbackOf;
 import static com.hazelcast.jet.impl.util.Util.jobNameAndExecutionId;
@@ -102,6 +103,13 @@ import static java.util.stream.Collectors.toList;
  * shared between multiple executions.
  */
 public class MasterContext {
+
+    private static final Object NULL_OBJECT = new Object() {
+        @Override
+        public String toString() {
+            return "NULL_OBJECT";
+        }
+    };
 
     public static final int SNAPSHOT_RESTORE_EDGE_PRIORITY = Integer.MIN_VALUE;
     public static final String SNAPSHOT_VERTEX_PREFIX = "__snapshot_";
@@ -506,7 +514,7 @@ public class MasterContext {
     private void cancelExecutionInvocations(long jobId, long executionId, TerminationMode mode) {
         nodeEngine.getExecutionService().execute(ExecutionService.ASYNC_EXECUTOR, () ->
                 invokeOnParticipants(plan -> new TerminateExecutionOperation(jobId, executionId, mode),
-                        responses -> { }, null));
+                        null, null));
     }
 
     void beginSnapshot(long executionId) {
@@ -814,42 +822,34 @@ public class MasterContext {
 
     /**
      * @param completionCallback a consumer that will receive a map of
-     *                           responses, one for each member. The value will
-     *                           be either the response or an exception thrown
-     *                           from the operation
-     * @param callback A callback that will be added to each individual
-     *                operation for each member
+     *                           responses, one for each member, after all have
+     *                           been received. The value will be either the
+     *                           response or an exception thrown from the
+     *                           operation
+     * @param callback A callback that will be called after each individual
+     *                operation for each member completes
      */
     private void invokeOnParticipants(Function<ExecutionPlan, Operation> operationCtor,
-                                      Consumer<Map<MemberInfo, Object>> completionCallback,
-                                      ExecutionCallback<Object> callback) {
-        Map<MemberInfo, AtomicReference<Object>> responses = new HashMap<>();
-        // pre-populate the map so that it's read-only from here on and can be used from multiple threads
-        for (MemberInfo member : executionPlanMap.keySet()) {
-            responses.put(member, new AtomicReference<>());
-        }
+                                      @Nullable Consumer<Map<MemberInfo, Object>> completionCallback,
+                                      @Nullable ExecutionCallback<Object> callback) {
+        ConcurrentMap<MemberInfo, Object> responses = new ConcurrentHashMap<>();
         AtomicInteger remainingCount = new AtomicInteger(executionPlanMap.size());
-        for (Entry<MemberInfo, AtomicReference<Object>> e : responses.entrySet()) {
-            MemberInfo member = e.getKey();
-            AtomicReference<Object> response = e.getValue();
-            Operation op = operationCtor.apply(executionPlanMap.get(member));
-            InternalCompletableFuture<Object> future =
-                    nodeEngine.getOperationService()
-                              .createInvocationBuilder(JetService.SERVICE_NAME, op, member.getAddress())
-                              .setExecutionCallback(callbackOf((r, throwable) -> {
-                                  boolean success = response.compareAndSet(null, r == null ? throwable : r);
-                                  assert success : "response=" + response.get();
-                                  if (remainingCount.decrementAndGet() == 0) {
-                                      // unwrap the AtomicReferences. Can't use stream api, toMap doesn't allow null values
-                                      Map<MemberInfo, Object> responses2 = new HashMap<>();
-                                      for (Entry<MemberInfo, AtomicReference<Object>> entry : responses.entrySet()) {
-                                          responses2.put(entry.getKey(), entry.getValue().get());
-                                      }
-                                      completionCallback.accept(responses2);
-                                  }
+        for (Entry<MemberInfo, ExecutionPlan> entry : executionPlanMap.entrySet()) {
+            MemberInfo member = entry.getKey();
+            Operation op = operationCtor.apply(entry.getValue());
+            InternalCompletableFuture<Object> future = nodeEngine.getOperationService()
+                    .createInvocationBuilder(JetService.SERVICE_NAME, op, member.getAddress())
+                    .invoke();
 
-                              }))
-                              .invoke();
+            if (completionCallback != null) {
+                future.andThen(callbackOf((r, throwable) -> {
+                    responses.put(member, r != null ? r : throwable != null ? peel(throwable) : NULL_OBJECT);
+                    if (remainingCount.decrementAndGet() == 0) {
+                        completionCallback.accept(responses);
+                    }
+                }));
+            }
+
             if (callback != null) {
                 future.andThen(callback);
             }
