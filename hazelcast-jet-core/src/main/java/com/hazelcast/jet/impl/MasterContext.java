@@ -840,7 +840,7 @@ public class MasterContext {
                                   boolean success = response.compareAndSet(null, r == null ? throwable : r);
                                   assert success : "response=" + response.get();
                                   if (remainingCount.decrementAndGet() == 0) {
-                                      // unwrap the AtomicReferences. Can't use stream api because toMap doesn't support null values...
+                                      // unwrap the AtomicReferences. Can't use stream api, toMap doesn't allow null values
                                       Map<MemberInfo, Object> responses2 = new HashMap<>();
                                       for (Entry<MemberInfo, AtomicReference<Object>> entry : responses.entrySet()) {
                                           responses2.put(entry.getKey(), entry.getValue().get());
