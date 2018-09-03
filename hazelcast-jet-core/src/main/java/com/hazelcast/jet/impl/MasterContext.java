@@ -741,7 +741,7 @@ public class MasterContext {
                 jobRecord = jobRecord.withSuspended(true);
                 nonSynchronizedAction = () -> coordinationService.suspendJob(this);
             } else if (terminationModeAction == NO_ACTION) {
-                jobStatus = NOT_RUNNING;
+                throw new UnsupportedOperationException("Should not have received " + terminationModeAction + " here");
             } else {
                 jobStatus = (isSuccess ? COMPLETED : FAILED);
 
