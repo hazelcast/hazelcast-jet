@@ -30,6 +30,7 @@ import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.execution.SnapshotRecord;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import com.hazelcast.test.annotation.Repeat;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -146,6 +147,7 @@ public class ManualRestartTest extends JetTestSupport {
     }
 
     @Test
+    @Repeat(100)
     public void when_terminalSnapshotFails_then_previousSnapshotUsed() {
         MapConfig mapConfig = new MapConfig(SnapshotRepository.SNAPSHOT_DATA_NAME_PREFIX + "*");
         mapConfig.getMapStoreConfig()

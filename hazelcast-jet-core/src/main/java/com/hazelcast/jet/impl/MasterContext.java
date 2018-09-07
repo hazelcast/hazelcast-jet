@@ -553,8 +553,10 @@ public class MasterContext {
                 responses -> onSnapshotCompleted(responses, executionId, newSnapshotId, isTerminal), null);
     }
 
-    private void onSnapshotCompleted(Map<MemberInfo, Object> responses, long executionId, long snapshotId,
-                                                  boolean wasTerminal) {
+    private void onSnapshotCompleted(
+            Map<MemberInfo, Object> responses, long executionId, long snapshotId, boolean wasTerminal
+    ) {
+        System.out.println("onSnapshotCompleted: " + responses);
         // Note: this method can be called after finalizeJob() is called or even after new execution started.
         // We only wait for snapshot completion if the job completed with a terminal snapshot and the job
         // was successful.
