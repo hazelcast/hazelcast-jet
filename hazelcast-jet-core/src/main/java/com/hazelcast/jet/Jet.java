@@ -29,7 +29,6 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.instance.HazelcastInstanceImpl;
 import com.hazelcast.instance.HazelcastInstanceProxy;
-import com.hazelcast.instance.Node;
 import com.hazelcast.jet.config.JetClientConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.MetricsConfig;
@@ -37,7 +36,6 @@ import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JetInstanceImpl;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.metrics.JetMetricsService;
-import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.merge.IgnoreMergingEntryMapMergePolicy;
 import com.hazelcast.spi.properties.GroupProperty;
 import com.hazelcast.spi.properties.HazelcastProperties;
@@ -48,7 +46,6 @@ import static com.hazelcast.jet.impl.JobRepository.JOB_RESULTS_MAP_NAME;
 import static com.hazelcast.jet.impl.config.XmlJetConfigBuilder.getClientConfig;
 import static com.hazelcast.jet.impl.metrics.JetMetricsService.applyMetricsConfig;
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_RESULTS_TTL_SECONDS;
-import static com.hazelcast.spi.properties.GroupProperty.SHUTDOWNHOOK_POLICY;
 
 /**
  * Entry point to the Jet product.
@@ -71,8 +68,9 @@ public final class Jet {
         configureJetService(config);
         HazelcastInstanceImpl hazelcastInstance = ((HazelcastInstanceProxy)
                 Hazelcast.newHazelcastInstance(config.getHazelcastConfig())).getOriginal();
-        Runtime.getRuntime().addShutdownHook(shutdownHookThread(hazelcastInstance));
-        return new JetInstanceImpl(hazelcastInstance, config);
+        JetInstanceImpl jetInstance = new JetInstanceImpl(hazelcastInstance, config);
+        jetInstance.registerShutdownHook();
+        return jetInstance;
     }
 
     /**
@@ -156,30 +154,5 @@ public final class Jet {
             hzConfig.getProperties().setProperty(prop, jetProps.getProperty(prop));
         }
         hzConfig.setProperty(GroupProperty.SHUTDOWNHOOK_ENABLED.getName(), "false");
-    }
-
-    private static Thread shutdownHookThread(HazelcastInstanceImpl hazelcastInstance) {
-        return new Thread(() -> {
-            Node node = hazelcastInstance.node;
-            if (node.isRunning()) {
-                String policy = node.getProperties().getString(SHUTDOWNHOOK_POLICY);
-                ILogger logger = node.getLogger(JetInstance.class);
-                logger.info("Running shutdown hook with policy: " + policy + ", Current state: " + node.getState());
-
-                JetService jetService = node.nodeEngine.getService(JetService.SERVICE_NAME);
-                jetService.shutDownJobs();
-
-                switch (policy) {
-                    case "TERMINATE":
-                        hazelcastInstance.getLifecycleService().terminate();
-                        break;
-                    case "GRACEFUL":
-                        hazelcastInstance.getLifecycleService().shutdown();
-                        break;
-                    default:
-                        throw new IllegalArgumentException("Unimplemented shutdown hook policy: " + policy);
-                }
-            }
-        });
     }
 }

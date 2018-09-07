@@ -35,6 +35,7 @@ import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
+import static com.hazelcast.spi.properties.GroupProperty.SHUTDOWNHOOK_POLICY;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -43,11 +44,13 @@ import static java.util.stream.Collectors.toList;
 public class JetInstanceImpl extends AbstractJetInstance {
     private final NodeEngine nodeEngine;
     private final JetConfig config;
+    private final Thread shutdownHookThread;
 
     public JetInstanceImpl(HazelcastInstanceImpl hazelcastInstance, JetConfig config) {
         super(hazelcastInstance);
         this.nodeEngine = hazelcastInstance.node.getNodeEngine();
         this.config = config;
+        this.shutdownHookThread = shutdownHookThread(nodeEngine);
     }
 
     @Nonnull @Override
@@ -109,5 +112,21 @@ public class JetInstanceImpl extends AbstractJetInstance {
         JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
         jetService.shutDownJobs();
         super.shutdown();
+        Runtime.getRuntime().removeShutdownHook(shutdownHookThread);
+    }
+
+    public void registerShutdownHook() {
+        Runtime.getRuntime().addShutdownHook(shutdownHookThread);
+    }
+
+    private Thread shutdownHookThread(NodeEngine nodeEngine) {
+        return new Thread(() -> {
+            String policy = nodeEngine.getProperties().getString(SHUTDOWNHOOK_POLICY);
+            if (policy.equals("TERMINATE")) {
+                getHazelcastInstance().getLifecycleService().terminate();
+            } else {
+                shutdown();
+            }
+        });
     }
 }
