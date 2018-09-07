@@ -133,7 +133,7 @@ public class JetService
     /**
      * Gracefully shuts down jobs on this member. Blocks until all are down.
      */
-    public void shutDownJobs() {
+    void shutDownJobs() {
         if (!shutdownInitiated.compareAndSet(false, true)) {
             logger.info("Shutdown requested, but already shut down or being shut down");
             return;

@@ -68,9 +68,8 @@ public final class Jet {
         configureJetService(config);
         HazelcastInstanceImpl hazelcastInstance = ((HazelcastInstanceProxy)
                 Hazelcast.newHazelcastInstance(config.getHazelcastConfig())).getOriginal();
-        JetInstanceImpl jetInstance = new JetInstanceImpl(hazelcastInstance, config);
-        jetInstance.registerShutdownHook();
-        return jetInstance;
+        JetService service = hazelcastInstance.node.nodeEngine.getService(JetService.SERVICE_NAME);
+        return service.getJetInstance();
     }
 
     /**
