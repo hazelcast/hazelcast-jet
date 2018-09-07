@@ -409,7 +409,7 @@ public class JobCoordinationService {
                 // we'll eventually learn of the job through scanning of records or from a join operation
                 throw new RetryableHazelcastException(message);
             } else {
-                throw new JobNotFoundException(message);
+                throw new JobNotFoundException(jobId);
             }
         }
 
