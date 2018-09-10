@@ -35,6 +35,7 @@ import com.hazelcast.jet.config.MetricsConfig;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.metrics.JetMetricsService;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.map.merge.IgnoreMergingEntryMapMergePolicy;
 import com.hazelcast.spi.properties.GroupProperty;
 import com.hazelcast.spi.properties.HazelcastProperties;
@@ -67,8 +68,7 @@ public final class Jet {
         configureJetService(config);
         HazelcastInstanceImpl hazelcastInstance = ((HazelcastInstanceProxy)
                 Hazelcast.newHazelcastInstance(config.getHazelcastConfig())).getOriginal();
-        JetService service = hazelcastInstance.node.nodeEngine.getService(JetService.SERVICE_NAME);
-        return service.getJetInstance();
+        return Util.getJetInstance(hazelcastInstance.node.nodeEngine);
     }
 
     /**

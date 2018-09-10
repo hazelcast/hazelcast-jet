@@ -51,6 +51,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
+import static com.hazelcast.spi.properties.GroupProperty.SHUTDOWNHOOK_POLICY;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class JetService
@@ -66,6 +67,7 @@ public class JetService
     private final ILogger logger;
     private final LiveOperationRegistry liveOperationRegistry;
     private final AtomicBoolean shutdownInitiated = new AtomicBoolean();
+    private final Thread shutdownHookThread;
 
     private JetConfig config;
     private JetInstance jetInstance;
@@ -83,6 +85,7 @@ public class JetService
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.logger = nodeEngine.getLogger(getClass());
         this.liveOperationRegistry = new LiveOperationRegistry();
+        this.shutdownHookThread = shutdownHookThread(nodeEngine);
     }
 
     @Override
@@ -128,6 +131,8 @@ public class JetService
                 "\t|   | |   |  /    |     |     |     |   |     |   |      \\   | |       |  \n" +
                 "\to   o o   o o---o o---o o---o o---o o   o o---o   o       o--o o---o   o   ");
         logger.info("Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.");
+
+        Runtime.getRuntime().addShutdownHook(shutdownHookThread);
     }
 
     /**
@@ -174,6 +179,8 @@ public class JetService
 
     @Override
     public void shutdown(boolean forceful) {
+        Runtime.getRuntime().removeShutdownHook(shutdownHookThread);
+
         jobCoordinationService.shutdown();
         jobExecutionService.shutdown(false);
         taskletExecutionService.shutdown(false);
@@ -278,5 +285,16 @@ public class JetService
             }
         }
         return keys;
+    }
+
+    private Thread shutdownHookThread(NodeEngine nodeEngine) {
+        return new Thread(() -> {
+            String policy = nodeEngine.getProperties().getString(SHUTDOWNHOOK_POLICY);
+            if (policy.equals("TERMINATE")) {
+                jetInstance.getHazelcastInstance().getLifecycleService().terminate();
+            } else {
+                jetInstance.shutdown();
+            }
+        });
     }
 }
