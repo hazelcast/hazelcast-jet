@@ -37,15 +37,16 @@ import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.metrics.JetMetricsService;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.map.merge.IgnoreMergingEntryMapMergePolicy;
-import com.hazelcast.spi.properties.GroupProperty;
 import com.hazelcast.spi.properties.HazelcastProperties;
 
 import java.util.Properties;
 
+import static com.hazelcast.jet.impl.JetService.JET_SHUTDOWN_HOOK_ENABLED;
 import static com.hazelcast.jet.impl.JobRepository.JOB_RESULTS_MAP_NAME;
 import static com.hazelcast.jet.impl.config.XmlJetConfigBuilder.getClientConfig;
 import static com.hazelcast.jet.impl.metrics.JetMetricsService.applyMetricsConfig;
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_RESULTS_TTL_SECONDS;
+import static com.hazelcast.spi.properties.GroupProperty.SHUTDOWNHOOK_ENABLED;
 
 /**
  * Entry point to the Jet product.
@@ -148,9 +149,13 @@ public final class Jet {
         applyMetricsConfig(hzConfig, metricsConfig);
 
         Properties jetProps = jetConfig.getProperties();
+        Properties hzProperties = hzConfig.getProperties();
         for (String prop : jetProps.stringPropertyNames()) {
-            hzConfig.getProperties().setProperty(prop, jetProps.getProperty(prop));
+            hzProperties.setProperty(prop, jetProps.getProperty(prop));
         }
-        hzConfig.setProperty(GroupProperty.SHUTDOWNHOOK_ENABLED.getName(), "false");
+        HazelcastProperties hazelcastProperties = new HazelcastProperties(hzProperties);
+        if (hazelcastProperties.getBoolean(JET_SHUTDOWN_HOOK_ENABLED)) {
+            hzConfig.setProperty(SHUTDOWNHOOK_ENABLED.getName(), "false");
+        }
     }
 }

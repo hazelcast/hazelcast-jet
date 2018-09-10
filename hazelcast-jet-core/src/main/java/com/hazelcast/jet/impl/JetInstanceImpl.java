@@ -110,6 +110,4 @@ public class JetInstanceImpl extends AbstractJetInstance {
         jetService.shutDownJobs();
         super.shutdown();
     }
-
-
 }

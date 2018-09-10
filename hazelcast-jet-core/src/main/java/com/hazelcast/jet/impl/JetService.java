@@ -43,6 +43,7 @@ import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.PacketHandler;
+import com.hazelcast.spi.properties.HazelcastProperty;
 
 import java.io.IOException;
 import java.util.Properties;
@@ -58,9 +59,11 @@ public class JetService
         implements ManagedService, ConfigurableService<JetConfig>, PacketHandler, MembershipAwareService,
         LiveOperationsTracker {
 
-    public static final int MAX_PARALLEL_ASYNC_OPS = 1000;
-
     public static final String SERVICE_NAME = "hz:impl:jetService";
+    public static final int MAX_PARALLEL_ASYNC_OPS = 1000;
+    public static final HazelcastProperty JET_SHUTDOWN_HOOK_ENABLED =
+            new HazelcastProperty("hazelcast.jet.shutdownhook.enabled", true);
+
     private static final int NOTIFY_MEMBER_SHUTDOWN_DELAY = 5;
 
     private final NodeEngineImpl nodeEngine;
@@ -118,6 +121,10 @@ public class JetService
 
         jobCoordinationService.init();
 
+        if (nodeEngine.getProperties().getBoolean(JET_SHUTDOWN_HOOK_ENABLED)) {
+            Runtime.getRuntime().addShutdownHook(shutdownHookThread);
+        }
+
         JetBuildInfo jetBuildInfo = BuildInfoProvider.getBuildInfo().getJetBuildInfo();
         logger.info(String.format("Starting Jet %s (%s - %s)",
                 jetBuildInfo.getVersion(), jetBuildInfo.getBuild(), jetBuildInfo.getRevision()));
@@ -131,8 +138,6 @@ public class JetService
                 "\t|   | |   |  /    |     |     |     |   |     |   |      \\   | |       |  \n" +
                 "\to   o o   o o---o o---o o---o o---o o   o o---o   o       o--o o---o   o   ");
         logger.info("Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.");
-
-        Runtime.getRuntime().addShutdownHook(shutdownHookThread);
     }
 
     /**
