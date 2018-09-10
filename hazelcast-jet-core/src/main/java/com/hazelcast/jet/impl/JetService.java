@@ -43,7 +43,6 @@ import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.PacketHandler;
-import com.hazelcast.spi.properties.HazelcastProperty;
 
 import java.io.IOException;
 import java.util.Properties;
@@ -52,6 +51,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
+import static com.hazelcast.spi.properties.GroupProperty.SHUTDOWNHOOK_ENABLED;
 import static com.hazelcast.spi.properties.GroupProperty.SHUTDOWNHOOK_POLICY;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -61,8 +61,6 @@ public class JetService
 
     public static final String SERVICE_NAME = "hz:impl:jetService";
     public static final int MAX_PARALLEL_ASYNC_OPS = 1000;
-    public static final HazelcastProperty JET_SHUTDOWN_HOOK_ENABLED =
-            new HazelcastProperty("hazelcast.jet.shutdownhook.enabled", true);
 
     private static final int NOTIFY_MEMBER_SHUTDOWN_DELAY = 5;
 
@@ -121,7 +119,7 @@ public class JetService
 
         jobCoordinationService.init();
 
-        if (nodeEngine.getProperties().getBoolean(JET_SHUTDOWN_HOOK_ENABLED)) {
+        if (Boolean.parseBoolean(properties.getProperty(SHUTDOWNHOOK_ENABLED.getName()))) {
             Runtime.getRuntime().addShutdownHook(shutdownHookThread);
         }
 
@@ -300,6 +298,6 @@ public class JetService
             } else {
                 jetInstance.shutdown();
             }
-        });
+        }, "jet.ShutdownThread");
     }
 }
