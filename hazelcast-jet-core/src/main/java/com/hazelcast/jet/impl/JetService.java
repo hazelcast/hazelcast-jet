@@ -120,6 +120,7 @@ public class JetService
         jobCoordinationService.init();
 
         if (Boolean.parseBoolean(properties.getProperty(SHUTDOWNHOOK_ENABLED.getName()))) {
+            logger.finest("Adding Jet shutdown hook");
             Runtime.getRuntime().addShutdownHook(shutdownHookThread);
         }
 

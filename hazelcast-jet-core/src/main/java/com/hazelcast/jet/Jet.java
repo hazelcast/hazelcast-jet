@@ -117,9 +117,12 @@ public final class Jet {
 
         Properties jetProps = jetConfig.getProperties();
         Properties hzProperties = hzConfig.getProperties();
+
+        // copy Jet Config properties as HZ properties
         for (String prop : jetProps.stringPropertyNames()) {
             hzProperties.setProperty(prop, jetProps.getProperty(prop));
         }
+
         HazelcastProperties properties = new HazelcastProperties(hzProperties);
 
         ServicesConfig servicesConfig = hzConfig.getServicesConfig();
@@ -127,7 +130,7 @@ public final class Jet {
                 .addServiceConfig(new ServiceConfig().setEnabled(true)
                         .setName(JetService.SERVICE_NAME)
                         .setClassName(JetService.class.getName())
-                        .setProperties(jetServiceProperties(properties.getString(SHUTDOWNHOOK_ENABLED)))
+                        .setProperties(jetServiceProperties(properties))
                         .setConfigObject(jetConfig));
 
         servicesConfig
@@ -154,13 +157,13 @@ public final class Jet {
         MetricsConfig metricsConfig = jetConfig.getMetricsConfig();
         applyMetricsConfig(hzConfig, metricsConfig);
 
-        // Force disable IMDG shutdown hook
+        // Force disable IMDG shutdown hook, we will use the Jet property instead
         hzConfig.setProperty(SHUTDOWNHOOK_ENABLED.getName(), "false");
     }
 
-    private static Properties jetServiceProperties(String shutdownHookEnabled) {
+    private static Properties jetServiceProperties(HazelcastProperties hzProperties) {
         Properties properties = new Properties();
-        properties.setProperty(SHUTDOWNHOOK_ENABLED.getName(), shutdownHookEnabled);
+        properties.setProperty(SHUTDOWNHOOK_ENABLED.getName(), hzProperties.getString(SHUTDOWNHOOK_ENABLED));
         return properties;
     }
 }
