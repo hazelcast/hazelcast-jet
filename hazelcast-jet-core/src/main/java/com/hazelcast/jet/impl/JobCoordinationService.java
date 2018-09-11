@@ -228,7 +228,7 @@ public class JobCoordinationService {
      * which represents result of the job.
      */
     public void submitJob(long jobId, Data dag, JobConfig config) {
-        assertMaster("Cannot submit job " + idToString(jobId) + " from non-master node");
+        assertIsMaster("Cannot submit job " + idToString(jobId) + " from non-master node");
 
         if (isShutdown) {
             throw new ShutdownInProgressException();
@@ -282,7 +282,7 @@ public class JobCoordinationService {
     }
 
     public CompletableFuture<Void> joinSubmittedJob(long jobId) {
-        assertMaster("Cannot join job " + idToString(jobId) + " from non-master node");
+        assertIsMaster("Cannot join job " + idToString(jobId) + " from non-master node");
 
         if (isShutdown) {
             throw new ShutdownInProgressException();
@@ -380,7 +380,7 @@ public class JobCoordinationService {
     }
 
     public void terminateJob(long jobId, TerminationMode terminationMode) {
-        assertMaster("Cannot " + terminationMode + " job " + idToString(jobId) + " from non-master node");
+        assertIsMaster("Cannot " + terminationMode + " job " + idToString(jobId) + " from non-master node");
 
         JobResult jobResult = jobRepository.getJobResult(jobId);
         if (jobResult != null) {
@@ -429,7 +429,8 @@ public class JobCoordinationService {
     }
 
     public Set<Long> getAllJobIds() {
-        assertMaster("Cannot query list of job ids from non-master node");
+        assertIsMaster("Cannot query list of job ids from non-master node");
+
         Set<Long> jobIds = new HashSet<>(jobRepository.getAllJobIds());
         jobIds.addAll(masterContexts.keySet());
         return jobIds;
@@ -440,7 +441,7 @@ public class JobCoordinationService {
      * if the requested job is not found.
      */
     public JobStatus getJobStatus(long jobId) {
-        assertMaster("Cannot query status of job " + idToString(jobId) + " from non-master node");
+        assertIsMaster("Cannot query status of job " + idToString(jobId) + " from non-master node");
 
         // first check if there is a job result present.
         // this map is updated first during completion.
@@ -479,7 +480,8 @@ public class JobCoordinationService {
      * if the requested job is not found.
      */
     public long getJobSubmissionTime(long jobId) {
-        assertMaster("Cannot query submission time of job " + idToString(jobId) + " from non-master node");
+        assertIsMaster("Cannot query submission time of job " + idToString(jobId) + " from non-master node");
+
         JobRecord jobRecord = jobRepository.getJobRecord(jobId);
         if (jobRecord != null) {
             return jobRecord.getCreationTime();
@@ -524,7 +526,7 @@ public class JobCoordinationService {
     }
 
     public void resumeJob(long jobId) {
-        assertMaster("Cannot resume job " + idToString(jobId) + " from non-master node");
+        assertIsMaster("Cannot resume job " + idToString(jobId) + " from non-master node");
 
         if (jobRepository.updateJobSuspendedStatus(jobId, false)) {
             JobRecord jobRecord = jobRepository.getJobRecord(jobId);
@@ -722,7 +724,7 @@ public class JobCoordinationService {
         jobRepository.cleanup(runningJobIds);
     }
 
-    private void assertMaster(String error) {
+    private void assertIsMaster(String error) {
         if (!isMaster()) {
             throw new JetException(error + ". Master address: " + nodeEngine.getClusterService().getMasterAddress());
         }

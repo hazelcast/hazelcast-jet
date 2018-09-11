@@ -32,6 +32,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -91,6 +93,47 @@ public class JobSummaryTest extends JetTestSupport {
             JobSummary summary = client.getJobSummaryList().get(0);
             assertEquals(JobStatus.COMPLETED, summary.getStatus());
             assertEquals(0, summary.getExecutionId());
+        }, 20);
+    }
+
+    @Test
+    public void when_manyJobs_then_sortedBySubmissionTime() {
+        int numJobs = 10;
+
+        List<Job> jobs = new ArrayList<>();
+        for (int i = 0; i < numJobs; i++) {
+            Job job = instance.newJob(newStreamPipeline(), new JobConfig().setName("job " + i));
+            jobs.add(job);
+        }
+
+        assertTrueEventually(() -> {
+            List<JobSummary> list = new ArrayList<>(client.getJobSummaryList());
+            assertEquals(numJobs, list.size());
+
+            Collections.reverse(list);
+
+            // jobs are sorted by submission time in descending order
+            for (int i = 0; i < numJobs; i++) {
+                JobSummary summary = list.get(i);
+                assertEquals("job " + i, summary.getName());
+                assertEquals(JobStatus.RUNNING, summary.getStatus());
+            }
+        }, 20);
+
+        jobs.forEach(Job::cancel);
+
+        assertTrueEventually(() -> {
+            List<JobSummary> list = new ArrayList<>(client.getJobSummaryList());
+            assertEquals(numJobs, list.size());
+
+            Collections.reverse(list);
+
+            // jobs should still be sorted by submission time in descending order
+            for (int i = 0; i < numJobs; i++) {
+                JobSummary summary = list.get(i);
+                assertEquals("job " + i, summary.getName());
+                assertEquals(JobStatus.COMPLETED, summary.getStatus());
+            }
         }, 20);
     }
 
