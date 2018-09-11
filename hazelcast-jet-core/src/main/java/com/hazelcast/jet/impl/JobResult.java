@@ -96,6 +96,10 @@ public class JobResult implements IdentifiedDataSerializable {
         return failure == null ? completedFuture(null) : exceptionallyCompletedFuture(failure);
     }
 
+    public String getJobNameOrId() {
+        return jobConfig.getName() != null ? jobConfig.getName() : idToString(jobId);
+    }
+
     @Override
     public String toString() {
         return "JobResult{" +
