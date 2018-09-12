@@ -35,16 +35,23 @@ public class JobSummary implements IdentifiedDataSerializable {
     private String name;
     private JobStatus status;
     private long submissionTime;
+    private long completionTime;
+    private String failureReason;
 
     public JobSummary() {
     }
 
-    public JobSummary(long jobId, long executionId, String name, JobStatus status, long submissionTime) {
+    public JobSummary(long jobId, long executionId, String name, JobStatus status, long submissionTime,
+                      long completionTime, Throwable failure) {
         this.jobId = jobId;
         this.executionId = executionId;
         this.name = name;
         this.status = status;
         this.submissionTime = submissionTime;
+        this.completionTime = completionTime;
+        if (failure != null) {
+            this.failureReason = failure.getMessage();
+        }
     }
 
     public long getJobId() {
@@ -70,6 +77,14 @@ public class JobSummary implements IdentifiedDataSerializable {
         return submissionTime;
     }
 
+    public long getCompletionTime() {
+        return completionTime;
+    }
+
+    public String getFailureReason() {
+        return failureReason;
+    }
+
     @Override
     public int getFactoryId() {
         return JetInitDataSerializerHook.FACTORY_ID;
@@ -87,6 +102,8 @@ public class JobSummary implements IdentifiedDataSerializable {
         out.writeUTF(name);
         out.writeObject(status);
         out.writeLong(submissionTime);
+        out.writeLong(completionTime);
+        out.writeUTF(failureReason);
     }
 
     @Override
@@ -96,6 +113,8 @@ public class JobSummary implements IdentifiedDataSerializable {
         name = in.readUTF();
         status = in.readObject();
         submissionTime = in.readLong();
+        completionTime = in.readLong();
+        failureReason = in.readUTF();
     }
 
     @Override
@@ -106,6 +125,8 @@ public class JobSummary implements IdentifiedDataSerializable {
                 ", name='" + name + '\'' +
                 ", status=" + status +
                 ", submissionTime=" + toLocalTime(submissionTime) +
+                ", completionTime=" + toLocalTime(completionTime) +
+                ", failureReason=" + failureReason +
                 '}';
     }
 }

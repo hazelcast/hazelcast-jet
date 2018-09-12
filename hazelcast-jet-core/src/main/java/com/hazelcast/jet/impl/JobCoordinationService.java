@@ -662,8 +662,8 @@ public class JobCoordinationService {
 
         // completed jobs
         jobRepository.getJobResults().stream().map(r -> new JobSummary(
-                r.getJobId(), 0, r.getJobNameOrId(), r.getJobStatus(), r.getCreationTime()
-        )).forEach(s -> jobs.put(s.getJobId(), s));
+                r.getJobId(), 0, r.getJobNameOrId(), r.getJobStatus(), r.getCreationTime(),
+                r.getCompletionTime(), r.getFailure())).forEach(s -> jobs.put(s.getJobId(), s));
 
         return jobs.values().stream().sorted(comparing(JobSummary::getSubmissionTime).reversed()).collect(toList());
     }
@@ -675,7 +675,8 @@ public class JobCoordinationService {
                 record.isSuspended() ? JobStatus.SUSPENDED : JobStatus.NOT_RUNNING
                 :
                 ctx.jobStatus();
-        return new JobSummary(record.getJobId(), execId, record.getJobNameOrId(), status, record.getCreationTime());
+        return new JobSummary(record.getJobId(), execId, record.getJobNameOrId(), status, record.getCreationTime(),
+                0, null);
     }
 
     private InternalPartitionServiceImpl getInternalPartitionService() {
