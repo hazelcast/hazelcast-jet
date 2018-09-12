@@ -22,6 +22,8 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 import static com.hazelcast.jet.Util.idToString;
@@ -30,7 +32,6 @@ import static com.hazelcast.jet.impl.util.Util.toLocalTime;
 public class JobSummary implements IdentifiedDataSerializable {
 
     private long jobId;
-
     private long executionId;
     private String name;
     private JobStatus status;
@@ -41,17 +42,25 @@ public class JobSummary implements IdentifiedDataSerializable {
     public JobSummary() {
     }
 
-    public JobSummary(long jobId, long executionId, String name, JobStatus status, long submissionTime,
-                      long completionTime, Throwable failure) {
+    // constructor for running job
+    public JobSummary(long jobId, long executionId, String name, JobStatus status, long submissionTime) {
         this.jobId = jobId;
         this.executionId = executionId;
         this.name = name;
         this.status = status;
         this.submissionTime = submissionTime;
+    }
+
+    // constructor for completed job
+    public JobSummary(
+            long jobId, String name, JobStatus status, long submissionTime, long completionTime, String failureReason
+    ) {
+        this.jobId = jobId;
+        this.name = name;
+        this.status = status;
+        this.submissionTime = submissionTime;
         this.completionTime = completionTime;
-        if (failure != null) {
-            this.failureReason = failure.getMessage();
-        }
+        this.failureReason = failureReason;
     }
 
     public long getJobId() {
@@ -65,10 +74,12 @@ public class JobSummary implements IdentifiedDataSerializable {
         return executionId;
     }
 
+    @Nonnull
     public String getName() {
         return name;
     }
 
+    @Nonnull
     public JobStatus getStatus() {
         return status;
     }
@@ -77,10 +88,17 @@ public class JobSummary implements IdentifiedDataSerializable {
         return submissionTime;
     }
 
+    /**
+     * Returns 0 if job is not yet completed.
+     */
     public long getCompletionTime() {
         return completionTime;
     }
 
+    /**
+     * Returns null if job is not yet completed.
+     */
+    @Nullable
     public String getFailureReason() {
         return failureReason;
     }

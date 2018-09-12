@@ -37,18 +37,19 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 @RunWith(HazelcastParallelClassRunner.class)
 public class JobSummaryTest extends JetTestSupport {
 
-    public static final String SOURCE_NAME = "source";
+    private static final String SOURCE_NAME = "source";
     private JetInstance instance;
     private JetClientInstanceImpl client;
 
     @Before
     public void setup() {
         JetConfig config = new JetConfig();
-        config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig().setMapName("source"));
+        config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig().setMapName(SOURCE_NAME));
         instance = createJetMembers(config, 2)[0];
         client = (JetClientInstanceImpl) createJetClient();
     }
@@ -133,8 +134,29 @@ public class JobSummaryTest extends JetTestSupport {
                 JobSummary summary = list.get(i);
                 assertEquals("job " + i, summary.getName());
                 assertEquals(JobStatus.COMPLETED, summary.getStatus());
+                assertNotEquals(0, summary.getCompletionTime());
             }
         }, 20);
+    }
+
+    @Test
+    public void when_job_failed() {
+        Pipeline p = Pipeline.create();
+        p.drawFrom(Sources.mapJournal("invalid", JournalInitialPosition.START_FROM_OLDEST))
+                .drainTo(Sinks.noop());
+        Job job = instance.newJob(p, new JobConfig().setName("jobA"));
+        String msg = "";
+        try {
+            job.join();
+        } catch (Exception e) {
+            msg = e.getMessage();
+        }
+        List<JobSummary> list = client.getJobSummaryList();
+        assertEquals(1, list.size());
+        JobSummary jobSummary = list.get(0);
+
+        assertEquals(msg, jobSummary.getFailureReason());
+        assertNotEquals(0, jobSummary.getCompletionTime());
     }
 
     public Pipeline newStreamPipeline() {
