@@ -97,6 +97,11 @@ public class JobResult implements IdentifiedDataSerializable {
         return failure;
     }
 
+    @Nullable
+    public String getFailureReason() {
+        return failure == null ? null : failure.toString();
+    }
+
     @Nonnull
     public JobStatus getJobStatus() {
         return isSuccessfulOrCancelled() ? COMPLETED : FAILED;

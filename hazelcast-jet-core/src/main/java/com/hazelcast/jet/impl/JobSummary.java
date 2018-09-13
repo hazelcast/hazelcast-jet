@@ -42,8 +42,16 @@ public class JobSummary implements IdentifiedDataSerializable {
     public JobSummary() {
     }
 
-    // constructor for running job
-    public JobSummary(long jobId, long executionId, String name, JobStatus status, long submissionTime) {
+    /**
+     * Constructor for a running job
+     */
+    public JobSummary(
+            long jobId,
+            long executionId,
+            @Nonnull String name,
+            @Nonnull JobStatus status,
+            long submissionTime
+    ) {
         this.jobId = jobId;
         this.executionId = executionId;
         this.name = name;
@@ -51,9 +59,16 @@ public class JobSummary implements IdentifiedDataSerializable {
         this.submissionTime = submissionTime;
     }
 
-    // constructor for completed job
+    /**
+     * Constructor for a completed job
+     */
     public JobSummary(
-            long jobId, String name, JobStatus status, long submissionTime, long completionTime, String failureReason
+            long jobId,
+            @Nonnull String name,
+            @Nonnull JobStatus status,
+            long submissionTime,
+            long completionTime,
+            @Nullable String failureReason
     ) {
         this.jobId = jobId;
         this.name = name;
