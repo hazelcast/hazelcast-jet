@@ -38,6 +38,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 
 @RunWith(HazelcastParallelClassRunner.class)
 public class JobSummaryTest extends JetTestSupport {
@@ -60,7 +61,22 @@ public class JobSummaryTest extends JetTestSupport {
     }
 
     @Test
-    public void when_jobLifecycle() {
+    public void when_batchJob() {
+        Job job = instance.newJob(newBatchPipeline(), new JobConfig().setName("jobA"));
+        job.join();
+
+        List<JobSummary> list = client.getJobSummaryList();
+        assertEquals(1, list.size());
+        JobSummary jobSummary = list.get(0);
+
+        assertEquals("jobA", jobSummary.getName());
+        assertEquals(job.getId(), jobSummary.getJobId());
+        assertEquals(JobStatus.COMPLETED, jobSummary.getStatus());
+        assertNull(jobSummary.getFailureReason());
+    }
+
+    @Test
+    public void when_streamingJobLifecycle() {
         Job job = instance.newJob(newStreamPipeline(), new JobConfig().setName("jobA"));
         List<JobSummary> list = client.getJobSummaryList();
         assertEquals(1, list.size());
@@ -162,6 +178,13 @@ public class JobSummaryTest extends JetTestSupport {
     public Pipeline newStreamPipeline() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.mapJournal(SOURCE_NAME, JournalInitialPosition.START_FROM_OLDEST))
+                .drainTo(Sinks.noop());
+        return p;
+    }
+
+    public Pipeline newBatchPipeline() {
+        Pipeline p = Pipeline.create();
+        p.drawFrom(Sources.map(SOURCE_NAME))
                 .drainTo(Sinks.noop());
         return p;
     }

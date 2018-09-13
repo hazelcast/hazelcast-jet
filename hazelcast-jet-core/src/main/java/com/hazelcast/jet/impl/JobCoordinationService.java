@@ -664,7 +664,7 @@ public class JobCoordinationService {
         jobRepository.getJobResults().stream()
                 .map(r -> new JobSummary(
                         r.getJobId(), r.getJobNameOrId(), r.getJobStatus(), r.getCreationTime(),
-                        r.getCompletionTime(), r.getFailure().toString())
+                        r.getCompletionTime(), r.getFailure() == null ? null : r.getFailure().toString())
                 ).forEach(s -> jobs.put(s.getJobId(), s));
 
         return jobs.values().stream().sorted(comparing(JobSummary::getSubmissionTime).reversed()).collect(toList());
