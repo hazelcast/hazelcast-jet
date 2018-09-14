@@ -231,7 +231,10 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
                                       return entry(broadcastKey(key), new long[]{offset, watermark});
                                   }));
             snapshotTraverser = traverseStream(snapshotStream)
-                    .onFirstNull(() -> snapshotTraverser = null);
+                    .onFirstNull(() -> {
+                        snapshotTraverser = null;
+                        logOffsets();
+                    });
         }
         return emitFromTraverserToSnapshot(snapshotTraverser);
     }
@@ -262,9 +265,38 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
         }
     }
 
+    @Override
+    public boolean finishSnapshotRestore() {
+        logOffsets();
+        return true;
+    }
+
     private boolean isEmpty(ConsumerRecords<K, V> records) {
         return records == null || records.isEmpty();
     }
+
+    private void logOffsets() {
+        offsets.forEach((key, offsets) -> {
+            int partitionCount = 0;
+            for (long offset : offsets) {
+                partitionCount += offset == -1 ? 0 : 1;
+            }
+            int[] partitionArray = new int[partitionCount];
+            long[] offsetArray = new long[partitionCount];
+            int count = 0;
+            for (int i = 0; i < offsets.length; i++) {
+                long offset = offsets[i];
+                if (offset != -1) {
+                    partitionArray[count] = i;
+                    offsetArray[count] = offset;
+                    count++;
+                }
+            }
+            logFinest(getLogger(), "Saved snapshot. Topic=%s, partitions=%s, offsets=%s",
+                    key, Arrays.toString(partitionArray), Arrays.toString(offsetArray));
+        });
+    }
+
 
     @Nonnull
     public static <K, V, T> DistributedSupplier<Processor> processorSupplier(
