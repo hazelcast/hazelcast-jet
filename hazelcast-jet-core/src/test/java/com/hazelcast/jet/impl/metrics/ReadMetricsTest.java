@@ -102,13 +102,16 @@ public class ReadMetricsTest extends JetTestSupport {
 
         JetMetricsService service = getNodeEngineImpl(instance).getService(JetMetricsService.SERVICE_NAME);
         service.pauseCollection();
-        try {
-            MetricsResultSet resultSet = client.readMetricsAsync(instance.getCluster().getLocalMember(), 0).get();
-            fail("readMetricsAsync call should have timed out.");
-        } catch (ExecutionException e) {
-            Exception peeled = peel(e);
-            assertInstanceOf(OperationTimeoutException.class, peeled);
-        }
+        assertTrueEventually(() -> {
+            try {
+                MetricsResultSet result = client.readMetricsAsync(instance.getCluster().getLocalMember(), 0).get();
+                fail("readMetricsAsync call should have timed out, got "
+                        + result.collections().size() + " collections instead");
+            } catch (ExecutionException e) {
+                Exception peeled = peel(e);
+                assertInstanceOf(OperationTimeoutException.class, peeled);
+            }
+        }, 30);
         service.resumeCollection();
         MetricsResultSet resultSet = client.readMetricsAsync(instance.getCluster().getLocalMember(), 0).get();
         assertEquals(1, resultSet.collections().size());
