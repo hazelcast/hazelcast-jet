@@ -235,7 +235,8 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
                     .onFirstNull(() -> {
                         snapshotTraverser = null;
                         if (getLogger().isFineEnabled()) {
-                            getLogger().fine("Finished saving snapshot. Saved offsets: " + offsets());
+                            getLogger().fine("Finished saving snapshot." +
+                                    " Saved offsets: " + offsets() + ", Saved watermarks: " + watermarks());
                         }
                     });
         }
@@ -271,7 +272,8 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
     @Override
     public boolean finishSnapshotRestore() {
         if (getLogger().isFineEnabled()) {
-            getLogger().fine("Finished restoring snapshot. Restored offsets: " + offsets());
+            getLogger().fine("Finished restoring snapshot. Restored offsets: " + offsets()
+                    + " and watermarks:" + watermarks());
         }
         return true;
     }
@@ -281,13 +283,14 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
     }
 
     private Map<TopicPartition, Long> offsets() {
-        return offsets.entrySet().stream()
-                .flatMap(e -> IntStream.range(0, e.getValue().length).mapToObj(partition ->
-                        entry(new TopicPartition(e.getKey(), partition), e.getValue()[partition]))
-                ).filter(e -> e.getValue() >= 0)
-                .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+        return currentAssignment.keySet().stream()
+                .collect(Collectors.toMap(tp -> tp, tp -> offsets.get(tp.topic())[tp.partition()]));
     }
 
+    private Map<TopicPartition, Long> watermarks() {
+        return currentAssignment.entrySet().stream()
+                .collect(Collectors.toMap(Entry::getKey, e -> watermarkSourceUtil.getWatermark(e.getValue())));
+    }
 
     @Nonnull
     public static <K, V, T> DistributedSupplier<Processor> processorSupplier(
