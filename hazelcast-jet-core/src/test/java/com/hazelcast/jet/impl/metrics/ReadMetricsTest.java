@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.metrics;
 
 import com.hazelcast.core.Member;
+import com.hazelcast.core.OperationTimeoutException;
 import com.hazelcast.instance.MemberImpl;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
@@ -36,8 +37,11 @@ import org.junit.runner.RunWith;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.StreamSupport;
 
+import static com.hazelcast.util.ExceptionUtil.peel;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @RunWith(HazelcastParallelClassRunner.class)
 public class ReadMetricsTest extends JetTestSupport {
@@ -49,9 +53,9 @@ public class ReadMetricsTest extends JetTestSupport {
     public void when_readMetricsAsync() throws Exception {
         JetConfig conf = new JetConfig();
         conf.getMetricsConfig().setCollectionIntervalSeconds(1);
-        JetInstance inst = createJetMember(conf);
+        JetInstance instance = createJetMember(conf);
         JetClientInstanceImpl client = (JetClientInstanceImpl) createJetClient();
-        Member member = inst.getHazelcastInstance().getCluster().getLocalMember();
+        Member member = instance.getHazelcastInstance().getCluster().getLocalMember();
 
         long nextSequence = 0;
         for (int i = 0; i < 3; i++) {
@@ -68,10 +72,10 @@ public class ReadMetricsTest extends JetTestSupport {
 
     @Test
     public void when_invalidUUID() throws ExecutionException, InterruptedException {
-        JetInstance inst = createJetMember();
+        JetInstance instance = createJetMember();
         JetClientInstanceImpl client = (JetClientInstanceImpl) createJetClient();
-        Address addr = inst.getCluster().getLocalMember().getAddress();
-        MemberVersion ver = inst.getCluster().getLocalMember().getVersion();
+        Address addr = instance.getCluster().getLocalMember().getAddress();
+        MemberVersion ver = instance.getCluster().getLocalMember().getVersion();
         MemberImpl member = new MemberImpl(addr, ver, false, UuidUtil.newUnsecureUuidString());
 
         exception.expectCause(Matchers.instanceOf(IllegalArgumentException.class));
@@ -82,10 +86,31 @@ public class ReadMetricsTest extends JetTestSupport {
     public void when_metricsDisabled() throws ExecutionException, InterruptedException {
         JetConfig cfg = new JetConfig();
         cfg.getMetricsConfig().setEnabled(false);
-        JetInstance inst = createJetMember(cfg);
+        JetInstance instance = createJetMember(cfg);
         JetClientInstanceImpl client = (JetClientInstanceImpl) createJetClient();
 
         exception.expectCause(Matchers.instanceOf(IllegalArgumentException.class));
-        MetricsResultSet resultSet = client.readMetricsAsync(inst.getCluster().getLocalMember(), 0).get();
+        MetricsResultSet resultSet = client.readMetricsAsync(instance.getCluster().getLocalMember(), 0).get();
+    }
+
+    @Test
+    public void when_metricsTimeout() throws ExecutionException, InterruptedException {
+        JetConfig cfg = new JetConfig();
+        cfg.getMetricsConfig().setCollectionIntervalSeconds(1);
+        JetInstance instance = createJetMember(cfg);
+        JetClientInstanceImpl client = (JetClientInstanceImpl) createJetClient();
+
+        JetMetricsService service = getNodeEngineImpl(instance).getService(JetMetricsService.SERVICE_NAME);
+        service.pauseCollection();
+        try {
+            MetricsResultSet resultSet = client.readMetricsAsync(instance.getCluster().getLocalMember(), 0).get();
+            fail("readMetricsAsync call should have timed out.");
+        } catch (ExecutionException e) {
+            Exception peeled = peel(e);
+            assertInstanceOf(OperationTimeoutException.class, peeled);
+        }
+        service.resumeCollection();
+        MetricsResultSet resultSet = client.readMetricsAsync(instance.getCluster().getLocalMember(), 0).get();
+        assertEquals(1, resultSet.collections().size());
     }
 }
