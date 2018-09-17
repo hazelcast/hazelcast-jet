@@ -69,6 +69,9 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
 
     private List<MetricsPublisher> publishers;
 
+    // pauses the collection service for testing
+    private volatile boolean paused;
+
     public JetMetricsService(NodeEngine nodeEngine) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.logger = nodeEngine.getLogger(getClass());
@@ -93,6 +96,10 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
 
         ProbeRenderer renderer = new PublisherProbeRenderer();
         scheduledFuture = nodeEngine.getExecutionService().scheduleWithRepetition("MetricsPublisher", () -> {
+            if (paused) {
+                logger.fine("Metrics not collected, service is paused.");
+                return;
+            }
             this.nodeEngine.getMetricsRegistry().render(renderer);
             for (MetricsPublisher publisher : publishers) {
                 publisher.whenComplete();
@@ -167,6 +174,20 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
             publishers.add(new JmxPublisher(nodeEngine.getHazelcastInstance().getName(), "com.hazelcast"));
         }
         return publishers;
+    }
+
+    /**
+     * Pause collection of metrics for testing
+     */
+    void pauseCollection() {
+        this.paused = true;
+    }
+
+    /**
+     * Resume collection of metrics for testing
+     */
+    void resumeCollection() {
+        this.paused = false;
     }
 
     /**
