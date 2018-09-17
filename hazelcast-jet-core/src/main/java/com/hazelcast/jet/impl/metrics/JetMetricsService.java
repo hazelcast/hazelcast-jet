@@ -102,7 +102,11 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
             }
             this.nodeEngine.getMetricsRegistry().render(renderer);
             for (MetricsPublisher publisher : publishers) {
-                publisher.whenComplete();
+                try {
+                    publisher.whenComplete();
+                } catch (Exception e) {
+                    logger.severe("Error completing publication for publisher " + publisher, e);
+                }
             }
         }, 1, config.getCollectionIntervalSeconds(), TimeUnit.SECONDS);
     }
