@@ -35,6 +35,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.StreamSupport;
 
 import static com.hazelcast.util.ExceptionUtil.peel;
@@ -102,9 +103,12 @@ public class ReadMetricsTest extends JetTestSupport {
 
         JetMetricsService service = getNodeEngineImpl(instance).getService(JetMetricsService.SERVICE_NAME);
         service.pauseCollection();
+        AtomicLong seq = new AtomicLong(0);
+        Member member = instance.getCluster().getLocalMember();
         assertTrueEventually(() -> {
             try {
-                MetricsResultSet result = client.readMetricsAsync(instance.getCluster().getLocalMember(), 0).get();
+                MetricsResultSet result = client.readMetricsAsync(member, seq.get()).get();
+                seq.set(result.nextSequence());
                 fail("readMetricsAsync call should have timed out, got "
                         + result.collections().size() + " collections instead");
             } catch (ExecutionException e) {
@@ -113,7 +117,7 @@ public class ReadMetricsTest extends JetTestSupport {
             }
         }, 30);
         service.resumeCollection();
-        MetricsResultSet resultSet = client.readMetricsAsync(instance.getCluster().getLocalMember(), 0).get();
+        MetricsResultSet resultSet = client.readMetricsAsync(member, seq.get()).get();
         assertEquals(1, resultSet.collections().size());
     }
 }

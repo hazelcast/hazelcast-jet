@@ -29,12 +29,13 @@ import java.util.concurrent.TimeUnit;
 
 public class ReadMetricsOperation extends Operation implements BlockingOperation, ReadonlyOperation {
 
+    private static final int MIN_TIMEOUT_SECONDS = 5;
     private long offset;
     private RingbufferSlice<Entry<Long, byte[]>> resultSet;
 
     public ReadMetricsOperation(long offset, int collectionIntervalSeconds) {
         this.offset = offset;
-        int timeoutSeconds = 1 + collectionIntervalSeconds * 2;
+        int timeoutSeconds = Math.min(MIN_TIMEOUT_SECONDS, collectionIntervalSeconds * 2);
         setWaitTimeout(TimeUnit.SECONDS.toMillis(timeoutSeconds));
     }
 
