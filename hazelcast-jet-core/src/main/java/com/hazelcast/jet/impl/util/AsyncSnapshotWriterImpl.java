@@ -229,7 +229,7 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
         }
 
         // we put a Data instance to the map directly to avoid the serialization of the byte array
-        ICompletableFuture<Object> future = ((IMap) currentMap).putAsync(
+        ICompletableFuture<Object> future = ((IMap) currentMap.get()).putAsync(
                 new SnapshotDataKey(partitionKeys[partitionId], partitionSequence), dataSupplier.get());
         partitionSequence += memberCount;
         future.andThen(callback);
