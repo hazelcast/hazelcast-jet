@@ -133,6 +133,18 @@ public class FunctionAdapter {
         return keyedWindowResultFn;
     }
 
+    <T, A, R> AggregateOperation1<?, A, ? extends R> adaptAggregateOperation1(
+            @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
+    ) {
+        return aggrOp;
+    }
+
+    <T, K, R, OUT> DistributedTriFunction<?, ? super K, ? super R, ?> adaptRollingAggregateOutputFn(
+            @Nonnull DistributedBiFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
+    ) {
+        return (t, k, r) -> mapToOutputFn.apply(k, r);
+    }
+
     @Nonnull
     public static ProcessorMetaSupplier adaptingMetaSupplier(ProcessorMetaSupplier metaSup, int[] ordinalsToAdapt) {
         return new WrappingProcessorMetaSupplier(metaSup, p -> new AdaptingProcessor(p, ordinalsToAdapt));
@@ -292,9 +304,17 @@ class JetEventFunctionAdapter extends FunctionAdapter {
                 jetEvent(keyedWindowResultFn.apply(winStart, winEnd, key, windowResult), winEnd - 1);
     }
 
+    @Override
+    <T, K, R, OUT> DistributedTriFunction<? super JetEvent<T>, ? super K, ? super R, ? extends JetEvent<OUT>>
+    adaptRollingAggregateOutputFn(
+            @Nonnull DistributedBiFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
+    ) {
+        return (jetEvent, key, result) -> jetEvent(mapToOutputFn.apply(key, result), jetEvent.timestamp());
+    }
+
     @Nonnull
     @SuppressWarnings("unchecked")
-    static <A, R> AggregateOperation<A, ? extends R> adaptAggregateOperation(
+    <A, R> AggregateOperation<A, ? extends R> adaptAggregateOperation(
             @Nonnull AggregateOperation<A, ? extends R> aggrOp
     ) {
         if (aggrOp instanceof AggregateOperation1) {
@@ -310,12 +330,14 @@ class JetEventFunctionAdapter extends FunctionAdapter {
         }
     }
 
-    static <T, A, R> AggregateOperation1<? super JetEvent<T>, A, ? extends R> adaptAggregateOperation1(
+    @Nonnull @Override
+    <T, A, R> AggregateOperation1<? super JetEvent<T>, A, ? extends R> adaptAggregateOperation1(
             @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
         return aggrOp.withAccumulateFn(adaptAccumulateFn(aggrOp.accumulateFn()));
     }
 
+    @Nonnull
     static <T0, T1, A, R> AggregateOperation2<? super JetEvent<T0>, ? super JetEvent<T1>, A, ? extends R>
     adaptAggregateOperation2(@Nonnull AggregateOperation2<? super T0, ? super T1, A, ? extends R> aggrOp) {
         return aggrOp
@@ -323,6 +345,7 @@ class JetEventFunctionAdapter extends FunctionAdapter {
                 .withAccumulateFn1(adaptAccumulateFn(aggrOp.accumulateFn1()));
     }
 
+    @Nonnull
     static <T0, T1, T2, A, R>
     AggregateOperation3<? super JetEvent<T0>, ? super JetEvent<T1>, ? super JetEvent<T2>, A, ? extends R>
     adaptAggregateOperation3(@Nonnull AggregateOperation3<? super T0, ? super T1, ? super T2, A, ? extends R> aggrOp) {
@@ -339,4 +362,3 @@ class JetEventFunctionAdapter extends FunctionAdapter {
         return (acc, t) -> accumulateFn.accept(acc, t.payload());
     }
 }
-
