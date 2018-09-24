@@ -19,22 +19,21 @@ package com.hazelcast.jet.impl.metrics.management;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.metrics.JetMetricsService;
 import com.hazelcast.jet.impl.metrics.management.ConcurrentArrayRingbuffer.RingbufferSlice;
+import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.ReadonlyOperation;
 
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+
+import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 
 public class ReadMetricsOperation extends Operation implements ReadonlyOperation {
 
-    private static final int MIN_TIMEOUT_SECONDS = 5;
     private long offset;
 
-    public ReadMetricsOperation(long offset, int collectionIntervalSeconds) {
+    public ReadMetricsOperation(long offset) {
         this.offset = offset;
-        int timeoutSeconds = Math.max(MIN_TIMEOUT_SECONDS, collectionIntervalSeconds * 2);
-        setWaitTimeout(TimeUnit.SECONDS.toMillis(timeoutSeconds));
     }
 
     @Override
@@ -45,9 +44,10 @@ public class ReadMetricsOperation extends Operation implements ReadonlyOperation
 
     @Override
     public void run() {
+        ILogger logger = getNodeEngine().getLogger(getClass());
         JetMetricsService service = getService();
         CompletableFuture<RingbufferSlice<Entry<Long, byte[]>>> future = service.readMetrics(offset);
-        future.whenComplete((slice, error) -> doSendResponse(error != null ? error : slice));
+        future.whenComplete(withTryCatch(logger, (slice, error) -> doSendResponse(error != null ? error : slice)));
     }
 
     @Override
@@ -65,7 +65,7 @@ public class ReadMetricsOperation extends Operation implements ReadonlyOperation
         return JetMetricsService.SERVICE_NAME;
     }
 
-    final void doSendResponse(Object value) {
+    private void doSendResponse(Object value) {
         try {
             sendResponse(value);
         } finally {

@@ -45,6 +45,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static java.util.stream.Collectors.joining;
 
 /**
@@ -60,7 +61,7 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
     private final LiveOperationRegistry liveOperationRegistry;
     // Holds futures for pending read metrics operations
     private final ConcurrentMap<CompletableFuture<RingbufferSlice<Map.Entry<Long, byte[]>>>, Long>
-            futureMap = new ConcurrentHashMap<>();
+            pendingReads = new ConcurrentHashMap<>();
 
     /**
      * Ringbuffer which stores a bounded history of metrics. For each round of collection,
@@ -133,15 +134,15 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
             throw new IllegalArgumentException("Metrics collection is not enabled");
         }
         CompletableFuture<RingbufferSlice<Map.Entry<Long, byte[]>>> future = new CompletableFuture<>();
-        future.whenComplete((s, e) -> futureMap.remove(future));
-        futureMap.put(future, startSequence);
+        future.whenComplete(withTryCatch(logger, (s, e) -> pendingReads.remove(future)));
+        pendingReads.put(future, startSequence);
 
-        readFromJournal(future, startSequence);
+        tryCompleteRead(future, startSequence);
 
         return future;
     }
 
-    private void readFromJournal(CompletableFuture<RingbufferSlice<Map.Entry<Long, byte[]>>> future, long sequence) {
+    private void tryCompleteRead(CompletableFuture<RingbufferSlice<Map.Entry<Long, byte[]>>> future, long sequence) {
         try {
             RingbufferSlice<Map.Entry<Long, byte[]>> slice = metricsJournal.copyFrom(sequence);
             if (!slice.isEmpty()) {
@@ -193,7 +194,7 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
             ManagementCenterPublisher publisher = new ManagementCenterPublisher(this.nodeEngine.getLoggingService(),
                     (blob, ts) -> {
                         metricsJournal.add(entry(ts, blob));
-                        futureMap.forEach(this::readFromJournal);
+                        pendingReads.forEach(this::tryCompleteRead);
                     }
             );
             publishers.add(publisher);
