@@ -83,7 +83,7 @@ public class ReceiverTasklet implements Tasklet {
     private final ArrayDeque<ObjWithPtionIdAndSize> inbox = new ArrayDeque<>();
     private final OutboundCollector collector;
 
-    private boolean receptionDone;
+    private BroadcastItem terminalItem;
 
     private final AtomicLong itemsInCounter = new AtomicLong();
     private final AtomicLong bytesInCounter = new AtomicLong();
@@ -111,18 +111,19 @@ public class ReceiverTasklet implements Tasklet {
 
     @Override @Nonnull
     public ProgressState call() {
-        if (receptionDone) {
-            return collector.offerBroadcast(DONE_ITEM);
+        if (terminalItem != null) {
+            return collector.offerBroadcast(terminalItem);
         }
         tracker.reset();
         tracker.notDone();
         tryFillInbox();
         for (ObjWithPtionIdAndSize o; (o = inbox.peek()) != null; ) {
             final Object item = o.getItem();
-            if (item == DONE_ITEM) {
-                receptionDone = true;
+            if (item == DONE_ITEM
+                    || item instanceof SnapshotBarrier && ((SnapshotBarrier) item).isTerminal()) {
+                terminalItem = (BroadcastItem) item;
                 inbox.remove();
-                assert inbox.peek() == null : "Found something in the queue beyond the DONE_ITEM: " + inbox.remove();
+                assert inbox.peek() == null : "Found something in the queue beyond " + item + ": " + inbox.remove();
                 break;
             }
             ProgressState outcome = item instanceof BroadcastItem

@@ -141,8 +141,12 @@ public class StoreSnapshotTasklet implements Tasklet {
                 pendingSnapshotId++;
                 resetCurrentMap();
                 hasReachedBarrier = false;
-                state = DRAIN;
-                progTracker.notDone();
+                if (snapshotContext.isTerminalSnapshot()) {
+                    state = DONE;
+                } else {
+                    progTracker.notDone();
+                    state = DRAIN;
+                }
                 break;
 
             default:

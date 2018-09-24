@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.internal.util.concurrent.ConcurrentConveyor;
 import com.hazelcast.internal.util.concurrent.Pipe;
 import com.hazelcast.internal.util.concurrent.QueuedPipe;
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
@@ -52,7 +51,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private final WatermarkCoalescer watermarkCoalescer;
     private final BitSet receivedBarriers; // indicates if current snapshot is received on the queue
     private final ILogger logger;
-    private long pendingSnapshotId; // next snapshot barrier to emit
+    private SnapshotBarrier currentBarrier;  // next snapshot barrier to emit
     private long numActiveQueues; // number of active queues remaining
 
     /**
@@ -62,8 +61,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
      *          is {@code false}.
      */
     public ConcurrentInboundEdgeStream(ConcurrentConveyor<Object> conveyor, int ordinal, int priority,
-                                       long lastSnapshotId, boolean waitForSnapshot, int maxWatermarkRetainMillis,
-                                       String debugName) {
+                                       boolean waitForSnapshot, int maxWatermarkRetainMillis, String debugName) {
         this.conveyor = conveyor;
         this.ordinal = ordinal;
         this.priority = priority;
@@ -73,7 +71,6 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
 
         numActiveQueues = conveyor.queueCount();
         receivedBarriers = new BitSet(conveyor.queueCount());
-        pendingSnapshotId = lastSnapshotId + 1;
         logger = Logger.getLogger(ConcurrentInboundEdgeStream.class.getName() + "." + debugName);
         logger.finest("Coalescing " + conveyor.queueCount() + " input queues");
     }
@@ -128,7 +125,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                     return MADE_PROGRESS;
                 }
             } else if (itemDetector.item instanceof SnapshotBarrier) {
-                observeBarrier(queueIndex, ((SnapshotBarrier) itemDetector.item).snapshotId());
+                observeBarrier(queueIndex, (SnapshotBarrier) itemDetector.item);
             } else if (result.isMadeProgress()) {
                 watermarkCoalescer.observeEvent(queueIndex);
             }
@@ -140,9 +137,10 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             if (itemDetector.item != null) {
                 // if we have received the current snapshot from all active queues, forward it
                 if (receivedBarriers.cardinality() == numActiveQueues) {
-                    boolean res = dest.test(new SnapshotBarrier(pendingSnapshotId));
+                    assert currentBarrier != null : "currentBarrier == null";
+                    boolean res = dest.test(currentBarrier);
                     assert res : "test result expected to be true";
-                    pendingSnapshotId++;
+                    currentBarrier = null;
                     receivedBarriers.clear();
                     return MADE_PROGRESS;
                 }
@@ -188,10 +186,11 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         return ProgressState.valueOf(drainedCount > 0, itemDetector.item == DONE_ITEM);
     }
 
-    private void observeBarrier(int queueIndex, long snapshotId) {
-        if (snapshotId != pendingSnapshotId) {
-            throw new JetException("Unexpected snapshot barrier "
-                    + snapshotId + ", expected " + pendingSnapshotId);
+    private void observeBarrier(int queueIndex, SnapshotBarrier barrier) {
+        if (currentBarrier == null) {
+            currentBarrier = barrier;
+        } else {
+            assert currentBarrier.equals(barrier) : currentBarrier + " != " + barrier;
         }
         receivedBarriers.set(queueIndex);
     }

@@ -93,6 +93,7 @@ public class ProcessorTasklet implements Tasklet {
     private InboundEdgeStream currInstream;
     private ProcessorState state;
     private long pendingSnapshotId;
+    private SnapshotBarrier currentBarrier;
     private Watermark pendingWatermark;
     private boolean processorClosed;
 
@@ -281,6 +282,7 @@ public class ProcessorTasklet implements Tasklet {
                             && receivedBarriers.cardinality() == numActiveOrdinals) {
                         // we have an empty inbox and received the current snapshot barrier from all active ordinals
                         state = SAVE_SNAPSHOT;
+                        currentBarrier = new SnapshotBarrier(pendingSnapshotId, ssContext.isTerminalSnapshot());
                         return;
                     } else if (numActiveOrdinals == 0) {
                         progTracker.madeProgress();
@@ -312,19 +314,21 @@ public class ProcessorTasklet implements Tasklet {
 
             case EMIT_BARRIER:
                 assert context.snapshottingEnabled() : "Snapshotting is not enabled";
-
-                progTracker.notDone();
-                if (outbox.offerToEdgesAndSnapshot(new SnapshotBarrier(pendingSnapshotId))) {
+                assert currentBarrier != null : "currentBarrier == null";
+                if (outbox.offerToEdgesAndSnapshot(currentBarrier)) {
+                    currentBarrier = null;
                     progTracker.madeProgress();
                     if (ssContext.isTerminalSnapshot()) {
                         doneAfterTerminalSnapshot = true;
-                        state = EMIT_DONE_ITEM;
+                        state = END;
+                        return;
                     } else {
                         receivedBarriers.clear();
                         pendingSnapshotId++;
                         state = initialProcessingState();
                     }
                 }
+                progTracker.notDone();
                 return;
 
             case COMPLETE:
@@ -336,6 +340,7 @@ public class ProcessorTasklet implements Tasklet {
                             + ", current was" + pendingSnapshotId;
                     if (currSnapshotId == pendingSnapshotId) {
                         state = SAVE_SNAPSHOT;
+                        currentBarrier = new SnapshotBarrier(currSnapshotId, ssContext.isTerminalSnapshot());
                         progTracker.madeProgress();
                         return;
                     }
@@ -397,7 +402,7 @@ public class ProcessorTasklet implements Tasklet {
                 }
             } else if (lastItem instanceof SnapshotBarrier) {
                 SnapshotBarrier barrier = (SnapshotBarrier) inbox.queue().removeLast();
-                observeSnapshot(currInstream.ordinal(), barrier.snapshotId());
+                observeSnapshot(currInstream.ordinal(), (SnapshotBarrier) barrier);
             } else if (lastItem != null && !(lastItem instanceof BroadcastItem)) {
                 watermarkCoalescer.observeEvent(currInstream.ordinal());
             }
@@ -444,11 +449,12 @@ public class ProcessorTasklet implements Tasklet {
         return "ProcessorTasklet{" + jobPrefix + context.vertexName() + '#' + context.globalProcessorIndex() + '}';
     }
 
-    private void observeSnapshot(int ordinal, long snapshotId) {
-        if (snapshotId != pendingSnapshotId) {
-            throw new JetException("Unexpected snapshot barrier " + snapshotId + " from ordinal " + ordinal +
+    private void observeSnapshot(int ordinal, SnapshotBarrier barrier) {
+        if (barrier.snapshotId() != pendingSnapshotId) {
+            throw new JetException("Unexpected snapshot barrier ID " + barrier.snapshotId() + " from ordinal " + ordinal +
                     " expected " + pendingSnapshotId);
         }
+        currentBarrier = barrier;
         receivedBarriers.set(ordinal);
     }
 

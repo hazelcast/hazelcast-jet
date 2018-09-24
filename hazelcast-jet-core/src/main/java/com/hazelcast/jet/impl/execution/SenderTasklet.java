@@ -29,7 +29,7 @@ import com.hazelcast.spi.NodeEngine;
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.ArrayDeque;
-import java.util.Queue;
+import java.util.Deque;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.hazelcast.jet.impl.Networking.createStreamPacketHeader;
@@ -45,7 +45,7 @@ import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 public class SenderTasklet implements Tasklet {
 
     private final Connection connection;
-    private final Queue<Object> inbox = new ArrayDeque<>();
+    private final Deque<Object> inbox = new ArrayDeque<>();
     private final ProgressTracker progTracker = new ProgressTracker();
     private final InboundEdgeStream inboundEdgeStream;
     private final BufferObjectDataOutput outputBuffer;
@@ -72,8 +72,7 @@ public class SenderTasklet implements Tasklet {
         bufPosPastHeader = outputBuffer.position();
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public ProgressState call() {
         progTracker.reset();
         tryFillInbox();
@@ -97,11 +96,13 @@ public class SenderTasklet implements Tasklet {
         }
         progTracker.notDone();
         final ProgressState result = inboundEdgeStream.drainTo(inbox::add);
-        progTracker.madeProgress(result.isMadeProgress());
-        instreamExhausted = result.isDone();
-        if (instreamExhausted) {
+        if (result.isDone()) {
+            instreamExhausted = true;
             inbox.add(new ObjectWithPartitionId(DONE_ITEM, -1));
+        } else if (inbox.peekLast() instanceof SnapshotBarrier && ((SnapshotBarrier) inbox.peekLast()).isTerminal()) {
+            instreamExhausted = true;
         }
+        progTracker.madeProgress(result.isMadeProgress());
     }
 
     private boolean tryFillOutputBuffer() {
@@ -121,7 +122,6 @@ public class SenderTasklet implements Tasklet {
                 outputBuffer.writeObject(itemWithPId.getItem());
                 sentSeq += estimatedMemoryFootprint(outputBuffer.position() - mark);
                 outputBuffer.writeInt(itemWithPId.getPartitionId());
-
             }
             outputBuffer.writeInt(bufPosPastHeader, writtenCount);
             lazyAdd(bytesOutCounter, outputBuffer.position());
