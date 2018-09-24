@@ -159,7 +159,7 @@
             <property name="tokens" value="CTOR_DEF"/>
         </module>
         <module name="ExecutableStatementCount">
-            <property name="max" value="20"/>
+            <property name="max" value="25"/>
             <property name="tokens" value="CTOR_DEF, INSTANCE_INIT, STATIC_INIT"/>
         </module>
         <module name="OuterTypeNumber">

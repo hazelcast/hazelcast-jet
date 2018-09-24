@@ -116,10 +116,11 @@ public class ProcessorTasklet implements Tasklet {
         this.serializationService = serializationService;
         this.processor = processor;
         this.numActiveOrdinals = instreams.size();
-        this.instreamGroupQueue = instreams
+        TreeMap<Integer, ArrayList<InboundEdgeStream>> inputsByPriority = instreams
                 .stream()
                 .collect(groupingBy(InboundEdgeStream::priority, TreeMap::new,
-                        toCollection(ArrayList<InboundEdgeStream>::new)))
+                        toCollection(ArrayList::new)));
+        this.instreamGroupQueue = inputsByPriority
                 .entrySet().stream()
                 .map(Entry::getValue)
                 .collect(toCollection(ArrayDeque::new));
@@ -130,7 +131,6 @@ public class ProcessorTasklet implements Tasklet {
         this.logger = getLogger(context);
 
         instreamCursor = popInstreamGroup();
-        currInstream = instreamCursor != null ? instreamCursor.value() : null;
         receivedCounts = new AtomicLongArray(instreams.size());
         receivedBatches = new AtomicLongArray(instreams.size());
         emittedCounts = new AtomicLongArray(outstreams.size() + 1);
@@ -140,6 +140,12 @@ public class ProcessorTasklet implements Tasklet {
         pendingSnapshotId = ssContext.lastSnapshotId() + 1;
 
         watermarkCoalescer = WatermarkCoalescer.create(maxWatermarkRetainMillis, instreams.size());
+
+        // watermarks are only needed for queues with the lowest priority
+        // all other inputs should be marked as done immediately
+        instreams.stream()
+                .filter(ies -> !inputsByPriority.lastEntry().getValue().contains(ies))
+                .forEach(ies -> watermarkCoalescer.queueDone(ies.ordinal()));
     }
 
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE",
@@ -404,14 +410,6 @@ public class ProcessorTasklet implements Tasklet {
 
             if (result.isDone()) {
                 receivedBarriers.clear(currInstream.ordinal());
-                long wm = watermarkCoalescer.queueDone(currInstream.ordinal());
-                // Note that there can be a WM received from upstream and the result can be done after single drain.
-                // In this case we might overwrite the WM here, but that's fine since the second WM should be newer.
-                if (wm != NO_NEW_WM) {
-                    assert pendingWatermark == null || pendingWatermark.timestamp() < wm
-                            : "trying to assign lower WM. Old=" + pendingWatermark.timestamp() + ", new=" + wm;
-                    pendingWatermark = new Watermark(wm);
-                }
                 instreamCursor.remove();
                 numActiveOrdinals--;
             }

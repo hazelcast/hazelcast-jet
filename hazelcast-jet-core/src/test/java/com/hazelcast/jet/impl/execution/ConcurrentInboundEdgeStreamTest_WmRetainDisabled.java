@@ -213,18 +213,6 @@ public class ConcurrentInboundEdgeStreamTest_WmRetainDisabled {
     }
 
     @Test
-    public void when_oneQueueDone_then_theOtherWorks() {
-        add(q1, DONE_ITEM);
-        drainAndAssert(MADE_PROGRESS);
-
-        add(q2, barrier(0));
-        drainAndAssert(MADE_PROGRESS, barrier(0));
-
-        add(q2, wm(0));
-        drainAndAssert(MADE_PROGRESS, wm(0));
-    }
-
-    @Test
     public void when_nonSpecificBroadcastItems_then_drainedInOneBatch() {
         // When
         BroadcastEntry<String, String> entry = new BroadcastEntry<>("k", "v");
@@ -233,22 +221,6 @@ public class ConcurrentInboundEdgeStreamTest_WmRetainDisabled {
 
         // Then
         drainAndAssert(MADE_PROGRESS, entry, entry);
-    }
-
-    @Test
-    public void when_wmInOneQueueAndTheOtherDoneLater_then_wmEmitted_v1() {
-        add(q1, wm(1));
-        add(q2, DONE_ITEM);
-        drainAndAssert(MADE_PROGRESS, wm(1));
-    }
-
-    @Test
-    public void when_wmInOneQueueAndTheOtherDoneLater_then_wmEmitted_v2() {
-        add(q1, wm(1));
-        drainAndAssert(MADE_PROGRESS);
-
-        add(q2, DONE_ITEM);
-        drainAndAssert(MADE_PROGRESS, wm(1));
     }
 
     private void drainAndAssert(ProgressState expectedState, Object... expectedItems) {

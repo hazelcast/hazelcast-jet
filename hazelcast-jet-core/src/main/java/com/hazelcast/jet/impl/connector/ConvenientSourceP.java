@@ -58,6 +58,7 @@ public class ConvenientSourceP<S, T> extends AbstractProcessor {
 
     private S src;
     private Traverser<?> traverser;
+    private boolean isCompleted;
 
     public ConvenientSourceP(
             @Nonnull Function<? super Context, ? extends S> createFn,
@@ -94,14 +95,33 @@ public class ConvenientSourceP<S, T> extends AbstractProcessor {
             fillBufferFn.accept(src, buffer);
             traverser =
                     wsu == null ? buffer.traverse()
-                    : buffer.isEmpty() ? wsu.handleNoEvent()
-                    : buffer.traverse().flatMap(t -> wsu.handleEvent(t, 0));
+                  : buffer.isEmpty() ? wsu.handleNoEvent()
+                  : buffer.traverse().flatMap(t -> wsu.handleEvent(t, 0));
         }
-        boolean bufferEmpty = emitFromTraverser(traverser);
-        if (bufferEmpty) {
+
+        boolean doneEmitting = emitFromTraverser(traverser);
+
+        if (doneEmitting) {
             traverser = null;
         }
-        return bufferEmpty && buffer.isClosed();
+
+        if (!buffer.isClosed()) {
+            return false;
+        }
+
+        // buffer is closed, do complete phase
+        if (wsu == null) {
+            // nothing to do, since no Watermarks are needed
+            return doneEmitting;
+        }
+
+        if (!isCompleted) {
+            isCompleted = true;
+            traverser = wsu.handleComplete();
+            doneEmitting = emitFromTraverser(traverser);
+        }
+
+        return doneEmitting && isCompleted;
     }
 
     @Override

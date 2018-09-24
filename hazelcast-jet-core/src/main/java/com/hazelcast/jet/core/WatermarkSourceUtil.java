@@ -162,6 +162,18 @@ public class WatermarkSourceUtil<T> {
         return handleEvent(System.nanoTime(), null, -1);
     }
 
+    /**
+     * Call this method when the stream is ended. Typically only needed
+     * to be used for batch sources. It returns a traverser
+     * with 1 object (the terminal watermark). If you need just the Watermark, call
+     * {@code next()} on the result.
+     */
+    @Nonnull
+    public Traverser<Object> handleComplete() {
+        return handleEvent(Long.MAX_VALUE, null, -1);
+    }
+
+
     // package-visible for tests
     Traverser<Object> handleEvent(long now, @Nullable T event, int partitionIndex) {
         assert traverser.isEmpty() : "the traverser returned previously not yet drained: remove all " +
