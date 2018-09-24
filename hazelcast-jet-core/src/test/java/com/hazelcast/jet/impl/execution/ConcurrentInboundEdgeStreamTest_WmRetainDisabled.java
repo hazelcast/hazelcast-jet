@@ -18,8 +18,10 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.util.concurrent.ConcurrentConveyor;
 import com.hazelcast.internal.util.concurrent.OneToOneConcurrentArrayQueue;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.impl.util.ProgressState;
+import com.hazelcast.logging.ILogger;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.Before;
@@ -37,12 +39,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
+import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.util.ProgressState.DONE;
 import static com.hazelcast.jet.impl.util.ProgressState.MADE_PROGRESS;
 import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static com.hazelcast.jet.impl.util.ProgressState.WAS_ALREADY_DONE;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
 
 @RunWith(Parameterized.class)
 @UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
@@ -77,7 +82,9 @@ public class ConcurrentInboundEdgeStreamTest_WmRetainDisabled {
         //noinspection unchecked
         conveyor = ConcurrentConveyor.concurrentConveyor(senderGone, q1, q2);
 
-        stream = new ConcurrentInboundEdgeStream(conveyor, 0, 0, -1, false, maxWatermarkRetainMillis, "cies");
+        stream = new ConcurrentInboundEdgeStream("cies", conveyor, ssContext(false),
+                0, 0, maxWatermarkRetainMillis
+        );
     }
 
     @Test
@@ -150,7 +157,10 @@ public class ConcurrentInboundEdgeStreamTest_WmRetainDisabled {
 
     @Test
     public void when_receivingBarriers_then_waitForBarrier() {
-        stream = new ConcurrentInboundEdgeStream(conveyor, 0, 0, -1, true, maxWatermarkRetainMillis, "cies");
+        stream = new ConcurrentInboundEdgeStream(
+                "cies", conveyor, ssContext(true),
+                0, 0, maxWatermarkRetainMillis
+        );
 
         add(q1, barrier(0));
         add(q2, 1);
@@ -166,7 +176,10 @@ public class ConcurrentInboundEdgeStreamTest_WmRetainDisabled {
 
     @Test
     public void when_receivingBarriersWhileDone_then_coalesce() {
-        stream = new ConcurrentInboundEdgeStream(conveyor, 0, 0, -1, true, maxWatermarkRetainMillis, "cies");
+        stream = new ConcurrentInboundEdgeStream(
+                "cies", conveyor, ssContext(true),
+                0, 0, maxWatermarkRetainMillis
+        );
 
         add(q1, 1, barrier(0));
         add(q2, DONE_ITEM);
@@ -249,6 +262,11 @@ public class ConcurrentInboundEdgeStreamTest_WmRetainDisabled {
 
         add(q2, DONE_ITEM);
         drainAndAssert(MADE_PROGRESS, wm(1));
+    }
+
+    public static SnapshotContext ssContext(boolean waitOnBarrier) {
+        ProcessingGuarantee guarantee = waitOnBarrier ? EXACTLY_ONCE : AT_LEAST_ONCE;
+        return new SnapshotContext(mock(ILogger.class), "testJob", -1, guarantee);
     }
 
     private void drainAndAssert(ProgressState expectedState, Object... expectedItems) {

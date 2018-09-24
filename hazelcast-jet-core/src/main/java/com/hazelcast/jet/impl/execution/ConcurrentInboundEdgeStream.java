@@ -20,6 +20,7 @@ import com.hazelcast.internal.util.concurrent.ConcurrentConveyor;
 import com.hazelcast.internal.util.concurrent.Pipe;
 import com.hazelcast.internal.util.concurrent.QueuedPipe;
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
@@ -44,7 +45,6 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
 
     private final int ordinal;
     private final int priority;
-    private final boolean waitForSnapshot;
     private final ConcurrentConveyor<Object> conveyor;
     private final ProgressTracker tracker = new ProgressTracker();
     private final ItemDetector itemDetector = new ItemDetector();
@@ -52,29 +52,29 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private final WatermarkCoalescer watermarkCoalescer;
     private final BitSet receivedBarriers; // indicates if current snapshot is received on the queue
     private final ILogger logger;
+    private final SnapshotContext snapshotContext;
+
+    // flag which indicates that barrier from all queues should be present before proceeding
+    private boolean waitOnBarrier;
     private long pendingSnapshotId; // next snapshot barrier to emit
     private long numActiveQueues; // number of active queues remaining
 
-    /**
-     * @param waitForSnapshot If {@code true}, a queue that had a barrier won't
-     *          be drained until the same barrier is received from all other
-     *          queues. This will enforce exactly-once vs. at-least-once, if it
-     *          is {@code false}.
-     */
-    public ConcurrentInboundEdgeStream(ConcurrentConveyor<Object> conveyor, int ordinal, int priority,
-                                       long lastSnapshotId, boolean waitForSnapshot, int maxWatermarkRetainMillis,
-                                       String debugName) {
+
+    public ConcurrentInboundEdgeStream(
+            String name, ConcurrentConveyor<Object> conveyor, SnapshotContext snapshotContext, int priority, int ordinal,
+            int maxWatermarkRetainMillis
+    ) {
         this.conveyor = conveyor;
         this.ordinal = ordinal;
         this.priority = priority;
-        this.waitForSnapshot = waitForSnapshot;
+        this.waitOnBarrier = snapshotContext.processingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE;
+        this.snapshotContext = snapshotContext;
 
         watermarkCoalescer = WatermarkCoalescer.create(maxWatermarkRetainMillis, conveyor.queueCount());
-
         numActiveQueues = conveyor.queueCount();
         receivedBarriers = new BitSet(conveyor.queueCount());
-        pendingSnapshotId = lastSnapshotId + 1;
-        logger = Logger.getLogger(ConcurrentInboundEdgeStream.class.getName() + "." + debugName);
+        pendingSnapshotId = snapshotContext.lastSnapshotId() + 1;
+        logger = Logger.getLogger(ConcurrentInboundEdgeStream.class.getName() + "." + name);
         logger.finest("Coalescing " + conveyor.queueCount() + " input queues");
     }
 
@@ -103,7 +103,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             }
 
             // skip queues where a snapshot barrier has already been received
-            if (waitForSnapshot && receivedBarriers.get(queueIndex)) {
+            if (waitOnBarrier && receivedBarriers.get(queueIndex)) {
                 continue;
             }
 
@@ -193,6 +193,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             throw new JetException("Unexpected snapshot barrier "
                     + snapshotId + ", expected " + pendingSnapshotId);
         }
+        waitOnBarrier = waitOnBarrier || snapshotContext.isTerminalSnapshot();
         receivedBarriers.set(queueIndex);
     }
 
