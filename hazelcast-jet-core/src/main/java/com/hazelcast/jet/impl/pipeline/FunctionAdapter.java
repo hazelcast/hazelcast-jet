@@ -107,6 +107,7 @@ public class FunctionAdapter {
         return joinClause;
     }
 
+    @Nonnull
     @SuppressWarnings("unchecked")
     public <T, T1, R> DistributedBiFunction<?, ? super T1, ?> adaptHashJoinOutputFn(
             @Nonnull DistributedBiFunction<? super T, ? super T1, ? extends R> mapToOutputFn
@@ -114,6 +115,7 @@ public class FunctionAdapter {
         return mapToOutputFn;
     }
 
+    @Nonnull
     @SuppressWarnings("unchecked")
     <T, T1, T2, R> DistributedTriFunction<?, ? super T1, ? super T2, ?> adaptHashJoinOutputFn(
             @Nonnull DistributedTriFunction<? super T, ? super T1, ? super T2, ? extends R> mapToOutputFn
@@ -121,24 +123,28 @@ public class FunctionAdapter {
         return mapToOutputFn;
     }
 
+    @Nonnull
     <R, OUT> WindowResultFunction<? super R, ?> adaptWindowResultFn(
             @Nonnull WindowResultFunction<? super R, ? extends OUT> windowResultFn
     ) {
         return windowResultFn;
     }
 
+    @Nonnull
     <K, R, OUT> KeyedWindowResultFunction<? super K, ? super R, ?> adaptKeyedWindowResultFn(
             @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> keyedWindowResultFn
     ) {
         return keyedWindowResultFn;
     }
 
+    @Nonnull
     <T, A, R> AggregateOperation1<?, A, ? extends R> adaptAggregateOperation1(
             @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
         return aggrOp;
     }
 
+    @Nonnull
     <T, K, R, OUT> DistributedTriFunction<?, ? super K, ? super R, ?> adaptRollingAggregateOutputFn(
             @Nonnull DistributedBiFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
     ) {
@@ -304,7 +310,7 @@ class JetEventFunctionAdapter extends FunctionAdapter {
                 jetEvent(keyedWindowResultFn.apply(winStart, winEnd, key, windowResult), winEnd - 1);
     }
 
-    @Override
+    @Nonnull @Override
     <T, K, R, OUT> DistributedTriFunction<? super JetEvent<T>, ? super K, ? super R, ? extends JetEvent<OUT>>
     adaptRollingAggregateOutputFn(
             @Nonnull DistributedBiFunction<? super K, ? super R, ? extends OUT> mapToOutputFn

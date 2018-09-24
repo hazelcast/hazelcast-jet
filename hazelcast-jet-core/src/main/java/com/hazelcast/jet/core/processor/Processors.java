@@ -818,8 +818,8 @@ public final class Processors {
      * emits nothing. Therefore it can be used to implement filtering semantics
      * as well.
      * <p>
-     * This vertex saves the state to snapshot so the context objects will survive
-     * a job restart.
+     * This vertex saves the state to snapshot so the state of the accumulators
+     * will survive a job restart.
      *
      * @param <T> type of the input item
      * @param <K> type of the key
