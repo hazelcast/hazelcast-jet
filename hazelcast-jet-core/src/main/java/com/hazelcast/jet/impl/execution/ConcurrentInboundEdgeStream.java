@@ -114,7 +114,11 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                 conveyor.removeQueue(queueIndex);
                 receivedBarriers.clear(queueIndex);
                 numActiveQueues--;
-                if (maybeEmitWm(watermarkCoalescer.queueDone(queueIndex), dest)) {
+                long wmTimestamp = watermarkCoalescer.queueDone(queueIndex);
+                if (maybeEmitWm(wmTimestamp, dest)) {
+                    if (logger.isFinestEnabled()) {
+                        logger.finest("Queue " + queueIndex + " is done, forwarding " + new Watermark(wmTimestamp));
+                    }
                     return numActiveQueues == 0 ? DONE : MADE_PROGRESS;
                 }
             } else if (itemDetector.item instanceof Watermark) {
