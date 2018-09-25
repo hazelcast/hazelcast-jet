@@ -96,8 +96,12 @@ public class ProcessorTasklet implements Tasklet {
     private SnapshotBarrier currentBarrier;
     private Watermark pendingWatermark;
     private boolean processorClosed;
-    private boolean waitForAllBarriers;
 
+    // Tells whether we are operating in exactly-once or at-least-once mode.
+    // In other words, whether a barrier from all inputs must be present before
+    // draining more items from an input stream where a barrier has been reached.
+    // Once a terminal snapshot barrier is reached, this is always true.
+    private boolean waitForAllBarriers;
 
     private final AtomicLongArray receivedCounts;
     private final AtomicLongArray receivedBatches;
@@ -132,7 +136,6 @@ public class ProcessorTasklet implements Tasklet {
         this.logger = getLogger(context);
 
         instreamCursor = popInstreamGroup();
-        currInstream = instreamCursor != null ? instreamCursor.value() : null;
         receivedCounts = new AtomicLongArray(instreams.size());
         receivedBatches = new AtomicLongArray(instreams.size());
         emittedCounts = new AtomicLongArray(outstreams.size() + 1);

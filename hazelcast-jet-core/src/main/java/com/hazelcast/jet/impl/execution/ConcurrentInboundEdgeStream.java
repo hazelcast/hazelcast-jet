@@ -51,9 +51,9 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private final BitSet receivedBarriers; // indicates if current snapshot is received on the queue
     private final ILogger logger;
 
-    // Tells whether we are operating in exactly-once or at-least-once mode. In other works, whether a
-    // barrier from all queues must be present before draining more items from a queue where a
-    // barrier has been reached.
+    // Tells whether we are operating in exactly-once or at-least-once mode.
+    // In other words, whether a barrier from all queues must be present before
+    // draining more items from a queue where a barrier has been reached.
     // Once a terminal snapshot barrier is reached, this is always true.
     private boolean waitForAllBarriers;
     private SnapshotBarrier currentBarrier;  // next snapshot barrier to emit
