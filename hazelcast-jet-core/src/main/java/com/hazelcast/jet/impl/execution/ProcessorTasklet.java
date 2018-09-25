@@ -96,13 +96,14 @@ public class ProcessorTasklet implements Tasklet {
     private SnapshotBarrier currentBarrier;
     private Watermark pendingWatermark;
     private boolean processorClosed;
+    private boolean waitOnBarrier;
+
 
     private final AtomicLongArray receivedCounts;
     private final AtomicLongArray receivedBatches;
     private final AtomicLongArray emittedCounts;
     private final AtomicLong queuesSize = new AtomicLong();
     private final AtomicLong queuesCapacity = new AtomicLong();
-    private boolean doneAfterTerminalSnapshot;
 
     public ProcessorTasklet(@Nonnull Processor.Context context,
                             @Nonnull SerializationService serializationService,
@@ -139,6 +140,7 @@ public class ProcessorTasklet implements Tasklet {
         receivedBarriers = new BitSet(instreams.size());
         state = initialProcessingState();
         pendingSnapshotId = ssContext.lastSnapshotId() + 1;
+        waitOnBarrier = ssContext.processingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE;
 
         watermarkCoalescer = WatermarkCoalescer.create(maxWatermarkRetainMillis, instreams.size());
     }
@@ -316,13 +318,11 @@ public class ProcessorTasklet implements Tasklet {
                 assert context.snapshottingEnabled() : "Snapshotting is not enabled";
                 assert currentBarrier != null : "currentBarrier == null";
                 if (outbox.offerToEdgesAndSnapshot(currentBarrier)) {
-                    currentBarrier = null;
                     progTracker.madeProgress();
-                    if (ssContext.isTerminalSnapshot()) {
-                        doneAfterTerminalSnapshot = true;
-                        state = END;
-                        return;
+                    if (currentBarrier.isTerminal() && instreamCursor == null) {
+                        state = EMIT_DONE_ITEM;
                     } else {
+                        currentBarrier = null;
                         receivedBarriers.clear();
                         pendingSnapshotId++;
                         state = initialProcessingState();
@@ -365,11 +365,6 @@ public class ProcessorTasklet implements Tasklet {
         }
     }
 
-    @Override
-    public boolean doneAfterTerminalSnapshot() {
-        return doneAfterTerminalSnapshot;
-    }
-
     private void fillInbox(long now) {
         assert inbox.isEmpty() : "inbox is not empty";
         assert pendingWatermark == null : "null wm expected, but was " + pendingWatermark;
@@ -384,8 +379,7 @@ public class ProcessorTasklet implements Tasklet {
             result = NO_PROGRESS;
 
             // skip ordinals where a snapshot barrier has already been received
-            if (ssContext != null && ssContext.processingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE
-                    && receivedBarriers.get(currInstream.ordinal())) {
+            if (waitOnBarrier && receivedBarriers.get(currInstream.ordinal())) {
                 instreamCursor.advance();
                 continue;
             }
@@ -402,7 +396,7 @@ public class ProcessorTasklet implements Tasklet {
                 }
             } else if (lastItem instanceof SnapshotBarrier) {
                 SnapshotBarrier barrier = (SnapshotBarrier) inbox.queue().removeLast();
-                observeSnapshot(currInstream.ordinal(), (SnapshotBarrier) barrier);
+                observeSnapshot(currInstream.ordinal(), barrier);
             } else if (lastItem != null && !(lastItem instanceof BroadcastItem)) {
                 watermarkCoalescer.observeEvent(currInstream.ordinal());
             }
@@ -455,6 +449,9 @@ public class ProcessorTasklet implements Tasklet {
                     " expected " + pendingSnapshotId);
         }
         currentBarrier = barrier;
+        if (barrier.isTerminal()) {
+            waitOnBarrier = true;
+        }
         receivedBarriers.set(ordinal);
     }
 

@@ -29,7 +29,7 @@ import com.hazelcast.spi.NodeEngine;
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.hazelcast.jet.impl.Networking.createStreamPacketHeader;
@@ -45,7 +45,7 @@ import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 public class SenderTasklet implements Tasklet {
 
     private final Connection connection;
-    private final Deque<Object> inbox = new ArrayDeque<>();
+    private final Queue<Object> inbox = new ArrayDeque<>();
     private final ProgressTracker progTracker = new ProgressTracker();
     private final InboundEdgeStream inboundEdgeStream;
     private final BufferObjectDataOutput outputBuffer;
@@ -96,13 +96,11 @@ public class SenderTasklet implements Tasklet {
         }
         progTracker.notDone();
         final ProgressState result = inboundEdgeStream.drainTo(inbox::add);
-        if (result.isDone()) {
-            instreamExhausted = true;
-            inbox.add(new ObjectWithPartitionId(DONE_ITEM, -1));
-        } else if (inbox.peekLast() instanceof SnapshotBarrier && ((SnapshotBarrier) inbox.peekLast()).isTerminal()) {
-            instreamExhausted = true;
-        }
         progTracker.madeProgress(result.isMadeProgress());
+        instreamExhausted = result.isDone();
+        if (instreamExhausted) {
+            inbox.add(new ObjectWithPartitionId(DONE_ITEM, -1));
+        }
     }
 
     private boolean tryFillOutputBuffer() {

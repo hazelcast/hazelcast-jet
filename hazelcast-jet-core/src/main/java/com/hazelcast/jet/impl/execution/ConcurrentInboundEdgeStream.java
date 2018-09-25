@@ -43,7 +43,6 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
 
     private final int ordinal;
     private final int priority;
-    private final boolean waitForSnapshot;
     private final ConcurrentConveyor<Object> conveyor;
     private final ProgressTracker tracker = new ProgressTracker();
     private final ItemDetector itemDetector = new ItemDetector();
@@ -51,6 +50,11 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private final WatermarkCoalescer watermarkCoalescer;
     private final BitSet receivedBarriers; // indicates if current snapshot is received on the queue
     private final ILogger logger;
+
+    // whether we are operating in exactly-once or at-least-once mode, that a barrier from all queues
+    // must be present before draining more items from a queue where a barrier has been reached
+    // once a terminal snapshot barrier is reached, this is always true
+    private boolean waitForSnapshot;
     private SnapshotBarrier currentBarrier;  // next snapshot barrier to emit
     private long numActiveQueues; // number of active queues remaining
 
@@ -191,6 +195,9 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             currentBarrier = barrier;
         } else {
             assert currentBarrier.equals(barrier) : currentBarrier + " != " + barrier;
+        }
+        if (barrier.isTerminal()) {
+            waitForSnapshot = true;
         }
         receivedBarriers.set(queueIndex);
     }
