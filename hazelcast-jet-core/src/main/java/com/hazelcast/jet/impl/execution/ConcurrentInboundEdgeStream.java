@@ -51,25 +51,26 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private final BitSet receivedBarriers; // indicates if current snapshot is received on the queue
     private final ILogger logger;
 
-    // whether we are operating in exactly-once or at-least-once mode, that a barrier from all queues
-    // must be present before draining more items from a queue where a barrier has been reached
-    // once a terminal snapshot barrier is reached, this is always true
-    private boolean waitForSnapshot;
+    // Tells whether we are operating in exactly-once or at-least-once mode. In other works, whether a
+    // barrier from all queues must be present before draining more items from a queue where a
+    // barrier has been reached.
+    // Once a terminal snapshot barrier is reached, this is always true.
+    private boolean waitForAllBarriers;
     private SnapshotBarrier currentBarrier;  // next snapshot barrier to emit
     private long numActiveQueues; // number of active queues remaining
 
     /**
-     * @param waitForSnapshot If {@code true}, a queue that had a barrier won't
+     * @param waitForAllBarriers If {@code true}, a queue that had a barrier won't
      *          be drained until the same barrier is received from all other
      *          queues. This will enforce exactly-once vs. at-least-once, if it
      *          is {@code false}.
      */
     public ConcurrentInboundEdgeStream(ConcurrentConveyor<Object> conveyor, int ordinal, int priority,
-                                       boolean waitForSnapshot, int maxWatermarkRetainMillis, String debugName) {
+                                       boolean waitForAllBarriers, int maxWatermarkRetainMillis, String debugName) {
         this.conveyor = conveyor;
         this.ordinal = ordinal;
         this.priority = priority;
-        this.waitForSnapshot = waitForSnapshot;
+        this.waitForAllBarriers = waitForAllBarriers;
 
         watermarkCoalescer = WatermarkCoalescer.create(maxWatermarkRetainMillis, conveyor.queueCount());
 
@@ -104,7 +105,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             }
 
             // skip queues where a snapshot barrier has already been received
-            if (waitForSnapshot && receivedBarriers.get(queueIndex)) {
+            if (waitForAllBarriers && receivedBarriers.get(queueIndex)) {
                 continue;
             }
 
@@ -197,7 +198,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             assert currentBarrier.equals(barrier) : currentBarrier + " != " + barrier;
         }
         if (barrier.isTerminal()) {
-            waitForSnapshot = true;
+            waitForAllBarriers = true;
         }
         receivedBarriers.set(queueIndex);
     }

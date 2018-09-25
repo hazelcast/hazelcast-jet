@@ -96,7 +96,7 @@ public class ProcessorTasklet implements Tasklet {
     private SnapshotBarrier currentBarrier;
     private Watermark pendingWatermark;
     private boolean processorClosed;
-    private boolean waitOnBarrier;
+    private boolean waitForAllBarriers;
 
 
     private final AtomicLongArray receivedCounts;
@@ -140,7 +140,7 @@ public class ProcessorTasklet implements Tasklet {
         receivedBarriers = new BitSet(instreams.size());
         state = initialProcessingState();
         pendingSnapshotId = ssContext.lastSnapshotId() + 1;
-        waitOnBarrier = ssContext.processingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE;
+        waitForAllBarriers = ssContext.processingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE;
 
         watermarkCoalescer = WatermarkCoalescer.create(maxWatermarkRetainMillis, instreams.size());
     }
@@ -284,7 +284,6 @@ public class ProcessorTasklet implements Tasklet {
                             && receivedBarriers.cardinality() == numActiveOrdinals) {
                         // we have an empty inbox and received the current snapshot barrier from all active ordinals
                         state = SAVE_SNAPSHOT;
-                        currentBarrier = new SnapshotBarrier(pendingSnapshotId, ssContext.isTerminalSnapshot());
                         return;
                     } else if (numActiveOrdinals == 0) {
                         progTracker.madeProgress();
@@ -379,7 +378,7 @@ public class ProcessorTasklet implements Tasklet {
             result = NO_PROGRESS;
 
             // skip ordinals where a snapshot barrier has already been received
-            if (waitOnBarrier && receivedBarriers.get(currInstream.ordinal())) {
+            if (waitForAllBarriers && receivedBarriers.get(currInstream.ordinal())) {
                 instreamCursor.advance();
                 continue;
             }
@@ -396,7 +395,7 @@ public class ProcessorTasklet implements Tasklet {
                 }
             } else if (lastItem instanceof SnapshotBarrier) {
                 SnapshotBarrier barrier = (SnapshotBarrier) inbox.queue().removeLast();
-                observeSnapshot(currInstream.ordinal(), barrier);
+                observeBarrier(currInstream.ordinal(), barrier);
             } else if (lastItem != null && !(lastItem instanceof BroadcastItem)) {
                 watermarkCoalescer.observeEvent(currInstream.ordinal());
             }
@@ -443,14 +442,14 @@ public class ProcessorTasklet implements Tasklet {
         return "ProcessorTasklet{" + jobPrefix + context.vertexName() + '#' + context.globalProcessorIndex() + '}';
     }
 
-    private void observeSnapshot(int ordinal, SnapshotBarrier barrier) {
+    private void observeBarrier(int ordinal, SnapshotBarrier barrier) {
         if (barrier.snapshotId() != pendingSnapshotId) {
             throw new JetException("Unexpected snapshot barrier ID " + barrier.snapshotId() + " from ordinal " + ordinal +
                     " expected " + pendingSnapshotId);
         }
         currentBarrier = barrier;
         if (barrier.isTerminal()) {
-            waitOnBarrier = true;
+            waitForAllBarriers = true;
         }
         receivedBarriers.set(ordinal);
     }
