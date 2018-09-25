@@ -316,7 +316,7 @@ public class ProcessorTasklet implements Tasklet {
                 progTracker.notDone();
                 if (outbox.offerToEdgesAndSnapshot(new SnapshotBarrier(pendingSnapshotId))) {
                     progTracker.madeProgress();
-                    if (ssContext.isTerminalSnapshot()) {
+                    if (instreamCursor == null & ssContext.isTerminalSnapshot()) {
                         doneAfterTerminalSnapshot = true;
                         state = EMIT_DONE_ITEM;
                     } else {

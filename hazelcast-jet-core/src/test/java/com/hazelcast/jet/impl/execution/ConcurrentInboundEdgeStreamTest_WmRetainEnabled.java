@@ -30,6 +30,7 @@ import org.junit.runner.RunWith;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.hazelcast.jet.impl.execution.ConcurrentInboundEdgeStreamTest_WmRetainDisabled.ssContext;
 import static com.hazelcast.jet.impl.util.ProgressState.MADE_PROGRESS;
 import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static java.util.Arrays.asList;
@@ -60,7 +61,9 @@ public class ConcurrentInboundEdgeStreamTest_WmRetainEnabled {
     }
 
     private ConcurrentInboundEdgeStream createCies(boolean waitForSnapshot) {
-        return new ConcurrentInboundEdgeStream(conveyor, 0, 0, -1, waitForSnapshot, 16, "cies");
+        return new ConcurrentInboundEdgeStream("cies",
+                conveyor, ssContext(waitForSnapshot), 0,0, 16
+        );
     }
 
     @Test

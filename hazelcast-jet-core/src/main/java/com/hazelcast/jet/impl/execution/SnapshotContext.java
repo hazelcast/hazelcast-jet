@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
-public class SnapshotContext {
+public final class SnapshotContext {
 
     public static final int NO_SNAPSHOT = -1;
 
