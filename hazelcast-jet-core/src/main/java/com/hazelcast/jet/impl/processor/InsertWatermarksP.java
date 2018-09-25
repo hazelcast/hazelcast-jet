@@ -57,6 +57,14 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
         return tryProcessInternal(item);
     }
 
+    @Override
+    public boolean complete() {
+        if (traverser == null) {
+            traverser = wsu.handleComplete();
+        }
+        return emitFromTraverser(traverser);
+    }
+
     @SuppressWarnings("unchecked")
     private boolean tryProcessInternal(@Nullable Object item) {
         if (traverser == null) {
