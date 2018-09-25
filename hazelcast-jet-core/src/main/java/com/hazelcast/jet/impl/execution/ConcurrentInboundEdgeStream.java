@@ -202,6 +202,10 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             assert currentBarrier.equals(barrier) : currentBarrier + " != " + barrier;
         }
         if (barrier.isTerminal()) {
+            // Switch to exactly-once mode. The reason is that there will be DONE_ITEM just after the
+            // terminal barrier and if we process it before receiving the other barriers, it could cause
+            // the watermark to advance. The exactly-once mode disallows processing of any items after
+            // the barrier before the barrier is processed.
             waitForAllBarriers = true;
         }
         receivedBarriers.set(queueIndex);
