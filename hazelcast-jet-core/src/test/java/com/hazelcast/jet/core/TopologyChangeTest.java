@@ -291,11 +291,22 @@ public class TopologyChangeTest extends JetTestSupport {
     }
 
     @Test
-    public void when_coordinatorLeavesDuringExecutionAndNoRestartConfigured_then_jobSuspends() throws Throwable {
+    public void when_coordinatorLeaves_AutoScalingOff_SnapshottingOn_then_jobSuspends() throws Throwable {
+        when_coordinatorLeaves_AutoScalingOff_then_jobFailsOrSuspends(true);
+    }
+
+    @Test
+    public void when_coordinatorLeaves_AutoScalingOff_SnapshottingOff_then_jobFails() throws Throwable {
+        when_coordinatorLeaves_AutoScalingOff_then_jobFailsOrSuspends(false);
+    }
+
+    private void when_coordinatorLeaves_AutoScalingOff_then_jobFailsOrSuspends(boolean snapshotted) throws Throwable {
         // Given
         JetInstance client = createJetClient();
         DAG dag = new DAG().vertex(new Vertex("test", new MockPS(StuckProcessor::new, nodeCount)));
-        JobConfig config = new JobConfig().setAutoScaling(false);
+        JobConfig config = new JobConfig();
+        config.setAutoScaling(false);
+        config.setProcessingGuarantee(snapshotted ? EXACTLY_ONCE : NONE);
 
         // When
         Job job = client.newJob(dag, config);
@@ -311,7 +322,7 @@ public class TopologyChangeTest extends JetTestSupport {
                     status = job.getStatus();
                 } catch (TargetNotMemberException ignored) { }
             }
-            assertEquals(SUSPENDED, status);
+            assertEquals(snapshotted ? SUSPENDED : FAILED, status);
         }, 10);
     }
 
