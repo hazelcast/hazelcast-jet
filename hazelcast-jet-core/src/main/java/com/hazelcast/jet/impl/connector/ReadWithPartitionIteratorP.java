@@ -27,7 +27,7 @@ import com.hazelcast.core.MembershipEvent;
 import com.hazelcast.core.MigrationEvent;
 import com.hazelcast.core.MigrationListener;
 import com.hazelcast.core.Partition;
-import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.RestartableException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
@@ -173,7 +173,7 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
 
     private void checkMigration() {
         if (!migrationWatcher.isClusterStable()) {
-            throw new JetException("Partition migration detected");
+            throw new RestartableException("Partition migration detected");
         }
     }
 
