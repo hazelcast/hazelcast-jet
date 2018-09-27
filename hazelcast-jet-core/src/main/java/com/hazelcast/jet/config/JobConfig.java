@@ -17,6 +17,7 @@
 package com.hazelcast.jet.config;
 
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.RestartableException;
 import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
@@ -115,19 +116,25 @@ public class JobConfig implements Serializable {
     /**
      * Sets whether Jet will scale the job up/down when a member is
      * added/removed from the cluster.
-     * <p>
-     * If enabled and a member is added or removed, the job will
-     * automatically restart, see {@link Job#restart} for more details.
-     * In case of member addition, it will restart after a {@linkplain
-     * InstanceConfig#setScaleUpDelayMillis(long) delay}.
-     * <p>
-     * If disabled and a <em>member is added</em>, Jet takes no action and the
-     * job will not use the added member; you have to manually {@linkplain
-     * Job#restart() restart} it. If a <em>member is removed</em> (after a
-     * shutdown or a failure), Jet suspends the job. You have to manually
-     * {@linkplain Job#resume() resume} it.
-     * <p>
-     * By default, auto-scaling is enabled.
+     * <ul>
+     *     <li><b>If enabled</b> (the default), the job will automatically
+     *     restart, see {@link Job#restart()} for more details. In case of
+     *     member addition, it will restart after a {@linkplain
+     *     InstanceConfig#setScaleUpDelayMillis(long) delay}.
+     *
+     *     <li><b>If disabled</b>, the following will happen:
+     *     <pre>
+     * +---------------+--------------+----------------+
+     * |               | Member added | Member removed |
+     * +---------------+--------------+----------------+
+     * | Snapshots on  | no action    | suspend        |
+     * | Snapshots off | no action    | fail           |
+     * +---------------+--------------+----------------+
+     *     </pre>
+     * </ul>
+     *
+     * When a {@link RestartableException} is thrown, the behavior is the same
+     * as if member was removed.
      *
      * @return {@code this} instance for fluent API
      */
