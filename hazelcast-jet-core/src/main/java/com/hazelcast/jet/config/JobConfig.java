@@ -17,7 +17,6 @@
 package com.hazelcast.jet.config;
 
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.RestartableException;
 import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
@@ -114,27 +113,23 @@ public class JobConfig implements Serializable {
     }
 
     /**
-     * Sets whether Jet will scale the job up/down when a member is
-     * added/removed from the cluster.
-     * <ul>
-     *     <li><b>If enabled</b> (the default), the job will automatically
-     *     restart, see {@link Job#restart()} for more details. In case of
-     *     member addition, it will restart after a {@linkplain
-     *     InstanceConfig#setScaleUpDelayMillis(long) delay}.
+     * Sets whether Jet will scale the job up or down when a member is added or
+     * removed from the cluster.
      *
-     *     <li><b>If disabled</b>, the following will happen:
-     *     <pre>
-     * +---------------+--------------+----------------+
-     * |               | Member added | Member removed |
-     * +---------------+--------------+----------------+
-     * | Snapshots on  | no action    | suspend        |
-     * | Snapshots off | no action    | fail           |
-     * +---------------+--------------+----------------+
-     *     </pre>
-     * </ul>
+     * <pre>
+     * +--------------------------+-----------------------+----------------+
+     * |       Auto scaling       |     Member added      | Member removed |
+     * +--------------------------+-----------------------+----------------+
+     * | Enabled                  | restart (after delay) | restart        |
+     * | Disabled - snapshots on  | no action             | suspend        |
+     * | Disabled - snapshots off | no action             | fail           |
+     * +--------------------------+-----------------------+----------------+
+     * </pre>
      *
-     * When a {@link RestartableException} is thrown, the behavior is the same
-     * as if member was removed.
+     * @see InstanceConfig#setScaleUpDelayMillis
+     *        Configuring the scale-up delay
+     * @see #setProcessingGuarantee
+     *        Enabling/disabling snapshots
      *
      * @return {@code this} instance for fluent API
      */
