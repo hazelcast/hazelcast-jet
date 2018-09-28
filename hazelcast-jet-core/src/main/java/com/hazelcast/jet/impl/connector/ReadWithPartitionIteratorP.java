@@ -49,6 +49,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -172,7 +173,7 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
     }
 
     private void checkMigration() {
-        if (!migrationWatcher.isClusterStable()) {
+        if (migrationWatcher.isClusterDirty()) {
             throw new RestartableException("Partition migration detected");
         }
     }
@@ -181,7 +182,7 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
             int count,
             List<Integer> ownedPartitions,
             Function<? super Integer, ? extends Iterator<T>> partitionToIterator,
-            MigrationWatcherImpl migrationWatcher
+            MigrationWatcher migrationWatcher
     ) {
         return processorToPartitions(count, ownedPartitions)
                 .values().stream()
@@ -250,7 +251,7 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
 
         private transient HazelcastInstance client;
         private transient Function<? super Integer, ? extends Iterator<T>> partitionToIterator;
-        private transient MigrationWatcherImpl migrationWatcher;
+        private transient MigrationWatcher migrationWatcher;
 
         RemoteClusterProcessorSupplier(
             List<Integer> ownedPartitions,
@@ -265,7 +266,7 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
         @Override
         public void init(@Nonnull Context context) {
             client = newHazelcastClient(serializableClientConfig.asClientConfig());
-            migrationWatcher = new MigrationWatcherImpl(client);
+            migrationWatcher = new MigrationWatcher(client);
             partitionToIterator = iteratorSupplier.apply(client);
         }
 
@@ -328,7 +329,7 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
                 iteratorSupplier;
 
         private transient Function<Integer, Iterator<T>> partitionToIterator;
-        private transient MigrationWatcherImpl migrationWatcher;
+        private transient MigrationWatcher migrationWatcher;
 
         LocalClusterProcessorSupplier(
             List<Integer> ownedPartitions,
@@ -341,7 +342,7 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
         @Override
         public void init(@Nonnull Context context) {
             partitionToIterator = iteratorSupplier.apply(context.jetInstance().getHazelcastInstance());
-            migrationWatcher = new MigrationWatcherImpl(context.jetInstance().getHazelcastInstance());
+            migrationWatcher = new MigrationWatcher(context.jetInstance().getHazelcastInstance());
         }
 
         @Override @Nonnull
@@ -357,31 +358,27 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
         }
     }
 
-    interface MigrationWatcher {
-        boolean isClusterStable();
-    }
-
-    private static final class MigrationWatcherImpl implements MigrationWatcher {
+    static class MigrationWatcher {
         private final HazelcastInstance instance;
         private final String membershipListenerReg;
         private String partitionListenerReg;
-        private volatile boolean clusterStable = true;
+        private AtomicBoolean clusterDirty = new AtomicBoolean();
 
-        MigrationWatcherImpl(HazelcastInstance instance) {
+        MigrationWatcher(HazelcastInstance instance) {
             this.instance = instance;
 
             membershipListenerReg = instance.getCluster().addMembershipListener(new MembershipAdapter() {
                 @Override
                 public void memberAdded(MembershipEvent membershipEvent) {
                     if (!membershipEvent.getMember().isLiteMember()) {
-                        clusterStable = false;
+                        clusterDirty.set(true);
                     }
                 }
 
                 @Override
                 public void memberRemoved(MembershipEvent membershipEvent) {
                     if (!membershipEvent.getMember().isLiteMember()) {
-                        clusterStable = false;
+                        clusterDirty.set(true);
                     }
                 }
             });
@@ -391,17 +388,17 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
                     @Override
                     public void migrationStarted(MigrationEvent migrationEvent) {
                         // Note: this event is fired also when a partition is lost or if a split merge occurs
-                        clusterStable = false;
+                        clusterDirty.set(true);
                     }
 
                     @Override
                     public void migrationCompleted(MigrationEvent migrationEvent) {
-                        clusterStable = false;
+                        clusterDirty.set(true);
                     }
 
                     @Override
                     public void migrationFailed(MigrationEvent migrationEvent) {
-                        clusterStable = false;
+                        clusterDirty.set(true);
                     }
                 });
             } catch (UnsupportedOperationException e) {
@@ -410,9 +407,8 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
             }
         }
 
-        @Override
-        public boolean isClusterStable() {
-            return clusterStable;
+        boolean isClusterDirty() {
+            return clusterDirty.get();
         }
 
         void deregister() {
