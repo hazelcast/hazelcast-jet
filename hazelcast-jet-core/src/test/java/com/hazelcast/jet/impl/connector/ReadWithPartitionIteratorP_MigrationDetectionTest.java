@@ -24,6 +24,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -37,7 +38,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 
+import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.pipeline.Sources.map;
 import static com.hazelcast.jet.pipeline.Sources.remoteMap;
 
@@ -108,7 +111,7 @@ public class ReadWithPartitionIteratorP_MigrationDetectionTest extends JetTestSu
 
         // start the job. The map reader will be blocked thanks to the backpressure from the mapping stage
         latch = new CountDownLatch(1);
-        Job job = jobInstance.newJob(p);
+        Job job = jobInstance.newJob(p, new JobConfig().setAutoScaling(false).setProcessingGuarantee(NONE));
 
         // create new member, migration will take place
         if (remote) {
@@ -121,7 +124,7 @@ public class ReadWithPartitionIteratorP_MigrationDetectionTest extends JetTestSu
         // release the latch, map reader should detect the migration and job should fail
         latch.countDown();
 
-        exception.expect(Exception.class);
+        exception.expect(ExecutionException.class);
         exception.expectMessage("migration detected");
         job.join();
     }
