@@ -25,7 +25,6 @@ import com.hazelcast.internal.cluster.impl.MembersView;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.RestartableException;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.JobStatus;
@@ -70,6 +69,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.JobStatus.COMPLETED;
 import static com.hazelcast.jet.core.JobStatus.FAILED;
@@ -629,11 +629,6 @@ public class MasterContext {
             logger.fine(opName + " of " + jobIdString() + " has failures: " + failures);
         }
 
-        TerminationMode mode = requestedTerminationMode;
-        if (mode == CANCEL) {
-            logger.fine(jobIdString() + " to be cancelled after " + opName);
-            return new JobTerminateRequestedException(mode);
-        }
 
         if (successfulMembers.size() == executionPlanMap.size()) {
             logger.fine(opName + " of " + jobIdString() + " was successful");
@@ -647,7 +642,7 @@ public class MasterContext {
         if (failures.stream().allMatch(e -> e.getValue() instanceof TerminatedWithSnapshotException)) {
             assert opName.equals("Execution") : "opName=" + opName;
             logger.fine(opName + " of " + jobIdString() + " terminated after a terminal snapshot");
-
+            TerminationMode mode = requestedTerminationMode;
             assert mode != null && mode.isWithTerminalSnapshot() : "mode=" + mode;
             return new JobTerminateRequestedException(mode);
         }
@@ -744,7 +739,8 @@ public class MasterContext {
                 scheduleRestart();
             } else if (terminationModeAction == SUSPEND
                     || (failure instanceof RestartableException || failure instanceof TopologyChangedException)
-                    && !jobRecord.getConfig().isAutoScaling()) {
+                            && !jobRecord.getConfig().isAutoScaling()
+                            && jobRecord.getConfig().getProcessingGuarantee() != NONE) {
                 jobStatus = SUSPENDED;
                 jobRecord = jobRecord.withSuspended(true);
                 nonSynchronizedAction = () -> coordinationService.suspendJob(this);
@@ -856,7 +852,7 @@ public class MasterContext {
     }
 
     private boolean isSnapshottingEnabled() {
-        return jobConfig().getProcessingGuarantee() != ProcessingGuarantee.NONE;
+        return jobConfig().getProcessingGuarantee() != NONE;
     }
 
     String jobName() {
