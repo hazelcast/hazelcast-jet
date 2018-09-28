@@ -859,6 +859,10 @@ public class MasterContext {
         return jobConfig().getProcessingGuarantee() != ProcessingGuarantee.NONE;
     }
 
+    String jobName() {
+        return jobName;
+    }
+
     String jobIdString() {
         return jobNameAndExecutionId(jobName, executionId);
     }
@@ -933,7 +937,7 @@ public class MasterContext {
         // If there is any member in our participants that is not among current data members,
         // this job will be restarted anyway. If it's the other way, then the sizes won't match.
         if (executionPlanMap == null || executionPlanMap.size() == currentDataMembers.size()) {
-            LoggingUtil.logFine(logger, "Not scaling job %s up: not running or already running on all members",
+            LoggingUtil.logFine(logger, "Not scaling %s up: not running or already running on all members",
                     jobIdString());
             return true;
         }

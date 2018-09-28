@@ -373,12 +373,16 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
             membershipListenerReg = instance.getCluster().addMembershipListener(new MembershipAdapter() {
                 @Override
                 public void memberAdded(MembershipEvent membershipEvent) {
-                    clusterStable = false;
+                    if (!membershipEvent.getMember().isLiteMember()) {
+                        clusterStable = false;
+                    }
                 }
 
                 @Override
                 public void memberRemoved(MembershipEvent membershipEvent) {
-                    clusterStable = false;
+                    if (!membershipEvent.getMember().isLiteMember()) {
+                        clusterStable = false;
+                    }
                 }
             });
 
