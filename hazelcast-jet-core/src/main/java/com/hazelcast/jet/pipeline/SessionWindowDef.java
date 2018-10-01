@@ -49,7 +49,7 @@ public class SessionWindowDef<T> implements WindowDefinition {
 
     @Override
     public long preferredWatermarkStride() {
-        return Math.min(MAX_FRAME_SIZE, sessionTimeout / MIN_WMS_PER_SESSION);
+        return Math.min(MAX_FRAME_SIZE, Math.max(1, sessionTimeout / MIN_WMS_PER_SESSION));
     }
 
     /**

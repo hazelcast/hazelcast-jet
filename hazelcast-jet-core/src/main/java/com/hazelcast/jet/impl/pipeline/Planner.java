@@ -43,7 +43,7 @@ import java.util.function.Consumer;
 import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.tumblingWinPolicy;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.noThrottling;
+import static com.hazelcast.jet.core.WatermarkEmissionPolicy.noWatermarks;
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
 import static java.util.stream.Collectors.toList;
 
@@ -75,7 +75,7 @@ public class Planner {
         // with the GCD frame length
         WatermarkEmissionPolicy emitPolicy = frameSizeGcd > 0
                 ? emitByFrame(tumblingWinPolicy(frameSizeGcd))
-                : noThrottling();
+                : noWatermarks();
         for (Transform transform : adjacencyMap.keySet()) {
             if (transform instanceof StreamSourceTransform) {
                 StreamSourceTransform t = (StreamSourceTransform) transform;
