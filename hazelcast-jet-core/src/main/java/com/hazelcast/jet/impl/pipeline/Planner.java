@@ -67,7 +67,7 @@ public class Planner {
         // Find the greatest common denominator of all frame lengths
         // appearing in the pipeline
         long frameSizeGcd = Util.gcd(adjacencyMap.keySet().stream()
-                                                 .map(Transform::watermarkFrameSize)
+                                                 .map(Transform::preferredWatermarkStride)
                                                  .filter(frameSize -> frameSize > 0)
                                                  .mapToLong(i -> i)
                                                  .toArray());
