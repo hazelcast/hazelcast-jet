@@ -98,8 +98,8 @@ public final class EventTimePolicy<T> implements Serializable {
     }
 
     /**
-     * Creates and returns new event time parameters. To get parameters that
-     * result in no timestamping, call {@link #noEventTime()}.
+     * Creates and returns a new event time policy. To get a policy that
+     * results in no timestamping, call {@link #noEventTime()}.
      *
      * @param timestampFn       function that extracts the timestamp from the event
      * @param wrapFn            function that transforms the received item and its timestamp into the
@@ -120,8 +120,8 @@ public final class EventTimePolicy<T> implements Serializable {
     }
 
     /**
-     * Creates and returns a watermark generation parameters object. To get
-     * parameters that result in no watermarks being emitted, call {@link
+     * Creates and returns a new event time policy. To get a policy that
+     * results in no watermarks being emitted, call {@link
      * #noEventTime()}.
      *
      * @param timestampFn       function that extracts the timestamp from the event
@@ -140,7 +140,7 @@ public final class EventTimePolicy<T> implements Serializable {
     }
 
     /**
-     * Returns event time parameters that result in no timestamping. Only
+     * Returns an event time policy that results in no timestamping. Only
      * useful in jobs with streaming sources that don't do any aggregation.
      * If there is an aggregation step in the job and you use these parameters,
      * your job will keep accumulating the data without producing any output.
