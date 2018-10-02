@@ -79,12 +79,12 @@ public class Planner {
         for (Transform transform : adjacencyMap.keySet()) {
             if (transform instanceof StreamSourceTransform) {
                 StreamSourceTransform t = (StreamSourceTransform) transform;
-                if (t.getWmParams() != null) {
-                    t.setWmParams(t.getWmParams().withEmitPolicy(emitPolicy));
+                if (t.getEventTimePolicy() != null) {
+                    t.setEventTimePolicy(t.getEventTimePolicy().withEmitPolicy(emitPolicy));
                 }
             } else if (transform instanceof TimestampTransform) {
                 TimestampTransform t = (TimestampTransform) transform;
-                t.setWmParams(t.getWmParams().withEmitPolicy(emitPolicy));
+                t.setEventTimePolicy(t.getEventTimePolicy().withEmitPolicy(emitPolicy));
             }
         }
 
