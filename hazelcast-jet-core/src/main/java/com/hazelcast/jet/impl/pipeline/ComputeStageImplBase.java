@@ -107,7 +107,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         );
 
         if (transform instanceof StreamSourceTransform) {
-            ((StreamSourceTransform<T>) transform).setWmGenerationParams(wmParams);
+            ((StreamSourceTransform<T>) transform).setWmParams(wmParams);
             this.fnAdapter = ADAPT_TO_JET_EVENT;
             return (StreamStage<T>) this;
         }

@@ -80,11 +80,11 @@ public class Planner {
             if (transform instanceof StreamSourceTransform) {
                 StreamSourceTransform t = (StreamSourceTransform) transform;
                 if (t.getWmParams() != null) {
-                    t.setWmGenerationParams(t.getWmParams().withEmitPolicy(emitPolicy));
+                    t.setWmParams(t.getWmParams().withEmitPolicy(emitPolicy));
                 }
             } else if (transform instanceof TimestampTransform) {
                 TimestampTransform t = (TimestampTransform) transform;
-                t.setWmGenerationParams(t.getWmGenParams().withEmitPolicy(emitPolicy));
+                t.setWmParams(t.getWmParams().withEmitPolicy(emitPolicy));
             }
         }
 

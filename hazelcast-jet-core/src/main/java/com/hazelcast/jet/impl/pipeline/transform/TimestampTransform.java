@@ -46,11 +46,11 @@ public class TimestampTransform<T> extends AbstractTransform {
     }
 
     @Nonnull
-    public WatermarkGenerationParams<? super T> getWmGenParams() {
+    public WatermarkGenerationParams<? super T> getWmParams() {
         return wmGenParams;
     }
 
-    public void setWmGenerationParams(@Nonnull WatermarkGenerationParams<? super T> wmGenParams) {
+    public void setWmParams(@Nonnull WatermarkGenerationParams<? super T> wmGenParams) {
         this.wmGenParams = wmGenParams;
     }
 }

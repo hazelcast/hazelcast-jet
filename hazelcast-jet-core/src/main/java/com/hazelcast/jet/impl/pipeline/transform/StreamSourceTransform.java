@@ -44,8 +44,8 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
     public StreamSourceTransform(
             @Nonnull String name,
             @Nullable WatermarkGenerationParams<? super T> initialWmParams,
-            @Nonnull Function<? super WatermarkGenerationParams<? super T>, ? extends ProcessorMetaSupplier>
-                    metaSupplierFn,
+            @Nonnull
+            Function<? super WatermarkGenerationParams<? super T>, ? extends ProcessorMetaSupplier> metaSupplierFn,
             boolean emitsWatermarks
     ) {
         super(name, emptyList());
@@ -97,7 +97,7 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
         return wmParams;
     }
 
-    public void setWmGenerationParams(@Nonnull WatermarkGenerationParams<? super T> wmParams) {
+    public void setWmParams(@Nonnull WatermarkGenerationParams<? super T> wmParams) {
         this.wmParams = wmParams;
     }
 
