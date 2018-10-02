@@ -66,6 +66,7 @@ import static com.hazelcast.jet.Util.cacheEventToEntry;
 import static com.hazelcast.jet.Util.cachePutEvents;
 import static com.hazelcast.jet.Util.mapEventToEntry;
 import static com.hazelcast.jet.Util.mapPutEvents;
+import static com.hazelcast.jet.impl.connector.StreamEventJournalP.streamRemoteCacheSupplier;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.util.Preconditions.checkNotNegative;
 
@@ -297,8 +298,8 @@ public final class SourceProcessors {
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull EventTimePolicy<? super T> eventTimePolicy
     ) {
-        return StreamEventJournalP
-                .streamRemoteCacheSupplier(cacheName, clientConfig, predicateFn, projectionFn, initialPos, eventTimePolicy);
+        return streamRemoteCacheSupplier(
+                cacheName, clientConfig, predicateFn, projectionFn, initialPos, eventTimePolicy);
     }
 
     /**
