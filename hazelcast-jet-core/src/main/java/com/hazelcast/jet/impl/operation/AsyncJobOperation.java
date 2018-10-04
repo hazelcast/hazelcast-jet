@@ -16,62 +16,43 @@
 
 package com.hazelcast.jet.impl.operation;
 
-import com.hazelcast.jet.impl.JetService;
-import com.hazelcast.spi.ExceptionAction;
+import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
-import static com.hazelcast.jet.impl.util.ExceptionUtil.isRestartableException;
-import static com.hazelcast.spi.ExceptionAction.THROW_EXCEPTION;
+import java.io.IOException;
 
-public abstract class AsyncJobOperation extends AbstractJobOperation {
+public abstract class AsyncJobOperation extends AsyncOperation implements IdentifiedDataSerializable {
+
+    private long jobId;
 
     protected AsyncJobOperation() {
     }
 
     protected AsyncJobOperation(long jobId) {
-        super(jobId);
+        this.jobId = jobId;
     }
 
-
-    @Override
-    public void beforeRun() {
-        JetService service = getService();
-        service.getLiveOperationRegistry().register(this);
+    protected final long jobId() {
+        return jobId;
     }
 
     @Override
-    public final void run() {
-        try {
-            doRun();
-        } catch (Exception e) {
-            logError(e);
-            doSendResponse(e);
-        }
-    }
-
-    protected abstract void doRun() throws Exception;
-
-    @Override
-    public final boolean returnsResponse() {
-        return false;
+    public final int getFactoryId() {
+        return JetInitDataSerializerHook.FACTORY_ID;
     }
 
     @Override
-    public final Object getResponse() {
-        throw new UnsupportedOperationException();
-    }
-
-    final void doSendResponse(Object value) {
-        try {
-            sendResponse(value);
-        } finally {
-            final JetService service = getService();
-            service.getLiveOperationRegistry().deregister(this);
-        }
+    protected void writeInternal(ObjectDataOutput out) throws IOException {
+        super.writeInternal(out);
+        out.writeLong(jobId);
     }
 
     @Override
-    public ExceptionAction onInvocationException(Throwable throwable) {
-        return isRestartableException(throwable) ? THROW_EXCEPTION : super.onInvocationException(throwable);
+    protected void readInternal(ObjectDataInput in) throws IOException {
+        super.readInternal(in);
+        jobId = in.readLong();
     }
 
 }
