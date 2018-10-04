@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.ExceptionAction;
 import com.hazelcast.spi.Operation;
@@ -69,6 +70,11 @@ public abstract class AsyncOperation extends Operation implements IdentifiedData
     @Override
     public ExceptionAction onInvocationException(Throwable throwable) {
         return isRestartableException(throwable) ? THROW_EXCEPTION : super.onInvocationException(throwable);
+    }
+
+    @Override
+    public final int getFactoryId() {
+        return JetInitDataSerializerHook.FACTORY_ID;
     }
 
 }

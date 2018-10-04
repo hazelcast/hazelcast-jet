@@ -16,14 +16,12 @@
 
 package com.hazelcast.jet.impl.operation;
 
-import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import java.io.IOException;
 
-public abstract class AsyncJobOperation extends AsyncOperation implements IdentifiedDataSerializable {
+public abstract class AsyncJobOperation extends AsyncOperation {
 
     private long jobId;
 
@@ -39,11 +37,6 @@ public abstract class AsyncJobOperation extends AsyncOperation implements Identi
     }
 
     @Override
-    public final int getFactoryId() {
-        return JetInitDataSerializerHook.FACTORY_ID;
-    }
-
-    @Override
     protected void writeInternal(ObjectDataOutput out) throws IOException {
         super.writeInternal(out);
         out.writeLong(jobId);
@@ -54,5 +47,4 @@ public abstract class AsyncJobOperation extends AsyncOperation implements Identi
         super.readInternal(in);
         jobId = in.readLong();
     }
-
 }

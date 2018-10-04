@@ -41,11 +41,6 @@ public class NotifyMemberShutdownOperation extends AsyncOperation {
     }
 
     @Override
-    public final int getFactoryId() {
-        return JetInitDataSerializerHook.FACTORY_ID;
-    }
-
-    @Override
     public int getId() {
         return JetInitDataSerializerHook.NOTIFY_MEMBER_SHUTDOWN_OP;
     }
