@@ -120,14 +120,14 @@ public class SnapshotContext {
         return guarantee;
     }
 
-    synchronized void initTaskletCount(int taskletCount, int highPriorityTaskletCount) {
+    synchronized void initTaskletCount(int totalTaskletCount, int highPriorityTaskletCount) {
         assert this.numTasklets == Integer.MIN_VALUE : "Tasklet count already set once.";
-        assert taskletCount >= highPriorityTaskletCount :
-                "taskletCount=" + taskletCount + ", highPriorityTaskletCount=" + highPriorityTaskletCount;
-        assert taskletCount > 0 : "taskletCount=" + taskletCount;
+        assert totalTaskletCount >= highPriorityTaskletCount :
+                "totalTaskletCount=" + totalTaskletCount + ", highPriorityTaskletCount=" + highPriorityTaskletCount;
+        assert totalTaskletCount > 0 : "totalTaskletCount=" + totalTaskletCount;
         assert highPriorityTaskletCount >= 0 : "highPriorityTaskletCount=" + highPriorityTaskletCount;
 
-        this.numTasklets = taskletCount;
+        this.numTasklets = totalTaskletCount;
         this.numHigherPriorityTasklets = highPriorityTaskletCount;
     }
 
@@ -157,7 +157,7 @@ public class SnapshotContext {
         if (numHigherPriorityTasklets == 0) {
             lastSnapshotId.set(snapshotId);
         } else {
-            logger.warning("Snapshot " + snapshotId + " for " + jobNameAndExecutionId + " is postponed" +
+            logger.info("Snapshot " + snapshotId + " for " + jobNameAndExecutionId + " is postponed" +
                     " until all higher priority vertices are completed (number of such vertices = "
                     + numHigherPriorityTasklets + ')');
             snapshotPostponed = true;
@@ -193,9 +193,11 @@ public class SnapshotContext {
                 this.lastSnapshotId.incrementAndGet();
                 logger.info("Postponed snapshot " + this.lastSnapshotId + " for " + jobNameAndExecutionId
                         + " started");
+                snapshotPostponed = false;
             }
         }
-        if (this.lastSnapshotId.get() > lastSnapshotId) {
+        assert numHigherPriorityTasklets <= numTasklets : "numHigherPriorityTasklets > numTasklets";
+        if (this.lastSnapshotId.get() + (snapshotPostponed ? 1 : 0) > lastSnapshotId) {
             snapshotDoneForTasklet(0, 0, 0);
         } else if (this.lastSnapshotId.get() < lastSnapshotId) {
             // tasklet is done with snapshot before startNewSnapshot was called
