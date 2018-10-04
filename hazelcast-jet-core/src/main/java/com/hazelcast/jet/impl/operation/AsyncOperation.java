@@ -27,9 +27,6 @@ import static com.hazelcast.spi.ExceptionAction.THROW_EXCEPTION;
 
 public abstract class AsyncOperation extends Operation implements IdentifiedDataSerializable {
 
-    protected AsyncOperation() {
-    }
-
     @Override
     public void beforeRun() {
         JetService service = getService();
