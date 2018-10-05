@@ -73,15 +73,16 @@ public class SnapshotContext {
 
     /**
      * Snapshot id of current active snapshot. Source processors read
-     * it and when they see changed value, they start a snapshot with that
-     * ID. {@code -1} means no snapshot was started.
+     * it and when they see higher value, they start a snapshot with that
+     * ID. {@code -1} means no snapshot was ever started for this job.
      */
     private volatile long activeSnapshotId;
 
     /**
-     * The snapshotId of the snapshot that should be performed.
-     * It's only different from {@code activeSnapshotId} when the snapshot
-     * was postponed due to a snapshot restore already in progress.
+     * The snapshotId of the snapshot that should be performed. It's equal to
+     * {@link #activeSnapshotId} most of the time, except for the case when the
+     * snapshot was postponed due to higher priority tasklets still running, in
+     * which case it's larger by 1.
      */
     private long currentSnapshotId;
 
@@ -140,7 +141,7 @@ public class SnapshotContext {
      * called. This can happen in a situation when a processor only has input
      * queues from remote members and the remote members happen to process
      * {@code SnapshotOperation} and send barriers to such processor before
-     * the {@code SnapshotOperation} is called on this member.
+     * the {@code SnapshotOperation} is executed on this member.
      */
     synchronized CompletableFuture<SnapshotOperationResult> startNewSnapshot(long snapshotId, boolean isTerminal) {
         assert snapshotId == currentSnapshotId + 1
@@ -203,16 +204,20 @@ public class SnapshotContext {
         }
         assert numHigherPriorityTasklets <= numTasklets : "numHigherPriorityTasklets > numTasklets";
 
-        // if tasklet is done before it was aware of the current snapshot, we
-        // treat it as if it already completed the snapshot without any data
         if (lastCompletedSnapshotId < currentSnapshotId) {
+            // if tasklet is done before it was aware of the current snapshot, we
+            // treat it as if it already completed the snapshot without any data
             snapshotDoneForTasklet(0, 0, 0);
         } else if (lastCompletedSnapshotId > currentSnapshotId) {
-            // Tasklet has already completed a snapshot that we haven't started yet
-            // before finishing. This means that `numRemainingTasklets`, which
-            // tracks the number of remaining tasklets for the current snapshot
-            // was decreased too eagerly because `snapshotDoneForTasklet` was already called.
-            // We need to undo this change. See also note in #startNewSnapshot()
+            // Tasklet has already completed a snapshot for which
+            // startNewSnapshot() wasn't yet called. How this is possible is
+            // explained in a note at #startNewSnapshot().
+            //
+            // This means that `numRemainingTasklets` was already decremented
+            // because `snapshotDoneForTasklet` was already called. We need to
+            // undo this change because this method decremented `numTasklets`
+            // too and `numTasklets` will be added to `numRemainingTasklets`
+            // once `startNewSnapshot` is called.
             numRemainingTasklets.incrementAndGet();
         }
     }
