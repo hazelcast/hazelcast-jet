@@ -39,13 +39,6 @@ public class SnapshotContext {
     private final ProcessingGuarantee guarantee;
 
     /**
-     * SnapshotId of last snapshot created. Source processors read
-     * it and when they see changed value, they start a snapshot with that
-     * ID. {@code -1} means no snapshot was started.
-     */
-    private final AtomicLong lastSnapshotId;
-
-    /**
      * If true, the job should terminate after the snapshot is processed.
      */
     private volatile boolean isTerminal;
@@ -79,11 +72,18 @@ public class SnapshotContext {
     private final AtomicReference<Throwable> snapshotError = new AtomicReference<>();
 
     /**
-     * True, if a snapshot was started and postponed. If true, then when
-     * {@link #numHigherPriorityTasklets} is decremented to 0, snapshot is
-     * started.
+     * Snapshot id of current active snapshot. Source processors read
+     * it and when they see changed value, they start a snapshot with that
+     * ID. {@code -1} means no snapshot was started.
      */
-    private boolean snapshotPostponed;
+    private volatile long currentSnapshotId;
+
+    /**
+     * The snapshotId of the snapshot that's waiting to start.
+     * It's only different from {@code currentSnapshotId} when the snapshot
+     * was postponed due to a snapshot restore already in progress.
+     */
+    private long pendingSnapshotId;
 
     /**
      * Future which will be created when a snapshot starts and completed and
@@ -96,11 +96,11 @@ public class SnapshotContext {
     private final AtomicLong totalChunks = new AtomicLong();
     private boolean isCancelled;
 
-    SnapshotContext(ILogger logger, String jobNameAndExecutionId, long lastSnapshotId,
+    SnapshotContext(ILogger logger, String jobNameAndExecutionId, long currentSnapshotId,
                     ProcessingGuarantee guarantee
     ) {
         this.jobNameAndExecutionId = jobNameAndExecutionId;
-        this.lastSnapshotId = new AtomicLong(lastSnapshotId);
+        this.currentSnapshotId = currentSnapshotId;
         this.guarantee = guarantee;
         this.logger = logger;
     }
@@ -109,7 +109,7 @@ public class SnapshotContext {
      * Id of the last started snapshot
      */
     long lastSnapshotId() {
-        return lastSnapshotId.get();
+        return currentSnapshotId;
     }
 
     boolean isTerminalSnapshot() {
@@ -143,8 +143,8 @@ public class SnapshotContext {
      * the {@code SnapshotOperation} is called on this member.
      */
     synchronized CompletableFuture<SnapshotOperationResult> startNewSnapshot(long snapshotId, boolean isTerminal) {
-        assert snapshotId == lastSnapshotId.get() + 1
-                : "new snapshotId not incremented by 1. Previous=" + lastSnapshotId + ", new=" + snapshotId;
+        assert snapshotId == currentSnapshotId + 1
+                : "new snapshotId not incremented by 1. Previous=" + currentSnapshotId + ", new=" + snapshotId;
         assert numTasklets >= 0 : "numTasklets=" + numTasklets;
         if (isCancelled) {
             throw new CancellationException("execution cancelled");
@@ -155,12 +155,13 @@ public class SnapshotContext {
                 "previous snapshot was not finished, numRemainingTasklets=" + (newNumRemainingTasklets - numTasklets);
         // if there are no higher priority tasklets, start the snapshot now
         if (numHigherPriorityTasklets == 0) {
-            lastSnapshotId.set(snapshotId);
+            currentSnapshotId = snapshotId;
+            pendingSnapshotId = currentSnapshotId;
         } else {
             logger.info("Snapshot " + snapshotId + " for " + jobNameAndExecutionId + " is postponed" +
                     " until all higher priority vertices are completed (number of such vertices = "
                     + numHigherPriorityTasklets + ')');
-            snapshotPostponed = true;
+            pendingSnapshotId = snapshotId;
         }
         if (numTasklets == 0) {
             // member is already done with the job and master didn't know it yet - we are immediately successful
@@ -177,29 +178,30 @@ public class SnapshotContext {
      * Called when {@link StoreSnapshotTasklet} is done (received DONE_ITEM
      * from all its processors).
      *
-     * @param lastSnapshotId id of the last snapshot completed by the tasklet
+     * @param lastCompletedSnapshotId id of the last snapshot completed by the tasklet
      */
-    synchronized void taskletDone(long lastSnapshotId, boolean isHigherPrioritySource) {
+    synchronized void taskletDone(long lastCompletedSnapshotId, boolean isHigherPrioritySource) {
         assert numTasklets > 0 : "numTasklets=" + numTasklets;
-        assert lastSnapshotId <= this.lastSnapshotId.get() + 1 : "this.lastSnapshotId=" + this.lastSnapshotId.get()
-                + "tasklet.lastSnapshotId=" + lastSnapshotId;
+        assert lastCompletedSnapshotId <= currentSnapshotId + 1 : "currentSnapshotId=" + currentSnapshotId
+                + "tasklet.lastCompletedSnapshotId=" + lastCompletedSnapshotId;
 
         numTasklets--;
         if (isHigherPrioritySource) {
             assert numHigherPriorityTasklets > 0 : "numHigherPriorityTasklets=" + numHigherPriorityTasklets;
             numHigherPriorityTasklets--;
             // after all higher priority vertices are done we can start the snapshot
-            if (numHigherPriorityTasklets == 0 && snapshotPostponed) {
-                this.lastSnapshotId.incrementAndGet();
-                logger.info("Postponed snapshot " + this.lastSnapshotId + " for " + jobNameAndExecutionId
+            if (numHigherPriorityTasklets == 0 && currentSnapshotId < pendingSnapshotId) {
+                currentSnapshotId = pendingSnapshotId;
+                logger.info("Postponed snapshot " + currentSnapshotId + " for " + jobNameAndExecutionId
                         + " started");
-                snapshotPostponed = false;
             }
         }
         assert numHigherPriorityTasklets <= numTasklets : "numHigherPriorityTasklets > numTasklets";
-        if (this.lastSnapshotId.get() + (snapshotPostponed ? 1 : 0) > lastSnapshotId) {
+
+        // if tasklet is done before it was aware of the pending snapshot
+        if (pendingSnapshotId > lastCompletedSnapshotId) {
             snapshotDoneForTasklet(0, 0, 0);
-        } else if (this.lastSnapshotId.get() < lastSnapshotId) {
+        } else if (currentSnapshotId < lastCompletedSnapshotId) {
             // Tasklet is done with snapshot before startNewSnapshot was called.
             // See note in #startNewSnapshot()
             numRemainingTasklets.incrementAndGet();
