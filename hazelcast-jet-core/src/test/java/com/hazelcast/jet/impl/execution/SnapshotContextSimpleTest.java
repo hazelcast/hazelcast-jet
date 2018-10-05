@@ -103,11 +103,11 @@ public class SnapshotContextSimpleTest {
     public void test_taskletDoneWhilePostponed() {
         ssContext.initTaskletCount(2, 2);
         CompletableFuture<SnapshotOperationResult> future = ssContext.startNewSnapshot(10, false);
-        assertEquals(9, ssContext.lastSnapshotId());
+        assertEquals(9, ssContext.activeSnapshotId());
         ssContext.taskletDone(9, true);
-        assertEquals(9, ssContext.lastSnapshotId());
+        assertEquals(9, ssContext.activeSnapshotId());
         ssContext.taskletDone(9, true);
-        assertEquals(10, ssContext.lastSnapshotId());
+        assertEquals(10, ssContext.activeSnapshotId());
         assertTrue(future.isDone());
     }
 }

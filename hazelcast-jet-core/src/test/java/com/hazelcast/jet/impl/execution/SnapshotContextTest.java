@@ -76,7 +76,7 @@ public class SnapshotContextTest {
         CompletableFuture<SnapshotOperationResult> future = null;
         if (snapshotStarted == SnapshotStarted.BEFORE) {
             future = ssContext.startNewSnapshot(10, false);
-            assertEquals("lastSnapshotId initially", numHigherPriority > 0 ? 9 : 10, ssContext.lastSnapshotId());
+            assertEquals("activeSnapshotId initially", numHigherPriority > 0 ? 9 : 10, ssContext.activeSnapshotId());
         }
 
         if (taskletDone == TaskletDone.NOT_DONE) {
@@ -96,8 +96,8 @@ public class SnapshotContextTest {
         assertTrue("future.isDone() == " + future.isDone(),
                 future.isDone() == (taskletCount == 1));
         assertEquals("numRemainingTasklets", taskletCount - 1, ssContext.getNumRemainingTasklets().get());
-        assertEquals("lastSnapshotId at the end",
-                taskletDone == TaskletDone.NOT_DONE && numHigherPriority > 0 ? 9 : 10, ssContext.lastSnapshotId());
+        assertEquals("activeSnapshotId at the end",
+                taskletDone == TaskletDone.NOT_DONE && numHigherPriority > 0 ? 9 : 10, ssContext.activeSnapshotId());
     }
 
     private enum SnapshotStarted {
