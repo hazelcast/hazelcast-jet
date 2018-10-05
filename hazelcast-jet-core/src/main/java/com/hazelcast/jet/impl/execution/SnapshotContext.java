@@ -200,7 +200,8 @@ public class SnapshotContext {
         if (this.lastSnapshotId.get() + (snapshotPostponed ? 1 : 0) > lastSnapshotId) {
             snapshotDoneForTasklet(0, 0, 0);
         } else if (this.lastSnapshotId.get() < lastSnapshotId) {
-            // tasklet is done with snapshot before startNewSnapshot was called
+            // Tasklet is done with snapshot before startNewSnapshot was called.
+            // See note in #startNewSnapshot()
             numRemainingTasklets.incrementAndGet();
         }
     }
