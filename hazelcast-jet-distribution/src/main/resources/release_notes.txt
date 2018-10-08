@@ -27,19 +27,22 @@ The label in the brackets refer to the respective module.
 [pipeline-api] Add exception throwing methods to distributed lambdas [#951]
 [pipeline-api] Add "AggregateOperation.andThen" [#959]
 [pipeline-api] Add Tuple4 and Tuple5 [#964]
+[pipeline-api] Map and List sources and sinks can now directly be created from IMap and IList instances [#1032]
 [core] Improve Watermark diagnostics logging [#872]
 [core] Processors should be closed as soon as processor is completed [#934]
 [core] jobId(), executionId() and jobConfig() are now available on Processor.Context [#934]
 [core] Use job name in logs [#939]
 [core] Add JetClientConfig which uses the default jet group name and password [#950]
-[core] Update Hazelcast to 3.10.5 [#1005]
+[core] New JVM shutdown hook which can gracefully shutdown jobs if shutdown hook policy is set to "GRACEFUL" [#1040]
+[core] Update Hazelcast to 3.10.5 [#1044]
+[core] Work stealing is removed as it didn't always guarantee balanced work distribution [#1093]
 
 3. Fixes
 
 [pipeline-api] Using results of a window aggregation in another window shouldn't cause a window shift [#898]
 [pipeline-api] mapToOutputFn in aggregations should support returning nulls [#938]
 [pipeline-api] Fix for mapWithMerging which shouldn't use a stateful flush function [#968]
-[kafka] Handle InterruptException in StreamKafkaP.close() [#870]
+[kafka] Handle InterruptException in StreamKafkaP.close() and in commitSync [#870, #1078]
 [java.util.stream] java.util.stream implementation is removed. It has been superceeded by the Pipeline API [#983]
 [spring] Spring module should no longer add dependency to hazelcast when used with spring boot [#977]
 [spring] Spring context should be injected to wrapped processors as well [#999]
@@ -49,6 +52,9 @@ The label in the brackets refer to the respective module.
 [pipeline-api] API for co-aggregation has been simplified
 [pipeline-api] File sources and sinks have been replaced with a builder API through Sources.filesBuilder()
 [pipeline-api] SinkBuilder now requires a name and takes Processor.Context as input in createFn
+[pipeline-api] SinkBuilder default parallelism is changed to 1 from 2
+[pipeline-api] Traverser.over is renamed to Traversers.traverseItems
+[pipeline-api] Utility methods in DistributedFunctions have been moved to their respective interfaces
 [core] AbstractProcessor.setCooperative is removed
 [core] Remove tempDir from config as it was unused
 [core] Processor.close() no longer receives the exception for the job
