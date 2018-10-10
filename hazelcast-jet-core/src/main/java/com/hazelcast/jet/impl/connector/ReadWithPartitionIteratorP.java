@@ -49,7 +49,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -173,7 +172,7 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
     }
 
     private void checkMigration() {
-        if (migrationWatcher.isClusterDirty()) {
+        if (migrationWatcher.clusterChanged()) {
             throw new RestartableException("Partition migration detected");
         }
     }
@@ -359,56 +358,73 @@ public final class ReadWithPartitionIteratorP<T> extends AbstractProcessor {
     }
 
     static class MigrationWatcher {
+
         private final HazelcastInstance instance;
         private final String membershipListenerReg;
-        private String partitionListenerReg;
-        private AtomicBoolean clusterDirty = new AtomicBoolean();
+        private final String partitionListenerReg;
+
+        private volatile boolean clusterChanged;
 
         MigrationWatcher(HazelcastInstance instance) {
             this.instance = instance;
 
-            membershipListenerReg = instance.getCluster().addMembershipListener(new MembershipAdapter() {
+            membershipListenerReg = registerMembershipListener(instance);
+            partitionListenerReg = registerMigrationListener(instance);
+        }
+
+        private String registerMembershipListener(HazelcastInstance instance) {
+            return instance.getCluster().addMembershipListener(new MembershipAdapter() {
                 @Override
                 public void memberAdded(MembershipEvent membershipEvent) {
                     if (!membershipEvent.getMember().isLiteMember()) {
-                        clusterDirty.set(true);
+                        setChanged();
                     }
                 }
 
                 @Override
                 public void memberRemoved(MembershipEvent membershipEvent) {
                     if (!membershipEvent.getMember().isLiteMember()) {
-                        clusterDirty.set(true);
+                        setChanged();
                     }
                 }
             });
+        }
 
+        private String registerMigrationListener(HazelcastInstance instance) {
             try {
-                partitionListenerReg = instance.getPartitionService().addMigrationListener(new MigrationListener() {
+                return instance.getPartitionService().addMigrationListener(new MigrationListener() {
                     @Override
                     public void migrationStarted(MigrationEvent migrationEvent) {
                         // Note: this event is fired also when a partition is lost or if a split merge occurs
-                        clusterDirty.set(true);
+                        setChanged();
                     }
 
                     @Override
                     public void migrationCompleted(MigrationEvent migrationEvent) {
-                        clusterDirty.set(true);
+                        setChanged();
                     }
 
                     @Override
                     public void migrationFailed(MigrationEvent migrationEvent) {
-                        clusterDirty.set(true);
+                        setChanged();
                     }
                 });
             } catch (UnsupportedOperationException e) {
                 // MigrationListener is not supported on client
-                partitionListenerReg = null;
+                return null;
             }
         }
 
-        boolean isClusterDirty() {
-            return clusterDirty.get();
+        private void setChanged() {
+            clusterChanged = true;
+        }
+
+        /**
+         * Returns {@code true} if any partition migration or member addition and removal took place
+         * since creation.
+         */
+        boolean clusterChanged() {
+            return clusterChanged;
         }
 
         void deregister() {

@@ -50,7 +50,7 @@ public class ReadWithPartitionIteratorPTest {
                 iterate(71, 72, 73),
         };
         MigrationWatcher migrationWatcher = mock(MigrationWatcher.class);
-        when(!migrationWatcher.isClusterDirty()).thenReturn(false);
+        when(!migrationWatcher.clusterChanged()).thenReturn(false);
         ReadWithPartitionIteratorP<Entry<Integer, Integer>> r =
                 new ReadWithPartitionIteratorP<>(p -> content[p], partitions, migrationWatcher);
         TestOutbox outbox = new TestOutbox(3);
