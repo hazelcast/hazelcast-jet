@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.config.ProcessingGuarantee;
+import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
 import com.hazelcast.logging.ILogger;
@@ -31,10 +32,9 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 
 public class SnapshotContext {
 
-    public static final int NO_SNAPSHOT = -1;
-
     private final ILogger logger;
 
+    private final long jobId;
     private final String jobNameAndExecutionId;
     private final ProcessingGuarantee guarantee;
 
@@ -87,6 +87,12 @@ public class SnapshotContext {
     private long currentSnapshotId;
 
     /**
+     * The data map index the active snapshot will be written to. It's either 0
+     * or 1 (a valid index) or -1 (meaning we don't know).
+     */
+    private volatile int currentDataMapIndex = -1;
+
+    /**
      * Future which will be created when a snapshot starts and completed and
      * nulled out when the snapshot completes.
      */
@@ -97,9 +103,10 @@ public class SnapshotContext {
     private final AtomicLong totalChunks = new AtomicLong();
     private boolean isCancelled;
 
-    SnapshotContext(ILogger logger, String jobNameAndExecutionId, long activeSnapshotId,
-                    ProcessingGuarantee guarantee
+    public SnapshotContext(ILogger logger, long jobId, String jobNameAndExecutionId, long activeSnapshotId,
+                           ProcessingGuarantee guarantee
     ) {
+        this.jobId = jobId;
         this.jobNameAndExecutionId = jobNameAndExecutionId;
         this.activeSnapshotId = currentSnapshotId = activeSnapshotId;
         this.guarantee = guarantee;
@@ -111,6 +118,22 @@ public class SnapshotContext {
      */
     long activeSnapshotId() {
         return activeSnapshotId;
+    }
+
+    public long currentSnapshotId() {
+        return currentSnapshotId;
+    }
+
+    /**
+     * Returns the name of the map that the current snapshot should be written
+     * to.
+     */
+    public String currentMapName() {
+        int mapIndex = this.currentDataMapIndex;
+        if (mapIndex < 0) {
+            return null;
+        }
+        return SnapshotRepository.snapshotDataMapName(jobId, mapIndex);
     }
 
     boolean isTerminalSnapshot() {
@@ -143,7 +166,8 @@ public class SnapshotContext {
      * {@code SnapshotOperation} and send barriers to such processor before
      * the {@code SnapshotOperation} is executed on this member.
      */
-    synchronized CompletableFuture<SnapshotOperationResult> startNewSnapshot(long snapshotId, boolean isTerminal) {
+    synchronized CompletableFuture<SnapshotOperationResult> startNewSnapshot(
+            long snapshotId, int dataMapIndex, boolean isTerminal) {
         assert snapshotId == currentSnapshotId + 1
                 : "new snapshotId not incremented by 1. Previous=" + currentSnapshotId + ", new=" + snapshotId;
         assert currentSnapshotId == activeSnapshotId : "last snapshot was postponed but not started";
@@ -158,6 +182,7 @@ public class SnapshotContext {
                 "previous snapshot was not finished, numRemainingTasklets=" + (newNumRemainingTasklets - numTasklets);
 
         currentSnapshotId = snapshotId;
+        currentDataMapIndex = dataMapIndex;
 
         if (numHigherPriorityTasklets == 0) {
             // if there are no higher priority tasklets, start the snapshot immediately
@@ -268,6 +293,7 @@ public class SnapshotContext {
         totalBytes.set(0);
         totalKeys.set(0);
         totalChunks.set(0);
+        currentDataMapIndex = -1;
     }
 
     void reportError(Throwable ex) {

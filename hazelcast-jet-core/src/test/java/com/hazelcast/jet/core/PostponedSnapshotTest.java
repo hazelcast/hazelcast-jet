@@ -16,14 +16,13 @@
 
 package com.hazelcast.jet.core;
 
-import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
+import com.hazelcast.jet.impl.JobRecord;
+import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.SnapshotRepository;
-import com.hazelcast.jet.impl.execution.SnapshotRecord;
-import com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Test;
@@ -35,8 +34,7 @@ import java.util.concurrent.atomic.AtomicIntegerArray;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLoggerP;
-import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.ONGOING;
-import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.SUCCESSFUL;
+import static com.hazelcast.jet.impl.execution.SnapshotData.NO_SNAPSHOT;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -58,8 +56,9 @@ public class PostponedSnapshotTest extends JetTestSupport {
         Job job = startJob();
 
         latches.set(0, 1);
-        IMapJet<Object, Object> snapshotsMap = instance.getMap(SnapshotRepository.snapshotsMapName(job.getId()));
-        assertTrueEventually(() -> assertTrue(existsSnapshot(snapshotsMap, SUCCESSFUL)), 5);
+        JobRepository jr = new JobRepository(instance, new SnapshotRepository(instance));
+        assertTrueEventually(() ->
+                assertTrue(jr.getJobRecord(job.getId()).getSnapshotData().dataMapIndex() != NO_SNAPSHOT));
 
         // finish the job
         latches.set(1, 1);
@@ -95,22 +94,17 @@ public class PostponedSnapshotTest extends JetTestSupport {
         config.setSnapshotIntervalMillis(100);
 
         Job job = instance.newJob(dag, config);
-        IMapJet<Object, Object> snapshotsMap = instance.getMap(SnapshotRepository.snapshotsMapName(job.getId()));
+        JobRepository jr = new JobRepository(instance, new SnapshotRepository(instance));
 
         // check, that snapshot starts, but stays in ONGOING state
-        assertTrueEventually(() -> assertTrue(existsSnapshot(snapshotsMap, ONGOING)), 5);
+        assertTrueEventually(() -> assertTrue(jr.getJobRecord(job.getId()).getSnapshotData().ongoingSnapshotId() >= 0), 5);
         assertTrueAllTheTime(() -> {
-            assertTrue(existsSnapshot(snapshotsMap, ONGOING));
-            assertFalse(existsSnapshot(snapshotsMap, SUCCESSFUL));
+            JobRecord jobRecord = jr.getJobRecord(job.getId());
+            assertTrue(jobRecord.getSnapshotData().ongoingSnapshotId() >= 0);
+            assertTrue("snapshotId=" + jobRecord.getSnapshotData().snapshotId(),
+                    jobRecord.getSnapshotData().snapshotId() < 0);
         }, 2);
         return job;
-    }
-
-    private boolean existsSnapshot(IMapJet<Object, Object> snapshotsMap, SnapshotStatus state) {
-        return snapshotsMap.entrySet().stream()
-                           .filter(e -> e.getValue() instanceof SnapshotRecord)
-                           .map(e -> (SnapshotRecord) e.getValue())
-                           .anyMatch(rec -> rec.status() == state);
     }
 
     private static final class SourceP extends AbstractProcessor {

@@ -147,7 +147,19 @@ public class SuspendResumeTest extends JetTestSupport {
         job.suspend();
         assertEqualsEventually(job::getStatus, SUSPENDED);
         instances[0].getHazelcastInstance().getLifecycleService().terminate();
-        job.resume();
+        for (int i = 0; ; i++) {
+            try {
+                // resume() can fail with JobNotFoundException if the new master didn't yet scan the jobs
+                // and created MasterContext for the JobRecords. It should do so in few seconds.
+                job.resume();
+                break;
+            } catch (JobNotFoundException e) {
+                if (i == 20) {
+                    throw e;
+                }
+                sleepSeconds(1);
+            }
+        }
         assertEqualsEventually(job::getStatus, RUNNING);
         StuckProcessor.proceedLatch.countDown();
         job.join();

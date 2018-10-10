@@ -23,30 +23,29 @@ import com.hazelcast.jet.impl.JobRepository.FilterExecutionIdByJobIdPredicate;
 import com.hazelcast.jet.impl.JobRepository.FilterJobIdPredicate;
 import com.hazelcast.jet.impl.JobRepository.FilterJobRecordByNamePredicate;
 import com.hazelcast.jet.impl.JobRepository.FilterJobResultByNamePredicate;
-import com.hazelcast.jet.impl.JobRepository.UpdateJobRecordEntryBackupProcessor;
 import com.hazelcast.jet.impl.JobRepository.UpdateJobRecordEntryProcessor;
 import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.JobSummary;
-import com.hazelcast.jet.impl.execution.SnapshotRecord;
-import com.hazelcast.jet.impl.operation.GetJobSummaryListOperation;
-import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
-import com.hazelcast.jet.impl.operation.TerminateExecutionOperation;
+import com.hazelcast.jet.impl.execution.SnapshotData;
 import com.hazelcast.jet.impl.operation.CompleteExecutionOperation;
 import com.hazelcast.jet.impl.operation.GetJobConfigOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsByNameOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsOperation;
 import com.hazelcast.jet.impl.operation.GetJobStatusOperation;
 import com.hazelcast.jet.impl.operation.GetJobSubmissionTimeOperation;
+import com.hazelcast.jet.impl.operation.GetJobSummaryListOperation;
 import com.hazelcast.jet.impl.operation.InitExecutionOperation;
 import com.hazelcast.jet.impl.operation.JoinSubmittedJobOperation;
+import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
 import com.hazelcast.jet.impl.operation.ResumeJobOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
 import com.hazelcast.jet.impl.operation.StartExecutionOperation;
 import com.hazelcast.jet.impl.operation.SubmitJobOperation;
+import com.hazelcast.jet.impl.operation.TerminateExecutionOperation;
 import com.hazelcast.jet.impl.operation.TerminateJobOperation;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
-import com.hazelcast.jet.impl.processor.SnapshotKey;
+import com.hazelcast.jet.impl.processor.SlidingWindowP.SnapshotKey;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl;
 import com.hazelcast.nio.serialization.DataSerializableFactory;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -67,7 +66,7 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
     public static final int SUBMIT_JOB_OP = 8;
     public static final int GET_JOB_STATUS_OP = 9;
     public static final int SNAPSHOT_OPERATION = 10;
-    public static final int MASTER_SNAPSHOT_RECORD = 11;
+    public static final int SNAPSHOT_DATA = 11;
     public static final int SESSION_WINDOW_P_WINDOWS = 12;
     public static final int FILTER_EXECUTION_ID_BY_JOB_ID_PREDICATE = 13;
     public static final int FILTER_JOB_ID = 14;
@@ -75,7 +74,6 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
     public static final int GET_JOB_IDS = 16;
     public static final int JOIN_SUBMITTED_JOB = 17;
     public static final int UPDATE_JOB_RECORD = 18;
-    public static final int UPDATE_JOB_QUORUM_BACKUP = 19;
     public static final int TERMINATE_EXECUTION_OP = 20;
     public static final int FILTER_JOB_RECORD_BY_NAME = 21;
     public static final int FILTER_JOB_RESULT_BY_NAME = 22;
@@ -131,8 +129,8 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
                     return new GetJobStatusOperation();
                 case SNAPSHOT_OPERATION:
                     return new SnapshotOperation();
-                case MASTER_SNAPSHOT_RECORD:
-                    return new SnapshotRecord();
+                case SNAPSHOT_DATA:
+                    return new SnapshotData();
                 case SESSION_WINDOW_P_WINDOWS:
                     return new SessionWindowP.Windows<>();
                 case FILTER_EXECUTION_ID_BY_JOB_ID_PREDICATE:
@@ -147,8 +145,6 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
                     return new JoinSubmittedJobOperation();
                 case UPDATE_JOB_RECORD:
                     return new UpdateJobRecordEntryProcessor();
-                case UPDATE_JOB_QUORUM_BACKUP:
-                    return new UpdateJobRecordEntryBackupProcessor();
                 case TERMINATE_EXECUTION_OP:
                     return new TerminateExecutionOperation();
                 case FILTER_JOB_RECORD_BY_NAME:

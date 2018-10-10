@@ -19,11 +19,16 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetTestSupport;
-import com.hazelcast.jet.core.JobNotFoundException;
+import com.hazelcast.jet.pipeline.JournalInitialPosition;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
@@ -38,7 +43,6 @@ import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -151,41 +155,17 @@ public class JobRepositoryTest extends JetTestSupport {
     }
 
     @Test
-    public void when_newQuorumSizeIsLargerThanCurrent_then_jobQuorumSizeIsUpdated() {
-        long jobId = uploadResourcesForNewJob();
-        Data dag = createDAGData();
-        JobRecord jobRecord = createJobRecord(jobId, dag);
-        jobRepository.putNewJobRecord(jobRecord);
-
-        int newQuorumSize = jobRecord.getQuorumSize() + 1;
-        boolean success = jobRepository.updateJobQuorumSizeIfLargerThanCurrent(jobId, newQuorumSize);
-
-        assertTrue(success);
-        jobRecord = jobRepository.getJobRecord(jobId);
-        assertEquals(newQuorumSize, jobRecord.getQuorumSize());
-    }
-
-    @Test
-    public void when_newQuorumSizeIsNotLargerThanCurrent_then_jobQuorumSizeIsNotUpdated() {
-        long jobId = uploadResourcesForNewJob();
-        Data dag = createDAGData();
-        JobRecord jobRecord = createJobRecord(jobId, dag);
-        jobRepository.putNewJobRecord(jobRecord);
-
-        int currentQuorumSize = jobRecord.getQuorumSize();
-        int newQuorumSize = currentQuorumSize - 1;
-        boolean success = jobRepository.updateJobQuorumSizeIfLargerThanCurrent(jobId, newQuorumSize);
-
-        assertFalse(success);
-        jobRecord = jobRepository.getJobRecord(jobId);
-        assertEquals(currentQuorumSize, jobRecord.getQuorumSize());
-    }
-
-    @Test(expected = JobNotFoundException.class)
-    public void when_jobIsMissing_then_jobQuorumSizeUpdateFails() {
-        long jobId = uploadResourcesForNewJob();
-
-        jobRepository.updateJobQuorumSizeIfLargerThanCurrent(jobId, 1);
+    public void test_getJobRecordFromClient() {
+        JetInstance client = createJetClient();
+        Pipeline p = Pipeline.create();
+        p.drawFrom(Sources.mapJournal("map", JournalInitialPosition.START_FROM_OLDEST))
+         .drainTo(Sinks.logger());
+        Job job = instance.newJob(p, new JobConfig()
+                .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
+                .setSnapshotIntervalMillis(100));
+        JobRepository jobRepository = new JobRepository(client, new SnapshotRepository(client));
+        assertTrueEventually(() -> assertNotNull(jobRepository.getJobRecord(job.getId())));
+        client.shutdown();
     }
 
     private long uploadResourcesForNewJob() {
@@ -205,5 +185,5 @@ public class JobRepositoryTest extends JetTestSupport {
         sleepAtLeastMillis(2 * RESOURCES_EXPIRATION_TIME_MILLIS);
     }
 
-    static class DummyClass { }
+    private static class DummyClass { }
 }

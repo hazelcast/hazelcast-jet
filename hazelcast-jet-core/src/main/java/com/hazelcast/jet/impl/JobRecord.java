@@ -17,17 +17,31 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.impl.execution.SnapshotData;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
+import com.hazelcast.util.Clock;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.impl.SnapshotRepository.snapshotDataMapName;
 import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
 
+/**
+ * Metadata information about the job. There's one instance for each jobId,
+ * used across multiple executions.
+ * <p>
+ * It should be updated only through MasterContext class, where multiple
+ * updates are synchronized.
+ *
+ * TODO [viliam] split static and dynamic data for less serialization
+ */
 public class JobRecord implements IdentifiedDataSerializable {
 
     private long jobId;
@@ -36,8 +50,17 @@ public class JobRecord implements IdentifiedDataSerializable {
     // JSON representation of DAG, used by management center
     private String dagJson;
     private JobConfig config;
-    private int quorumSize;
-    private boolean suspended;
+    private volatile int quorumSize;
+    private volatile boolean suspended;
+
+    private volatile SnapshotData snapshotData = new SnapshotData();
+
+    /**
+     * Timestamp to order async updates to the JobRecord. See {@link
+     * JobRepository#writeJobRecordSync} and {@link
+     * JobRepository#writeJobRecordAsync}.
+     */
+    private final AtomicLong timestamp = new AtomicLong();
 
     public JobRecord() {
     }
@@ -69,6 +92,7 @@ public class JobRecord implements IdentifiedDataSerializable {
         return dag;
     }
 
+    // used by ManCenter
     public String getDagJson() {
         return dagJson;
     }
@@ -81,22 +105,52 @@ public class JobRecord implements IdentifiedDataSerializable {
         return quorumSize;
     }
 
-    public boolean isSuspended() {
-        return suspended;
-    }
-
-    public JobRecord withQuorumSize(int newQuorumSize) {
+    public void setQuorumSize(int newQuorumSize) {
         if (newQuorumSize <= quorumSize) {
             throw new IllegalArgumentException("New quorum size: " + newQuorumSize
                     + " must be bigger than current quorum size of " + this);
         }
-        return new JobRecord(getJobId(), getCreationTime(), getDag(), getDagJson(), getConfig(), newQuorumSize,
-                isSuspended());
+        this.quorumSize = newQuorumSize;
     }
 
-    public JobRecord withSuspended(boolean suspended) {
-        return new JobRecord(getJobId(), getCreationTime(), getDag(), getDagJson(), getConfig(), getQuorumSize(),
-                suspended);
+    public boolean isSuspended() {
+        return suspended;
+    }
+
+    public void setSuspended(boolean suspended) {
+        this.suspended = suspended;
+    }
+
+    @Nonnull
+    public SnapshotData getSnapshotData() {
+        return snapshotData;
+    }
+
+    public void setSnapshotData(SnapshotData snapshotData) {
+        this.snapshotData = snapshotData;
+    }
+
+    public String successfulSnapshotDataMapName() {
+        if (snapshotData.snapshotId() < 0) {
+            throw new IllegalStateException("No successful snapshot");
+        }
+        return snapshotDataMapName(jobId, snapshotData.dataMapIndex());
+    }
+
+    public long getTimestamp() {
+        return timestamp.get();
+    }
+
+    /**
+     * Sets the timestamp to:
+     *   <pre>max(Clock.currentTimeMillis(), this.timestamp + 1);</pre>
+     * <p>
+     * In other words, after this call the timestamp is guaranteed to be
+     * incremented by at least 1 and be no smaller than the current wall clock
+     * time.
+     */
+    void updateTimestamp() {
+        timestamp.updateAndGet(v -> Math.max(Clock.currentTimeMillis(), v + 1));
     }
 
     @Override
@@ -118,6 +172,8 @@ public class JobRecord implements IdentifiedDataSerializable {
         out.writeObject(config);
         out.writeInt(quorumSize);
         out.writeBoolean(suspended);
+        snapshotData.writeData(out);
+        out.writeLong(timestamp.get());
     }
 
     @Override
@@ -129,6 +185,8 @@ public class JobRecord implements IdentifiedDataSerializable {
         config = in.readObject();
         quorumSize = in.readInt();
         suspended = in.readBoolean();
+        snapshotData.readData(in);
+        timestamp.set(in.readLong());
     }
 
     @Override
@@ -141,6 +199,8 @@ public class JobRecord implements IdentifiedDataSerializable {
                 ", config=" + config +
                 ", quorumSize=" + quorumSize +
                 ", suspended=" + suspended +
+                ", snapshotData=" + snapshotData +
+                ", timestamp=" + timestamp +
                 '}';
     }
 }

@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriter;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
@@ -37,7 +36,6 @@ public class StoreSnapshotTasklet implements Tasklet {
     long pendingSnapshotId;
 
     private final SnapshotContext snapshotContext;
-    private final long jobId;
     private final InboundEdgeStream inboundEdgeStream;
     private final ILogger logger;
     private final String vertexName;
@@ -51,7 +49,6 @@ public class StoreSnapshotTasklet implements Tasklet {
 
     public StoreSnapshotTasklet(
             SnapshotContext snapshotContext,
-            long jobId,
             InboundEdgeStream inboundEdgeStream,
             AsyncSnapshotWriter ssWriter,
             ILogger logger,
@@ -59,7 +56,6 @@ public class StoreSnapshotTasklet implements Tasklet {
             boolean isHigherPrioritySource
     ) {
         this.snapshotContext = snapshotContext;
-        this.jobId = jobId;
         this.inboundEdgeStream = inboundEdgeStream;
         this.logger = logger;
         this.vertexName = vertexName;
@@ -67,8 +63,6 @@ public class StoreSnapshotTasklet implements Tasklet {
 
         this.ssWriter = ssWriter;
         this.pendingSnapshotId = snapshotContext.activeSnapshotId() + 1;
-
-        resetCurrentMap();
     }
 
     @Nonnull @Override
@@ -118,7 +112,7 @@ public class StoreSnapshotTasklet implements Tasklet {
 
             case FLUSH:
                 progTracker.notDone();
-                if (ssWriter.flush()) {
+                if (ssWriter.flushAndReset()) {
                     progTracker.madeProgress();
                     state = REACHED_BARRIER;
                 }
@@ -132,14 +126,13 @@ public class StoreSnapshotTasklet implements Tasklet {
                 // check for writing error
                 Throwable error = ssWriter.getError();
                 if (error != null) {
-                    logger.severe("Error writing to snapshot map '" + currMapName() + "'", error);
+                    logger.severe("Error writing to snapshot map", error);
                     snapshotContext.reportError(error);
                 }
                 progTracker.madeProgress();
                 snapshotContext.snapshotDoneForTasklet(ssWriter.getTotalPayloadBytes(), ssWriter.getTotalKeys(),
                         ssWriter.getTotalChunks());
                 pendingSnapshotId++;
-                resetCurrentMap();
                 hasReachedBarrier = false;
                 state = DRAIN;
                 progTracker.notDone();
@@ -149,14 +142,6 @@ public class StoreSnapshotTasklet implements Tasklet {
                 // note State.DONE also goes here
                 throw new JetException("Unexpected state: " + state);
         }
-    }
-
-    String currMapName() {
-        return SnapshotRepository.snapshotDataMapName(jobId, pendingSnapshotId, vertexName);
-    }
-
-    private void resetCurrentMap() {
-        ssWriter.setCurrentMap(currMapName());
     }
 
     @Override

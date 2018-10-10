@@ -70,12 +70,12 @@ public class SnapshotContextTest {
     @Test
     public void test_snapShortStartAndDone() {
         SnapshotContext ssContext =
-                new SnapshotContext(mock(ILogger.class), "test job", 9, ProcessingGuarantee.EXACTLY_ONCE);
+                new SnapshotContext(mock(ILogger.class), 1, "test job", 9, ProcessingGuarantee.EXACTLY_ONCE);
 
         ssContext.initTaskletCount(taskletCount, numHigherPriority);
         CompletableFuture<SnapshotOperationResult> future = null;
         if (snapshotStarted == SnapshotStarted.BEFORE) {
-            future = ssContext.startNewSnapshot(10, false);
+            future = ssContext.startNewSnapshot(10, 0, false);
             assertEquals("activeSnapshotId initially", numHigherPriority > 0 ? 9 : 10, ssContext.activeSnapshotId());
         }
 
@@ -89,7 +89,7 @@ public class SnapshotContextTest {
         }
 
         if (snapshotStarted == SnapshotStarted.AFTER) {
-            future = ssContext.startNewSnapshot(10, false);
+            future = ssContext.startNewSnapshot(10, 0, false);
         }
 
         assertNotNull("future == null", future);
