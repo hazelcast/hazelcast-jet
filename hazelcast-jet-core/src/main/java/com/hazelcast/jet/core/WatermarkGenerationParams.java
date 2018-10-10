@@ -62,6 +62,8 @@ public final class WatermarkGenerationParams<T> implements Serializable {
      */
     public static final long DEFAULT_IDLE_TIMEOUT = 60_000L;
 
+    private static final DistributedObjLongBiFunction<?, ?> NO_WRAPPING = (event, timestamp) -> event;
+
     private static final DistributedSupplier<WatermarkPolicy> NO_WATERMARKS = () -> new WatermarkPolicy() {
         @Override
         public long reportEvent(long timestamp) {
@@ -134,7 +136,7 @@ public final class WatermarkGenerationParams<T> implements Serializable {
             @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
             long idleTimeoutMillis
     ) {
-        return wmGenParams(timestampFn, (event, timestamp) -> event, wmPolicy, wmEmitPolicy, idleTimeoutMillis);
+        return wmGenParams(timestampFn, noWrapping(), wmPolicy, wmEmitPolicy, idleTimeoutMillis);
     }
 
     /**
@@ -145,7 +147,12 @@ public final class WatermarkGenerationParams<T> implements Serializable {
      * producing any output.
      */
     public static <T> WatermarkGenerationParams<T> noWatermarks() {
-        return wmGenParams(i -> Long.MIN_VALUE, NO_WATERMARKS, noThrottling(), -1);
+        return wmGenParams(i -> Long.MIN_VALUE, noWrapping(), NO_WATERMARKS, noThrottling(), -1);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> DistributedObjLongBiFunction<T, Object> noWrapping() {
+        return (DistributedObjLongBiFunction<T, Object>) NO_WRAPPING;
     }
 
     /**
