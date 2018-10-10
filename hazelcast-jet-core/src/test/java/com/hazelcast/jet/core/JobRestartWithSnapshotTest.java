@@ -34,7 +34,6 @@ import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.JobRepository;
-import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.SnapshotContext;
 import com.hazelcast.jet.impl.execution.SnapshotData;
@@ -76,7 +75,7 @@ import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
-import static com.hazelcast.jet.impl.SnapshotRepository.snapshotDataMapName;
+import static com.hazelcast.jet.impl.JobRepository.snapshotDataMapName;
 import static com.hazelcast.jet.impl.util.Util.arrayIndexOf;
 import static com.hazelcast.test.PacketFiltersUtil.delayOperationsFrom;
 import static java.util.Arrays.asList;
@@ -209,7 +208,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         config.setSnapshotIntervalMillis(1200);
         Job job = instance1.newJob(dag, config);
 
-        JobRepository jobRepository = new JobRepository(instance1, new SnapshotRepository(instance1));
+        JobRepository jobRepository = new JobRepository(instance1);
         int timeout = (int) (MILLISECONDS.toSeconds(config.getSnapshotIntervalMillis()) + 2);
 
         waitForFirstSnapshot(jobRepository, job.getId(), timeout);
@@ -330,7 +329,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         config.setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
         config.setSnapshotIntervalMillis(0);
         Job job = instance1.newJob(dag, config);
-        JobRepository repository = new JobRepository(instance1, new SnapshotRepository(instance1));
+        JobRepository repository = new JobRepository(instance1);
 
         // the first snapshot should succeed
         assertTrueEventually(() -> {
@@ -446,7 +445,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
     }
 
     private void stressTest(Consumer<Job> action) throws Exception {
-        JobRepository jobRepository = new JobRepository(instance1, new SnapshotRepository(instance1));
+        JobRepository jobRepository = new JobRepository(instance1);
 
         DAG dag = new DAG();
         dag.newVertex("generator", SnapshotStressSourceP::new)

@@ -32,7 +32,6 @@ import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.JobRepository;
-import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.kafka.KafkaSources;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -168,7 +167,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
 
         if (guarantee != ProcessingGuarantee.NONE) {
             // wait until a new snapshot appears
-            JobRepository jr = new JobRepository(instances[0], new SnapshotRepository(instances[0]));
+            JobRepository jr = new JobRepository(instances[0]);
             long currentMax = jr.getJobRecord(job.getId()).getSnapshotData().snapshotId();
             assertTrueEventually(() -> {
                 JobRecord jobRecord = jr.getJobRecord(job.getId());

@@ -30,7 +30,7 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.hazelcast.jet.Util.idToString;
-import static com.hazelcast.jet.impl.SnapshotRepository.snapshotDataMapName;
+import static com.hazelcast.jet.impl.JobRepository.snapshotDataMapName;
 import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
 
 /**

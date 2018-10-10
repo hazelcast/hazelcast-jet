@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.config.ProcessingGuarantee;
-import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
 import com.hazelcast.logging.ILogger;
@@ -28,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.hazelcast.jet.impl.JobRepository.snapshotDataMapName;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
 public class SnapshotContext {
@@ -133,7 +133,7 @@ public class SnapshotContext {
         if (mapIndex < 0) {
             return null;
         }
-        return SnapshotRepository.snapshotDataMapName(jobId, mapIndex);
+        return snapshotDataMapName(jobId, mapIndex);
     }
 
     boolean isTerminalSnapshot() {

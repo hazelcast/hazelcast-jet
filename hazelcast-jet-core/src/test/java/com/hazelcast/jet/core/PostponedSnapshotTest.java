@@ -22,7 +22,6 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.JobRecord;
 import com.hazelcast.jet.impl.JobRepository;
-import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Test;
@@ -56,7 +55,7 @@ public class PostponedSnapshotTest extends JetTestSupport {
         Job job = startJob();
 
         latches.set(0, 1);
-        JobRepository jr = new JobRepository(instance, new SnapshotRepository(instance));
+        JobRepository jr = new JobRepository(instance);
         assertTrueEventually(() ->
                 assertTrue(jr.getJobRecord(job.getId()).getSnapshotData().dataMapIndex() != NO_SNAPSHOT));
 
@@ -94,7 +93,7 @@ public class PostponedSnapshotTest extends JetTestSupport {
         config.setSnapshotIntervalMillis(100);
 
         Job job = instance.newJob(dag, config);
-        JobRepository jr = new JobRepository(instance, new SnapshotRepository(instance));
+        JobRepository jr = new JobRepository(instance);
 
         // check, that snapshot starts, but stays in ONGOING state
         assertTrueEventually(() -> assertTrue(jr.getJobRecord(job.getId()).getSnapshotData().ongoingSnapshotId() >= 0), 5);

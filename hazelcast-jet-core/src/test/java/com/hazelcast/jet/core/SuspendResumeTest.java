@@ -24,7 +24,6 @@ import com.hazelcast.jet.core.TestProcessors.MockPS;
 import com.hazelcast.jet.core.TestProcessors.StuckProcessor;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.JobResult;
-import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
@@ -231,8 +230,7 @@ public class SuspendResumeTest extends JetTestSupport {
         assertEqualsEventually(job::getStatus, COMPLETED);
 
         // check that job resources are deleted
-        SnapshotRepository snapshotRepository = new SnapshotRepository(instances[0]);
-        JobRepository jobRepository = new JobRepository(instances[0], snapshotRepository);
+        JobRepository jobRepository = new JobRepository(instances[0]);
         assertTrueEventually(() -> {
             assertNull("JobRecord", jobRepository.getJobRecord(job.getId()));
             JobResult jobResult = jobRepository.getJobResult(job.getId());

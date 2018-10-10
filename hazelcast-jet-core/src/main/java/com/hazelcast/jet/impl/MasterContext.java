@@ -119,7 +119,7 @@ public class MasterContext {
     private final ILogger logger;
     private final long jobId;
     private final String jobName;
-    private final SnapshotRepository snapshotRepository;
+    private final JobRepository jobRepository;
     private final JobRecord jobRecord;
     private volatile JobStatus jobStatus = NOT_RUNNING;
     private volatile Set<Vertex> vertices;
@@ -169,7 +169,7 @@ public class MasterContext {
     MasterContext(NodeEngineImpl nodeEngine, JobCoordinationService coordinationService, JobRecord jobRecord) {
         this.nodeEngine = nodeEngine;
         this.coordinationService = coordinationService;
-        this.snapshotRepository = coordinationService.snapshotRepository();
+        this.jobRepository = coordinationService.jobRepository();
         this.logger = nodeEngine.getLogger(getClass());
         this.jobRecord = jobRecord;
         this.jobId = jobRecord.getJobId();
@@ -317,7 +317,7 @@ public class MasterContext {
         if (isSnapshottingEnabled()) {
             long snapshotToRestore = jobRecord.getSnapshotData().snapshotId();
             try {
-                snapshotRepository.clearSnapshotData(jobId, jobRecord.getSnapshotData().ongoingDataMapIndex());
+                jobRepository.clearSnapshotData(jobId, jobRecord.getSnapshotData().ongoingDataMapIndex());
             } catch (Exception e) {
                 logger.warning("Cannot delete old snapshots for " + jobName, e);
             }
@@ -582,7 +582,7 @@ public class MasterContext {
                 jobRecord.getSnapshotData().duration(), jobRecord.getSnapshotData().numBytes(),
                 jobRecord.getSnapshotData().numKeys(), jobRecord.getSnapshotData().numChunks(),
                 jobRecord.getSnapshotData().dataMapIndex()));
-        snapshotRepository.clearSnapshotData(jobId, jobRecord.getSnapshotData().ongoingDataMapIndex());
+        jobRepository.clearSnapshotData(jobId, jobRecord.getSnapshotData().ongoingDataMapIndex());
 
         Runnable nonSynchronizedAction = () -> { };
         synchronized (lock) {

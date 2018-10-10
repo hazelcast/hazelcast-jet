@@ -28,7 +28,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.JobRestartWithSnapshotTest.SequencesInPartitionsGeneratorP;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.impl.SnapshotRepository;
+import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Rule;
@@ -63,14 +63,14 @@ public class SnapshotFailureTest extends JetTestSupport {
         config.getInstanceConfig().setCooperativeThreadCount(LOCAL_PARALLELISM);
 
         // force snapshots to fail by adding a failing map store configuration for snapshot data maps
-        MapConfig mapConfig = new MapConfig(SnapshotRepository.SNAPSHOT_DATA_MAP_PREFIX + '*');
+        MapConfig mapConfig = new MapConfig(JobRepository.SNAPSHOT_DATA_MAP_PREFIX + '*');
         MapStoreConfig mapStoreConfig = mapConfig.getMapStoreConfig();
         mapStoreConfig.setEnabled(true);
         mapStoreConfig.setImplementation(new FailingMapStore());
         config.getHazelcastConfig().addMapConfig(mapConfig);
 
         config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig()
-                .setMapName(SnapshotRepository.SNAPSHOT_DATA_MAP_PREFIX + '*'));
+                .setMapName(JobRepository.SNAPSHOT_DATA_MAP_PREFIX + '*'));
 
         JetInstance[] instances = createJetMembers(config, 2);
         instance1 = instances[0];

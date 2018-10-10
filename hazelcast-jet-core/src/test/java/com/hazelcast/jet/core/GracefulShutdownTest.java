@@ -28,7 +28,6 @@ import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobRepository;
-import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.tcp.FirewallingConnectionManager;
 import com.hazelcast.test.HazelcastSerialClassRunner;
@@ -243,7 +242,7 @@ public class GracefulShutdownTest extends JetTestSupport {
 
     @Test
     public void when_shutdownGracefulWhileRestartGraceful_then_restartsFromTerminalSnapshot() throws Exception {
-        MapConfig mapConfig = new MapConfig(SnapshotRepository.SNAPSHOT_DATA_MAP_PREFIX + "*");
+        MapConfig mapConfig = new MapConfig(JobRepository.SNAPSHOT_DATA_MAP_PREFIX + "*");
         mapConfig.getMapStoreConfig()
                  .setClassName(BlockingMapStore.class.getName())
                  .setEnabled(true);

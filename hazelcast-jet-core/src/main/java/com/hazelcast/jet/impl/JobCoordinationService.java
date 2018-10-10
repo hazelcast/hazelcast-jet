@@ -91,7 +91,6 @@ public class JobCoordinationService {
     private final JetConfig config;
     private final ILogger logger;
     private final JobRepository jobRepository;
-    private final SnapshotRepository snapshotRepository;
     private final ConcurrentMap<Long, MasterContext> masterContexts = new ConcurrentHashMap<>();
     private final Set<String> membersShuttingDown = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Object lock = new Object();
@@ -102,13 +101,12 @@ public class JobCoordinationService {
     private final AtomicInteger scaleUpScheduledCount = new AtomicInteger();
 
     JobCoordinationService(NodeEngineImpl nodeEngine, JetService jetService, JetConfig config,
-                           JobRepository jobRepository, SnapshotRepository snapshotRepository) {
+                           JobRepository jobRepository) {
         this.nodeEngine = nodeEngine;
         this.jetService = jetService;
         this.config = config;
         this.logger = nodeEngine.getLogger(getClass());
         this.jobRepository = jobRepository;
-        this.snapshotRepository = snapshotRepository;
     }
 
     public void init() {
@@ -485,10 +483,6 @@ public class JobCoordinationService {
         }
 
         throw new JobNotFoundException(jobId);
-    }
-
-    SnapshotRepository snapshotRepository() {
-        return snapshotRepository;
     }
 
     public JobRepository jobRepository() {

@@ -68,7 +68,7 @@ public class JobRepositoryTest extends JetTestSupport {
         properties.setProperty(JOB_SCAN_PERIOD.getName(), Long.toString(JOB_SCAN_PERIOD_IN_MILLIS));
 
         instance = createJetMember(config);
-        jobRepository = new JobRepository(instance, null);
+        jobRepository = new JobRepository(instance);
         jobRepository.setResourcesExpirationMillis(RESOURCES_EXPIRATION_TIME_MILLIS);
 
         jobIds = instance.getMap(RANDOM_IDS_MAP_NAME);
@@ -163,7 +163,7 @@ public class JobRepositoryTest extends JetTestSupport {
         Job job = instance.newJob(p, new JobConfig()
                 .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
                 .setSnapshotIntervalMillis(100));
-        JobRepository jobRepository = new JobRepository(client, new SnapshotRepository(client));
+        JobRepository jobRepository = new JobRepository(client);
         assertTrueEventually(() -> assertNotNull(jobRepository.getJobRecord(job.getId())));
         client.shutdown();
     }

@@ -27,7 +27,6 @@ import com.hazelcast.jet.core.TestProcessors.MockPS;
 import com.hazelcast.jet.core.TestProcessors.StuckForeverSourceP;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobRepository;
-import com.hazelcast.jet.impl.SnapshotRepository;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
@@ -147,7 +146,7 @@ public class ManualRestartTest extends JetTestSupport {
 
     @Test
     public void when_terminalSnapshotFails_then_previousSnapshotUsed() {
-        MapConfig mapConfig = new MapConfig(SnapshotRepository.SNAPSHOT_DATA_MAP_PREFIX + "*");
+        MapConfig mapConfig = new MapConfig(JobRepository.SNAPSHOT_DATA_MAP_PREFIX + "*");
         mapConfig.getMapStoreConfig()
                  .setClassName(FailingMapStore.class.getName())
                  .setEnabled(true);

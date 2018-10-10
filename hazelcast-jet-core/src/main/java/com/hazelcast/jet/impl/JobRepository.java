@@ -25,6 +25,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.core.JobNotFoundException;
+import com.hazelcast.jet.impl.execution.SnapshotData;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
@@ -37,7 +38,6 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.query.Predicate;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
-import javax.annotation.Nullable;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -57,6 +57,7 @@ import java.util.zip.DeflaterOutputStream;
 
 import static com.hazelcast.jet.Jet.INTERNAL_JET_OBJECTS_PREFIX;
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static java.util.Collections.newSetFromMap;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.HOURS;
@@ -84,12 +85,22 @@ public class JobRepository {
      */
     public static final String JOB_RESULTS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + "results";
 
+    /**
+     * Prefix for internal IMaps which store snapshot data. Snapshot data for
+     * one snapshot is stored in either of the following two maps:
+     * <ul>
+     *     <li>{@code _jet.snapshot.<jobId>.0}
+     *     <li>{@code _jet.snapshot.<jobId>.1}
+     * </ul>
+     * Which one of these is determined in {@link SnapshotData}.
+     */
+    public static final String SNAPSHOT_DATA_MAP_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "snapshot.";
+
     private static final String RESOURCE_MARKER = "__jet.resourceMarker";
     private static final long DEFAULT_RESOURCES_EXPIRATION_MILLIS = HOURS.toMillis(2);
 
     private final HazelcastInstance instance;
     private final ILogger logger;
-    private final SnapshotRepository snapshotRepository;
 
     private final IMap<Long, Long> randomIds;
     private final IMap<Long, JobRecord> jobRecords;
@@ -122,12 +133,8 @@ public class JobRepository {
         }
     };
 
-    /**
-     * @param snapshotRepository Can be {@code null} if used on client to upload resources.
-     */
-    public JobRepository(JetInstance jetInstance, @Nullable SnapshotRepository snapshotRepository) {
+    public JobRepository(JetInstance jetInstance) {
         this.instance = jetInstance.getHazelcastInstance();
-        this.snapshotRepository = snapshotRepository;
         this.logger = instance.getLoggingService().getLogger(getClass());
 
         this.randomIds = instance.getMap(RANDOM_IDS_MAP_NAME);
@@ -221,9 +228,7 @@ public class JobRepository {
     }
 
     private void cleanupJobResourcesAndSnapshots(long jobId, IMap<String, Object> jobResourcesMap) {
-        if (snapshotRepository != null) {
-            snapshotRepository.destroySnapshotDataMaps(jobId);
-        }
+        destroySnapshotDataMaps(jobId);
         jobResourcesMap.destroy();
     }
 
@@ -410,13 +415,37 @@ public class JobRepository {
 
     /**
      * See {@link #writeJobRecordAsync(JobRecord)}.
-     *
-     * @return true, if the write succeeded (wasn't ignored)
      */
     void writeJobRecordSync(JobRecord jobRecord) {
         jobRecord.updateTimestamp();
         String msg = (String) jobRecords.executeOnKey(jobRecord.getJobId(), new UpdateJobRecordEntryProcessor(jobRecord));
         writeJobRecordCallback.onResponse(msg);
+    }
+
+    /**
+     * Returns map name in the form {@code "_jet.snapshot.<jobId>.<dataMapIndex>"}.
+     */
+    public static String snapshotDataMapName(long jobId, int dataMapIndex) {
+        return SNAPSHOT_DATA_MAP_PREFIX + idToString(jobId) + '.' + dataMapIndex;
+    }
+
+    /**
+     * Delete all snapshots for a given job.
+     */
+    void destroySnapshotDataMaps(long jobId) {
+        instance.getMap(snapshotDataMapName(jobId, 0)).destroy();
+        instance.getMap(snapshotDataMapName(jobId, 1)).destroy();
+        logFine(logger, "Destroyed both snapshot maps for job %s", idToString(jobId));
+    }
+
+    void clearSnapshotData(long jobId, int dataMapIndex) {
+        String mapName = snapshotDataMapName(jobId, dataMapIndex);
+        try {
+            instance.getMap(mapName).clear();
+            logFine(logger, "Cleared snapshot data map %s", mapName);
+        } catch (Exception logged) {
+            logger.warning("Cannot delete old snapshot data  " + idToString(jobId), logged);
+        }
     }
 
     public static final class UpdateJobRecordEntryProcessor implements
