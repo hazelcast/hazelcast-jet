@@ -25,7 +25,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.core.JobNotFoundException;
-import com.hazelcast.jet.impl.execution.SnapshotData;
+import com.hazelcast.jet.impl.JobRecord.DynamicData;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
@@ -92,7 +92,7 @@ public class JobRepository {
      *     <li>{@code _jet.snapshot.<jobId>.0}
      *     <li>{@code _jet.snapshot.<jobId>.1}
      * </ul>
-     * Which one of these is determined in {@link SnapshotData}.
+     * Which one of these is determined in {@link DynamicData}.
      */
     public static final String SNAPSHOT_DATA_MAP_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "snapshot.";
 
@@ -404,21 +404,22 @@ public class JobRepository {
      * <p>
      * The write will be ignored if the timestamp of the given JobRecord is
      * older than the timestamp of the stored record. See {@link
-     * UpdateJobRecordEntryProcessor#process}. It will also be ignored if the
+     * UpdateJobRecordDynamicDataEntryProcessor#process}. It will also be ignored if the
      * key doesn't exist in the IMap.
      */
-    void writeJobRecordAsync(JobRecord jobRecord) {
-        jobRecord.updateTimestamp();
-        jobRecords.submitToKey(jobRecord.getJobId(), new UpdateJobRecordEntryProcessor(jobRecord),
+    void writeJobRecordAsync(long jobId, DynamicData dynamicData) {
+        dynamicData.updateTimestamp();
+        jobRecords.submitToKey(jobId, new UpdateJobRecordDynamicDataEntryProcessor(jobId, dynamicData),
                 writeJobRecordCallback);
     }
 
     /**
-     * See {@link #writeJobRecordAsync(JobRecord)}.
+     * See {@link #writeJobRecordAsync}.
      */
-    void writeJobRecordSync(JobRecord jobRecord) {
-        jobRecord.updateTimestamp();
-        String msg = (String) jobRecords.executeOnKey(jobRecord.getJobId(), new UpdateJobRecordEntryProcessor(jobRecord));
+    void writeJobRecordSync(long jobId, DynamicData dynamicData) {
+        dynamicData.updateTimestamp();
+        String msg = (String) jobRecords.executeOnKey(jobId,
+                new UpdateJobRecordDynamicDataEntryProcessor(jobId, dynamicData));
         writeJobRecordCallback.onResponse(msg);
     }
 
@@ -432,7 +433,7 @@ public class JobRepository {
     /**
      * Delete all snapshots for a given job.
      */
-    void destroySnapshotDataMaps(long jobId) {
+    private void destroySnapshotDataMaps(long jobId) {
         instance.getMap(snapshotDataMapName(jobId, 0)).destroy();
         instance.getMap(snapshotDataMapName(jobId, 1)).destroy();
         logFine(logger, "Destroyed both snapshot maps for job %s", idToString(jobId));
@@ -448,37 +449,41 @@ public class JobRepository {
         }
     }
 
-    public static final class UpdateJobRecordEntryProcessor implements
+    public static final class UpdateJobRecordDynamicDataEntryProcessor implements
                     EntryProcessor<Long, JobRecord>,
                     EntryBackupProcessor<Long, JobRecord>,
                     IdentifiedDataSerializable {
 
+        private long jobId;
         @SuppressFBWarnings(value = "SE_BAD_FIELD",
-                justification = "UpdateJobRecordEntryProcessor is not going to be java-serialized")
-        private JobRecord jobRecord;
+                justification = "this class is not going to be java-serialized")
+        private DynamicData dynamicData;
 
-        public UpdateJobRecordEntryProcessor() {
+        public UpdateJobRecordDynamicDataEntryProcessor() {
         }
 
-        UpdateJobRecordEntryProcessor(JobRecord jobRecord) {
-            this.jobRecord = jobRecord;
+        UpdateJobRecordDynamicDataEntryProcessor(long jobId, DynamicData dynamicData) {
+            this.jobId = jobId;
+            this.dynamicData = dynamicData;
         }
 
         @Override
         public Object process(Entry<Long, JobRecord> entry) {
             if (entry.getValue() == null) {
                 // ignore missing value - this method of updating cannot be used for initial JobRecord creation
-                return "Update to JobRecord for job " + jobRecord.getJobNameOrId() + " ignored, oldValue == null";
+                return "Update to JobRecord for job " + idToString(jobId) + " ignored, oldValue == null";
             }
-            if (entry.getValue().getTimestamp() >= jobRecord.getTimestamp()) {
+            if (entry.getValue().getTimestamp() >= dynamicData.getTimestamp()) {
                 // ignore older update.
                 // Reason for this is that normally, all updates to JobRecord are done through MasterContext in an
                 // async way.
-                return "Update to JobRecord for job " + jobRecord.getJobNameOrId() + " ignored, newer value found. "
+                return "Update to JobRecord for job " + idToString(jobId) + " ignored, newer value found. "
                         + "Stored timestamp=" + entry.getValue().getTimestamp() + ", timestamp of the update="
-                        + jobRecord.getTimestamp();
+                        + dynamicData.getTimestamp();
             }
-            entry.setValue(jobRecord);
+            entry.getValue().setDynamicData(dynamicData);
+            // this is needed to handle a quirk of EntryProcessor.process()
+            entry.setValue(entry.getValue());
             return null;
         }
 
@@ -504,12 +509,14 @@ public class JobRepository {
 
         @Override
         public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeObject(jobRecord);
+            out.writeLong(jobId);
+            out.writeObject(dynamicData);
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
-            jobRecord = in.readObject();
+            jobId = in.readLong();
+            dynamicData = in.readObject();
         }
     }
 

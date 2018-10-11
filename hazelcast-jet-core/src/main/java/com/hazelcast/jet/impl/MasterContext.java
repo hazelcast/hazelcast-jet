@@ -315,9 +315,9 @@ public class MasterContext {
         }
 
         if (isSnapshottingEnabled()) {
-            long snapshotToRestore = jobRecord.getSnapshotData().snapshotId();
+            long snapshotToRestore = jobRecord.snapshotId();
             try {
-                jobRepository.clearSnapshotData(jobId, jobRecord.getSnapshotData().ongoingDataMapIndex());
+                jobRepository.clearSnapshotData(jobId, jobRecord.ongoingDataMapIndex());
             } catch (Exception e) {
                 logger.warning("Cannot delete old snapshots for " + jobName, e);
             }
@@ -336,7 +336,7 @@ public class MasterContext {
                     + "\nHINT: You can use graphviz or http://viz-js.com to visualize the printed graph.");
             logger.fine("Building execution plan for " + jobIdString());
             executionPlanMap = createExecutionPlans(nodeEngine, membersView, dag, jobId, executionId,
-                    jobConfig(), jobRecord.getSnapshotData().ongoingSnapshotId());
+                    jobConfig(), jobRecord.ongoingSnapshotId());
         } catch (Exception e) {
             logger.severe("Exception creating execution plan for " + jobIdString(), e);
             finalizeJob(e);
@@ -539,15 +539,15 @@ public class MasterContext {
         }
 
         // TODO [viliam] more safe updating, guaranteed +1 value?
-        jobRecord.setSnapshotData(jobRecord.getSnapshotData().startNewSnapshot());
+        jobRecord.startNewSnapshot();
         writeJobRecord(true);
-        long newSnapshotId = jobRecord.getSnapshotData().ongoingSnapshotId();
+        long newSnapshotId = jobRecord.ongoingSnapshotId();
 
         logger.info(String.format("Starting%s snapshot %s for %s",
                 isTerminal ? " terminal" : "", newSnapshotId, jobIdString()));
         Function<ExecutionPlan, Operation> factory =
                 plan -> new SnapshotOperation(jobId, executionId, newSnapshotId,
-                        jobRecord.getSnapshotData().ongoingDataMapIndex(), isTerminal);
+                        jobRecord.ongoingDataMapIndex(), isTerminal);
 
         invokeOnParticipants(factory,
                 responses -> onSnapshotCompleted(responses, executionId, newSnapshotId, isTerminal), null);
@@ -572,17 +572,17 @@ public class MasterContext {
             logger.warning(jobIdString() + " snapshot " + snapshotId + " failed on some member(s), " +
                     "one of the failures: " + mergedResult.getError());
         }
-        jobRecord.setSnapshotData(jobRecord.getSnapshotData().ongoingSnapshotDone(
+        jobRecord.ongoingSnapshotDone(
                 mergedResult.getNumBytes(), mergedResult.getNumKeys(), mergedResult.getNumChunks(),
-                mergedResult.getError()));
+                mergedResult.getError());
         writeJobRecord(false);
         logger.info(String.format("Snapshot %d for %s completed with status %s in %dms, " +
                         "%,d bytes, %,d keys in %,d chunks, stored in data map %d",
                 snapshotId, jobIdString(), isSuccess ? "SUCCESS" : "FAILURE",
-                jobRecord.getSnapshotData().duration(), jobRecord.getSnapshotData().numBytes(),
-                jobRecord.getSnapshotData().numKeys(), jobRecord.getSnapshotData().numChunks(),
-                jobRecord.getSnapshotData().dataMapIndex()));
-        jobRepository.clearSnapshotData(jobId, jobRecord.getSnapshotData().ongoingDataMapIndex());
+                jobRecord.duration(), jobRecord.numBytes(),
+                jobRecord.numKeys(), jobRecord.numChunks(),
+                jobRecord.dataMapIndex()));
+        jobRepository.clearSnapshotData(jobId, jobRecord.ongoingDataMapIndex());
 
         Runnable nonSynchronizedAction = () -> { };
         synchronized (lock) {
@@ -828,9 +828,9 @@ public class MasterContext {
     private void writeJobRecord(boolean async) {
         JobRepository jobRepository = coordinationService.jobRepository();
         if (async) {
-            jobRepository.writeJobRecordAsync(jobRecord);
+            jobRepository.writeJobRecordAsync(jobRecord.getJobId(), jobRecord.getDynamicData());
         } else {
-            jobRepository.writeJobRecordSync(jobRecord);
+            jobRepository.writeJobRecordSync(jobRecord.getJobId(), jobRecord.getDynamicData());
         }
     }
 

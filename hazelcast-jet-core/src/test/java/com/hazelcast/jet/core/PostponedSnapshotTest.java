@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicIntegerArray;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLoggerP;
-import static com.hazelcast.jet.impl.execution.SnapshotData.NO_SNAPSHOT;
+import static com.hazelcast.jet.impl.JobRecord.DynamicData.NO_SNAPSHOT;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -57,7 +57,7 @@ public class PostponedSnapshotTest extends JetTestSupport {
         latches.set(0, 1);
         JobRepository jr = new JobRepository(instance);
         assertTrueEventually(() ->
-                assertTrue(jr.getJobRecord(job.getId()).getSnapshotData().dataMapIndex() != NO_SNAPSHOT));
+                assertTrue(jr.getJobRecord(job.getId()).dataMapIndex() != NO_SNAPSHOT));
 
         // finish the job
         latches.set(1, 1);
@@ -96,12 +96,12 @@ public class PostponedSnapshotTest extends JetTestSupport {
         JobRepository jr = new JobRepository(instance);
 
         // check, that snapshot starts, but stays in ONGOING state
-        assertTrueEventually(() -> assertTrue(jr.getJobRecord(job.getId()).getSnapshotData().ongoingSnapshotId() >= 0), 5);
+        assertTrueEventually(() -> assertTrue(jr.getJobRecord(job.getId()).ongoingSnapshotId() >= 0), 5);
         assertTrueAllTheTime(() -> {
             JobRecord jobRecord = jr.getJobRecord(job.getId());
-            assertTrue(jobRecord.getSnapshotData().ongoingSnapshotId() >= 0);
-            assertTrue("snapshotId=" + jobRecord.getSnapshotData().snapshotId(),
-                    jobRecord.getSnapshotData().snapshotId() < 0);
+            assertTrue(jobRecord.ongoingSnapshotId() >= 0);
+            assertTrue("snapshotId=" + jobRecord.snapshotId(),
+                    jobRecord.snapshotId() < 0);
         }, 2);
         return job;
     }

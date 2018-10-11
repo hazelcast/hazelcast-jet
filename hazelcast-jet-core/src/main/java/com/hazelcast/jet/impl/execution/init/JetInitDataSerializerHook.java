@@ -23,10 +23,10 @@ import com.hazelcast.jet.impl.JobRepository.FilterExecutionIdByJobIdPredicate;
 import com.hazelcast.jet.impl.JobRepository.FilterJobIdPredicate;
 import com.hazelcast.jet.impl.JobRepository.FilterJobRecordByNamePredicate;
 import com.hazelcast.jet.impl.JobRepository.FilterJobResultByNamePredicate;
-import com.hazelcast.jet.impl.JobRepository.UpdateJobRecordEntryProcessor;
+import com.hazelcast.jet.impl.JobRepository.UpdateJobRecordDynamicDataEntryProcessor;
 import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.JobSummary;
-import com.hazelcast.jet.impl.execution.SnapshotData;
+import com.hazelcast.jet.impl.JobRecord.DynamicData;
 import com.hazelcast.jet.impl.operation.CompleteExecutionOperation;
 import com.hazelcast.jet.impl.operation.GetJobConfigOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsByNameOperation;
@@ -66,7 +66,7 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
     public static final int SUBMIT_JOB_OP = 8;
     public static final int GET_JOB_STATUS_OP = 9;
     public static final int SNAPSHOT_OPERATION = 10;
-    public static final int SNAPSHOT_DATA = 11;
+    public static final int DYNAMIC_DATA = 11;
     public static final int SESSION_WINDOW_P_WINDOWS = 12;
     public static final int FILTER_EXECUTION_ID_BY_JOB_ID_PREDICATE = 13;
     public static final int FILTER_JOB_ID = 14;
@@ -129,8 +129,8 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
                     return new GetJobStatusOperation();
                 case SNAPSHOT_OPERATION:
                     return new SnapshotOperation();
-                case SNAPSHOT_DATA:
-                    return new SnapshotData();
+                case DYNAMIC_DATA:
+                    return new DynamicData();
                 case SESSION_WINDOW_P_WINDOWS:
                     return new SessionWindowP.Windows<>();
                 case FILTER_EXECUTION_ID_BY_JOB_ID_PREDICATE:
@@ -144,7 +144,7 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
                 case JOIN_SUBMITTED_JOB:
                     return new JoinSubmittedJobOperation();
                 case UPDATE_JOB_RECORD:
-                    return new UpdateJobRecordEntryProcessor();
+                    return new UpdateJobRecordDynamicDataEntryProcessor();
                 case TERMINATE_EXECUTION_OP:
                     return new TerminateExecutionOperation();
                 case FILTER_JOB_RECORD_BY_NAME:
