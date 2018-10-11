@@ -168,11 +168,11 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         if (guarantee != ProcessingGuarantee.NONE) {
             // wait until a new snapshot appears
             JobRepository jr = new JobRepository(instances[0]);
-            long currentMax = jr.getJobRecord(job.getId()).getSnapshotData().snapshotId();
+            long currentMax = jr.getJobRecord(job.getId()).snapshotId();
             assertTrueEventually(() -> {
                 JobRecord jobRecord = jr.getJobRecord(job.getId());
                 assertNotNull("jobRecord == null", jobRecord);
-                long newMax = jobRecord.getSnapshotData().snapshotId();
+                long newMax = jobRecord.snapshotId();
                 assertTrue("no snapshot produced", newMax > currentMax);
                 System.out.println("snapshot " + newMax + " found, previous was " + currentMax);
             });
