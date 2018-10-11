@@ -59,6 +59,12 @@ public class SnapshotContextTest {
             for (int taskletCount = 1; taskletCount <= 2; taskletCount++) {
                 for (TaskletDone taskletDone : TaskletDone.values()) {
                     for (int numHigherPriority = 0; numHigherPriority <= 1; numHigherPriority++) {
+                        if (numHigherPriority > 0 && taskletDone == TaskletDone.DONE_AFTER_CURRENT_SNAPSHOT
+                                || snapshotStarted == SnapshotStarted.AFTER
+                                        && taskletDone != TaskletDone.DONE_BEFORE_CURRENT_SNAPSHOT) {
+                            // these scenarios are not allowed
+                            continue;
+                        }
                         res.add(new Object[]{snapshotStarted, taskletCount, taskletDone, numHigherPriority});
                     }
                 }
@@ -68,7 +74,7 @@ public class SnapshotContextTest {
     }
 
     @Test
-    public void test_snapShortStartAndDone() {
+    public void test_snapshotStartedAndDone() {
         SnapshotContext ssContext =
                 new SnapshotContext(mock(ILogger.class), 1, "test job", 9, ProcessingGuarantee.EXACTLY_ONCE);
 
