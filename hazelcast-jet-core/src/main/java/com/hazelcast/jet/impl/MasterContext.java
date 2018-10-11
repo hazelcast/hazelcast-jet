@@ -538,7 +538,6 @@ public class MasterContext {
             isTerminal = nextSnapshotIsTerminal;
         }
 
-        // TODO [viliam] more safe updating, guaranteed +1 value?
         jobRecord.startNewSnapshot();
         writeJobRecord(true);
         long newSnapshotId = jobRecord.ongoingSnapshotId();

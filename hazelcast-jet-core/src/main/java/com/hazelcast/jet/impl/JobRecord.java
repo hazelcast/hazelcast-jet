@@ -104,7 +104,7 @@ public class JobRecord implements IdentifiedDataSerializable {
         return dynamicData.quorumSize;
     }
 
-    public void setQuorumSize(int newQuorumSize) {
+    void setQuorumSize(int newQuorumSize) {
         if (newQuorumSize <= dynamicData.quorumSize) {
             throw new IllegalArgumentException("New quorum size: " + newQuorumSize
                     + " must be bigger than current quorum size of " + this);
@@ -120,12 +120,12 @@ public class JobRecord implements IdentifiedDataSerializable {
         this.dynamicData.suspended = suspended;
     }
 
-    public void startNewSnapshot() {
+    void startNewSnapshot() {
         dynamicData.ongoingSnapshotId++;
         dynamicData.ongoingSnapshotStartTime = Clock.currentTimeMillis();
     }
 
-    public void ongoingSnapshotDone(long numBytes, long numKeys, long numChunks, @Nullable String failureText) {
+    void ongoingSnapshotDone(long numBytes, long numKeys, long numChunks, @Nullable String failureText) {
         dynamicData.lastFailureText = failureText;
         if (failureText == null) {
             dynamicData.snapshotId = dynamicData.ongoingSnapshotId;
@@ -152,7 +152,7 @@ public class JobRecord implements IdentifiedDataSerializable {
      * Returns the index of the data map into which the new snapshot will be
      * written.
      */
-    public int ongoingDataMapIndex() {
+    int ongoingDataMapIndex() {
         assert dynamicData.dataMapIndex == 0 // we'll return 1
                 || dynamicData.dataMapIndex == 1 // we'll return 0
                 || dynamicData.dataMapIndex == -1 // we'll return 0

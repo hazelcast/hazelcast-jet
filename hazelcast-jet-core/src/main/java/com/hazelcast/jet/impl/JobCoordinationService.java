@@ -195,7 +195,7 @@ public class JobCoordinationService {
                     if (masterContext == null) {
                         jobRepository.updateJobQuorumSizeIfSmaller(jobRecord.getJobId(), currentQuorumSize);
                         // check the master context again, it might have been just created and have picked
-                        // up the old JobRecord
+                        // up the JobRecord before being updated
                         masterContext = masterContexts.get(jobRecord.getJobId());
                     }
                     if (masterContext != null) {
