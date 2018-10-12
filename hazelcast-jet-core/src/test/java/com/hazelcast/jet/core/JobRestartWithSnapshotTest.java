@@ -276,44 +276,6 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
     }
 
     @Test
-    public void when_snapshotDoneBeforeStarted_then_snapshotSuccessful() {
-        /*
-        Design of this test
-
-        The DAG is "source -> sink". Source completes immediately on
-        non-coordinator (worker) and is infinite on coordinator. Edge between
-        source and sink is distributed. This situation will cause that after the
-        source completes on member, the sink on worker will only have the remote
-        source. This will allow that we can receive the barrier from remote
-        coordinator before worker even starts the snapshot. This is the purpose
-        of this test. To ensure that this happens, we postpone handling of
-        SnapshotOperation on the worker.
-        */
-
-        // instance1 is always coordinator
-        delayOperationsFrom(
-                hz(instance1),
-                JetInitDataSerializerHook.FACTORY_ID,
-                singletonList(JetInitDataSerializerHook.SNAPSHOT_OPERATION)
-        );
-
-        DAG dag = new DAG();
-        Vertex source = dag.newVertex("source", new NonBalancedSource(getAddress(instance2).toString()));
-        Vertex sink = dag.newVertex("sink", writeListP("sink"));
-        dag.edge(between(source, sink).distributed());
-
-        JobConfig config = new JobConfig();
-        config.setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
-        config.setSnapshotIntervalMillis(500);
-        Job job = instance1.newJob(dag, config);
-
-        assertTrueEventually(() -> assertNotNull(getSnapshotContext(job)));
-        SnapshotContext ssContext = getSnapshotContext(job);
-        assertTrueEventually(() -> assertTrue("numRemainingTasklets was not negative, the tested scenario did not happen",
-                ssContext.getNumRemainingTasklets().get() < 0), 3);
-    }
-
-    @Test
     public void when_snapshotStartedBeforeExecution_then_firstSnapshotIsSuccessful() {
         // instance1 is always coordinator
         // delay ExecuteOperation so that snapshot is started before execution is started on the worker member
