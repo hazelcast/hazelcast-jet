@@ -218,13 +218,8 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
 
     @CheckReturnValue
     private boolean putAsyncToMap(int partitionId, Supplier<Data> dataSupplier) {
-        if (currentMap == null) {
-            String mapName = snapshotContext.currentMapName();
-            if (mapName == null) {
-                return false;
-            }
-            currentMap = nodeEngine.getHazelcastInstance().getMap(mapName);
-            this.currentSnapshotId = snapshotContext.currentSnapshotId();
+        if (!initCurrentMap()) {
+            return false;
         }
 
         if (!Util.tryIncrement(numConcurrentAsyncOps, 1, JetService.MAX_PARALLEL_ASYNC_OPS)) {
@@ -244,6 +239,18 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
         return true;
     }
 
+    private boolean initCurrentMap() {
+        if (currentMap == null) {
+            String mapName = snapshotContext.currentMapName();
+            if (mapName == null) {
+                return false;
+            }
+            currentMap = nodeEngine.getHazelcastInstance().getMap(mapName);
+            this.currentSnapshotId = snapshotContext.currentSnapshotId();
+        }
+        return true;
+    }
+
     /**
      * Flush all partitions and reset current map. No further items can be
      * offered until new snapshot is seen in {@link #snapshotContext}.
@@ -254,6 +261,10 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
     @Override
     @CheckReturnValue
     public boolean flushAndReset() {
+        if (!initCurrentMap()) {
+            return false;
+        }
+
         for (int i = 0; i < buffers.length; i++) {
             if (!flush(i)) {
                 return false;

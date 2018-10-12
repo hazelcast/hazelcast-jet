@@ -259,6 +259,13 @@ public class AsyncSnapshotWriterImplTest extends JetTestSupport {
         Assert.assertEquals("bar", in.readObject());
     }
 
+    @Test
+    public void when_noItemsAndNoCurrentMap_then_flushAndResetReturnsFalse() {
+        when(snapshotContext.currentMapName()).thenReturn(null);
+        assertFalse(writer.flushAndReset());
+        when(snapshotContext.currentMapName()).thenReturn("map1");
+    }
+
     private void assertTargetMapEntry(String key, int sequence, int entryLength) {
         int partitionKey = writer.partitionKey(partitionService.getPartitionId(key));
         SnapshotDataKey mapKey = new SnapshotDataKey(partitionKey, 1, "vertex", sequence);
