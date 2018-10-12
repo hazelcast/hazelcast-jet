@@ -26,6 +26,7 @@ import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.PartitionService;
+import com.hazelcast.instance.HazelcastInstanceImpl;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.RestartableException;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -44,7 +45,10 @@ import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.impl.proxy.MapProxyImpl;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
+import com.hazelcast.spi.partition.IPartitionService;
+import com.hazelcast.spi.serialization.SerializationService;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -130,6 +134,8 @@ public final class HazelcastWriters {
         private final DistributedBiFunction<? super V, ? super T, ? extends V> updateFn;
         private final boolean isLocal;
         private final PartitionService partitionService;
+        private final IPartitionService internalPartitionService;
+        private final SerializationService serializationService;
 
         private final Semaphore concurrentAsyncOpsSemaphore = new Semaphore(MAX_PARALLEL_ASYNC_OPS);
         private final AtomicReference<Throwable> firstError = new AtomicReference<>();
@@ -148,6 +154,14 @@ public final class HazelcastWriters {
 
             map = instance.getMap(mapName);
             partitionService = instance.getPartitionService();
+            if (isLocal) {
+                HazelcastInstanceImpl castedInstance = (HazelcastInstanceImpl) instance;
+                internalPartitionService = castedInstance.node.nodeEngine.getPartitionService();
+                serializationService = castedInstance.getSerializationService();
+            } else {
+                internalPartitionService = null;
+                serializationService = null;
+            }
             int partitionCount = partitionService.getPartitions().size();
             tmpMaps = new Map[partitionCount];
             for (int i = 0; i < partitionCount; i++) {
@@ -159,7 +173,16 @@ public final class HazelcastWriters {
             K key = toKeyFn.apply(item);
             // Calculating partitionId requires serializing - we serialize the key twice unnecessarily, but I don't
             // know a way to avoid it.
-            int partitionId = partitionService.getPartition(key).getPartitionId();
+            Data keyData;
+            int partitionId;
+            if (isLocal) {
+                keyData = serializationService.toData(key, ((MapProxyImpl) map).getPartitionStrategy());
+                partitionId = internalPartitionService.getPartitionId(keyData);
+            } else {
+                // We ignore it partition strategy for remote connection, the client doesn't know of it.
+                // The functionality should work, but will be ineffective.
+                partitionId = partitionService.getPartition(key).getPartitionId();
+            }
             tmpMaps[partitionId].merge(key, item, MultiItem::merge);
         }
 
