@@ -51,6 +51,7 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.partition.IPartitionService;
 import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.spi.serialization.SerializationServiceAware;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -641,6 +642,8 @@ public final class HazelcastWriters {
         }
     }
 
+    @SuppressFBWarnings(value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
+            justification = "the class is never java-serialized")
     public static class ApplyFnEntryProcessor<V, T>
             implements EntryProcessor<Object, V>, EntryBackupProcessor<Object, V>, IdentifiedDataSerializable,
             SerializationServiceAware {
