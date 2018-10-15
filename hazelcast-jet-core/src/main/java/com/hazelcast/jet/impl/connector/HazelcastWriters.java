@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.cache.ICache;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
 import com.hazelcast.client.proxy.ClientMapProxy;
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.HazelcastInstance;
@@ -49,6 +50,7 @@ import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.partition.IPartitionService;
 import com.hazelcast.spi.serialization.SerializationService;
+import com.hazelcast.spi.serialization.SerializationServiceAware;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -73,6 +75,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.callbackOf;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.impl.util.Util.tryIncrement;
+import static com.hazelcast.util.MapUtil.createHashMap;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -140,7 +143,7 @@ public final class HazelcastWriters {
         private final Semaphore concurrentAsyncOpsSemaphore = new Semaphore(MAX_PARALLEL_ASYNC_OPS);
         private final AtomicReference<Throwable> firstError = new AtomicReference<>();
         private final IMap map;
-        private final Map<K, Object>[] tmpMaps;
+        private final Map<Data, Object>[] tmpMaps;
 
         UpdateMapContext(
                 HazelcastInstance instance,
@@ -160,7 +163,7 @@ public final class HazelcastWriters {
                 serializationService = castedInstance.getSerializationService();
             } else {
                 internalPartitionService = null;
-                serializationService = null;
+                serializationService = ((HazelcastClientProxy) instance).getSerializationService();
             }
             int partitionCount = partitionService.getPartitions().size();
             tmpMaps = new Map[partitionCount];
@@ -171,19 +174,23 @@ public final class HazelcastWriters {
 
         void add(T item) {
             K key = toKeyFn.apply(item);
-            // Calculating partitionId requires serializing - we serialize the key twice unnecessarily, but I don't
-            // know a way to avoid it.
-            Data keyData;
             int partitionId;
+            Data keyData;
             if (isLocal) {
+                // We pre-serialize the key and value to avoid double serialization when partitionId
+                // is calculated and when the value for backup operation is re-serialized
                 keyData = serializationService.toData(key, ((MapProxyImpl) map).getPartitionStrategy());
                 partitionId = internalPartitionService.getPartitionId(keyData);
             } else {
-                // We ignore it partition strategy for remote connection, the client doesn't know of it.
-                // The functionality should work, but will be ineffective.
+                // We ignore partition strategy for remote connection, the client doesn't know it.
+                // TODO we might be able to fix this after https://github.com/hazelcast/hazelcast/issues/13950 is fixed
+                // The functionality should work, but will be ineffective: the submitOnKey calls will have wrongly
+                // partitioned data.
+                keyData = serializationService.toData(key);
                 partitionId = partitionService.getPartition(key).getPartitionId();
             }
-            tmpMaps[partitionId].merge(key, item, MultiItem::merge);
+            Data itemData = serializationService.toData(item);
+            tmpMaps[partitionId].merge(keyData, itemData, (o, n) -> MultiItem.merge(o, (Data) n));
         }
 
         void flush() {
@@ -251,17 +258,44 @@ public final class HazelcastWriters {
      * to distinguish it from other stream items, which could be
      * ArrayList themselves.
      */
-    private static class MultiItem<E> extends ArrayList<E> {
-        public static <E> MultiItem<E> merge(Object o, E n) {
-            MultiItem<E> multiItem;
+    public static class MultiItem extends ArrayList<Data> implements IdentifiedDataSerializable {
+        public static MultiItem merge(Object o, Data n) {
+            MultiItem multiItem;
             if (o instanceof MultiItem) {
-                multiItem = (MultiItem<E>) o;
+                multiItem = (MultiItem) o;
             } else {
-                multiItem = new MultiItem<>();
-                multiItem.add((E) o);
+                multiItem = new MultiItem();
+                multiItem.add((Data) o);
             }
             multiItem.add(n);
             return multiItem;
+        }
+
+        @Override
+        public void writeData(ObjectDataOutput out) throws IOException {
+            out.writeInt(size());
+            for (Data element : this) {
+                out.writeData(element);
+            }
+        }
+
+        @Override
+        public void readData(ObjectDataInput in) throws IOException {
+            int size = in.readInt();
+            ensureCapacity(size);
+            for (int i = 0; i < size; i++) {
+                add(in.readData());
+            }
+        }
+
+        @Override
+        public int getFactoryId() {
+            return SerializationConstants.FACTORY_ID;
+        }
+
+        @Override
+        public int getId() {
+            return SerializationConstants.HAZELCAST_WRITERS_MULTI_ITEM;
         }
     }
 
@@ -607,16 +641,18 @@ public final class HazelcastWriters {
         }
     }
 
-    public static class ApplyFnEntryProcessor<K, V, T>
-            implements EntryProcessor<K, V>, EntryBackupProcessor<K, V>, IdentifiedDataSerializable {
-        private Map<K, Object> keysToUpdate;
+    public static class ApplyFnEntryProcessor<V, T>
+            implements EntryProcessor<Object, V>, EntryBackupProcessor<Object, V>, IdentifiedDataSerializable,
+            SerializationServiceAware {
+        private Map<Data, Object> keysToUpdate;
         private DistributedBiFunction<? super V, ? super T, ? extends V> updateFn;
+        private transient SerializationService serializationService;
 
         public ApplyFnEntryProcessor() {
         }
 
         ApplyFnEntryProcessor(
-                Map<K, Object> keysToUpdate,
+                Map<Data, Object> keysToUpdate,
                 DistributedBiFunction<? super V, ? super T, ? extends V> updateFn
         ) {
             this.keysToUpdate = keysToUpdate;
@@ -624,9 +660,11 @@ public final class HazelcastWriters {
         }
 
         @Override
-        public Object process(Entry<K, V> entry) {
-            Object item = keysToUpdate.get(entry.getKey());
-            if (item == null && !keysToUpdate.containsKey(entry.getKey())) {
+        public Object process(Entry<Object, V> entry) {
+            // it should not matter that we don't take the PartitionStrategy here into account
+            Data keyData = serializationService.toData(entry.getKey());
+            Object item = keysToUpdate.get(keyData);
+            if (item == null && !keysToUpdate.containsKey(keyData)) {
                 // Implementing equals/hashCode is not required for IMap keys since serialized version is used
                 // instead. After serializing/deserializing the keys they will have different identity. And since they
                 // don't implement the methods, they key can't be found in the map.
@@ -634,41 +672,63 @@ public final class HazelcastWriters {
                         "correctly implemented for the key? Key type: " + entry.getKey().getClass().getName());
             }
             if (item instanceof MultiItem) {
-                for (T o : ((MultiItem<T>) item)) {
+                for (Data o : ((MultiItem) item)) {
                     handle(entry, o);
                 }
             } else {
-                handle(entry, (T) item);
+                handle(entry, (Data) item);
             }
             return null;
         }
 
-        private void handle(Entry<K, V> entry, T item) {
+        private void handle(Entry<Object, V> entry, Data itemData) {
+            T item = serializationService.toObject(itemData);
             V oldValue = entry.getValue();
             V newValue = updateFn.apply(oldValue, item);
             entry.setValue(newValue);
         }
 
         @Override
-        public EntryBackupProcessor<K, V> getBackupProcessor() {
+        public EntryBackupProcessor<Object, V> getBackupProcessor() {
             return this;
         }
 
         @Override
+        public void processBackup(Entry<Object, V> entry) {
+            process(entry);
+        }
+
+        @Override
+        public void setSerializationService(SerializationService serializationService) {
+            this.serializationService = serializationService;
+        }
+
+        @Override
         public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeObject(keysToUpdate);
+            out.writeInt(keysToUpdate.size());
+            for (Entry<Data, Object> en : keysToUpdate.entrySet()) {
+                out.writeData(en.getKey());
+                if (en.getValue() instanceof Data) {
+                    out.writeBoolean(true);
+                    out.writeData((Data) en.getValue());
+                } else {
+                    out.writeBoolean(false);
+                    out.writeObject(en.getValue());
+                }
+            }
             out.writeObject(updateFn);
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
-            keysToUpdate = in.readObject();
+            int keysToUpdateSize = in.readInt();
+            keysToUpdate = createHashMap(keysToUpdateSize);
+            for (int i = 0; i < keysToUpdateSize; i++) {
+                Data key = in.readData();
+                Object value = in.readBoolean() ? in.readData() : in.readObject();
+                keysToUpdate.put(key, value);
+            }
             updateFn = in.readObject();
-        }
-
-        @Override
-        public void processBackup(Entry<K, V> entry) {
-            process(entry);
         }
 
         @Override
