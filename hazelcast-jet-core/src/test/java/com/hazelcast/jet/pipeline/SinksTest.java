@@ -355,11 +355,11 @@ public class SinksTest extends PipelineTestSupport {
         ProcessorMetaSupplier metaSupplier = SinkProcessors.<Entry<String, Integer>, String, Integer>mergeMapP(
                 sinkName, Entry::getKey, Entry::getValue, Integer::sum);
 
-        TestProcessorSupplierContext psContext = new TestProcessorSupplierContext().setJetInstance(jet());
+        TestProcessorSupplierContext psContext = new TestProcessorSupplierContext().setJetInstance(member);
         Processor p = TestSupport.supplierFrom(metaSupplier, psContext).get();
 
         TestOutbox outbox = new TestOutbox();
-        p.init(outbox, new TestProcessorContext().setJetInstance(jet()));
+        p.init(outbox, new TestProcessorContext().setJetInstance(member));
         TestInbox inbox = new TestInbox();
         inbox.add(entry("k", 1));
         inbox.add(entry("k", 2));
@@ -369,7 +369,7 @@ public class SinksTest extends PipelineTestSupport {
         p.close();
 
         // assert the output map contents
-        IMapJet<Object, Object> actual = jet().getMap(sinkName);
+        IMapJet<Object, Object> actual = member.getMap(sinkName);
         assertEquals(1, actual.size());
         assertEquals(3, actual.get("k"));
     }
