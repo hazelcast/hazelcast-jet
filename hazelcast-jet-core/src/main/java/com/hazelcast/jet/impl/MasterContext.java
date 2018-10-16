@@ -393,7 +393,7 @@ public class MasterContext {
         executionStartTime = System.nanoTime();
         if (jobRecord.isSuspended()) {
             jobRecord.setSuspended(false);
-            writeJobRecord(true);
+            writeJobRecordAsync();
         }
 
         return true;
@@ -538,7 +538,7 @@ public class MasterContext {
         }
 
         jobRecord.startNewSnapshot();
-        writeJobRecord(true);
+        writeJobRecordAsync();
         long newSnapshotId = jobRecord.ongoingSnapshotId();
 
         logger.info(String.format("Starting%s snapshot %s for %s",
@@ -573,7 +573,7 @@ public class MasterContext {
         jobRecord.ongoingSnapshotDone(
                 mergedResult.getNumBytes(), mergedResult.getNumKeys(), mergedResult.getNumChunks(),
                 mergedResult.getError());
-        writeJobRecord(false);
+        writeJobRecordSync();
         logger.info(String.format("Snapshot %d for %s completed with status %s in %dms, " +
                         "%,d bytes, %,d keys in %,d chunks, stored in data map %d",
                 snapshotId, jobIdString(), isSuccess ? "SUCCESS" : "FAILURE",
@@ -749,7 +749,7 @@ public class MasterContext {
                             && jobRecord.getConfig().getProcessingGuarantee() != NONE) {
                 jobStatus = SUSPENDED;
                 jobRecord.setSuspended(true);
-                nonSynchronizedAction = () -> writeJobRecord(true);
+                nonSynchronizedAction = this::writeJobRecordAsync;
             } else {
                 jobStatus = (isSuccess ? COMPLETED : FAILED);
 
@@ -815,19 +815,18 @@ public class MasterContext {
     void updateQuorumSize(int newQuorumSize) {
         if (jobRecord.getQuorumSize() < newQuorumSize) {
             jobRecord.setQuorumSize(newQuorumSize);
-            writeJobRecord(true);
+            writeJobRecordAsync();
             logger.info("Current quorum size: " + jobRecord.getQuorumSize() + " of job "
                     + idToString(jobRecord.getJobId()) + " is updated to: " + newQuorumSize);
         }
     }
 
-    private void writeJobRecord(boolean async) {
-        JobRepository jobRepository = coordinationService.jobRepository();
-        if (async) {
-            jobRepository.writeJobRecordAsync(jobRecord.getJobId(), jobRecord.getDynamicData());
-        } else {
-            jobRepository.writeJobRecordSync(jobRecord.getJobId(), jobRecord.getDynamicData());
-        }
+    private void writeJobRecordSync() {
+        coordinationService.jobRepository().writeJobRecordSync(jobRecord.getJobId(), jobRecord.getDynamicData());
+    }
+
+    private void writeJobRecordAsync() {
+        coordinationService.jobRepository().writeJobRecordAsync(jobRecord.getJobId(), jobRecord.getDynamicData());
     }
 
     /**
