@@ -212,9 +212,8 @@ public final class HazelcastWriters {
                     if (tmpMaps[partitionId].isEmpty()) {
                         continue;
                     }
-                    ApplyFnEntryProcessor<K, V, T> entryProcessor = new ApplyFnEntryProcessor<>(
-                            tmpMaps[partitionId], updateFn
-                    );
+                    ApplyFnEntryProcessor<K, V, T> entryProcessor =
+                            new ApplyFnEntryProcessor<>(tmpMaps[partitionId], updateFn);
                     try {
                         // block until we get a permit
                         concurrentAsyncOpsSemaphore.acquire();
@@ -634,8 +633,8 @@ public final class HazelcastWriters {
                 throw new JetException("The new item not found in the map - is equals/hashCode " +
                         "correctly implemented for the key? Key type: " + entry.getKey().getClass().getName());
             }
-            if (item instanceof MultiItem) {
-                for (Data o : ((MultiItem) item)) {
+            if (item instanceof List) {
+                for (Data o : ((List<Data>) item)) {
                     handle(entry, o);
                 }
             } else {
@@ -673,11 +672,16 @@ public final class HazelcastWriters {
                 out.writeData(en.getKey());
                 Object value = en.getValue();
                 if (value instanceof Data) {
-                    out.writeBoolean(true);
+                    out.writeInt(1);
                     out.writeData((Data) value);
-                } else if (value instanceof MultiItem) {
-                    out.writeBoolean(false);
-                    ((MultiItem) value).write(out);
+                } else if (value instanceof List) {
+                    List<Data> list = (List<Data>) value;
+                    out.writeInt(list.size());
+                    for (Data data : list) {
+                        out.writeData(data);
+                    }
+                } else {
+                    assert false : "Unknown value type: " + value.getClass();
                 }
             }
             out.writeObject(updateFn);
@@ -689,7 +693,17 @@ public final class HazelcastWriters {
             keysToUpdate = createHashMap(keysToUpdateSize);
             for (int i = 0; i < keysToUpdateSize; i++) {
                 Data key = in.readData();
-                Object value = in.readBoolean() ? in.readData() : MultiItem.read(in);
+                int size = in.readInt();
+                Object value;
+                if (size == 1) {
+                    value = in.readData();
+                } else {
+                    List<Data> list = new ArrayList<>(size);
+                    for (int j = 0; j < size; j++) {
+                        list.add(in.readData());
+                    }
+                    value = list;
+                }
                 keysToUpdate.put(key, value);
             }
             updateFn = in.readObject();
@@ -707,46 +721,15 @@ public final class HazelcastWriters {
 
         // used to group entries when more than one entry exists for the same key
         public static Object append(Object value, Data item) {
-            MultiItem multiItem;
-            if (value instanceof MultiItem) {
-                multiItem = (MultiItem) value;
+            List<Data> list;
+            if (value instanceof List) {
+                list = (List) value;
             } else {
-                multiItem = new MultiItem();
-                multiItem.add((Data) value);
+                list = new ArrayList<>();
+                list.add((Data) value);
             }
-            multiItem.add(item);
-            return multiItem;
-        }
-
-        /**
-         * This is just a plain java.util.ArrayList. We extend it in order
-         * to distinguish it from other stream items, which could be
-         * ArrayList themselves.
-         */
-        private static class MultiItem extends ArrayList<Data>  {
-
-            MultiItem() {
-            }
-
-            MultiItem(int initialCapacity) {
-                super(initialCapacity);
-            }
-
-            public void write(ObjectDataOutput out) throws IOException {
-                out.writeInt(size());
-                for (Data element : this) {
-                    out.writeData(element);
-                }
-            }
-
-            public static MultiItem read(ObjectDataInput in) throws IOException {
-                int size = in.readInt();
-                MultiItem item = new MultiItem(size);
-                for (int i = 0; i < size; i++) {
-                    item.add(in.readData());
-                }
-                return item;
-            }
+            list.add(item);
+            return list;
         }
     }
 }
