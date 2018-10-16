@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,27 +36,24 @@ public class VertexDef implements IdentifiedDataSerializable {
     private List<EdgeDef> outboundEdges = new ArrayList<>();
     private String name;
     private ProcessorSupplier processorSupplier;
-    private int procIdxOffset;
-    private int parallelism;
+    private int localParallelism;
 
     VertexDef() {
     }
 
-    VertexDef(int id, String name, ProcessorSupplier processorSupplier,
-              int procIdxOffset, int parallelism) {
+    VertexDef(int id, String name, ProcessorSupplier processorSupplier, int localParallelism) {
         this.id = id;
         this.name = name;
         this.processorSupplier = processorSupplier;
-        this.procIdxOffset = procIdxOffset;
-        this.parallelism = parallelism;
+        this.localParallelism = localParallelism;
     }
 
     String name() {
         return name;
     }
 
-    int parallelism() {
-        return parallelism;
+    int localParallelism() {
+        return localParallelism;
     }
 
     int vertexId() {
@@ -83,29 +80,31 @@ public class VertexDef implements IdentifiedDataSerializable {
         return processorSupplier;
     }
 
-    int getProcIdxOffset() {
-        return procIdxOffset;
+    boolean isSnapshotVertex() {
+        return name.startsWith(MasterContext.SNAPSHOT_VERTEX_PREFIX);
     }
 
     /**
-     * Returns true in any of the following cases:
-     * <ul><li>
-     *     the priority of this vertex is {@link
-     *     MasterContext#SNAPSHOT_RESTORE_EDGE_PRIORITY}
-     * </li><li>
-     *     this vertex is a higher-priority source for some of its downstream
-     *     vertices
-     * </li><li>
-     *     it sits upstream of a vertex that satisfies the above condition
-     * </li></ul>
+     * Returns true in any of the following cases:<ul>
+     *     <li>this vertex is a higher-priority source for some of its
+     *         downstream vertices
+     *     <li>this vertex' output is connected by a snapshot restore edge*
+     *     <li>it sits upstream of a vertex meeting the other conditions
+     * </ul>
+     *
+     * (*) We consider a snapshot-restoring vertices to by higher priority
+     * because when connected to a source vertex, they are the only input to it
+     * and therefore they wouldn't be a higher-priority source. However, we
+     * want to prevent snapshot before snapshot restoring is done.
+     * Fixes https://github.com/hazelcast/hazelcast-jet/pull/1101
      */
     boolean isHigherPriorityUpstream() {
         for (EdgeDef outboundEdge : outboundEdges) {
             VertexDef downstream = outboundEdge.destVertex();
-            if (outboundEdge.priority() == MasterContext.SNAPSHOT_RESTORE_EDGE_PRIORITY
-                    || downstream.isHigherPriorityUpstream()
-                    || downstream.inboundEdges.stream()
-                                              .anyMatch(edge -> edge.priority() > outboundEdge.priority())) {
+            if (downstream.inboundEdges.stream()
+                                       .anyMatch(edge -> edge.priority() > outboundEdge.priority())
+                    || outboundEdge.isSnapshotRestoreEdge()
+                    || downstream.isHigherPriorityUpstream()) {
                 return true;
             }
         }
@@ -118,7 +117,6 @@ public class VertexDef implements IdentifiedDataSerializable {
                 "name='" + name + '\'' +
                 '}';
     }
-
 
     //             IdentifiedDataSerializable implementation
 
@@ -139,8 +137,7 @@ public class VertexDef implements IdentifiedDataSerializable {
         writeList(out, inboundEdges);
         writeList(out, outboundEdges);
         CustomClassLoadedObject.write(out, processorSupplier);
-        out.writeInt(procIdxOffset);
-        out.writeInt(parallelism);
+        out.writeInt(localParallelism);
     }
 
     @Override
@@ -150,7 +147,6 @@ public class VertexDef implements IdentifiedDataSerializable {
         inboundEdges = readList(in);
         outboundEdges = readList(in);
         processorSupplier = CustomClassLoadedObject.read(in);
-        procIdxOffset = in.readInt();
-        parallelism = in.readInt();
+        localParallelism = in.readInt();
     }
 }

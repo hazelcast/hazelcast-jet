@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,29 @@
 
 package com.hazelcast.jet.function;
 
+import com.hazelcast.jet.impl.util.ExceptionUtil;
+
 import java.io.Serializable;
 import java.util.function.ToIntFunction;
 
 /**
  * {@code Serializable} variant of {@link ToIntFunction
- * java.util.function.ToIntFunction}.
+ * java.util.function.ToIntFunction} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedToIntFunction<T> extends ToIntFunction<T>, Serializable {
+
+    /**
+     * Exception-declaring version of {@link ToIntFunction#applyAsInt}.
+     */
+    int applyAsIntEx(T value) throws Exception;
+
+    @Override
+    default int applyAsInt(T value) {
+        try {
+            return applyAsIntEx(value);
+        } catch (Exception e) {
+            throw ExceptionUtil.sneakyThrow(e);
+        }
+    }
 }

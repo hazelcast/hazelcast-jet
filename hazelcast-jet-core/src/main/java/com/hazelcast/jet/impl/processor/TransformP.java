@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,8 @@
 
 package com.hazelcast.jet.impl.processor;
 
-import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.core.kotlin.TransformPK;
+import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.function.DistributedFunction;
 
 import javax.annotation.Nonnull;
@@ -42,7 +41,8 @@ public class TransformP<T, R> extends AbstractProcessor {
     }
 
     @Override
-    protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
+    @SuppressWarnings("unchecked")
+    protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         return flatMapper.tryProcess((T) item);
     }
 }

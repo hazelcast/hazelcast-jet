@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package com.hazelcast.jet.server;
 
 import com.hazelcast.core.Cluster;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.ReplicatedMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -25,9 +26,9 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.impl.util.Util;
-import com.hazelcast.jet.stream.IStreamList;
-import com.hazelcast.jet.stream.IStreamMap;
-import com.hazelcast.jet.stream.JetCacheManager;
+import com.hazelcast.jet.IListJet;
+import com.hazelcast.jet.IMapJet;
+import com.hazelcast.jet.JetCacheManager;
 
 import javax.annotation.Nonnull;
 import java.lang.reflect.Method;
@@ -56,9 +57,9 @@ import java.util.jar.JarFile;
  *     Main-Class} in {@code MANIFEST.MF}.
  * </li><li>
  *     Run your JAR, but instead of {@code java -jar jetjob.jar} use {@code
- *     submit-jet.sh jetjob.jar}. The script is found in the Jet distribution
+ *     jet-submit.sh jetjob.jar}. The script is found in the Jet distribution
  *     zipfile, in the {@code bin} directory. On Windows use {@code
- *     submit-jet.bat}.
+ *     jet-submit.bat}.
  * </li><li>
  *     The Jet client will be configured from {@code hazelcast-client.xml}
  *     found in the {@code config} directory in Jet's distribution directory
@@ -81,7 +82,7 @@ import java.util.jar.JarFile;
  *
  * After building the JAR, submit the job:
  * <pre>
- * $ submit-jet.sh jetjob.jar
+ * $ jet-submit.sh jetjob.jar
  * </pre>
  *
  */
@@ -201,8 +202,13 @@ public final class JetBootstrap {
         }
 
         @Nonnull @Override
-        public <K, V> IStreamMap<K, V> getMap(@Nonnull String name) {
+        public <K, V> IMapJet<K, V> getMap(@Nonnull String name) {
             return instance.getMap(name);
+        }
+
+        @Nonnull @Override
+        public <K, V> ReplicatedMap<K, V> getReplicatedMap(@Nonnull String name) {
+            return instance.getReplicatedMap(name);
         }
 
         @Nonnull @Override
@@ -211,7 +217,7 @@ public final class JetBootstrap {
         }
 
         @Nonnull @Override
-        public <E> IStreamList<E> getList(@Nonnull String name) {
+        public <E> IListJet<E> getList(@Nonnull String name) {
             return instance.getList(name);
         }
 

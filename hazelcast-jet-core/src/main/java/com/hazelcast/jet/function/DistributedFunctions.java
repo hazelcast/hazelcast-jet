@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,30 +70,5 @@ public final class DistributedFunctions {
     @Nonnull
     public static <T> DistributedFunction<T, String> constantKey() {
         return t -> CONSTANT_KEY;
-    }
-
-    /**
-     * Returns a consumer that does nothing with the argument.
-     */
-    @Nonnull
-    public static <T> DistributedConsumer<T> noopConsumer() {
-        return t -> {
-        };
-    }
-
-    /**
-     * Returns a predicate that always evaluates to {@code true}.
-     */
-    @Nonnull
-    public static <T> DistributedPredicate<T> alwaysTrue() {
-        return t -> true;
-    }
-
-    /**
-     * Return sa predicate that always evaluates to {@code false}.
-     */
-    @Nonnull
-    public static <T> DistributedPredicate<T> alwaysFalse() {
-        return t -> false;
     }
 }

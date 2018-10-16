@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ public class WatermarkPolicies_limitingLagAndLullTest {
 
     private static final int MAX_LULL_MS = 3;
     private long currTime;
-    private WatermarkPolicy p = limitingLagAndLull(2, MAX_LULL_MS, () -> currTime).get();
+    private WatermarkPolicy p = limitingLagAndLull(2, MAX_LULL_MS, () -> currTime);
 
     @Test
     public void when_outOfOrderEvents_then_monotonicWm() {

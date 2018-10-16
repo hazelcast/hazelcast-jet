@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.execution.init;
 
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
@@ -28,7 +27,6 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -45,21 +43,14 @@ public class DetermineLocalParallelismTest extends JetTestSupport {
 
     private static final int DEFAULT_PARALLELISM = 2;
 
-    private JetTestInstanceFactory jetFactory;
     private NodeEngine nodeEngine;
 
     @Before
     public void before() {
-        jetFactory = new JetTestInstanceFactory();
         JetConfig cfg = new JetConfig();
         cfg.getInstanceConfig().setCooperativeThreadCount(DEFAULT_PARALLELISM);
-        JetInstance jet = jetFactory.newMember(cfg);
+        JetInstance jet = createJetMember(cfg);
         nodeEngine = getNode(jet.getHazelcastInstance()).getNodeEngine();
-    }
-
-    @After
-    public void after() {
-        jetFactory.terminateAll();
     }
 
     @Test
@@ -98,7 +89,7 @@ public class DetermineLocalParallelismTest extends JetTestSupport {
         ExecutionPlanBuilder.createExecutionPlans(
                 nodeEngine,
                 ((ClusterServiceImpl) nodeEngine.getClusterService()).getMembershipManager().getMembersView(),
-                dag, new JobConfig(), NO_SNAPSHOT);
+                dag, 1, 1, new JobConfig(), NO_SNAPSHOT);
     }
 
     private static class ValidatingMetaSupplier implements ProcessorMetaSupplier {

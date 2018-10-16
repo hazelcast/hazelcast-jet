@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.core.TestProcessors.ListSource;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.After;
@@ -51,19 +50,16 @@ public class RoutingPolicyTest extends JetTestSupport {
     private static final List<Integer> NUMBERS_HIGH = IntStream.range(4096, 8192).boxed().collect(toList());
 
     private JetInstance instance;
-    private JetTestInstanceFactory factory;
     private ListConsumerSup consumerSup;
 
     @Before
     public void setupEngine() {
-        factory = new JetTestInstanceFactory();
-        instance = factory.newMember();
+        instance = createJetMember();
         consumerSup = new ListConsumerSup();
     }
 
     @After
     public void tearDown() {
-        factory.terminateAll();
         ListConsumerSup.processors = null;
     }
 
@@ -237,7 +233,7 @@ public class RoutingPolicyTest extends JetTestSupport {
         private final List<Object> list = new ArrayList<>();
 
         @Override
-        protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
+        protected boolean tryProcess(int ordinal, @Nonnull Object item) {
             list.add(item);
             return true;
         }

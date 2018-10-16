@@ -13,14 +13,30 @@
     <parent>
         <groupId>com.hazelcast.jet</groupId>
         <artifactId>hazelcast-jet-root</artifactId>
-        <version>0.6-SNAPSHOT</version>
+        <version>0.8-SNAPSHOT</version>
     </parent>
 
     <properties>
         <main.basedir>${project.parent.basedir}</main.basedir>
         <scala.version>2.11</scala.version>
-        <kafka.version>0.11.0.0</kafka.version>
+        <kafka.version>1.0.0</kafka.version>
     </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Automatic-Module-Name>com.hazelcast.jet.kafka</Automatic-Module-Name>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
     <dependencies>
         <dependency>

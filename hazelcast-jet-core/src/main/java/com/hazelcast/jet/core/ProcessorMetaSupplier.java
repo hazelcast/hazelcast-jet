@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,21 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
+import com.hazelcast.partition.strategy.StringPartitioningStrategy;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.List;
 import java.util.function.Function;
+
+import static com.hazelcast.util.UuidUtil.newUnsecureUuidString;
+import static java.util.Collections.singletonList;
 
 /**
  * Factory of {@link ProcessorSupplier} instances. The starting point of
@@ -35,7 +41,7 @@ import java.util.function.Function;
  * client creates {@code ProcessorMetaSupplier} as a part of the DAG;
  * </li><li>
  * serializes it and sends to a cluster member;
- * </li<li>
+ * </li><li>
  * the member deserializes and uses it to create one {@code ProcessorSupplier}
  * for each cluster member;
  * </li><li>
@@ -84,25 +90,27 @@ public interface ProcessorMetaSupplier extends Serializable {
      * been called.
      */
     @Nonnull
-    Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses);
+    Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses);
 
     /**
      * Called on coordinator member after execution has finished on all
      * members, successfully or not. This method will be called after {@link
-     * ProcessorSupplier#complete(Throwable)} has been called on all
+     * ProcessorSupplier#close(Throwable)} has been called on all
      * <em>available</em> members.
      * <p>
      * If there is an exception during the creation of the execution plan, this
      * method will be called regardless of whether the {@link #init(Context)
      * init()} or {@link #get(List) get()} method have been called or not.
+     * If this method throws an exception, it will be logged and ignored; it
+     * won't be reported as a job failure.
      * <p>
      * If you rely on the fact that this method is run once per cluster, it can
-     * happen that it is not called, if the coordinator member crashed.
+     * happen that it is not called at all, if the coordinator member crashed.
      *
      * @param error the exception (if any) that caused the job to fail;
      *              {@code null} in the case of successful job completion
      */
-    default void complete(Throwable error) {
+    default void close(@Nullable Throwable error) throws Exception {
     }
 
     /**
@@ -120,31 +128,11 @@ public interface ProcessorMetaSupplier extends Serializable {
     /**
      * Wraps the provided {@code ProcessorSupplier} into a meta-supplier that
      * will always return it. The {@link #preferredLocalParallelism()} of
-     * the meta-supplier will be one, i.e., no local parallelization.
-     */
-    static ProcessorMetaSupplier dontParallelize(ProcessorSupplier supplier) {
-        return of(supplier, 1);
-    }
-
-    /**
-     * Wraps the provided {@code ProcessorSupplier} into a meta-supplier that
-     * will always return it. The {@link #preferredLocalParallelism()} of
      * the meta-supplier will be {@link Vertex#LOCAL_PARALLELISM_USE_DEFAULT}.
      */
     @Nonnull
     static ProcessorMetaSupplier of(@Nonnull ProcessorSupplier procSupplier) {
         return of(procSupplier, Vertex.LOCAL_PARALLELISM_USE_DEFAULT);
-    }
-
-    /**
-     * Factory method that wraps the given {@code Supplier<Processor>}
-     * and uses it as the supplier of all {@code Processor} instances.
-     * Specifically, returns a meta-supplier that will always return the
-     * result of calling {@link ProcessorSupplier#of(DistributedSupplier)}.
-     */
-    @Nonnull
-    static ProcessorMetaSupplier dontParallelize(@Nonnull DistributedSupplier<? extends Processor> procSupplier) {
-        return of(ProcessorSupplier.of(procSupplier), 1);
     }
 
     /**
@@ -158,7 +146,8 @@ public interface ProcessorMetaSupplier extends Serializable {
      */
     @Nonnull
     static ProcessorMetaSupplier of(
-            @Nonnull DistributedSupplier<? extends Processor> procSupplier, int preferredLocalParallelism
+            @Nonnull DistributedSupplier<? extends Processor> procSupplier,
+            int preferredLocalParallelism
     ) {
         return of(ProcessorSupplier.of(procSupplier), preferredLocalParallelism);
     }
@@ -184,10 +173,12 @@ public interface ProcessorMetaSupplier extends Serializable {
      * @param addressToSupplier the mapping from address to ProcessorSupplier
      * @param preferredLocalParallelism the value to return from {@link #preferredLocalParallelism()}
      */
+    @Nonnull
     static ProcessorMetaSupplier of(
-            DistributedFunction<Address, ProcessorSupplier> addressToSupplier,
+            @Nonnull DistributedFunction<? super Address, ? extends ProcessorSupplier> addressToSupplier,
             int preferredLocalParallelism
     ) {
+        Vertex.checkLocalParallelism(preferredLocalParallelism);
         return new ProcessorMetaSupplier() {
             @Override
             public int preferredLocalParallelism() {
@@ -195,7 +186,7 @@ public interface ProcessorMetaSupplier extends Serializable {
             }
 
             @Nonnull @Override
-            public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
+            public Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses) {
                 return addressToSupplier;
             }
         };
@@ -207,8 +198,111 @@ public interface ProcessorMetaSupplier extends Serializable {
      * ProcessorSupplier}. The {@link #preferredLocalParallelism()} of
      * the meta-supplier will be {@link Vertex#LOCAL_PARALLELISM_USE_DEFAULT}.
      */
-    static ProcessorMetaSupplier of(DistributedFunction<Address, ProcessorSupplier> addressToSupplier) {
+    @Nonnull
+    static ProcessorMetaSupplier of(
+            @Nonnull DistributedFunction<? super Address, ? extends ProcessorSupplier> addressToSupplier
+    ) {
         return of(addressToSupplier, Vertex.LOCAL_PARALLELISM_USE_DEFAULT);
+    }
+
+
+    /**
+     * Wraps the provided {@code ProcessorSupplier} into a meta-supplier that
+     * will always return it. The {@link #preferredLocalParallelism()} of
+     * the meta-supplier will be one, i.e., no local parallelization.
+     * <p>
+     * The parallelism will be overriden if the {@link Vertex#localParallelism(int)} is
+     * set to a specific value.
+     */
+    @Nonnull
+    static ProcessorMetaSupplier preferLocalParallelismOne(@Nonnull ProcessorSupplier supplier) {
+        return of(supplier, 1);
+    }
+
+    /**
+     * Variant of {@link #preferLocalParallelismOne(ProcessorSupplier)} where
+     * the supplied {@code DistributedSupplier<Processor>} will be
+     * wrapped into a {@link ProcessorSupplier}.
+     */
+    @Nonnull
+    static ProcessorMetaSupplier preferLocalParallelismOne(
+            @Nonnull DistributedSupplier<? extends Processor> procSupplier
+    ) {
+        return of(ProcessorSupplier.of(procSupplier), 1);
+    }
+
+    /**
+     * Variant of {@link #forceTotalParallelismOne(ProcessorSupplier, String)} where the node
+     * for the supplier will be chosen randomly.
+     */
+    @Nonnull
+    static ProcessorMetaSupplier forceTotalParallelismOne(@Nonnull ProcessorSupplier supplier) {
+        return forceTotalParallelismOne(supplier, newUnsecureUuidString());
+    }
+
+    /**
+     * Wraps the provided {@code ProcessorSupplier} into a meta-supplier that
+     * will only use the given {@code ProcessorSupplier} on a single node.
+     * The node will be chosen according to the {@code partitionKey} supplied.
+     * This is mainly provided as a convenience for implementing
+     * non-distributed sources where data can't be read in parallel by multiple
+     * consumers. When used as a sink or intermediate vertex, the DAG should ensure
+     * that only the processor instance on the designated node receives any data,
+     * otherwise an {@code IllegalStateException} will be thrown.
+     * <p>
+     * The vertex containing the {@code ProcessorMetaSupplier} must have a local
+     * parallelism setting of 1, otherwise {code IllegalArgumentException} is thrown.
+     *
+     * @param supplier the supplier that will be wrapped
+     * @param partitionKey the supplier will only be created on the node that owns the supplied
+     *                     partition key
+     * @return the wrapped {@code ProcessorMetaSupplier}
+     *
+     * @throws IllegalArgumentException if vertex has local parallelism setting of greater than 1
+     */
+    @Nonnull
+    static ProcessorMetaSupplier forceTotalParallelismOne(
+            @Nonnull ProcessorSupplier supplier, @Nonnull String partitionKey
+    ) {
+        return new ProcessorMetaSupplier() {
+
+            private transient Address ownerAddress;
+
+            @Override
+            public void init(@Nonnull Context context) {
+                if (context.localParallelism() != 1) {
+                    throw new IllegalArgumentException(
+                            "Non-distributed vertex had parallelism of " + context.localParallelism()
+                                    + ", should be 1");
+                }
+                String key = StringPartitioningStrategy.getPartitionKey(partitionKey);
+                ownerAddress = context.jetInstance().getHazelcastInstance().getPartitionService()
+                                      .getPartition(key).getOwner().getAddress();
+            }
+
+            @Nonnull @Override
+            public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
+                return addr -> addr.equals(ownerAddress) ?
+                        supplier
+                        :
+                        count -> singletonList(new AbstractProcessor() {
+                            @Override
+                            protected boolean tryProcess(int ordinal, @Nonnull Object item) {
+                                throw new IllegalStateException(
+                                        "This vertex has a total parallelism of one and as such only"
+                                                + " expects input on one node. Edge configuration must be adjusted to"
+                                                + " make sure that only the expected node receives any input."
+                                                + " Unexpected input received from ordinal " + ordinal + ": " + item
+                                );
+                            }
+                        });
+            }
+
+            @Override
+            public int preferredLocalParallelism() {
+                return 1;
+            }
+        };
     }
 
     /**
@@ -224,23 +318,57 @@ public interface ProcessorMetaSupplier extends Serializable {
         JetInstance jetInstance();
 
         /**
+         * Returns the job ID. Job id is unique for job submission and doesn't
+         * change when the job restarts. It's also unique for all running and
+         * archived jobs.
+         */
+        long jobId();
+
+        /**
+         * Returns the job execution ID. It's unique for one execution, but
+         * changes when the job restarts.
+         */
+        long executionId();
+
+        /**
+         * Returns the {@link JobConfig}.
+         */
+        @Nonnull
+        JobConfig jobConfig();
+
+        /**
          * Returns the total number of {@code Processor}s that will be created
          * across the cluster. This number remains stable for entire job
-         * execution.
+         * execution. It is equal to {@link #memberCount()} * {@link
+         * #localParallelism()}.
          */
         int totalParallelism();
 
         /**
          * Returns the number of processors that each {@code ProcessorSupplier}
          * will be asked to create once deserialized on each member. All
-         * members have equal local parallelism; dividing {@link
-         * #totalParallelism} by local parallelism gives you the participating
-         * member count. The count doesn't change unless the job restarts.
+         * members have equal local parallelism. The count doesn't change
+         * unless the job restarts.
          */
         int localParallelism();
 
         /**
-         * Returns a logger for the associated {@code ProcessorSupplier}.
+         * Returns the number of members running this job.
+         * <p>
+         * Note that the value might be lower than current member count if
+         * members were added after the job started. The count doesn't change
+         * unless the job restarts.
+         */
+        int memberCount();
+
+        /**
+         * Returns the name of the associated vertex.
+         */
+        @Nonnull
+        String vertexName();
+
+        /**
+         * Returns a logger for the associated {@code ProcessorMetaSupplier}.
          */
         @Nonnull
         ILogger logger();

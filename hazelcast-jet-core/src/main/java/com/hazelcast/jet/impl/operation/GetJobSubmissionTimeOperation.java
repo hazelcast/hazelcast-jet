@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,8 @@ package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
-import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
-public class GetJobSubmissionTimeOperation extends AbstractJobOperation implements IdentifiedDataSerializable {
+public class GetJobSubmissionTimeOperation extends AbstractJobOperation {
 
     private long response;
 
@@ -32,7 +31,7 @@ public class GetJobSubmissionTimeOperation extends AbstractJobOperation implemen
     }
 
     @Override
-    public void run() throws Exception {
+    public void run() {
         JetService service = getService();
         response = service.getJobCoordinationService().getJobSubmissionTime(jobId());
     }

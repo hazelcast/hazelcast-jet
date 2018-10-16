@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,27 +16,27 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.jet.impl.operation.AsyncOperation;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.LiveOperations;
+import com.hazelcast.spi.Operation;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class LiveOperationRegistry {
     // memberAddress -> callId -> operation
-    final ConcurrentHashMap<Address, Map<Long, AsyncOperation>> liveOperations = new ConcurrentHashMap<>();
+    final ConcurrentHashMap<Address, Map<Long, Operation>> liveOperations = new ConcurrentHashMap<>();
 
-    public void register(AsyncOperation operation) {
-        Map<Long, AsyncOperation> callIds = liveOperations.computeIfAbsent(operation.getCallerAddress(),
+    public void register(Operation operation) {
+        Map<Long, Operation> callIds = liveOperations.computeIfAbsent(operation.getCallerAddress(),
                 (key) -> new ConcurrentHashMap<>());
         if (callIds.putIfAbsent(operation.getCallId(), operation) != null) {
             throw new IllegalStateException("Duplicate operation during registration of operation=" + operation);
         }
     }
 
-    public void deregister(AsyncOperation operation) {
-        Map<Long, AsyncOperation> operations = liveOperations.get(operation.getCallerAddress());
+    public void deregister(Operation operation) {
+        Map<Long, Operation> operations = liveOperations.get(operation.getCallerAddress());
 
         if (operations == null) {
             throw new IllegalStateException("Missing address during de-registration of operation=" + operation);
@@ -47,7 +47,7 @@ public class LiveOperationRegistry {
         }
     }
 
-    void populate(LiveOperations liveOperations) {
+    public void populate(LiveOperations liveOperations) {
         this.liveOperations.forEach((key, value) -> value.keySet().forEach(callId -> liveOperations.add(key, callId)));
     }
 

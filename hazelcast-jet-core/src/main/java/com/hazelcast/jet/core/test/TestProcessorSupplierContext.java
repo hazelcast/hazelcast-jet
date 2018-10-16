@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,44 +22,57 @@ import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.core.test.TestSupport.getLogger;
-
 /**
- * Simple implementation of {@link ProcessorSupplier.Context}.
+ * {@link ProcessorSupplier.Context} implementation suitable to be used in tests.
  */
-public class TestProcessorSupplierContext implements ProcessorSupplier.Context {
+public class TestProcessorSupplierContext
+        extends TestProcessorMetaSupplierContext
+        implements ProcessorSupplier.Context {
 
-    private JetInstance jetInstance;
-    private int localParallelism = 1;
+    private int memberIndex;
 
-    @Override
-    public JetInstance jetInstance() {
-        return jetInstance;
-    }
-
-    /**
-     * Set the jet instance.
-     */
-    public TestProcessorSupplierContext setJetInstance(JetInstance jetInstance) {
-        this.jetInstance = jetInstance;
-        return this;
-    }
-
-    @Override
-    public int localParallelism() {
-        return localParallelism;
+    @Nonnull @Override
+    public TestProcessorSupplierContext setLogger(@Nonnull ILogger logger) {
+        return (TestProcessorContext) super.setLogger(logger);
     }
 
     @Nonnull @Override
-    public ILogger logger() {
-        return getLogger(getClass());
+    public TestProcessorSupplierContext setJetInstance(@Nonnull JetInstance jetInstance) {
+        return (TestProcessorSupplierContext) super.setJetInstance(jetInstance);
+    }
+
+    @Nonnull @Override
+    public TestProcessorSupplierContext setVertexName(@Nonnull String vertexName) {
+        return (TestProcessorSupplierContext) super.setVertexName(vertexName);
+    }
+
+    @Nonnull @Override
+    public TestProcessorSupplierContext setTotalParallelism(int totalParallelism) {
+        return (TestProcessorSupplierContext) super.setTotalParallelism(totalParallelism);
+    }
+
+    @Nonnull @Override
+    public TestProcessorSupplierContext setLocalParallelism(int localParallelism) {
+        return (TestProcessorSupplierContext) super.setLocalParallelism(localParallelism);
+    }
+
+    @Override
+    public int memberIndex() {
+        assert memberIndex >= 0 && memberIndex < memberCount()
+                : "memberIndex should be in range 0.." + (memberCount() - 1);
+        return memberIndex;
     }
 
     /**
-     * Set local parallelism.
+     * Set the member index.
      */
-    public TestProcessorSupplierContext setLocalParallelism(int localParallelism) {
-        this.localParallelism = localParallelism;
+    public TestProcessorSupplierContext setMemberIndex(int memberIndex) {
+        this.memberIndex = memberIndex;
         return this;
+    }
+
+    @Override
+    protected String loggerName() {
+        return vertexName() + "#PS";
     }
 }

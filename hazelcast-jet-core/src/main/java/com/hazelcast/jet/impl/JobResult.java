@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,19 +19,22 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
+import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.core.JobStatus.COMPLETED;
 import static com.hazelcast.jet.core.JobStatus.FAILED;
-import static com.hazelcast.jet.impl.util.Util.idToString;
+import static com.hazelcast.jet.impl.util.Util.exceptionallyCompletedFuture;
 import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 
 public class JobResult implements IdentifiedDataSerializable {
 
@@ -45,8 +48,12 @@ public class JobResult implements IdentifiedDataSerializable {
     public JobResult() {
     }
 
-    public JobResult(long jobId, JobConfig jobConfig, String coordinatorUUID, long creationTime, Long completionTime,
-                     Throwable failure) {
+    public JobResult(long jobId,
+                     @Nonnull JobConfig jobConfig,
+                     @Nonnull String coordinatorUUID,
+                     long creationTime, long completionTime,
+                     @Nullable Throwable failure
+    ) {
         this.jobId = jobId;
         this.jobConfig = jobConfig;
         this.coordinatorUUID = coordinatorUUID;
@@ -59,10 +66,12 @@ public class JobResult implements IdentifiedDataSerializable {
         return jobId;
     }
 
+    @Nonnull
     public JobConfig getJobConfig() {
         return jobConfig;
     }
 
+    @Nonnull
     public String getCoordinatorUUID() {
         return coordinatorUUID;
     }
@@ -76,23 +85,36 @@ public class JobResult implements IdentifiedDataSerializable {
     }
 
     public boolean isSuccessful() {
-        return (failure == null);
+        return failure == null;
     }
 
     public boolean isSuccessfulOrCancelled() {
-        return (failure == null || failure instanceof CancellationException);
+        return failure == null || failure instanceof CancellationException;
     }
 
+    @Nullable
     public Throwable getFailure() {
         return failure;
     }
 
+    @Nullable
+    public String getFailureReason() {
+        return failure == null ? null : failure.toString();
+    }
+
+    @Nonnull
     public JobStatus getJobStatus() {
         return isSuccessfulOrCancelled() ? COMPLETED : FAILED;
     }
 
+    @Nonnull
     public CompletableFuture<Void> asCompletableFuture() {
-        return failure == null ? Util.completedVoidFuture() : Util.completedVoidFuture(failure);
+        return failure == null ? completedFuture(null) : exceptionallyCompletedFuture(failure);
+    }
+
+    @Nonnull
+    public String getJobNameOrId() {
+        return jobConfig.getName() != null ? jobConfig.getName() : idToString(jobId);
     }
 
     @Override
@@ -100,7 +122,7 @@ public class JobResult implements IdentifiedDataSerializable {
         return "JobResult{" +
                 "coordinatorUUID='" + coordinatorUUID + '\'' +
                 ", jobId=" + idToString(jobId) +
-                ", jobConfig.name=" + jobConfig.getName() +
+                ", name=" + jobConfig.getName() +
                 ", creationTime=" + toLocalDateTime(creationTime) +
                 ", completionTime=" + toLocalDateTime(completionTime) +
                 ", failure=" + failure +
@@ -136,5 +158,4 @@ public class JobResult implements IdentifiedDataSerializable {
         completionTime = in.readLong();
         failure = in.readObject();
     }
-
 }

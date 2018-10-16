@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,16 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.internal.json.JsonArray;
+import com.hazelcast.internal.json.JsonObject;
+import com.hazelcast.jet.core.Edge.RoutingPolicy;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.SerializationConstants;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,13 +36,17 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
+import static com.hazelcast.jet.impl.util.Util.escapeGraphviz;
 import static com.hazelcast.util.Preconditions.checkTrue;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.newSetFromMap;
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.joining;
 
 /**
  * Describes a computation to be performed by the Jet computation engine.
@@ -69,7 +77,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     private Set<Edge> edges = new LinkedHashSet<>();
     private Map<String, Vertex> nameToVertex = new HashMap<>();
     // Transient field:
-    private Set<Vertex> verticesByIdentity = newSetFromMap(new IdentityHashMap<Vertex, Boolean>());
+    private Set<Vertex> verticesByIdentity = newSetFromMap(new IdentityHashMap<>());
 
     /**
      * Creates a vertex from a {@code Supplier<Processor>} and adds it to this DAG.
@@ -79,7 +87,10 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
      * @param name the unique name of the vertex
      * @param simpleSupplier the simple, parameterless supplier of {@code Processor} instances
      */
-    public Vertex newVertex(String name, DistributedSupplier<? extends Processor> simpleSupplier) {
+    @Nonnull
+    public Vertex newVertex(
+            @Nonnull String name, @Nonnull DistributedSupplier<? extends Processor> simpleSupplier
+    ) {
         return addVertex(new Vertex(name, simpleSupplier));
     }
 
@@ -91,7 +102,8 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
      * @param name the unique name of the vertex
      * @param processorSupplier the supplier of {@code Processor} instances which will be used on all members
      */
-    public Vertex newVertex(String name, ProcessorSupplier processorSupplier) {
+    @Nonnull
+    public Vertex newVertex(@Nonnull String name, @Nonnull ProcessorSupplier processorSupplier) {
         return addVertex(new Vertex(name, processorSupplier));
     }
 
@@ -104,14 +116,16 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
      * @param metaSupplier the meta-supplier of {@code ProcessorSupplier}s for each member
      *
      */
-    public Vertex newVertex(String name, ProcessorMetaSupplier metaSupplier) {
+    @Nonnull
+    public Vertex newVertex(@Nonnull String name, @Nonnull ProcessorMetaSupplier metaSupplier) {
         return addVertex(new Vertex(name, metaSupplier));
     }
 
     /**
      * Adds a vertex to this DAG. The vertex name must be unique.
      */
-    public DAG vertex(Vertex vertex) {
+    @Nonnull
+    public DAG vertex(@Nonnull Vertex vertex) {
         addVertex(vertex);
         return this;
     }
@@ -124,7 +138,8 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
      * and outbound ordinals are independent, so there can be two edges at the
      * same ordinal, one inbound and one outbound.
      */
-    public DAG edge(Edge edge) {
+    @Nonnull
+    public DAG edge(@Nonnull Edge edge) {
         if (edge.getDestination() == null) {
             throw new IllegalArgumentException("Edge has no destination");
         }
@@ -171,7 +186,8 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     /**
      * Returns the inbound edges connected to the vertex with the given name.
      */
-    public List<Edge> getInboundEdges(String vertexName) {
+    @Nonnull
+    public List<Edge> getInboundEdges(@Nonnull String vertexName) {
         if (!nameToVertex.containsKey(vertexName)) {
             throw new IllegalArgumentException("No vertex with name '" + vertexName + "' found in this DAG");
         }
@@ -187,7 +203,8 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     /**
      * Returns the outbound edges connected to the vertex with the given name.
      */
-    public List<Edge> getOutboundEdges(String vertexName) {
+    @Nonnull
+    public List<Edge> getOutboundEdges(@Nonnull String vertexName) {
         if (!nameToVertex.containsKey(vertexName)) {
             throw new IllegalArgumentException("No vertex with name '" + vertexName + "' found in this DAG");
         }
@@ -203,7 +220,8 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     /**
      * Returns the vertex with the given name.
      */
-    public Vertex getVertex(String vertexName) {
+    @Nonnull
+    public Vertex getVertex(@Nonnull String vertexName) {
         return nameToVertex.get(vertexName);
     }
 
@@ -211,6 +229,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
      * Returns an iterator over the DAG's vertices in topological order.
      */
     @Override
+    @Nonnull
     public Iterator<Vertex> iterator() {
         return validate().iterator();
     }
@@ -249,7 +268,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
                         .add(edge.getDestination());
         }
         for (Vertex v : nameToVertex.values()) {
-            adjacencyMap.computeIfAbsent(v, x -> emptyList());
+            adjacencyMap.putIfAbsent(v, emptyList());
         }
         return topologicalSort(adjacencyMap, Vertex::getName);
     }
@@ -283,12 +302,27 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     }
 
     @Override
+    @Nonnull
     public String toString() {
+        return toString(-1);
+    }
+
+    /**
+     * Returns a string representation of the DAG.
+     *
+     * @param defaultLocalParallelism the local parallelism that will be shown if
+     *                                neither overridden on the vertex nor the
+     *                                preferred parallelism is defined by
+     *                                meta-supplier
+     */
+    @Nonnull
+    public String toString(int defaultLocalParallelism) {
         final StringBuilder b = new StringBuilder("dag\n");
         for (Vertex v : this) {
             b.append("    .vertex(\"").append(v.getName()).append("\")");
-            if (v.getLocalParallelism() != -1) {
-                b.append(".localParallelism(").append(v.getLocalParallelism()).append(')');
+            int localParallelism = getLocalParallelism(defaultLocalParallelism, v);
+            if (localParallelism != -1) {
+                b.append(".localParallelism(").append(localParallelism).append(')');
             }
             b.append('\n');
         }
@@ -296,6 +330,105 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
             b.append("    .edge(").append(e).append(")\n");
         }
         return b.toString();
+    }
+
+    /**
+     * Returns a JSON representation of the DAG.
+     *
+     * @param defaultLocalParallelism the local parallelism that will be shown if
+     *                                neither overridden on the vertex nor the
+     *                                preferred parallelism is defined by
+     *                                meta-supplier
+     */
+    @Nonnull
+    public JsonObject toJson(int defaultLocalParallelism) {
+        JsonObject dag = new JsonObject();
+        JsonArray vertices = new JsonArray();
+        for (Vertex v : this) {
+            JsonObject vertex = new JsonObject();
+            vertex.add("name", v.getName());
+            vertex.add("parallelism", getLocalParallelism(defaultLocalParallelism, v));
+            vertices.add(vertex);
+        }
+        dag.add("vertices", vertices);
+
+        JsonArray edges = new JsonArray();
+        for (Edge e : this.edges) {
+            JsonObject edge = new JsonObject();
+            edge.add("from", e.getSourceName());
+            edge.add("fromOrdinal", e.getSourceOrdinal());
+            edge.add("to", e.getDestName());
+            edge.add("toOrdinal", e.getDestOrdinal());
+            edge.add("priority", e.getPriority());
+            edge.add("distributed", e.isDistributed());
+            edge.add("type", e.getRoutingPolicy().toString().toLowerCase());
+            edges.add(edge);
+        }
+        dag.add("edges", edges);
+        return dag;
+    }
+
+    private static int getLocalParallelism(int defaultLocalParallelism, Vertex v) {
+        int localParallelism = v.getLocalParallelism();
+        if (localParallelism == -1) {
+            localParallelism = v.getMetaSupplier().preferredLocalParallelism();
+            if (localParallelism == -1) {
+                localParallelism = defaultLocalParallelism;
+            }
+        }
+        return localParallelism;
+    }
+
+     /**
+     * Returns a DOT format (graphviz) representation of the DAG.
+     */
+    @Nonnull
+    public String toDotString() {
+        final StringBuilder builder = new StringBuilder(512);
+        builder.append("digraph DAG {\n");
+        Pattern stepPattern = Pattern.compile("(?<stepName>.+)-step[12]");
+        int clusterCount = 0;
+        for (Vertex v : this) {
+            List<Edge> out = getOutboundEdges(v.getName());
+            List<Edge> in = getInboundEdges(v.getName());
+
+            if (out.isEmpty() && in.isEmpty()) {
+                // dangling vertex
+                builder.append("\t")
+                       .append("\"").append(escapeGraphviz(v.getName())).append("\"")
+                       .append(";\n");
+            }
+            for (Edge e : out) {
+                List<String> labels = new ArrayList<>();
+                if (e.isDistributed()) {
+                    labels.add("distributed");
+                }
+                if (e.getRoutingPolicy() != RoutingPolicy.UNICAST) {
+                    labels.add(e.getRoutingPolicy().toString().toLowerCase());
+                }
+                Matcher srcMatcher = stepPattern.matcher(e.getSourceName());
+                Matcher destMatcher = stepPattern.matcher(e.getDestName());
+                boolean inSubgraph = srcMatcher.matches() && destMatcher.matches()
+                        && srcMatcher.group("stepName").equals(destMatcher.group("stepName"));
+                if (inSubgraph) {
+                    builder.append("\tsubgraph cluster_").append(clusterCount++).append(" {\n")
+                           .append("\t");
+                }
+                builder.append("\t")
+                       .append("\"").append(escapeGraphviz(e.getSourceName())).append("\"")
+                       .append(" -> ")
+                       .append("\"").append(escapeGraphviz(e.getDestName())).append("\"");
+                if (!labels.isEmpty()) {
+                    builder.append(labels.stream().collect(joining("-", " [label=\"", "\"]")));
+                }
+                builder.append(";\n");
+                if (inSubgraph) {
+                    builder.append("\t}\n");
+                }
+            }
+        }
+        builder.append("}");
+        return builder.toString();
     }
 
     @Override

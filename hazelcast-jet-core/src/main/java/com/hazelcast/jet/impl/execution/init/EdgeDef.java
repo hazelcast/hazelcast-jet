@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,11 @@
 
 package com.hazelcast.jet.impl.execution.init;
 
+import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.Edge.RoutingPolicy;
-import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.core.Partitioner;
+import com.hazelcast.jet.impl.MasterContext;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -95,6 +96,10 @@ public class EdgeDef implements IdentifiedDataSerializable {
 
     int priority() {
         return priority;
+    }
+
+    boolean isSnapshotRestoreEdge() {
+        return priority == MasterContext.SNAPSHOT_RESTORE_EDGE_PRIORITY;
     }
 
     boolean isDistributed() {

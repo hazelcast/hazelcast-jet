@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,78 +16,63 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.jet.core.CloseableProcessorSupplier;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.core.kotlin.ProcessorK;
+import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedConsumer;
-import com.hazelcast.jet.function.DistributedIntFunction;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedSupplier;
 
 import javax.annotation.Nonnull;
-import java.io.Closeable;
 
-public final class WriteBufferedP<B, T> implements Processor, Closeable {
+public final class WriteBufferedP<B, T> implements Processor {
 
-    private final DistributedIntFunction<B> newBufferFn;
-    private final DistributedBiConsumer<B, T> addToBufferFn;
-    private final DistributedConsumer<B> flushBufferFn;
-    private final DistributedConsumer<B> disposeBufferFn;
+    private final DistributedFunction<? super Context, B> createFn;
+    private final DistributedBiConsumer<? super B, ? super T> onReceiveFn;
+    private final DistributedConsumer<? super B> flushFn;
+    private final DistributedConsumer<? super B> destroyFn;
 
     private B buffer;
 
-    WriteBufferedP(DistributedIntFunction<B> newBufferFn,
-                   DistributedBiConsumer<B, T> addToBufferFn,
-                   DistributedConsumer<B> flushBufferFn,
-                   DistributedConsumer<B> disposeBufferFn
+    WriteBufferedP(
+            @Nonnull DistributedFunction<? super Context, B> createFn,
+            @Nonnull DistributedBiConsumer<? super B, ? super T> onReceiveFn,
+            @Nonnull DistributedConsumer<? super B> flushFn,
+            @Nonnull DistributedConsumer<? super B> destroyFn
     ) {
-        this.newBufferFn = newBufferFn;
-        this.addToBufferFn = addToBufferFn;
-        this.flushBufferFn = flushBufferFn;
-        this.disposeBufferFn = disposeBufferFn;
+        this.createFn = createFn;
+        this.onReceiveFn = onReceiveFn;
+        this.flushFn = flushFn;
+        this.destroyFn = destroyFn;
     }
 
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
-        this.buffer = newBufferFn.apply(context.globalProcessorIndex());
-    }
-
-    /**
-     * This is private API. Call
-     * {@link com.hazelcast.jet.core.processor.SinkProcessors#writeBufferedP(
-     *        DistributedIntFunction, DistributedBiConsumer,
-     *        DistributedConsumer, DistributedConsumer)
-     * SinkProcessors.writeBuffered()} instead.
-     */
-    @Nonnull
-    public static <B, T> ProcessorSupplier supplier(
-            DistributedIntFunction<B> newBufferFn,
-            DistributedBiConsumer<B, T> addToBufferFn,
-            DistributedConsumer<B> flushBufferFn,
-            DistributedConsumer<B> disposeBufferFn
-    ) {
-        return new CloseableProcessorSupplier<>(
-                () -> new WriteBufferedP<>(newBufferFn, addToBufferFn, flushBufferFn, disposeBufferFn));
+        buffer = createFn.apply(context);
+        if (buffer == null) {
+            throw new JetException("Null buffer created");
+        }
     }
 
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
-        inbox.drainJ(item -> {
-            addToBufferFn.accept(buffer, (T) item);
-        });
-        flushBufferFn.accept(buffer);
+        inbox.drain(item -> onReceiveFn.accept(buffer, (T) item));
+        flushFn.accept(buffer);
     }
 
     @Override
     public boolean complete() {
-        close();
         return true;
     }
 
+    @Override
     public void close() {
-        disposeBufferFn.accept(buffer);
+        if (buffer != null) {
+            destroyFn.accept(buffer);
+        }
     }
 
     @Override
@@ -95,4 +80,16 @@ public final class WriteBufferedP<B, T> implements Processor, Closeable {
         return false;
     }
 
+    /**
+     * This is private API. Call {@link SinkProcessors#writeBufferedP} instead.
+     */
+    @Nonnull
+    public static <B, T> DistributedSupplier<Processor> supplier(
+            @Nonnull DistributedFunction<? super Context, ? extends B> createFn,
+            @Nonnull DistributedBiConsumer<? super B, ? super T> onReceiveFn,
+            @Nonnull DistributedConsumer<? super B> flushFn,
+            @Nonnull DistributedConsumer<? super B> destroyFn
+    ) {
+        return () -> new WriteBufferedP<>(createFn, onReceiveFn, flushFn, destroyFn);
+    }
 }

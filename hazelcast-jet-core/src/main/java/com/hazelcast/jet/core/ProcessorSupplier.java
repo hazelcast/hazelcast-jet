@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 
 package com.hazelcast.jet.core;
 
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.stream.Stream;
@@ -51,10 +51,18 @@ public interface ProcessorSupplier extends Serializable {
     Collection<? extends Processor> get(int count);
 
     /**
-     * Called after the execution has finished on all members, successfully
-     * or not, or immediately, when the execution was <em>aborted</em> due to
-     * a member leaving the cluster. If called immediately, it can happen that
-     * the job is still running on some member.
+     * Called after the execution has finished on all members - successfully or
+     * not. This method will be called after {@link Processor#close} has been
+     * called on all <em>available</em> members.
+     * <p>
+     * If the execution was <em>aborted</em> due to a member leaving the
+     * cluster, it is called immediately (but not before {@link
+     * Processor#close} for local processors). In this case, it can happen
+     * that the job is still running on some other member (but not on this
+     * member).
+     * <p>
+     * If this method throws an exception, it will be logged and ignored; it
+     * won't be reported as a job failure.
      * <p>
      * Note: this method can be called even if {@link #init(Context) init()} or
      * {@link #get(int) get()} were not called yet in case the job fails during
@@ -63,7 +71,7 @@ public interface ProcessorSupplier extends Serializable {
      * @param error the exception (if any) that caused the job to fail;
      *              {@code null} in the case of successful job completion
      */
-    default void complete(Throwable error) {
+    default void close(@Nullable Throwable error) throws Exception {
     }
 
     /**
@@ -78,24 +86,20 @@ public interface ProcessorSupplier extends Serializable {
     /**
      * Context passed to the supplier in the {@link #init(Context) init()} call.
      */
-    interface Context {
-
-        /**
-         * Returns the current Jet instance
-         */
-        @Nonnull
-        JetInstance jetInstance();
-
-        /**
-         * Returns the number of processors that the associated {@code ProcessorSupplier}
-         * will be asked to create.
-         */
-        int localParallelism();
+    interface Context extends ProcessorMetaSupplier.Context {
 
         /**
          * Returns a logger for the associated {@code ProcessorSupplier}.
          */
         @Nonnull
         ILogger logger();
+
+        /**
+         * Returns the index of the member among all the members that run this
+         * job: it's a unique cluster-wide index.
+         * <p>
+         * The value is in the range {@code [0...memberCount-1]}.
+         */
+        int memberIndex();
     }
 }

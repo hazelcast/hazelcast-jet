@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,12 @@
 
 package com.hazelcast.jet.datamodel;
 
+import com.hazelcast.jet.function.KeyedWindowResultFunction;
+
 import javax.annotation.Nonnull;
 import java.util.Map;
 
-import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
+import static com.hazelcast.jet.impl.util.Util.toLocalTime;
 
 /**
  * A {@code Map.Entry} extended with a {@code long timestamp}, used for
@@ -30,7 +32,9 @@ import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
  */
 public final class TimestampedEntry<K, V> implements Map.Entry<K, V> {
     private final long timestamp;
+    @Nonnull
     private final K key;
+    @Nonnull
     private final V value;
 
     /**
@@ -85,10 +89,18 @@ public final class TimestampedEntry<K, V> implements Map.Entry<K, V> {
 
     @Override
     public String toString() {
-        return "TimestampedEntry{ts="
-                + timestamp
-                + ", formattedTs="
-                + toLocalDateTime(timestamp)
-                + ", key=" + key + ", value=" + value + '}';
+        return String.format("{ts=%s, key='%s', value='%s'}", toLocalTime(timestamp), key, value);
+    }
+
+    /**
+     * This method matches the shape of the functional interface {@link
+     * KeyedWindowResultFunction}.
+     * <p>
+     * Constructs a {@code TimestampedEntry} using the window end time as the
+     * timestamp.
+     */
+    public static <K, V> TimestampedEntry<K, V> fromWindowResult(long winStart, long winEnd, @Nonnull K key,
+                                                                 @Nonnull V value) {
+        return new TimestampedEntry<>(winEnd, key, value);
     }
 }

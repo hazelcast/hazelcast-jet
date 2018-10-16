@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import com.hazelcast.nio.ObjectDataOutput;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.Objects;
 
 /**
  * Maintains the components needed to compute the linear regression on a
@@ -101,7 +102,7 @@ public final class LinTrendAccumulator {
      * Computes the linear coefficient of the linear regression of the
      * accumulated samples.
      */
-    public double finish() {
+    public double export() {
         BigInteger bigN = BigInteger.valueOf(n);
         return bigN.multiply(sumXY).subtract(sumX.multiply(sumY)).doubleValue() /
                 bigN.multiply(sumX2).subtract(sumX.multiply(sumX)).doubleValue();
@@ -112,21 +113,21 @@ public final class LinTrendAccumulator {
         LinTrendAccumulator that;
         return this == obj ||
                 obj instanceof LinTrendAccumulator
-                && this.n == (that = (LinTrendAccumulator) obj).n
-                && this.sumX.equals(that.sumX)
-                && this.sumY.equals(that.sumY)
-                && this.sumXY.equals(that.sumXY)
-                && this.sumX2.equals(that.sumX2);
+                        && this.n == (that = (LinTrendAccumulator) obj).n
+                        && Objects.equals(this.sumX, that.sumX)
+                        && Objects.equals(this.sumY, that.sumY)
+                        && Objects.equals(this.sumXY, that.sumXY)
+                        && Objects.equals(this.sumX2, that.sumX2);
     }
 
     @Override
     public int hashCode() {
         int hc = 17;
         hc = 73 * hc + Long.hashCode(n);
-        hc = 73 * hc + sumX.hashCode();
-        hc = 73 * hc + sumY.hashCode();
-        hc = 73 * hc + sumXY.hashCode();
-        hc = 73 * hc + sumX2.hashCode();
+        hc = 73 * hc + Objects.hashCode(sumX);
+        hc = 73 * hc + Objects.hashCode(sumY);
+        hc = 73 * hc + Objects.hashCode(sumXY);
+        hc = 73 * hc + Objects.hashCode(sumX2);
         return hc;
     }
 

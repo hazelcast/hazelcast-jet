@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,13 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -49,11 +48,10 @@ import static org.junit.Assert.fail;
 @RunWith(HazelcastSerialClassRunner.class)
 public class JobRepositoryTest extends JetTestSupport {
 
-    private static final long JOB_EXPIRATION_TIME_IN_MILLIS = SECONDS.toMillis(1);
+    private static final long RESOURCES_EXPIRATION_TIME_MILLIS = SECONDS.toMillis(1);
     private static final long JOB_SCAN_PERIOD_IN_MILLIS = HOURS.toMillis(1);
     private static final int QUORUM_SIZE = 2;
 
-    private JetTestInstanceFactory factory = new JetTestInstanceFactory();
     private JobConfig jobConfig = new JobConfig();
     private JetInstance instance;
     private JobRepository jobRepository;
@@ -65,16 +63,11 @@ public class JobRepositoryTest extends JetTestSupport {
         Properties properties = config.getProperties();
         properties.setProperty(JOB_SCAN_PERIOD.getName(), Long.toString(JOB_SCAN_PERIOD_IN_MILLIS));
 
-        instance = factory.newMember(config);
+        instance = createJetMember(config);
         jobRepository = new JobRepository(instance, null);
-        jobRepository.setJobExpirationDurationInMillis(JOB_EXPIRATION_TIME_IN_MILLIS);
+        jobRepository.setResourcesExpirationMillis(RESOURCES_EXPIRATION_TIME_MILLIS);
 
         jobIds = instance.getMap(RANDOM_IDS_MAP_NAME);
-    }
-
-    @After
-    public void tearDown() {
-        factory.terminateAll();
     }
 
     @Test
@@ -188,14 +181,11 @@ public class JobRepositoryTest extends JetTestSupport {
         assertEquals(currentQuorumSize, jobRecord.getQuorumSize());
     }
 
-    @Test
-    public void when_jobIsMissing_then_jobQuorumSizeIsNotUpdated() {
+    @Test(expected = JobNotFoundException.class)
+    public void when_jobIsMissing_then_jobQuorumSizeUpdateFails() {
         long jobId = uploadResourcesForNewJob();
 
-        boolean success = jobRepository.updateJobQuorumSizeIfLargerThanCurrent(jobId, 1);
-
-        assertFalse(success);
-        assertNull(jobRepository.getJobRecord(jobId));
+        jobRepository.updateJobQuorumSizeIfLargerThanCurrent(jobId, 1);
     }
 
     private long uploadResourcesForNewJob() {
@@ -208,16 +198,12 @@ public class JobRepositoryTest extends JetTestSupport {
     }
 
     private JobRecord createJobRecord(long jobId, Data dag) {
-        return new JobRecord(jobId, System.currentTimeMillis(), dag, jobConfig, QUORUM_SIZE);
+        return new JobRecord(jobId, System.currentTimeMillis(), dag, "", jobConfig, QUORUM_SIZE, false);
     }
 
     private void sleepUntilJobExpires() {
-        sleepAtLeastMillis(2 * JOB_EXPIRATION_TIME_IN_MILLIS);
+        sleepAtLeastMillis(2 * RESOURCES_EXPIRATION_TIME_MILLIS);
     }
 
-
-    static class DummyClass {
-
-    }
-
+    static class DummyClass { }
 }

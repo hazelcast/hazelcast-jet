@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package com.hazelcast.jet.core;
 
 /**
  * Enumerates the two possible kinds of timestamp: event timestamp and
- * frame timestamp. Used by the slidind window processors.
+ * frame timestamp. Used by the sliding window processors.
  */
 public enum TimestampKind {
     /**

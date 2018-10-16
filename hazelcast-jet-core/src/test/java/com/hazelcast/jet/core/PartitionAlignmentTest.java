@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,11 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.TestProcessors.ListSource;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -45,25 +43,18 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastParallelClassRunner.class)
-public class PartitionAlignmentTest {
+public class PartitionAlignmentTest extends JetTestSupport {
 
     private static final int ITEM_COUNT = 32;
     private static final int PARTITION_COUNT = ITEM_COUNT / 2;
 
     private JetInstance instance;
-    private JetTestInstanceFactory factory;
 
     @Before
     public void before() {
-        factory = new JetTestInstanceFactory();
         final JetConfig cfg = new JetConfig();
         cfg.getHazelcastConfig().setProperty("hazelcast.partition.count", String.valueOf(PARTITION_COUNT));
-        instance = factory.newMembers(cfg, 2)[0];
-    }
-
-    @After
-    public void after() {
-        factory.terminateAll();
+        instance = createJetMembers(cfg, 2)[0];
     }
 
     @Test
@@ -106,7 +97,7 @@ public class PartitionAlignmentTest {
         private final Map<Integer, int[]> counts = new HashMap<>();
 
         @Override
-        protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
+        protected boolean tryProcess(int ordinal, @Nonnull Object item) {
             counts.computeIfAbsent((Integer) item, x -> new int[2])[ordinal]++;
             return true;
         }

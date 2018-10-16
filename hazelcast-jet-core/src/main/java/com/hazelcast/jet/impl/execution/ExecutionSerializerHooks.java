@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.impl.serialization.SerializerHookConstants;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -25,12 +26,50 @@ import com.hazelcast.nio.serialization.StreamSerializer;
 
 import java.io.IOException;
 
+import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
+
 /**
  * Hazelcast serializer hooks for the classes in the {@code
  * com.hazelcast.jet.impl.execution} package. This is not a public-facing
  * API.
  */
 class ExecutionSerializerHooks {
+    public static final class DoneItemHook implements SerializerHook<DoneItem> {
+
+        @Override
+        public Class<DoneItem> getSerializationType() {
+            return DoneItem.class;
+        }
+
+        @Override
+        public Serializer createSerializer() {
+            return new StreamSerializer<DoneItem>() {
+                @Override
+                public int getTypeId() {
+                    return SerializerHookConstants.DONE_ITEM;
+                }
+
+                @Override
+                public void destroy() {
+                }
+
+                @Override
+                public void write(ObjectDataOutput out, DoneItem object) {
+                }
+
+                @Override
+                public DoneItem read(ObjectDataInput in) {
+                    return DoneItem.DONE_ITEM;
+                }
+            };
+        }
+
+        @Override
+        public boolean isOverwritable() {
+            return true;
+        }
+    }
+
     public static final class SnapshotBarrierHook implements SerializerHook<SnapshotBarrier> {
 
         @Override
@@ -53,11 +92,12 @@ class ExecutionSerializerHooks {
                 @Override
                 public void write(ObjectDataOutput out, SnapshotBarrier object) throws IOException {
                     out.writeLong(object.snapshotId());
+                    out.writeBoolean(object.isTerminal());
                 }
 
                 @Override
                 public SnapshotBarrier read(ObjectDataInput in) throws IOException {
-                    return new SnapshotBarrier(in.readLong());
+                    return new SnapshotBarrier(in.readLong(), in.readBoolean());
                 }
             };
         }
@@ -107,19 +147,19 @@ class ExecutionSerializerHooks {
         }
     }
 
-    public static final class BroadcastKeyReferenceHook implements SerializerHook<BroadcastKeyReference> {
+    public static final class BroadcastKeyHook implements SerializerHook<BroadcastKey> {
 
         @Override
-        public Class<BroadcastKeyReference> getSerializationType() {
-            return BroadcastKeyReference.class;
+        public Class<BroadcastKey> getSerializationType() {
+            return BroadcastKey.class;
         }
 
         @Override
         public Serializer createSerializer() {
-            return new StreamSerializer<BroadcastKeyReference>() {
+            return new StreamSerializer<BroadcastKey>() {
                 @Override
                 public int getTypeId() {
-                    return SerializerHookConstants.BROADCAST_KEY_REFERENCE;
+                    return SerializerHookConstants.BROADCAST_KEY;
                 }
 
                 @Override
@@ -128,14 +168,13 @@ class ExecutionSerializerHooks {
                 }
 
                 @Override
-                public void write(ObjectDataOutput out, BroadcastKeyReference object) throws IOException {
-                    out.writeLong(object.id());
+                public void write(ObjectDataOutput out, BroadcastKey object) throws IOException {
                     out.writeObject(object.key());
                 }
 
                 @Override
-                public BroadcastKeyReference read(ObjectDataInput in) throws IOException {
-                    return new BroadcastKeyReference(in.readLong(), in.readObject());
+                public BroadcastKey read(ObjectDataInput in) throws IOException {
+                    return broadcastKey(in.readObject());
                 }
             };
         }

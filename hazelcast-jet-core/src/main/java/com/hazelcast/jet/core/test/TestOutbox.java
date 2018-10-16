@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,7 @@
 
 package com.hazelcast.jet.core.test;
 
-import com.hazelcast.core.ManagedContext;
-import com.hazelcast.core.PartitioningStrategy;
+import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.impl.execution.OutboundCollector;
 import com.hazelcast.jet.impl.execution.OutboxImpl;
@@ -27,23 +26,32 @@ import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.serialization.SerializationService;
 
 import javax.annotation.Nonnull;
+import java.time.LocalTime;
 import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicLongArray;
+import java.util.function.Function;
+import java.util.stream.IntStream;
 
+import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.util.Preconditions.checkNotNegative;
+import static java.util.function.Function.identity;
 
 /**
- * Implements {@code Outbox} with an array of {@link ArrayDeque}s.
+ * {@code Outbox} implementation suitable to be used in tests.
  */
 public final class TestOutbox implements Outbox {
 
-    private static final SerializationService IDENTITY_SERIALIZER = new MockSerializationService();
-
     private final Queue<Object>[] buckets;
-    private final Queue<Entry<MockData, MockData>> snapshotQueue = new ArrayDeque<>();
+    private final Queue<Entry<Data, Data>> snapshotQueue = new ArrayDeque<>();
     private final OutboxImpl outbox;
+    private final SerializationService serializationService;
+
+    private final int[] allOrdinals;
 
     /**
      * @param capacities Capacities of individual buckets. Number of buckets
@@ -66,15 +74,18 @@ public final class TestOutbox implements Outbox {
         buckets = new Queue[edgeCapacities.length];
         Arrays.setAll(buckets, i -> new ArrayDeque());
 
+        allOrdinals = IntStream.range(0, edgeCapacities.length).toArray();
+
         OutboundCollector[] outstreams = new OutboundCollector[edgeCapacities.length + (snapshotCapacity > 0 ? 1 : 0)];
         Arrays.setAll(outstreams, i ->
                 i < edgeCapacities.length
                     ? e -> addToQueue(buckets[i], edgeCapacities[i], e)
-                    : e -> addToQueue(snapshotQueue, snapshotCapacity, (Entry<MockData, MockData>) e));
+                    : e -> addToQueue(snapshotQueue, snapshotCapacity, (Entry<Data, Data>) e));
 
-        outbox = new OutboxImpl(outstreams, snapshotCapacity > 0, new ProgressTracker(), IDENTITY_SERIALIZER,
-                Integer.MAX_VALUE);
-        outbox.resetBatch();
+        serializationService = new DefaultSerializationServiceBuilder().build();
+        outbox = new OutboxImpl(outstreams, snapshotCapacity > 0, new ProgressTracker(), serializationService,
+                Integer.MAX_VALUE, new AtomicLongArray(outstreams.length + (snapshotCapacity > 0 ? 1 : 0)));
+        outbox.reset();
     }
 
     private static <E> ProgressState addToQueue(Queue<? super E> queue, int capacity, E o) {
@@ -93,144 +104,110 @@ public final class TestOutbox implements Outbox {
 
     @Override
     public boolean offer(int ordinal, @Nonnull Object item) {
-        return outbox.offer(ordinal, item);
-    }
-
-    @Override
-    public boolean offer(int[] ordinals, @Nonnull Object item) {
-        return outbox.offer(ordinals, item);
+        return offer(ordinal == -1 ? allOrdinals : new int[]{ordinal}, item);
     }
 
     @Override
     public boolean offer(@Nonnull Object item) {
-        return outbox.offer(item);
+        return offer(allOrdinals, item);
+    }
+
+    @Override
+    public boolean offer(@Nonnull int[] ordinals, @Nonnull Object item) {
+        return outbox.offer(ordinals, item);
+    }
+
+    @Override
+    public boolean offerToSnapshot(@Nonnull Object key, @Nonnull Object value) {
+        return outbox.offerToSnapshot(key, value);
+    }
+
+    /**
+     * Exposes individual output queues to the testing code.
+     * @param ordinal ordinal of the bucket
+     */
+    public <T> Queue<T> queue(int ordinal) {
+        return (Queue<T>) buckets[ordinal];
+    }
+
+    /**
+     * Returns the queue to which snapshot is written. It contains serialized
+     * data, if you need deserialized data, you might prefer to use
+     * {@link #drainSnapshotQueueAndReset}.
+     */
+    public Queue<Entry<Data, Data>> snapshotQueue() {
+        return snapshotQueue;
+    }
+
+    /**
+     * Move all items from the queue to the {@code target} collection and make
+     * the outbox available to accept more items. Also calls {@link
+     * #reset()}. If you have a limited capacity outbox, you need to call
+     * this method regularly.
+     *
+     * @param queueOrdinal the queue from Outbox to drain
+     * @param target target collection
+     * @param logItems whether to log drained items to {@code System.out}
+     */
+    public <T> void drainQueueAndReset(int queueOrdinal, Collection<T> target, boolean logItems) {
+        drainInternal(queue(queueOrdinal), target, identity(), logItems, "Output-" + queueOrdinal);
+    }
+
+    /**
+     * Move all items from all queues (except the snapshot queue) to the {@code
+     * target} list of collections. Queue N is moved to collection at target N
+     * etc. Also calls {@link #reset()}. If you have a limited capacity outbox,
+     * you need to call this method regularly.
+     *
+     * @param target list of target collections
+     * @param logItems whether to log drained items to {@code System.out}
+     */
+    public <T> void drainQueuesAndReset(List<? extends Collection<T>> target, boolean logItems) {
+        for (int ordinal : allOrdinals) {
+            drainQueueAndReset(ordinal, target.get(ordinal), logItems);
+        }
+    }
+
+    /**
+     * Deserialize and move all items from the snapshot queue to the {@code
+     * target} collection and make the outbox available to accept more items.
+     * Also calls {@link #reset()}. If you have a limited capacity outbox, you
+     * need to call this method regularly.
+     *
+     * @param target target list
+     * @param logItems whether to log drained items to {@code System.out}
+     */
+    public <K, V> void drainSnapshotQueueAndReset(Collection<? super Entry<K, V>> target, boolean logItems) {
+        drainInternal(snapshotQueue(), target, this::deserializeSnapshotEntry, logItems, "Output-ss");
+    }
+
+    private <K, V> Entry<K, V> deserializeSnapshotEntry(Entry<Data, Data> t) {
+        return entry(serializationService.toObject(t.getKey()), serializationService.toObject(t.getValue()));
+    }
+
+    private <T, R> void drainInternal(Queue<? extends T> q, Collection<? super R> target, Function<T, R> mapFn,
+                                      boolean logItems, String prefix) {
+        for (T o; (o = q.poll()) != null; ) {
+            target.add(mapFn.apply(o));
+            if (logItems) {
+                System.out.println(LocalTime.now() + " " + prefix + ": " + o);
+            }
+        }
+        reset();
+    }
+
+    /**
+     * Call this method after any of the {@code offer()} methods returned
+     * {@code false} to be able to offer again. Method is called automatically
+     * from {@link #drainQueueAndReset} and {@link #drainSnapshotQueueAndReset}
+     * methods.
+     */
+    public void reset() {
+        outbox.reset();
     }
 
     @Override
     public String toString() {
         return Arrays.toString(buckets);
-    }
-
-    @Override
-    public boolean offerToSnapshot(Object key, Object value) {
-        return outbox.offerToSnapshot(key, value);
-    }
-
-    /**
-     * Exposes individual buckets to the testing code.
-     * @param ordinal ordinal of the bucket
-     */
-    public Queue<Object> queueWithOrdinal(int ordinal) {
-        return buckets[ordinal];
-    }
-
-    /**
-     * Returns the queue to which snapshot is written.
-     */
-    public Queue<Entry<MockData, MockData>> snapshotQueue() {
-        return snapshotQueue;
-    }
-
-
-    /**
-     * Javadoc pending
-     */
-    public static class MockSerializationService implements SerializationService {
-
-        @Override
-        public <B extends Data> B toData(Object obj) {
-            return (B) new MockData(obj);
-        }
-
-        @Override
-        public <B extends Data> B toData(Object obj, PartitioningStrategy strategy) {
-            return (B) new MockData(obj);
-        }
-
-        @Override
-        public <T> T toObject(Object data) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> T toObject(Object data, Class klazz) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ManagedContext getManagedContext() {
-            return o -> o; // initialize() will do nothing
-        }
-    }
-
-    /**
-     * Javadoc pending
-     */
-    public static class MockData implements Data {
-        private final Object object;
-
-        /**
-         * Javadoc pending
-         */
-        public MockData(Object object) {
-            this.object = object;
-        }
-
-        /**
-         * Javadoc pending
-         */
-        public Object getObject() {
-            return object;
-        }
-
-        @Override
-        public byte[] toByteArray() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public int getType() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public int totalSize() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void copyTo(byte[] dest, int destPos) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public int dataSize() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public int getHeapCost() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public int getPartitionHash() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean hasPartitionHash() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public long hash64() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean isPortable() {
-            throw new UnsupportedOperationException();
-        }
     }
 }

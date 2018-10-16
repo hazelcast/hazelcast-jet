@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -107,7 +107,7 @@ public class VertexTest {
 
     private void validateProcessor() throws UnknownHostException {
         Address address = new Address("localhost", 5701);
-        Function<Address, ProcessorSupplier> fn = v.getMetaSupplier().get(singletonList(address));
+        Function<? super Address, ? extends ProcessorSupplier> fn = v.getMetaSupplier().get(singletonList(address));
         ProcessorSupplier supplier = fn.apply(address);
         Collection<? extends Processor> processors = supplier.get(1);
         assertEquals(NoopP.class, processors.iterator().next().getClass());

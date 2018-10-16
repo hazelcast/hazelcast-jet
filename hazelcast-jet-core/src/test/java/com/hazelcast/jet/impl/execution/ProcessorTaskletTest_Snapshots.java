@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,15 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.test.TestOutbox.MockData;
-import com.hazelcast.jet.core.test.TestOutbox.MockSerializationService;
-import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
+import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.util.UuidUtil;
 import org.junit.Before;
@@ -64,7 +64,8 @@ public class ProcessorTaskletTest_Snapshots {
     private List<MockInboundStream> instreams;
     private List<OutboundEdgeStream> outstreams;
     private SnapshottableProcessor processor;
-    private ProcCtx context;
+    private Processor.Context context;
+    private SerializationService serializationService;
     private SnapshotContext snapshotContext;
     private MockOutboundCollector snapshotCollector;
 
@@ -72,8 +73,8 @@ public class ProcessorTaskletTest_Snapshots {
     public void setUp() {
         this.mockInput = IntStream.range(0, MOCK_INPUT_SIZE).boxed().collect(toList());
         this.processor = new SnapshottableProcessor();
-        this.context = new ProcCtx(null, new MockSerializationService(), null, null, 0,
-                EXACTLY_ONCE);
+        this.serializationService = new DefaultSerializationServiceBuilder().build();
+        this.context = new TestProcessorContext().setProcessingGuarantee(EXACTLY_ONCE);
         this.instreams = new ArrayList<>();
         this.outstreams = new ArrayList<>();
         this.snapshotCollector = new MockOutboundCollector(1024);
@@ -124,7 +125,7 @@ public class ProcessorTaskletTest_Snapshots {
         instreams.add(instream2);
         outstreams.add(outstream1);
 
-        Tasklet tasklet = createTasklet(ProcessingGuarantee.EXACTLY_ONCE);
+        Tasklet tasklet = createTasklet(EXACTLY_ONCE);
 
         // When
         callUntil(tasklet, NO_PROGRESS);
@@ -145,7 +146,7 @@ public class ProcessorTaskletTest_Snapshots {
         // Given
         MockOutboundStream outstream1 = new MockOutboundStream(0, 2);
         outstreams.add(outstream1);
-        Tasklet tasklet = createTasklet(ProcessingGuarantee.EXACTLY_ONCE);
+        Tasklet tasklet = createTasklet(EXACTLY_ONCE);
         processor.itemsToEmitInComplete = 4;
 
         // When
@@ -156,14 +157,14 @@ public class ProcessorTaskletTest_Snapshots {
         assertEquals(emptyList(), getSnapshotBufferValues());
 
         // When
-        snapshotContext.startNewSnapshot(0);
+        snapshotContext.startNewSnapshot(0, false);
         outstream1.flush();
 
         callUntil(tasklet, NO_PROGRESS);
 
         // Then
-        assertEquals(asList(barrier(0), 2), outstream1.getBuffer());
-        assertEquals(asList(0 , 1, barrier(0)), getSnapshotBufferValues());
+        assertEquals(asList(2, barrier(0)), outstream1.getBuffer());
+        assertEquals(asList(0 , 1, 2, barrier(0)), getSnapshotBufferValues());
     }
 
     @Test
@@ -179,7 +180,7 @@ public class ProcessorTaskletTest_Snapshots {
         instreams.add(instream2);
         outstreams.add(outstream1);
 
-        Tasklet tasklet = createTasklet(ProcessingGuarantee.EXACTLY_ONCE);
+        Tasklet tasklet = createTasklet(EXACTLY_ONCE);
 
         // When
         callUntil(tasklet, DONE);
@@ -193,9 +194,9 @@ public class ProcessorTaskletTest_Snapshots {
         for (int i = 0; i < instreams.size(); i++) {
             instreams.get(i).setOrdinal(i);
         }
-        snapshotContext = new SnapshotContext(mock(ILogger.class), 0, 0, -1, guarantee);
+        snapshotContext = new SnapshotContext(mock(ILogger.class), "test job", -1, guarantee);
         snapshotContext.initTaskletCount(1, 0);
-        final ProcessorTasklet t = new ProcessorTasklet(context, processor, instreams, outstreams,
+        final ProcessorTasklet t = new ProcessorTasklet(context, serializationService, processor, instreams, outstreams,
                 snapshotContext, snapshotCollector, -1);
         t.init();
         return t;
@@ -208,7 +209,7 @@ public class ProcessorTaskletTest_Snapshots {
     }
 
     private Object deserializeEntryValue(Entry e) {
-        return ((MockData) e.getValue()).getObject();
+        return serializationService.toObject(e.getValue());
     }
 
     private static void callUntil(Tasklet tasklet, ProgressState expectedState) {
@@ -223,7 +224,7 @@ public class ProcessorTaskletTest_Snapshots {
     }
 
     private SnapshotBarrier barrier(long snapshotId) {
-        return new SnapshotBarrier(snapshotId);
+        return new SnapshotBarrier(snapshotId, false);
     }
 
     private static class SnapshottableProcessor implements Processor {
@@ -231,6 +232,7 @@ public class ProcessorTaskletTest_Snapshots {
         int nullaryProcessCallCountdown;
         int itemsToEmitInComplete;
         int completedCount;
+        boolean offerSucceeded = true;
         private Outbox outbox;
 
         private Queue<Map.Entry> snapshotQueue = new ArrayDeque<>();
@@ -246,7 +248,7 @@ public class ProcessorTaskletTest_Snapshots {
                 if (!outbox.offer(item)) {
                     return;
                 } else {
-                    snapshotQueue.offer(entry(UuidUtil.newUnsecureUUID(), inbox.remove()));
+                    snapshotQueue.offer(entry(UuidUtil.newUnsecureUUID(), inbox.poll()));
                 }
             }
         }
@@ -256,12 +258,21 @@ public class ProcessorTaskletTest_Snapshots {
             if (completedCount == itemsToEmitInComplete) {
                 return true;
             }
-            boolean accepted = outbox.offer(completedCount);
-            if (accepted) {
+            offerSucceeded = false;
+            finishOffering();
+            return completedCount == itemsToEmitInComplete;
+        }
+
+        private boolean finishOffering() {
+            if (offerSucceeded) {
+                return true;
+            }
+            offerSucceeded = outbox.offer(completedCount);
+            if (offerSucceeded) {
                 snapshotQueue.offer(entry(UuidUtil.newUnsecureUUID(), completedCount));
                 completedCount++;
             }
-            return completedCount == itemsToEmitInComplete;
+            return offerSucceeded;
         }
 
         @Override
@@ -271,6 +282,9 @@ public class ProcessorTaskletTest_Snapshots {
 
         @Override
         public boolean saveToSnapshot() {
+            if (!finishOffering()) {
+                return false;
+            }
             for (Map.Entry item; (item = snapshotQueue.peek()) != null; ) {
                 if (!outbox.offerToSnapshot(item.getKey(), item.getValue())) {
                     return false;

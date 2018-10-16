@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package com.hazelcast.jet.aggregate;
 
 import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -24,6 +25,8 @@ import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperationBuilder;
+import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.datamodel.Tag.tag0;
 import static com.hazelcast.jet.datamodel.Tag.tag1;
 import static com.hazelcast.jet.datamodel.Tag.tag2;
@@ -52,7 +55,7 @@ public class AggregateOperationTest {
                 .andAccumulate(tag1(), accFn1)
                 .andCombine(combineFn)
                 .andDeduct(deductFn)
-                .andFinish(finishFn);
+                .andExportFinish(finishFn);
 
         // Then
         assertSame(createFn, aggrOp.createFn());
@@ -66,30 +69,30 @@ public class AggregateOperationTest {
     @Test(expected = IllegalArgumentException.class)
     public void when_askForNonexistentTag_then_exception() {
         // Given
-        AggregateOperation<LongAccumulator, LongAccumulator> aggrOp = AggregateOperation
+        AggregateOperation<LongAccumulator, Long> aggrOp = AggregateOperation
                 .withCreate(LongAccumulator::new)
                 .andAccumulate(tag0(), (acc, item) -> acc.add(1))
                 .andAccumulate(tag1(), (acc, item) -> acc.add(10))
-                .andIdentityFinish();
+                .andExportFinish(LongAccumulator::get);
 
         // When - then exception
         aggrOp.accumulateFn(tag2());
     }
 
     @Test
-    public void when_withFinishFn_then_newFinishFn() {
+    public void when_withIdentityFinish() {
         // Given
         AggregateOperation<LongAccumulator, Long> aggrOp = AggregateOperation
                 .withCreate(LongAccumulator::new)
                 .andAccumulate(tag0(), (x, y) -> { })
-                .andFinish(LongAccumulator::get);
+                .andExportFinish(LongAccumulator::get);
 
         // When
-        DistributedFunction<LongAccumulator, String> newFinishFn = Object::toString;
-        AggregateOperation<LongAccumulator, String> newAggrOp = aggrOp.withFinishFn(newFinishFn);
+        AggregateOperation<LongAccumulator, LongAccumulator> newAggrOp = aggrOp.withIdentityFinish();
 
         // Then
-        assertSame(newFinishFn, newAggrOp.finishFn());
+        LongAccumulator acc = newAggrOp.createFn().get();
+        assertSame(acc, newAggrOp.finishFn().apply(acc));
     }
 
     @Test
@@ -100,7 +103,7 @@ public class AggregateOperationTest {
                 .andAccumulate(tag0(), (acc, item) -> acc.add(1))
                 .andAccumulate(tag1(), (acc, item) -> acc.add(10))
                 .andCombine(LongAccumulator::add)
-                .andFinish(LongAccumulator::get);
+                .andExportFinish(LongAccumulator::get);
         AggregateOperation1<LongAccumulator, LongAccumulator, Long> combiningAggrOp =
                 aggrOp.withCombiningAccumulateFn(wholeItem());
         DistributedBiConsumer<? super LongAccumulator, ? super Object> accFn = combiningAggrOp.accumulateFn(tag0());
@@ -118,6 +121,26 @@ public class AggregateOperationTest {
         assertEquals(5, combinedAcc.get());
     }
 
+    @Test
+    public void when_andThen_then_exportAndFinishChanged() {
+        // Given
+        CoAggregateOperationBuilder b = coAggregateOperationBuilder();
+        b.add(tag0(), summingLong((Long x) -> x));
+        Tag<Long> outTag1 = b.add(tag1(), summingLong((Long x) -> x));
+        AggregateOperation<Object[], Long> aggrOp = b.build(ibt -> ibt.get(outTag1));
+
+        // When
+        AggregateOperation<Object[], Long> incAggrOp = aggrOp.andThen(a -> a + 1);
+
+        // Then
+        Object[] acc = incAggrOp.createFn().get();
+        incAggrOp.accumulateFn(tag1()).accept(acc, 13L);
+        long exported = incAggrOp.exportFn().apply(acc);
+        long finished = incAggrOp.finishFn().apply(acc);
+        assertEquals(14L, exported);
+        assertEquals(14L, finished);
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void when_duplicateTag_then_exception() {
         AggregateOperation
@@ -132,6 +155,6 @@ public class AggregateOperationTest {
                 .withCreate(LongAccumulator::new)
                 .andAccumulate(tag0(), (acc, item) -> acc.add(1))
                 .andAccumulate(tag2(), (acc, item) -> acc.add(10))
-                .andIdentityFinish();
+                .andExportFinish(LongAccumulator::get);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,12 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.core.AppendableTraverser;
 import com.hazelcast.jet.core.BroadcastKey;
-import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.core.WatermarkGenerationParams;
+import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.WatermarkSourceUtil;
-import com.hazelcast.jet.core.kotlin.InsertWatermarksPK;
+import com.hazelcast.jet.core.processor.Processors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -31,49 +30,43 @@ import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 
 /**
- * See {@link com.hazelcast.jet.core.processor.Processors#insertWatermarksP}.
+ * See {@link Processors#insertWatermarksP}.
  *
  * @param <T> type of the stream item
  */
 public class InsertWatermarksP<T> extends AbstractProcessor {
 
-    private final WatermarkSourceUtil<T> wsu;
-    private final AppendableTraverser<Object> traverser = new AppendableTraverser<>(2);
-    private boolean doneWithTraverser = true;
+    private final WatermarkSourceUtil<? super T> wsu;
+    private Traverser<Object> traverser;
 
     // value to be used temporarily during snapshot restore
     private long minRestoredWm = Long.MAX_VALUE;
 
-    public InsertWatermarksP(WatermarkGenerationParams<T> wmGenParams) {
-        super(new InsertWatermarksPK<>(wmGenParams));
-        wsu = new WatermarkSourceUtil<>(wmGenParams);
+    public InsertWatermarksP(EventTimePolicy<? super T> eventTimePolicy) {
+        wsu = new WatermarkSourceUtil<>(eventTimePolicy);
         wsu.increasePartitionCount(1);
     }
 
     @Override
     public boolean tryProcess() {
-        return tryProcessInt(null);
+        return tryProcessInternal(null);
     }
 
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-        return tryProcessInt(item);
+        return tryProcessInternal(item);
     }
 
-    private boolean tryProcessInt(@Nullable Object item) {
-        if (doneWithTraverser) {
-            Watermark wm = item == null
-                    ? wsu.handleNoEvent()
-                    : wsu.handleEvent(0, (T) item);
-            if (wm != null) {
-                traverser.append(wm);
-            }
-            if (item != null) {
-                traverser.append(item);
-            }
-            doneWithTraverser = traverser.isEmpty();
+    @SuppressWarnings("unchecked")
+    private boolean tryProcessInternal(@Nullable Object item) {
+        if (traverser == null) {
+            traverser = wsu.handleEvent((T) item, 0);
         }
-        return emitFromTraverser(traverser, o -> doneWithTraverser = traverser.isEmpty());
+        if (emitFromTraverser(traverser)) {
+            traverser = null;
+            return true;
+        }
+        return false;
     }
 
     @Override

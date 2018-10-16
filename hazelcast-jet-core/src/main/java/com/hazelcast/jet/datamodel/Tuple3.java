@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package com.hazelcast.jet.datamodel;
 import java.util.Objects;
 
 /**
- * A 3-tuple (triple) of statically typed fields.
+ * An immutable 3-tuple (triple) of statically typed fields.
  *
  * @param <E0> the type of the field 0
  * @param <E1> the type of the field 1
@@ -81,14 +81,14 @@ public final class Tuple3<E0, E1, E2> {
     @Override
     public int hashCode() {
         int hc = 17;
-        hc = 73 * hc + f0.hashCode();
-        hc = 73 * hc + f1.hashCode();
-        hc = 73 * hc + f2.hashCode();
+        hc = 73 * hc + Objects.hashCode(f0);
+        hc = 73 * hc + Objects.hashCode(f1);
+        hc = 73 * hc + Objects.hashCode(f2);
         return hc;
     }
 
     @Override
     public String toString() {
-        return "Tuple3{" + f0 + ", " + f1 + ", " + f2 + '}';
+        return "(" + f0 + ", " + f1 + ", " + f2 + ')';
     }
 }

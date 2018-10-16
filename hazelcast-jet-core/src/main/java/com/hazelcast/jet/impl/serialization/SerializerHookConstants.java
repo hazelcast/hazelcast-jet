@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,18 +39,21 @@ public final class SerializerHookConstants {
     public static final int LONG_DOUBLE_ACC = -309;
     public static final int TUPLE2 = -310;
     public static final int TUPLE3 = -311;
-    public static final int TWO_BAGS = -312;
-    public static final int THREE_BAGS = -313;
+    public static final int TUPLE4 = -312;
+    public static final int TUPLE5 = -313;
     public static final int TAG = -314;
     public static final int ITEMS_BY_TAG = -315;
-    public static final int BAGS_BY_TAG = -316;
-    public static final int WATERMARK = -317;
-    public static final int SNAPSHOT_BARRIER = -318;
+    public static final int WATERMARK = -316;
+    public static final int SNAPSHOT_BARRIER = -317;
+    public static final int DONE_ITEM = -318;
     public static final int BROADCAST_ENTRY = -319;
-    public static final int BROADCAST_KEY_REFERENCE = -320;
-    public static final int SESSION = -321;
+    public static final int BROADCAST_KEY = -320;
+    public static final int WINDOW_RESULT = -321;
     public static final int HASH_MAP = -322;
     public static final int HASH_SET = -323;
+    public static final int JET_EVENT = -324;
+    public static final int TIMESTAMPED_ITEM = -325;
+
 
     // reserved for hadoop module: -380 to -390
 

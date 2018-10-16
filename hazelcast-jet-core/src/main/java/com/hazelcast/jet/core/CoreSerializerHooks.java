@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.serialization.SerializerHookConstants;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -25,11 +26,14 @@ import com.hazelcast.nio.serialization.StreamSerializer;
 
 import java.io.IOException;
 
+import static com.hazelcast.jet.impl.JetEvent.jetEvent;
+
 /**
  * Hazelcast serializer hooks for the classes in the {@code
  * com.hazelcast.jet.core} package. This is not a public-facing API.
  */
 class CoreSerializerHooks {
+
     public static final class WatermarkHook implements SerializerHook<Watermark> {
 
         @Override
@@ -64,6 +68,45 @@ class CoreSerializerHooks {
         @Override
         public boolean isOverwritable() {
             return true;
+        }
+    }
+
+    public static final class JetEventHook implements SerializerHook<JetEvent> {
+
+        @Override
+        public Class<JetEvent> getSerializationType() {
+            return JetEvent.class;
+        }
+
+        @Override
+        public Serializer createSerializer() {
+            return new StreamSerializer<JetEvent>() {
+                @Override
+                public void write(ObjectDataOutput out, JetEvent object) throws IOException {
+                    out.writeObject(object.payload());
+                    out.writeLong(object.timestamp());
+                }
+
+                @Override
+                public JetEvent read(ObjectDataInput in) throws IOException {
+                    Object payload = in.readObject();
+                    long timestamp = in.readLong();
+                    return jetEvent(payload, timestamp);
+                }
+
+                @Override
+                public int getTypeId() {
+                    return SerializerHookConstants.JET_EVENT;
+                }
+
+                @Override
+                public void destroy() {
+                }
+            };
+        }
+
+        @Override public boolean isOverwritable() {
+            return false;
         }
     }
 }

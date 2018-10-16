@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,13 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.util.concurrent.MPSCQueue;
+import com.hazelcast.jet.config.InstanceConfig;
+import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.ObjectWithPartitionId;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
+import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.Logger;
 import com.hazelcast.nio.BufferObjectDataInput;
 import com.hazelcast.util.concurrent.IdleStrategy;
 
@@ -27,9 +31,11 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static com.hazelcast.jet.impl.util.Util.lazyAdd;
 import static java.lang.Math.ceil;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -37,6 +43,8 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * Receives from a remote member the data associated with a single edge.
  */
 public class ReceiverTasklet implements Tasklet {
+
+    public static final ILogger LOG = Logger.getLogger(ReceiverTasklet.class);
 
     /**
      * The {@code ackedSeq} atomic array holds, per sending member, the sequence
@@ -77,11 +85,15 @@ public class ReceiverTasklet implements Tasklet {
 
     private boolean receptionDone;
 
+    private final AtomicLong itemsInCounter = new AtomicLong();
+    private final AtomicLong bytesInCounter = new AtomicLong();
+
     //                    FLOW-CONTROL STATE
     //            All arrays are indexed by sender ID.
 
     // read by a task scheduler thread, written by a tasklet execution thread
     private volatile long ackedSeq;
+    private volatile int numWaitingInInbox;
 
     // read and written by updateAndGetSendSeqLimitCompressed(), which is invoked sequentially by a task scheduler
     private int receiveWindowCompressed;
@@ -124,6 +136,7 @@ public class ReceiverTasklet implements Tasklet {
             inbox.remove();
             ackItem(o.estimatedMemoryFootprint);
         }
+        numWaitingInInbox = inbox.size();
         return tracker.toProgressState();
     }
 
@@ -153,7 +166,7 @@ public class ReceiverTasklet implements Tasklet {
      *         measured in compressed seq units (see {@link #COMPRESSED_SEQ_UNIT_LOG2})
      *     </li><li>
      *         {@code seqsPerAckPeriod = (seqDelta / timeDelta) * }
-     *         {@link com.hazelcast.jet.config.InstanceConfig#setFlowControlPeriodMs(int)
+     *         {@link InstanceConfig#setFlowControlPeriodMs(int)
      *         flowControlPeriodMs}, projected amount of data processed by the receiver
      *         in one standard flow control period (called "ack period" for short)
      *     </li></ol>
@@ -183,17 +196,31 @@ public class ReceiverTasklet implements Tasklet {
         if (hadPrevStats) {
             final double ackedSeqsPerAckPeriod = flowControlPeriodNs * ackedSeqCompressedDelta / ackTimeDelta;
             final int targetRwin = rwinMultiplier * (int) ceil(ackedSeqsPerAckPeriod);
-            final int rwinDiff = targetRwin - receiveWindowCompressed;
+            int rwinDiff = targetRwin - receiveWindowCompressed;
+            int numWaitingInInbox = this.numWaitingInInbox;
+            // If nothing is waiting in the inbox, our processing speed isn't the cause
+            // for less traffic through the processor, it's the sender who's not
+            // sending enough data. Don't shrink the RWIN in this case.
+            if (numWaitingInInbox == 0 && rwinDiff < 0) {
+                rwinDiff = 0;
+            }
             receiveWindowCompressed += rwinDiff / 2;
+            LoggingUtil.logFinest(LOG, "receiveWindowCompressed=%d", receiveWindowCompressed);
         }
         return ackedSeqCompressed + receiveWindowCompressed;
     }
 
+    // Only one thread writes to ackedSeq
+    @SuppressWarnings("NonAtomicOperationOnVolatileField")
     long ackItem(long itemWeight) {
-        final long seqNow = ackedSeq;
-        final long seqToBe = seqNow + itemWeight;
-        ackedSeq = seqToBe;
-        return seqToBe;
+        return ackedSeq += itemWeight;
+    }
+
+    /**
+     * To be called only from testing code.
+     */
+    void setNumWaitingInInbox(int value) {
+        this.numWaitingInInbox = value;
     }
 
     @Override
@@ -205,7 +232,7 @@ public class ReceiverTasklet implements Tasklet {
         return (int) (seq >> COMPRESSED_SEQ_UNIT_LOG2);
     }
 
-    static long estimatedMemoryFootprint(int itemBlobSize) {
+    static long estimatedMemoryFootprint(long itemBlobSize) {
         final int inboxSlot = 4; // slot in ArrayDeque<ObjPtionAndSenderId> inbox
         final int objPtionAndSenderIdHeader = 16; // object header of ObjPtionAndSenderId instance
         final int itemField = 4; // ObjectWithPartitionId.item
@@ -220,6 +247,8 @@ public class ReceiverTasklet implements Tasklet {
 
     private void tryFillInbox() {
         try {
+            long totalBytes = 0;
+            long totalItems = 0;
             for (BufferObjectDataInput received; (received = incoming.poll()) != null; ) {
                 final int itemCount = received.readInt();
                 for (int i = 0; i < itemCount; i++) {
@@ -228,8 +257,13 @@ public class ReceiverTasklet implements Tasklet {
                     final int itemSize = received.position() - mark;
                     inbox.add(new ObjWithPtionIdAndSize(item, received.readInt(), itemSize));
                 }
+                totalItems += itemCount;
+                totalBytes += received.position();
+                received.close();
                 tracker.madeProgress();
             }
+            lazyAdd(bytesInCounter, totalBytes);
+            lazyAdd(itemsInCounter, totalItems);
         } catch (IOException e) {
             throw rethrow(e);
         }
@@ -242,5 +276,13 @@ public class ReceiverTasklet implements Tasklet {
             super(item, partitionId);
             this.estimatedMemoryFootprint = estimatedMemoryFootprint(itemBlobSize);
         }
+    }
+
+    public AtomicLong getItemsInCounter() {
+        return itemsInCounter;
+    }
+
+    public AtomicLong getBytesInCounter() {
+        return bytesInCounter;
     }
 }

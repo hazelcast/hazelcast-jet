@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,10 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.core.CloseableProcessorSupplier;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 
 import javax.annotation.Nonnull;
-import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -32,14 +30,13 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.util.concurrent.locks.LockSupport;
 
-import static com.hazelcast.jet.core.ProcessorMetaSupplier.dontParallelize;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
  * @see SourceProcessors#streamSocketP(String, int, Charset)
  */
-public final class StreamSocketP extends AbstractProcessor implements Closeable {
+public final class StreamSocketP extends AbstractProcessor {
 
     private static final int BUFFER_SIZE = 4096;
     private static final int MAX_BYTES_PER_CHAR = 4;
@@ -158,7 +155,7 @@ public final class StreamSocketP extends AbstractProcessor implements Closeable 
      * Internal API, use {@link SourceProcessors#streamSocketP(String, int, Charset)}.
      */
     public static ProcessorMetaSupplier supplier(String host, int port, @Nonnull String charset) {
-        return dontParallelize(new CloseableProcessorSupplier<>(
-                () -> new StreamSocketP(host, port, Charset.forName(charset))));
+        return ProcessorMetaSupplier.preferLocalParallelismOne(
+                () -> new StreamSocketP(host, port, Charset.forName(charset)));
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.Collection;
 
+import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
@@ -45,15 +46,16 @@ public class SerializerHooksTest {
     public Object instance;
 
     @Parameters
-    public static Collection<Object> data() throws Exception {
+    public static Collection<Object> data() {
         return Arrays.asList(
                 new Object[]{new String[]{"a", "b", "c"}},
-                new SimpleImmutableEntry<>("key", "value")
+                new SimpleImmutableEntry<>("key", "value"),
+                jetEvent("payload", System.currentTimeMillis())
         );
     }
 
     @Test
-    public void testSerializerHooks() throws Exception {
+    public void testSerializerHooks() {
         SerializationService serializationService = new DefaultSerializationServiceBuilder().build();
 
         Data serialized = serializationService.toData(instance);

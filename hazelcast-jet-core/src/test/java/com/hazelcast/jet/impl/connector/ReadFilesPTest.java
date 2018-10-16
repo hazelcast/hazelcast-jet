@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,29 +16,28 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.jet.IListJet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.stream.IStreamList;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map.Entry;
 import java.util.stream.IntStream;
 
+import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readFilesP;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -47,7 +46,7 @@ public class ReadFilesPTest extends JetTestSupport {
 
     private JetInstance instance;
     private File directory;
-    private IStreamList<String> list;
+    private IListJet<Entry<String, String>> list;
 
     @Before
     public void setup() throws Exception {
@@ -96,13 +95,13 @@ public class ReadFilesPTest extends JetTestSupport {
 
         instance.newJob(dag).join();
 
-        assertEquals(Arrays.asList("hello2", "world2"), new ArrayList<>(list));
+        assertEquals(Arrays.asList(entry("file2.txt", "hello2"), entry("file2.txt", "world2")), new ArrayList<>(list));
 
         finishDirectory(file1, file2);
     }
 
     @Test
-    public void when_directory_then_ignore() throws Exception {
+    public void when_directory_then_ignore() {
         DAG dag = buildDag(null);
 
         File file1 = new File(directory, randomName());
@@ -121,29 +120,14 @@ public class ReadFilesPTest extends JetTestSupport {
         }
 
         DAG dag = new DAG();
-        Vertex reader = dag.newVertex("reader", readFilesP(directory.getPath(), StandardCharsets.UTF_8, glob))
+        Vertex reader = dag.newVertex("reader", readFilesP(directory.getPath(), UTF_8, glob, false, Util::entry))
                 .localParallelism(1);
         Vertex writer = dag.newVertex("writer", writeListP(list.getName())).localParallelism(1);
         dag.edge(between(reader, writer));
         return dag;
     }
 
-    private static void appendToFile(File file, String... lines) throws Exception {
-        try (PrintWriter writer = new PrintWriter(new FileOutputStream(file, true))) {
-            for (String payload : lines) {
-                writer.write(payload + '\n');
-            }
-        }
-    }
-
-    private static File createTempDirectory() throws Exception {
-        Path directory = Files.createTempDirectory("read-file-p");
-        File file = directory.toFile();
-        file.deleteOnExit();
-        return file;
-    }
-
-    private void finishDirectory(File ... files) throws Exception {
+    private void finishDirectory(File ... files) {
         for (File file : files) {
             assertTrue(file.delete());
         }

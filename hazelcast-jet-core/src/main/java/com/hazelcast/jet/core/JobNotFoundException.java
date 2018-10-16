@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.impl.util.Util;
+import com.hazelcast.jet.Util;
 
 /**
  * Thrown when a job could not be found on the master node
@@ -25,7 +25,11 @@ import com.hazelcast.jet.impl.util.Util;
 public class JobNotFoundException extends JetException {
 
     public JobNotFoundException(long jobId) {
-       super("Job with id " + Util.idToString(jobId) + " not found.");
+       super("Job with id " + Util.idToString(jobId) + " not found");
+    }
+
+    public JobNotFoundException(String message) {
+        super(message);
     }
 
     public JobNotFoundException(String message, Throwable cause) {

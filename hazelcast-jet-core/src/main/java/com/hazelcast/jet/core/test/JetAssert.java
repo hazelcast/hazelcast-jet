@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,10 +32,21 @@ final class JetAssert {
         }
     }
 
+    static void assertSame(String message, Object expected, Object actual) {
+        if (expected == actual) {
+            return;
+        }
+        throwNotEqual(message, expected, actual);
+    }
+
     static void assertEquals(String message, Object expected, Object actual) {
         if (Objects.equals(expected, actual)) {
             return;
         }
+        throwNotEqual(message, expected, actual);
+    }
+
+    private static void throwNotEqual(String message, Object expected, Object actual) {
         if (message != null && !message.equals("")) {
             message = message + " ";
         }

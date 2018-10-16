@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.util;
 
 import com.hazelcast.spi.properties.HazelcastProperty;
 
+import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -28,6 +29,8 @@ public final class JetGroupProperty {
 
     public static final HazelcastProperty JOB_SCAN_PERIOD
             = new HazelcastProperty("jet.job.scan.period", SECONDS.toMillis(5), MILLISECONDS);
+    public static final HazelcastProperty JOB_RESULTS_TTL_SECONDS
+            = new HazelcastProperty("jet.job.results.ttl.seconds", DAYS.toSeconds(7), SECONDS);
 
     private JetGroupProperty() {
     }

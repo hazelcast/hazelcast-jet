@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,14 +42,14 @@ public class CoreSerializerHooksTest {
     public Object instance;
 
     @Parameters
-    public static Collection<Object> data() throws Exception {
+    public static Collection<Object> data() {
         return Arrays.asList(
                 new Watermark(13L)
         );
     }
 
     @Test
-    public void testSerializerHook() throws Exception {
+    public void testSerializerHook() {
         SerializationService serializationService = new DefaultSerializationServiceBuilder().build();
 
         Data serialized = serializationService.toData(instance);

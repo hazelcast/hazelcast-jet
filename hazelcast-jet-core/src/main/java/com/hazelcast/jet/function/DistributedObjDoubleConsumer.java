@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,29 @@
 
 package com.hazelcast.jet.function;
 
+import com.hazelcast.jet.impl.util.ExceptionUtil;
+
 import java.io.Serializable;
 import java.util.function.ObjDoubleConsumer;
 
 /**
  * {@code Serializable} variant of {@link ObjDoubleConsumer
- * java.util.function.ObjDoubleConsumer}.
+ * java.util.function.ObjDoubleConsumer} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedObjDoubleConsumer<T> extends ObjDoubleConsumer<T>, Serializable {
+
+    /**
+     * Exception-declaring version of {@link ObjDoubleConsumer#accept}.
+     */
+    void acceptEx(T t, double value) throws Exception;
+
+    @Override
+    default void accept(T t, double value) {
+        try {
+            acceptEx(t, value);
+        } catch (Exception e) {
+            throw ExceptionUtil.sneakyThrow(e);
+        }
+    }
 }

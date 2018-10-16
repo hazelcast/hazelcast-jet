@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+  ~ Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@
     <parent>
         <groupId>com.hazelcast.jet</groupId>
         <artifactId>hazelcast-jet-root</artifactId>
-        <version>0.6-SNAPSHOT</version>
+        <version>0.8-SNAPSHOT</version>
     </parent>
 
     <properties>
@@ -37,7 +37,13 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>${maven.jar.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
                 <configuration>
                     <archive>
                         <index>true</index>
@@ -45,6 +51,9 @@
                         <manifest>
                             <mainClass>com.hazelcast.jet.server.StartServer</mainClass>
                         </manifest>
+                        <manifestEntries>
+                            <Automatic-Module-Name>com.hazelcast.jet</Automatic-Module-Name>
+                        </manifestEntries>
                     </archive>
                 </configuration>
             </plugin>
@@ -62,9 +71,9 @@
                 <configuration>
                     <createSourcesJar>true</createSourcesJar>
                     <createDependencyReducedPom>true</createDependencyReducedPom>
-                    <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
                     <transformers>
-                        <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                        <transformer
+                                implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                     </transformers>
                 </configuration>
             </plugin>
@@ -73,11 +82,20 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
                     <includeDependencySources>true</includeDependencySources>
-                    <includeTransitiveDependencySources>true</includeTransitiveDependencySources>
                     <dependencySourceIncludes>
-                        <dependencySourceInclude>com.hazelcast</dependencySourceInclude>
-                        <dependencySourceInclude>com.hazelcast.jet</dependencySourceInclude>
+                        <dependencySourceInclude>com.hazelcast:hazelcast</dependencySourceInclude>
+                        <dependencySourceInclude>com.hazelcast:hazelcast-client</dependencySourceInclude>
+                        <dependencySourceInclude>com.hazelcast.jet:hazelcast-jet-core</dependencySourceInclude>
                     </dependencySourceIncludes>
+                    <additionalDependencies>
+                        <!-- This dependency is only referenced from some internal packages and not used during runtime
+                        but JDK9 seems to try to resolve the dependency anyway when building javadoc -->
+                        <additionalDependency>
+                            <groupId>com.hazelcast</groupId>
+                            <artifactId>hazelcast-code-generator</artifactId>
+                            <version>${hazelcast.protocol.version}</version>
+                        </additionalDependency>
+                    </additionalDependencies>
                 </configuration>
             </plugin>
         </plugins>
@@ -129,6 +147,15 @@
             <artifactId>hazelcast-jet-core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
+
+        <!-- optional dependencies -->
+        <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast-aws</artifactId>
+            <version>${hazelcast.aws.version}</version>
+            <optional>true</optional>
+            <scope>provided</scope>
+        </dependency>
         <dependency>
             <groupId>javax.cache</groupId>
             <artifactId>cache-api</artifactId>
@@ -136,6 +163,49 @@
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>javax.jms</groupId>
+            <artifactId>javax.jms-api</artifactId>
+            <version>${jms.api.version}</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.core</artifactId>
+            <version>${osgi.version}</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+            <version>${jsr250.api.version}</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
 
+        <!-- logging -->
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>${log4j.version}</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>${log4j2.version}</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.api.version}</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 </project>

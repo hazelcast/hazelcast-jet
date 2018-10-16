@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,8 @@ package com.hazelcast.jet.accumulator;
  */
 public class LongDoubleAccumulator {
 
-    private long value1;
-    private double value2;
+    private long longValue;
+    private double doubleValue;
 
     /**
      * Creates a new instance with values equal to 0.
@@ -31,39 +31,39 @@ public class LongDoubleAccumulator {
     }
 
     /**
-     * Creates a new instance with the specified value.
+     * Creates a new instance with the specified values.
      */
-    public LongDoubleAccumulator(long value1, double value2) {
-        this.value1 = value1;
-        this.value2 = value2;
+    public LongDoubleAccumulator(long longValue, double doubleValue) {
+        this.longValue = longValue;
+        this.doubleValue = doubleValue;
     }
 
     /**
-     * Returns the current value1.
+     * Returns the {@code long} value.
      */
-    public long getValue1() {
-        return value1;
+    public long getLong() {
+        return longValue;
     }
 
     /**
-     * Sets the value1.
+     * Sets the {@code long} value.
      */
-    public void setValue1(long value1) {
-        this.value1 = value1;
+    public void setLong(long value1) {
+        this.longValue = value1;
     }
 
     /**
-     * Returns the current value2.
+     * Returns the {@code double} value.
      */
-    public double getValue2() {
-        return value2;
+    public double getDouble() {
+        return doubleValue;
     }
 
     /**
-     * Sets the value2.
+     * Sets the {@code double} value.
      */
-    public void setValue2(double value2) {
-        this.value2 = value2;
+    public void setDouble(double value2) {
+        this.doubleValue = value2;
     }
 
     @Override
@@ -71,21 +71,21 @@ public class LongDoubleAccumulator {
         return this == o ||
                 o != null
                 && this.getClass() == o.getClass()
-                && this.value1 == ((LongDoubleAccumulator) o).value1
-                && this.value2 == ((LongDoubleAccumulator) o).value2;
+                && this.longValue == ((LongDoubleAccumulator) o).longValue
+                && Double.compare(this.doubleValue, ((LongDoubleAccumulator) o).doubleValue) == 0;
     }
 
     @Override
     public int hashCode() {
         int result;
-        result = (int) (value1 ^ (value1 >>> 32));
-        long temp = Double.doubleToLongBits(value2);
+        result = (int) (longValue ^ (longValue >>> 32));
+        long temp = Double.doubleToLongBits(doubleValue);
         result = 31 * result + (int) (temp ^ (temp >>> 32));
         return result;
     }
 
     @Override
     public String toString() {
-        return "LongLongAccumulator(" + value1 + ", " + value2 + ')';
+        return "LongLongAccumulator(" + longValue + ", " + doubleValue + ')';
     }
 }

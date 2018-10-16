@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,29 @@
 
 package com.hazelcast.jet.function;
 
+import com.hazelcast.jet.impl.util.ExceptionUtil;
+
 import java.io.Serializable;
 import java.util.function.ToDoubleFunction;
 
 /**
  * {@code Serializable} variant of {@link ToDoubleFunction
- * java.util.function.ToDoubleFunction}.
+ * java.util.function.ToDoubleFunction} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedToDoubleFunction<T> extends ToDoubleFunction<T>, Serializable {
+
+    /**
+     * Exception-declaring version of {@link ToDoubleFunction#applyAsDouble}.
+     */
+    double applyAsDoubleEx(T value) throws Exception;
+
+    @Override
+    default double applyAsDouble(T value) {
+        try {
+            return applyAsDoubleEx(value);
+        } catch (Exception e) {
+            throw ExceptionUtil.sneakyThrow(e);
+        }
+    }
 }

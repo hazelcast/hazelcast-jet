@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,23 +28,32 @@ public interface JetCodecTemplate {
     void submitJob(long jobId, Data dag, Data jobConfig);
 
     @Request(id = 2, retryable = false, response = ResponseMessageConst.VOID)
-    void cancelJob(long jobId);
+    void terminateJob(long jobId, int terminateMode);
 
     @Request(id = 3, retryable = false, response = ResponseMessageConst.DATA)
     Object getJobStatus(long jobId);
 
-    @Request(id = 4, retryable = false, response = ResponseMessageConst.DATA)
+    @Request(id = 4, retryable = true, response = ResponseMessageConst.DATA)
     Object getJobIds();
 
     @Request(id = 5, retryable = false, response = ResponseMessageConst.DATA)
     void joinSubmittedJob(long jobId);
 
-    @Request(id = 6, retryable = false, response = ResponseMessageConst.DATA)
+    @Request(id = 6, retryable = true, response = ResponseMessageConst.DATA)
     Object getJobIdsByName(String name);
 
-    @Request(id = 7, retryable = false, response = ResponseMessageConst.LONG)
+    @Request(id = 7, retryable = true, response = ResponseMessageConst.LONG)
     long getJobSubmissionTime(long jobId);
 
     @Request(id = 8, retryable = false, response = ResponseMessageConst.DATA)
     Object getJobConfig(long jobId);
+
+    @Request(id = 9, retryable = true, response = ResponseMessageConst.DATA)
+    Object readMetrics(String uuid, long fromSequence);
+
+    @Request(id = 10, retryable = false, response = ResponseMessageConst.VOID)
+    void resumeJob(long jobId);
+
+    @Request(id = 11, retryable = true, response = ResponseMessageConst.DATA)
+    Object getJobSummaryList();
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,10 +34,10 @@ import java.util.concurrent.Callable;
 import java.util.stream.Stream;
 
 /**
- * A support class for the {@link XmlJetConfigBuilder} to locate the client
+ * A support class for the {@link XmlJetConfigBuilder} to locate the
  * xml configuration.
  */
-final class XmlJetConfigLocator {
+public final class XmlJetConfigLocator {
 
     public static final String HAZELCAST_MEMBER_CONFIG_PROPERTY = "hazelcast.config";
     public static final String HAZELCAST_JET_CONFIG_PROPERTY = "hazelcast.jet.config";
@@ -85,7 +85,7 @@ final class XmlJetConfigLocator {
                     () -> XmlJetConfigLocator.defaultFromClasspath(defaultXmlName))
                     .map(Util::uncheckCall)
                     .filter(Objects::nonNull)
-                    .findFirst().get();
+                    .findFirst().orElseThrow(() -> new JetException("Could not find any Jet configuration file."));
         } catch (Exception e) {
             throw new JetException("Failed to initialize Jet configuration", e);
         }

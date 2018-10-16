@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,9 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
-import com.hazelcast.jet.datamodel.Session;
+import com.hazelcast.jet.datamodel.WindowResult;
+import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.Repeat;
 import org.junit.After;
@@ -34,7 +36,6 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Util.entry;
@@ -43,6 +44,7 @@ import static com.hazelcast.jet.core.test.TestSupport.verifyProcessor;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static java.util.Arrays.asList;
 import static java.util.Collections.shuffle;
+import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertTrue;
@@ -51,16 +53,17 @@ import static org.junit.Assert.assertTrue;
 public class SessionWindowPTest {
 
     private static final int SESSION_TIMEOUT = 10;
-    private Supplier<Processor> supplier;
-    private SessionWindowP<Entry<String, Long>, String, ?, Long> lastSuppliedProcessor;
+    private DistributedSupplier<Processor> supplier;
+    private SessionWindowP<String, ?, Long, WindowResult<String, Long>> lastSuppliedProcessor;
 
     @Before
     public void before() {
         supplier = () -> lastSuppliedProcessor = new SessionWindowP<>(
                 SESSION_TIMEOUT,
-                Entry::getValue,
-                entryKey(),
-                AggregateOperations.counting());
+                singletonList((DistributedToLongFunction<Entry<Object, Long>>) Entry::getValue),
+                singletonList(entryKey()),
+                AggregateOperations.counting(),
+                WindowResult::new);
     }
 
     @After
@@ -117,9 +120,21 @@ public class SessionWindowPTest {
         verifyProcessor(supplier)
                 .input(inbox)
                 .expectOutput(asList(
-                        new Session("a", 1, 22, 3),
+                        new WindowResult(1, 22, "a", 3),
                         new Watermark(25),
-                        new Session("a", 30, 50, 3)));
+                        new WindowResult(30, 50, "a", 3)));
+    }
+
+    @Test
+    public void when_lateEvent_then_dropped() {
+        verifyProcessor(supplier)
+                .input(asList(
+                        new Watermark(20),
+                        entry("key", 19L)
+                ))
+                .expectOutput(singletonList(
+                        new Watermark(20)
+                ));
     }
 
     private void assertCorrectness(List<Object> events) {
@@ -176,11 +191,11 @@ public class SessionWindowPTest {
                 long wm = timestampBase - wmLag;
                 int winCount = 0;
                 while (!lastSuppliedProcessor.tryProcessWatermark(new Watermark(wm))) {
-                    while (outbox.queueWithOrdinal(0).poll() != null) {
+                    while (outbox.queue(0).poll() != null) {
                         winCount++;
                     }
                 }
-                while (outbox.queueWithOrdinal(0).poll() != null) {
+                while (outbox.queue(0).poll() != null) {
                     winCount++;
                 }
             }
@@ -203,10 +218,10 @@ public class SessionWindowPTest {
         ));
     }
 
-    private static Stream<Session<String, Long>> expectedSessions(String key) {
+    private static Stream<WindowResult<String, Long>> expectedSessions(String key) {
         return Stream.of(
-                new Session<>(key, 1, 22, 3L),
-                new Session<>(key, 30, 50, 3L)
+                new WindowResult<>(1, 22, key, 3L),
+                new WindowResult<>(30, 50, key, 3L)
         );
     }
 }

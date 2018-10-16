@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,15 +23,12 @@ import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.core.test.TestSupport.getLogger;
-
 /**
- * Simple implementation of {@link Processor.Context}.
+ * {@link Processor.Context} implementation suitable to be used in tests.
  */
-public class TestProcessorContext implements Processor.Context {
-    private JetInstance jetInstance;
-    private ILogger logger;
-    private String vertexName = "testVertex";
+public class TestProcessorContext extends TestProcessorSupplierContext implements Processor.Context {
+
+    private int localProcessorIndex;
     private int globalProcessorIndex;
     private ProcessingGuarantee processingGuarantee = ProcessingGuarantee.NONE;
 
@@ -39,52 +36,30 @@ public class TestProcessorContext implements Processor.Context {
      * Constructor with default values.
      */
     public TestProcessorContext() {
+        localProcessorIndex = 0;
         globalProcessorIndex = 0;
-        logger = getLogger(vertexName + "#" + globalProcessorIndex);
     }
 
-    @Nonnull @Override
-    public JetInstance jetInstance() {
-        return jetInstance;
-    }
-
-    /**
-     * Set the jet instance.
-     */
-    public TestProcessorContext setJetInstance(JetInstance jetInstance) {
-        this.jetInstance = jetInstance;
-        return this;
-    }
-
-    @Nonnull @Override
-    public ILogger logger() {
-        return logger;
-    }
-
-    /**
-     * Set the logger.
-     */
-    public TestProcessorContext setLogger(@Nonnull ILogger logger) {
-        this.logger = logger;
-        return this;
-    }
-
-    @Nonnull @Override
-    public String vertexName() {
-        return vertexName;
-    }
-
-    /**
-     * Set the vertex name.
-     */
-    public TestProcessorContext setVertexName(@Nonnull String vertexName) {
-        this.vertexName = vertexName;
-        return this;
+    @Override
+    public int localProcessorIndex() {
+        assert localProcessorIndex >= 0 && localProcessorIndex < localParallelism()
+                : "localProcessorIndex should be in range 0.." + (localParallelism() - 1);
+        return localProcessorIndex;
     }
 
     @Override
     public int globalProcessorIndex() {
+        assert globalProcessorIndex >= 0 && globalProcessorIndex < totalParallelism()
+                : "globalProcessorIndex should be in range 0.." + (totalParallelism() - 1);
         return globalProcessorIndex;
+    }
+
+    /**
+     * Set the local processor index
+     */
+    public TestProcessorContext setLocalProcessorIndex(int localProcessorIndex) {
+        this.localProcessorIndex = localProcessorIndex;
+        return this;
     }
 
     /**
@@ -103,8 +78,39 @@ public class TestProcessorContext implements Processor.Context {
     /**
      * Sets the processing guarantee.
      */
+    @Nonnull
     public TestProcessorContext setProcessingGuarantee(ProcessingGuarantee processingGuarantee) {
         this.processingGuarantee = processingGuarantee;
         return this;
+    }
+
+    @Nonnull @Override
+    public TestProcessorContext setLogger(@Nonnull ILogger logger) {
+        return (TestProcessorContext) super.setLogger(logger);
+    }
+
+    @Nonnull @Override
+    public TestProcessorContext setJetInstance(@Nonnull JetInstance jetInstance) {
+        return (TestProcessorContext) super.setJetInstance(jetInstance);
+    }
+
+    @Nonnull @Override
+    public TestProcessorContext setTotalParallelism(int totalParallelism) {
+        return (TestProcessorContext) super.setTotalParallelism(totalParallelism);
+    }
+
+    @Nonnull @Override
+    public TestProcessorContext setLocalParallelism(int localParallelism) {
+        return (TestProcessorContext) super.setLocalParallelism(localParallelism);
+    }
+
+    @Nonnull @Override
+    public TestProcessorContext setVertexName(@Nonnull String vertexName) {
+        return (TestProcessorContext) super.setVertexName(vertexName);
+    }
+
+    @Override
+    protected String loggerName() {
+        return vertexName() + "#" + globalProcessorIndex;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import java.util.Collection;
 import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.FAILED;
 import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.ONGOING;
 import static com.hazelcast.jet.impl.execution.SnapshotRecord.SnapshotStatus.SUCCESSFUL;
-import static com.hazelcast.jet.impl.util.Util.idToString;
+import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
 import static com.hazelcast.util.Preconditions.checkFalse;
 import static com.hazelcast.util.Preconditions.checkTrue;
@@ -46,6 +46,12 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
     private long jobId;
     private long snapshotId;
     private long startTime = System.currentTimeMillis();
+    private long endTime = Long.MIN_VALUE;
+
+    private long numBytes;
+    private long numKeys;
+    private long numChunks;
+
     private SnapshotStatus status = ONGOING;
     private Collection<String> vertices;
 
@@ -74,6 +80,14 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         return status;
     }
 
+    public void snapshotComplete(SnapshotStatus status, long numBytes, long numKeys, long numChunks) {
+        setStatus(status);
+        this.numBytes = numBytes;
+        this.numKeys = numKeys;
+        this.numChunks = numChunks;
+        this.endTime = System.currentTimeMillis();
+    }
+
     public void setStatus(SnapshotStatus newStatus) {
         checkFalse((newStatus == null || newStatus == ONGOING), "new status cannot be null or " + ONGOING);
 
@@ -92,8 +106,33 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         return startTime;
     }
 
+    public long endTime() {
+        return endTime;
+    }
+
     public boolean isSuccessful() {
         return status == SUCCESSFUL;
+    }
+
+    /**
+     * Net number of bytes in primary copy. Doesn't include IMap overhead and backup copies.
+     */
+    public long numBytes() {
+        return numBytes;
+    }
+
+    /**
+     * Number of snapshot keys (after exploding chunks).
+     */
+    public long numKeys() {
+        return numKeys;
+    }
+
+    /**
+     * Number of chunks the snapshot is stored in. One chunk is one IMap entry.
+     */
+    public long numChunks() {
+        return numChunks;
     }
 
     @Override
@@ -111,6 +150,10 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         out.writeLong(jobId);
         out.writeLong(snapshotId);
         out.writeLong(startTime);
+        out.writeLong(endTime);
+        out.writeLong(numBytes);
+        out.writeLong(numKeys);
+        out.writeLong(numChunks);
         out.writeUTF(status.toString());
         out.writeObject(vertices);
     }
@@ -120,6 +163,10 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
         jobId = in.readLong();
         snapshotId = in.readLong();
         startTime = in.readLong();
+        endTime = in.readLong();
+        numBytes = in.readLong();
+        numKeys = in.readLong();
+        numChunks = in.readLong();
         status = SnapshotStatus.valueOf(in.readUTF());
         vertices = in.readObject();
     }
@@ -130,6 +177,10 @@ public class SnapshotRecord implements IdentifiedDataSerializable {
                 "jobId=" + idToString(jobId) +
                 ", snapshotId=" + snapshotId +
                 ", startTime=" + toLocalDateTime(startTime) +
+                ", endTime=" + toLocalDateTime(endTime) +
+                ", numBytes=" + numBytes +
+                ", numKeys=" + numKeys +
+                ", numChunks=" + numChunks +
                 ", status=" + status +
                 ", vertices=" + vertices +
                 '}';

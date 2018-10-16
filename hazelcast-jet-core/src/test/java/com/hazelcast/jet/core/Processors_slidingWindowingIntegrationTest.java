@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,12 +20,15 @@ import com.hazelcast.core.IList;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.jet.aggregate.AggregateOperation;
+import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
-import org.junit.After;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -43,12 +46,10 @@ import java.util.stream.Stream;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
-import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
+import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLagAndLull;
-import static com.hazelcast.jet.core.WindowDefinition.slidingWindowDef;
-import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
-import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
@@ -78,11 +79,6 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
         );
     }
 
-    @After
-    public void shutdownAll() {
-        shutdownFactory();
-    }
-
     @Test
     public void smokeTest() throws Exception {
         runTest(
@@ -97,34 +93,49 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
             throws Exception {
         JetInstance instance = createJetMember();
 
-        WindowDefinition wDef = slidingWindowDef(2000, 1000);
-        AggregateOperation1<Object, ?, Long> counting = counting();
+        SlidingWindowPolicy wDef = slidingWinPolicy(2000, 1000);
 
         DAG dag = new DAG();
         boolean isBatchLocal = isBatch; // to prevent serialization of whole class
+
+        DistributedFunction<? super MyEvent, ?> keyFn = MyEvent::getKey;
+        DistributedToLongFunction<? super MyEvent> timestampFn = MyEvent::getTimestamp;
+
         Vertex source = dag.newVertex("source", () -> new EmitListP(sourceEvents, isBatchLocal)).localParallelism(1);
-        Vertex insertPP = dag.newVertex("insertWmP", insertWatermarksP(wmGenParams(
-                MyEvent::getTimestamp, limitingLagAndLull(500, 1000), emitByFrame(wDef), -1
+        Vertex insertPP = dag.newVertex("insertWmP", insertWatermarksP(eventTimePolicy(
+                timestampFn, limitingLagAndLull(500, 1000), emitByFrame(wDef), -1
         ))).localParallelism(1);
         Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP("sink"));
 
         dag.edge(between(source, insertPP).isolated());
 
+        AggregateOperation<LongAccumulator, Long> counting = counting();
         if (singleStageProcessor) {
             Vertex slidingWin = dag.newVertex("slidingWin",
-                    aggregateToSlidingWindowP(MyEvent::getKey,
-                            MyEvent::getTimestamp, TimestampKind.EVENT, wDef, counting));
+                    Processors.aggregateToSlidingWindowP(
+                            singletonList(keyFn),
+                            singletonList(timestampFn),
+                            TimestampKind.EVENT,
+                            wDef,
+                            counting,
+                            TimestampedEntry::fromWindowResult));
             dag
                     .edge(between(insertPP, slidingWin).partitioned(MyEvent::getKey).distributed())
                     .edge(between(slidingWin, sink));
 
         } else {
             Vertex accumulateByFrame = dag.newVertex("accumulateByFrame",
-                    accumulateByFrameP(MyEvent::getKey,
-                            MyEvent::getTimestamp, TimestampKind.EVENT, wDef, counting));
-            Vertex slidingWin = dag.newVertex("slidingWin", combineToSlidingWindowP(wDef, counting));
+                    Processors.accumulateByFrameP(
+                            singletonList(keyFn),
+                            singletonList(timestampFn),
+                            TimestampKind.EVENT,
+                            wDef,
+                            counting.withIdentityFinish()
+                    ));
+            Vertex slidingWin = dag.newVertex("slidingWin",
+                    combineToSlidingWindowP(wDef, counting, TimestampedEntry::fromWindowResult));
             dag
-                    .edge(between(insertPP, accumulateByFrame).partitioned(MyEvent::getKey))
+                    .edge(between(insertPP, accumulateByFrame).partitioned(keyFn))
                     .edge(between(accumulateByFrame, slidingWin).partitioned(entryKey()).distributed())
                     .edge(between(slidingWin, sink));
         }
@@ -165,6 +176,11 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
         }
 
         @Override
+        public boolean isCooperative() {
+            return false;
+        }
+
+        @Override
         public boolean complete() {
             if (!emitFromTraverser(traverser)) {
                 return false;
@@ -177,11 +193,6 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
                 }
             }
             return true;
-        }
-
-        @Override
-        public boolean isCooperative() {
-            return false;
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,8 @@ package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.impl.execution.BroadcastItem;
 
-import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
+import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
+import static com.hazelcast.jet.impl.util.Util.toLocalTime;
 
 /**
  * Watermark is an item occasionally inserted into a disordered
@@ -60,9 +61,8 @@ public final class Watermark implements BroadcastItem {
 
     @Override
     public String toString() {
-        return "Watermark{ts="
-                + timestamp
-                + ", formattedTs="
-                + toLocalDateTime(timestamp) + '}';
+        return timestamp == IDLE_MESSAGE.timestamp
+                ? "Watermark{IDLE_MESSAGE}"
+                : "Watermark{ts=" + toLocalTime(timestamp) + '}';
     }
 }

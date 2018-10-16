@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,10 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.config.ProcessingGuarantee;
+import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
-import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
@@ -38,7 +37,6 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 @RunWith(Parameterized.class)
-@Category(ParallelTest.class)
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 public class SnapshotContextTest {
 
@@ -72,34 +70,34 @@ public class SnapshotContextTest {
     @Test
     public void test_snapShortStartAndDone() {
         SnapshotContext ssContext =
-                new SnapshotContext(mock(ILogger.class), 1, 1, 9, ProcessingGuarantee.EXACTLY_ONCE);
+                new SnapshotContext(mock(ILogger.class), "test job", 9, ProcessingGuarantee.EXACTLY_ONCE);
 
         ssContext.initTaskletCount(taskletCount, numHigherPriority);
-        CompletableFuture<Void> future = null;
+        CompletableFuture<SnapshotOperationResult> future = null;
         if (snapshotStarted == SnapshotStarted.BEFORE) {
-            future = ssContext.startNewSnapshot(10);
-            assertEquals("lastSnapshotId initially", numHigherPriority > 0 ? 9 : 10, ssContext.lastSnapshotId());
+            future = ssContext.startNewSnapshot(10, false);
+            assertEquals("activeSnapshotId initially", numHigherPriority > 0 ? 9 : 10, ssContext.activeSnapshotId());
         }
 
         if (taskletDone == TaskletDone.NOT_DONE) {
-            ssContext.snapshotDoneForTasklet();
+            ssContext.snapshotDoneForTasklet(0, 0, 0);
         } else if (taskletDone == TaskletDone.DONE_BEFORE_CURRENT_SNAPSHOT) {
             ssContext.taskletDone(9, numHigherPriority > 0);
         } else if (taskletDone == TaskletDone.DONE_AFTER_CURRENT_SNAPSHOT) {
-            ssContext.snapshotDoneForTasklet();
+            ssContext.snapshotDoneForTasklet(0, 0, 0);
             ssContext.taskletDone(10, numHigherPriority > 0);
         }
 
         if (snapshotStarted == SnapshotStarted.AFTER) {
-            future = ssContext.startNewSnapshot(10);
+            future = ssContext.startNewSnapshot(10, false);
         }
 
         assertNotNull("future == null", future);
         assertTrue("future.isDone() == " + future.isDone(),
                 future.isDone() == (taskletCount == 1));
         assertEquals("numRemainingTasklets", taskletCount - 1, ssContext.getNumRemainingTasklets().get());
-        assertEquals("lastSnapshotId at the end",
-                taskletDone == TaskletDone.NOT_DONE && numHigherPriority > 0 ? 9 : 10, ssContext.lastSnapshotId());
+        assertEquals("activeSnapshotId at the end",
+                taskletDone == TaskletDone.NOT_DONE && numHigherPriority > 0 ? 9 : 10, ssContext.activeSnapshotId());
     }
 
     private enum SnapshotStarted {

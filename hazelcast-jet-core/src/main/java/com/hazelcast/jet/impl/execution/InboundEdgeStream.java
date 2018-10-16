@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,7 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.impl.util.ProgressState;
-
-import java.util.function.Consumer;
+import com.hazelcast.util.function.Predicate;
 
 /**
  * The inbound side of a data stream corresponding to a single DAG edge identified by its ordinal. In the
@@ -31,7 +30,14 @@ public interface InboundEdgeStream {
 
     int priority();
 
-    ProgressState drainTo(Consumer<Object> dest);
+    /**
+     * Passes the items from the queues to the predicate while it returns {@code true}.
+     */
+    ProgressState drainTo(Predicate<Object> dest);
 
     boolean isDone();
+
+    int capacities();
+
+    int sizes();
 }

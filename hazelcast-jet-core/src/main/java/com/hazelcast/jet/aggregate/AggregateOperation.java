@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,21 +21,65 @@ import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.aggregate.AggregateOperation1Impl;
+import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
+import java.util.Objects;
 
-import static com.hazelcast.util.Preconditions.checkNotNull;
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 /**
- * Contains primitives needed to compute an aggregated result of stream
- * processing. The result is computed by updating a mutable result
- * container, called the <em>accumulator</em>, with data from each stream
- * item and, after all items are processed, transforming the accumulator
- * into the final result. The data items may come from one or more inbound
- * streams; there is a separate {@code accumulate} function for each of
- * them.
+ * Contains primitives needed to compute an aggregated result of data
+ * processing. Check out {@link AggregateOperations} to find the one
+ * you need and, if you don't find it there, construct one by using the
+ * {@link #withCreate aggregate operation builder} and reading the
+ * description below.
+ * <p>
+ * Jet aggregates the data by updating a mutable container,
+ * called the <em>accumulator</em>, with the data from each stream item.
+ * It does this by applying the {@link #accumulateFn accumulate} primitive
+ * to the the accumulator and a given item. Jet provides some accumulator
+ * objects in the {@link com.hazelcast.jet.accumulator accumulator} package
+ * that you can reuse, and you can also write your own if needed. The
+ * accumulator must be serializable because Jet may need to send it to
+ * another member to be combined with other accumulators or store it in state
+ * snapshot.
+ * <p>
+ * After it processes all the items in a batch/window, Jet transforms the
+ * accumulator into the final result by applying the {@link #finishFn()
+ * finish} primitive.
+ * <p>
+ * Since it is a distributed/parallel computation engine, Jet will create
+ * several independent processing units to perform the same aggregation,
+ * and it must combine their partial results before applying the {@code
+ * finish} primitive and emitting the final result. This is the role of the
+ * {@link #combineFn combine} primitive.
+ * <p>
+ * Finally, {@code AggregateOperation} also defines the {@link #deductFn()
+ * deduct} primitive, which allows Jet to efficiently aggregate infinite
+ * stream data into a <em>sliding window</em> by evicting old data from the
+ * existing accumulator instead of building a new one from scratch each time
+ * the window slides forward. Providing a {@code deduct} primitive that makes
+ * the computation more efficient than rebuilding the accumulator from scratch
+ * isn't always possible. Therefore it is optional.
+ * <p>
+ * Depending on usage, the data items may come from one or more inbound
+ * streams, and the {@code AggregateOperation} must provide a separate
+ * {@code accumulate} primitive for each of them. If you are creating the
+ * aggregating pipeline stage using the {@link StageWithKeyAndWindow#aggregateBuilder
+ * builder object}, then you'll identify each contributing stream to the
+ * {@code AggregateOperation} using the <em>tags</em> you got from the
+ * builder.
+ * <p>
+ * If, on the other hand, you are calling one of the direct methods such
+ * as {@link StageWithKeyAndWindow#aggregate2
+ * stage.aggregate2()}, then you'll deal with specializations of this interface
+ * such as {@link AggregateOperation2} and you'll identify the input stages by
+ * their index; zero index corresponds to the stage you're calling the
+ * method on and the higher indices correspond to the stages you pass in as
+ * arguments.
  * <p>
  * This is a summary of all the primitives involved:
  * <ol><li>
@@ -45,33 +89,20 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
  *     the accumulator
  * </li><li>
  *     {@link #combineFn() combine} the contents of the right-hand
- *     accumulator into the left-hand one
+ *     accumulator into the left-hand one, optional
  * </li><li>
- *     {@link #deductFn() deduct} the contents of the right-hand
- *     accumulator from the left-hand one (undo the effects of {@code combine})
+ *     {@link #deductFn() deduct} the contents of the right-hand accumulator
+ *     from the left-hand one (undo the effects of {@code combine}), optional
  * </li><li>
- *     {@link #finishFn() finish} accumulation by transforming the
- *     accumulator object into the final result
+ *     {@link #exportFn() export}: calculate the result value from an
+ *     accumulator while preserving the accumulator state for further
+ *     accumulation. Used for aggregations with speculative results or for
+ *     rolling aggregations
+ * </li><li>
+ *     {@link #finishFn() finish}: calculate the result value from an
+ *     accumulator. After this conversion the accumulator will no longer be
+ *     used, it's allowed, for example, to use the {@code identity()} function
  * </li></ol>
- * The <em>deduct</em> primitive is optional. It is used in sliding window
- * aggregation, where it can significantly improve the performance.
- *
- * <h3>Static type design</h3>
- * This interface covers the fully general case with an arbitrary number of
- * contributing streams, each identified by its <em>tag</em>. The static
- * type system cannot capture a variable number of type parameters,
- * therefore this interface has no type parameter describing the stream
- * item. The tags themselves carry the type information, but there must be a
- * runtime check whether a given tag is registered with this aggregate
- * operation.
- * <p>
- * There are specializations of this interface for up to three contributing
- * streams whose type they statically capture. They are {@link
- * AggregateOperation1}, {@link AggregateOperation2} and {@link
- * AggregateOperation3}. If you use the provided {@link
- * #withCreate(DistributedSupplier) builder object}, it will automatically
- * return the appropriate static type, depending on which {@code accumulate}
- * primitives you have provided.
  *
  * @param <A> the type of the accumulator
  * @param <R> the type of the final result
@@ -79,10 +110,20 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 public interface AggregateOperation<A, R> extends Serializable {
 
     /**
+     * Returns the number of contributing streams this operation is set up to
+     * handle. The index passed to {@link #accumulateFn(int)} must be less than
+     * this number.
+     */
+    int arity();
+
+    /**
      * A primitive that returns a new accumulator. If the {@code deduct}
      * primitive is defined, the accumulator object <strong>must</strong>
      * properly implement {@code equals()}. See {@link #deductFn()} for an
      * explanation.
+     * <p>
+     * The returned accumulator must be serializable. For performance, you
+     * should prefer Hazelcast custom serialization.
      */
     @Nonnull
     DistributedSupplier<A> createFn();
@@ -111,7 +152,7 @@ public interface AggregateOperation<A, R> extends Serializable {
      * A primitive that accepts two accumulators and updates the state of the
      * left-hand one by combining it with the state of the right-hand one.
      * The right-hand accumulator remains unchanged. In some cases, such as
-     * single-stage batch aggregation it is not needed and may be {@code null}.
+     * single-step batch aggregation it is not needed and may be {@code null}.
      */
     @Nullable
     DistributedBiConsumer<? super A, ? super A> combineFn();
@@ -144,35 +185,72 @@ public interface AggregateOperation<A, R> extends Serializable {
      * to determine whether the accumulator is now "empty" (i.e., equal to a
      * fresh instance), which signals that the current window contains no more
      * items with the associated grouping key and the entry must be removed
-     * from the resuts.
+     * from the results.
      */
     @Nullable
     DistributedBiConsumer<? super A, ? super A> deductFn();
 
     /**
-     * A primitive that finishes the accumulation process by transforming
-     * the accumulator object into the final result.
+     * A primitive that transforms the accumulator into a result of the
+     * aggregation. Unlike {@link #finishFn() finish} primitive, this operation
+     * must not:
+     * <ul>
+     *     <li>mutate the accumulator: it must remain ready to accumulate more
+     *     items
+     *     <li>share mutable data with the accumulator: accumulating more items
+     *     to the accumulator must not change the result
+     * </ul>
+     * For example, when accumulating into an {@code ArrayList}, you must copy
+     * it before returning it. If the elements of the list are mutated, they
+     * must be copied as well.
+     * <p>
+     * The returned function must never return {@code null}. In other words,
+     * for any accumulator it must return a non-null exported value.
      */
     @Nonnull
-    DistributedFunction<? super A, R> finishFn();
+    DistributedFunction<? super A, ? extends R> exportFn();
+
+    /**
+     * A primitive that transforms the accumulator into a result of the
+     * aggregation. This is a relaxed version of {@link #exportFn() export}
+     * primitive: the accumulator is guaranteed to be no longer used after this
+     * operation. For example, when accumulating into an {@code ArrayList}, you
+     * can return the accumulator list directly without copying it.
+     * <p>
+     * The returned function must never return {@code null}. In other words,
+     * for any accumulator it must return a non-null finished value.
+     */
+    @Nonnull
+    default DistributedFunction<? super A, ? extends R> finishFn() {
+        return exportFn();
+    }
+
+    /**
+     * Returns a copy of this aggregate operation, but with all the {@code
+     * accumulate} primitives replaced with the ones supplied here. The
+     * argument at position {@code i} replaces the primitive at index {@code
+     * i}, as returned by {@link #accumulateFn(int)}.
+     */
+    @Nonnull
+    @SuppressWarnings("unchecked")
+    AggregateOperation<A, R> withAccumulateFns(DistributedBiConsumer... accumulateFns);
 
     /**
      * Returns a copy of this aggregate operation, but with the {@code finish}
-     * primitive replaced with the supplied one.
-     *
-     * @param finishFn the new {@code finish} primitive
-     * @param <R_NEW> the new aggregation result type
+     * primitive replaced with the identity function. It will return the
+     * accumulator object as-is. The returned aggregate operation does not
+     * support the {@code export} primitive.
      */
     @Nonnull
-    <R_NEW> AggregateOperation<A, R_NEW> withFinishFn(
-            @Nonnull DistributedFunction<? super A, R_NEW> finishFn
-    );
+    AggregateOperation<A, A> withIdentityFinish();
 
     /**
      * Returns a copy of this aggregate operation, but with the {@code
-     * accumulate} primitive replaced with one that expects to find
-     * accumulator objects in the input and will combine them all into
-     * a single accumulator of the same type.
+     * accumulate} primitive replaced with one that expects to find accumulator
+     * objects in the input items and combines them all into a single
+     * accumulator of the same type. It's used in the second aggregation stage
+     * of a two-stage aggregation setup. The first stage emits its accumulators
+     * to the second stage.
      *
      * @param getAccFn the function that extracts the accumulator from the stream item
      * @param <T> the type of stream item
@@ -181,15 +259,30 @@ public interface AggregateOperation<A, R> extends Serializable {
     default <T> AggregateOperation1<T, A, R> withCombiningAccumulateFn(
             @Nonnull DistributedFunction<T, A> getAccFn
     ) {
-        DistributedBiConsumer<? super A, ? super A> combineFn = combineFn();
-        checkNotNull(combineFn, "The 'combine' primitive is missing");
+        DistributedBiConsumer<? super A, ? super A> combineFn =
+                Objects.requireNonNull(combineFn(), "The 'combine' primitive is missing");
         return new AggregateOperation1Impl<>(
                 createFn(),
                 (A acc, T item) -> combineFn.accept(acc, getAccFn.apply(item)),
                 combineFn,
                 deductFn(),
+                exportFn(),
                 finishFn());
     }
+
+    /**
+     * Returns a copy of this aggregate operation, but with the {@code export}
+     * and {@code finish} primitives composed with the supplied {@code thenFn}.
+     * This replaces {@code exportFn} with {@code exportFn.andThen(thenFn)},
+     * same for {@code finishFn}. The main use case is to transform the result
+     * of an existing (library-provided) aggregate operation.
+     *
+     * @param thenFn the function to apply to the results of {@code export} and {@code finish}
+     *               primitives
+     * @param <R_NEW> the type of the returned aggregate operation's result
+     */
+    @Nonnull
+    <R_NEW> AggregateOperation<A, R_NEW> andThen(DistributedFunction<? super R, ? extends R_NEW> thenFn);
 
     /**
      * Returns a builder object, initialized with the supplied {@code create}
@@ -208,13 +301,13 @@ public interface AggregateOperation<A, R> extends Serializable {
      *     For variable arity use {@link AggregateOperationBuilder#andAccumulate(Tag,
      *     DistributedBiConsumer) andAccumulate(tag)}.
      * </li></ul>
-     * The {@link AggregateOperationBuilder.Arity1#andFinish(DistributedFunction)
-     * andFinish()} method returns the constructed aggregate operation. Its
-     * static type receives all the type parameters captured in the above
-     * method calls. If your aggregate operation doesn't need a finishing
-     * transformation (the accumulator itself is the result value), you
-     * can call the shorthand {@link AggregateOperationBuilder.Arity1#andIdentityFinish()
-     * andIdentityFinish()}.
+     * The {@link AggregateOperationBuilder.Arity1#andExportFinish
+     * andExportFinish()} method returns the constructed aggregate operation.
+     * Its static type receives all the type parameters captured in the above
+     * method calls. For optimization purposes you may want to specify a {@code
+     * finish} primitive that is different from {@code export}, for example
+     * return the accumulator itself without copying. In that case you'll use
+     * {@code builder.andExport(exportFn).andFinish(finishFn)}.
      *
      * @param createFn the {@code create} primitive
      * @param <A> the type of the accumulator
@@ -223,6 +316,7 @@ public interface AggregateOperation<A, R> extends Serializable {
      */
     @Nonnull
     static <A> AggregateOperationBuilder<A> withCreate(@Nonnull DistributedSupplier<A> createFn) {
+        checkSerializable(createFn, "createFn");
         return new AggregateOperationBuilder<>(createFn);
     }
 }

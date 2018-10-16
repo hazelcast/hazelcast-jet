@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,29 @@
 
 package com.hazelcast.jet.function;
 
+import com.hazelcast.jet.impl.util.ExceptionUtil;
+
 import java.io.Serializable;
 import java.util.function.LongSupplier;
 
 /**
  * {@code Serializable} variant of {@link LongSupplier
- * java.util.function.LongSupplier}.
+ * java.util.function.LongSupplier} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedLongSupplier extends LongSupplier, Serializable {
+
+    /**
+     * Exception-declaring version of {@link LongSupplier#getAsLong}.
+     */
+    long getAsLongEx() throws Exception;
+
+    @Override
+    default long getAsLong() {
+        try {
+            return getAsLongEx();
+        } catch (Exception e) {
+            throw ExceptionUtil.sneakyThrow(e);
+        }
+    }
 }

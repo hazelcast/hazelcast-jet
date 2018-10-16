@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,34 @@
 
 package com.hazelcast.jet.core;
 
-import com.hazelcast.jet.impl.execution.BroadcastKeyReference;
+import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
-
-import static com.hazelcast.jet.impl.util.Util.secureRandomNextLong;
+import java.util.Objects;
 
 /**
- * Marker interface for a key in the snapshot state that indicates the
+ * Marks a key in the snapshot state to indicate that the
  * corresponding entry should be broadcast to all processors
  * when restoring the snapshot.
  *
  * @param <K> type of key
  */
-public interface BroadcastKey<K> {
+public final class BroadcastKey<K> {
+
+    private final K key;
+
+    private BroadcastKey(@Nonnull K key) {
+        Preconditions.checkNotNull(key, "key");
+        this.key = key;
+    }
 
     /**
      * Returns the underlying key
      */
     @Nonnull
-    K key();
+    public K key() {
+        return key;
+    }
 
     /**
      * Returns a given key as a broadcast key.
@@ -46,7 +54,29 @@ public interface BroadcastKey<K> {
      * will receive multiple key-value pairs with the given BroadcastKey
      */
     @Nonnull
-    static <K> BroadcastKey<K> broadcastKey(@Nonnull K key) {
-        return new BroadcastKeyReference<>(secureRandomNextLong(), key);
+    public static <K> BroadcastKey<K> broadcastKey(@Nonnull K key) {
+        return new BroadcastKey<>(key);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        BroadcastKey<?> that = (BroadcastKey<?>) o;
+        return Objects.equals(key, that.key);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(key);
+    }
+
+    @Override
+    public String toString() {
+        return "BroadcastKey{key=" + key + '}';
     }
 }

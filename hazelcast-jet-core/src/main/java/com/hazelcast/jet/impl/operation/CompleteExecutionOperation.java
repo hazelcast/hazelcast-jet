@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,8 @@ import com.hazelcast.spi.Operation;
 
 import java.io.IOException;
 
-import static com.hazelcast.jet.impl.util.ExceptionUtil.isTopologicalFailure;
-import static com.hazelcast.jet.impl.util.Util.idToString;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.isRestartableException;
+import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.spi.ExceptionAction.THROW_EXCEPTION;
 
 public class CompleteExecutionOperation extends Operation implements IdentifiedDataSerializable {
@@ -46,17 +46,17 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
     }
 
     @Override
-    public void run() throws Exception {
+    public void run() {
         ILogger logger = getLogger();
         JetService service = getService();
 
         Address callerAddress = getCallerAddress();
-        logger.fine("Completing execution " + idToString(executionId) + " from caller: " + callerAddress
-                + " with " + error);
+        logger.fine("Completing execution " + idToString(executionId) + " from caller " + callerAddress
+                + ", error=" + error);
 
         Address masterAddress = getNodeEngine().getMasterAddress();
         if (!callerAddress.equals(masterAddress)) {
-            throw new IllegalStateException("Caller " + callerAddress + " cannot complete execution of "
+            throw new IllegalStateException("Caller " + callerAddress + " cannot complete execution "
                     + idToString(executionId) + " because it is not master. Master is: " + masterAddress);
         }
 
@@ -65,7 +65,7 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
 
     @Override
     public ExceptionAction onInvocationException(Throwable throwable) {
-        return isTopologicalFailure(throwable) ? THROW_EXCEPTION : super.onInvocationException(throwable);
+        return isRestartableException(throwable) ? THROW_EXCEPTION : super.onInvocationException(throwable);
     }
 
     @Override

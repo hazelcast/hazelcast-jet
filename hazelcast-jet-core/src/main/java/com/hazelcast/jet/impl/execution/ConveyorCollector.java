@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.util.concurrent.ConcurrentConveyor;
 import com.hazelcast.jet.impl.util.ProgressState;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 public class ConveyorCollector implements OutboundCollector {
 
@@ -26,7 +25,6 @@ public class ConveyorCollector implements OutboundCollector {
     private final int queueIndex;
     private final int[] partitions;
 
-    @SuppressFBWarnings("EI_EXPOSE_REP")
     public ConveyorCollector(ConcurrentConveyor<Object> conveyor, int queueIndex, int[] partitions) {
         this.conveyor = conveyor;
         this.queueIndex = queueIndex;
@@ -44,7 +42,6 @@ public class ConveyorCollector implements OutboundCollector {
     }
 
     @Override
-    @SuppressFBWarnings("EI_EXPOSE_REP")
     public int[] getPartitions() {
         return partitions;
     }

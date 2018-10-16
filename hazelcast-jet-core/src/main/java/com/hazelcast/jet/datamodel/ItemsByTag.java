@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -83,12 +84,12 @@ public class ItemsByTag {
     @Override
     public boolean equals(Object o) {
         return o instanceof ItemsByTag
-                && this.map.equals(((ItemsByTag) o).map);
+                && Objects.equals(this.map, ((ItemsByTag) o).map);
     }
 
     @Override
     public int hashCode() {
-        return map.hashCode();
+        return Objects.hashCode(map);
     }
 
     @Override

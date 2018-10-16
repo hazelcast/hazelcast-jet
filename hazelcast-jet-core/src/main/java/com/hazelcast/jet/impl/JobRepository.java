@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.core.JobNotFoundException;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.map.EntryBackupProcessor;
@@ -47,12 +48,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.zip.DeflaterOutputStream;
 
 import static com.hazelcast.jet.Jet.INTERNAL_JET_OBJECTS_PREFIX;
-import static com.hazelcast.jet.impl.util.Util.idToString;
+import static com.hazelcast.jet.Util.idToString;
+import static java.util.Collections.newSetFromMap;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.stream.Collectors.toList;
@@ -80,7 +83,7 @@ public class JobRepository {
     public static final String JOB_RESULTS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + "results";
 
     private static final String RESOURCE_MARKER = "__jet.resourceMarker";
-    private static final long JOB_EXPIRATION_DURATION_IN_MILLIS = HOURS.toMillis(2);
+    private static final long DEFAULT_RESOURCES_EXPIRATION_MILLIS = HOURS.toMillis(2);
 
     private final HazelcastInstance instance;
     private final SnapshotRepository snapshotRepository;
@@ -88,12 +91,25 @@ public class JobRepository {
     private final IMap<Long, Long> randomIds;
     private final IMap<Long, JobRecord> jobRecords;
     private final IMap<Long, JobResult> jobResults;
-    private long jobExpirationDurationInMillis = JOB_EXPIRATION_DURATION_IN_MILLIS;
+    private long resourcesExpirationMillis = DEFAULT_RESOURCES_EXPIRATION_MILLIS;
+
+    /**
+     * Because the member can fail at any moment we try to delete job data regularly
+     * for completed jobs. However, this creates overhead:
+     * <pre>{@code
+     *     IMap map = instance.getMap("map");
+     *     map.destroy();
+     * }</pre>
+     *
+     * To avoid it, we store the deleted jobIds in this set. If it's found there, we don't
+     * retry to delete it.
+     */
+    private final Set<Long> deletedJobs = newSetFromMap(new ConcurrentHashMap<>());
 
     /**
      * @param snapshotRepository Can be {@code null} if used on client to upload resources.
      */
-    JobRepository(JetInstance jetInstance, @Nullable SnapshotRepository snapshotRepository) {
+    public JobRepository(JetInstance jetInstance, @Nullable SnapshotRepository snapshotRepository) {
         this.instance = jetInstance.getHazelcastInstance();
         this.snapshotRepository = snapshotRepository;
 
@@ -103,8 +119,8 @@ public class JobRepository {
     }
 
     // for tests
-    void setJobExpirationDurationInMillis(long jobExpirationDurationInMillis) {
-        this.jobExpirationDurationInMillis = jobExpirationDurationInMillis;
+    void setResourcesExpirationMillis(long resourcesExpirationMillis) {
+        this.resourcesExpirationMillis = resourcesExpirationMillis;
     }
 
     /**
@@ -142,7 +158,7 @@ public class JobRepository {
         }
 
         // the marker object will be used to decide when to clean up job resources
-        jobResourcesMap.put(RESOURCE_MARKER, jobId);
+        jobResourcesMap.put(RESOURCE_MARKER, System.currentTimeMillis());
 
         return jobId;
     }
@@ -204,15 +220,28 @@ public class JobRepository {
         JobRecord prev = jobRecords.putIfAbsent(jobId, jobRecord);
         if (prev != null && !prev.getDag().equals(jobRecord.getDag())) {
             throw new IllegalStateException("Cannot put job record for job " + idToString(jobId)
-                    + " because it already exists with a different dag");
+                    + " because it already exists with a different DAG");
         }
     }
 
     /**
      * Updates the job quorum size if it is only larger than the current quorum size of the given job
+     *
+     * @return true, if the quorum size was changed
      */
     boolean updateJobQuorumSizeIfLargerThanCurrent(long jobId, int newQuorumSize) {
-        return (boolean) jobRecords.executeOnKey(jobId, new UpdateJobRecordQuorumEntryProcessor(newQuorumSize));
+        return (boolean) jobRecords.executeOnKey(jobId, new UpdateJobRecordEntryProcessor(
+                r -> newQuorumSize > r.getQuorumSize() ? r.withQuorumSize(newQuorumSize) : null));
+    }
+
+    /**
+     * Updates the job suspension status.
+     *
+     * @return true, if the record existed
+     */
+    boolean updateJobSuspendedStatus(long jobId, boolean suspendedStatus) {
+        return (boolean) jobRecords.executeOnKey(jobId,
+                new UpdateJobRecordEntryProcessor(r -> r.withSuspended(suspendedStatus)));
     }
 
     /**
@@ -224,6 +253,13 @@ public class JobRepository {
             executionId = Util.secureRandomNextLong();
         } while (randomIds.putIfAbsent(executionId, jobId) != null);
         return executionId;
+    }
+
+    /**
+     * Returns how many execution ids are present for the given job id
+     */
+    long getExecutionIdCount(long jobId) {
+        return randomIds.values(new FilterExecutionIdByJobIdPredicate(jobId)).size();
     }
 
     /**
@@ -253,9 +289,13 @@ public class JobRepository {
 
     /**
      * Performs cleanup after job completion. Deletes job record and job resources but keeps the job id
-     * so that it will not be used again for a new job submission
+     * so that it will not be used again for a new job submission.
      */
     private void deleteJob(long jobId) {
+        if (deletedJobs.contains(jobId)) {
+            return;
+        }
+
         // Delete the job record
         jobRecords.remove(jobId);
         // Delete the execution ids, but keep the job id
@@ -263,6 +303,8 @@ public class JobRepository {
 
         // Delete job resources
         cleanupJobResourcesAndSnapshots(jobId, getJobResources(jobId));
+
+        deletedJobs.add(jobId);
     }
 
     /**
@@ -286,29 +328,27 @@ public class JobRepository {
                  .filter(jobId -> !validJobIds.contains(jobId))
                  .forEach(jobId -> {
                      IMap<String, Object> resources = getJobResources(jobId);
-                     if (resources.isEmpty()) {
-                         return;
-                     }
-
                      EntryView<String, Object> marker = resources.getEntryView(RESOURCE_MARKER);
                      // If the marker is absent, then job resources may be still uploaded.
                      // Just put the marker so that the job resources may be cleaned up eventually.
                      // If the job resources are still being uploaded, then the marker will be overwritten, which is ok.
                      if (marker == null) {
-                         resources.putIfAbsent(RESOURCE_MARKER, RESOURCE_MARKER);
-                     } else if (isJobRecordExpired(marker.getCreationTime())) {
+                         resources.putIfAbsent(RESOURCE_MARKER, System.currentTimeMillis());
+                     } else if (isMarkerExpired(marker)) {
+                         // The marker has been around for defined expiry time and the job still wasn't started.
+                         // We assume the job submission was interrupted - let's clean up the data.
                          cleanupJobResourcesAndSnapshots(jobId, resources);
                      }
                  });
     }
 
+    private boolean isMarkerExpired(EntryView<String, Object> record) {
+        return (System.currentTimeMillis() - (Long) record.getValue()) >= resourcesExpirationMillis;
+    }
+
     List<JobRecord> getJobRecords(String name) {
         return jobRecords.values(new FilterJobRecordByNamePredicate(name)).stream()
                          .sorted(comparing(JobRecord::getCreationTime).reversed()).collect(toList());
-    }
-
-    private boolean isJobRecordExpired(long creationTime) {
-        return (System.currentTimeMillis() - creationTime) >= jobExpirationDurationInMillis;
     }
 
     Set<Long> getAllJobIds() {
@@ -332,6 +372,10 @@ public class JobRepository {
 
     public JobResult getJobResult(long jobId) {
         return jobResults.get(jobId);
+    }
+
+    Collection<JobResult> getJobResults() {
+        return jobResults.values();
     }
 
     List<JobResult> getJobResults(String name) {
@@ -405,39 +449,37 @@ public class JobRepository {
         }
     }
 
-    public static class UpdateJobRecordQuorumEntryProcessor
+    public static class UpdateJobRecordEntryProcessor
             implements EntryProcessor<Long, JobRecord>, IdentifiedDataSerializable {
 
-        private int newQuorumSize;
+        private DistributedFunction<JobRecord, JobRecord> updateFn;
         private boolean updated;
 
-        public UpdateJobRecordQuorumEntryProcessor() {
+        public UpdateJobRecordEntryProcessor() {
         }
 
-        UpdateJobRecordQuorumEntryProcessor(int newQuorumSize) {
-            this.newQuorumSize = newQuorumSize;
+        UpdateJobRecordEntryProcessor(DistributedFunction<JobRecord, JobRecord> updateFn) {
+            this.updateFn = updateFn;
         }
 
         @Override
         public Object process(Entry<Long, JobRecord> entry) {
             JobRecord jobRecord = entry.getValue();
             if (jobRecord == null) {
-                return false;
+                throw new JobNotFoundException("JobRecord for job " + idToString(entry.getKey()) + " not found");
             }
 
-            updated = (newQuorumSize > jobRecord.getQuorumSize());
+            JobRecord newJobRecord = updateFn.apply(jobRecord);
+            updated = newJobRecord != null;
             if (updated) {
-                JobRecord newJobRecord = new JobRecord(jobRecord.getJobId(), jobRecord.getCreationTime(),
-                        jobRecord.getDag(), jobRecord.getConfig(), newQuorumSize);
                 entry.setValue(newJobRecord);
             }
-
             return updated;
         }
 
         @Override
         public EntryBackupProcessor<Long, JobRecord> getBackupProcessor() {
-            return updated ? new UpdateJobRecordQuorumEntryBackupProcessor(newQuorumSize) : null;
+            return updated ? new UpdateJobRecordEntryBackupProcessor(updateFn) : null;
         }
 
         @Override
@@ -447,30 +489,30 @@ public class JobRepository {
 
         @Override
         public int getId() {
-            return JetInitDataSerializerHook.UPDATE_JOB_QUORUM;
+            return JetInitDataSerializerHook.UPDATE_JOB_RECORD;
         }
 
         @Override
         public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeInt(newQuorumSize);
+            out.writeObject(updateFn);
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
-            newQuorumSize = in.readInt();
+            updateFn = in.readObject();
         }
     }
 
-    public static class UpdateJobRecordQuorumEntryBackupProcessor
+    public static class UpdateJobRecordEntryBackupProcessor
             implements EntryBackupProcessor<Long, JobRecord>, IdentifiedDataSerializable {
 
-        private int newQuorumSize;
+        private DistributedFunction<JobRecord, JobRecord> updateFn;
 
-        public UpdateJobRecordQuorumEntryBackupProcessor() {
+        public UpdateJobRecordEntryBackupProcessor() {
         }
 
-        UpdateJobRecordQuorumEntryBackupProcessor(int newQuorumSize) {
-            this.newQuorumSize = newQuorumSize;
+        UpdateJobRecordEntryBackupProcessor(DistributedFunction<JobRecord, JobRecord> updateFn) {
+            this.updateFn = updateFn;
         }
 
         @Override
@@ -480,9 +522,10 @@ public class JobRepository {
                 return;
             }
 
-            JobRecord newJobRecord = new JobRecord(jobRecord.getJobId(), jobRecord.getCreationTime(),
-                    jobRecord.getDag(), jobRecord.getConfig(), newQuorumSize);
-            entry.setValue(newJobRecord);
+            JobRecord newJobRecord = updateFn.apply(jobRecord);
+            if (newJobRecord != null) {
+                entry.setValue(newJobRecord);
+            }
         }
 
         @Override
@@ -497,12 +540,12 @@ public class JobRepository {
 
         @Override
         public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeInt(newQuorumSize);
+            out.writeObject(updateFn);
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
-            newQuorumSize = in.readInt();
+            updateFn = in.readObject();
         }
     }
 

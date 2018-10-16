@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,13 +58,6 @@ public class CircularListCursor<E> {
     }
 
     /**
-     * Positions the cursor at the first list element.
-     */
-    public void reset() {
-        index = 0;
-    }
-
-    /**
      * Removes the current item from the underlying collection and points the cursor
      * to the previous item, wrapping around to the last item if necessary.
      */
@@ -82,5 +75,9 @@ public class CircularListCursor<E> {
     @Override
     public String toString() {
         return "CircularListCursor{index=" + index + '}';
+    }
+
+    public List<E> getList() {
+        return list;
     }
 }

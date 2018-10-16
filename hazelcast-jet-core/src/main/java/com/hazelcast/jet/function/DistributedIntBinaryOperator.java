@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,29 @@
 
 package com.hazelcast.jet.function;
 
+import com.hazelcast.jet.impl.util.ExceptionUtil;
+
 import java.io.Serializable;
 import java.util.function.IntBinaryOperator;
 
 /**
  * {@code Serializable} variant of {@link IntBinaryOperator
- * java.util.function.IntBinaryOperator}.
+ * java.util.function.IntBinaryOperator} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedIntBinaryOperator extends IntBinaryOperator, Serializable {
+
+    /**
+     * Exception-declaring version of {@link IntBinaryOperator#applyAsInt}.
+     */
+    int applyAsIntEx(int left, int right) throws Exception;
+
+    @Override
+    default int applyAsInt(int left, int right) {
+        try {
+            return applyAsIntEx(left, right);
+        } catch (Exception e) {
+            throw ExceptionUtil.sneakyThrow(e);
+        }
+    }
 }

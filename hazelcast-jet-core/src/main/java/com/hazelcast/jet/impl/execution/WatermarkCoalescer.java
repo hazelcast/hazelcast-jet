@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,12 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.impl.util.TimestampHistory;
 
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static com.hazelcast.util.Preconditions.checkNotNegative;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -86,6 +88,11 @@ public abstract class WatermarkCoalescer {
     public abstract long checkWmHistory(long systemTime);
 
     /**
+     * Returns the last emitted watermark.
+     */
+    public abstract long lastEmittedWm();
+
+    /**
      * Returns {@code System.nanoTime()} or a dummy value, if it is not needed,
      * because the call is expensive in hot loop.
      */
@@ -94,7 +101,7 @@ public abstract class WatermarkCoalescer {
     /**
      * Factory method.
      *
-     * @param maxWatermarkRetainMillis see {@link com.hazelcast.jet.config.JobConfig#setMaxWatermarkRetainMillis}
+     * @param maxWatermarkRetainMillis see {@link JobConfig#setMaxWatermarkRetainMillis}
      * @param queueCount number of queues
      */
     public static WatermarkCoalescer create(int maxWatermarkRetainMillis, int queueCount) {
@@ -108,7 +115,7 @@ public abstract class WatermarkCoalescer {
     }
 
     /**
-     * Special-case implementation for zero inputs.
+     * Special-case implementation for zero inputs (source processors).
      */
     private static final class ZeroInputImpl extends WatermarkCoalescer {
 
@@ -133,6 +140,11 @@ public abstract class WatermarkCoalescer {
         }
 
         @Override
+        public long lastEmittedWm() {
+            return Long.MIN_VALUE;
+        }
+
+        @Override
         public long getTime() {
             return -1;
         }
@@ -146,9 +158,10 @@ public abstract class WatermarkCoalescer {
         private final TimestampHistory watermarkHistory;
         private final long[] queueWms;
         private final boolean[] isIdle;
-        private long lastEmittedWm = Long.MIN_VALUE;
+        private AtomicLong lastEmittedWm = new AtomicLong(Long.MIN_VALUE);
         private long topObservedWm = Long.MIN_VALUE;
         private boolean allInputsAreIdle;
+        private boolean idleMessagePending;
 
         StandardImpl(int maxWatermarkRetainMillis, int queueCount) {
             isIdle = new boolean[queueCount];
@@ -189,9 +202,11 @@ public abstract class WatermarkCoalescer {
                 isIdle[queueIndex] = false;
                 allInputsAreIdle = false;
                 queueWms[queueIndex] = wmValue;
-                if (watermarkHistory != null && wmValue > topObservedWm) {
+                if (wmValue > topObservedWm) {
                     topObservedWm = wmValue;
-                    watermarkHistory.sample(systemTime, topObservedWm);
+                    if (watermarkHistory != null) {
+                        watermarkHistory.sample(systemTime, topObservedWm);
+                    }
                 }
                 return checkObservedWms();
             }
@@ -217,15 +232,28 @@ public abstract class WatermarkCoalescer {
 
             // if the lowest observed wm is MAX_VALUE that means that all inputs are idle
             if (min == Long.MAX_VALUE) {
+                // When all inputs are idle, we should first emit top observed WM.
+                // For example: have 2 queues. Q1 got to wm(1), Q2 to wm(2). Later on, both become idle at the
+                // same moment. Now two things can happen:
+                //   1. Idle-message from Q1 is received first: Q1 is excluded from coalescing, wm(2) is forwarded.
+                //      Then message from Q2 is received, WM stays at wm(2)
+                //   2. Idle-message from Q2 is received first: Q2 is excluded from coalescing, WM stays at wm(1).
+                //      Then message from Q1 is received. Without this condition WM would stay at wm(1). With it,
+                //      wm(2) is forwarded.
                 allInputsAreIdle = true;
+                if (topObservedWm > lastEmittedWm.get()) {
+                    idleMessagePending = notDoneInputCount != 0;
+                    lastEmittedWm.lazySet(topObservedWm);
+                    return topObservedWm;
+                }
                 return notDoneInputCount != 0
                         ? IDLE_MESSAGE.timestamp()
                         : NO_NEW_WM;
             }
 
             // if the new lowest observed wm is larger than already emitted, emit it
-            if (min > lastEmittedWm) {
-                lastEmittedWm = min;
+            if (min > lastEmittedWm.get()) {
+                lastEmittedWm.lazySet(min);
                 return min;
             }
 
@@ -234,21 +262,29 @@ public abstract class WatermarkCoalescer {
 
         @Override
         public long checkWmHistory(long systemTime) {
+            if (idleMessagePending) {
+                idleMessagePending = false;
+                return IDLE_MESSAGE.timestamp();
+            }
             if (watermarkHistory == null) {
                 return NO_NEW_WM;
             }
             long historicWm = watermarkHistory.sample(systemTime, topObservedWm);
-            if (historicWm > lastEmittedWm) {
-                lastEmittedWm = historicWm;
+            if (historicWm > lastEmittedWm.get()) {
+                lastEmittedWm.lazySet(historicWm);
                 return historicWm;
             }
             return NO_NEW_WM;
         }
 
         @Override
+        public long lastEmittedWm() {
+            return lastEmittedWm.get();
+        }
+
+        @Override
         public long getTime() {
             return watermarkHistory != null ? System.nanoTime() : -1;
         }
-
     }
 }

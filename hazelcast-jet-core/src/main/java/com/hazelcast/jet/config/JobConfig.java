@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.config;
 
+import com.hazelcast.jet.Job;
 import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
@@ -29,22 +30,23 @@ import java.util.List;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.util.Preconditions.checkNotNull;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Contains the configuration specific to one Hazelcast Jet job.
  */
 public class JobConfig implements Serializable {
 
-    private static final int SNAPSHOT_INTERVAL_MILLIS_DEFAULT = 10_000;
+    private static final long SNAPSHOT_INTERVAL_MILLIS_DEFAULT = SECONDS.toMillis(10);
 
     private String name;
     private ProcessingGuarantee processingGuarantee = ProcessingGuarantee.NONE;
     private long snapshotIntervalMillis = SNAPSHOT_INTERVAL_MILLIS_DEFAULT;
-
+    private boolean autoScaling = true;
     private boolean splitBrainProtectionEnabled;
     private final List<ResourceConfig> resourceConfigs = new ArrayList<>();
-    private boolean autoRestartEnabled = true;
     private int maxWatermarkRetainMillis = -1;
+    private JobClassLoaderFactory classLoaderFactory;
 
     /**
      * Returns the name of the job or {@code null} if no name was given.
@@ -55,8 +57,11 @@ public class JobConfig implements Serializable {
     }
 
     /**
-     * Sets the name for the job. Job names do not have to be unique.
-     * Default value is {@code null}.
+     * Sets the name for the job. Job names do not have to be unique but it's
+     * good to keep them unique to be able to distinguish them in logs and the
+     * Management Center.
+     * <p>
+     * The default value is {@code null}.
      *
      * @return {@code this} instance for fluent API
      */
@@ -95,9 +100,9 @@ public class JobConfig implements Serializable {
      * <p>
      * Split-brain protection is disabled by default.
      * <p>
-     * This setting has no effect if
-     * {@link #setAutoRestartOnMemberFailure(boolean) auto restart on member
-     * failure} is disabled.
+     * If {@linkplain #setAutoScaling(boolean) auto scaling} is disabled and
+     * you manually {@link Job#resume} the job, the job won't start executing
+     * until the quorum is met, but will remain in the resumed state.
      *
      * @return {@code this} instance for fluent API
      */
@@ -108,29 +113,37 @@ public class JobConfig implements Serializable {
     }
 
     /**
-     * Tells whether {@link #setAutoRestartOnMemberFailure(boolean) auto
-     * restart after member failure} is enabled.
-     */
-    public boolean isAutoRestartOnMemberFailureEnabled() {
-        return this.autoRestartEnabled;
-    }
-
-    /**
-     * Sets whether the job should automatically restart after a
-     * participating member leaves the cluster. When enabled and a member
-     * fails, the job will automatically restart on the remaining members.
-     * <p>
-     * If snapshotting is enabled, the job state will be restored from the
-     * latest snapshot.
-     * <p>
-     * By default, auto-restart is enabled.
+     * Sets whether Jet will scale the job up or down when a member is added or
+     * removed from the cluster.
+     *
+     * <pre>
+     * +--------------------------+-----------------------+----------------+
+     * |       Auto scaling       |     Member added      | Member removed |
+     * +--------------------------+-----------------------+----------------+
+     * | Enabled                  | restart (after delay) | restart        |
+     * | Disabled - snapshots on  | no action             | suspend        |
+     * | Disabled - snapshots off | no action             | fail           |
+     * +--------------------------+-----------------------+----------------+
+     * </pre>
+     *
+     * @see InstanceConfig#setScaleUpDelayMillis
+     *        Configuring the scale-up delay
+     * @see #setProcessingGuarantee
+     *        Enabling/disabling snapshots
      *
      * @return {@code this} instance for fluent API
      */
-    @Nonnull
-    public JobConfig setAutoRestartOnMemberFailure(boolean isEnabled) {
-        this.autoRestartEnabled = isEnabled;
+    public JobConfig setAutoScaling(boolean enabled) {
+        this.autoScaling = enabled;
         return this;
+    }
+
+    /**
+     * Returns whether auto scaling is enabled, see {@link
+     * #setAutoScaling(boolean)}.
+     */
+    public boolean isAutoScaling() {
+        return autoScaling;
     }
 
     /**
@@ -169,9 +182,9 @@ public class JobConfig implements Serializable {
 
     /**
      * Sets the snapshot interval in milliseconds &mdash; the interval between
-     * the completion of the previous snapshot and the start of a new one.
-     * Must be set to a positive value. This setting is only relevant when
-     * <i>>at-least-once</i> or <i>exactly-once</i> processing guarantees are used.
+     * the completion of the previous snapshot and the start of a new one. Must
+     * be set to a positive value. This setting is only relevant with
+     * <i>at-least-once</i> or <i>exactly-once</i> processing guarantees.
      * <p>
      * Default value is set to 10 seconds.
      *
@@ -210,7 +223,7 @@ public class JobConfig implements Serializable {
      * Limiting the watermark retention time allows it to advance, and therefore
      * the processing to continue, in the face of exceedingly large stream skew.
      * However, since any event with a timestamp less than the current watermark
-     * is categorized as a <em>late event </em> and dropped, this limit can
+     * is categorized as a <em>late event</em> and dropped, this limit can
      * result in data loss.
      *
      * @param retainMillis maximum time to retain watermarks for delayed queues
@@ -391,4 +404,22 @@ public class JobConfig implements Serializable {
         return urlFile.substring(urlFile.lastIndexOf('/') + 1, urlFile.length());
     }
 
+    /**
+     * Sets a custom {@link JobClassLoaderFactory} that will be used to load
+     * job classes and resources on Jet members.
+     *
+     * @return {@code this} instance for fluent API
+     */
+    public JobConfig setClassLoaderFactory(@Nullable JobClassLoaderFactory classLoaderFactory) {
+        this.classLoaderFactory = classLoaderFactory;
+        return this;
+    }
+
+    /**
+     * Returns the configured {@link JobClassLoaderFactory}.
+     */
+    @Nullable
+    public JobClassLoaderFactory getClassLoaderFactory() {
+        return classLoaderFactory;
+    }
 }

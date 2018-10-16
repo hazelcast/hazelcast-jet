@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,17 +19,20 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.jet.impl.util.ProgressState;
 
 import javax.annotation.Nonnull;
-import java.util.concurrent.Callable;
 
-public interface Tasklet extends Callable<ProgressState> {
+public interface Tasklet {
 
     default void init() {
     }
 
-    @Override @Nonnull
+    @Nonnull
     ProgressState call();
 
     default boolean isCooperative() {
         return true;
     }
+
+    default void close() {
+    }
+
 }

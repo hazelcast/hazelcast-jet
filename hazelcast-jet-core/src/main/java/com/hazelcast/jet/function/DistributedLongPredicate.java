@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.function;
 
+import com.hazelcast.jet.impl.util.ExceptionUtil;
+
 import java.io.Serializable;
 import java.util.function.LongPredicate;
 
@@ -23,10 +25,24 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * {@code Serializable} variant of {@link LongPredicate
- * java.util.function.LongPredicate}.
+ * java.util.function.LongPredicate} which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedLongPredicate extends LongPredicate, Serializable {
+
+    /**
+     * Exception-declaring version of {@link LongPredicate#test}.
+     */
+    boolean testEx(long value) throws Exception;
+
+    @Override
+    default boolean test(long value) {
+        try {
+            return testEx(value);
+        } catch (Exception e) {
+            throw ExceptionUtil.sneakyThrow(e);
+        }
+    }
 
     /**
      * {@code Serializable} variant of {@link

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,9 +25,6 @@ import java.util.Objects;
  */
 public class MutableReference<T> {
 
-    /**
-     * The holder's value.
-     */
     private T value;
 
     /**
@@ -51,11 +48,10 @@ public class MutableReference<T> {
     }
 
     /**
-     * Returns {@code true} if the current value is not null, {@code false}
-     * otherwise.
+     * Tells whether the current value is {@code null}.
      */
-    public boolean isPresent() {
-        return value != null;
+    public boolean isNull() {
+        return value == null;
     }
 
     /**

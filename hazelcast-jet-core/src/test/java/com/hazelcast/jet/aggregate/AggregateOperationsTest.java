@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,17 @@
 
 package com.hazelcast.jet.aggregate;
 
+import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
 import com.hazelcast.jet.accumulator.DoubleAccumulator;
 import com.hazelcast.jet.accumulator.LinTrendAccumulator;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.accumulator.LongDoubleAccumulator;
 import com.hazelcast.jet.accumulator.LongLongAccumulator;
 import com.hazelcast.jet.accumulator.MutableReference;
+import com.hazelcast.jet.datamodel.ItemsByTag;
+import com.hazelcast.jet.datamodel.Tag;
+import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.function.DistributedFunctions;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Rule;
@@ -29,19 +34,19 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
+import static com.hazelcast.jet.aggregate.AggregateOperations.allOfBuilder;
 import static com.hazelcast.jet.aggregate.AggregateOperations.averagingDouble;
 import static com.hazelcast.jet.aggregate.AggregateOperations.averagingLong;
 import static com.hazelcast.jet.aggregate.AggregateOperations.concatenating;
@@ -51,12 +56,16 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.linearTrend;
 import static com.hazelcast.jet.aggregate.AggregateOperations.mapping;
 import static com.hazelcast.jet.aggregate.AggregateOperations.maxBy;
 import static com.hazelcast.jet.aggregate.AggregateOperations.minBy;
+import static com.hazelcast.jet.aggregate.AggregateOperations.pickAny;
 import static com.hazelcast.jet.aggregate.AggregateOperations.reducing;
+import static com.hazelcast.jet.aggregate.AggregateOperations.sorting;
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingDouble;
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toList;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toMap;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
+import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
+import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.function.DistributedComparator.naturalOrder;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
@@ -65,8 +74,10 @@ import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
 import static java.util.function.Function.identity;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -74,8 +85,16 @@ import static org.junit.Assert.assertTrue;
 @RunWith(HazelcastParallelClassRunner.class)
 public class AggregateOperationsTest {
 
+    private static final InternalSerializationService SERIALIZATION_SERVICE =
+            new DefaultSerializationServiceBuilder().build();
+
     @Rule
     public ExpectedException exception = ExpectedException.none();
+
+    @Test
+    public void when_pickAny() {
+        validateOpWithoutDeduct(pickAny(), MutableReference::get, 1, 2, 1, 1, 1);
+    }
 
     @Test
     public void when_counting() {
@@ -91,7 +110,7 @@ public class AggregateOperationsTest {
 
     @Test
     public void when_summingToDouble() {
-        validateOp(summingDouble(Double::doubleValue), DoubleAccumulator::get,
+        validateOp(summingDouble(Double::doubleValue), DoubleAccumulator::export,
                 0.5, 1.5, 0.5, 2.0, 2.0);
     }
 
@@ -142,34 +161,60 @@ public class AggregateOperationsTest {
     }
 
     @Test
-    public void when_allOf() {
+    public void when_allOf2() {
         validateOp(
                 allOf(counting(), summingLong(Long::longValue)),
                 identity(), 10L, 11L,
-                asList(longAcc(1), longAcc(10)),
-                asList(longAcc(2), longAcc(21)),
-                asList(2L, 21L)
+                tuple2(longAcc(1), longAcc(10)),
+                tuple2(longAcc(2), longAcc(21)),
+                tuple2(2L, 21L)
         );
     }
 
     @Test
     public void when_allOfWithoutDeduct_then_noDeduct() {
         validateOpWithoutDeduct(
-                allOf(counting(), maxBy(naturalOrder())),
+                allOf(counting(), AggregateOperations.<Long>maxBy(naturalOrder())),
                 identity(), 10L, 11L,
-                asList(longAcc(1), new MutableReference<>(10L)),
-                asList(longAcc(2), new MutableReference<>(11L)),
-                asList(2L, 11L)
+                tuple2(longAcc(1), new MutableReference<>(10L)),
+                tuple2(longAcc(2), new MutableReference<>(11L)),
+                tuple2(2L, 11L)
+        );
+    }
+
+    @Test
+    public void when_allOf3() {
+        validateOp(
+                allOf(counting(), summingLong(Long::longValue), averagingLong(Long::longValue)),
+                identity(), 10L, 11L,
+                tuple3(longAcc(1), longAcc(10), longLongAcc(1, 10)),
+                tuple3(longAcc(2), longAcc(21), longLongAcc(2, 21)),
+                tuple3(2L, 21L, 10.5)
+        );
+    }
+
+    @Test
+    public void when_allOfN() {
+        AllOfAggregationBuilder<Long> builder = allOfBuilder();
+        Tag<Long> tagSum = builder.add(summingLong(Long::longValue));
+        Tag<Long> tagCount = builder.add(counting());
+        AggregateOperationsTest.validateOp(
+                builder.build(),
+                identity(),
+                10L, 11L,
+                new Object[]{longAcc(10L), longAcc(1L)},
+                new Object[]{longAcc(21L), longAcc(2L)},
+                ItemsByTag.itemsByTag(tagCount, 2L, tagSum, 21L)
         );
     }
 
     @Test
     public void when_allOfWithoutCombine_then_noCombine() {
-        AggregateOperation1<Long, List<Object>, List<Object>> composite =
+        AggregateOperation1<Long, ?, Tuple2<Long, Long>> composite =
                 allOf(AggregateOperation
                                 .withCreate(LongAccumulator::new)
-                                .<Long>andAccumulate(LongAccumulator::add)
-                                .andFinish(LongAccumulator::get),
+                                .<Long>andAccumulate(LongAccumulator::addAllowingOverflow)
+                                .andExportFinish(LongAccumulator::get),
                         summingLong(x -> x));
         assertNull(composite.combineFn());
     }
@@ -183,7 +228,7 @@ public class AggregateOperationsTest {
         BiConsumer<? super LinTrendAccumulator, ? super Entry<Long, Long>> accFn = op.accumulateFn();
         BiConsumer<? super LinTrendAccumulator, ? super LinTrendAccumulator> combineFn = op.combineFn();
         BiConsumer<? super LinTrendAccumulator, ? super LinTrendAccumulator> deductFn = op.deductFn();
-        Function<? super LinTrendAccumulator, Double> finishFn = op.finishFn();
+        Function<? super LinTrendAccumulator, ? extends Double> finishFn = op.finishFn();
         assertNotNull(deductFn);
 
         // When
@@ -432,9 +477,9 @@ public class AggregateOperationsTest {
                 identity(),
                 entryA,
                 entryA,
-                asMap("a", Arrays.asList(entryA)),
-                asMap("a", Arrays.asList(entryA, entryA)),
-                asMap("a", Arrays.asList(entryA, entryA))
+                asMap("a", singletonList(entryA)),
+                asMap("a", asList(entryA, entryA)),
+                asMap("a", asList(entryA, entryA))
         );
     }
 
@@ -442,7 +487,7 @@ public class AggregateOperationsTest {
     public void when_groupingBy_withDownstreamOperation() {
         Entry<String, Integer> entryA = entry("a", 1);
         validateOpWithoutDeduct(
-                groupingBy(entryKey(), AggregateOperations.counting()),
+                groupingBy(entryKey(), counting()),
                 identity(),
                 entryA,
                 entryA,
@@ -457,7 +502,7 @@ public class AggregateOperationsTest {
         Entry<String, Integer> entryA = entry("a", 1);
         Entry<String, Integer> entryB = entry("b", 1);
         validateOpWithoutDeduct(
-                groupingBy(entryKey(), TreeMap::new, AggregateOperations.counting()),
+                groupingBy(entryKey(), TreeMap::new, counting()),
                 a -> {
                     assertThat(a, instanceOf(TreeMap.class));
                     return a;
@@ -470,6 +515,40 @@ public class AggregateOperationsTest {
         );
     }
 
+    @Test
+    public void when_sorting() {
+        validateOpWithoutDeduct(
+                sorting(naturalOrder()),
+                identity(),
+                2,
+                1,
+                singletonList(2),
+                asList(2, 1),
+                asList(1, 2)
+        );
+    }
+
+    @Test
+    public void when_aggregateOpAsCollector() {
+        collectAndVerify(IntStream.range(0, 1000));
+    }
+
+    @Test
+    public void when_aggregateOpAsParallelCollector() {
+        collectAndVerify(IntStream.range(0, 1000).parallel());
+    }
+
+    private void collectAndVerify(IntStream stream) {
+        AggregateOperation1<Integer, LongLongAccumulator, Double> averageOp = averagingLong(i -> i);
+        AggregateOperation1<Integer, MutableReference<Integer>, Integer> maxOp = maxBy(naturalOrder());
+
+        Tuple2<Double, Integer> result = stream
+                .boxed()
+                .collect(allOf(averageOp, maxOp).toCollector());
+
+        assertEquals((Double) 499.5d, result.f0());
+        assertEquals((Integer) 999, result.f1());
+    }
 
     private static <T, A, X, R> void validateOp(
             AggregateOperation1<T, A, R> op,
@@ -495,34 +574,55 @@ public class AggregateOperationsTest {
         // are allowed to be destructive ops
 
         // Then
-        assertEquals("accumulated", expectAcced1, getAccValFn.apply(acc1));
+        assertEqualsOrArrayEquals("accumulated", expectAcced1, getAccValFn.apply(acc1));
+
+        R acc1Exported = op.exportFn().apply(acc1);
+        byte[] acc1ExportedSerialized = serialize(acc1Exported);
 
         // When
         op.combineFn().accept(acc1, acc2);
         // Then
-        assertEquals("combined", expectCombined, getAccValFn.apply(acc1));
+        assertEqualsOrArrayEquals("combined", expectCombined, getAccValFn.apply(acc1));
+
+        // When - acc1 was mutated
+        // Then - it's exported version must stay unchanged
+        assertArrayEquals(acc1ExportedSerialized, serialize(acc1Exported));
+
+        // When
+        R exported = op.exportFn().apply(acc1);
+        // Then
+        assertEquals("exported", expectFinished, exported);
+        assertNotSame(exported, acc1);
 
         // When
         R finished = op.finishFn().apply(acc1);
         // Then
-        assertEquals("finished", expectFinished, finished);
+        assertEqualsOrArrayEquals("finished", expectFinished, finished);
 
         // When
         deductAccFn.accept(acc1, acc2);
         // Then
-        assertEquals("deducted", expectAcced1, getAccValFn.apply(acc1));
+        assertEqualsOrArrayEquals("deducted", expectAcced1, getAccValFn.apply(acc1));
 
         // When - accumulate both items into single accumulator
         acc1 = op.createFn().get();
         op.accumulateFn().accept(acc1, item1);
         op.accumulateFn().accept(acc1, item2);
         // Then
-        assertEquals("accumulated", expectCombined, getAccValFn.apply(acc1));
+        assertEqualsOrArrayEquals("accumulated", expectCombined, getAccValFn.apply(acc1));
+    }
+
+    private static void assertEqualsOrArrayEquals(String msg, Object expected, Object actual) {
+        if (expected instanceof Object[]) {
+            assertArrayEquals(msg, (Object[]) expected, (Object[]) actual);
+        } else {
+            assertEquals(msg, expected, actual);
+        }
     }
 
     private static <T, A, X, R> void validateOpWithoutDeduct(
-            AggregateOperation1<T, A, R> op,
-            Function<A, X> getAccValFn,
+            AggregateOperation1<? super T, A, ? extends R> op,
+            Function<? super A, ? extends X> getAccValFn,
             T item1,
             T item2,
             X expectAcced,
@@ -545,10 +645,23 @@ public class AggregateOperationsTest {
         // Then
         assertEquals("accumulated", expectAcced, getAccValFn.apply(acc1));
 
+        R acc1Exported = op.exportFn().apply(acc1);
+        byte[] acc1ExportedSerialized = serialize(acc1Exported);
+
         // When
         op.combineFn().accept(acc1, acc2);
         // Then
         assertEquals("combined", expectCombined, getAccValFn.apply(acc1));
+
+        // When - acc1 was mutated
+        // Then - it's exported version must stay unchanged
+        assertArrayEquals(acc1ExportedSerialized, serialize(acc1Exported));
+
+        // When
+        R exported = op.exportFn().apply(acc1);
+        // Then
+        assertEquals("exported", expectFinished, exported);
+        assertNotSame(exported, acc1);
 
         // When
         R finished = op.finishFn().apply(acc1);
@@ -563,6 +676,11 @@ public class AggregateOperationsTest {
         assertEquals("accumulated", expectCombined, getAccValFn.apply(acc1));
     }
 
+    private static byte[] serialize(Object o) {
+        return SERIALIZATION_SERVICE.toBytes(o);
+    }
+
+    @SuppressWarnings("unchecked")
     private static <K, V> Map<K, V> asMap(Object... entries) {
         Map<K, V> map = new HashMap<>();
         for (int i = 0; i < entries.length; i += 2) {
@@ -575,4 +693,7 @@ public class AggregateOperationsTest {
         return new LongAccumulator(val);
     }
 
+    private static LongLongAccumulator longLongAcc(long val1, long val2) {
+        return new LongLongAccumulator(val1, val2);
+    }
 }

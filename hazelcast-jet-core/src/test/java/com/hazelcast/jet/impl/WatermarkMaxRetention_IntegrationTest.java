@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import com.hazelcast.jet.core.TestProcessors.StuckForeverSourceP;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -45,11 +44,6 @@ public class WatermarkMaxRetention_IntegrationTest extends JetTestSupport {
 
     private static final String SINK_NAME = "sink";
     private JetInstance instance = createJetMember();
-
-    @After
-    public void after() {
-        shutdownFactory();
-    }
 
     @Test
     public void test_onEdgeCoalescing() {

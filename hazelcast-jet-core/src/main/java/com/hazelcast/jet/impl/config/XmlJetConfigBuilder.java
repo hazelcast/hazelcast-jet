@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import com.hazelcast.instance.JetBuildInfo;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.config.MetricsConfig;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.nio.IOUtil;
@@ -35,15 +36,17 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
+import javax.annotation.Nullable;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.InputStream;
+import java.util.Optional;
 import java.util.Properties;
 
 import static com.hazelcast.jet.impl.config.XmlJetConfigLocator.getClientConfigStream;
 import static com.hazelcast.jet.impl.config.XmlJetConfigLocator.getJetConfigStream;
 import static com.hazelcast.jet.impl.config.XmlJetConfigLocator.getMemberConfigStream;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.util.StringUtil.LINE_SEPARATOR;
 
 /**
@@ -72,22 +75,22 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
         try {
             parseAndBuildConfig(in);
         } catch (Exception e) {
-            throw rethrow(e);
+            throw sneakyThrow(e);
         } finally {
             IOUtil.closeResource(in);
         }
     }
 
-    public static JetConfig getConfig(Properties properties) {
-        InputStream in = getJetConfigStream(properties);
-        JetConfig cfg = new XmlJetConfigBuilder(properties, in).jetConfig;
+    public static JetConfig loadConfig(@Nullable InputStream stream, @Nullable Properties properties) {
+        if (properties == null) {
+            properties = System.getProperties();
+        }
+        if (stream == null) {
+            stream = getJetConfigStream(properties);
+        }
+        JetConfig cfg = new XmlJetConfigBuilder(properties, stream).jetConfig;
         cfg.setHazelcastConfig(getMemberConfig(properties));
         return cfg;
-    }
-
-    public static JetConfig getConfig() {
-        Properties properties = System.getProperties();
-        return getConfig(properties);
     }
 
     public static ClientConfig getClientConfig() {
@@ -98,7 +101,7 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
         return new XmlClientConfigBuilder(getClientConfigStream(properties)).build();
     }
 
-    public static Config getMemberConfig(Properties properties) {
+    private static Config getMemberConfig(Properties properties) {
         return new XmlConfigBuilder(getMemberConfigStream(properties)).build();
     }
 
@@ -155,7 +158,7 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
         handleConfig(root);
     }
 
-    private void handleConfig(Element docElement) throws Exception {
+    private void handleConfig(Element docElement) {
         for (Node node : childElements(docElement)) {
             String name = cleanNodeName(node);
             switch (name) {
@@ -167,6 +170,9 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
                     break;
                 case "edge-defaults":
                     parseEdgeDefaults(node);
+                    break;
+                case "metrics":
+                    parseMetrics(node);
                     break;
                 default:
                     throw new AssertionError("Unrecognized XML element: " + name);
@@ -182,9 +188,6 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
                 case "cooperative-thread-count":
                     instanceConfig.setCooperativeThreadCount(intValue(node));
                     break;
-                case "temp-dir":
-                    instanceConfig.setTempDir(stringValue(node));
-                    break;
                 case "flow-control-period":
                     instanceConfig.setFlowControlPeriodMs(intValue(node));
                     break;
@@ -197,7 +200,7 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
         }
     }
 
-    private EdgeConfig parseEdgeDefaults(Node edgeNode) {
+    private void parseEdgeDefaults(Node edgeNode) {
         EdgeConfig config = jetConfig.getDefaultEdgeConfig();
         for (Node child : childElements(edgeNode)) {
             String name = cleanNodeName(child);
@@ -215,7 +218,30 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
                     throw new AssertionError("Unrecognized XML element: " + name);
             }
         }
-        return config;
+    }
+
+    private void parseMetrics(Node metricsNode) {
+        MetricsConfig config = jetConfig.getMetricsConfig();
+
+        getBooleanAttribute(metricsNode, "enabled").ifPresent(config::setEnabled);
+        getBooleanAttribute(metricsNode, "jmxEnabled").ifPresent(config::setJmxEnabled);
+
+        for (Node child : childElements(metricsNode)) {
+            String name = cleanNodeName(child);
+            switch (name) {
+                case "retention-seconds":
+                    config.setRetentionSeconds(intValue(child));
+                    break;
+                case "collection-interval-seconds":
+                    config.setCollectionIntervalSeconds(intValue(child));
+                    break;
+                case "metrics-for-data-structures":
+                    config.setMetricsForDataStructures(booleanValue(child));
+                    break;
+                default:
+                    throw new AssertionError("Unrecognized XML element: " + name);
+            }
+        }
     }
 
     private int intValue(Node node) {
@@ -226,4 +252,11 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
         return getTextContent(node);
     }
 
+    private boolean booleanValue(Node node) {
+        return Boolean.parseBoolean(getTextContent(node));
+    }
+
+    private Optional<Boolean> getBooleanAttribute(Node node, String name) {
+        return Optional.ofNullable(node.getAttributes().getNamedItem(name)).map(this::booleanValue);
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,36 +19,37 @@ package com.hazelcast.jet.impl.connector;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.processor.DiagnosticProcessors;
+import com.hazelcast.jet.function.DistributedFunction;
 
 import javax.annotation.Nonnull;
 import java.util.function.Function;
 
 /**
- * See {@link DiagnosticProcessors#writeLoggerP(com.hazelcast.jet.function.DistributedFunction)}
+ * See {@link DiagnosticProcessors#writeLoggerP(DistributedFunction)}.
  */
 public class WriteLoggerP<T> extends AbstractProcessor {
 
-    private Function<T, String> toStringFn;
+    private Function<T, ? extends CharSequence> toStringFn;
 
-    public WriteLoggerP(Function<T, String> toStringFn) {
+    public WriteLoggerP(Function<T, ? extends CharSequence> toStringFn) {
         this.toStringFn = toStringFn;
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-        getLogger().info(toStringFn.apply((T) item));
-        return true;
-    }
-
-    @Override
-    public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
-        getLogger().info(watermark.toString());
-        return true;
     }
 
     @Override
     public boolean isCooperative() {
         return false;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    protected boolean tryProcess(int ordinal, @Nonnull Object item) {
+        getLogger().info(toStringFn.apply((T) item).toString());
+        return true;
+    }
+
+    @Override
+    public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
+        getLogger().fine(watermark.toString());
+        return true;
     }
 }

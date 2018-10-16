@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package com.hazelcast.jet.aggregate;
 
 import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -24,6 +25,8 @@ import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
+import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.datamodel.Tag.tag0;
 import static com.hazelcast.jet.datamodel.Tag.tag1;
 import static com.hazelcast.jet.datamodel.Tag.tag2;
@@ -39,11 +42,12 @@ public class AggregateOperation2Test {
 
         // Given
         DistributedSupplier<LongAccumulator> createFn = LongAccumulator::new;
-        DistributedBiConsumer<LongAccumulator, Object> accFn0 = (acc, item) -> acc.add(1);
-        DistributedBiConsumer<LongAccumulator, Object> accFn1 = (acc, item) -> acc.add(10);
-        DistributedBiConsumer<LongAccumulator, LongAccumulator> combineFn = LongAccumulator::add;
-        DistributedBiConsumer<LongAccumulator, LongAccumulator> deductFn = LongAccumulator::subtract;
-        DistributedFunction<LongAccumulator, Long> finishFn = LongAccumulator::get;
+        DistributedBiConsumer<LongAccumulator, Object> accFn0 = (acc, item) -> acc.addAllowingOverflow(1);
+        DistributedBiConsumer<LongAccumulator, Object> accFn1 = (acc, item) -> acc.addAllowingOverflow(10);
+        DistributedBiConsumer<LongAccumulator, LongAccumulator> combineFn = LongAccumulator::addAllowingOverflow;
+        DistributedBiConsumer<LongAccumulator, LongAccumulator> deductFn = LongAccumulator::subtractAllowingOverflow;
+        DistributedFunction<LongAccumulator, Long> exportFn = acc -> 1L;
+        DistributedFunction<LongAccumulator, Long> finishFn = acc -> 2L;
 
         // When
         AggregateOperation2<Object, Object, LongAccumulator, Long> aggrOp = AggregateOperation
@@ -52,6 +56,7 @@ public class AggregateOperation2Test {
                 .andAccumulate1(accFn1)
                 .andCombine(combineFn)
                 .andDeduct(deductFn)
+                .andExport(exportFn)
                 .andFinish(finishFn);
 
         // Then
@@ -62,49 +67,50 @@ public class AggregateOperation2Test {
         assertSame(accFn1, aggrOp.accumulateFn(tag1()));
         assertSame(combineFn, aggrOp.combineFn());
         assertSame(deductFn, aggrOp.deductFn());
+        assertSame(exportFn, aggrOp.exportFn());
         assertSame(finishFn, aggrOp.finishFn());
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void when_askForNonexistentTag_then_exception() {
         // Given
-        AggregateOperation2<Object, Object, LongAccumulator, LongAccumulator> aggrOp = AggregateOperation
+        AggregateOperation2<Object, Object, LongAccumulator, Long> aggrOp = AggregateOperation
                 .withCreate(LongAccumulator::new)
                 .andAccumulate0((x, y) -> { })
                 .andAccumulate1((x, y) -> { })
-                .andIdentityFinish();
+                .andExportFinish(LongAccumulator::get);
 
         // When - then exception
         aggrOp.accumulateFn(tag2());
     }
 
     @Test
-    public void when_withFinishFn_then_newFinishFn() {
+    public void when_withIdentityFinish() {
         // Given
-        AggregateOperation2<Object, Object, LongAccumulator, LongAccumulator> aggrOp = AggregateOperation
+        AggregateOperation2<Object, Object, LongAccumulator, Long> aggrOp = AggregateOperation
                 .withCreate(LongAccumulator::new)
-                .andAccumulate0((acc, item) -> acc.add(1))
-                .andAccumulate1((acc, item) -> acc.add(1))
-                .andIdentityFinish();
+                .andAccumulate0((acc, item) -> acc.addAllowingOverflow(1))
+                .andAccumulate1((acc, item) -> acc.addAllowingOverflow(1))
+                .andExportFinish(LongAccumulator::get);
 
         // When
-        DistributedFunction<LongAccumulator, String> newFinishFn = Object::toString;
-        AggregateOperation2<Object, Object, LongAccumulator, String> newAggrOp = aggrOp.withFinishFn(newFinishFn);
+        AggregateOperation2<Object, Object, LongAccumulator, LongAccumulator> newAggrOp = aggrOp.withIdentityFinish();
 
         // Then
-        assertSame(newFinishFn, newAggrOp.finishFn());
+        LongAccumulator acc = newAggrOp.createFn().get();
+        assertSame(acc, newAggrOp.finishFn().apply(acc));
     }
 
     @Test
     public void when_withCombiningAccumulateFn_then_accumulateFnCombines() {
         // Given
-        AggregateOperation2<Object, Object, LongAccumulator, LongAccumulator> aggrOp = AggregateOperation
+        AggregateOperation2<Object, Object, LongAccumulator, Long> aggrOp = AggregateOperation
                 .withCreate(LongAccumulator::new)
-                .andAccumulate0((acc, item) -> acc.add(1))
-                .andAccumulate1((acc, item) -> acc.add(10))
-                .andCombine(LongAccumulator::add)
-                .andIdentityFinish();
-        AggregateOperation1<LongAccumulator, LongAccumulator, LongAccumulator> combiningAggrOp =
+                .andAccumulate0((acc, item) -> acc.addAllowingOverflow(1))
+                .andAccumulate1((acc, item) -> acc.addAllowingOverflow(10))
+                .andCombine(LongAccumulator::addAllowingOverflow)
+                .andExportFinish(LongAccumulator::get);
+        AggregateOperation1<LongAccumulator, LongAccumulator, Long> combiningAggrOp =
                 aggrOp.withCombiningAccumulateFn(wholeItem());
         DistributedBiConsumer<? super LongAccumulator, ? super LongAccumulator> accFn = combiningAggrOp.accumulateFn();
         LongAccumulator partialAcc1 = combiningAggrOp.createFn().get();
@@ -119,5 +125,28 @@ public class AggregateOperation2Test {
 
         // Then
         assertEquals(5, combinedAcc.get());
+    }
+
+    @Test
+    public void when_andThen_then_exportAndFinishChanged() {
+        // Given
+        AggregateOperation2<Long, Long, Tuple2<LongAccumulator, LongAccumulator>, Long> aggrOp =
+                aggregateOperation2(
+                        summingLong((Long x) -> x),
+                        summingLong((Long x) -> x),
+                        (r0, r1) -> r1
+                );
+
+        // When
+        AggregateOperation2<Long, Long, Tuple2<LongAccumulator, LongAccumulator>, Long> incAggrOp
+                = aggrOp.andThen(a -> a + 1);
+
+        // Then
+        Tuple2<LongAccumulator, LongAccumulator> acc = incAggrOp.createFn().get();
+        incAggrOp.accumulateFn1().accept(acc, 13L);
+        long exported = incAggrOp.exportFn().apply(acc);
+        long finished = incAggrOp.finishFn().apply(acc);
+        assertEquals(14L, exported);
+        assertEquals(14L, finished);
     }
 }

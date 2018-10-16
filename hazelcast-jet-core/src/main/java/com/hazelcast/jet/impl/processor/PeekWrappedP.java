@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,10 @@ import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.core.kotlin.ProcessorK;
+import com.hazelcast.jet.core.processor.DiagnosticProcessors;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
+import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.NodeEngine;
 
@@ -34,17 +35,15 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.impl.execution.init.ExecutionPlan.createLoggerName;
-import static com.hazelcast.util.Preconditions.checkNotNull;
+import static com.hazelcast.jet.impl.util.Util.toLocalTime;
 
 /**
- * Internal API, see
- * {@link com.hazelcast.jet.core.processor.DiagnosticProcessors}.
+ * Internal API, see {@link DiagnosticProcessors}.
  */
-public final class PeekWrappedP<T> implements Processor {
+public final class PeekWrappedP<T> extends ProcessorWrapper {
 
-    private final Processor wrappedProcessor;
-    private final DistributedFunction<T, String> toStringFn;
-    private final Predicate<T> shouldLogFn;
+    private final DistributedFunction<? super T, ? extends CharSequence> toStringFn;
+    private final Predicate<? super T> shouldLogFn;
     private final LoggingInbox loggingInbox;
     private ILogger logger;
 
@@ -54,13 +53,13 @@ public final class PeekWrappedP<T> implements Processor {
 
     private boolean peekedWatermarkLogged;
 
-    public PeekWrappedP(@Nonnull Processor wrappedProcessor, @Nonnull DistributedFunction<T, String> toStringFn,
-                        @Nonnull Predicate<T> shouldLogFn, boolean peekInput, boolean peekOutput, boolean peekSnapshot) {
-        checkNotNull(wrappedProcessor, "wrappedProcessor");
-        checkNotNull(toStringFn, "toStringFn");
-        checkNotNull(shouldLogFn, "shouldLogFn");
-
-        this.wrappedProcessor = wrappedProcessor;
+    public PeekWrappedP(
+            @Nonnull Processor wrapped,
+            @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn,
+            @Nonnull Predicate<? super T> shouldLogFn,
+            boolean peekInput, boolean peekOutput, boolean peekSnapshot
+    ) {
+        super(wrapped);
         this.toStringFn = toStringFn;
         this.shouldLogFn = shouldLogFn;
         this.peekInput = peekInput;
@@ -81,22 +80,17 @@ public final class PeekWrappedP<T> implements Processor {
             ProcCtx c = (ProcCtx) context;
             NodeEngine nodeEngine = ((HazelcastInstanceImpl) c.jetInstance().getHazelcastInstance()).node.nodeEngine;
             ILogger newLogger = nodeEngine.getLogger(
-                    createLoggerName(wrappedProcessor.getClass().getName(), c.vertexName(), c.globalProcessorIndex()));
-            context = new ProcCtx(c.jetInstance(), c.getSerializationService(), newLogger, c.vertexName(),
-                    c.globalProcessorIndex(), c.processingGuarantee());
+                    createLoggerName(
+                            getWrapped().getClass().getName(),
+                            c.jobConfig().getName(),
+                            c.vertexName(),
+                            c.globalProcessorIndex())
+            );
+            context = new ProcCtx(c.jetInstance(), c.jobId(), c.executionId(), c.jobConfig(),
+                    newLogger, c.vertexName(), c.localProcessorIndex(), c.globalProcessorIndex(), c.processingGuarantee(),
+                    c.localParallelism(), c.memberIndex(), c.memberCount());
         }
-
-        wrappedProcessor.init(outbox, context);
-    }
-
-    @Override
-    public ProcessorK kotlinProcessor() {
-        return null;
-    }
-
-    @Override
-    public boolean isCooperative() {
-        return wrappedProcessor.isCooperative();
+        super.init(outbox, context);
     }
 
     @Override
@@ -104,42 +98,19 @@ public final class PeekWrappedP<T> implements Processor {
         if (peekInput) {
             loggingInbox.wrappedInbox = inbox;
             loggingInbox.ordinal = ordinal;
-            wrappedProcessor.process(ordinal, loggingInbox);
+            super.process(ordinal, loggingInbox);
         } else {
-            wrappedProcessor.process(ordinal, inbox);
+            super.process(ordinal, inbox);
         }
     }
 
-    @Override
-    public boolean tryProcess() {
-        return wrappedProcessor.tryProcess();
-    }
-
-    @Override
-    public boolean complete() {
-        return wrappedProcessor.complete();
-    }
-
-    private void log(String prefix, T object) {
-        // null object can come from poll()
-        if (object != null && shouldLogFn.test(object)) {
-            logger.info(prefix + ": " + toStringFn.apply(object));
+    private void log(String prefix, @Nonnull T object) {
+        if (shouldLogFn.test(object)) {
+            logger.info(prefix + ": " + toStringFn.apply(object)
+                    + (object instanceof JetEvent
+                            ? " (eventTime=" + toLocalTime(((JetEvent) object).timestamp()) + ")"
+                            : ""));
         }
-    }
-
-    @Override
-    public boolean completeEdge(int ordinal) {
-        return wrappedProcessor.completeEdge(ordinal);
-    }
-
-    @Override
-    public boolean saveToSnapshot() {
-        return wrappedProcessor.saveToSnapshot();
-    }
-
-    @Override
-    public void restoreFromSnapshot(@Nonnull Inbox inbox) {
-        wrappedProcessor.restoreFromSnapshot(inbox);
     }
 
     @Override
@@ -148,16 +119,14 @@ public final class PeekWrappedP<T> implements Processor {
             logger.info("Input: " + watermark);
             peekedWatermarkLogged = true;
         }
-        if (wrappedProcessor.tryProcessWatermark(watermark)) {
+        if (super.tryProcessWatermark(watermark)) {
             peekedWatermarkLogged = false;
+            if (peekOutput) {
+                logger.info("Output forwarded: " + watermark);
+            }
             return true;
         }
         return false;
-    }
-
-    @Override
-    public boolean finishSnapshotRestore() {
-        return wrappedProcessor.finishSnapshotRestore();
     }
 
     private class LoggingInbox implements Inbox {
@@ -192,14 +161,14 @@ public final class PeekWrappedP<T> implements Processor {
             return res;
         }
 
-        private void log(T res) {
-            PeekWrappedP.this.log("Input from " + ordinal, res);
+        private void log(@Nonnull T res) {
+            PeekWrappedP.this.log("Input from ordinal " + ordinal, res);
         }
 
         @Override
-        public Object remove() {
+        public void remove() {
             peekedItemLogged = false;
-            return wrappedInbox.remove();
+            wrappedInbox.remove();
         }
     }
 
@@ -233,7 +202,7 @@ public final class PeekWrappedP<T> implements Processor {
                 return false;
             }
             if (logOutput) {
-                String prefix = "Output to " + ordinal;
+                String prefix = "Output to ordinal " + ordinal;
                 if (item instanceof Watermark) {
                     logger.info(prefix + ": " + item);
                 } else {
@@ -247,7 +216,6 @@ public final class PeekWrappedP<T> implements Processor {
         public boolean offer(int[] ordinals, @Nonnull Object item) {
             // use broadcast logic to be able to report accurately
             // which queue was pushed to when.
-            boolean done = true;
             for (int i = 0; i < ordinals.length; i++) {
                 if (broadcastTracker.get(i)) {
                     continue;
@@ -255,13 +223,11 @@ public final class PeekWrappedP<T> implements Processor {
                 if (offer(i, item)) {
                     broadcastTracker.set(i);
                 } else {
-                    done = false;
+                    return false;
                 }
             }
-            if (done) {
-                broadcastTracker.clear();
-            }
-            return done;
+            broadcastTracker.clear();
+            return true;
         }
 
         @Override

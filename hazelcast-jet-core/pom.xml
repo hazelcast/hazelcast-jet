@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+  ~ Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@
     <parent>
         <groupId>com.hazelcast.jet</groupId>
         <artifactId>hazelcast-jet-root</artifactId>
-        <version>0.6-SNAPSHOT</version>
+        <version>0.8-SNAPSHOT</version>
     </parent>
 
     <properties>
@@ -67,29 +67,16 @@
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Automatic-Module-Name>com.hazelcast.jet.core</Automatic-Module-Name>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
             </plugin>
         </plugins>
     </build>
-
-    <profiles>
-        <profile>
-            <id>test</id>
-            <activation>
-                <file>
-                    <exists>${basedir}/src/test/resources/sample-pojo-1.0-person.jar</exists>
-                </file>
-            </activation>
-            <dependencies>
-                <dependency>
-                    <groupId>sample-person</groupId>
-                    <artifactId>com.sample</artifactId>
-                    <version>1.0</version>
-                    <scope>system</scope>
-                    <systemPath>${basedir}/src/test/resources/sample-pojo-1.0-person.jar</systemPath>
-                </dependency>
-            </dependencies>
-        </profile>
-    </profiles>
 
     <dependencies>
         <dependency>
@@ -110,6 +97,14 @@
             <optional>true</optional>
         </dependency>
 
+        <dependency>
+            <groupId>javax.jms</groupId>
+            <artifactId>javax.jms-api</artifactId>
+            <version>${jms.api.version}</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+
         <!--TEST DEPENDENCIES-->
         <dependency>
             <groupId>com.hazelcast</groupId>
@@ -117,6 +112,30 @@
             <scope>test</scope>
             <version>${hazelcast.version}</version>
             <classifier>tests</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.activemq</groupId>
+            <artifactId>activemq-all</artifactId>
+            <version>5.15.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.activemq.tooling</groupId>
+            <artifactId>activemq-junit</artifactId>
+            <version>5.15.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>nl.jqno.equalsverifier</groupId>
+            <artifactId>equalsverifier</artifactId>
+            <version>2.4.4</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>1.4.196</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

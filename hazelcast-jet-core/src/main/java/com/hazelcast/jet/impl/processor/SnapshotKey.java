@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,9 +24,11 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
+import java.util.Objects;
 
 /**
- * Javadoc pending.
+ * Represents the key of an item being sent to the snapshot in a
+ * fault-tolerant streaming job.
  */
 public final class SnapshotKey implements PartitionAware<Object>, IdentifiedDataSerializable {
     long timestamp;
@@ -73,13 +75,13 @@ public final class SnapshotKey implements PartitionAware<Object>, IdentifiedData
         return this == o
                 || o instanceof SnapshotKey
                 && this.timestamp == (that = (SnapshotKey) o).timestamp
-                && this.key.equals(that.key);
+                && Objects.equals(this.key, that.key);
     }
 
     @Override
     public int hashCode() {
         int hc = (int) (timestamp ^ (timestamp >>> 32));
-        hc = 73 * hc + key.hashCode();
+        hc = 73 * hc + Objects.hashCode(key);
         return hc;
     }
 

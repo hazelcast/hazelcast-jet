@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 package com.hazelcast.jet.accumulator;
 
 /**
- * Mutable container of a {@code double} value.
+ * Accumulator of a {@code double} value.
  */
 public class DoubleAccumulator {
 
@@ -37,13 +37,6 @@ public class DoubleAccumulator {
     }
 
     /**
-     * Returns the current value.
-     */
-    public double get() {
-        return value;
-    }
-
-    /**
      * Sets the value as given.
      */
     public DoubleAccumulator set(double value) {
@@ -51,12 +44,43 @@ public class DoubleAccumulator {
         return this;
     }
 
+    /**
+     * Adds the value to this objects' value.
+     */
+    public DoubleAccumulator accumulate(double v) {
+        value += v;
+        return this;
+    }
+
+    /**
+     * Adds the value of the supplied accumulator to this one.
+     */
+    public DoubleAccumulator combine(DoubleAccumulator that) {
+        value += that.value;
+        return this;
+    }
+
+    /**
+     * Subtracts the value of the supplied accumulator from this one.
+     */
+    public DoubleAccumulator deduct(DoubleAccumulator that) {
+        value -= that.value;
+        return this;
+    }
+
+    /**
+     * Returns the current value.
+     */
+    public double export() {
+        return value;
+    }
+
     @Override
     public boolean equals(Object o) {
         return this == o ||
                 o != null
-                && this.getClass() == o.getClass()
-                && this.value == ((DoubleAccumulator) o).value;
+                        && this.getClass() == o.getClass()
+                        && Double.compare(this.value, ((DoubleAccumulator) o).value) == 0;
     }
 
     @Override
@@ -67,29 +91,5 @@ public class DoubleAccumulator {
     @Override
     public String toString() {
         return "DoubleAccumulator(" + value + ')';
-    }
-
-    /**
-     * Adds the value to this objects' value.
-     */
-    public  DoubleAccumulator add(double v) {
-        value += v;
-        return this;
-    }
-
-    /**
-     * Adds the value of the supplied accumulator to this one.
-     */
-    public DoubleAccumulator add(DoubleAccumulator that) {
-        value += that.value;
-        return this;
-    }
-
-    /**
-     * Subtracts the value of the supplied accumulator from this one.
-     */
-    public DoubleAccumulator subtract(DoubleAccumulator that) {
-        value -= that.value;
-        return this;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,20 +17,17 @@
 package com.hazelcast.jet.impl.util;
 
 import com.hazelcast.jet.core.Inbox;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.util.ArrayDeque;
+import java.util.Deque;
 
 /**
- * Extends {@link ArrayDeque} to implement {@link Inbox}.
+ * An {@link Inbox} implementation backed by an {@link ArrayDeque}.
  */
-// The correctness of this class depends on the fact that the
-// implementations of batch draining methods in Inbox delegate
-// to poll(). Therefore the class is final.
-@SuppressFBWarnings(value = "SE_BAD_FIELD", justification = "Inbox is not intended to be serializable")
-public final class ArrayDequeInbox extends ArrayDeque<Object> implements Inbox {
+public final class ArrayDequeInbox implements Inbox {
 
     private final ProgressTracker progTracker;
+    private final ArrayDeque<Object> queue = new ArrayDeque<>();
 
     /**
      * Constructs the inbox with the provided progress tracker.
@@ -40,16 +37,36 @@ public final class ArrayDequeInbox extends ArrayDeque<Object> implements Inbox {
     }
 
     @Override
+    public boolean isEmpty() {
+        return queue.isEmpty();
+    }
+
+    @Override
+    public Object peek() {
+        return queue.peek();
+    }
+
+    @Override
     public Object poll() {
-        Object result = super.poll();
+        Object result = queue.poll();
         progTracker.madeProgress(result != null);
         return result;
     }
 
     @Override
-    public Object remove() {
-        Object result = super.remove();
+    public void remove() {
+        queue.remove();
         progTracker.madeProgress();
-        return result;
+    }
+
+    /**
+     * Retrieves the queue backing this inbox.
+     */
+    public Deque<Object> queue() {
+        return queue;
+    }
+
+    public int size() {
+        return queue.size();
     }
 }

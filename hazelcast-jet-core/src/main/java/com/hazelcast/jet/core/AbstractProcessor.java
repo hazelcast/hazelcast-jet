@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,13 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.kotlin.ProcessorK;
 import com.hazelcast.logging.ILogger;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
@@ -67,7 +67,6 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
  */
 public abstract class AbstractProcessor implements Processor {
 
-    private boolean isCooperative = true;
     private ILogger logger;
     private Outbox outbox;
 
@@ -84,21 +83,6 @@ public abstract class AbstractProcessor implements Processor {
     }
 
     // final implementations of Processor API
-
-    /**
-     * Specifies what this processor's {@link #isCooperative()} method will return.
-     * The method will have no effect if called after the processor has been
-     * submitted to the execution service; therefore it should be called from the
-     * {@link ProcessorSupplier} that creates it or in processor's constructor.
-     */
-    public final void setCooperative(boolean isCooperative) {
-        this.isCooperative = isCooperative;
-    }
-
-    @Override
-    public boolean isCooperative() {
-        return isCooperative;
-    }
 
     @Override
     public ProcessorK kotlinProcessor() {
@@ -141,19 +125,19 @@ public abstract class AbstractProcessor implements Processor {
             switch (ordinal) {
                 case 0:
                     process0(inbox);
-                    return;
+                    break;
                 case 1:
                     process1(inbox);
-                    return;
+                    break;
                 case 2:
                     process2(inbox);
-                    return;
+                    break;
                 case 3:
                     process3(inbox);
-                    return;
+                    break;
                 case 4:
                     process4(inbox);
-                    return;
+                    break;
                 default:
                     processAny(ordinal, inbox);
             }
@@ -186,7 +170,8 @@ public abstract class AbstractProcessor implements Processor {
      * Tries to process the supplied input item, which was received from the
      * edge with the supplied ordinal. May choose to process only partially
      * and return {@code false}, in which case it will be called again later
-     * with the same {@code (ordinal, item)} combination.
+     * with the same {@code (ordinal, item)} combination before any other
+     * processing method is called.
      * <p>
      * The default implementation throws an {@code UnsupportedOperationException}.
      * <p>
@@ -208,7 +193,7 @@ public abstract class AbstractProcessor implements Processor {
      * Tries to process the supplied input item, which was received from the
      * edge with ordinal 0. May choose to process only partially and return
      * {@code false}, in which case it will be called again later with the same
-     * item.
+     * item before any other processing method is called.
      * <p>
      * The default implementation delegates to {@link #tryProcess(int, Object)
      * tryProcess(0, item)}.
@@ -225,7 +210,7 @@ public abstract class AbstractProcessor implements Processor {
      * Tries to process the supplied input item, which was received from the
      * edge with ordinal 1. May choose to process only partially and return
      * {@code false}, in which case it will be called again later with the same
-     * item.
+     * item before any other processing method is called.
      * <p>
      * The default implementation delegates to {@link #tryProcess(int, Object)
      * tryProcess(1, item)}.
@@ -242,7 +227,7 @@ public abstract class AbstractProcessor implements Processor {
      * Tries to process the supplied input item, which was received from the
      * edge with ordinal 2. May choose to process only partially and return
      * {@code false}, in which case it will be called again later with the same
-     * item.
+     * item before any other processing method is called.
      * <p>
      * The default implementation delegates to {@link #tryProcess(int, Object)
      * tryProcess(2, item)}.
@@ -259,7 +244,7 @@ public abstract class AbstractProcessor implements Processor {
      * Tries to process the supplied input item, which was received from the
      * edge with ordinal 3. May choose to process only partially and return
      * {@code false}, in which case it will be called again later with the same
-     * item.
+     * item before any other processing method is called.
      * <p>
      * The default implementation delegates to {@link #tryProcess(int, Object)
      * tryProcess(3, item)}.
@@ -276,7 +261,7 @@ public abstract class AbstractProcessor implements Processor {
      * Tries to process the supplied input item, which was received from the
      * edge with ordinal 4. May choose to process only partially and return
      * {@code false}, in which case it will be called again later with the same
-     * item.
+     * item before any other processing method is called.
      * <p>
      * The default implementation delegates to {@link #tryProcess(int, Object)
      * tryProcess(4, item)}.
@@ -316,8 +301,16 @@ public abstract class AbstractProcessor implements Processor {
         return logger;
     }
 
+    protected final Outbox getOutbox() {
+        return outbox;
+    }
+
     /**
      * Offers the item to the outbox bucket at the supplied ordinal.
+     * <p>
+     * Emitted items should not be subsequently mutated because the same
+     * instance might be used by a downstream processor in a different thread,
+     * causing concurrent access.
      *
      * @return {@code true}, if the item was accepted. If {@code false} is
      * returned, the call must be retried later with the same (or equal) item.
@@ -329,6 +322,10 @@ public abstract class AbstractProcessor implements Processor {
 
     /**
      * Offers the item to all the outbox buckets (except the snapshot outbox).
+     * <p>
+     * Emitted items should not be subsequently mutated because the same
+     * instance might be used by a downstream processor in a different thread,
+     * causing concurrent access.
      *
      * @return {@code true}, if the item was accepted. If {@code false} is
      * returned, the call must be retried later with the same (or equal) item.
@@ -340,20 +337,27 @@ public abstract class AbstractProcessor implements Processor {
 
     /**
      * Offers the item to the outbox buckets identified in the supplied array.
+     * <p>
+     * Emitted items should not be subsequently mutated because the same
+     * instance might be used by a downstream processor in a different thread,
+     * causing concurrent access.
      *
      * @return {@code true}, if the item was accepted. If {@code false} is
      * returned, the call must be retried later with the same (or equal) item.
      */
     @CheckReturnValue
-    protected final boolean tryEmit(int[] ordinals, @Nonnull Object item) {
+    protected final boolean tryEmit(@Nonnull int[] ordinals, @Nonnull Object item) {
         return outbox.offer(ordinals, item);
     }
 
     /**
      * Obtains items from the traverser and offers them to the outbox's buckets
-     * identified in the supplied array. Calls the {@code onEmit} callback (if
-     * supplied) for each emitted item. If the outbox refuses an item, it backs
+     * identified in the supplied array. If the outbox refuses an item, it backs
      * off and returns {@code false}.
+     * <p>
+     * Emitted items should not be subsequently mutated because the same
+     * instance might be used by a downstream processor in a different thread,
+     * causing concurrent access.
      * <p>
      * If this method returns {@code false}, then the caller must retain the
      * traverser and pass it again in the subsequent invocation of this method,
@@ -364,12 +368,9 @@ public abstract class AbstractProcessor implements Processor {
      *
      * @param ordinals ordinals of the target bucket
      * @param traverser traverser over items to emit
-     * @param onEmit optional callback that gets notified of each emitted item
      * @return whether the traverser has been exhausted
      */
-    protected final <E> boolean emitFromTraverser(
-            @Nonnull int[] ordinals, @Nonnull Traverser<E> traverser, @Nullable Consumer<? super E> onEmit
-    ) {
+    protected final <E> boolean emitFromTraverser(@Nonnull int[] ordinals, @Nonnull Traverser<E> traverser) {
         E item;
         if (pendingItem != null) {
             item = (E) pendingItem;
@@ -378,11 +379,7 @@ public abstract class AbstractProcessor implements Processor {
             item = traverser.next();
         }
         for (; item != null; item = traverser.next()) {
-            if (tryEmit(ordinals, item)) {
-                if (onEmit != null) {
-                    onEmit.accept(item);
-                }
-            } else {
+            if (!tryEmit(ordinals, item)) {
                 pendingItem = item;
                 return false;
             }
@@ -392,9 +389,12 @@ public abstract class AbstractProcessor implements Processor {
 
     /**
      * Obtains items from the traverser and offers them to the outbox's buckets
-     * identified in the supplied array. Calls the {@code onEmit} callback (if
-     * supplied) for each emitted item. If the outbox refuses an item, it backs
+     * identified in the supplied array. If the outbox refuses an item, it backs
      * off and returns {@code false}.
+     * <p>
+     * Emitted items should not be subsequently mutated because the same
+     * instance might be used by a downstream processor in a different thread,
+     * causing concurrent access.
      * <p>
      * If this method returns {@code false}, then the caller must retain the
      * traverser and pass it again in the subsequent invocation of this method,
@@ -405,12 +405,9 @@ public abstract class AbstractProcessor implements Processor {
      *
      * @param ordinal ordinal of the target bucket
      * @param traverser traverser over items to emit
-     * @param onEmit optional callback that gets notified of each emitted item
      * @return whether the traverser has been exhausted
      */
-    protected final <E> boolean emitFromTraverser(
-            int ordinal, @Nonnull Traverser<E> traverser, @Nullable Consumer<? super E> onEmit
-    ) {
+    protected final <E> boolean emitFromTraverser(int ordinal, @Nonnull Traverser<E> traverser) {
         E item;
         if (pendingItem != null) {
             item = (E) pendingItem;
@@ -419,11 +416,7 @@ public abstract class AbstractProcessor implements Processor {
             item = traverser.next();
         }
         for (; item != null; item = traverser.next()) {
-            if (tryEmit(ordinal, item)) {
-                if (onEmit != null) {
-                    onEmit.accept(item);
-                }
-            } else {
+            if (!tryEmit(ordinal, item)) {
                 pendingItem = item;
                 return false;
             }
@@ -432,35 +425,11 @@ public abstract class AbstractProcessor implements Processor {
     }
 
     /**
-     * Convenience for {@link #emitFromTraverser(int, Traverser, Consumer)}
-     * which emits to all ordinals.
-     */
-    protected final <E> boolean emitFromTraverser(@Nonnull Traverser<E> traverser, @Nullable Consumer<? super E> onEmit) {
-        return emitFromTraverser(-1, traverser, onEmit);
-    }
-
-    /**
-     * Convenience for {@link #emitFromTraverser(int, Traverser, Consumer)}
+     * Convenience for {@link #emitFromTraverser(int, Traverser)}
      * which emits to all ordinals.
      */
     protected final boolean emitFromTraverser(@Nonnull Traverser<?> traverser) {
-        return emitFromTraverser(-1, traverser, null);
-    }
-
-    /**
-     * Convenience for {@link #emitFromTraverser(int, Traverser, Consumer)}
-     * which emits to the specified ordinal.
-     */
-    protected final boolean emitFromTraverser(int ordinal, @Nonnull Traverser<?> traverser) {
-        return emitFromTraverser(ordinal, traverser, null);
-    }
-
-    /**
-     * Convenience for {@link #emitFromTraverser(int[], Traverser, Consumer)}
-     * which emits to the specified ordinals.
-     */
-    protected final boolean emitFromTraverser(int[] ordinals, @Nonnull Traverser<?> traverser) {
-        return emitFromTraverser(ordinals, traverser, null);
+        return emitFromTraverser(-1, traverser);
     }
 
     /**
@@ -471,6 +440,9 @@ public abstract class AbstractProcessor implements Processor {
      * BroadcastKey}, the entry will be restored to all processor instances.
      * Otherwise, the key will be distributed according to default partitioning
      * and only a single processor instance will receive the key.
+     * <p>
+     * Keys and values offered to snapshot are serialized and can be further
+     * mutated as soon as this method returns.
      *
      * @return {@code true}, if the item was accepted. If {@code false} is
      * returned, the call must be retried later with the same (or equal) key
@@ -486,6 +458,9 @@ public abstract class AbstractProcessor implements Processor {
      * of the outbox. Each item is a {@code Map.Entry} and its key and value
      * are passed as the two arguments of {@link #tryEmitToSnapshot(Object, Object)}.
      * If the outbox refuses an item, it backs off and returns {@code false}.
+     * <p>
+     * Keys and values offered to snapshot are serialized and can be further
+     * mutated as soon as this method returns.
      * <p>
      * If this method returns {@code false}, then the caller must retain the
      * traverser and pass it again in the subsequent invocation of this method,
@@ -533,10 +508,11 @@ public abstract class AbstractProcessor implements Processor {
      * all defined output ordinals.
      */
     @Nonnull
+    @SuppressFBWarnings("NP_NULL_PARAM_DEREF_NONVIRTUAL") // possible spotbugs bug
     protected final <T, R> FlatMapper<T, R> flatMapper(
             @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper
     ) {
-        return flatMapper(null, mapper);
+        return new FlatMapper<>(null, mapper);
     }
 
     /**
@@ -545,7 +521,7 @@ public abstract class AbstractProcessor implements Processor {
      */
     @Nonnull
     protected final <T, R> FlatMapper<T, R> flatMapper(
-            int[] ordinals, @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper
+            @Nonnull int[] ordinals, @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper
     ) {
         return new FlatMapper<>(ordinals, mapper);
     }
@@ -560,7 +536,7 @@ public abstract class AbstractProcessor implements Processor {
      * supplies a {@code mapper} which takes an item and returns a traverser
      * over all output items that should be emitted. The {@link
      * #tryProcess(Object)} method obtains and passes the traverser to {@link
-     * #emitFromTraverser(int, Traverser, Consumer)}.
+     * #emitFromTraverser(int, Traverser)}.
      *
      * Example:
      * <pre>
@@ -583,7 +559,8 @@ public abstract class AbstractProcessor implements Processor {
         private final Function<? super T, ? extends Traverser<? extends R>> mapper;
         private Traverser<? extends R> outputTraverser;
 
-        FlatMapper(int[] outputOrdinals, @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper) {
+        private FlatMapper(@Nullable int[] outputOrdinals,
+                           @Nonnull Function<? super T, ? extends Traverser<? extends R>> mapper) {
             this.outputOrdinals = outputOrdinals;
             this.mapper = mapper;
         }
@@ -609,7 +586,7 @@ public abstract class AbstractProcessor implements Processor {
 
         private boolean emit() {
             return outputOrdinals != null
-                    ? emitFromTraverser(outputOrdinals, outputTraverser, null)
+                    ? emitFromTraverser(outputOrdinals, outputTraverser)
                     : emitFromTraverser(outputTraverser);
         }
     }

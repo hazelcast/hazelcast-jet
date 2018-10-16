@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ public final class WatermarkPolicies {
      *            and the watermark
      */
     @Nonnull
-    public static DistributedSupplier<WatermarkPolicy> withFixedLag(long lag) {
+    public static DistributedSupplier<WatermarkPolicy> limitingLag(long lag) {
         checkNotNegative(lag, "lag must not be negative");
 
         return () -> new WatermarkPolicyBase() {
@@ -108,7 +108,7 @@ public final class WatermarkPolicies {
     public static DistributedSupplier<WatermarkPolicy> limitingTimestampAndWallClockLag(
             long timestampLag, long wallClockLag
     ) {
-        return WatermarkPolicyUtil.limitingTimestampAndWallClockLag(timestampLag, wallClockLag,
+        return () -> WatermarkPolicyUtil.limitingTimestampAndWallClockLag(timestampLag, wallClockLag,
                 System::currentTimeMillis);
     }
 
@@ -129,7 +129,8 @@ public final class WatermarkPolicies {
      * when there is a guarantee that each substream will emit at least one
      * event that will initialize the timestamp. Otherwise the empty substream
      * will hold back the processing of all other substreams by keeping the
-     * watermark below any realistic value.
+     * watermark below any realistic value. Configuring {@link
+     * EventTimePolicy#idleTimeoutMillis()} will cope with this.
      *
      * @param lag the desired difference between the top observed timestamp
      *               and the watermark
@@ -138,6 +139,6 @@ public final class WatermarkPolicies {
      */
     @Nonnull
     public static DistributedSupplier<WatermarkPolicy> limitingLagAndLull(long lag, long maxLullMs) {
-        return WatermarkPolicyUtil.limitingLagAndLull(lag, maxLullMs, System::nanoTime);
+        return () -> WatermarkPolicyUtil.limitingLagAndLull(lag, maxLullMs, System::nanoTime);
     }
 }

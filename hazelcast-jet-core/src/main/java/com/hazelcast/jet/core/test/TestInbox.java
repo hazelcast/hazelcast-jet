@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,73 @@ package com.hazelcast.jet.core.test;
 import com.hazelcast.jet.core.Inbox;
 
 import java.util.ArrayDeque;
+import java.util.Collection;
+import java.util.Deque;
 
 /**
- * Extends {@link ArrayDeque} to implement {@link Inbox}.
+ * {@link Inbox} implementation suitable to be used in tests.
  */
-public final class TestInbox extends ArrayDeque<Object> implements Inbox {
+public final class TestInbox implements Inbox {
+
+    private final ArrayDeque<Object> queue = new ArrayDeque<>();
+
+    @Override
+    public boolean isEmpty() {
+        return queue.isEmpty();
+    }
+
+    @Override
+    public Object peek() {
+        return queue.peek();
+    }
+
+    @Override
+    public Object poll() {
+        return queue.poll();
+    }
+
+    @Override
+    public void remove() {
+        queue.remove();
+    }
+
+    /**
+     * Retrieves the queue backing the inbox.
+     */
+    public Deque<Object> queue() {
+        return queue;
+    }
+
+    /**
+     * Convenience for {@code inbox.queue().add(o)}
+     */
+    public void add(Object o) {
+        queue.add(o);
+    }
+
+    /**
+     * Convenience for {@code inbox.queue().addAll(collection)}
+     */
+    public void addAll(Collection<?> collection) {
+        queue.addAll(collection);
+    }
+
+    /**
+     * Convenience for {@code inbox.queue().clear()}
+     */
+    public void clear() {
+        queue.clear();
+    }
+
+    /**
+     * Convenience for {@code inbox.queue().size()}
+     */
+    public int size() {
+       return queue.size();
+    }
+
+    @Override
+    public String toString() {
+        return queue.toString();
+    }
 }

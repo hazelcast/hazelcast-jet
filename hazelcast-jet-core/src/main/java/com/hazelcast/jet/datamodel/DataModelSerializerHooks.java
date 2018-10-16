@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,21 +24,62 @@ import com.hazelcast.nio.serialization.SerializerHook;
 import com.hazelcast.nio.serialization.StreamSerializer;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Map.Entry;
 import java.util.Set;
 
 import static com.hazelcast.jet.datamodel.ItemsByTag.NONE;
-import static com.hazelcast.jet.datamodel.ThreeBags.threeBags;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
-import static com.hazelcast.jet.datamodel.TwoBags.twoBags;
+import static com.hazelcast.jet.datamodel.Tuple4.tuple4;
+import static com.hazelcast.jet.datamodel.Tuple5.tuple5;
 
 /**
  * Hazelcast serializer hooks for the classes in the {@code
  * com.hazelcast.jet.datamodel} package. This is not a public-facing API.
  */
 class DataModelSerializerHooks {
+
+    public static final class TimestampedItemHook implements SerializerHook<TimestampedItem> {
+
+        @Override
+        public Class<TimestampedItem> getSerializationType() {
+            return TimestampedItem.class;
+        }
+
+        @Override
+        public Serializer createSerializer() {
+            return new StreamSerializer<TimestampedItem>() {
+                @Override
+                public int getTypeId() {
+                    return SerializerHookConstants.TIMESTAMPED_ITEM;
+                }
+
+                @Override
+                public void destroy() {
+
+                }
+
+                @Override
+                public void write(ObjectDataOutput out, TimestampedItem timestampedItem) throws IOException {
+                    out.writeLong(timestampedItem.timestamp());
+                    out.writeObject(timestampedItem.item());
+
+                }
+
+                @Override
+                public TimestampedItem read(ObjectDataInput in) throws IOException {
+                    long timestamp = in.readLong();
+                    Object item = in.readObject();
+                    return new TimestampedItem<>(timestamp, item);
+                }
+            };
+        }
+
+        @Override public boolean isOverwritable() {
+            return false;
+        }
+    }
+
     public static final class TimestampedEntryHook implements SerializerHook<TimestampedEntry> {
 
         @Override
@@ -80,36 +121,36 @@ class DataModelSerializerHooks {
         }
     }
 
-    public static final class SessionHook implements SerializerHook<Session> {
+    public static final class WindowResultHook implements SerializerHook<WindowResult> {
 
         @Override
-        public Class<Session> getSerializationType() {
-            return Session.class;
+        public Class<WindowResult> getSerializationType() {
+            return WindowResult.class;
         }
 
         @Override
         public Serializer createSerializer() {
-            return new StreamSerializer<Session>() {
+            return new StreamSerializer<WindowResult>() {
                 @Override
-                public void write(ObjectDataOutput out, Session object) throws IOException {
+                public void write(ObjectDataOutput out, WindowResult object) throws IOException {
                     out.writeObject(object.getKey());
                     out.writeLong(object.getStart());
                     out.writeLong(object.getEnd());
-                    out.writeObject(object.getResult());
+                    out.writeObject(object.getValue());
                 }
 
                 @Override
-                public Session read(ObjectDataInput in) throws IOException {
+                public WindowResult read(ObjectDataInput in) throws IOException {
                     Object key = in.readObject();
                     long start = in.readLong();
                     long end = in.readLong();
                     Object result = in.readObject();
-                    return new Session<>(key, start, end, result);
+                    return new WindowResult<>(start, end, key, result);
                 }
 
                 @Override
                 public int getTypeId() {
-                    return SerializerHookConstants.SESSION;
+                    return SerializerHookConstants.WINDOW_RESULT;
                 }
 
                 @Override
@@ -198,30 +239,32 @@ class DataModelSerializerHooks {
         }
     }
 
-    public static final class TwoBagsHook implements SerializerHook<TwoBags> {
+    public static final class Tuple4Hook implements SerializerHook<Tuple4> {
 
         @Override
-        public Class<TwoBags> getSerializationType() {
-            return TwoBags.class;
+        public Class<Tuple4> getSerializationType() {
+            return Tuple4.class;
         }
 
         @Override
         public Serializer createSerializer() {
-            return new StreamSerializer<TwoBags>() {
+            return new StreamSerializer<Tuple4>() {
                 @Override
-                public void write(ObjectDataOutput out, TwoBags t) throws IOException {
-                    out.writeObject(t.bag0());
-                    out.writeObject(t.bag1());
+                public void write(ObjectDataOutput out, Tuple4 t) throws IOException {
+                    out.writeObject(t.f0());
+                    out.writeObject(t.f1());
+                    out.writeObject(t.f2());
+                    out.writeObject(t.f3());
                 }
 
                 @Override
-                public TwoBags read(ObjectDataInput in) throws IOException {
-                    return twoBags(in.readObject(), in.readObject());
+                public Tuple4 read(ObjectDataInput in) throws IOException {
+                    return tuple4(in.readObject(), in.readObject(), in.readObject(), in.readObject());
                 }
 
                 @Override
                 public int getTypeId() {
-                    return SerializerHookConstants.TWO_BAGS;
+                    return SerializerHookConstants.TUPLE4;
                 }
 
                 @Override
@@ -235,31 +278,33 @@ class DataModelSerializerHooks {
         }
     }
 
-    public static final class ThreeBagsHook implements SerializerHook<ThreeBags> {
+    public static final class Tuple5Hook implements SerializerHook<Tuple5> {
 
         @Override
-        public Class<ThreeBags> getSerializationType() {
-            return ThreeBags.class;
+        public Class<Tuple5> getSerializationType() {
+            return Tuple5.class;
         }
 
         @Override
         public Serializer createSerializer() {
-            return new StreamSerializer<ThreeBags>() {
+            return new StreamSerializer<Tuple5>() {
                 @Override
-                public void write(ObjectDataOutput out, ThreeBags t) throws IOException {
-                    out.writeObject(t.bag0());
-                    out.writeObject(t.bag1());
-                    out.writeObject(t.bag2());
+                public void write(ObjectDataOutput out, Tuple5 t) throws IOException {
+                    out.writeObject(t.f0());
+                    out.writeObject(t.f1());
+                    out.writeObject(t.f2());
+                    out.writeObject(t.f3());
+                    out.writeObject(t.f4());
                 }
 
                 @Override
-                public ThreeBags read(ObjectDataInput in) throws IOException {
-                    return threeBags(in.readObject(), in.readObject(), in.readObject());
+                public Tuple5 read(ObjectDataInput in) throws IOException {
+                    return tuple5(in.readObject(), in.readObject(), in.readObject(), in.readObject(), in.readObject());
                 }
 
                 @Override
                 public int getTypeId() {
-                    return SerializerHookConstants.THREE_BAGS;
+                    return SerializerHookConstants.TUPLE5;
                 }
 
                 @Override
@@ -327,24 +372,6 @@ class DataModelSerializerHooks {
 
     }
 
-    public static final class BagsByTagHook implements SerializerHook<BagsByTag> {
-
-        @Override
-        public Class<BagsByTag> getSerializationType() {
-            return BagsByTag.class;
-        }
-
-        @Override
-        public Serializer createSerializer() {
-            return new BagsByTagSerializer();
-        }
-
-        @Override public boolean isOverwritable() {
-            return false;
-        }
-
-    }
-
     private static class ItemsByTagSerializer implements StreamSerializer<ItemsByTag> {
         @Override
         public void write(ObjectDataOutput out, ItemsByTag ibt) throws IOException {
@@ -370,37 +397,6 @@ class DataModelSerializerHooks {
         @Override
         public int getTypeId() {
             return SerializerHookConstants.ITEMS_BY_TAG;
-        }
-
-        @Override
-        public void destroy() {
-        }
-    }
-
-    private static class BagsByTagSerializer implements StreamSerializer<BagsByTag> {
-        @Override
-        public void write(ObjectDataOutput out, BagsByTag bbt) throws IOException {
-            Set<Entry<Tag<?>, Collection>> entries = bbt.entrySet();
-            out.writeInt(entries.size());
-            for (Entry<Tag<?>, Collection> e : entries) {
-                out.writeObject(e.getKey());
-                out.writeObject(e.getValue());
-            }
-        }
-
-        @Override
-        public BagsByTag read(ObjectDataInput in) throws IOException {
-            int size = in.readInt();
-            BagsByTag bbt = new BagsByTag();
-            for (int i = 0; i < size; i++) {
-                bbt.put(in.readObject(), in.readObject());
-            }
-            return bbt;
-        }
-
-        @Override
-        public int getTypeId() {
-            return SerializerHookConstants.BAGS_BY_TAG;
         }
 
         @Override

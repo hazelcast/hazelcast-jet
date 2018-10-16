@@ -35,7 +35,7 @@ case "$key" in
     -P|--password)
     PASSWORD="$2"
     shift # past argument
-    ;;
+     ;;
      -a|--address)
     ADDRESS="$2"
     shift # past argument

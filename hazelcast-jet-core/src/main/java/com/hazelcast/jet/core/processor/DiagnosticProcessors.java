@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,8 +31,9 @@ import com.hazelcast.jet.impl.util.WrappingProcessorSupplier;
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.core.ProcessorMetaSupplier.dontParallelize;
-import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
+import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
+import static com.hazelcast.jet.function.DistributedPredicate.alwaysTrue;
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 /**
  * Static utility class with factories of sinks and wrappers that log
@@ -49,21 +50,23 @@ public final class DiagnosticProcessors {
      * Returns a meta-supplier of processors for a sink vertex that logs all
      * the data items it receives. The log category is {@code
      * com.hazelcast.jet.impl.processor.PeekWrappedP.<vertexName>#<processorIndex>}
-     * and the level is INFO. {@link Watermark} items are always logged, they
-     * are <em>not</em> passed to {@code toStringFn}.
+     * and the level is INFO. {@link Watermark} items are always logged, but at
+     * FINE level; they are <em>not</em> passed to {@code toStringFn}.
      * <p>
      * The vertex logs each item on whichever cluster member it happens to
-     * receive it. Its primary purpose is for development use, when running Jet
-     * on a local machine.
+     * receive it. Its primary purpose is for development, when running Jet on
+     * a local machine.
      *
      * @param toStringFn a function that returns a string representation of a stream item
      * @param <T> stream item type
      */
     @Nonnull
     public static <T> ProcessorMetaSupplier writeLoggerP(
-            @Nonnull DistributedFunction<T, String> toStringFn
+            @Nonnull DistributedFunction<T, ? extends CharSequence> toStringFn
     ) {
-        return dontParallelize(() -> new WriteLoggerP<>(toStringFn));
+        checkSerializable(toStringFn, "toStringFn");
+
+        return preferLocalParallelismOne(() -> new WriteLoggerP<>(toStringFn));
     }
 
     /**
@@ -85,8 +88,11 @@ public final class DiagnosticProcessors {
      *     if the item passed, uses {@code toStringFn} to get a string
      *     representation of the item
      * </li><li>
-     *     logs the string at the INFO level, the category being
-     *     {@code com.hazelcast.jet.impl.processor.PeekWrappedP.<vertexName>#<processorIndex>}
+     *     logs the string at the INFO level, the logger is
+     *     {@code com.hazelcast.jet.impl.processor.PeekWrappedP.<vertexName>#<processorIndex>}.
+     *     The text is prefixed with "Input from X: ", where X is the edge
+     *     ordinal the item is received from. Received watermarks are prefixed
+     *     with just "Input: ".
      * </ol>
      * <p>
      * Note: Watermarks are always logged. {@link Watermark} objects are not
@@ -95,7 +101,7 @@ public final class DiagnosticProcessors {
      * @param toStringFn  a function that returns the string representation of the item.
      *                    You can use {@code Object::toString}.
      * @param shouldLogFn a function to filter the logged items. You can use {@link
-     *                    com.hazelcast.jet.function.DistributedFunctions#alwaysTrue()
+     *                    DistributedPredicate#alwaysTrue()
      *                    alwaysTrue()} as a pass-through filter when you don't need any
      *                    filtering.
      * @param wrapped The wrapped meta-supplier.
@@ -106,7 +112,7 @@ public final class DiagnosticProcessors {
      */
     @Nonnull
     public static <T> ProcessorMetaSupplier peekInputP(
-            @Nonnull DistributedFunction<T, String> toStringFn,
+            @Nonnull DistributedFunction<T, ? extends CharSequence> toStringFn,
             @Nonnull DistributedPredicate<T> shouldLogFn,
             @Nonnull ProcessorMetaSupplier wrapped
     ) {
@@ -121,7 +127,7 @@ public final class DiagnosticProcessors {
      */
     @Nonnull
     public static <T> ProcessorSupplier peekInputP(
-            @Nonnull DistributedFunction<T, String> toStringFn,
+            @Nonnull DistributedFunction<T, ? extends CharSequence> toStringFn,
             @Nonnull DistributedPredicate<T> shouldLogFn,
             @Nonnull ProcessorSupplier wrapped
     ) {
@@ -137,7 +143,7 @@ public final class DiagnosticProcessors {
      */
     @Nonnull
     public static <T> DistributedSupplier<Processor> peekInputP(
-            @Nonnull DistributedFunction<T, String> toStringFn,
+            @Nonnull DistributedFunction<T, ? extends CharSequence> toStringFn,
             @Nonnull DistributedPredicate<T> shouldLogFn,
             @Nonnull DistributedSupplier<Processor> wrapped
     ) {
@@ -189,22 +195,32 @@ public final class DiagnosticProcessors {
      *     if the item passed, uses {@code toStringFn} to get a string
      *     representation of the item
      * </li><li>
-     *     logs the string at the INFO level, the category being
-     *     {@code com.hazelcast.jet.impl.processor.PeekWrappedP.<vertexName>#<processorIndex>}
+     *     logs the string at the INFO level, the logger is
+     *     {@code com.hazelcast.jet.impl.processor.PeekWrappedP.<vertexName>#<processorIndex>}.
+     *     The logged text is prefixed with "Output to X: ", where X is the edge
+     *     ordinal the item is sent to
      * </ol>
      * <p>
      * Technically speaking, snapshot data is emitted to the same outbox as regular
      * data, but this wrapper only logs the regular data. See {@link
      * #peekSnapshotP(DistributedFunction, DistributedPredicate, ProcessorMetaSupplier)
      * peekSnapshot()}.
-     * <p>
-     * Note: Watermarks are always logged. {@link Watermark} objects are not
-     * passed to {@code shouldLogFn} and {@code toStringFn}.
+     *
+     * <h4>Logging of Watermarks</h4>
+     *
+     * There are two kinds of watermarks:<ol>
+     *     <li>Watermarks originated in the processor, prefixed in the logs
+     *     with {@code "Output to N: "}
+     *     <li>Watermarks received on input, which are forwarded automatically.
+     *     These are prefixed with {@code "Output forwarded: "}
+     * </ol>
+     * Both are always logged. {@link Watermark} objects are not passed to
+     * {@code shouldLogFn} or {@code toStringFn}.
      *
      * @param toStringFn  a function that returns the string representation of the item.
      *                    You can use {@code Object::toString}.
      * @param shouldLogFn a function to filter the logged items. You can use {@link
-     *                    com.hazelcast.jet.function.DistributedFunctions#alwaysTrue()
+     *                    DistributedPredicate#alwaysTrue()
      *                    alwaysTrue()} as a pass-through filter when you don't need any
      *                    filtering.
      * @param wrapped The wrapped meta-supplier.
@@ -215,8 +231,8 @@ public final class DiagnosticProcessors {
      */
     @Nonnull
     public static <T> ProcessorMetaSupplier peekOutputP(
-            @Nonnull DistributedFunction<T, String> toStringFn,
-            @Nonnull DistributedPredicate<T> shouldLogFn,
+            @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn,
+            @Nonnull DistributedPredicate<? super T> shouldLogFn,
             @Nonnull ProcessorMetaSupplier wrapped
     ) {
         return new WrappingProcessorMetaSupplier(wrapped, p ->
@@ -230,8 +246,8 @@ public final class DiagnosticProcessors {
      */
     @Nonnull
     public static <T> ProcessorSupplier peekOutputP(
-            @Nonnull DistributedFunction<T, String> toStringFn,
-            @Nonnull DistributedPredicate<T> shouldLogFn,
+            @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn,
+            @Nonnull DistributedPredicate<? super T> shouldLogFn,
             @Nonnull ProcessorSupplier wrapped
     ) {
         return new WrappingProcessorSupplier(wrapped, p ->
@@ -246,8 +262,8 @@ public final class DiagnosticProcessors {
      */
     @Nonnull
     public static <T> DistributedSupplier<Processor> peekOutputP(
-            @Nonnull DistributedFunction<T, String> toStringFn,
-            @Nonnull DistributedPredicate<T> shouldLogFn,
+            @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn,
+            @Nonnull DistributedPredicate<? super T> shouldLogFn,
             @Nonnull DistributedSupplier<Processor> wrapped) {
         return () -> new PeekWrappedP<>(wrapped.get(), toStringFn, shouldLogFn, false, true, false);
     }
@@ -304,7 +320,7 @@ public final class DiagnosticProcessors {
      * @param toStringFn  a function that returns the string representation of the item.
      *                    You can use {@code Object::toString}
      * @param shouldLogFn a function to filter the logged items. You can use {@link
-     *                    com.hazelcast.jet.function.DistributedFunctions#alwaysTrue()
+     *                    DistributedPredicate#alwaysTrue()
      *                    alwaysTrue()} as a pass-through filter when you don't need any
      *                    filtering.
      * @param wrapped The wrapped meta-supplier.
@@ -316,8 +332,8 @@ public final class DiagnosticProcessors {
      */
     @Nonnull
     public static <K, V> ProcessorMetaSupplier peekSnapshotP(
-            @Nonnull DistributedFunction<Entry<K, V>, String> toStringFn,
-            @Nonnull DistributedPredicate<Entry<K, V>> shouldLogFn,
+            @Nonnull DistributedFunction<? super Entry<K, V>, ? extends CharSequence> toStringFn,
+            @Nonnull DistributedPredicate<? super Entry<K, V>> shouldLogFn,
             @Nonnull ProcessorMetaSupplier wrapped
     ) {
         return new WrappingProcessorMetaSupplier(wrapped, p ->
@@ -331,8 +347,8 @@ public final class DiagnosticProcessors {
      */
     @Nonnull
     public static <K, V> ProcessorSupplier peekSnapshotP(
-            @Nonnull DistributedFunction<Entry<K, V>, String> toStringFn,
-            @Nonnull DistributedPredicate<Entry<K, V>> shouldLogFn,
+            @Nonnull DistributedFunction<? super Entry<K, V>, ? extends CharSequence> toStringFn,
+            @Nonnull DistributedPredicate<? super Entry<K, V>> shouldLogFn,
             @Nonnull ProcessorSupplier wrapped
     ) {
         return new WrappingProcessorSupplier(wrapped, p ->
@@ -347,8 +363,8 @@ public final class DiagnosticProcessors {
      */
     @Nonnull
     public static <K, V> DistributedSupplier<Processor> peekSnapshotP(
-            @Nonnull DistributedFunction<Entry<K, V>, String> toStringFn,
-            @Nonnull DistributedPredicate<Entry<K, V>> shouldLogFn,
+            @Nonnull DistributedFunction<? super Entry<K, V>, ? extends CharSequence> toStringFn,
+            @Nonnull DistributedPredicate<? super Entry<K, V>> shouldLogFn,
             @Nonnull DistributedSupplier<Processor> wrapped) {
         return () -> new PeekWrappedP<>(wrapped.get(), toStringFn, shouldLogFn, false, false, true);
     }

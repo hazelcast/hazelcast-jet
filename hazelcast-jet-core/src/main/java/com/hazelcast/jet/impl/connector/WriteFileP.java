@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,16 +23,14 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedWriter;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
-import static com.hazelcast.jet.core.ProcessorMetaSupplier.dontParallelize;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeBufferedP;
-import static com.hazelcast.jet.impl.util.Util.uncheckCall;
-import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 
 /**
  * See {@link SinkProcessors#writeFileP(String, DistributedFunction, Charset, boolean)}.
@@ -52,19 +50,19 @@ public final class WriteFileP {
      */
     public static <T> ProcessorMetaSupplier metaSupplier(
             @Nonnull String directoryName,
-            @Nonnull DistributedFunction<T, String> toStringFn,
+            @Nonnull DistributedFunction<? super T, ? extends String> toStringFn,
             @Nonnull String charset,
             boolean append) {
 
-        return dontParallelize(writeBufferedP(
-                globalIndex -> createBufferedWriter(Paths.get(directoryName), globalIndex,
+        return ProcessorMetaSupplier.preferLocalParallelismOne(writeBufferedP(
+                ctx -> createBufferedWriter(Paths.get(directoryName), ctx.globalProcessorIndex(),
                         charset, append),
-                (fileWriter, item) -> uncheckRun(() -> {
+                (fileWriter, item) -> {
                     fileWriter.write(toStringFn.apply((T) item));
                     fileWriter.newLine();
-                }),
-                fileWriter -> uncheckRun(fileWriter::flush),
-                fileWriter -> uncheckRun(fileWriter::close)
+                },
+                BufferedWriter::flush,
+                BufferedWriter::close
         ));
     }
 
@@ -72,14 +70,15 @@ public final class WriteFileP {
             justification = "mkdirs() returns false if the directory already existed, which is good. "
                     + "We don't care even if it didn't exist and we failed to create it, "
                     + "because we'll fail later when trying to create the file.")
-    private static BufferedWriter createBufferedWriter(Path directory, int globalIndex, String charset, boolean append) {
+    private static BufferedWriter createBufferedWriter(
+            Path directory, int globalIndex, String charset, boolean append) throws IOException {
         directory.toFile().mkdirs();
 
         Path file = directory.resolve(String.valueOf(globalIndex));
 
-        return uncheckCall(() -> Files.newBufferedWriter(file,
+        return Files.newBufferedWriter(file,
                 Charset.forName(charset), StandardOpenOption.CREATE,
-                append ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING));
+                append ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING);
     }
 
 }

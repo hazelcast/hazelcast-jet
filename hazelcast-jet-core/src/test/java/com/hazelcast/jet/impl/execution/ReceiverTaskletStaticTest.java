@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import static org.junit.Assert.assertEquals;
 public class ReceiverTaskletStaticTest {
 
     @Test
-    public void testCompressSeq() throws Exception {
+    public void testCompressSeq() {
         assertEquals(0, compressSeq(0));
         assertEquals(0, compressSeq((1 << COMPRESSED_SEQ_UNIT_LOG2) - 1));
         assertEquals(1, compressSeq(1 << COMPRESSED_SEQ_UNIT_LOG2));
@@ -38,7 +38,7 @@ public class ReceiverTaskletStaticTest {
     }
 
     @Test
-    public void testEstimatedMemoryFootprint() throws Exception {
+    public void testEstimatedMemoryFootprint() {
         assertEquals(56, estimatedMemoryFootprint(0));
         assertEquals(66, estimatedMemoryFootprint(10));
     }

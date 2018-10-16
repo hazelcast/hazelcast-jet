@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,26 +20,35 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
 import com.hazelcast.instance.Node;
+import com.hazelcast.jet.ICacheJet;
+import com.hazelcast.jet.IListJet;
+import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.JetService;
-import com.hazelcast.jet.stream.IStreamCache;
-import com.hazelcast.jet.stream.IStreamList;
-import com.hazelcast.jet.stream.IStreamMap;
+import com.hazelcast.jet.impl.util.Util.RunnableExc;
+import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.Logger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.test.AssertTask;
 import com.hazelcast.test.HazelcastTestSupport;
 import org.junit.After;
-import org.junit.Assume;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public abstract class JetTestSupport extends HazelcastTestSupport {
 
+    protected ILogger logger = Logger.getLogger(getClass());
     private JetTestInstanceFactory instanceFactory;
 
     @After
@@ -64,6 +73,13 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
         return instanceFactory.newMember(config);
     }
 
+    protected JetInstance[] createJetMembers(JetConfig config, int nodeCount) {
+        if (instanceFactory == null) {
+            instanceFactory = new JetTestInstanceFactory();
+        }
+        return instanceFactory.newMembers(config, nodeCount);
+    }
+
     protected JetInstance createJetMember(JetConfig config, Address[] blockedAddress) {
         if (instanceFactory == null) {
             instanceFactory = new JetTestInstanceFactory();
@@ -71,14 +87,13 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
         return instanceFactory.newMember(config, blockedAddress);
     }
 
-    protected static <K, V> IStreamMap<K, V> getMap(JetInstance instance) {
+    protected static <K, V> IMapJet<K, V> getMap(JetInstance instance) {
         return instance.getMap(randomName());
     }
 
-    protected static <K, V> IStreamCache<K, V> getCache(JetInstance instance) {
+    protected static <K, V> ICacheJet<K, V> getCache(JetInstance instance) {
         return instance.getCacheManager().getCache(randomName());
     }
-
 
     protected static void fillMapWithInts(IMap<Integer, Integer> map, int count) {
         Map<Integer, Integer> vals = IntStream.range(0, count).boxed().collect(Collectors.toMap(m -> m, m -> m));
@@ -91,31 +106,38 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
         }
     }
 
-    protected static <E> IStreamList<E> getList(JetInstance instance) {
+    protected static <E> IListJet<E> getList(JetInstance instance) {
         return instance.getList(randomName());
     }
 
-    protected static void assumeNotWindows() {
-        Assume.assumeFalse(isWindows());
+    protected static void appendToFile(File file, String... lines) throws IOException {
+        try (PrintWriter writer = new PrintWriter(new FileOutputStream(file, true))) {
+            for (String payload : lines) {
+                writer.write(payload + '\n');
+            }
+        }
     }
 
-    protected static boolean isWindows() {
-        return System.getProperty("os.name").toLowerCase().contains("windows");
+    protected static File createTempDirectory() throws IOException {
+        Path directory = Files.createTempDirectory("jet-test-temp");
+        File file = directory.toFile();
+        file.deleteOnExit();
+        return file;
     }
 
-    public static void assertTrueEventually(UncheckedRunnable runnable) {
+    public static void assertTrueEventually(RunnableExc runnable) {
         HazelcastTestSupport.assertTrueEventually(assertTask(runnable));
     }
 
-    public static void assertTrueEventually(UncheckedRunnable runnable, long timeoutSeconds) {
+    public static void assertTrueEventually(RunnableExc runnable, long timeoutSeconds) {
         HazelcastTestSupport.assertTrueEventually(assertTask(runnable), timeoutSeconds);
     }
 
-    public static void assertTrueAllTheTime(UncheckedRunnable runnable, long durationSeconds) {
+    public static void assertTrueAllTheTime(RunnableExc runnable, long durationSeconds) {
         HazelcastTestSupport.assertTrueAllTheTime(assertTask(runnable), durationSeconds);
     }
 
-    public static void assertTrueFiveSeconds(UncheckedRunnable runnable) {
+    public static void assertTrueFiveSeconds(RunnableExc runnable) {
         HazelcastTestSupport.assertTrueFiveSeconds(assertTask(runnable));
     }
 
@@ -139,7 +161,7 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
         return getNodeEngineImpl(hz(instance));
     }
 
-    private static AssertTask assertTask(UncheckedRunnable runnable) {
+    private static AssertTask assertTask(RunnableExc runnable) {
         return new AssertTask() {
             @Override
             public void run() throws Exception {
@@ -152,8 +174,17 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
         return instanceFactory.nextAddress();
     }
 
-    @FunctionalInterface
-    public interface UncheckedRunnable {
-        void run() throws Exception;
+    protected void terminateInstance(JetInstance instance) {
+        instanceFactory.terminate(instance);
+    }
+
+    public static void spawnSafe(RunnableExc r) {
+        spawn(() -> {
+            try {
+                r.run();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 }

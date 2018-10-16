@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -235,5 +235,35 @@ public class WatermarkCoalescerTest {
             assertEquals(Long.MIN_VALUE, wc.checkWmHistory(MILLISECONDS.toNanos(i)));
             assertEquals(Long.MIN_VALUE, wc.checkWmHistory(wc.getTime()));
         }
+    }
+
+    @Test
+    public void when_allInputsHadWms_allBecomeIdle_theLessAheadBecomesIdleLater_then_topWmForwarded() {
+        // When
+        assertEquals(Long.MIN_VALUE, wc.observeWm(0, 0, 10));
+        assertEquals(10L, wc.observeWm(0, 1, 11));
+
+        // now queue1 becomes idle. Wm should stay at 10
+        assertEquals(Long.MIN_VALUE, wc.observeWm(0, 1, IDLE_MESSAGE.timestamp()));
+
+        // Then
+        // queue0 becomes idle. Wm should be forwarded to 11
+        assertEquals(11L, wc.observeWm(0, 0, IDLE_MESSAGE.timestamp()));
+        assertEquals(IDLE_MESSAGE.timestamp(), wc.checkWmHistory(0));
+    }
+
+    @Test
+    public void when_allInputsHadWms_aheadOnesBecomeIdle_behindOneIsDone_then_topWmForwarded() {
+        // When
+        assertEquals(Long.MIN_VALUE, wc.observeWm(0, 0, 10));
+        assertEquals(10L, wc.observeWm(0, 1, 11));
+
+        // now queue1 becomes idle. Wm should stay at 10
+        assertEquals(Long.MIN_VALUE, wc.observeWm(0, 1, IDLE_MESSAGE.timestamp()));
+
+        // Then
+        // queue0 becomes done. Wm should be forwarded to 11
+        assertEquals(11L, wc.queueDone(0));
+        assertEquals(IDLE_MESSAGE.timestamp(), wc.checkWmHistory(0));
     }
 }

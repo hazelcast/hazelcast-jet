@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,9 @@
  */
 
 /**
- * Classes intended to be used for accumulator objects in Jet aggregation
- * operations.
+ * Classes intended to be used for accumulator objects in an {@link
+ * com.hazelcast.jet.aggregate.AggregateOperation AggregateOperation}.
+ * They are Hazelcast-serializable via {@link
+ * com.hazelcast.jet.accumulator.AccumulatorSerializerHooks}.
  */
 package com.hazelcast.jet.accumulator;

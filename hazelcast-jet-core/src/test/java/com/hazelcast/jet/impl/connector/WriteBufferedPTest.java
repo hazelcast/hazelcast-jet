@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,12 +24,12 @@ import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Processor.Context;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.TestProcessors.StuckForeverSourceP;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.core.test.TestInbox;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Test;
@@ -56,7 +56,8 @@ public class WriteBufferedPTest extends JetTestSupport {
 
     @Test
     public void writeBuffered_smokeTest() throws Exception {
-        Processor p = getLoggingBufferedWriter().get(1).iterator().next();
+        DistributedSupplier<Processor> supplier = getLoggingBufferedWriter();
+        Processor p = supplier.get();
         Outbox outbox = mock(Outbox.class);
         p.init(outbox, mock(Context.class));
         TestInbox inbox = new TestInbox();
@@ -69,6 +70,7 @@ public class WriteBufferedPTest extends JetTestSupport {
         p.tryProcessWatermark(new Watermark(0)); // watermark should not be written
         p.process(0, inbox); // empty flush
         p.complete();
+        p.close();
 
         assertEquals(asList(
                 "new",
@@ -89,31 +91,27 @@ public class WriteBufferedPTest extends JetTestSupport {
     @Test
     public void when_writeBufferedJobFailed_then_bufferDisposed() throws Exception {
         JetInstance instance = createJetMember();
-        try {
-            DAG dag = new DAG();
-            Vertex source = dag.newVertex("source", StuckForeverSourceP::new);
-            Vertex sink = dag.newVertex("sink", getLoggingBufferedWriter()).localParallelism(1);
+        DAG dag = new DAG();
+        Vertex source = dag.newVertex("source", StuckForeverSourceP::new);
+        Vertex sink = dag.newVertex("sink", getLoggingBufferedWriter()).localParallelism(1);
 
-            dag.edge(Edge.between(source, sink));
+        dag.edge(Edge.between(source, sink));
 
-            Job job = instance.newJob(dag);
-            // wait for the job to initialize
-            Thread.sleep(5000);
-            job.cancel();
+        Job job = instance.newJob(dag);
+        // wait for the job to initialize
+        Thread.sleep(5000);
+        job.cancel();
 
-            assertTrueEventually(() -> assertTrue("No \"dispose\", only: " + events, events.contains("dispose")), 60);
-            System.out.println(events);
-        } finally {
-            instance.shutdown();
-        }
+        assertTrueEventually(() -> assertTrue("No \"dispose\", only: " + events, events.contains("dispose")), 60);
+        System.out.println(events);
     }
 
     // returns a processor that will not write anywhere, just log the events
-    private static ProcessorSupplier getLoggingBufferedWriter() {
+    private static DistributedSupplier<Processor> getLoggingBufferedWriter() {
         return SinkProcessors.writeBufferedP(
                 idx -> {
                     events.add("new");
-                    return null;
+                    return "foo";
                 },
                 (buffer, item) -> events.add("add:" + item),
                 buffer -> events.add("flush"),

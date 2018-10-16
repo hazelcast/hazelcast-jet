@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,55 +16,49 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.test.TestOutbox;
+import com.hazelcast.jet.IListJet;
+import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.test.HazelcastParallelClassRunner;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mockito;
 
-import java.util.Queue;
+import java.util.List;
+import java.util.stream.IntStream;
 
-import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static java.util.stream.Collectors.toList;
 
 @RunWith(HazelcastParallelClassRunner.class)
-public class ReadIListPTest {
+public class ReadIListPTest extends JetTestSupport {
+
+    private JetInstance instance;
+
+    @Before
+    public void setUp() {
+        instance = this.createJetMember();
+    }
 
     @Test
     public void when_sizeLessThanFetchSize_then_readAll() {
-        testReader(13);
+        testReader(ReadIListP.FETCH_SIZE / 2);
     }
 
     @Test
     public void when_sizeMoreThanFetchSize_then_readAll() {
-        testReader(3);
+        testReader(ReadIListP.FETCH_SIZE * 3 / 2);
     }
 
-    private static void testReader(int fetchSize) {
-        final TestOutbox outbox = new TestOutbox(2);
-        final Queue<Object> bucket = outbox.queueWithOrdinal(0);
-        final ReadIListP r = new ReadIListP(asList(1, 2, 3, 4));
-        r.init(outbox, Mockito.mock(Processor.Context.class));
-
-        // When
-        assertFalse(r.complete());
-
-        // Then
-        assertEquals(1, bucket.poll());
-        assertEquals(2, bucket.poll());
-        assertNull(bucket.poll());
-
-        // When
-        assertTrue(r.complete());
-
-        // Then
-        assertEquals(3, bucket.poll());
-        assertEquals(4, bucket.poll());
-        assertNull(bucket.poll());
+    private void testReader(int listLength) {
+        IListJet<Object> list = instance.getList(randomName());
+        List<Object> data = IntStream.range(0, listLength).boxed().collect(toList());
+        list.addAll(data);
+        TestSupport
+                .verifyProcessor(() -> new ReadIListP(list.getName(), null))
+                .jetInstance(instance)
+                .disableSnapshots()
+                .disableLogging()
+                .expectOutput(data);
     }
-
 }

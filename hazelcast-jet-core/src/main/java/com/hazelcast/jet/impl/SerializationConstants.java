@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,14 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.internal.serialization.impl.FactoryIdHelper;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.connector.HazelcastWriters.ApplyFnEntryProcessor;
+import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 /**
- * Constants used for Hazelcast's {@link com.hazelcast.nio.serialization.IdentifiedDataSerializable}
+ * Constants used for Hazelcast's {@link IdentifiedDataSerializable}
  * mechanism.
  */
 public final class SerializationConstants {
@@ -32,7 +34,7 @@ public final class SerializationConstants {
     public static final int JET_DS_FACTORY_ID = -10001;
     /** Resolved ID of Jet's data serialization factory. */
     public static final int FACTORY_ID = FactoryIdHelper.getFactoryId(JET_DS_FACTORY, JET_DS_FACTORY_ID);
-    /** Serialization ID of the {@link com.hazelcast.jet.core.DAG} class. */
+    /** Serialization ID of the {@link DAG} class. */
     public static final int DAG = 0;
     /** Serialization ID of the {@link Vertex} class. */
     public static final int VERTEX = 1;

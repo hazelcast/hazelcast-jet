@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,33 @@
 
 package com.hazelcast.jet.function;
 
+import com.hazelcast.jet.impl.util.ExceptionUtil;
+
 import java.io.Serializable;
 import java.util.function.Function;
 
 import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
- * {@code Serializable} variant of {@link Function
- * java.util.function.Function}.
+ * {@code Serializable} variant of {@link Function java.util.function.Function}
+ * which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedFunction<T, R> extends Function<T, R>, Serializable {
+
+    /**
+     * Exception-declaring version of {@link Function#apply}.
+     */
+    R applyEx(T t) throws Exception;
+
+    @Override
+    default R apply(T t) {
+        try {
+            return applyEx(t);
+        } catch (Exception e) {
+            throw ExceptionUtil.sneakyThrow(e);
+        }
+    }
 
     /**
      * {@code Serializable} variant of {@link Function#identity()

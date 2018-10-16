@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,22 +18,34 @@ package com.hazelcast.jet;
 
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
-import com.hazelcast.client.impl.HazelcastClientProxy;
+import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
+import com.hazelcast.config.Config;
 import com.hazelcast.config.MapConfig;
+import com.hazelcast.config.MergePolicyConfig;
 import com.hazelcast.config.ServiceConfig;
+import com.hazelcast.config.ServicesConfig;
 import com.hazelcast.config.matcher.MatchingPointConfigPatternMatcher;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.instance.HazelcastInstanceImpl;
 import com.hazelcast.instance.HazelcastInstanceProxy;
+import com.hazelcast.jet.config.JetClientConfig;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.config.MetricsConfig;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
-import com.hazelcast.jet.impl.JetInstanceImpl;
 import com.hazelcast.jet.impl.JetService;
-import com.hazelcast.jet.impl.config.XmlJetConfigBuilder;
+import com.hazelcast.jet.impl.metrics.JetMetricsService;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.map.merge.IgnoreMergingEntryMapMergePolicy;
+import com.hazelcast.spi.properties.HazelcastProperties;
 
+import java.util.Properties;
+
+import static com.hazelcast.jet.impl.JobRepository.JOB_RESULTS_MAP_NAME;
 import static com.hazelcast.jet.impl.config.XmlJetConfigBuilder.getClientConfig;
+import static com.hazelcast.jet.impl.metrics.JetMetricsService.applyMetricsConfig;
+import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_RESULTS_TTL_SECONDS;
+import static com.hazelcast.spi.properties.GroupProperty.SHUTDOWNHOOK_ENABLED;
 
 /**
  * Entry point to the Jet product.
@@ -56,15 +68,15 @@ public final class Jet {
         configureJetService(config);
         HazelcastInstanceImpl hazelcastInstance = ((HazelcastInstanceProxy)
                 Hazelcast.newHazelcastInstance(config.getHazelcastConfig())).getOriginal();
-        return new JetInstanceImpl(hazelcastInstance, config);
+        return Util.getJetInstance(hazelcastInstance.node.nodeEngine);
     }
 
     /**
-     * Creates a member of the Jet cluster with the default configuration.
+     * Creates a member of the Jet cluster with the configuration loaded from
+     * default location.
      */
     public static JetInstance newJetInstance() {
-        JetConfig config = XmlJetConfigBuilder.getConfig();
-        return newJetInstance(config);
+        return newJetInstance(JetConfig.loadDefault());
     }
 
     /**
@@ -77,6 +89,9 @@ public final class Jet {
 
     /**
      * Creates a Jet client with the given Hazelcast client configuration.
+     *
+     * {@link JetClientConfig} may be used to create a configuration with the
+     * default group name and password for Jet.
      */
     public static JetInstance newJetClient(ClientConfig config) {
         return getJetClientInstance(HazelcastClient.newHazelcastClient(config));
@@ -95,19 +110,60 @@ public final class Jet {
     }
 
     static void configureJetService(JetConfig jetConfig) {
-        if (!(jetConfig.getHazelcastConfig().getConfigPatternMatcher() instanceof MatchingPointConfigPatternMatcher)) {
+        Config hzConfig = jetConfig.getHazelcastConfig();
+        if (!(hzConfig.getConfigPatternMatcher() instanceof MatchingPointConfigPatternMatcher)) {
             throw new UnsupportedOperationException("Custom config pattern matcher is not supported in Jet");
         }
 
-        jetConfig.getHazelcastConfig().getServicesConfig()
-                 .addServiceConfig(new ServiceConfig().setEnabled(true)
-                                                      .setName(JetService.SERVICE_NAME)
-                                                      .setClassName(JetService.class.getName())
-                                                      .setConfigObject(jetConfig));
+        Properties jetProps = jetConfig.getProperties();
+        Properties hzProperties = hzConfig.getProperties();
 
-        jetConfig.getHazelcastConfig().addMapConfig(new MapConfig(INTERNAL_JET_OBJECTS_PREFIX + "*")
-                 .setBackupCount(jetConfig.getInstanceConfig().getBackupCount())
-                 .setStatisticsEnabled(false)
-                 .setMergePolicy(IgnoreMergingEntryMapMergePolicy.class.getName()));
+        // copy Jet Config properties as HZ properties
+        for (String prop : jetProps.stringPropertyNames()) {
+            hzProperties.setProperty(prop, jetProps.getProperty(prop));
+        }
+
+        HazelcastProperties properties = new HazelcastProperties(hzProperties);
+
+        ServicesConfig servicesConfig = hzConfig.getServicesConfig();
+        servicesConfig
+                .addServiceConfig(new ServiceConfig().setEnabled(true)
+                        .setName(JetService.SERVICE_NAME)
+                        .setClassName(JetService.class.getName())
+                        .setProperties(jetServiceProperties(properties))
+                        .setConfigObject(jetConfig));
+
+        servicesConfig
+                .addServiceConfig(new ServiceConfig().setEnabled(true)
+                        .setName(JetMetricsService.SERVICE_NAME)
+                        .setClassName(JetMetricsService.class.getName())
+                        .setConfigObject(jetConfig.getMetricsConfig()));
+
+
+        MapConfig metadataMapConfig = new MapConfig(INTERNAL_JET_OBJECTS_PREFIX + "*")
+                .setBackupCount(jetConfig.getInstanceConfig().getBackupCount())
+                .setStatisticsEnabled(false)
+                .setMergePolicyConfig(
+                        new MergePolicyConfig().setPolicy(IgnoreMergingEntryMapMergePolicy.class.getName()));
+
+        MapConfig resultsMapConfig = new MapConfig(metadataMapConfig)
+                .setName(JOB_RESULTS_MAP_NAME)
+                .setTimeToLiveSeconds(properties.getSeconds(JOB_RESULTS_TTL_SECONDS));
+
+        hzConfig
+                .addMapConfig(metadataMapConfig)
+                .addMapConfig(resultsMapConfig);
+
+        MetricsConfig metricsConfig = jetConfig.getMetricsConfig();
+        applyMetricsConfig(hzConfig, metricsConfig);
+
+        // Force disable IMDG shutdown hook, we will use the Jet property instead
+        hzConfig.setProperty(SHUTDOWNHOOK_ENABLED.getName(), "false");
+    }
+
+    private static Properties jetServiceProperties(HazelcastProperties hzProperties) {
+        Properties properties = new Properties();
+        properties.setProperty(SHUTDOWNHOOK_ENABLED.getName(), hzProperties.getString(SHUTDOWNHOOK_ENABLED));
+        return properties;
     }
 }

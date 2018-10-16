@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,16 +18,15 @@ package com.hazelcast.jet.impl.execution.init;
 
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.MembersView;
-import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.EdgeConfig;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.config.EdgeConfig;
-import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.execution.init.Contexts.MetaSupplierCtx;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
@@ -35,6 +34,7 @@ import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.partition.IPartitionService;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -47,7 +47,6 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 import static java.lang.Integer.min;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 
 public final class ExecutionPlanBuilder {
 
@@ -55,7 +54,8 @@ public final class ExecutionPlanBuilder {
     }
 
     public static Map<MemberInfo, ExecutionPlan> createExecutionPlans(
-            NodeEngine nodeEngine, MembersView membersView, DAG dag, JobConfig jobConfig, long lastSnapshotId
+            NodeEngine nodeEngine, MembersView membersView, DAG dag, long jobId, long executionId,
+            JobConfig jobConfig, long lastSnapshotId
     ) {
         final JetInstance instance = getJetInstance(nodeEngine);
         final int defaultParallelism = instance.getConfig().getInstanceConfig().getCooperativeThreadCount();
@@ -67,8 +67,11 @@ public final class ExecutionPlanBuilder {
         final int clusterSize = members.size();
         final boolean isJobDistributed = clusterSize > 1;
         final EdgeConfig defaultEdgeConfig = instance.getConfig().getDefaultEdgeConfig();
-        final Map<MemberInfo, ExecutionPlan> plans = members.stream()
-                .collect(toMap(m -> m, m -> new ExecutionPlan(partitionOwners, jobConfig, lastSnapshotId)));
+        final Map<MemberInfo, ExecutionPlan> plans = new HashMap<>();
+        int memberIndex = 0;
+        for (MemberInfo member : members) {
+            plans.put(member, new ExecutionPlan(partitionOwners, jobConfig, lastSnapshotId, memberIndex++, clusterSize));
+        }
         final Map<String, Integer> vertexIdMap = assignVertexIds(dag);
         for (Entry<String, Integer> entry : vertexIdMap.entrySet()) {
             final Vertex vertex = dag.getVertex(entry.getKey());
@@ -83,19 +86,17 @@ public final class ExecutionPlanBuilder {
                     e -> vertexIdMap.get(e.getDestName()), isJobDistributed);
             final ILogger logger = nodeEngine.getLogger(String.format("%s.%s#ProcessorMetaSupplier",
                     metaSupplier.getClass().getName(), vertex.getName()));
-            metaSupplier.init(new MetaSupplierCtx(instance, logger, totalParallelism, localParallelism));
+            metaSupplier.init(new MetaSupplierCtx(instance, jobId, executionId, jobConfig, logger,
+                    vertex.getName(), localParallelism, totalParallelism, clusterSize));
 
-            Function<Address, ProcessorSupplier> procSupplierFn = metaSupplier.get(addresses);
-            int procIdxOffset = 0;
+            Function<? super Address, ? extends ProcessorSupplier> procSupplierFn = metaSupplier.get(addresses);
             for (Entry<MemberInfo, ExecutionPlan> e : plans.entrySet()) {
                 final ProcessorSupplier processorSupplier = procSupplierFn.apply(e.getKey().getAddress());
                 checkSerializable(processorSupplier, "ProcessorSupplier in vertex '" + vertex.getName() + '\'');
-                final VertexDef vertexDef = new VertexDef(
-                        vertexId, vertex.getName(), processorSupplier, procIdxOffset, localParallelism);
+                final VertexDef vertexDef = new VertexDef(vertexId, vertex.getName(), processorSupplier, localParallelism);
                 vertexDef.addInboundEdges(inbound);
                 vertexDef.addOutboundEdges(outbound);
                 e.getValue().addVertex(vertexDef);
-                procIdxOffset += localParallelism;
             }
         }
         return plans;
@@ -109,16 +110,9 @@ public final class ExecutionPlanBuilder {
     }
 
     private static int determineParallelism(Vertex vertex, int preferredLocalParallelism, int defaultParallelism) {
-        if (!Vertex.isValidLocalParallelism(preferredLocalParallelism)) {
-            throw new JetException(String.format(
-                    "ProcessorMetaSupplier in vertex %s specifies preferred local parallelism of %d",
-                    vertex.getName(), preferredLocalParallelism));
-        }
         int localParallelism = vertex.getLocalParallelism();
-        if (!Vertex.isValidLocalParallelism(localParallelism)) {
-            throw new JetException(String.format(
-                    "Vertex %s specifies local parallelism of %d", vertex.getName(), localParallelism));
-        }
+        Vertex.checkLocalParallelism(preferredLocalParallelism);
+        Vertex.checkLocalParallelism(localParallelism);
         return localParallelism != LOCAL_PARALLELISM_USE_DEFAULT
                         ? localParallelism
              : preferredLocalParallelism != LOCAL_PARALLELISM_USE_DEFAULT
@@ -147,7 +141,7 @@ public final class ExecutionPlanBuilder {
             MemberInfo member;
             if ((member = membersView.getMember(address)) == null) {
                 // Address in partition table doesn't exist in member list,
-                // it has just left the cluster.
+                // it has just joined the cluster.
                 throw new TopologyChangedException("Topology changed, " + address + " is not in original member list");
             }
 

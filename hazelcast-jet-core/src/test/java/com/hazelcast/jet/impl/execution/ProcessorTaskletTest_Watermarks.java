@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.core.test.TestOutbox.MockSerializationService;
-import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
+import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.test.HazelcastParallelClassRunner;
@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
+import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static com.hazelcast.jet.impl.util.ProgressState.MADE_PROGRESS;
 import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
@@ -53,14 +54,13 @@ public class ProcessorTaskletTest_Watermarks {
     private List<MockInboundStream> instreams;
     private List<OutboundEdgeStream> outstreams;
     private ProcessorWithWatermarks processor;
-    private ProcCtx context;
+    private Processor.Context context;
     private MockOutboundCollector snapshotCollector;
 
     @Before
     public void setUp() {
         this.processor = new ProcessorWithWatermarks();
-        this.context = new ProcCtx(null, new MockSerializationService(), null, null, 0,
-                EXACTLY_ONCE);
+        this.context = new TestProcessorContext();
         this.instreams = new ArrayList<>();
         this.outstreams = new ArrayList<>();
         this.snapshotCollector = new MockOutboundCollector(0);
@@ -264,14 +264,30 @@ public class ProcessorTaskletTest_Watermarks {
         assertEquals(asList("wm(101)-0", wm(101)), outstream1.getBuffer());
     }
 
+    @Test
+    public void when_oneEdgeWaitsForWmAndThenDone_then_wmForwarded() {
+        MockInboundStream instream1 = new MockInboundStream(0, singletonList(wm(100)), 1000);
+        MockInboundStream instream2 = new MockInboundStream(0, singletonList(DONE_ITEM), 1000);
+        MockOutboundStream outstream1 = new MockOutboundStream(0, 128);
+        instreams.add(instream1);
+        instreams.add(instream2);
+        outstreams.add(outstream1);
+        ProcessorTasklet tasklet = createTasklet(16);
+
+        callUntil(400, tasklet, NO_PROGRESS);
+
+        // Then
+        assertEquals(asList("wm(100)-0", wm(100)), outstream1.getBuffer());
+    }
+
     private ProcessorTasklet createTasklet(int maxWatermarkRetainMillis) {
         for (int i = 0; i < instreams.size(); i++) {
             instreams.get(i).setOrdinal(i);
         }
-        SnapshotContext snapshotContext = new SnapshotContext(mock(ILogger.class), 0, 0, -1, EXACTLY_ONCE);
+        SnapshotContext snapshotContext = new SnapshotContext(mock(ILogger.class), "test job", -1, EXACTLY_ONCE);
         snapshotContext.initTaskletCount(1, 0);
-        final ProcessorTasklet t = new ProcessorTasklet(context, processor, instreams, outstreams,
-                snapshotContext, snapshotCollector, maxWatermarkRetainMillis);
+        final ProcessorTasklet t = new ProcessorTasklet(context, new DefaultSerializationServiceBuilder().build(),
+                processor, instreams, outstreams, snapshotContext, snapshotCollector, maxWatermarkRetainMillis);
         t.init();
         return t;
     }

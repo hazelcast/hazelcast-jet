@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,11 @@ import com.hazelcast.core.Member;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.AbstractEntryProcessor;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.nio.Address;
@@ -34,8 +37,8 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
+import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -50,19 +53,27 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicLongArray;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.function.ToIntFunction;
+import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static java.lang.Math.abs;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
@@ -71,8 +82,10 @@ import static java.util.stream.IntStream.range;
 
 public final class Util {
 
+    private static final Pattern ID_PATTERN = Pattern.compile("(\\p{XDigit}{4}-){3}\\p{XDigit}{4}");
+
     private static final int BUFFER_SIZE = 1 << 15;
-    private static final char[] ID_TEMPLATE = "0000-0000-0000-0000".toCharArray();
+    private static final DateTimeFormatter LOCAL_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
     private Util() {
     }
@@ -127,6 +140,32 @@ public final class Util {
     }
 
     /**
+     * This method will generate an {@link ExecutionCallback} which allows to
+     * asynchronously get notified when the execution is completed, either
+     * successfully or with an error.
+     *
+     * @param callback BiConsumer to call when execution is completed. Only one
+     *                of the passed values will be non-null, except for the
+     *                case the normal result is null, in which case both values
+     *                will be null
+     * @param <T> type of the response
+     * @return {@link ExecutionCallback}
+     */
+    public static <T> ExecutionCallback<T> callbackOf(BiConsumer<T, Throwable> callback) {
+        return new ExecutionCallback<T>() {
+            @Override
+            public void onResponse(T o) {
+                callback.accept(o, null);
+            }
+
+            @Override
+            public void onFailure(Throwable throwable) {
+                callback.accept(null, throwable);
+            }
+        };
+    }
+
+    /**
      * Atomically increment the {@code value} by {@code increment}, unless
      * the value after increment would exceed the {@code limit}.
      * <p>
@@ -134,6 +173,7 @@ public final class Util {
      * @param limit maximum value the {@code value} can take (inclusive)
      * @return {@code true}, if successful, {@code false}, if {@code limit} would be exceeded.
      */
+    @CheckReturnValue
     public static boolean tryIncrement(AtomicInteger value, int increment, int limit) {
         int prev;
         int next;
@@ -274,7 +314,7 @@ public final class Util {
                 .collect(groupingBy(e -> e.getKey() % count, mapping(Map.Entry::getValue, toList())));
 
         for (int processor = 0; processor < count; processor++) {
-            processorToPartitions.computeIfAbsent(processor, x -> emptyList());
+            processorToPartitions.putIfAbsent(processor, emptyList());
         }
         return processorToPartitions;
     }
@@ -298,7 +338,11 @@ public final class Util {
         return Holder.NUMBER_GENERATOR.nextLong();
     }
 
-    public static String jobAndExecutionId(long jobId, long executionId) {
+    public static String jobNameAndExecutionId(String jobName, long executionId) {
+        return "job '" + jobName + "', execution " + idToString(executionId);
+    }
+
+    public static String jobIdAndExecutionId(long jobId, long executionId) {
         return "job " + idToString(jobId) + ", execution " + idToString(executionId);
     }
 
@@ -310,17 +354,27 @@ public final class Util {
         return toZonedDateTime(timestamp).toLocalDateTime();
     }
 
+    public static String toLocalTime(long timestamp) {
+        return toZonedDateTime(timestamp).toLocalTime().format(LOCAL_TIME_FORMATTER);
+    }
+
+    /**
+     * Parses the jobId formatted with {@link
+     * com.hazelcast.jet.Util#idToString(long)}.
+     *
+     * <p>The method is lenient: if the string doesn't match the structure
+     * output by {@code idToString} or if the string is null, it will return
+     * -1.
+     *
+     * @return the parsed ID or -1 if parsing failed.
+     */
     @SuppressWarnings("checkstyle:magicnumber")
-    public static String idToString(long id) {
-        char[] buf = Arrays.copyOf(ID_TEMPLATE, ID_TEMPLATE.length);
-        String hexStr = Long.toHexString(id);
-        for (int i = hexStr.length() - 1, j = 18; i >= 0; i--, j--) {
-            buf[j] = hexStr.charAt(i);
-            if (j == 15 || j == 10 || j == 5) {
-                j--;
-            }
+    public static long idFromString(String str) {
+        if (str == null || !ID_PATTERN.matcher(str).matches()) {
+            return -1;
         }
-        return new String(buf);
+        str = str.replaceAll("-", "");
+        return Long.parseUnsignedLong(str, 16);
     }
 
     public static <K, V> EntryProcessor<K, V> entryProcessor(
@@ -336,6 +390,13 @@ public final class Util {
         };
     }
 
+    /**
+     * @param remappingFunction A function that takes the key and
+     *                         current value (which can be null) and
+     *                         should return new value. If it returns
+     *                         null, the entry for the key will be
+     *                         deleted.
+     */
     public static <K, V> V compute(IMap<K, V> map, K key,
                                   DistributedBiFunction<? super K, ? super V, ? extends V> remappingFunction) {
         return (V) map.executeOnKey(key, entryProcessor(remappingFunction));
@@ -355,27 +416,104 @@ public final class Util {
     }
 
     /**
-     * Util method to get around findbugs issue https://github.com/findbugsproject/findbugs/issues/79
+     * Returns a future which is already completed with the supplied exception.
      */
-    @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
-    public static CompletableFuture<Void> completedVoidFuture() {
-        return CompletableFuture.completedFuture(null);
-    }
-
-    /**
-     * Returns a void future which is already completed with the supplied exception
-     */
-    public static CompletableFuture<Void> completedVoidFuture(@Nonnull Throwable exception) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
+    public static <T> CompletableFuture<T> exceptionallyCompletedFuture(@Nonnull Throwable exception) {
+        CompletableFuture<T> future = new CompletableFuture<>();
         future.completeExceptionally(exception);
         return future;
     }
 
     /**
-     * Util method to get around findbugs issue https://github.com/findbugsproject/findbugs/issues/79
+     * Logs a late event that was dropped.
      */
-    @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
-    public static void completeVoidFuture(CompletableFuture<Void> future) {
-        future.complete(null);
+    public static void logLateEvent(ILogger logger, long currentWm, @Nonnull Object item) {
+        if (!logger.isInfoEnabled()) {
+            return;
+        }
+        if (item instanceof JetEvent) {
+            JetEvent event = (JetEvent) item;
+            logger.info(
+                    String.format("Event dropped, late by %dms. currentWatermark=%s, eventTime=%s, event=%s",
+                            currentWm - event.timestamp(), toLocalTime(currentWm), toLocalTime(event.timestamp()),
+                            event.payload()
+                    ));
+        } else {
+            logger.info(String.format(
+                    "Late event dropped. currentWatermark=%s, event=%s", new Watermark(currentWm), item
+            ));
+        }
+    }
+
+    /**
+     * Calculate greatest common divisor of a series of integer numbers. Returns
+     * 0, if the number of values is 0.
+     */
+    public static long gcd(long... values) {
+        long res = 0;
+        for (long value : values) {
+            res = gcd(res, value);
+        }
+        return res;
+    }
+
+    /**
+     * Calculate greatest common divisor of two integer numbers.
+     */
+    public static long gcd(long a, long b) {
+        a = abs(a);
+        b = abs(b);
+        if (b == 0) {
+            return a;
+        }
+        return gcd(b, a % b);
+    }
+
+    public static void lazyIncrement(AtomicLong counter) {
+        lazyAdd(counter, 1);
+    }
+
+    public static void lazyIncrement(AtomicLongArray counters, int index) {
+        lazyAdd(counters, index, 1);
+    }
+
+    /**
+     * Adds {@code addend} to the counter, using {@code lazySet}. Useful for
+     * incrementing {@linkplain com.hazelcast.internal.metrics.Probe probes}
+     * if only one thread is updating the value.
+     */
+    public static void lazyAdd(AtomicLong counter, long addend) {
+        counter.lazySet(counter.get() + addend);
+    }
+
+    /**
+     * Adds {@code addend} to the counter, using {@code lazySet}. Useful for
+     * incrementing {@linkplain com.hazelcast.internal.metrics.Probe probes}
+     * if only one thread is updating the value.
+     */
+    public static void lazyAdd(AtomicLongArray counters, int index, long addend) {
+        counters.lazySet(index, counters.get(index) + addend);
+    }
+
+    /**
+     * Adds items of the collection. Faster than {@code
+     * collection.stream().mapToInt(toIntF).sum()} and equal to plain old loop
+     * in performance. Crates no GC litter (if you use non-capturing lambda for
+     * {@code toIntF}, else new lambda instance is created for each call).
+     */
+    public static <E> int sum(Collection<E> collection, ToIntFunction<E> toIntF) {
+        int sum = 0;
+        for (E e : collection) {
+            sum += toIntF.applyAsInt(e);
+        }
+        return sum;
+    }
+
+    /**
+     * Escapes the vertex name for graphviz by prefixing the quote character
+     * with backslash.
+     */
+    public static String escapeGraphviz(String value) {
+        return value.replace("\"", "\\\"");
     }
 }

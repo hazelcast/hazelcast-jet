@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,34 +22,38 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.core.test.TestOutbox;
+import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.core.test.TestSupport;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.map.impl.proxy.MapProxyImpl;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
 import java.util.concurrent.locks.LockSupport;
-import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
-import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
-import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
-import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
+import static com.hazelcast.jet.core.WatermarkEmissionPolicy.noThrottling;
+import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
+import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
+import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.spi.properties.GroupProperty.PARTITION_COUNT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.stream.Collectors.toList;
+import static org.junit.Assert.assertEquals;
 
-@Category(QuickTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
 public class StreamEventJournalP_WmCoalescingTest extends JetTestSupport {
 
@@ -71,7 +75,6 @@ public class StreamEventJournalP_WmCoalescingTest extends JetTestSupport {
         config.getHazelcastConfig().addEventJournalConfig(journalConfig);
         JetInstance instance = this.createJetMember(config);
 
-        assert map == null;
         map = (MapProxyImpl<Integer, Integer>) instance.getHazelcastInstance().<Integer, Integer>getMap("test");
 
         partitionKeys = new int[2];
@@ -90,30 +93,35 @@ public class StreamEventJournalP_WmCoalescingTest extends JetTestSupport {
                    .disableProgressAssertion()
                    .disableRunUntilCompleted(1000)
                    .disableSnapshots()
-                   .expectOutput(asList(10, wm(10), 10));
+                   .expectOutput(asList(wm(10), 10, 10));
     }
 
     @Test
-    public void when_entryInOnePartition_then_wmForwardedAfterIdleTime() {
+    public void when_entryInOnePartition_then_wmForwardedAfterIdleTime() throws InterruptedException {
         // initially, there will be entries in both partitions
-        map.put(partitionKeys[0], 10);
-        map.put(partitionKeys[1], 10);
+        map.put(partitionKeys[0], 11);
+        map.put(partitionKeys[1], 11);
 
         // insert to map in parallel to verifyProcessor so that the partition0 is not marked as idle
         // but partition1 is
-        new Thread(() -> {
-            for (int i = 0; i < 8; i++) {
+        CountDownLatch productionStartedLatch = new CountDownLatch(1);
+        Future future = spawn(() -> {
+            while (!Thread.interrupted()) {
                 LockSupport.parkNanos(MILLISECONDS.toNanos(500));
-                map.put(partitionKeys[0], 10);
+                map.put(partitionKeys[0], 11);
+                productionStartedLatch.countDown();
             }
-        }).start();
+        });
+        productionStartedLatch.await();
 
-        TestSupport.verifyProcessor(createSupplier(asList(0, 1), 2000))
+        TestSupport.verifyProcessor(createSupplier(asList(0, 1), 4000))
                    .disableProgressAssertion()
                    .disableRunUntilCompleted(4000)
                    .disableSnapshots()
                    .outputChecker((e, a) -> new HashSet<>(e).equals(new HashSet<>(a)))
-                   .expectOutput(asList(10, wm(10)));
+                   .expectOutput(asList(11, wm(11)));
+
+        future.cancel(true);
     }
 
     @Test
@@ -128,25 +136,30 @@ public class StreamEventJournalP_WmCoalescingTest extends JetTestSupport {
     @Test
     public void when_allPartitionsIdleAndThenRecover_then_wmOutput() throws Exception {
         // Insert to map in parallel to verifyProcessor.
+        CountDownLatch latch = new CountDownLatch(1);
         Thread updatingThread = new Thread(() -> uncheckRun(() -> {
             // We will start after a delay so that the source will first become idle and then recover.
-            Thread.sleep(2000);
-            for (int i = 0; i < 16; i++) {
-                map.put(partitionKeys[0], 10);
-                Thread.sleep(250);
+            latch.await();
+            for (;;) {
+                map.put(partitionKeys[0], 12);
+                Thread.sleep(100);
             }
         }));
         updatingThread.start();
 
-        TestSupport.verifyProcessor(createSupplier(asList(0, 1), 1000))
-                   .disableProgressAssertion()
-                   .disableRunUntilCompleted(3000)
-                   .disableSnapshots()
-                   .outputChecker((e, a) -> {
-                       a.removeAll(singletonList(10));
-                       return a.equals(e);
-                   })
-                   .expectOutput(asList(IDLE_MESSAGE, wm(10)));
+        Processor processor = createSupplier(asList(0, 1), 2000).get();
+        TestOutbox outbox = new TestOutbox(1024);
+        Queue<Object> outbox0 = outbox.queue(0);
+        processor.init(outbox, new TestProcessorContext());
+
+        assertTrueEventually(() -> {
+            processor.complete();
+            // after we have the IDLE_MESSAGE, release the latch to let the other thread produce events
+            if (IDLE_MESSAGE.equals(outbox0.peek())) {
+                latch.countDown();
+            }
+            assertEquals(asList(IDLE_MESSAGE, wm(12), 12), outbox0.stream().distinct().collect(toList()));
+        });
 
         updatingThread.interrupt();
         updatingThread.join();
@@ -155,19 +168,19 @@ public class StreamEventJournalP_WmCoalescingTest extends JetTestSupport {
     @Test
     public void test_nonFirstPartition() {
         /* aim of this test is to check that the mapping from partitionIndex to partitionId works */
-        map.put(partitionKeys[1], 10);
+        map.put(partitionKeys[1], 13);
 
         TestSupport.verifyProcessor(createSupplier(singletonList(1), 2000))
                    .disableProgressAssertion()
                    .disableRunUntilCompleted(4000)
                    .disableSnapshots()
-                   .expectOutput(asList(wm(10), 10, IDLE_MESSAGE));
+                   .expectOutput(asList(wm(13), 13, IDLE_MESSAGE));
     }
 
-    public Supplier<Processor> createSupplier(List<Integer> assignedPartitions, long idleTimeout) {
+    public DistributedSupplier<Processor> createSupplier(List<Integer> assignedPartitions, long idleTimeout) {
         return () -> new StreamEventJournalP<>(map, assignedPartitions, e -> true,
                 EventJournalMapEvent::getNewValue, START_FROM_OLDEST, false,
-                wmGenParams(Integer::intValue, withFixedLag(0), suppressDuplicates(), idleTimeout));
+                eventTimePolicy(Integer::intValue, limitingLag(0), noThrottling(), idleTimeout));
     }
 
     private Watermark wm(long timestamp) {

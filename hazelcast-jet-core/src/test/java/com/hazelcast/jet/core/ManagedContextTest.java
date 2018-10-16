@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.core.ManagedContext;
+import com.hazelcast.jet.IListJet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.stream.IStreamList;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Before;
 import org.junit.Test;
@@ -55,7 +55,7 @@ public class ManagedContextTest extends JetTestSupport {
         jet.newJob(dag).join();
 
         // Then
-        IStreamList<Object> list = jet.getList("sink");
+        IListJet<Object> list = jet.getList("sink");
         assertEquals(singletonList(INJECTED_VALUE), list.subList(0, list.size()));
     }
 

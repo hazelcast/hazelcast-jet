@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.core;
 
-import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.After;
@@ -38,15 +38,17 @@ import static org.junit.Assert.assertTrue;
 public class SlowSourceYieldTest {
 
     private JetInstance instance;
+    private JetTestInstanceFactory factory;
 
     @Before
     public void before() {
-        instance = Jet.newJetInstance();
+        factory = new JetTestInstanceFactory();
+        instance = factory.newMember();
     }
 
     @After
     public void after() {
-        Jet.shutdownAll();
+        factory.shutdownAll();
     }
 
     @Test
@@ -66,7 +68,7 @@ public class SlowSourceYieldTest {
         private int yieldedAt;
 
         @Override
-        protected void init(@Nonnull Context context) throws Exception {
+        protected void init(@Nonnull Context context) {
             // this should take about 5 seconds to emit
             traverser = traverseStream(IntStream.range(0, 5000)
                                                 .peek(i -> uncheckRun(() -> Thread.sleep(1)))

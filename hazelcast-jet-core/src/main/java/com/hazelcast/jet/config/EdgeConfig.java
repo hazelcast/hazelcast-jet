@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ package com.hazelcast.jet.config;
 import com.hazelcast.jet.core.Edge;
 
 import java.io.Serializable;
+
+import static com.hazelcast.util.Preconditions.checkPositive;
 
 /**
  * A configuration object for a DAG {@link Edge} that holds fine-tuning
@@ -48,23 +50,23 @@ public class EdgeConfig implements Serializable {
 
     /**
      * Sets the capacity of processor-to-processor concurrent queues. The value
-     * is rounded upwards to next power of 2.
+     * is rounded upwards to the next power of 2.
      * <p>
-     * When data needs to travel between two processors on the same cluster member,
-     * it is sent over a concurrent single-producer, single-consumer (SPSC) queue of
-     * fixed capacity.
+     * When data needs to travel between two processors on the same cluster
+     * member, Jet sends it over a concurrent single-producer, single-consumer
+     * (SPSC) queue of fixed capacity.
      * <p>
-     * Since there are several processors executing the logic of each vertex, and
-     * since the queues are SPSC, there will be
-     * {@code senderParallelism * receiverParallelism} queues representing the edge
-     * on each member. Care should be taken to strike a balance between performance
-     * and memory usage. The default of {@value #DEFAULT_QUEUE_SIZE} is a good size
-     * for simple DAGs and moderate parallelism, but the optimum can be determined only
-     * by experiment.
+     * Since there are several processors executing the logic of each vertex,
+     * and since the queues are SPSC, there will be {@code senderParallelism *
+     * receiverParallelism} queues representing the edge on each member. The
+     * edge capacity should strike a balance between performance and memory
+     * usage. The default of {@value #DEFAULT_QUEUE_SIZE} is a good size for
+     * simple DAGs and moderate parallelism.
      *
      * @return {@code this} instance for fluent API
      */
     public EdgeConfig setQueueSize(int queueSize) {
+        checkPositive(queueSize, "queueSize should be a positive number");
         this.queueSize = queueSize;
         return this;
     }
@@ -104,6 +106,7 @@ public class EdgeConfig implements Serializable {
      * @return {@code this} instance for fluent API
      */
     public EdgeConfig setReceiveWindowMultiplier(int receiveWindowMultiplier) {
+        checkPositive(receiveWindowMultiplier, "receiveWindowMultiplier should be a positive number");
         this.receiveWindowMultiplier = receiveWindowMultiplier;
         return this;
     }
@@ -131,6 +134,7 @@ public class EdgeConfig implements Serializable {
      * @return {@code this} instance for fluent API
      */
     public EdgeConfig setPacketSizeLimit(int packetSizeLimit) {
+        checkPositive(packetSizeLimit, "packetSizeLimit should be a positive number");
         this.packetSizeLimit = packetSizeLimit;
         return this;
     }

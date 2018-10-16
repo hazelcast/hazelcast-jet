@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,14 +30,13 @@ import java.util.Arrays;
 
 import static com.hazelcast.jet.Jet.getJetClientInstance;
 import static com.hazelcast.jet.impl.config.XmlJetConfigBuilder.getClientConfig;
-import static com.hazelcast.jet.impl.config.XmlJetConfigBuilder.getConfig;
 
 public class JetTestInstanceFactory {
 
     private final TestHazelcastFactory factory = new TestHazelcastFactory();
 
     public JetInstance newMember() {
-        return newMember(getConfig());
+        return newMember(JetConfig.loadDefault());
     }
 
     public JetInstance newMember(JetConfig config) {

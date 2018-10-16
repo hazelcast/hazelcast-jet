@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import java.util.NoSuchElementException;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastParallelClassRunner.class)
 public class ArrayDequeInboxTest {
@@ -36,29 +37,30 @@ public class ArrayDequeInboxTest {
     private ArrayDequeInbox inbox = new ArrayDequeInbox(new ProgressTracker());
 
     @Before
-    public void before() throws Exception {
-        inbox.add(ITEM);
+    public void before() {
+        inbox.queue().add(ITEM);
     }
 
     @Test
-    public void when_pollNonEmpty_then_getItem() throws Exception {
+    public void when_pollNonEmpty_then_getItem() {
         assertEquals(ITEM, inbox.poll());
     }
 
     @Test
-    public void when_pollEmpty_then_getNull() throws Exception {
-        inbox.clear();
+    public void when_pollEmpty_then_getNull() {
+        inbox.queue().clear();
         assertNull(inbox.poll());
     }
 
     @Test
-    public void when_removeNonEmpty_then_getItem() throws Exception {
-        assertEquals(ITEM, inbox.remove());
+    public void when_removeNonEmpty_then_removeItem() {
+        inbox.remove();
+        assertTrue(inbox.isEmpty());
     }
 
     @Test(expected = NoSuchElementException.class)
-    public void when_removeEmpty_then_getException() throws Exception {
-        inbox.clear();
+    public void when_removeEmpty_then_getException() {
+        inbox.queue().clear();
         inbox.remove();
     }
 

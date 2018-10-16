@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ public class ConcurrentInboundEdgeStreamTest_WmRetainEnabled {
     }
 
     private ConcurrentInboundEdgeStream createCies(boolean waitForSnapshot) {
-        return new ConcurrentInboundEdgeStream(conveyor, 0, 0, -1, waitForSnapshot, 16);
+        return new ConcurrentInboundEdgeStream(conveyor, 0, 0, waitForSnapshot, 16, "cies");
     }
 
     @Test
@@ -169,6 +169,6 @@ public class ConcurrentInboundEdgeStreamTest_WmRetainEnabled {
     }
 
     private SnapshotBarrier barrier(long snapshotId) {
-        return new SnapshotBarrier(snapshotId);
+        return new SnapshotBarrier(snapshotId, false);
     }
 }

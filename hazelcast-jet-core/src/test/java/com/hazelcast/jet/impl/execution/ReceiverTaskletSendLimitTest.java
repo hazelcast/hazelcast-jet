@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,16 +47,16 @@ public class ReceiverTaskletSendLimitTest {
     }
 
     @Test
-    public void when_noData_then_rwinHalvedEachTime() throws Exception {
+    public void when_noData_then_rwinRemainsUnchanged() {
         double expectedSeq = INITIAL_RECEIVE_WINDOW_COMPRESSED;
         for (int i = 0; i < 10; i++) {
             assertEquals((long) expectedSeq, tasklet.updateAndGetSendSeqLimitCompressed(START + i * ACK_PERIOD));
-            expectedSeq = ceil(expectedSeq / 2);
+            expectedSeq = ceil(expectedSeq);
         }
     }
 
     @Test
-    public void when_steadyFlow_then_steadyRwin() throws Exception {
+    public void when_steadyFlow_then_steadyRwin() {
         // Given
         final int ackedSeqsPerIterCompressed = 1000;
         final long ackedSeqsPerIter = ackedSeqsPerIterCompressed << COMPRESSED_SEQ_UNIT_LOG2;
@@ -76,7 +76,7 @@ public class ReceiverTaskletSendLimitTest {
     }
 
     @Test
-    public void when_hiccupInReceiver_then_rwinDropsToZero() throws Exception {
+    public void when_hiccupInReceiver_then_rwinDropsToZero() {
         // Given
         final int ackedSeqsPerIterCompressed = 1000;
         final long ackedSeqsPerIter = ackedSeqsPerIterCompressed << COMPRESSED_SEQ_UNIT_LOG2;
@@ -91,6 +91,7 @@ public class ReceiverTaskletSendLimitTest {
         }
 
         // When
+        tasklet.setNumWaitingInInbox(1);
         long seqLimit = 0;
         for (int i = 0; i < hiccupIters; i++, iter++) {
             seqLimit = tasklet.updateAndGetSendSeqLimitCompressed(START + iter * ACK_PERIOD);
@@ -99,11 +100,11 @@ public class ReceiverTaskletSendLimitTest {
         // Then
         final long ackedSeqCompressed = (warmupIters * ackedSeqsPerIter) >> COMPRESSED_SEQ_UNIT_LOG2;
         final long rwin = seqLimit - ackedSeqCompressed;
-        assertTrue(rwin == 0 || rwin == 1);
+        assertTrue("rwin=" + rwin, rwin == 0 || rwin == 1);
     }
 
     @Test
-    public void when_recoverFromHiccup_then_rwinRecoversQuickly() throws Exception {
+    public void when_recoverFromHiccup_then_rwinRecoversQuickly() {
         // Given
         final int ackedSeqsPerIterCompressed = 1000;
         final long ackedSeqsPerIter = ackedSeqsPerIterCompressed << COMPRESSED_SEQ_UNIT_LOG2;

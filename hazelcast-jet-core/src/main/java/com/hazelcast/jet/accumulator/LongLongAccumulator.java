@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ public class LongLongAccumulator {
     }
 
     /**
-     * Creates a new instance with the specified value.
+     * Creates a new instance with the specified values.
      */
     public LongLongAccumulator(long value1, long value2) {
         this.value1 = value1;
@@ -39,30 +39,30 @@ public class LongLongAccumulator {
     }
 
     /**
-     * Returns the current value1.
+     * Returns the first value.
      */
-    public long getValue1() {
+    public long get1() {
         return value1;
     }
 
     /**
-     * Sets the value1.
+     * Sets the first value.
      */
-    public void setValue1(long value1) {
+    public void set1(long value1) {
         this.value1 = value1;
     }
 
     /**
-     * Returns the current value2.
+     * Returns the second value.
      */
-    public long getValue2() {
+    public long get2() {
         return value2;
     }
 
     /**
-     * Sets the value2.
+     * Sets the second value.
      */
-    public void setValue2(long value2) {
+    public void set2(long value2) {
         this.value2 = value2;
     }
 

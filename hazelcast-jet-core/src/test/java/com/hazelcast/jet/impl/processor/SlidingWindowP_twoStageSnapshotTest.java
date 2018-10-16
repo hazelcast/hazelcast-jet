@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,17 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.core.WindowDefinition;
+import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import org.junit.After;
 import org.junit.Before;
@@ -43,16 +46,16 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.core.WindowDefinition.slidingWindowDef;
-import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
+import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
  * This test checks the flushing of internal buffer downstream instead of saving
- * anything to snapshot in stage 1 out of 2.
+ * anything to snapshot in pipeline 1 out of 2.
  */
 @RunWith(Parameterized.class)
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
@@ -63,8 +66,8 @@ public class SlidingWindowP_twoStageSnapshotTest {
     @Parameter
     public boolean simulateRestore;
 
-    private SlidingWindowP<?, ?, ?> lastSuppliedStage1Processor;
-    private SlidingWindowP<?, ?, ?> lastSuppliedStage2Processor;
+    private SlidingWindowP<?, ?, ?, ?> lastSuppliedStage1Processor;
+    private SlidingWindowP<?, ?, ?, ?> lastSuppliedStage2Processor;
     private DistributedSupplier<SlidingWindowP> stage1Supplier;
     private DistributedSupplier<SlidingWindowP> stage2Supplier;
 
@@ -75,27 +78,29 @@ public class SlidingWindowP_twoStageSnapshotTest {
 
     @Before
     public void before() {
-        WindowDefinition windowDef = slidingWindowDef(4, 1);
+        SlidingWindowPolicy windowDef = slidingWinPolicy(4, 1);
 
-        AggregateOperation1<Entry<?, Long>, LongAccumulator, Long> operation = AggregateOperation
+        AggregateOperation1<Entry<?, Long>, LongAccumulator, Long> aggrOp = AggregateOperation
                 .withCreate(LongAccumulator::new)
-                .andAccumulate((LongAccumulator acc, Entry<?, Long> item) -> acc.addExact(item.getValue()))
-                .andCombine(LongAccumulator::addExact)
-                .andDeduct(LongAccumulator::subtractExact)
-                .andFinish(LongAccumulator::get);
+                .andAccumulate((LongAccumulator acc, Entry<?, Long> item) -> acc.add(item.getValue()))
+                .andCombine(LongAccumulator::add)
+                .andDeduct(LongAccumulator::subtract)
+                .andExportFinish(LongAccumulator::get);
 
-        DistributedSupplier<Processor> procSupplier1 = accumulateByFrameP(
-                t -> KEY,
-                Entry<Long, Long>::getKey,
+        DistributedSupplier<Processor> procSupplier1 = Processors.accumulateByFrameP(
+                singletonList((DistributedFunction<? super Entry<Long, Long>, ?>) t -> KEY),
+                singletonList((DistributedToLongFunction<? super Entry<Long, Long>>) Entry::getKey),
                 TimestampKind.EVENT,
                 windowDef,
-                operation);
+                ((AggregateOperation1<? super Entry<Long, Long>, LongAccumulator, ?>) aggrOp).withIdentityFinish()
+        );
 
-        DistributedSupplier<Processor> procSupplier2 = combineToSlidingWindowP(windowDef, operation);
+        DistributedSupplier<Processor> procSupplier2 =
+                combineToSlidingWindowP(windowDef, aggrOp, TimestampedEntry::fromWindowResult);
 
         // new supplier to save the last supplied instance
-        stage1Supplier = () -> lastSuppliedStage1Processor = (SlidingWindowP<?, ?, ?>) procSupplier1.get();
-        stage2Supplier = () -> lastSuppliedStage2Processor = (SlidingWindowP<?, ?, ?>) procSupplier2.get();
+        stage1Supplier = () -> lastSuppliedStage1Processor = (SlidingWindowP<?, ?, ?, ?>) procSupplier1.get();
+        stage2Supplier = () -> lastSuppliedStage2Processor = (SlidingWindowP<?, ?, ?, ?>) procSupplier2.get();
     }
 
     @After
@@ -123,7 +128,7 @@ public class SlidingWindowP_twoStageSnapshotTest {
         // process some events in the 1st stage
         assertTrue(stage1p1.tryProcess(0, entry(1L, 1L))); // entry key is time
         assertTrue(stage1p2.tryProcess(0, entry(2L, 2L)));
-        assertTrue(stage1p1Outbox.queueWithOrdinal(0).isEmpty() && stage2Outbox.queueWithOrdinal(0).isEmpty());
+        assertTrue(stage1p1Outbox.queue(0).isEmpty() && stage2Outbox.queue(0).isEmpty());
 
         // save state in stage1
         assertTrue(stage1p1.saveToSnapshot());
@@ -165,23 +170,25 @@ public class SlidingWindowP_twoStageSnapshotTest {
                         outboxFrame(7, 7),
                         outboxFrame(8, 4)
                 )),
-                collectionToString(stage2Outbox.queueWithOrdinal(0)));
+                collectionToString(stage2Outbox.queue(0)));
     }
 
-    private void processStage2(SlidingWindowP p, TestOutbox stage1p1Outbox, TestOutbox stage1p2Outbox, TestInbox inbox) {
-        inbox.addAll(stage1p1Outbox.queueWithOrdinal(0));
-        inbox.addAll(stage1p2Outbox.queueWithOrdinal(0));
-        stage1p1Outbox.queueWithOrdinal(0).clear();
-        stage1p2Outbox.queueWithOrdinal(0).clear();
+    private static void processStage2(
+            SlidingWindowP p, TestOutbox stage1p1Outbox, TestOutbox stage1p2Outbox, TestInbox inbox
+    ) {
+        inbox.addAll(stage1p1Outbox.queue(0));
+        inbox.addAll(stage1p2Outbox.queue(0));
+        stage1p1Outbox.queue(0).clear();
+        stage1p2Outbox.queue(0).clear();
         p.process(0, inbox);
         assertTrue(inbox.isEmpty());
     }
 
-    private TestOutbox newOutbox() {
+    private static TestOutbox newOutbox() {
         return new TestOutbox(new int[] {128}, 128);
     }
 
-    private void assertEmptyState(SlidingWindowP p) {
+    private static void assertEmptyState(SlidingWindowP p) {
         assertTrue("tsToKeyToFrame is not empty: " + p.tsToKeyToAcc,
                 p.tsToKeyToAcc.isEmpty());
         assertTrue("slidingWindow is not empty: " + p.slidingWindow,

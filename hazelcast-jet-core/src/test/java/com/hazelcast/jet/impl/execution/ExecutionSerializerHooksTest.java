@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,9 +33,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 
+import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
+import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
 
 @RunWith(Parameterized.class)
 @Category(ParallelTest.class)
@@ -46,23 +49,28 @@ public class ExecutionSerializerHooksTest {
     public Object instance;
 
     @Parameters
-    public static Collection<Object> data() throws Exception {
+    public static Collection<Object> data() {
         return Arrays.asList(
-                new SnapshotBarrier(17L),
+                DONE_ITEM,
+                new SnapshotBarrier(17L, false),
                 new BroadcastEntry<>("key", "value"),
-                new BroadcastKeyReference<>(17L, "broadcast-key")
+                broadcastKey("broadcast-key")
         );
     }
 
     @Test
-    public void testSerializerHooks() throws Exception {
+    public void testSerializerHooks() {
         if (!(instance instanceof Map.Entry)) {
             assertFalse("Type implements java.io.Serializable", instance instanceof Serializable);
         }
         SerializationService serializationService = new DefaultSerializationServiceBuilder().build();
         Data serialized = serializationService.toData(instance);
         Object deserialized = serializationService.toObject(serialized);
-        assertNotSame("serialization/deserialization didn't take place", instance, deserialized);
+        if (instance instanceof  DoneItem) {
+            assertSame("deserialized instance not same for type " + instance.getClass() , instance, deserialized);
+        } else {
+            assertNotSame("deserialized instance same for type " + instance.getClass(), instance, deserialized);
+        }
         assertEquals("objects are not equal after serialize/deserialize", instance, deserialized);
     }
 }

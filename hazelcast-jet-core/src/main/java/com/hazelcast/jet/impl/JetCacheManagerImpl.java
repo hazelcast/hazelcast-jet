@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,9 @@
 
 package com.hazelcast.jet.impl;
 
+import com.hazelcast.jet.ICacheJet;
+import com.hazelcast.jet.JetCacheManager;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.stream.IStreamCache;
-import com.hazelcast.jet.stream.JetCacheManager;
-import com.hazelcast.jet.stream.impl.CacheDecorator;
 
 /**
  * Hazelcast Jet {@code JetCacheManager} implementation accessible via {@code JetInstance} that provides access to JSR-107
@@ -36,7 +35,7 @@ public class JetCacheManagerImpl implements JetCacheManager {
     }
 
     @Override
-    public <K, V> IStreamCache<K, V> getCache(String name) {
+    public <K, V> ICacheJet<K, V> getCache(String name) {
         return CacheGetter.getCache(jetInstance, name);
     }
 
@@ -45,8 +44,10 @@ public class JetCacheManagerImpl implements JetCacheManager {
      */
     private static class CacheGetter {
 
-        private static <K, V> IStreamCache<K, V> getCache(JetInstance jetInstance, String name) {
-            return new CacheDecorator<>(jetInstance.getHazelcastInstance().getCacheManager().getCache(name), jetInstance);
+        private static <K, V> ICacheJet<K, V> getCache(JetInstance jetInstance, String name) {
+            return new ICacheDecorator<>(
+                    jetInstance.getHazelcastInstance().getCacheManager().getCache(name), jetInstance
+            );
         }
 
     }

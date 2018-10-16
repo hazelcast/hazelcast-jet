@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+  ~ Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -27,11 +27,10 @@
     <parent>
         <groupId>com.hazelcast.jet</groupId>
         <artifactId>hazelcast-jet-root</artifactId>
-        <version>0.6-SNAPSHOT</version>
+        <version>0.8-SNAPSHOT</version>
     </parent>
 
     <properties>
-        <hazelcast.protocol.version>1.4.0</hazelcast.protocol.version>
         <main.basedir>${project.parent.basedir}</main.basedir>
     </properties>
 
@@ -55,20 +54,13 @@
         <dependency>
             <groupId>com.hazelcast</groupId>
             <artifactId>hazelcast</artifactId>
-            <scope>provided</scope>
             <version>${hazelcast.version}</version>
         </dependency>
         <dependency>
             <groupId>com.hazelcast</groupId>
-            <artifactId>hazelcast-client-protocol</artifactId>
-            <scope>provided</scope>
-            <version>${hazelcast.protocol.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.hazelcast</groupId>
             <artifactId>hazelcast-code-generator</artifactId>
-            <scope>provided</scope>
             <version>${hazelcast.protocol.version}</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>

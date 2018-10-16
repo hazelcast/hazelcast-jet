@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * A 2-tuple (pair) of statically typed fields. Also implements
- * {@link Map.Entry}.
+ * An immutable 2-tuple (pair) of statically typed fields. Also implements
+ * {@link java.util.Map.Entry}.
  *
  * @param <E0> the type of the field 0
  * @param <E1> the type of the field 1
@@ -77,8 +77,6 @@ public final class Tuple2<E0, E1> implements Map.Entry<E0, E1> {
         throw new UnsupportedOperationException("Tuple2 is immutable");
     }
 
-
-
     @Override
     public boolean equals(Object obj) {
         final Tuple2 that;
@@ -91,11 +89,11 @@ public final class Tuple2<E0, E1> implements Map.Entry<E0, E1> {
     @Override
     public int hashCode() {
         // This implementation is specified by Map.Entry and must not be changed
-        return  f0.hashCode() ^ f1.hashCode();
+        return Objects.hashCode(f0) ^ Objects.hashCode(f1);
     }
 
     @Override
     public String toString() {
-        return "Tuple2{" + f0 + ", " + f1 + '}';
+        return "(" + f0 + ", " + f1 + ')';
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,17 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.ICompletableFuture;
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobStatus;
-import com.hazelcast.jet.impl.operation.CancelJobOperation;
 import com.hazelcast.jet.impl.operation.GetJobConfigOperation;
 import com.hazelcast.jet.impl.operation.GetJobStatusOperation;
 import com.hazelcast.jet.impl.operation.GetJobSubmissionTimeOperation;
 import com.hazelcast.jet.impl.operation.JoinSubmittedJobOperation;
+import com.hazelcast.jet.impl.operation.ResumeJobOperation;
 import com.hazelcast.jet.impl.operation.SubmitJobOperation;
+import com.hazelcast.jet.impl.operation.TerminateJobOperation;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.serialization.Data;
@@ -35,10 +37,11 @@ import com.hazelcast.spi.serialization.SerializationService;
 
 import javax.annotation.Nonnull;
 
+import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 
 /**
- * {@link com.hazelcast.jet.Job} proxy on member.
+ * {@link Job} proxy on member.
  */
 public class JobProxy extends AbstractJobProxy<NodeEngineImpl> {
 
@@ -70,8 +73,17 @@ public class JobProxy extends AbstractJobProxy<NodeEngineImpl> {
     }
 
     @Override
-    protected ICompletableFuture<Void> invokeCancelJob() {
-        return invokeOp(new CancelJobOperation(getId()));
+    protected ICompletableFuture<Void> invokeTerminateJob(TerminationMode mode) {
+        return invokeOp(new TerminateJobOperation(getId(), mode));
+    }
+
+    @Override
+    public void resume() {
+        try {
+            invokeOp(new ResumeJobOperation(getId())).get();
+        } catch (Exception e) {
+            throw rethrow(e);
+        }
     }
 
     @Override

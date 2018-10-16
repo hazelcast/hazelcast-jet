@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.kotlin.ProcessorK;
 import com.hazelcast.logging.ILogger;
@@ -64,22 +63,22 @@ public interface Processor {
      * <p>
      * A cooperative processor should also not attempt any blocking operations,
      * such as I/O operations, waiting for locks/semaphores or sleep
-     * operations. Violations to this rule will manifest themselves as less
-     * than 100% CPU usage under maximum load. The processor should also return
-     * as soon as an item is rejected by the outbox (that is when the {@link
-     * Outbox#offer(Object) offer()} method returns {@code false}).
+     * operations. Violations of this rule will manifest as less than 100% CPU
+     * usage under maximum load. The processor must also return as soon as the
+     * outbox rejects an item (that is when the {@link Outbox#offer(Object)
+     * offer()} method returns {@code false}).
      * <p>
      * If this processor declares itself cooperative, it will share a thread
      * with other cooperative processors. Otherwise it will run in a dedicated
      * Java thread.
      * <p>
-     * Jet prefers cooperative processors because they result in greater overall
-     * throughput. A processor should be non-cooperative only if it involves
-     * blocking operations, which would cause all other processors on the same
-     * shared thread to starve.
+     * Jet prefers cooperative processors because they result in a greater
+     * overall throughput. A processor should be non-cooperative only if it
+     * involves blocking operations, which would cause all other processors on
+     * the same shared thread to starve.
      * <p>
-     * Processor instances on single vertex are allowed to return different
-     * value, but single processor instance must return constant value.
+     * Processor instances of a single vertex are allowed to return different
+     * values, but a single processor instance must always return the same value.
      * <p>
      * The default implementation returns {@code true}.
      */
@@ -180,7 +179,17 @@ public interface Processor {
     /**
      * Called after all the inbound edges' streams are exhausted. If it returns
      * {@code false}, it will be invoked again until it returns {@code true}.
-     * After this method is called, no other processing methods will be called on
+     * For example, a streaming source processor will return {@code false}
+     * forever. Unlike other methods which guarantee that no other method is
+     * called until they return {@code true}, {@link #saveToSnapshot()} can be
+     * called even though this method returned {@code false}. If you returned
+     * because {@code Outbox.offer()} returned {@code false}, make sure to
+     * first offer the pending item to the outbox in {@link #saveToSnapshot()}
+     * before continuing to {@linkplain Outbox#offerToSnapshot offer to
+     * snapshot}.
+     *
+     *<p>
+     * After this method is called, no other processing methods are called on
      * this processor, except for {@link #saveToSnapshot()}.
      * <p>
      * Non-cooperative processors are required to return from this method from
@@ -196,7 +205,7 @@ public interface Processor {
     }
 
     /**
-     * Stores its snapshotted state by adding items to the outbox's {@link
+     * Stores its snapshotted state by adding items to the outbox's {@linkplain
      * Outbox#offerToSnapshot(Object, Object) snapshot bucket}. If it returns
      * {@code false}, it will be called again before proceeding to call any
      * other method.
@@ -206,6 +215,11 @@ public interface Processor {
      * exhausted, it may also be called between {@link #complete()} calls. Once
      * {@code complete()} returns {@code true}, this method won't be called
      * anymore.
+     * <p>
+     * <b>Note:</b> if you returned from {@link #complete()} because some of
+     * the {@code Outbox.offer()} method returned false, you need to make sure
+     * to re-offer the pending item in this method before offering any items to
+     * {@link Outbox#offerToSnapshot}.
      * <p>
      * The default implementation takes no action and returns {@code true}.
      */
@@ -243,16 +257,26 @@ public interface Processor {
     }
 
     /**
+     * Called as the last method in the processor lifecycle. It is called
+     * whether the job was successful or not, and strictly before {@link
+     * ProcessorSupplier#close} is called on this member. The method might get
+     * called even if {@link #init} method was not yet called.
+     * <p>
+     * The method will be called right after {@link #complete()} returns {@code
+     * true}, that is before the job is finished. The job might still be
+     * running other processors.
+     * <p>
+     * If this method throws an exception, it is logged but it won't be
+     * reported as a job failure or cause the job to fail.
+     */
+    default void close() throws Exception {
+    }
+
+    /**
      * Context passed to the processor in the
      * {@link #init(Outbox, Context) init()} call.
      */
-    interface Context {
-
-        /**
-         * Returns the current Jet instance
-         */
-        @Nonnull
-        JetInstance jetInstance();
+    interface Context extends ProcessorSupplier.Context {
 
         /**
          *  Return a logger for the processor
@@ -262,15 +286,19 @@ public interface Processor {
 
         /**
          * Returns the index of the processor among all the processors created for
-         * this vertex on all nodes: its unique cluster-wide index.
+         * this vertex on a single node: it's a unique node-wide index.
+         * <p>
+         * The value is in the range {@code [0...localParallelism-1]}.
+         */
+        int localProcessorIndex();
+
+        /**
+         * Returns the index of the processor among all the processors created for
+         * this vertex on all nodes: it's a unique cluster-wide index.
+         * <p>
+         * The value is in the range {@code [0...totalParallelism-1]}.
          */
         int globalProcessorIndex();
-
-        /***
-         * Returns the name of the vertex associated with this processor.
-         */
-        @Nonnull
-        String vertexName();
 
         /**
          * Returns true, if snapshots will be saved for this job.

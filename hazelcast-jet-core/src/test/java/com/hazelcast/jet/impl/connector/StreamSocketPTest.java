@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -81,7 +81,7 @@ public class StreamSocketPTest extends JetTestSupport {
     public void before() {
         outbox = new TestOutbox(10);
         context = new TestProcessorContext();
-        bucket = outbox.queueWithOrdinal(0);
+        bucket = outbox.queue(0);
     }
 
     @Test
@@ -90,7 +90,7 @@ public class StreamSocketPTest extends JetTestSupport {
         // split at any place: between \r\n, between the bytes of utf-16 sequence etc
         byte[] inputBytes = input.getBytes(UTF_16);
         for (int splitIndex = 0; splitIndex < inputBytes.length; splitIndex++) {
-            System.out.println("--------- runTest(" + splitIndex + ") ---------");
+            logger.info("--------- runTest(" + splitIndex + ") ---------");
             runTest(inputBytes, splitIndex);
         }
     }

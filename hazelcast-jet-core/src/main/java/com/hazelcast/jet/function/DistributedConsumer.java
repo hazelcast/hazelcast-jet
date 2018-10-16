@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,33 @@
 
 package com.hazelcast.jet.function;
 
+import com.hazelcast.jet.impl.util.ExceptionUtil;
+
 import java.io.Serializable;
 import java.util.function.Consumer;
 
 import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
- * {@code Serializable} variant of {@link Consumer
- * java.util.function.Consumer}.
+ * {@code Serializable} variant of {@link Consumer java.util.function.Consumer}
+ * which declares checked exception.
  */
 @FunctionalInterface
 public interface DistributedConsumer<T> extends Consumer<T>, Serializable {
+
+    /**
+     * Exception-declaring version of {@link Consumer#accept}
+     */
+    void acceptEx(T t) throws Exception;
+
+    @Override
+    default void accept(T t) {
+        try {
+            acceptEx(t);
+        } catch (Exception e) {
+            throw ExceptionUtil.sneakyThrow(e);
+        }
+    }
 
     /**
      * {@code Serializable} variant of {@link Consumer#andThen(Consumer)
@@ -38,5 +54,12 @@ public interface DistributedConsumer<T> extends Consumer<T>, Serializable {
             accept(t);
             after.accept(t);
         };
+    }
+
+    /**
+     * Returns a consumer that does nothing.
+     */
+    static <T> DistributedConsumer<T> noop() {
+        return x -> { };
     }
 }
