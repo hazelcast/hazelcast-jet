@@ -143,7 +143,9 @@ public final class HazelcastWriters {
 
         private final Semaphore concurrentAsyncOpsSemaphore = new Semaphore(MAX_PARALLEL_ASYNC_OPS);
         private final AtomicReference<Throwable> firstError = new AtomicReference<>();
-        private final IMap map;
+        private final IMap<K, V> map;
+
+        // one map per partition to store the temporary values
         private final Map<Data, Object>[] tmpMaps;
 
         UpdateMapContext(
@@ -195,7 +197,7 @@ public final class HazelcastWriters {
                 partitionId = clientPartitionService.getPartitionId(keyData);
             }
             Data itemData = serializationService.toData(item);
-            tmpMaps[partitionId].merge(keyData, itemData, (o, n) -> MultiItem.merge(o, (Data) n));
+            tmpMaps[partitionId].merge(keyData, itemData, (o, n) -> ApplyFnEntryProcessor.append(o, (Data) n));
         }
 
         void flush() {
@@ -210,26 +212,21 @@ public final class HazelcastWriters {
                     if (tmpMaps[partitionId].isEmpty()) {
                         continue;
                     }
-                    ApplyFnEntryProcessor entryProcessor = new ApplyFnEntryProcessor(tmpMaps[partitionId], updateFn);
+                    ApplyFnEntryProcessor<K, V, T> entryProcessor = new ApplyFnEntryProcessor<>(
+                            tmpMaps[partitionId], updateFn
+                    );
                     try {
                         // block until we get a permit
                         concurrentAsyncOpsSemaphore.acquire();
                     } catch (InterruptedException e) {
                         return;
                     }
-                    submitToKeys(map, tmpMaps[partitionId].keySet(), entryProcessor)
-                            .andThen(new ExecutionCallback() {
-                                @Override
-                                public void onResponse(Object response) {
-                                    concurrentAsyncOpsSemaphore.release();
-                                }
 
-                                @Override
-                                public void onFailure(Throwable t) {
-                                    firstError.compareAndSet(null, t);
-                                    concurrentAsyncOpsSemaphore.release();
-                                }
-                            });
+                    submitToKeys(map, tmpMaps[partitionId].keySet(), entryProcessor)
+                            .andThen(callbackOf(r -> concurrentAsyncOpsSemaphore.release(), t -> {
+                                firstError.compareAndSet(null, t);
+                                concurrentAsyncOpsSemaphore.release();
+                            }));
                     tmpMaps[partitionId] = new HashMap<>();
                 }
             } catch (HazelcastInstanceNotActiveException e) {
@@ -246,9 +243,12 @@ public final class HazelcastWriters {
         }
     }
 
-    private static <K> ICompletableFuture<Map<K, Object>> submitToKeys(
-            IMap<K, ?> map, Set<K> keys, EntryProcessor entryProcessor) {
+    @SuppressWarnings("unchecked")
+    private static <K, V> ICompletableFuture<Map<K, V>> submitToKeys(
+            IMap<K, V> map, Set<Data> keys, EntryProcessor<K, V> entryProcessor) {
         // TODO remove this method once submitToKeys is public API
+        // we force Set<Data> instead of Set<K> to avoid re-serialization of keys
+        // this relies on an implementation detail of submitToKeys method.
         if (map instanceof MapProxyImpl) {
             return ((MapProxyImpl) map).submitToKeys(keys, entryProcessor);
         } else if (map instanceof ClientMapProxy) {
@@ -258,51 +258,6 @@ public final class HazelcastWriters {
         }
     }
 
-    /**
-     * This is just a plain java.util.ArrayList. We extend it in order
-     * to distinguish it from other stream items, which could be
-     * ArrayList themselves.
-     */
-    public static class MultiItem extends ArrayList<Data> implements IdentifiedDataSerializable {
-        public static MultiItem merge(Object o, Data n) {
-            MultiItem multiItem;
-            if (o instanceof MultiItem) {
-                multiItem = (MultiItem) o;
-            } else {
-                multiItem = new MultiItem();
-                multiItem.add((Data) o);
-            }
-            multiItem.add(n);
-            return multiItem;
-        }
-
-        @Override
-        public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeInt(size());
-            for (Data element : this) {
-                out.writeData(element);
-            }
-        }
-
-        @Override
-        public void readData(ObjectDataInput in) throws IOException {
-            int size = in.readInt();
-            ensureCapacity(size);
-            for (int i = 0; i < size; i++) {
-                add(in.readData());
-            }
-        }
-
-        @Override
-        public int getFactoryId() {
-            return SerializationConstants.FACTORY_ID;
-        }
-
-        @Override
-        public int getId() {
-            return SerializationConstants.HAZELCAST_WRITERS_MULTI_ITEM;
-        }
-    }
 
     @Nonnull
     @SuppressWarnings("unchecked")
@@ -398,6 +353,7 @@ public final class HazelcastWriters {
      */
     private static class CacheFlush {
 
+        @SuppressWarnings("unchecked")
         static DistributedFunction<HazelcastInstance, DistributedConsumer<ArrayMap>> flushToCache(
                 String name, boolean isLocal
         ) {
@@ -648,12 +604,12 @@ public final class HazelcastWriters {
 
     @SuppressFBWarnings(value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
             justification = "the class is never java-serialized")
-    public static class ApplyFnEntryProcessor<V, T>
-            implements EntryProcessor<Object, V>, EntryBackupProcessor<Object, V>, IdentifiedDataSerializable,
+    public static class ApplyFnEntryProcessor<K, V, T>
+            implements EntryProcessor<K, V>, EntryBackupProcessor<K, V>, IdentifiedDataSerializable,
             SerializationServiceAware {
         private Map<Data, Object> keysToUpdate;
         private DistributedBiFunction<? super V, ? super T, ? extends V> updateFn;
-        private transient SerializationService serializationService;
+        private SerializationService serializationService;
 
         public ApplyFnEntryProcessor() {
         }
@@ -667,7 +623,7 @@ public final class HazelcastWriters {
         }
 
         @Override
-        public Object process(Entry<Object, V> entry) {
+        public Object process(Entry<K, V> entry) {
             // it should not matter that we don't take the PartitionStrategy here into account
             Data keyData = serializationService.toData(entry.getKey());
             Object item = keysToUpdate.get(keyData);
@@ -688,7 +644,7 @@ public final class HazelcastWriters {
             return null;
         }
 
-        private void handle(Entry<Object, V> entry, Data itemData) {
+        private void handle(Entry<K, V> entry, Data itemData) {
             T item = serializationService.toObject(itemData);
             V oldValue = entry.getValue();
             V newValue = updateFn.apply(oldValue, item);
@@ -696,12 +652,12 @@ public final class HazelcastWriters {
         }
 
         @Override
-        public EntryBackupProcessor<Object, V> getBackupProcessor() {
+        public EntryBackupProcessor<K, V> getBackupProcessor() {
             return this;
         }
 
         @Override
-        public void processBackup(Entry<Object, V> entry) {
+        public void processBackup(Entry<K, V> entry) {
             process(entry);
         }
 
@@ -715,12 +671,13 @@ public final class HazelcastWriters {
             out.writeInt(keysToUpdate.size());
             for (Entry<Data, Object> en : keysToUpdate.entrySet()) {
                 out.writeData(en.getKey());
-                if (en.getValue() instanceof Data) {
+                Object value = en.getValue();
+                if (value instanceof Data) {
                     out.writeBoolean(true);
-                    out.writeData((Data) en.getValue());
-                } else {
+                    out.writeData((Data) value);
+                } else if (value instanceof MultiItem) {
                     out.writeBoolean(false);
-                    out.writeObject(en.getValue());
+                    ((MultiItem) value).write(out);
                 }
             }
             out.writeObject(updateFn);
@@ -732,7 +689,7 @@ public final class HazelcastWriters {
             keysToUpdate = createHashMap(keysToUpdateSize);
             for (int i = 0; i < keysToUpdateSize; i++) {
                 Data key = in.readData();
-                Object value = in.readBoolean() ? in.readData() : in.readObject();
+                Object value = in.readBoolean() ? in.readData() : MultiItem.read(in);
                 keysToUpdate.put(key, value);
             }
             updateFn = in.readObject();
@@ -746,6 +703,50 @@ public final class HazelcastWriters {
         @Override
         public int getId() {
             return SerializationConstants.APPLY_FN_ENTRY_PROCESSOR;
+        }
+
+        // used to group entries when more than one entry exists for the same key
+        public static Object append(Object value, Data item) {
+            MultiItem multiItem;
+            if (value instanceof MultiItem) {
+                multiItem = (MultiItem) value;
+            } else {
+                multiItem = new MultiItem();
+                multiItem.add((Data) value);
+            }
+            multiItem.add(item);
+            return multiItem;
+        }
+
+        /**
+         * This is just a plain java.util.ArrayList. We extend it in order
+         * to distinguish it from other stream items, which could be
+         * ArrayList themselves.
+         */
+        private static class MultiItem extends ArrayList<Data>  {
+
+            MultiItem() {
+            }
+
+            MultiItem(int initialCapacity) {
+                super(initialCapacity);
+            }
+
+            public void write(ObjectDataOutput out) throws IOException {
+                out.writeInt(size());
+                for (Data element : this) {
+                    out.writeData(element);
+                }
+            }
+
+            public static MultiItem read(ObjectDataInput in) throws IOException {
+                int size = in.readInt();
+                MultiItem item = new MultiItem(size);
+                for (int i = 0; i < size; i++) {
+                    item.add(in.readData());
+                }
+                return item;
+            }
         }
     }
 }

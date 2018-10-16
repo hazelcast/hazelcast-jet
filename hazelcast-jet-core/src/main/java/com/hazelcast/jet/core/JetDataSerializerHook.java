@@ -18,14 +18,13 @@ package com.hazelcast.jet.core;
 
 import com.hazelcast.internal.serialization.DataSerializerHook;
 import com.hazelcast.jet.impl.SerializationConstants;
-import com.hazelcast.jet.impl.connector.HazelcastWriters;
+import com.hazelcast.jet.impl.connector.HazelcastWriters.ApplyFnEntryProcessor;
 import com.hazelcast.nio.serialization.DataSerializableFactory;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import static com.hazelcast.jet.impl.SerializationConstants.APPLY_FN_ENTRY_PROCESSOR;
 import static com.hazelcast.jet.impl.SerializationConstants.DAG;
 import static com.hazelcast.jet.impl.SerializationConstants.EDGE;
-import static com.hazelcast.jet.impl.SerializationConstants.HAZELCAST_WRITERS_MULTI_ITEM;
 import static com.hazelcast.jet.impl.SerializationConstants.VERTEX;
 
 /**
@@ -55,9 +54,7 @@ public final class JetDataSerializerHook implements DataSerializerHook {
                 case VERTEX:
                     return new Vertex();
                 case APPLY_FN_ENTRY_PROCESSOR:
-                    return new HazelcastWriters.ApplyFnEntryProcessor();
-                case HAZELCAST_WRITERS_MULTI_ITEM:
-                    return new HazelcastWriters.MultiItem();
+                    return new ApplyFnEntryProcessor();
                 default:
                     throw new IllegalArgumentException("Unknown type id " + typeId);
             }
