@@ -20,13 +20,13 @@ import com.hazelcast.cache.ICache;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
 import com.hazelcast.client.proxy.ClientMapProxy;
+import com.hazelcast.client.spi.ClientPartitionService;
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
-import com.hazelcast.core.PartitionService;
 import com.hazelcast.instance.HazelcastInstanceImpl;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.RestartableException;
@@ -137,8 +137,8 @@ public final class HazelcastWriters {
         private final DistributedFunction<? super T, ? extends K> toKeyFn;
         private final DistributedBiFunction<? super V, ? super T, ? extends V> updateFn;
         private final boolean isLocal;
-        private final PartitionService partitionService;
-        private final IPartitionService internalPartitionService;
+        private final IPartitionService memberPartitionService;
+        private final ClientPartitionService clientPartitionService;
         private final SerializationService serializationService;
 
         private final Semaphore concurrentAsyncOpsSemaphore = new Semaphore(MAX_PARALLEL_ASYNC_OPS);
@@ -157,16 +157,20 @@ public final class HazelcastWriters {
             this.isLocal = isLocal;
 
             map = instance.getMap(mapName);
-            partitionService = instance.getPartitionService();
+            int partitionCount;
             if (isLocal) {
                 HazelcastInstanceImpl castedInstance = (HazelcastInstanceImpl) instance;
-                internalPartitionService = castedInstance.node.nodeEngine.getPartitionService();
+                clientPartitionService = null;
+                memberPartitionService = castedInstance.node.nodeEngine.getPartitionService();
                 serializationService = castedInstance.getSerializationService();
+                partitionCount = memberPartitionService.getPartitionCount();
             } else {
-                internalPartitionService = null;
-                serializationService = ((HazelcastClientProxy) instance).getSerializationService();
+                HazelcastClientProxy clientProxy = (HazelcastClientProxy) instance;
+                clientPartitionService = clientProxy.client.getClientPartitionService();
+                memberPartitionService = null;
+                serializationService = clientProxy.getSerializationService();
+                partitionCount = clientPartitionService.getPartitionCount();
             }
-            int partitionCount = partitionService.getPartitions().size();
             tmpMaps = new Map[partitionCount];
             for (int i = 0; i < partitionCount; i++) {
                 tmpMaps[i] = new HashMap<>();
@@ -181,14 +185,14 @@ public final class HazelcastWriters {
                 // We pre-serialize the key and value to avoid double serialization when partitionId
                 // is calculated and when the value for backup operation is re-serialized
                 keyData = serializationService.toData(key, ((MapProxyImpl) map).getPartitionStrategy());
-                partitionId = internalPartitionService.getPartitionId(keyData);
+                partitionId = memberPartitionService.getPartitionId(keyData);
             } else {
                 // We ignore partition strategy for remote connection, the client doesn't know it.
                 // TODO we might be able to fix this after https://github.com/hazelcast/hazelcast/issues/13950 is fixed
                 // The functionality should work, but will be ineffective: the submitOnKey calls will have wrongly
                 // partitioned data.
                 keyData = serializationService.toData(key);
-                partitionId = partitionService.getPartition(key).getPartitionId();
+                partitionId = clientPartitionService.getPartitionId(keyData);
             }
             Data itemData = serializationService.toData(item);
             tmpMaps[partitionId].merge(keyData, itemData, (o, n) -> MultiItem.merge(o, (Data) n));
