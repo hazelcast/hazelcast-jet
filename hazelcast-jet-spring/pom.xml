@@ -13,7 +13,7 @@
     <parent>
         <artifactId>hazelcast-jet-root</artifactId>
         <groupId>com.hazelcast.jet</groupId>
-        <version>0.7</version>
+        <version>0.7.1-SNAPSHOT</version>
     </parent>
 
     <properties>
