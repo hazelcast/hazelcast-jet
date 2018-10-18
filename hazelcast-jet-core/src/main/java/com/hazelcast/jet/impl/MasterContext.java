@@ -813,8 +813,10 @@ public class MasterContext {
     }
 
     void updateQuorumSize(int newQuorumSize) {
+        // This method can be called in parallel if multiple members are added. We don't synchronize here,
+        // but the worst that can happen is that we write the JobRecord out unnecessarily.
         if (jobRecord.getQuorumSize() < newQuorumSize) {
-            jobRecord.setQuorumSize(newQuorumSize);
+            jobRecord.setLargerQuorumSize(newQuorumSize);
             writeJobRecordAsync();
             logger.info("Current quorum size: " + jobRecord.getQuorumSize() + " of job "
                     + idToString(jobRecord.getJobId()) + " is updated to: " + newQuorumSize);

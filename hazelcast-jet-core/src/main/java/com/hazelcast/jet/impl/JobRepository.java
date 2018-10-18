@@ -255,7 +255,7 @@ public class JobRepository {
             if (value == null) {
                 return null;
             }
-            value.setQuorumSize(Math.max(newQuorumSize, value.getQuorumSize()));
+            value.setLargerQuorumSize(newQuorumSize);
             return value;
         }));
     }

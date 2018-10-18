@@ -26,6 +26,7 @@ import com.hazelcast.util.Clock;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.hazelcast.jet.Util.idToString;
@@ -60,7 +61,7 @@ public class JobRecord implements IdentifiedDataSerializable {
         this.dag = dag;
         this.dagJson = dagJson;
         this.config = config;
-        dynamicData.quorumSize = quorumSize;
+        dynamicData.quorumSize.set(quorumSize);
         dynamicData.suspended = suspended;
     }
 
@@ -101,15 +102,14 @@ public class JobRecord implements IdentifiedDataSerializable {
     }
 
     public int getQuorumSize() {
-        return dynamicData.quorumSize;
+        return dynamicData.quorumSize.get();
     }
 
-    void setQuorumSize(int newQuorumSize) {
-        if (newQuorumSize <= dynamicData.quorumSize) {
-            throw new IllegalArgumentException("New quorum size: " + newQuorumSize
-                    + " must be bigger than current quorum size of " + this);
-        }
-        dynamicData.quorumSize = newQuorumSize;
+    /**
+     * Updates the quorum size if it's larger than the current value. Ignores, if it's not.
+     */
+    void setLargerQuorumSize(int newQuorumSize) {
+        dynamicData.quorumSize.getAndAccumulate(newQuorumSize, Math::max);
     }
 
     public boolean isSuspended() {
@@ -276,7 +276,7 @@ public class JobRecord implements IdentifiedDataSerializable {
          */
         private final AtomicLong timestamp = new AtomicLong();
 
-        private volatile int quorumSize;
+        private final AtomicInteger quorumSize = new AtomicInteger();
         private volatile boolean suspended;
 
         /**
@@ -363,7 +363,7 @@ public class JobRecord implements IdentifiedDataSerializable {
             if (lastFailureText != null) {
                 out.writeUTF(lastFailureText);
             }
-            out.writeInt(quorumSize);
+            out.writeInt(quorumSize.get());
             out.writeBoolean(suspended);
             out.writeLong(timestamp.get());
         }
@@ -380,7 +380,7 @@ public class JobRecord implements IdentifiedDataSerializable {
             ongoingSnapshotId = in.readLong();
             ongoingSnapshotStartTime = in.readLong();
             lastFailureText = in.readBoolean() ? in.readUTF() : null;
-            quorumSize = in.readInt();
+            quorumSize.set(in.readInt());
             suspended = in.readBoolean();
             timestamp.set(in.readLong());
         }
