@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.EntryView;
-import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetException;
@@ -50,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
@@ -119,19 +119,6 @@ public class JobRepository {
      * retry to delete it.
      */
     private final Set<Long> deletedJobs = newSetFromMap(new ConcurrentHashMap<>());
-    private final ExecutionCallback<String> writeJobRecordCallback = new ExecutionCallback<String>() {
-        @Override
-        public void onResponse(String response) {
-            if (response != null) {
-                logger.fine(response);
-            }
-        }
-
-        @Override
-        public void onFailure(Throwable t) {
-            logger.warning("Failed to write JobRecord", t);
-        }
-    };
 
     public JobRepository(JetInstance jetInstance) {
         this.instance = jetInstance.getHazelcastInstance();
@@ -407,20 +394,20 @@ public class JobRepository {
      * UpdateJobRecordDynamicDataEntryProcessor#process}. It will also be ignored if the
      * key doesn't exist in the IMap.
      */
-    void writeJobRecordAsync(long jobId, DynamicData dynamicData) {
+    CompletableFuture<Void> writeJobRecord(long jobId, DynamicData dynamicData) {
         dynamicData.updateTimestamp();
+        CompletableFuture<Void> future = new CompletableFuture<>();
         jobRecords.submitToKey(jobId, new UpdateJobRecordDynamicDataEntryProcessor(jobId, dynamicData),
-                writeJobRecordCallback);
-    }
-
-    /**
-     * See {@link #writeJobRecordAsync}.
-     */
-    void writeJobRecordSync(long jobId, DynamicData dynamicData) {
-        dynamicData.updateTimestamp();
-        String msg = (String) jobRecords.executeOnKey(jobId,
-                new UpdateJobRecordDynamicDataEntryProcessor(jobId, dynamicData));
-        writeJobRecordCallback.onResponse(msg);
+                Util.callbackOf(response -> {
+                    if (response != null) {
+                        logger.fine(response.toString());
+                    }
+                    future.complete(null);
+                }, t -> {
+                    logger.warning("Failed to write JobRecord", t);
+                    future.completeExceptionally(t);
+                }));
+        return future;
     }
 
     /**

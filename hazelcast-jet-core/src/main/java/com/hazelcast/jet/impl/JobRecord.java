@@ -270,9 +270,8 @@ public class JobRecord implements IdentifiedDataSerializable {
         public static final int NO_SNAPSHOT = -1;
 
         /**
-         * Timestamp to order async updates to the JobRecord. See {@link
-         * JobRepository#writeJobRecordSync} and {@link
-         * JobRepository#writeJobRecordAsync}.
+         * Timestamp to order async updates to the JobRecord. {@link
+         * JobRepository#writeJobRecord}.
          */
         private final AtomicLong timestamp = new AtomicLong();
 

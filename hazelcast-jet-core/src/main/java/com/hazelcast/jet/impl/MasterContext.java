@@ -91,6 +91,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.callbackOf;
 import static com.hazelcast.jet.impl.util.Util.jobNameAndExecutionId;
+import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.partitioningBy;
@@ -394,7 +395,7 @@ public class MasterContext {
         executionStartTime = System.nanoTime();
         if (jobRecord.isSuspended()) {
             jobRecord.setSuspended(false);
-            writeJobRecordAsync();
+            writeJobRecord();
         }
 
         return true;
@@ -539,7 +540,7 @@ public class MasterContext {
         }
 
         jobRecord.startNewSnapshot();
-        writeJobRecordAsync();
+        writeJobRecord();
         long newSnapshotId = jobRecord.ongoingSnapshotId();
 
         logger.info(String.format("Starting%s snapshot %s for %s",
@@ -574,7 +575,7 @@ public class MasterContext {
         jobRecord.ongoingSnapshotDone(
                 mergedResult.getNumBytes(), mergedResult.getNumKeys(), mergedResult.getNumChunks(),
                 mergedResult.getError());
-        writeJobRecordSync();
+        uncheckRun(() -> writeJobRecord().get());
         logger.info(String.format("Snapshot %d for %s completed with status %s in %dms, " +
                         "%,d bytes, %,d keys in %,d chunks, stored in data map %d",
                 snapshotId, jobIdString(), isSuccess ? "SUCCESS" : "FAILURE",
@@ -751,7 +752,7 @@ public class MasterContext {
                             && jobRecord.getConfig().getProcessingGuarantee() != NONE) {
                 jobStatus = SUSPENDED;
                 jobRecord.setSuspended(true);
-                nonSynchronizedAction = this::writeJobRecordAsync;
+                nonSynchronizedAction = this::writeJobRecord;
             } else {
                 jobStatus = (isSuccess ? COMPLETED : FAILED);
 
@@ -819,18 +820,14 @@ public class MasterContext {
         // but the worst that can happen is that we write the JobRecord out unnecessarily.
         if (jobRecord.getQuorumSize() < newQuorumSize) {
             jobRecord.setLargerQuorumSize(newQuorumSize);
-            writeJobRecordAsync();
+            writeJobRecord();
             logger.info("Current quorum size: " + jobRecord.getQuorumSize() + " of job "
                     + idToString(jobRecord.getJobId()) + " is updated to: " + newQuorumSize);
         }
     }
 
-    private void writeJobRecordSync() {
-        coordinationService.jobRepository().writeJobRecordSync(jobRecord.getJobId(), jobRecord.getDynamicData());
-    }
-
-    private void writeJobRecordAsync() {
-        coordinationService.jobRepository().writeJobRecordAsync(jobRecord.getJobId(), jobRecord.getDynamicData());
+    private CompletableFuture<Void> writeJobRecord() {
+        return coordinationService.jobRepository().writeJobRecord(jobRecord.getJobId(), jobRecord.getDynamicData());
     }
 
     /**
