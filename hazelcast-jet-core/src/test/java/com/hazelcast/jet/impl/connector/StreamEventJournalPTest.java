@@ -190,7 +190,7 @@ public class StreamEventJournalPTest extends JetTestSupport {
     }
 
     @Test
-    public void when_futureSequence_thenResetOffset() {
+    public void when_futureSequence_thenResetOffset() throws Exception {
         TestOutbox outbox = new TestOutbox(new int[]{16}, 16);
         StreamEventJournalP p = (StreamEventJournalP) supplier.get();
 
