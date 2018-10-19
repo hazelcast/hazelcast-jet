@@ -403,10 +403,10 @@ public class JobRepository {
     /**
      * Write the JobRecord to the IMap.
      * <p>
-     * The write will be ignored if the timestamp of the given JobRecord is
-     * older than the timestamp of the stored record. See {@link
-     * UpdateJobExecutionRecordEntryProcessor#process}. It will also be ignored if the
-     * key doesn't exist in the IMap.
+     * The write will be ignored if the timestamp of the given {@link
+     * JobExecutionRecord} is older than the timestamp of the stored record.
+     * See {@link UpdateJobExecutionRecordEntryProcessor#process}. It will also
+     * be ignored if the key doesn't exist in the IMap.
      */
     void writeJobExecutionRecord(long jobId, JobExecutionRecord record) {
         record.updateTimestamp();
@@ -469,9 +469,9 @@ public class JobRepository {
             }
             if (entry.getValue().getTimestamp() >= jobExecutionRecord.getTimestamp()) {
                 // ignore older update.
-                // Reason for this is that normally, all updates to JobRecord are done through MasterContext in an
-                // async way.
-                return "Update to JobRecord for job " + idToString(jobId) + " ignored, newer value found. "
+                // It can happen because we allow to execute updates in parallel and they can overtake each other.
+                // We don't want to overwrite newer update.
+                return "Update to JobRecord for job " + idToString(jobId) + " ignored, newer timestamp found. "
                         + "Stored timestamp=" + entry.getValue().getTimestamp() + ", timestamp of the update="
                         + jobExecutionRecord.getTimestamp();
             }

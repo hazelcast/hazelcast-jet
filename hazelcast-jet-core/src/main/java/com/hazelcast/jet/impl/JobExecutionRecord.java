@@ -21,6 +21,7 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.util.Clock;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -123,6 +124,8 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
         this.suspended = suspended;
     }
 
+    @SuppressFBWarnings(value = "VO_VOLATILE_INCREMENT",
+            justification = "all updates to ongoingSnapshotId are synchronized")
     void startNewSnapshot() {
         this.ongoingSnapshotId++;
         this.ongoingSnapshotStartTime = Clock.currentTimeMillis();

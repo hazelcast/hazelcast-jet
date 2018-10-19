@@ -546,14 +546,14 @@ public class MasterContext {
             }
             snapshotInProgress = true;
             isTerminal = nextSnapshotIsTerminal;
+            jobExecutionRecord.startNewSnapshot();
         }
 
-        jobExecutionRecord.startNewSnapshot();
         writeJobExecutionRecord();
         long newSnapshotId = jobExecutionRecord.ongoingSnapshotId();
 
-        logger.info(String.format("Starting%s snapshot %s for %s",
-                isTerminal ? " terminal" : "", newSnapshotId, jobIdString()));
+        logger.info(String.format("Starting%s snapshot %s for %s", isTerminal ? " terminal" : "", newSnapshotId,
+                jobIdString()));
         Function<ExecutionPlan, Operation> factory =
                 plan -> new SnapshotOperation(jobId, executionId, newSnapshotId,
                         jobExecutionRecord.ongoingDataMapIndex(), isTerminal);
