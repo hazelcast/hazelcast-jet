@@ -239,8 +239,9 @@ public class JobCoordinationService {
 
         int quorumSize = config.isSplitBrainProtectionEnabled() ? getQuorumSize() : 0;
         String dagJson = dagToJson(jobId, config, dag);
-        JobRecord jobRecord = new JobRecord(jobId, Clock.currentTimeMillis(), dag, dagJson, config, quorumSize, false);
-        MasterContext masterContext = new MasterContext(nodeEngine, this, jobRecord);
+        JobRecord jobRecord = new JobRecord(jobId, Clock.currentTimeMillis(), dag, dagJson, config);
+        JobExecutionRecord jobExecutionRecord = new JobExecutionRecord(jobId, quorumSize, false);
+        MasterContext masterContext = new MasterContext(nodeEngine, this, jobRecord, jobExecutionRecord);
 
         synchronized (lock) {
             if (isShutdown) {
@@ -283,7 +284,9 @@ public class JobCoordinationService {
 
         JobRecord jobRecord = jobRepository.getJobRecord(jobId);
         if (jobRecord != null) {
-            return startJobIfNotStartedOrCompleted(jobRecord, "join request from client");
+            JobExecutionRecord jobExecutionRecord = ensureExecutionRecord(jobId,
+                    jobRepository.getJobExecutionRecord(jobId));
+            return startJobIfNotStartedOrCompleted(jobRecord, jobExecutionRecord, "join request from client");
         }
 
         JobResult jobResult = jobRepository.getJobResult(jobId);
@@ -295,7 +298,8 @@ public class JobCoordinationService {
     }
 
     // Tries to start a job if it is not already running or completed
-    private CompletableFuture<Void> startJobIfNotStartedOrCompleted(JobRecord jobRecord, String reason) {
+    private CompletableFuture<Void> startJobIfNotStartedOrCompleted(@Nonnull JobRecord jobRecord,
+                @Nonnull JobExecutionRecord jobExecutionRecord, String reason) {
         // the order of operations is important.
         long jobId = jobRecord.getJobId();
         JobResult jobResult = jobRepository.getJobResult(jobId);
@@ -311,7 +315,7 @@ public class JobCoordinationService {
                 throw new ShutdownInProgressException();
             }
 
-            masterContext = new MasterContext(nodeEngine, this, jobRecord);
+            masterContext = new MasterContext(nodeEngine, this, jobRecord, jobExecutionRecord);
             oldMasterContext = masterContexts.putIfAbsent(jobId, masterContext);
         }
 
@@ -451,9 +455,9 @@ public class JobCoordinationService {
         }
 
         // no master context found, job might be just submitted
-        JobRecord jobRecord = jobRepository.getJobRecord(jobId);
-        if (jobRecord != null) {
-            return jobRecord.isSuspended() ? SUSPENDED : NOT_RUNNING;
+        JobExecutionRecord jobExecutionRecord = jobRepository.getJobExecutionRecord(jobId);
+        if (jobExecutionRecord != null) {
+            return jobExecutionRecord.isSuspended() ? SUSPENDED : NOT_RUNNING;
         } else {
             // no job record found, but check job results again
             // since job might have been completed meanwhile.
@@ -633,10 +637,14 @@ public class JobCoordinationService {
     private JobSummary getJobSummary(JobRecord record) {
         MasterContext ctx = masterContexts.get(record.getJobId());
         long execId = ctx == null ? 0 : ctx.executionId();
-        JobStatus status = ctx == null ?
-                record.isSuspended() ? JobStatus.SUSPENDED : JobStatus.NOT_RUNNING
-                :
-                ctx.jobStatus();
+        JobStatus status;
+        if (ctx == null) {
+            JobExecutionRecord executionRecord = jobRepository.getJobExecutionRecord(record.getJobId());
+            status = executionRecord != null && executionRecord.isSuspended()
+                    ? JobStatus.SUSPENDED : JobStatus.NOT_RUNNING;
+        } else {
+            status = ctx.jobStatus();
+        }
         return new JobSummary(record.getJobId(), execId, record.getJobNameOrId(), status, record.getCreationTime());
     }
 
@@ -666,10 +674,13 @@ public class JobCoordinationService {
 
         try {
             Collection<JobRecord> jobs = jobRepository.getJobRecords();
-            jobs.stream()
-                    .filter(jobRecord -> !jobRecord.isSuspended())
-                    .forEach(jobRecord ->
-                            startJobIfNotStartedOrCompleted(jobRecord, "discovered by scanning of JobRecords"));
+            for (JobRecord jobRecord : jobs) {
+                JobExecutionRecord jobExecutionRecord = ensureExecutionRecord(jobRecord.getJobId(),
+                        jobRepository.getJobExecutionRecord(jobRecord.getJobId()));
+                if (!jobExecutionRecord.isSuspended()) {
+                    startJobIfNotStartedOrCompleted(jobRecord, jobExecutionRecord, "discovered by scanning of JobRecords");
+                }
+            }
 
             performCleanup();
         } catch (Exception e) {
@@ -679,6 +690,10 @@ public class JobCoordinationService {
 
             logger.severe("Scanning jobs failed", e);
         }
+    }
+
+    private JobExecutionRecord ensureExecutionRecord(long jobId, JobExecutionRecord record) {
+        return record != null ? record : new JobExecutionRecord(jobId, getQuorumSize(), false);
     }
 
     private void performCleanup() {

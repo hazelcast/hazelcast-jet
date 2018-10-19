@@ -54,7 +54,6 @@ public class JobRepositoryTest extends JetTestSupport {
 
     private static final long RESOURCES_EXPIRATION_TIME_MILLIS = SECONDS.toMillis(1);
     private static final long JOB_SCAN_PERIOD_IN_MILLIS = HOURS.toMillis(1);
-    private static final int QUORUM_SIZE = 2;
 
     private JobConfig jobConfig = new JobConfig();
     private JetInstance instance;
@@ -178,7 +177,7 @@ public class JobRepositoryTest extends JetTestSupport {
     }
 
     private JobRecord createJobRecord(long jobId, Data dag) {
-        return new JobRecord(jobId, System.currentTimeMillis(), dag, "", jobConfig, QUORUM_SIZE, false);
+        return new JobRecord(jobId, System.currentTimeMillis(), dag, "", jobConfig);
     }
 
     private void sleepUntilJobExpires() {

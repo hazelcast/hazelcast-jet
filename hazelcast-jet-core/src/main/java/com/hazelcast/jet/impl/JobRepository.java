@@ -24,7 +24,6 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.core.JobNotFoundException;
-import com.hazelcast.jet.impl.JobRecord.DynamicData;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
@@ -49,7 +48,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
@@ -76,9 +74,14 @@ public class JobRepository {
     public static final String RANDOM_IDS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + "ids";
 
     /**
-     * Name of internal IMap which stores job records
+     * Name of internal IMap which stores {@link JobRecord}s.
      */
     public static final String JOB_RECORDS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + "records";
+
+    /**
+     * Name of internal IMap which stores {@link JobExecutionRecord}s.
+     */
+    public static final String JOB_EXECUTION_RECORDS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + "executionRecords";
 
     /**
      * Name of internal IMap which stores job results
@@ -92,7 +95,7 @@ public class JobRepository {
      *     <li>{@code _jet.snapshot.<jobId>.0}
      *     <li>{@code _jet.snapshot.<jobId>.1}
      * </ul>
-     * Which one of these is determined in {@link DynamicData}.
+     * Which one of these is determined in {@link JobExecutionRecord}.
      */
     public static final String SNAPSHOT_DATA_MAP_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "snapshot.";
 
@@ -104,6 +107,7 @@ public class JobRepository {
 
     private final IMap<Long, Long> randomIds;
     private final IMap<Long, JobRecord> jobRecords;
+    private final IMap<Long, JobExecutionRecord> jobExecutionRecords;
     private final IMap<Long, JobResult> jobResults;
     private long resourcesExpirationMillis = DEFAULT_RESOURCES_EXPIRATION_MILLIS;
 
@@ -126,6 +130,7 @@ public class JobRepository {
 
         this.randomIds = instance.getMap(RANDOM_IDS_MAP_NAME);
         this.jobRecords = instance.getMap(JOB_RECORDS_MAP_NAME);
+        this.jobExecutionRecords = instance.getMap(JOB_EXECUTION_RECORDS_MAP_NAME);
         this.jobResults = instance.getMap(JOB_RESULTS_MAP_NAME);
     }
 
@@ -233,12 +238,16 @@ public class JobRepository {
         }
     }
 
+     void putJobExecutionRecord(JobExecutionRecord jobExecutionRecord) {
+        jobExecutionRecords.put(jobExecutionRecord.getJobId(), jobExecutionRecord);
+    }
+
     /**
      * Updates the job quorum size of all jobs so that it is at least {@code
      * newQuorumSize}.
      */
     void updateJobQuorumSizeIfSmaller(long jobId, int newQuorumSize) {
-        jobRecords.executeOnKey(jobId, Util.<Long, JobRecord>entryProcessor((key, value) -> {
+        jobExecutionRecords.executeOnKey(jobId, Util.<Long, JobExecutionRecord>entryProcessor((key, value) -> {
             if (value == null) {
                 return null;
             }
@@ -300,6 +309,7 @@ public class JobRepository {
         }
 
         // Delete the job record
+        jobExecutionRecords.remove(jobId);
         jobRecords.remove(jobId);
         // Delete the execution ids, but keep the job id
         randomIds.removeAll(new FilterExecutionIdByJobIdPredicate(jobId));
@@ -369,6 +379,10 @@ public class JobRepository {
        return jobRecords.get(jobId);
     }
 
+    public JobExecutionRecord getJobExecutionRecord(long jobId) {
+       return jobExecutionRecords.get(jobId);
+    }
+
     <T> IMap<String, T> getJobResources(long jobId) {
         return instance.getMap(RESOURCES_MAP_NAME_PREFIX + idToString(jobId));
     }
@@ -391,23 +405,16 @@ public class JobRepository {
      * <p>
      * The write will be ignored if the timestamp of the given JobRecord is
      * older than the timestamp of the stored record. See {@link
-     * UpdateJobRecordDynamicDataEntryProcessor#process}. It will also be ignored if the
+     * UpdateJobExecutionRecordEntryProcessor#process}. It will also be ignored if the
      * key doesn't exist in the IMap.
      */
-    CompletableFuture<Void> writeJobRecord(long jobId, DynamicData dynamicData) {
-        dynamicData.updateTimestamp();
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        jobRecords.submitToKey(jobId, new UpdateJobRecordDynamicDataEntryProcessor(jobId, dynamicData),
-                Util.callbackOf(response -> {
-                    if (response != null) {
-                        logger.fine(response.toString());
-                    }
-                    future.complete(null);
-                }, t -> {
-                    logger.warning("Failed to write JobRecord", t);
-                    future.completeExceptionally(t);
-                }));
-        return future;
+    void writeJobExecutionRecord(long jobId, JobExecutionRecord record) {
+        record.updateTimestamp();
+        String result = (String) jobExecutionRecords.executeOnKey(jobId,
+                new UpdateJobExecutionRecordEntryProcessor(jobId, record));
+        if (result != null) {
+            logger.fine(result);
+        }
     }
 
     /**
@@ -436,51 +443,49 @@ public class JobRepository {
         }
     }
 
-    public static final class UpdateJobRecordDynamicDataEntryProcessor implements
-                    EntryProcessor<Long, JobRecord>,
-                    EntryBackupProcessor<Long, JobRecord>,
+    public static final class UpdateJobExecutionRecordEntryProcessor implements
+                    EntryProcessor<Long, JobExecutionRecord>,
+                    EntryBackupProcessor<Long, JobExecutionRecord>,
                     IdentifiedDataSerializable {
 
         private long jobId;
         @SuppressFBWarnings(value = "SE_BAD_FIELD",
                 justification = "this class is not going to be java-serialized")
-        private DynamicData dynamicData;
+        private JobExecutionRecord jobExecutionRecord;
 
-        public UpdateJobRecordDynamicDataEntryProcessor() {
+        public UpdateJobExecutionRecordEntryProcessor() {
         }
 
-        UpdateJobRecordDynamicDataEntryProcessor(long jobId, DynamicData dynamicData) {
+        UpdateJobExecutionRecordEntryProcessor(long jobId, JobExecutionRecord jobExecutionRecord) {
             this.jobId = jobId;
-            this.dynamicData = dynamicData;
+            this.jobExecutionRecord = jobExecutionRecord;
         }
 
         @Override
-        public Object process(Entry<Long, JobRecord> entry) {
+        public Object process(Entry<Long, JobExecutionRecord> entry) {
             if (entry.getValue() == null) {
                 // ignore missing value - this method of updating cannot be used for initial JobRecord creation
                 return "Update to JobRecord for job " + idToString(jobId) + " ignored, oldValue == null";
             }
-            if (entry.getValue().getTimestamp() >= dynamicData.getTimestamp()) {
+            if (entry.getValue().getTimestamp() >= jobExecutionRecord.getTimestamp()) {
                 // ignore older update.
                 // Reason for this is that normally, all updates to JobRecord are done through MasterContext in an
                 // async way.
                 return "Update to JobRecord for job " + idToString(jobId) + " ignored, newer value found. "
                         + "Stored timestamp=" + entry.getValue().getTimestamp() + ", timestamp of the update="
-                        + dynamicData.getTimestamp();
+                        + jobExecutionRecord.getTimestamp();
             }
-            entry.getValue().setDynamicData(dynamicData);
-            // this is needed to handle a quirk of EntryProcessor.process()
-            entry.setValue(entry.getValue());
+            entry.setValue(jobExecutionRecord);
             return null;
         }
 
         @Override
-        public EntryBackupProcessor<Long, JobRecord> getBackupProcessor() {
+        public EntryBackupProcessor<Long, JobExecutionRecord> getBackupProcessor() {
             return this;
         }
 
         @Override
-        public void processBackup(Entry<Long, JobRecord> entry) {
+        public void processBackup(Entry<Long, JobExecutionRecord> entry) {
             process(entry);
         }
 
@@ -491,19 +496,19 @@ public class JobRepository {
 
         @Override
         public int getId() {
-            return JetInitDataSerializerHook.UPDATE_JOB_RECORD;
+            return JetInitDataSerializerHook.UPDATE_JOB_EXECUTION_RECORD_EP;
         }
 
         @Override
         public void writeData(ObjectDataOutput out) throws IOException {
             out.writeLong(jobId);
-            out.writeObject(dynamicData);
+            out.writeObject(jobExecutionRecord);
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
             jobId = in.readLong();
-            dynamicData = in.readObject();
+            jobExecutionRecord = in.readObject();
         }
     }
 

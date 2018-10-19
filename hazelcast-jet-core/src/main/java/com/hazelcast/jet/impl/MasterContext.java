@@ -91,7 +91,6 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.callbackOf;
 import static com.hazelcast.jet.impl.util.Util.jobNameAndExecutionId;
-import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.partitioningBy;
@@ -122,6 +121,7 @@ public class MasterContext {
     private final String jobName;
     private final JobRepository jobRepository;
     private final JobRecord jobRecord;
+    private final JobExecutionRecord jobExecutionRecord;
     private volatile JobStatus jobStatus = NOT_RUNNING;
     private volatile Set<Vertex> vertices;
 
@@ -167,15 +167,17 @@ public class MasterContext {
      */
     private CompletableFuture<Void> terminalSnapshotFuture;
 
-    MasterContext(NodeEngineImpl nodeEngine, JobCoordinationService coordinationService, JobRecord jobRecord) {
+    MasterContext(NodeEngineImpl nodeEngine, JobCoordinationService coordinationService, @Nonnull JobRecord jobRecord,
+                  @Nonnull JobExecutionRecord jobExecutionRecord) {
         this.nodeEngine = nodeEngine;
         this.coordinationService = coordinationService;
         this.jobRepository = coordinationService.jobRepository();
         this.logger = nodeEngine.getLogger(getClass());
         this.jobRecord = jobRecord;
+        this.jobExecutionRecord = jobExecutionRecord;
         this.jobId = jobRecord.getJobId();
         this.jobName = jobRecord.getJobNameOrId();
-        if (jobRecord.isSuspended()) {
+        if (jobExecutionRecord.isSuspended()) {
             jobStatus = SUSPENDED;
         }
     }
@@ -198,6 +200,10 @@ public class MasterContext {
 
     public JobRecord jobRecord() {
         return jobRecord;
+    }
+
+    public JobExecutionRecord jobExecutionRecord() {
+        return jobExecutionRecord;
     }
 
     public CompletableFuture<Void> completionFuture() {
@@ -279,6 +285,9 @@ public class MasterContext {
                 return;
             }
 
+            // ensure JobExecutionRecord exists
+            jobRepository.putJobExecutionRecord(jobExecutionRecord);
+
             if (requestedTerminationMode != null) {
                 if (requestedTerminationMode.actionAfterTerminate() == RESTART) {
                     // ignore restart, we are just starting
@@ -316,9 +325,9 @@ public class MasterContext {
         }
 
         if (isSnapshottingEnabled()) {
-            long snapshotToRestore = jobRecord.snapshotId();
+            long snapshotToRestore = jobExecutionRecord.snapshotId();
             try {
-                jobRepository.clearSnapshotData(jobId, jobRecord.ongoingDataMapIndex());
+                jobRepository.clearSnapshotData(jobId, jobExecutionRecord.ongoingDataMapIndex());
             } catch (Exception e) {
                 logger.warning("Cannot delete old snapshots for " + jobName, e);
             }
@@ -337,7 +346,7 @@ public class MasterContext {
                     + "\nHINT: You can use graphviz or http://viz-js.com to visualize the printed graph.");
             logger.fine("Building execution plan for " + jobIdString());
             executionPlanMap = createExecutionPlans(nodeEngine, membersView, dag, jobId, executionId,
-                    jobConfig(), jobRecord.ongoingSnapshotId());
+                    jobConfig(), jobExecutionRecord.ongoingSnapshotId());
         } catch (Exception e) {
             logger.severe("Exception creating execution plan for " + jobIdString(), e);
             finalizeJob(e);
@@ -355,7 +364,7 @@ public class MasterContext {
     }
 
     private void rewriteDagWithSnapshotRestore(DAG dag, long snapshotId) {
-        String mapName = jobRecord.successfulSnapshotDataMapName();
+        String mapName = jobExecutionRecord.successfulSnapshotDataMapName(jobId);
         logger.info("State of " + jobIdString() + " will be restored from snapshot " + snapshotId + ", map=" + mapName);
 
         List<Vertex> originalVertices = new ArrayList<>();
@@ -393,16 +402,16 @@ public class MasterContext {
         assert jobStatus == NOT_RUNNING : "cannot start job " + idToString(jobId) + " with status: " + jobStatus;
         jobStatus = STARTING;
         executionStartTime = System.nanoTime();
-        if (jobRecord.isSuspended()) {
-            jobRecord.setSuspended(false);
-            writeJobRecord();
+        if (jobExecutionRecord.isSuspended()) {
+            jobExecutionRecord.setSuspended(false);
+            writeJobExecutionRecord();
         }
 
         return true;
     }
 
     private boolean scheduleRestartIfQuorumAbsent() {
-        int quorumSize = jobRecord.getQuorumSize();
+        int quorumSize = jobExecutionRecord.getQuorumSize();
         if (coordinationService.isQuorumPresent(quorumSize)) {
             return false;
         }
@@ -539,15 +548,15 @@ public class MasterContext {
             isTerminal = nextSnapshotIsTerminal;
         }
 
-        jobRecord.startNewSnapshot();
-        writeJobRecord();
-        long newSnapshotId = jobRecord.ongoingSnapshotId();
+        jobExecutionRecord.startNewSnapshot();
+        writeJobExecutionRecord();
+        long newSnapshotId = jobExecutionRecord.ongoingSnapshotId();
 
         logger.info(String.format("Starting%s snapshot %s for %s",
                 isTerminal ? " terminal" : "", newSnapshotId, jobIdString()));
         Function<ExecutionPlan, Operation> factory =
                 plan -> new SnapshotOperation(jobId, executionId, newSnapshotId,
-                        jobRecord.ongoingDataMapIndex(), isTerminal);
+                        jobExecutionRecord.ongoingDataMapIndex(), isTerminal);
 
         invokeOnParticipants(factory,
                 responses -> onSnapshotCompleted(responses, executionId, newSnapshotId, isTerminal), null);
@@ -572,17 +581,17 @@ public class MasterContext {
             logger.warning(jobIdString() + " snapshot " + snapshotId + " failed on some member(s), " +
                     "one of the failures: " + mergedResult.getError());
         }
-        jobRecord.ongoingSnapshotDone(
+        jobExecutionRecord.ongoingSnapshotDone(
                 mergedResult.getNumBytes(), mergedResult.getNumKeys(), mergedResult.getNumChunks(),
                 mergedResult.getError());
-        uncheckRun(() -> writeJobRecord().get());
+        writeJobExecutionRecord();
         logger.info(String.format("Snapshot %d for %s completed with status %s in %dms, " +
                         "%,d bytes, %,d keys in %,d chunks, stored in data map %d",
                 snapshotId, jobIdString(), isSuccess ? "SUCCESS" : "FAILURE",
-                jobRecord.duration(), jobRecord.numBytes(),
-                jobRecord.numKeys(), jobRecord.numChunks(),
-                jobRecord.dataMapIndex()));
-        jobRepository.clearSnapshotData(jobId, jobRecord.ongoingDataMapIndex());
+                jobExecutionRecord.duration(), jobExecutionRecord.numBytes(),
+                jobExecutionRecord.numKeys(), jobExecutionRecord.numChunks(),
+                jobExecutionRecord.dataMapIndex()));
+        jobRepository.clearSnapshotData(jobId, jobExecutionRecord.ongoingDataMapIndex());
 
         Runnable nonSynchronizedAction = () -> { };
         synchronized (lock) {
@@ -751,8 +760,8 @@ public class MasterContext {
                             && !jobRecord.getConfig().isAutoScaling()
                             && jobRecord.getConfig().getProcessingGuarantee() != NONE) {
                 jobStatus = SUSPENDED;
-                jobRecord.setSuspended(true);
-                nonSynchronizedAction = this::writeJobRecord;
+                jobExecutionRecord.setSuspended(true);
+                nonSynchronizedAction = this::writeJobExecutionRecord;
             } else {
                 jobStatus = (isSuccess ? COMPLETED : FAILED);
 
@@ -818,16 +827,24 @@ public class MasterContext {
     void updateQuorumSize(int newQuorumSize) {
         // This method can be called in parallel if multiple members are added. We don't synchronize here,
         // but the worst that can happen is that we write the JobRecord out unnecessarily.
-        if (jobRecord.getQuorumSize() < newQuorumSize) {
-            jobRecord.setLargerQuorumSize(newQuorumSize);
-            writeJobRecord();
-            logger.info("Current quorum size: " + jobRecord.getQuorumSize() + " of job "
+        if (jobExecutionRecord.getQuorumSize() < newQuorumSize) {
+            jobExecutionRecord.setLargerQuorumSize(newQuorumSize);
+            writeJobExecutionRecord();
+            logger.info("Current quorum size: " + jobExecutionRecord.getQuorumSize() + " of job "
                     + idToString(jobRecord.getJobId()) + " is updated to: " + newQuorumSize);
         }
     }
 
-    private CompletableFuture<Void> writeJobRecord() {
-        return coordinationService.jobRepository().writeJobRecord(jobRecord.getJobId(), jobRecord.getDynamicData());
+    private void writeJobExecutionRecord() {
+        try {
+            coordinationService.jobRepository().writeJobExecutionRecord(jobRecord.getJobId(), jobExecutionRecord);
+            logger.info("aaa, written JER");
+        } catch (RuntimeException e) {
+            // We don't bubble up the exceptions, if we can't write the record out, the universe is
+            // probably crumbling apart anyway. And we don't depend on it, we only write out for
+            // others to know or for the case should the master we fail.
+            logger.warning("Failed to update JobRecord", e);
+        }
     }
 
     /**

@@ -32,7 +32,7 @@ import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.impl.JobRecord;
+import com.hazelcast.jet.impl.JobExecutionRecord;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.SnapshotContext;
@@ -294,9 +294,9 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
 
         // the first snapshot should succeed
         assertTrueEventually(() -> {
-            JobRecord jobRecord = repository.getJobRecord(job.getId());
-            assertNotNull("null JobRecord", jobRecord);
-            assertEquals(0, jobRecord.snapshotId());
+            JobExecutionRecord record = repository.getJobExecutionRecord(job.getId());
+            assertNotNull("null JobRecord", record);
+            assertEquals(0, record.snapshotId());
         }, 30);
     }
 
@@ -319,24 +319,24 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
     private void waitForFirstSnapshot(JobRepository jr, long jobId, int timeout) {
         long[] snapshotId = {-1};
         assertTrueEventually(() -> {
-            JobRecord jobRecord = jr.getJobRecord(jobId);
-            assertNotNull("null jobRecord", jobRecord);
+            JobExecutionRecord record = jr.getJobExecutionRecord(jobId);
+            assertNotNull("null JobExecutionRecord", record);
             assertTrue("No snapshot produced",
-                    jobRecord.dataMapIndex() >= 0 && jobRecord.snapshotId() >= 0);
-            snapshotId[0] = jobRecord.snapshotId();
+                    record.dataMapIndex() >= 0 && record.snapshotId() >= 0);
+            snapshotId[0] = record.snapshotId();
         }, timeout);
         logger.info("First snapshot found (id=" + snapshotId[0] + ")");
     }
 
     private void waitForNextSnapshot(JobRepository jr, long jobId, int timeoutSeconds) {
-        long originalSnapshotId = jr.getJobRecord(jobId).snapshotId();
+        long originalSnapshotId = jr.getJobExecutionRecord(jobId).snapshotId();
         assertTrue("no snapshot found", originalSnapshotId >= 0);
         // wait until there is at least one more snapshot
         long[] snapshotId = {-1};
         assertTrueEventually(() -> {
-            JobRecord jobRecord = jr.getJobRecord(jobId);
-            assertNotNull("jobRecord is null", jobRecord);
-            snapshotId[0] = jobRecord.snapshotId();
+            JobExecutionRecord record = jr.getJobExecutionRecord(jobId);
+            assertNotNull("jobExecutionRecord is null", record);
+            snapshotId[0] = record.snapshotId();
             assertTrue("No more snapshots produced after restart in " + timeoutSeconds + " seconds",
                     snapshotId[0] > originalSnapshotId);
         }, timeoutSeconds);
@@ -378,7 +378,9 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
     @Test
     public void stressTest_restart() throws Exception {
         stressTest(job -> {
+            logger.info("aaa, restarting");
             job.restart();
+            logger.info("aaa, restarted");
             // Sleep a little in order to not observe the RUNNING status from the execution
             // before the restart.
             LockSupport.parkNanos(MILLISECONDS.toNanos(500));
@@ -415,7 +417,9 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                 new JobConfig().setSnapshotIntervalMillis(10)
                                .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE));
 
+        logger.info("aaa, waiting for 1st snapshot");
         waitForFirstSnapshot(jobRepository, job.getId(), 5);
+        logger.info("aaa, first snapshot found");
         spawn(() -> {
             for (int i = 0; i < 10; i++) {
                 action.accept(job);

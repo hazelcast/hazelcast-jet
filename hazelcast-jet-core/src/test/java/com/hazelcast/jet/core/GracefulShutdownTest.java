@@ -264,7 +264,7 @@ public class GracefulShutdownTest extends JetTestSupport {
         JetService jetService = getNode(instances[0]).nodeEngine.getService(JetService.SERVICE_NAME);
         JobRepository jobRepository = jetService.getJobCoordinationService().jobRepository();
         assertTrueEventually(() -> assertTrue(
-                jobRepository.getJobRecord(job.getId()).dataMapIndex() >= 0));
+                jobRepository.getJobExecutionRecord(job.getId()).dataMapIndex() >= 0));
 
         // When
         BlockingMapStore.shouldBlock = true;

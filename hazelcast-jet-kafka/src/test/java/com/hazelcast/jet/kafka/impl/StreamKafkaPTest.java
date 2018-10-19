@@ -22,15 +22,15 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.BroadcastKey;
+import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedToLongFunction;
-import com.hazelcast.jet.impl.JobRecord;
+import com.hazelcast.jet.impl.JobExecutionRecord;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.kafka.KafkaSources;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -60,8 +60,8 @@ import java.util.Set;
 import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.noThrottling;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
+import static com.hazelcast.jet.core.WatermarkEmissionPolicy.noThrottling;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static java.util.Arrays.asList;
@@ -168,11 +168,11 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         if (guarantee != ProcessingGuarantee.NONE) {
             // wait until a new snapshot appears
             JobRepository jr = new JobRepository(instances[0]);
-            long currentMax = jr.getJobRecord(job.getId()).snapshotId();
+            long currentMax = jr.getJobExecutionRecord(job.getId()).snapshotId();
             assertTrueEventually(() -> {
-                JobRecord jobRecord = jr.getJobRecord(job.getId());
-                assertNotNull("jobRecord == null", jobRecord);
-                long newMax = jobRecord.snapshotId();
+                JobExecutionRecord jobExecutionRecord = jr.getJobExecutionRecord(job.getId());
+                assertNotNull("jobExecutionRecord == null", jobExecutionRecord);
+                long newMax = jobExecutionRecord.snapshotId();
                 assertTrue("no snapshot produced", newMax > currentMax);
                 System.out.println("snapshot " + newMax + " found, previous was " + currentMax);
             });
