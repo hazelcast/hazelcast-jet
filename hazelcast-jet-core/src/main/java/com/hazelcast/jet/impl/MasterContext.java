@@ -286,7 +286,7 @@ public class MasterContext {
             }
 
             // ensure JobExecutionRecord exists
-            jobRepository.putJobExecutionRecord(jobExecutionRecord);
+            writeJobExecutionRecord(true);
 
             if (requestedTerminationMode != null) {
                 if (requestedTerminationMode.actionAfterTerminate() == RESTART) {
@@ -404,7 +404,7 @@ public class MasterContext {
         executionStartTime = System.nanoTime();
         if (jobExecutionRecord.isSuspended()) {
             jobExecutionRecord.setSuspended(false);
-            writeJobExecutionRecord();
+            writeJobExecutionRecord(false);
         }
 
         return true;
@@ -549,7 +549,7 @@ public class MasterContext {
             jobExecutionRecord.startNewSnapshot();
         }
 
-        writeJobExecutionRecord();
+        writeJobExecutionRecord(false);
         long newSnapshotId = jobExecutionRecord.ongoingSnapshotId();
 
         logger.info(String.format("Starting%s snapshot %s for %s", isTerminal ? " terminal" : "", newSnapshotId,
@@ -584,7 +584,7 @@ public class MasterContext {
         jobExecutionRecord.ongoingSnapshotDone(
                 mergedResult.getNumBytes(), mergedResult.getNumKeys(), mergedResult.getNumChunks(),
                 mergedResult.getError());
-        writeJobExecutionRecord();
+        writeJobExecutionRecord(false);
         logger.info(String.format("Snapshot %d for %s completed with status %s in %dms, " +
                         "%,d bytes, %,d keys in %,d chunks, stored in data map %d",
                 snapshotId, jobIdString(), isSuccess ? "SUCCESS" : "FAILURE",
@@ -761,7 +761,7 @@ public class MasterContext {
                             && jobRecord.getConfig().getProcessingGuarantee() != NONE) {
                 jobStatus = SUSPENDED;
                 jobExecutionRecord.setSuspended(true);
-                nonSynchronizedAction = this::writeJobExecutionRecord;
+                nonSynchronizedAction = () -> writeJobExecutionRecord(false);
             } else {
                 jobStatus = (isSuccess ? COMPLETED : FAILED);
 
@@ -829,15 +829,15 @@ public class MasterContext {
         // but the worst that can happen is that we write the JobRecord out unnecessarily.
         if (jobExecutionRecord.getQuorumSize() < newQuorumSize) {
             jobExecutionRecord.setLargerQuorumSize(newQuorumSize);
-            writeJobExecutionRecord();
+            writeJobExecutionRecord(false);
             logger.info("Current quorum size: " + jobExecutionRecord.getQuorumSize() + " of job "
                     + idToString(jobRecord.getJobId()) + " is updated to: " + newQuorumSize);
         }
     }
 
-    private void writeJobExecutionRecord() {
+    private void writeJobExecutionRecord(boolean canCreate) {
         try {
-            coordinationService.jobRepository().writeJobExecutionRecord(jobRecord.getJobId(), jobExecutionRecord);
+            coordinationService.jobRepository().writeJobExecutionRecord(jobRecord.getJobId(), jobExecutionRecord, canCreate);
             logger.info("aaa, written JER");
         } catch (RuntimeException e) {
             // We don't bubble up the exceptions, if we can't write the record out, the universe is

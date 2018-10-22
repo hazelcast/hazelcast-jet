@@ -238,10 +238,6 @@ public class JobRepository {
         }
     }
 
-     void putJobExecutionRecord(JobExecutionRecord jobExecutionRecord) {
-        jobExecutionRecords.put(jobExecutionRecord.getJobId(), jobExecutionRecord);
-    }
-
     /**
      * Updates the job quorum size of all jobs so that it is at least {@code
      * newQuorumSize}.
@@ -408,10 +404,10 @@ public class JobRepository {
      * See {@link UpdateJobExecutionRecordEntryProcessor#process}. It will also
      * be ignored if the key doesn't exist in the IMap.
      */
-    void writeJobExecutionRecord(long jobId, JobExecutionRecord record) {
+    void writeJobExecutionRecord(long jobId, JobExecutionRecord record, boolean canCreate) {
         record.updateTimestamp();
         String result = (String) jobExecutionRecords.executeOnKey(jobId,
-                new UpdateJobExecutionRecordEntryProcessor(jobId, record));
+                new UpdateJobExecutionRecordEntryProcessor(jobId, record, canCreate));
         if (result != null) {
             logger.fine(result);
         }
@@ -452,22 +448,24 @@ public class JobRepository {
         @SuppressFBWarnings(value = "SE_BAD_FIELD",
                 justification = "this class is not going to be java-serialized")
         private JobExecutionRecord jobExecutionRecord;
+        private boolean canCreate;
 
         public UpdateJobExecutionRecordEntryProcessor() {
         }
 
-        UpdateJobExecutionRecordEntryProcessor(long jobId, JobExecutionRecord jobExecutionRecord) {
+        UpdateJobExecutionRecordEntryProcessor(long jobId, JobExecutionRecord jobExecutionRecord, boolean canCreate) {
             this.jobId = jobId;
             this.jobExecutionRecord = jobExecutionRecord;
+            this.canCreate = canCreate;
         }
 
         @Override
         public Object process(Entry<Long, JobExecutionRecord> entry) {
-            if (entry.getValue() == null) {
+            if (entry.getValue() == null && !canCreate) {
                 // ignore missing value - this method of updating cannot be used for initial JobRecord creation
                 return "Update to JobRecord for job " + idToString(jobId) + " ignored, oldValue == null";
             }
-            if (entry.getValue().getTimestamp() >= jobExecutionRecord.getTimestamp()) {
+            if (entry.getValue() != null && entry.getValue().getTimestamp() >= jobExecutionRecord.getTimestamp()) {
                 // ignore older update.
                 // It can happen because we allow to execute updates in parallel and they can overtake each other.
                 // We don't want to overwrite newer update.
@@ -503,12 +501,14 @@ public class JobRepository {
         public void writeData(ObjectDataOutput out) throws IOException {
             out.writeLong(jobId);
             out.writeObject(jobExecutionRecord);
+            out.writeBoolean(canCreate);
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
             jobId = in.readLong();
             jobExecutionRecord = in.readObject();
+            canCreate = in.readBoolean();
         }
     }
 
