@@ -837,7 +837,8 @@ public class MasterContext {
 
     private void writeJobExecutionRecord(boolean canCreate) {
         try {
-            coordinationService.jobRepository().writeJobExecutionRecord(jobRecord.getJobId(), jobExecutionRecord, canCreate);
+            coordinationService.jobRepository().writeJobExecutionRecord(jobRecord.getJobId(), jobExecutionRecord,
+                    canCreate);
             logger.info("aaa, written JER");
         } catch (RuntimeException e) {
             // We don't bubble up the exceptions, if we can't write the record out, the universe is
