@@ -17,7 +17,6 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Traverser;
@@ -34,10 +33,7 @@ import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.JobExecutionRecord;
 import com.hazelcast.jet.impl.JobRepository;
-import com.hazelcast.jet.impl.execution.ExecutionContext;
-import com.hazelcast.jet.impl.execution.SnapshotContext;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
-import com.hazelcast.nio.Address;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Rule;
@@ -56,7 +52,6 @@ import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -71,7 +66,6 @@ import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
-import static com.hazelcast.jet.core.processor.Processors.noopP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.JobRepository.snapshotDataMapName;
@@ -298,22 +292,6 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
             assertNotNull("null JobRecord", record);
             assertEquals(0, record.snapshotId());
         }, 30);
-    }
-
-    private SnapshotContext getSnapshotContext(Job job) {
-        IMapJet<Long, Long> randomIdsMap = instance1.getMap(JobRepository.RANDOM_IDS_MAP_NAME);
-        long executionId = randomIdsMap.entrySet().stream()
-                                       .filter(e -> e.getValue().equals(job.getId())
-                                               && !e.getValue().equals(e.getKey()))
-                                       .mapToLong(Entry::getKey)
-                                       .findAny()
-                                       .orElseThrow(() -> new AssertionError("ExecutionId not found"));
-        ExecutionContext executionContext = null;
-        // spin until the executionContext is available on the worker
-        while (executionContext == null) {
-            executionContext = getJetService(instance2).getJobExecutionService().getExecutionContext(executionId);
-        }
-        return executionContext.snapshotContext();
     }
 
     private void waitForFirstSnapshot(JobRepository jr, long jobId, int timeout) {
@@ -602,38 +580,6 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                     advanceCursor();
                 }
             }
-        }
-    }
-
-    /**
-     * Supplier of processors that emit nothing and complete immediately
-     * on designated member and never on others.
-     */
-    private static final class NonBalancedSource implements ProcessorMetaSupplier {
-        private final String finishingMemberAddress;
-
-        private NonBalancedSource(String finishingMemberAddress) {
-            this.finishingMemberAddress = finishingMemberAddress;
-        }
-
-        @Nonnull
-        @Override
-        public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-            return address -> {
-                String sAddress = address.toString();
-                return ProcessorSupplier.of(() -> sAddress.equals(finishingMemberAddress)
-                        ? noopP().get() : new StreamingNoopSourceP());
-            };
-        }
-    }
-
-    /**
-     * A source processor that emits nothing and never completes
-     */
-    private static final class StreamingNoopSourceP implements Processor {
-        @Override
-        public boolean complete() {
-            return false;
         }
     }
 
