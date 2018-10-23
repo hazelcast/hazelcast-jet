@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.hazelcast.jet.impl.JobRepository.snapshotDataMapName;
+import static com.hazelcast.jet.impl.util.Util.toLocalTime;
 
 /**
  * Runtime information about the job. There's one instance for each jobId, used
@@ -126,12 +127,12 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
 
     @SuppressFBWarnings(value = "VO_VOLATILE_INCREMENT",
             justification = "all updates to ongoingSnapshotId are synchronized")
-    void startNewSnapshot() {
+    public void startNewSnapshot() {
         this.ongoingSnapshotId++;
         this.ongoingSnapshotStartTime = Clock.currentTimeMillis();
     }
 
-    void ongoingSnapshotDone(long numBytes, long numKeys, long numChunks, @Nullable String failureText) {
+    public void ongoingSnapshotDone(long numBytes, long numKeys, long numChunks, @Nullable String failureText) {
         this.lastFailureText = failureText;
         if (failureText == null) {
             this.snapshotId = this.ongoingSnapshotId;
@@ -287,21 +288,21 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
 
     @Override
     public String toString() {
-        return "DynamicData{" +
+        return "JobExecutionRecord{" +
                 "jobId=" + jobId +
-                ", timestamp=" + timestamp.get() +
+                ", timestamp=" + toLocalTime(timestamp.get()) +
                 ", quorumSize=" + quorumSize +
                 ", suspended=" + suspended +
                 ", snapshotId=" + snapshotId +
                 ", dataMapIndex=" + dataMapIndex +
-                ", startTime=" + startTime +
-                ", endTime=" + endTime +
+                ", startTime=" + toLocalTime(startTime) +
+                ", endTime=" + toLocalTime(endTime) +
                 ", numBytes=" + numBytes +
                 ", numKeys=" + numKeys +
                 ", numChunks=" + numChunks +
                 ", ongoingSnapshotId=" + ongoingSnapshotId +
-                ", ongoingSnapshotStartTime=" + ongoingSnapshotStartTime +
-                ", lastFailureText='" + lastFailureText + '\'' +
+                ", ongoingSnapshotStartTime=" + toLocalTime(ongoingSnapshotStartTime) +
+                ", lastFailureText=" + (lastFailureText == null ? "null" : '\'' + lastFailureText + '\'') +
                 '}';
     }
 }

@@ -378,9 +378,9 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
     @Test
     public void stressTest_restart() throws Exception {
         stressTest(job -> {
-            logger.info("aaa, restarting");
+            logger.info("restarting");
             job.restart();
-            logger.info("aaa, restarted");
+            logger.info("restarted");
             // Sleep a little in order to not observe the RUNNING status from the execution
             // before the restart.
             LockSupport.parkNanos(MILLISECONDS.toNanos(500));
@@ -417,9 +417,9 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                 new JobConfig().setSnapshotIntervalMillis(10)
                                .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE));
 
-        logger.info("aaa, waiting for 1st snapshot");
+        logger.info("waiting for 1st snapshot");
         waitForFirstSnapshot(jobRepository, job.getId(), 5);
-        logger.info("aaa, first snapshot found");
+        logger.info("first snapshot found");
         spawn(() -> {
             for (int i = 0; i < 10; i++) {
                 action.accept(job);

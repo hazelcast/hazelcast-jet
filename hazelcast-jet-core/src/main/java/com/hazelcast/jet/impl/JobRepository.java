@@ -397,19 +397,19 @@ public class JobRepository {
     }
 
     /**
-     * Write the JobRecord to the IMap.
+     * Write the {@link JobExecutionRecord} to the IMap.
      * <p>
-     * The write will be ignored if the timestamp of the given {@link
-     * JobExecutionRecord} is older than the timestamp of the stored record.
-     * See {@link UpdateJobExecutionRecordEntryProcessor#process}. It will also
-     * be ignored if the key doesn't exist in the IMap.
+     * The write will be ignored if the timestamp of the given record is older
+     * than the timestamp of the stored record. See {@link
+     * UpdateJobExecutionRecordEntryProcessor#process}. It will also be ignored
+     * if the key doesn't exist in the IMap.
      */
     void writeJobExecutionRecord(long jobId, JobExecutionRecord record, boolean canCreate) {
         record.updateTimestamp();
-        String result = (String) jobExecutionRecords.executeOnKey(jobId,
+        String message = (String) jobExecutionRecords.executeOnKey(jobId,
                 new UpdateJobExecutionRecordEntryProcessor(jobId, record, canCreate));
-        if (result != null) {
-            logger.fine(result);
+        if (message != null) {
+            logger.fine(message);
         }
     }
 
