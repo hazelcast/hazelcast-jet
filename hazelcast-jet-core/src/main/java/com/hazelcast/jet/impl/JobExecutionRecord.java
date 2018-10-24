@@ -25,6 +25,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -54,12 +55,6 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
     private volatile boolean suspended;
 
     /**
-     * The ID of current successful snapshot. If {@link #dataMapIndex} < 0,
-     * there's no successful snapshot.
-     */
-    private volatile long snapshotId = NO_SNAPSHOT;
-
-    /**
      * The data map index of current successful snapshot (0 or 1) or -1, if
      * there's no successful snapshot.
      */
@@ -71,14 +66,6 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
      */
     private volatile long ongoingSnapshotId = NO_SNAPSHOT;
 
-    // === Stats for current successful snapshot ===
-    private volatile long startTime = Long.MIN_VALUE;
-    private volatile long endTime = Long.MIN_VALUE;
-    private volatile long numBytes;
-    private volatile long numKeys;
-    private volatile long numChunks;
-
-    // === Stats for last attempted snapshot ===
     /**
      * Start time of the ongoing snapshot or {@code Long.MIN_VALUE}, if there's
      * no ongoing snapshot.
@@ -90,8 +77,14 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
      * snapshot. If the last attempt was successful, it's null.
      */
     @Nullable
-    private volatile String lastFailureText;
-    // === End of stats ===
+    private volatile String lastSnapshotFailure;
+
+    /**
+     * Stats for the last successful snapshot. {@code null} if no successful
+     * snapshot exists.
+     */
+    @Nullable
+    private volatile SnapshotStats snapshotStats;
 
     public JobExecutionRecord() {
     }
@@ -107,7 +100,7 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
     }
 
     public int getQuorumSize() {
-        return this.quorumSize.get();
+        return quorumSize.get();
     }
 
     /**
@@ -125,31 +118,36 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
         this.suspended = suspended;
     }
 
+    @SuppressWarnings("NonAtomicOperationOnVolatileField")
     @SuppressFBWarnings(value = "VO_VOLATILE_INCREMENT",
             justification = "all updates to ongoingSnapshotId are synchronized")
     public void startNewSnapshot() {
-        this.ongoingSnapshotId++;
-        this.ongoingSnapshotStartTime = Clock.currentTimeMillis();
+        ongoingSnapshotId++;
+        ongoingSnapshotStartTime = Clock.currentTimeMillis();
     }
 
     public void ongoingSnapshotDone(long numBytes, long numKeys, long numChunks, @Nullable String failureText) {
-        this.lastFailureText = failureText;
+        lastSnapshotFailure = failureText;
         if (failureText == null) {
-            this.snapshotId = this.ongoingSnapshotId;
-            this.numBytes = numBytes;
-            this.numKeys = numKeys;
-            this.numChunks = numChunks;
-            this.startTime = this.ongoingSnapshotStartTime;
-            this.endTime = Clock.currentTimeMillis();
-            this.dataMapIndex = ongoingDataMapIndex();
-        } else {
-            // we don't update the other fields because they only pertain to a successful snapshot
+            snapshotStats = new SnapshotStats(
+                    ongoingSnapshotId, ongoingSnapshotStartTime, Clock.currentTimeMillis(), numBytes, numKeys, numChunks
+            );
+            dataMapIndex = ongoingDataMapIndex();
         }
-        this.ongoingSnapshotStartTime = Long.MIN_VALUE;
+        ongoingSnapshotStartTime = Long.MIN_VALUE;
     }
 
+    /**
+     * The ID of current successful snapshot. If {@link #NO_SNAPSHOT} then
+     * no successful snapshot exists.
+     */
     public long snapshotId() {
-        return this.snapshotId;
+        if (snapshotStats != null) {
+            // note: snapshotStats should never revert to null after being set
+            return Objects.requireNonNull(snapshotStats).snapshotId;
+        } else {
+            return NO_SNAPSHOT;
+        }
     }
 
     public int dataMapIndex() {
@@ -168,40 +166,6 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
         return (this.dataMapIndex + 1) & 1;
     }
 
-    public long startTime() {
-        return this.startTime;
-    }
-
-    public long endTime() {
-        return this.endTime;
-    }
-
-    public long duration() {
-        return this.endTime - this.startTime;
-    }
-
-    /**
-     * Net number of bytes in primary copy. Doesn't include IMap overhead and backup copies.
-     */
-    public long numBytes() {
-        return this.numBytes;
-    }
-
-    /**
-     * Number of snapshot keys (after exploding chunks).
-     */
-    public long numKeys() {
-        return this.numKeys;
-    }
-
-    /**
-     * Number of chunks the snapshot is stored in. One chunk is one IMap entry,
-     * so this is the number of entries in the data map.
-     */
-    public long numChunks() {
-        return this.numChunks;
-    }
-
     public long ongoingSnapshotId() {
         return this.ongoingSnapshotId;
     }
@@ -210,9 +174,21 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
         return this.ongoingSnapshotStartTime;
     }
 
+    /**
+     * Returns the stats for the last successful snapshot
+     */
     @Nullable
-    public String lastFailureText() {
-        return this.lastFailureText;
+    public SnapshotStats snapshotStats() {
+        return snapshotStats;
+    }
+
+    /**
+     * Returns the failure message for last snapshot, if any. If last snapshot
+     * was successful, then it will return {@code null}.
+     */
+    @Nullable
+    public String lastSnapshotFailure() {
+        return this.lastSnapshotFailure;
     }
 
     long getTimestamp() {
@@ -231,7 +207,7 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
         timestamp.updateAndGet(v -> Math.max(Clock.currentTimeMillis(), v + 1));
     }
 
-    public String successfulSnapshotDataMapName(long jobId) {
+    String successfulSnapshotDataMapName(long jobId) {
         if (snapshotId() < 0) {
             throw new IllegalStateException("No successful snapshot");
         }
@@ -251,20 +227,12 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeLong(jobId);
-        out.writeLong(snapshotId);
         out.writeInt(dataMapIndex);
-        out.writeLong(startTime);
-        out.writeLong(endTime);
-        out.writeLong(numBytes);
-        out.writeLong(numKeys);
-        out.writeLong(numChunks);
         out.writeLong(ongoingSnapshotId);
-        out.writeLong(ongoingSnapshotStartTime);
-        out.writeBoolean(lastFailureText != null);
-        if (lastFailureText != null) {
-            out.writeUTF(lastFailureText);
-        }
         out.writeInt(quorumSize.get());
+        out.writeLong(ongoingSnapshotStartTime);
+        out.writeObject(lastSnapshotFailure);
+        out.writeObject(snapshotStats);
         out.writeBoolean(suspended);
         out.writeLong(timestamp.get());
     }
@@ -272,17 +240,12 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
     @Override
     public void readData(ObjectDataInput in) throws IOException {
         jobId = in.readLong();
-        snapshotId = in.readLong();
         dataMapIndex = in.readInt();
-        startTime = in.readLong();
-        endTime = in.readLong();
-        numBytes = in.readLong();
-        numKeys = in.readLong();
-        numChunks = in.readLong();
         ongoingSnapshotId = in.readLong();
-        ongoingSnapshotStartTime = in.readLong();
-        lastFailureText = in.readBoolean() ? in.readUTF() : null;
         quorumSize.set(in.readInt());
+        ongoingSnapshotStartTime = in.readLong();
+        lastSnapshotFailure = in.readObject();
+        snapshotStats = in.readObject();
         suspended = in.readBoolean();
         timestamp.set(in.readLong());
     }
@@ -294,16 +257,136 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
                 ", timestamp=" + toLocalTime(timestamp.get()) +
                 ", quorumSize=" + quorumSize +
                 ", suspended=" + suspended +
-                ", snapshotId=" + snapshotId +
                 ", dataMapIndex=" + dataMapIndex +
-                ", startTime=" + toLocalTime(startTime) +
-                ", endTime=" + toLocalTime(endTime) +
-                ", numBytes=" + numBytes +
-                ", numKeys=" + numKeys +
-                ", numChunks=" + numChunks +
                 ", ongoingSnapshotId=" + ongoingSnapshotId +
                 ", ongoingSnapshotStartTime=" + toLocalTime(ongoingSnapshotStartTime) +
-                ", lastFailureText=" + (lastFailureText == null ? "null" : '\'' + lastFailureText + '\'') +
+                ", snapshotStats=" + snapshotStats +
+                ", lastSnapshotFailure=" + (lastSnapshotFailure == null ? "null" : '\'' + lastSnapshotFailure + '\'') +
                 '}';
+    }
+
+    public static class SnapshotStats implements IdentifiedDataSerializable {
+
+        private long snapshotId;
+
+        /*
+         * Stats for current successful snapshot.
+         */
+        private long startTime;
+        private long endTime;
+        private long numBytes;
+        private long numKeys;
+        private long numChunks;
+
+        public SnapshotStats() {
+
+        }
+
+        SnapshotStats(long snapshotId, long startTime, long endTime, long numBytes,
+                      long numKeys, long numChunks) {
+            this.snapshotId = snapshotId;
+            this.startTime = startTime;
+            this.endTime = endTime;
+            this.numBytes = numBytes;
+            this.numKeys = numKeys;
+            this.numChunks = numChunks;
+        }
+
+        public long startTime() {
+            return this.startTime;
+        }
+
+        public long endTime() {
+            return this.endTime;
+        }
+
+        public long duration() {
+            return this.endTime - this.startTime;
+        }
+
+        /**
+         * Net number of bytes in primary copy. Doesn't include IMap overhead and backup copies.
+         */
+        public long numBytes() {
+            return this.numBytes;
+        }
+
+        /**
+         * Number of snapshot keys (after exploding chunks).
+         */
+        public long numKeys() {
+            return this.numKeys;
+        }
+
+        /**
+         * Number of chunks the snapshot is stored in. One chunk is one IMap entry,
+         * so this is the number of entries in the data map.
+         */
+        public long numChunks() {
+            return this.numChunks;
+        }
+
+        @Override
+        public int getFactoryId() {
+            return JetInitDataSerializerHook.FACTORY_ID;
+        }
+
+        @Override
+        public int getId() {
+            return JetInitDataSerializerHook.SNAPSHOT_STATS;
+        }
+
+        @Override
+        public void writeData(ObjectDataOutput out) throws IOException {
+            out.writeLong(snapshotId);
+            out.writeLong(startTime);
+            out.writeLong(endTime);
+            out.writeLong(numBytes);
+            out.writeLong(numKeys);
+            out.writeLong(numChunks);
+        }
+
+        @Override
+        public void readData(ObjectDataInput in) throws IOException {
+            snapshotId = in.readLong();
+            startTime = in.readLong();
+            endTime = in.readLong();
+            numBytes = in.readLong();
+            numKeys = in.readLong();
+            numChunks = in.readLong();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            SnapshotStats that = (SnapshotStats) o;
+            return snapshotId == that.snapshotId &&
+                    startTime == that.startTime &&
+                    endTime == that.endTime &&
+                    numBytes == that.numBytes &&
+                    numKeys == that.numKeys &&
+                    numChunks == that.numChunks;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(snapshotId, startTime, endTime, numBytes, numKeys, numChunks);
+        }
+
+        @Override
+        public String toString() {
+            return "SnapshotStats{" +
+                    ", startTime=" + toLocalTime(startTime) +
+                    ", endTime=" + toLocalTime(endTime) +
+                    ", numBytes=" + numBytes +
+                    ", numKeys=" + numKeys +
+                    ", numChunks=" + numChunks +
+                    '}';
+        }
     }
 }
