@@ -65,21 +65,20 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
      */
     private volatile int dataMapIndex = -1;
 
-    /*
-     * Stats for current successful snapshot.
-     */
-    private volatile long startTime = Long.MIN_VALUE;
-    private volatile long endTime = Long.MIN_VALUE;
-    private volatile long numBytes;
-    private volatile long numKeys;
-    private volatile long numChunks;
-
     /**
      * ID for the ongoing or the next snapshot. The value is incremented each
      * time we attempt a new snapshot.
      */
     private volatile long ongoingSnapshotId = NO_SNAPSHOT;
 
+    // === Stats for current successful snapshot ===
+    private volatile long startTime = Long.MIN_VALUE;
+    private volatile long endTime = Long.MIN_VALUE;
+    private volatile long numBytes;
+    private volatile long numKeys;
+    private volatile long numChunks;
+
+    // === Stats for last attempted snapshot ===
     /**
      * Start time of the ongoing snapshot or {@code Long.MIN_VALUE}, if there's
      * no ongoing snapshot.
@@ -92,6 +91,7 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
      */
     @Nullable
     private volatile String lastFailureText;
+    // === End of stats ===
 
     public JobExecutionRecord() {
     }
