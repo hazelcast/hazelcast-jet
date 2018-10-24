@@ -75,20 +75,20 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
     private volatile long numChunks;
 
     /**
-     * ID for the ongoing snapshot. The value is incremented when we start a
-     * new snapshot.
-     * <p>
-     * If {@code ongoingSnapshotId == }{@link #snapshotId}, there's no ongoing
-     * snapshot. But if {@code ongoingSnapshotId > }{@link #snapshotId} it
-     * doesn't mean a snapshot is ongoing: it will happen when a snapshot
-     * fails. For next ongoing snapshot we'll increment the value again.
+     * ID for the ongoing or the next snapshot. The value is incremented each
+     * time we attempt a new snapshot.
      */
     private volatile long ongoingSnapshotId = NO_SNAPSHOT;
-    private volatile long ongoingSnapshotStartTime;
 
     /**
-     * Contains the error message for the failure of the last snapshot.
-     * if the last snapshot was successful, it's null.
+     * Start time of the ongoing snapshot or {@code Long.MIN_VALUE}, if there's
+     * no ongoing snapshot.
+     */
+    private volatile long ongoingSnapshotStartTime = Long.MIN_VALUE;
+
+    /**
+     * Contains the error message for the failure of the last attempted
+     * snapshot. If the last attempt was successful, it's null.
      */
     @Nullable
     private volatile String lastFailureText;
@@ -145,6 +145,7 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
         } else {
             // we don't update the other fields because they only pertain to a successful snapshot
         }
+        this.ongoingSnapshotStartTime = Long.MIN_VALUE;
     }
 
     public long snapshotId() {
