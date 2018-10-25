@@ -178,8 +178,8 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
                 .flatMap(List::stream);
         return traverseStream(closedWindows)
                 .onFirstNull(() -> {
-                    windowsToClose.clear();
                     lazyAdd(totalWindows, -windowsToClose.values().stream().mapToInt(Set::size).sum());
+                    windowsToClose.clear();
                 });
     }
 
