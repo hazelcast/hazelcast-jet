@@ -20,10 +20,10 @@ import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
 import com.hazelcast.config.Config;
+import com.hazelcast.config.HotRestartConfig;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MergePolicyConfig;
 import com.hazelcast.config.ServiceConfig;
-import com.hazelcast.config.ServicesConfig;
 import com.hazelcast.config.matcher.MatchingPointConfigPatternMatcher;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
@@ -35,7 +35,6 @@ import com.hazelcast.jet.config.MetricsConfig;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.metrics.JetMetricsService;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.map.merge.IgnoreMergingEntryMapMergePolicy;
 import com.hazelcast.spi.properties.HazelcastProperties;
 
@@ -68,7 +67,9 @@ public final class Jet {
         configureJetService(config);
         HazelcastInstanceImpl hazelcastInstance = ((HazelcastInstanceProxy)
                 Hazelcast.newHazelcastInstance(config.getHazelcastConfig())).getOriginal();
-        return Util.getJetInstance(hazelcastInstance.node.nodeEngine);
+        JetService jetService = hazelcastInstance.node.nodeEngine.getService(JetService.SERVICE_NAME);
+        jetService.getJobCoordinationService().startScanningForJobs();
+        return jetService.getJetInstance();
     }
 
     /**
@@ -125,33 +126,32 @@ public final class Jet {
 
         HazelcastProperties properties = new HazelcastProperties(hzProperties);
 
-        ServicesConfig servicesConfig = hzConfig.getServicesConfig();
-        servicesConfig
-                .addServiceConfig(new ServiceConfig().setEnabled(true)
+        hzConfig.getServicesConfig()
+                .addServiceConfig(new ServiceConfig()
+                        .setEnabled(true)
                         .setName(JetService.SERVICE_NAME)
                         .setClassName(JetService.class.getName())
                         .setProperties(jetServiceProperties(properties))
-                        .setConfigObject(jetConfig));
-
-        servicesConfig
-                .addServiceConfig(new ServiceConfig().setEnabled(true)
+                        .setConfigObject(jetConfig))
+                .addServiceConfig(new ServiceConfig()
+                        .setEnabled(true)
                         .setName(JetMetricsService.SERVICE_NAME)
                         .setClassName(JetMetricsService.class.getName())
                         .setConfigObject(jetConfig.getMetricsConfig()));
 
-
-        MapConfig metadataMapConfig = new MapConfig(INTERNAL_JET_OBJECTS_PREFIX + "*")
+        MapConfig metadataMapConfig = new MapConfig(INTERNAL_JET_OBJECTS_PREFIX + '*')
                 .setBackupCount(jetConfig.getInstanceConfig().getBackupCount())
                 .setStatisticsEnabled(false)
                 .setMergePolicyConfig(
-                        new MergePolicyConfig().setPolicy(IgnoreMergingEntryMapMergePolicy.class.getName()));
+                        new MergePolicyConfig().setPolicy(IgnoreMergingEntryMapMergePolicy.class.getName()))
+                .setHotRestartConfig(new HotRestartConfig().setEnabled(true));
 
         MapConfig resultsMapConfig = new MapConfig(metadataMapConfig)
                 .setName(JOB_RESULTS_MAP_NAME)
                 .setTimeToLiveSeconds(properties.getSeconds(JOB_RESULTS_TTL_SECONDS));
+        resultsMapConfig.getHotRestartConfig().setEnabled(true);
 
-        hzConfig
-                .addMapConfig(metadataMapConfig)
+        hzConfig.addMapConfig(metadataMapConfig)
                 .addMapConfig(resultsMapConfig);
 
         MetricsConfig metricsConfig = jetConfig.getMetricsConfig();
