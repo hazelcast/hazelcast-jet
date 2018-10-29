@@ -24,6 +24,7 @@ import com.hazelcast.instance.HazelcastInstanceProxy;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JetInstanceImpl;
+import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.nio.Address;
 
 import java.util.Arrays;
@@ -43,6 +44,8 @@ public class JetTestInstanceFactory {
         Jet.configureJetService(config);
         HazelcastInstanceImpl hazelcastInstance =
                 ((HazelcastInstanceProxy) (factory.newHazelcastInstance(config.getHazelcastConfig()))).getOriginal();
+        JetService jetService = hazelcastInstance.node.nodeEngine.getService(JetService.SERVICE_NAME);
+        jetService.getJobCoordinationService().startScanningForJobs();
         return new JetInstanceImpl(hazelcastInstance, config);
     }
 
