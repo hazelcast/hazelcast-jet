@@ -304,7 +304,7 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
 
         StuckProcessor.proceedLatch.countDown();
 
-        assertTrueEventually(() -> assertEquals(NOT_RUNNING, job.getStatus()), 10);
+        assertJobStatusEventually(job, NOT_RUNNING, 10);
 
         createJetMember(jetConfig);
 
@@ -345,7 +345,7 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
 
             assertTrue(((ClusterService) instances[2].getCluster()).isMaster());
 
-            assertTrueEventually(() -> assertEquals(RUNNING, jobRef[0].getStatus()), 10);
+            assertJobStatusEventually(jobRef[0], RUNNING, 10);
             assertTrueAllTheTime(() -> assertEquals(RUNNING, jobRef[0].getStatus()), 5);
         };
 

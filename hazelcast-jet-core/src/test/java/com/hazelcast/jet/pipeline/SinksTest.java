@@ -24,6 +24,7 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.map.AbstractEntryProcessor;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -38,7 +39,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
@@ -653,7 +653,7 @@ public class SinksTest extends PipelineTestSupport {
         // Then
         p.drawFrom(Sources.<String, Integer>map(srcName)).drainTo(sink);
         Job job = jet().newJob(p);
-        assertTrueEventually(() -> assertEquals(RUNNING, job.getStatus()));
+        assertJobStatusEventually(job, JobStatus.RUNNING);
         assertEquals(1, srcMap.size());
         assertEquals(1, srcMap.get("key").intValue());
         srcMap.unlock("key");
