@@ -187,7 +187,7 @@ public class GracefulShutdownTest extends JetTestSupport {
         Job job = instances[0].newJob(dag);
 
         // after that, the job should become RUNNING
-        assertJobStatusEventually(job, JobStatus.RUNNING, 5);
+        assertJobStatusEventually(job, JobStatus.RUNNING);
     }
 
     @Test
