@@ -105,7 +105,7 @@ public class JobTest extends JetTestSupport {
         PSThatWaitsOnInit.initLatch.countDown();
 
         // Then
-        assertCompletedEventually(job);
+        assertJobStatusEventually(job, COMPLETED);
     }
 
     @Test
@@ -122,7 +122,7 @@ public class JobTest extends JetTestSupport {
         joinAndExpectCancellation(job);
 
         StuckProcessor.proceedLatch.countDown();
-        assertCompletedEventually(job);
+        assertJobStatusEventually(job, COMPLETED);
     }
 
     @Test
@@ -157,7 +157,7 @@ public class JobTest extends JetTestSupport {
         Job trackedJob = trackedJobs.iterator().next();
 
         // Then
-        assertTrueEventually(() -> assertEquals(RUNNING, trackedJob.getStatus()));
+        assertJobStatusEventually(trackedJob, RUNNING);
 
         submittedJob.cancel();
         joinAndExpectCancellation(submittedJob);
@@ -203,7 +203,7 @@ public class JobTest extends JetTestSupport {
         joinAndExpectCancellation(trackedJob);
 
         StuckProcessor.proceedLatch.countDown();
-        assertCompletedEventually(trackedJob);
+        assertJobStatusEventually(trackedJob, COMPLETED);
     }
 
     @Test
@@ -248,8 +248,8 @@ public class JobTest extends JetTestSupport {
 
         StuckProcessor.proceedLatch.countDown();
 
-        assertCompletedEventually(trackedJob);
-        assertCompletedEventually(submittedJob);
+        assertJobStatusEventually(trackedJob, JobStatus.COMPLETED);
+        assertJobStatusEventually(submittedJob, JobStatus.COMPLETED);
     }
 
     @Test
@@ -303,7 +303,7 @@ public class JobTest extends JetTestSupport {
         assertNotNull(trackedJob);
         assertEquals(jobName, trackedJob.getName());
         assertEquals(job.getId(), trackedJob.getId());
-        assertTrueEventually(() -> assertEquals(RUNNING, trackedJob.getStatus()));
+        assertJobStatusEventually(trackedJob, RUNNING);
 
         StuckProcessor.proceedLatch.countDown();
     }
@@ -331,7 +331,7 @@ public class JobTest extends JetTestSupport {
 
         assertNotNull(trackedJob);
         assertEquals(job.getId(), trackedJob.getId());
-        assertTrueEventually(() -> assertEquals(RUNNING, trackedJob.getStatus()));
+        assertJobStatusEventually(trackedJob, RUNNING);
 
         StuckProcessor.proceedLatch.countDown();
     }
@@ -417,7 +417,7 @@ public class JobTest extends JetTestSupport {
         assertEquals(jobName, trackedJob.getName());
         assertNotEquals(job1.getId(), trackedJob.getId());
         assertEquals(job2.getId(), trackedJob.getId());
-        assertTrueEventually(() -> assertEquals(RUNNING, trackedJob.getStatus()));
+        assertJobStatusEventually(trackedJob, RUNNING);
 
         StuckProcessor.proceedLatch.countDown();
     }
@@ -508,10 +508,10 @@ public class JobTest extends JetTestSupport {
 
         assertEquals(job2.getId(), trackedJob1.getId());
         assertEquals(jobName, trackedJob1.getName());
-        assertTrueEventually(() -> assertEquals(RUNNING, trackedJob1.getStatus()));
+        assertJobStatusEventually(trackedJob1, JobStatus.RUNNING);
         assertEquals(job1.getId(), trackedJob2.getId());
         assertEquals(jobName, trackedJob2.getName());
-        assertTrueEventually(() -> assertEquals(RUNNING, trackedJob2.getStatus()));
+        assertJobStatusEventually(trackedJob2, JobStatus.RUNNING);
 
         StuckProcessor.proceedLatch.countDown();
     }
@@ -632,10 +632,6 @@ public class JobTest extends JetTestSupport {
             fail();
         } catch (CancellationException ignored) {
         }
-    }
-
-    private void assertCompletedEventually(Job job) {
-        assertTrueEventually(() -> assertEquals(COMPLETED, job.getStatus()));
     }
 
     private static final class PSThatWaitsOnInit implements ProcessorSupplier {
