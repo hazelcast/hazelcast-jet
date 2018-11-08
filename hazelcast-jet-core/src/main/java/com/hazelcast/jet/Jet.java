@@ -39,6 +39,7 @@ import com.hazelcast.map.merge.IgnoreMergingEntryMapMergePolicy;
 import com.hazelcast.spi.properties.HazelcastProperties;
 
 import java.util.Properties;
+import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.JobRepository.JOB_RESULTS_MAP_NAME;
 import static com.hazelcast.jet.impl.config.XmlJetConfigBuilder.getClientConfig;
@@ -64,12 +65,7 @@ public final class Jet {
      * Creates a member of the Jet cluster with the given configuration.
      */
     public static JetInstance newJetInstance(JetConfig config) {
-        configureJetService(config);
-        HazelcastInstanceImpl hazelcastInstance = ((HazelcastInstanceProxy)
-                Hazelcast.newHazelcastInstance(config.getHazelcastConfig())).getOriginal();
-        JetService jetService = hazelcastInstance.node.nodeEngine.getService(JetService.SERVICE_NAME);
-        jetService.getJobCoordinationService().startScanningForJobs();
-        return jetService.getJetInstance();
+        return newJetInstanceImpl(config, Hazelcast::newHazelcastInstance);
     }
 
     /**
@@ -104,6 +100,15 @@ public final class Jet {
     public static void shutdownAll() {
         HazelcastClient.shutdownAll();
         Hazelcast.shutdownAll();
+    }
+
+    static JetInstance newJetInstanceImpl(JetConfig config, Function<Config, HazelcastInstance> newHzFn) {
+        configureJetService(config);
+        HazelcastInstanceImpl hzImpl = ((HazelcastInstanceProxy) newHzFn.apply(config.getHazelcastConfig()))
+                .getOriginal();
+        JetService jetService = hzImpl.node.nodeEngine.getService(JetService.SERVICE_NAME);
+        jetService.getJobCoordinationService().startScanningForJobs();
+        return jetService.getJetInstance();
     }
 
     static JetClientInstanceImpl getJetClientInstance(HazelcastInstance client) {
