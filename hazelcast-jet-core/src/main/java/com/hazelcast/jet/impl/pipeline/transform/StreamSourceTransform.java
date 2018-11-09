@@ -34,8 +34,7 @@ import static java.util.Collections.emptyList;
 
 public class StreamSourceTransform<T> extends AbstractTransform implements StreamSource<T> {
 
-    private final Function<? super WatermarkGenerationParams<? super T>, ? extends ProcessorMetaSupplier>
-            metaSupplierFn;
+    private final Function<? super WatermarkGenerationParams<? super T>, ? extends ProcessorMetaSupplier> metaSupplierFn;
     private final boolean emitsWatermarks;
 
     @Nullable
@@ -66,12 +65,11 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
     @Override
     @SuppressWarnings("unchecked")
     public void addToDag(Planner p) {
-        WatermarkGenerationParams<? super T> params = wmParams != null ? wmParams : noWatermarks();
         if (emitsWatermarks || wmParams == null) {
             // Reached when the source either emits both JetEvents and watermarks
             // or neither. In these cases we don't have to insert watermarks.
-            p.addVertex(this, p.uniqueVertexName(name(), ""),
-                    localParallelism(), metaSupplierFn.apply(params)
+            p.addVertex(this, p.uniqueVertexName(name(), ""), localParallelism(),
+                    metaSupplierFn.apply(wmParams != null ? wmParams : noWatermarks())
             );
         } else {
             //                  ------------
@@ -84,9 +82,10 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
             //                 |  insertWMP  |
             //                  -------------
             String v1name = p.uniqueVertexName(name(), "");
-            Vertex v1 = p.dag.newVertex(v1name, metaSupplierFn.apply(params)).localParallelism(localParallelism());
+            Vertex v1 = p.dag.newVertex(v1name, metaSupplierFn.apply(wmParams))
+                             .localParallelism(localParallelism());
             PlannerVertex pv2 = p.addVertex(
-                    this, v1name + "-insertWM", localParallelism(), insertWatermarksP(params)
+                    this, v1name + "-insertWM", localParallelism(), insertWatermarksP(wmParams)
             );
             p.dag.edge(between(v1, pv2.v).isolated());
         }

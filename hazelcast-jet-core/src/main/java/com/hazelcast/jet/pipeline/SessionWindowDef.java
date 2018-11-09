@@ -49,7 +49,7 @@ public class SessionWindowDef<T> implements WindowDefinition {
 
     @Override
     public long watermarkFrameSize() {
-        return Math.min(MAX_FRAME_RATE, sessionTimeout / MIN_WMS_PER_SESSION);
+        return Math.min(MAX_FRAME_RATE, Math.max(1, sessionTimeout / MIN_WMS_PER_SESSION));
     }
 
     /**
