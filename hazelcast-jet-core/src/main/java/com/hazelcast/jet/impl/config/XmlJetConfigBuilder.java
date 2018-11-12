@@ -139,10 +139,11 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
     }
 
     @Override
+    @SuppressWarnings("checkstyle:magicnumber")
     protected String getReleaseVersion() {
         BuildInfo buildInfo = BuildInfoProvider.getBuildInfo();
         JetBuildInfo jetBuildInfo = buildInfo.getJetBuildInfo();
-        return jetBuildInfo.getVersion().substring(0, 3);
+        return jetBuildInfo.getVersion().substring(0, 5);
     }
 
     private void parseAndBuildConfig(InputStream in) throws Exception {
@@ -193,6 +194,9 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
                     break;
                 case "backup-count":
                     instanceConfig.setBackupCount(intValue(node));
+                    break;
+                case "scale-up-delay-millis":
+                    instanceConfig.setScaleUpDelayMillis(longValue(node));
                     break;
                 default:
                     throw new AssertionError("Unrecognized XML element: " + name);
@@ -245,6 +249,10 @@ public final class XmlJetConfigBuilder extends AbstractConfigBuilder {
     }
 
     private int intValue(Node node) {
+        return Integer.parseInt(stringValue(node));
+    }
+
+    private int longValue(Node node) {
         return Integer.parseInt(stringValue(node));
     }
 

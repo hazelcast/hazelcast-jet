@@ -21,7 +21,7 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans
 		http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
 		http://www.hazelcast.com/schema/jet-spring
-		http://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-0.7.xsd
+		http://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-0.7.1.xsd
 		http://www.hazelcast.com/schema/spring
 		http://www.hazelcast.com/schema/spring/hazelcast-spring-3.10.xsd">
 
@@ -40,7 +40,7 @@
             <hz:map name="map" backup-count="3">
             </hz:map>
         </hz:config>
-        <jet:instance-config backup-count="4" cooperative-thread-Count="2" flow-control-period-ms="200"/>
+        <jet:instance-config backup-count="4" cooperative-thread-Count="2" flow-control-period-ms="200" scale-up-delay-millis="1234"/>
         <jet:default-edge-config queue-size="8" packet-size-limit="3" receive-window-multiplier="5"/>
         <jet:properties>
             <hz:property name="foo">bar</hz:property>
