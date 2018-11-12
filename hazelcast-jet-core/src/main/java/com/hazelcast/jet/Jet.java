@@ -113,7 +113,7 @@ public final class Jet {
         return new JetClientInstanceImpl(((HazelcastClientProxy) client).client);
     }
 
-    static void configureJetService(JetConfig jetConfig) {
+    private static void configureJetService(JetConfig jetConfig) {
         Config hzConfig = jetConfig.getHazelcastConfig();
         if (!(hzConfig.getConfigPatternMatcher() instanceof MatchingPointConfigPatternMatcher)) {
             throw new UnsupportedOperationException("Custom config pattern matcher is not supported in Jet");
@@ -152,7 +152,6 @@ public final class Jet {
         MapConfig resultsMapConfig = new MapConfig(metadataMapConfig)
                 .setName(JOB_RESULTS_MAP_NAME)
                 .setTimeToLiveSeconds(properties.getSeconds(JOB_RESULTS_TTL_SECONDS));
-        resultsMapConfig.getHotRestartConfig().setEnabled(hotRestartEnabled);
 
         hzConfig.addMapConfig(metadataMapConfig)
                 .addMapConfig(resultsMapConfig);
