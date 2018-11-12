@@ -15,12 +15,17 @@
   ~ limitations under the License.
   -->
 
-<hazelcast-jet xsi:schemaLocation="http://www.hazelcast.com/schema/jet-config hazelcast-jet-config-0.7.xsd"
+<hazelcast-jet xsi:schemaLocation="http://www.hazelcast.com/schema/jet-config hazelcast-jet-config-0.7.1.xsd"
                xmlns="http://www.hazelcast.com/schema/jet-config"
                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <instance>
         <!-- time spacing of flow-control (ack) packets -->
        <flow-control-period>100</flow-control-period>
+        <!-- number of backup copies to configure for Hazelcast IMaps used internally in a Jet job -->
+        <backup-count>1</backup-count>
+        <!-- the delay after which auto-scaled jobs will restart if a new member is added to the
+             cluster. The default is 10 seconds. Has no effect on jobs with auto scaling disabled -->
+        <scale-up-delay-millis>10000</scale-up-delay-millis>
     </instance>
     <edge-defaults>
         <!-- capacity of the concurrent SPSC queue between each two processors -->
