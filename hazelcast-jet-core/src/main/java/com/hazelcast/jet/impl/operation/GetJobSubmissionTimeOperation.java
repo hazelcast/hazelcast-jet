@@ -18,8 +18,9 @@ package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
+import com.hazelcast.spi.impl.AllowedDuringPassiveState;
 
-public class GetJobSubmissionTimeOperation extends AbstractJobOperation {
+public class GetJobSubmissionTimeOperation extends AbstractJobOperation implements AllowedDuringPassiveState {
 
     private long response;
 
