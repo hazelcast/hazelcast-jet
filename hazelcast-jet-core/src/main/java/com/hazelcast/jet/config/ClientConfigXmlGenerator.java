@@ -72,6 +72,10 @@ import java.util.Set;
 import static com.hazelcast.nio.IOUtil.closeResource;
 import static com.hazelcast.util.StringUtil.isNullOrEmpty;
 
+/**
+ * The ClientConfigXmlGenerator is responsible for transforming a
+ * {@link ClientConfig} to a Hazelcast Client XML string.
+ */
 public class ClientConfigXmlGenerator {
 
     private static final int INDENT = 5;
@@ -80,15 +84,23 @@ public class ClientConfigXmlGenerator {
 
     private final boolean formatted;
 
+    /**
+     * Creates a new generator instance with {@link #formatted} {@code false}
+     */
     public ClientConfigXmlGenerator() {
         this(false);
     }
 
+    /**
+     * Creates a new generator instance
+     */
     public ClientConfigXmlGenerator(boolean formatted) {
         this.formatted = formatted;
     }
 
-
+    /**
+     * Transforms the given {@link ClientConfig} to xml string
+     */
     public String generate(ClientConfig clientConfig) {
         Preconditions.isNotNull(clientConfig, "ClientConfig");
 
@@ -441,7 +453,7 @@ public class ClientConfigXmlGenerator {
         if (socketInterceptor == null) {
             return;
         }
-        gen.open("socket-interceptor","enabled", socketInterceptor.isEnabled())
+        gen.open("socket-interceptor", "enabled", socketInterceptor.isEnabled())
            .node("class-name", classNameOrImplClass(socketInterceptor.getClassName(),
                    socketInterceptor.getImplementation()))
            .appendProperties(socketInterceptor.getProperties())
