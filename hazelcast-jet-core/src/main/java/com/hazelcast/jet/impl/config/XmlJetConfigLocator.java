@@ -95,8 +95,6 @@ public final class XmlJetConfigLocator {
     private static InputStream defaultFromClasspath(String defaultXmlName) throws IOException {
         LOGGER.info("Loading " + defaultXmlName + " from classpath.");
 
-        URL resource = Config.class.getClassLoader().getResource(defaultXmlName);
-        System.out.println(resource);
         InputStream in = Config.class.getClassLoader().getResourceAsStream(defaultXmlName);
         if (in == null) {
             throw new IOException("Could not load " + defaultXmlName + " + from classpath");
