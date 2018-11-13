@@ -17,6 +17,7 @@
 package com.hazelcast.jet;
 
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.util.Util;
@@ -156,4 +157,61 @@ public interface Job {
      * coordinator did not yet load job's metadata.
      */
     void cancel();
+
+    /**
+     * Initiates exporting of state snapshot and saves it under the given name,
+     * after which the job will be cancelled without processing any more data
+     * after the snapshot. It's similar to {@link #suspend()}, except that the
+     * job cannot be later resumed, but a new job has to be submitted with
+     * possibly changed Pipeline using {@link
+     * JobConfig#setInitialSnapshotName(String)}.
+     *
+     * For more comments about "exported state" see {@link
+     * #exportState(String)}.
+     *
+     * If the snapshot fails, the job won't be cancelled but will be suspended.
+     *
+     * You can call this method for suspended job: in that case the last
+     * successful snapshot will be copied and the job cancelled.
+     *
+     * TODO [viliam] finish javadoc
+     *
+     * @param name name of the snapshot
+     */
+    void cancelAndExportState(String name);
+
+    /**
+     * Initiates a state snapshot and saves it under the given name.
+     * The call will block until the snapshot is successfully stored. The
+     * state can later be used to start a new job from the stored
+     * state using {@link JobConfig#setInitialSnapshotName(String)}.
+     *
+     * The state is independent from this job. It will be stored in an IMap Jet won't
+     * automatically delete the snapshot, it has to be {@linkplain
+     * JetInstance#deleteExportedState(String) deleted manually}. If your state is
+     * large, make sure to have enough memory to store it.
+     * <p>
+     * If a snapshot with that name already exists, it will be overwritten. If
+     * a snapshot is already in progress (either automatic or user-requested),
+     * the requested one will start immediately after the previous one
+     * completes. If snapshot with the same name is requested for two jobs at
+     * the same time, their data will likely be damaged (similar to two
+     * processes writing to the same file).
+     *
+     * You can call this method for suspended job: in that case the last
+     * successful snapshot will be copied.
+     *
+     * You can also export state of non-snapshotted jobs (those with {@link
+     * ProcessingGuarantee#NONE}.
+     *
+     * Parallel requests to export snapshot are serialized and executed one by
+     * one. Graceful job-control action such as graceful shutdown or suspending
+     * a snapshotted job is also enqueued. Forceful job-control actions will
+     * interrupt the exported snapshot.
+     *
+     * TODO [viliam] finish javadoc
+     *
+     * @param name name of the snapshot
+     */
+    void exportState(String name);
 }

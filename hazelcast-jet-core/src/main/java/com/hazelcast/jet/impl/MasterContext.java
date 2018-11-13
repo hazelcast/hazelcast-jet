@@ -22,6 +22,7 @@ import com.hazelcast.core.Member;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.cluster.impl.MembersView;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
@@ -29,6 +30,7 @@ import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.impl.JobExecutionRecord.SnapshotStats;
 import com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate;
 import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
@@ -56,9 +58,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -79,10 +83,13 @@ import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.STARTING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
+import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.impl.JobRepository.snapshotDataMapName;
 import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.RESTART;
 import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.SUSPEND;
-import static com.hazelcast.jet.impl.TerminationMode.CANCEL;
+import static com.hazelcast.jet.impl.TerminationMode.CANCEL_FORCEFUL;
+import static com.hazelcast.jet.impl.TerminationMode.CANCEL_GRACEFUL;
 import static com.hazelcast.jet.impl.TerminationMode.RESTART_GRACEFUL;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder.createExecutionPlans;
@@ -152,15 +159,20 @@ public class MasterContext {
     private boolean snapshotInProgress;
 
     /**
-     * If {@code true}, the snapshot that will be executed next will be
-     * terminal (a graceful shutdown). It is set to true when a graceful
-     * shutdown or restart is requested and reset back to false when such a
-     * snapshot is initiated.
+     * If the queue contains an item, the next snapshot will be started right
+     * after the current one or immediately, if there's no snapshot in
+     * progress. The tuple contains:<ul>
+     *     <li>{@code mapName}: user-requested map name to export the snapshot
+     *         to or null, if default map is to be used
+     *     <li>{@code isTerminal}: if true, job will be terminated after the
+     *         snapshot
+     *     <li>{@code future}: future, that will be completed when snapshot is
+     *         validated.
+     * </ul>
      *
-     * <p>If it's true at snapshot completion time, the next snapshot is not
-     * scheduled after a delay but run immediately.
+     * Queue is accessed only in synchronized code.
      */
-    private volatile boolean nextSnapshotIsTerminal;
+    private final Queue<Tuple3<String, Boolean, CompletableFuture<Void>>> requestedSnapshotsQueue = new LinkedList<>();
 
     /**
      * A future (re)created when the job is started and completed when terminal
@@ -199,7 +211,7 @@ public class MasterContext {
         return jobRecord.getConfig();
     }
 
-    public JobRecord jobRecord() {
+    JobRecord jobRecord() {
         return jobRecord;
     }
 
@@ -218,13 +230,14 @@ public class MasterContext {
         JobStatus localStatus;
         assertLockNotHeld();
         synchronized (lock) {
-            if (!isSnapshottingEnabled()) {
-                // switch graceful method to forceful if we don't do snapshots
+            // Switch graceful method to forceful if we don't do snapshots, except for graceful
+            // cancellation, which is allowed even if not snapshotting.
+            if (!isSnapshottingEnabled() && mode != CANCEL_GRACEFUL) {
                 mode = mode.withoutTerminalSnapshot();
             }
 
             localStatus = jobStatus();
-            if (localStatus == SUSPENDED && mode != CANCEL) {
+            if (localStatus == SUSPENDED && mode != CANCEL_FORCEFUL) {
                 // if suspended, we can only cancel the job. Other terminations have no effect.
                 return false;
             }
@@ -236,6 +249,9 @@ public class MasterContext {
             if (localStatus == SUSPENDED) {
                 this.jobStatus = COMPLETED;
                 setFinalResult(new CancellationException());
+            }
+            if (mode.isWithTerminalSnapshot()) {
+                requestedSnapshotsQueue.add(tuple3(null, true, null));
             }
         }
 
@@ -250,8 +266,34 @@ public class MasterContext {
         return true;
     }
 
+    CompletableFuture<Void> exportSnapshot(String name, boolean cancelJob) {
+        assertLockNotHeld();
+        CompletableFuture<Void> future;
+        synchronized (lock) {
+            JobStatus localStatus = jobStatus();
+            if (localStatus == SUSPENDED) {
+                // TODO [viliam] copy snapshot map
+                throw new UnsupportedOperationException("TODO");
+            }
+            if (localStatus != RUNNING) {
+                throw new JetException("Cannot export snapshot, job is neither RUNNING nor SUSPENDED, but " + localStatus);
+            }
+            future = new CompletableFuture<>();
+            requestedSnapshotsQueue.add(tuple3(name, cancelJob, future));
+        }
+        if (cancelJob) {
+            if (!requestTermination(CANCEL_GRACEFUL)) {
+                throw new JetException("Cannot cancel " + jobIdString() + " and export to '" + name + "': " +
+                        "already terminating in mode: " + requestedTerminationMode());
+            }
+        } else {
+            beginSnapshot(executionId);
+        }
+        return future;
+    }
+
     boolean isCancelled() {
-        return requestedTerminationMode == CANCEL;
+        return requestedTerminationMode == CANCEL_FORCEFUL;
     }
 
     TerminationMode requestedTerminationMode() {
@@ -315,7 +357,7 @@ public class MasterContext {
             executionId = executionIdSupplier.apply(jobId);
 
             snapshotInProgress = false;
-            nextSnapshotIsTerminal = false;
+            requestedSnapshotsQueue.clear();
             terminalSnapshotFuture = new CompletableFuture<>();
         }
 
@@ -325,18 +367,22 @@ public class MasterContext {
             return;
         }
 
-        if (isSnapshottingEnabled()) {
-            long snapshotToRestore = jobExecutionRecord.snapshotId();
-            try {
-                jobRepository.clearSnapshotData(jobId, jobExecutionRecord.ongoingDataMapIndex());
-            } catch (Exception e) {
-                logger.warning("Cannot delete old snapshots for " + jobName, e);
-            }
-            if (snapshotToRestore >= 0) {
-                rewriteDagWithSnapshotRestore(dag, snapshotToRestore);
-            } else {
-                logger.info("No previous snapshot for " + jobIdString() + " found.");
-            }
+        long snapshotToRestore = jobExecutionRecord.snapshotId();
+        try {
+            jobRepository.clearSnapshotData(jobId, jobExecutionRecord.ongoingDataMapIndex());
+        } catch (Exception e) {
+            logger.warning("Cannot delete old snapshots for " + jobName, e);
+        }
+        String mapName = null;
+        if (snapshotToRestore >= 0) {
+            mapName = jobExecutionRecord.successfulSnapshotDataMapName(jobId);
+        } else if (jobConfig().getInitialSnapshotName() != null) {
+            mapName = jobConfig().getInitialSnapshotName();
+        }
+        if (mapName != null) {
+            rewriteDagWithSnapshotRestore(dag, snapshotToRestore, mapName);
+        } else {
+            logger.info("No previous snapshot for " + jobIdString() + " found.");
         }
 
         MembersView membersView = getMembersView();
@@ -364,8 +410,7 @@ public class MasterContext {
         invokeOnParticipants(operationCtor, this::onInitStepCompleted, null);
     }
 
-    private void rewriteDagWithSnapshotRestore(DAG dag, long snapshotId) {
-        String mapName = jobExecutionRecord.successfulSnapshotDataMapName(jobId);
+    private void rewriteDagWithSnapshotRestore(DAG dag, long snapshotId, String mapName) {
         logger.info("State of " + jobIdString() + " will be restored from snapshot " + snapshotId + ", map=" + mapName);
 
         List<Vertex> originalVertices = new ArrayList<>();
@@ -506,7 +551,6 @@ public class MasterContext {
         // this method can be called multiple times to handle the termination, it must
         // be safe against it (idempotent).
         if (mode.isWithTerminalSnapshot()) {
-            nextSnapshotIsTerminal = true;
             beginSnapshot(executionId);
         } else {
             if (executionInvocationCallback != null) {
@@ -522,6 +566,8 @@ public class MasterContext {
 
     void beginSnapshot(long executionId) {
         boolean isTerminal;
+        String mapName;
+        CompletableFuture<Void> future;
         assertLockNotHeld();
         synchronized (lock) {
             if (this.executionId != executionId) {
@@ -546,25 +592,42 @@ public class MasterContext {
                 return;
             }
             snapshotInProgress = true;
-            isTerminal = nextSnapshotIsTerminal;
-            jobExecutionRecord.startNewSnapshot();
+            Tuple3<String, Boolean, CompletableFuture<Void>> requestedSnapshot = requestedSnapshotsQueue.poll();
+            if (requestedSnapshot != null) {
+                mapName = requestedSnapshot.f0();
+                isTerminal = requestedSnapshot.f1();
+                future = requestedSnapshot.f2();
+            } else {
+                isTerminal = false;
+                mapName = null;
+                future = null;
+            }
+            jobExecutionRecord.startNewSnapshot(mapName);
         }
 
         writeJobExecutionRecord(false);
         long newSnapshotId = jobExecutionRecord.ongoingSnapshotId();
 
-        logger.info(String.format("Starting%s snapshot %s for %s", isTerminal ? " terminal" : "", newSnapshotId,
-                jobIdString()));
+        boolean isExport = mapName != null;
+        logger.info(String.format("Starting snapshot %d for %s", newSnapshotId, jobIdString())
+                + (isTerminal ? ", terminal" : "")
+                + (isExport ? ", exported to '" + mapName + '\'' : ""));
+        String finalMapName = isExport ? mapName
+                : snapshotDataMapName(jobId, jobExecutionRecord.ongoingDataMapIndex());
         Function<ExecutionPlan, Operation> factory =
-                plan -> new SnapshotOperation(jobId, executionId, newSnapshotId,
-                        jobExecutionRecord.ongoingDataMapIndex(), isTerminal);
+                plan -> new SnapshotOperation(jobId, executionId, newSnapshotId, finalMapName, isTerminal);
 
         invokeOnParticipants(factory,
-                responses -> onSnapshotCompleted(responses, executionId, newSnapshotId, isTerminal), null);
+                responses -> onSnapshotCompleted(responses, executionId, newSnapshotId, isTerminal, future), null);
     }
 
-    private void onSnapshotCompleted(Map<MemberInfo, Object> responses, long executionId, long snapshotId,
-                                                  boolean wasTerminal) {
+    private void onSnapshotCompleted(
+            Map<MemberInfo, Object> responses,
+            long executionId,
+            long snapshotId,
+            boolean wasTerminal,
+            @Nullable CompletableFuture<Void> future
+    ) {
         // Note: this method can be called after finalizeJob() is called or even after new execution started.
         // We only wait for snapshot completion if the job completed with a terminal snapshot and the job
         // was successful.
@@ -582,11 +645,11 @@ public class MasterContext {
             logger.warning(jobIdString() + " snapshot " + snapshotId + " failed on some member(s), " +
                     "one of the failures: " + mergedResult.getError());
         }
-        jobExecutionRecord.ongoingSnapshotDone(
+
+        SnapshotStats stats = jobExecutionRecord.ongoingSnapshotDone(
                 mergedResult.getNumBytes(), mergedResult.getNumKeys(), mergedResult.getNumChunks(),
                 mergedResult.getError());
         writeJobExecutionRecord(false);
-        SnapshotStats stats = jobExecutionRecord.snapshotStats();
         logger.info(String.format("Snapshot %d for %s completed with status %s in %dms, " +
                         "%,d bytes, %,d keys in %,d chunks, stored in data map %d",
                 snapshotId, jobIdString(), isSuccess ? "SUCCESS" : "FAILURE",
@@ -594,6 +657,13 @@ public class MasterContext {
                 stats.numKeys(), stats.numChunks(),
                 jobExecutionRecord.dataMapIndex()));
         jobRepository.clearSnapshotData(jobId, jobExecutionRecord.ongoingDataMapIndex());
+        if (future != null) {
+            if (isSuccess) {
+                future.complete(null);
+            } else {
+                future.completeExceptionally(new JetException(mergedResult.getError()));
+            }
+        }
 
         Runnable nonSynchronizedAction = () -> { };
         synchronized (lock) {
@@ -609,8 +679,8 @@ public class MasterContext {
                 boolean completedNow = terminalSnapshotFuture.complete(null);
                 assert completedNow : "terminalSnapshotFuture was already completed";
             } else {
-                // schedule next snapshot after a delay or immediately, if it is terminal
-                if (nextSnapshotIsTerminal) {
+                // schedule next snapshot after a delay or immediately, if it is requested
+                if (!requestedSnapshotsQueue.isEmpty()) {
                     nonSynchronizedAction = () -> coordinationService.beginSnapshot(jobId, executionId);
                 } else {
                     coordinationService.scheduleSnapshot(jobId, executionId);

@@ -93,19 +93,19 @@ public class SuspendResumeTest extends JetTestSupport {
     }
 
     @Test
-    public void when_memberAddedAfterResume_then_jobResumesOnAllMembers() throws Exception {
-        // When
+    public void when_memberAddedWhileSuspended_then_jobResumesOnAllMembers() throws Exception {
         Job job = instances[0].newJob(dag);
         StuckProcessor.executionStarted.await();
         job.suspend();
         assertJobStatusEventually(job, SUSPENDED);
+        // When
         createJetMember(config);
+
+        // Then
         job.resume();
         assertJobStatusEventually(job, RUNNING);
         StuckProcessor.proceedLatch.countDown();
         job.join();
-
-        // Then
         assertEquals(2 * NODE_COUNT + 1, MockPS.initCount.get());
 
         assertTrueEventually(() -> {
@@ -116,7 +116,7 @@ public class SuspendResumeTest extends JetTestSupport {
     }
 
     @Test
-    public void when_nonCoordinatorDiesAfterSuspend_then_jobResumes() throws Exception {
+    public void when_nonCoordinatorDiesWhileSuspended_then_jobResumes() throws Exception {
         // When
         Job job = instances[0].newJob(dag);
         StuckProcessor.executionStarted.await();
@@ -139,7 +139,7 @@ public class SuspendResumeTest extends JetTestSupport {
     }
 
     @Test
-    public void when_coordinatorDiesAfterSuspend_then_jobResumes() throws Exception {
+    public void when_coordinatorDiesWhileSuspended_then_jobResumes() throws Exception {
         // When
         Job job = instances[1].newJob(dag);
         StuckProcessor.executionStarted.await();

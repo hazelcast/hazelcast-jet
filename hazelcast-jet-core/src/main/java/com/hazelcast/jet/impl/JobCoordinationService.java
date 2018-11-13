@@ -62,7 +62,7 @@ import static com.hazelcast.jet.core.JobStatus.COMPLETING;
 import static com.hazelcast.jet.core.JobStatus.NOT_RUNNING;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
-import static com.hazelcast.jet.impl.TerminationMode.CANCEL;
+import static com.hazelcast.jet.impl.TerminationMode.CANCEL_FORCEFUL;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
@@ -378,7 +378,7 @@ public class JobCoordinationService {
 
         JobResult jobResult = jobRepository.getJobResult(jobId);
         if (jobResult != null) {
-            if (terminationMode == CANCEL) {
+            if (terminationMode == CANCEL_FORCEFUL) {
                 logger.fine("Ignoring cancellation of a completed job " + idToString(jobId));
                 return;
             }
@@ -406,7 +406,7 @@ public class JobCoordinationService {
         // it will restart.
         // In any case, it doesn't make sense to restart a suspended job.
         JobStatus jobStatus = masterContext.jobStatus();
-        if (jobStatus != RUNNING && terminationMode != CANCEL) {
+        if (jobStatus != RUNNING && terminationMode != CANCEL_FORCEFUL) {
             throw new IllegalStateException("Cannot " + terminationMode + ", job status is " + jobStatus
                     + ", should be " + RUNNING);
         }
@@ -414,7 +414,7 @@ public class JobCoordinationService {
         if (!masterContext.requestTermination(terminationMode)) {
             TerminationMode mcTerminationMode = masterContext.requestedTerminationMode();
             // ignore double cancellation
-            if (terminationMode == CANCEL && mcTerminationMode == CANCEL) {
+            if (terminationMode == CANCEL_FORCEFUL && mcTerminationMode == CANCEL_FORCEFUL) {
                 return;
             }
             throw new IllegalStateException("Cannot " + terminationMode + ", job is already terminating in mode: "
@@ -523,6 +523,16 @@ public class JobCoordinationService {
             throw new JobNotFoundException("MasterContext not found to resume job " + idToString(jobId));
         }
         masterContext.resumeJob(jobRepository::newExecutionId);
+    }
+
+    public CompletableFuture<Void> exportSnapshot(long jobId, String name, boolean cancelJob) {
+        assertIsMaster("Cannot export snapshot for job " + idToString(jobId) + " from non-master node");
+
+        MasterContext masterContext = masterContexts.get(jobId);
+        if (masterContext == null) {
+            throw new JobNotFoundException("MasterContext not found to resume job " + idToString(jobId));
+        }
+        return masterContext.exportSnapshot(name, cancelJob);
     }
 
     /**

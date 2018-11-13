@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
 import com.hazelcast.client.impl.protocol.ClientMessage;
+import com.hazelcast.client.impl.protocol.codec.JetExportStateCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobConfigCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobStatusCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobSubmissionTimeCodec;
@@ -96,6 +97,26 @@ public class ClientJobProxy extends AbstractJobProxy<HazelcastClientInstanceImpl
     @Override
     public void resume() {
         ClientMessage request = JetResumeJobCodec.encodeRequest(getId());
+        try {
+            new CancellableFuture<>(invocation(request, masterAddress()).invoke()).get();
+        } catch (Exception e) {
+            throw rethrow(e);
+        }
+    }
+
+    @Override
+    public void cancelAndExportState(String name) {
+        ClientMessage request = JetExportStateCodec.encodeRequest(getId(), name, true);
+        try {
+            new CancellableFuture<>(invocation(request, masterAddress()).invoke()).get();
+        } catch (Exception e) {
+            throw rethrow(e);
+        }
+    }
+
+    @Override
+    public void exportState(String name) {
+        ClientMessage request = JetExportStateCodec.encodeRequest(getId(), name, false);
         try {
             new CancellableFuture<>(invocation(request, masterAddress()).invoke()).get();
         } catch (Exception e) {

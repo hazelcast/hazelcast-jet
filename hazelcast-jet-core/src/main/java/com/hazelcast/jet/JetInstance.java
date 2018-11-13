@@ -134,6 +134,11 @@ public interface JetInstance {
         return getJobs(name).stream().findFirst().orElse(null);
     }
 
+    default void deleteExportedState(@Nonnull String name) {
+        // TODO [viliam]
+        throw new UnsupportedOperationException("todo");
+    }
+
     /**
      * Returns the distributed map instance with the specified name.
      *

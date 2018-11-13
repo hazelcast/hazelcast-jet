@@ -21,6 +21,7 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobStatus;
+import com.hazelcast.jet.impl.operation.ExportStateOperation;
 import com.hazelcast.jet.impl.operation.GetJobConfigOperation;
 import com.hazelcast.jet.impl.operation.GetJobStatusOperation;
 import com.hazelcast.jet.impl.operation.GetJobSubmissionTimeOperation;
@@ -81,6 +82,24 @@ public class JobProxy extends AbstractJobProxy<NodeEngineImpl> {
     public void resume() {
         try {
             invokeOp(new ResumeJobOperation(getId())).get();
+        } catch (Exception e) {
+            throw rethrow(e);
+        }
+    }
+
+    @Override
+    public void cancelAndExportState(String name) {
+        try {
+            invokeOp(new ExportStateOperation(getId(), name, true)).get();
+        } catch (Exception e) {
+            throw rethrow(e);
+        }
+    }
+
+    @Override
+    public void exportState(String name) {
+        try {
+            invokeOp(new ExportStateOperation(getId(), name, false)).get();
         } catch (Exception e) {
             throw rethrow(e);
         }

@@ -47,6 +47,7 @@ public class JobConfig implements Serializable {
     private final List<ResourceConfig> resourceConfigs = new ArrayList<>();
     private int maxWatermarkRetainMillis = -1;
     private JobClassLoaderFactory classLoaderFactory;
+    private String initialSnapshotName;
 
     /**
      * Returns the name of the job or {@code null} if no name was given.
@@ -421,5 +422,22 @@ public class JobConfig implements Serializable {
     @Nullable
     public JobClassLoaderFactory getClassLoaderFactory() {
         return classLoaderFactory;
+    }
+
+    public String getInitialSnapshotName() {
+        return initialSnapshotName;
+    }
+
+    /**
+     * TODO [viliam] finish javadoc
+     *
+     * You can restore state also for non-snapshotted jobs.
+     *
+     * @param initialSnapshotName
+     * @return
+     */
+    public JobConfig setInitialSnapshotName(String initialSnapshotName) {
+        this.initialSnapshotName = initialSnapshotName;
+        return this;
     }
 }
