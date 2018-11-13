@@ -29,7 +29,6 @@ import com.hazelcast.client.config.ProxyFactoryConfig;
 import com.hazelcast.client.config.SocketOptions;
 import com.hazelcast.client.util.RandomLB;
 import com.hazelcast.client.util.RoundRobinLB;
-import com.hazelcast.config.ConfigXmlGenerator;
 import com.hazelcast.config.DiscoveryConfig;
 import com.hazelcast.config.EntryListenerConfig;
 import com.hazelcast.config.EvictionConfig;
@@ -68,6 +67,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.IntStream;
 
 import static com.hazelcast.nio.IOUtil.closeResource;
 import static com.hazelcast.util.StringUtil.isNullOrEmpty;
@@ -76,42 +76,37 @@ import static com.hazelcast.util.StringUtil.isNullOrEmpty;
  * The ClientConfigXmlGenerator is responsible for transforming a
  * {@link ClientConfig} to a Hazelcast Client XML string.
  */
-public class ClientConfigXmlGenerator {
+public final class ClientConfigXmlGenerator {
 
-    private static final int INDENT = 5;
+    private static final ILogger LOGGER = Logger.getLogger(ClientConfigXmlGenerator.class);
+    private static final char CHARACTER_THRESHOLD = 0x7e;
 
-    private static final ILogger LOGGER = Logger.getLogger(ConfigXmlGenerator.class);
-
-    private final boolean formatted;
-
-    /**
-     * Creates a new generator instance with {@link #formatted} {@code false}
-     */
-    public ClientConfigXmlGenerator() {
-        this(false);
+    private ClientConfigXmlGenerator() {
     }
 
     /**
-     * Creates a new generator instance
+     * Convenience for {@link #generate(ClientConfig, int)}, which
+     * generates the xml without any formatting.
      */
-    public ClientConfigXmlGenerator(boolean formatted) {
-        this.formatted = formatted;
+    public static String generate(ClientConfig clientConfig) {
+        return generate(clientConfig, -1);
     }
 
     /**
      * Transforms the given {@link ClientConfig} to xml string
+     * formatting the output with given {@code indent}, -1 means no
+     * formatting.
      */
-    public String generate(ClientConfig clientConfig) {
+    public static String generate(ClientConfig clientConfig, int indent) {
         Preconditions.isNotNull(clientConfig, "ClientConfig");
 
         StringBuilder xml = new StringBuilder();
         XmlGenerator gen = new XmlGenerator(xml);
 
-        xml.append("<hazelcast-client ")
-           .append("xmlns=\"http://www.hazelcast.com/schema/client-config\"\n")
-           .append("xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n")
-           .append("xsi:schemaLocation=\"http://www.hazelcast.com/schema/client-config ")
-           .append("http://www.hazelcast.com/schema/client-config/hazelcast-client-config-3.10.xsd\">");
+        gen.open("hazelcast-client", "xmlns", "http://www.hazelcast.com/schema/client-config",
+                "xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance",
+                "xsi:schemaLocation", "http://www.hazelcast.com/schema/client-config " +
+                        "http://www.hazelcast.com/schema/client-config/hazelcast-client-config-3.10.xsd");
 
         //GroupConfig
         group(gen, clientConfig.getGroupConfig());
@@ -150,14 +145,18 @@ public class ClientConfigXmlGenerator {
         //FlakeIdGenerator
         flakeIdGenerator(gen, clientConfig.getFlakeIdGeneratorConfigMap());
 
-        xml.append("</hazelcast-client>");
+        //close HazelcastClient
+        gen.close();
 
-        return format(xml.toString(), INDENT);
+        return format(xml.toString(), indent);
     }
 
-    private String format(String input, int indent) {
-        if (!formatted) {
+    private static String format(String input, int indent) {
+        if (indent < 0) {
             return input;
+        }
+        if (indent == 0) {
+            throw new IllegalArgumentException("Indent should be greater than 0");
         }
         StreamResult xmlOutput = null;
         try {
@@ -286,6 +285,13 @@ public class ClientConfigXmlGenerator {
             gen.close();
         }
 
+        serializers(gen, serialization);
+
+        //close serialization
+        gen.close();
+    }
+
+    private static void serializers(XmlGenerator gen, SerializationConfig serialization) {
         GlobalSerializerConfig global = serialization.getGlobalSerializerConfig();
         Collection<SerializerConfig> serializers = serialization.getSerializerConfigs();
         if (global != null || !serializers.isEmpty()) {
@@ -297,14 +303,16 @@ public class ClientConfigXmlGenerator {
             serializers.forEach(serializer -> gen.node("serializer", null,
                     "type-class", classNameOrImplClass(serializer.getTypeClassName(), serializer.getTypeClass()),
                     "class-name", classNameOrImplClass(serializer.getClassName(), serializer.getImplementation())));
+            //close serializers
             gen.close();
         }
-        gen.close();
     }
 
     private static void nativeMemory(XmlGenerator gen, NativeMemoryConfig nativeMemory) {
-        gen.open("native-memory", "enabled", nativeMemory.isEnabled(), "allocator-type", nativeMemory.getAllocatorType())
-           .node("size", null, "value", nativeMemory.getSize().getValue(), "unit", nativeMemory.getSize().getUnit())
+        gen.open("native-memory", "enabled", nativeMemory.isEnabled(),
+                "allocator-type", nativeMemory.getAllocatorType())
+           .node("size", null, "value", nativeMemory.getSize().getValue(),
+                   "unit", nativeMemory.getSize().getUnit())
            .node("min-block-size", nativeMemory.getMinBlockSize())
            .node("page-size", nativeMemory.getPageSize())
            .node("metadata-space-percentage", nativeMemory.getMetadataSpacePercentage())
@@ -611,7 +619,7 @@ public class ClientConfigXmlGenerator {
 
         private static void appendAttributes(StringBuilder xml, Object... attributes) {
             for (int i = 0; i < attributes.length; ) {
-                xml.append(" ").append(attributes[i++]).append("=\"").append(attributes[i++]).append("\"");
+                xml.append(" ").append(escape(attributes[i++])).append("=\"").append(escape(attributes[i++])).append("\"");
             }
         }
 
@@ -619,17 +627,51 @@ public class ClientConfigXmlGenerator {
             if (contents != null || attributes.length > 0) {
                 xml.append('<').append(name);
                 for (int i = 0; i < attributes.length; ) {
-                    Object key = attributes[i++];
-                    Object val = attributes[i++];
+                    Object key = escape(attributes[i++]);
+                    Object val = escape(attributes[i++]);
                     if (val != null) {
                         xml.append(" ").append(key).append("=\"").append(val).append("\"");
                     }
                 }
                 if (contents != null) {
-                    xml.append('>').append(contents).append("</").append(name).append('>');
+                    xml.append('>').append(escape(contents)).append("</").append(name).append('>');
                 } else {
                     xml.append("/>");
                 }
+            }
+        }
+
+        private static String escape(Object o) {
+            if (o == null) {
+                return null;
+            }
+            return o.toString()
+                    .codePoints()
+                    .flatMap(XmlGenerator::escapeChar)
+                    .collect(StringBuilder::new,
+                            StringBuilder::appendCodePoint,
+                            StringBuilder::append)
+                    .toString();
+        }
+
+        private static IntStream escapeChar(int c) {
+            switch (c) {
+                case '<':
+                    return "&lt;".chars();
+                case '>':
+                    return "&gt;".chars();
+                case '"':
+                    return "&quot;".chars();
+                case '&':
+                    return "&amp;".chars();
+                case '\'':
+                    return "&apos;".chars();
+                default:
+                    if (c > CHARACTER_THRESHOLD) {
+                        return ("&#" + c + ";").chars();
+                    } else {
+                        return IntStream.of(c);
+                    }
             }
         }
     }

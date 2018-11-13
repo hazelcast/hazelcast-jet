@@ -77,10 +77,25 @@ import static org.junit.Assert.assertTrue;
 public class ClientConfigXmlGeneratorTest extends JetTestSupport {
 
     private static final boolean DEBUG = false;
-    private static final ClientConfigXmlGenerator generator = new ClientConfigXmlGenerator(DEBUG);
     private static final Random RANDOM = new Random();
 
     private ClientConfig clientConfig = new ClientConfig();
+
+    @Test
+    public void escape() {
+        StringBuilder builder = new StringBuilder()
+                .append('<').append(' ')
+                .append('>').append(' ')
+                .append('&').append(' ')
+                .append('"').append(' ')
+                .append('\'').append(' ')
+                .append((char) 0x8e);
+        GroupConfig expected = new GroupConfig(builder.toString(), "pass");
+        clientConfig.setGroupConfig(expected);
+        GroupConfig actual = newConfigViaGenerator().getGroupConfig();
+        assertEquals(expected.getName(), actual.getName());
+        assertEquals(expected.getPassword(), actual.getPassword());
+    }
 
     @Test
     public void group() {
@@ -383,14 +398,14 @@ public class ClientConfigXmlGeneratorTest extends JetTestSupport {
                                 //.setComparatorClassName(randomString())
                                 .setSize(randomInt())
                 ).addIndexConfig(
-                        new MapIndexConfig()
-                                .setOrdered(true)
-                                .setAttribute(randomString())
-                ).addEntryListenerConfig(
-                        (EntryListenerConfig) new EntryListenerConfig()
-                                .setIncludeValue(true)
-                                .setLocal(true)
-                                .setClassName(randomString()));
+                new MapIndexConfig()
+                        .setOrdered(true)
+                        .setAttribute(randomString())
+        ).addEntryListenerConfig(
+                (EntryListenerConfig) new EntryListenerConfig()
+                        .setIncludeValue(true)
+                        .setLocal(true)
+                        .setClassName(randomString()));
         clientConfig.addQueryCacheConfig(randomString(), expected);
 
         Map<String, Map<String, QueryCacheConfig>> actual = newConfigViaGenerator().getQueryCacheConfigs();
@@ -435,7 +450,7 @@ public class ClientConfigXmlGeneratorTest extends JetTestSupport {
     }
 
     private ClientConfig newConfigViaGenerator() {
-        String xml = generator.generate(clientConfig);
+        String xml = ClientConfigXmlGenerator.generate(clientConfig, DEBUG ? 5 : -1);
         debug(xml);
         return new XmlClientConfigBuilder(new ByteArrayInputStream(xml.getBytes())).build();
     }

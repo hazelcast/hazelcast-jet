@@ -17,10 +17,12 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.client.config.ClientConfig;
-import com.hazelcast.config.GroupConfig;
+import com.hazelcast.client.config.XmlClientConfigBuilder;
+import com.hazelcast.jet.config.ClientConfigXmlGenerator;
 
+import java.io.ByteArrayInputStream;
 import java.io.Serializable;
-import java.util.List;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Serializable subset of the {@link ClientConfig} which contains address and
@@ -29,23 +31,14 @@ import java.util.List;
  */
 class SerializableClientConfig implements Serializable {
 
-    private String groupName;
-    private String groupPass;
-    private List<String> addresses;
+    private String xml;
 
     SerializableClientConfig(ClientConfig clientConfig) {
-        GroupConfig groupConfig = clientConfig.getGroupConfig();
-        List<String> addresses = clientConfig.getNetworkConfig().getAddresses();
-        this.groupName = groupConfig.getName();
-        this.groupPass = groupConfig.getPassword();
-        this.addresses = addresses;
+        xml = ClientConfigXmlGenerator.generate(clientConfig);
     }
 
     ClientConfig asClientConfig() {
-        ClientConfig config = new ClientConfig();
-        config.getGroupConfig().setName(groupName);
-        config.getGroupConfig().setPassword(groupPass);
-        config.getNetworkConfig().setAddresses(addresses);
-        return config;
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8));
+        return new XmlClientConfigBuilder(inputStream).build();
     }
 }
