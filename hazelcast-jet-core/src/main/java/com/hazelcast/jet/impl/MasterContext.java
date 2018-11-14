@@ -387,7 +387,12 @@ public class MasterContext {
             mapName = Jet.EXPORTED_STATES_PREFIX + jobConfig().getInitialSnapshotName();
         }
         if (mapName != null) {
-            rewriteDagWithSnapshotRestore(dag, snapshotToRestore, mapName);
+            try {
+                rewriteDagWithSnapshotRestore(dag, snapshotToRestore, mapName);
+            } catch (Exception e) {
+                finalizeJob(e);
+                return;
+            }
         } else {
             logger.info("No previous snapshot for " + jobIdString() + " found.");
         }
@@ -697,11 +702,11 @@ public class MasterContext {
                 mergedResult.getError());
         writeJobExecutionRecord(false);
         logger.info(String.format("Snapshot %d for %s completed with status %s in %dms, " +
-                        "%,d bytes, %,d keys in %,d chunks, stored in data map %d",
+                        "%,d bytes, %,d keys in %,d chunks, stored in '%s'",
                 snapshotId, jobIdString(), isSuccess ? "SUCCESS" : "FAILURE",
                 stats.duration(), stats.numBytes(),
                 stats.numKeys(), stats.numChunks(),
-                jobExecutionRecord.dataMapIndex()));
+                snapshotMapName));
         jobRepository.clearSnapshotData(jobId, jobExecutionRecord.ongoingDataMapIndex());
         if (future != null) {
             if (isSuccess) {

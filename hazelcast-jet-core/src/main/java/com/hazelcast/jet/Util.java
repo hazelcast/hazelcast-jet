@@ -22,15 +22,13 @@ import com.hazelcast.core.EntryEventType;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.impl.SnapshotValidationRecord;
+import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl.SnapshotDataKey;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.Map.Entry;
-
-import static com.hazelcast.jet.GenericPredicates.notEqual;
-import static com.hazelcast.query.QueryConstants.KEY_ATTRIBUTE_NAME;
 
 /**
  * Miscellaneous utility methods useful in DAG building logic.
@@ -119,12 +117,12 @@ public final class Util {
     }
 
     public static void cleanUpSnapshotMap(JetInstance instance, String snapshotMapName) {
-        // TODO [viliam] test this
-        IMapJet<Object, Object> map = instance.getMap(snapshotMapName);
+        IMapJet<Object, Object> map = instance.getExportedState(snapshotMapName);
         SnapshotValidationRecord record = (SnapshotValidationRecord) map.get(SnapshotValidationRecord.KEY);
         if (record == null) {
             throw new JetException("Validation record not found - probably not a snapshot map");
         }
-        map.removeAll(notEqual(KEY_ATTRIBUTE_NAME + ".snapshotId", record.getSnapshotId()));
+        map.removeAll(entry -> entry.getKey() instanceof SnapshotDataKey
+                && ((SnapshotDataKey) entry.getKey()).snapshotId() != record.getSnapshotId());
     }
 }

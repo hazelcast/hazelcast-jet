@@ -221,6 +221,9 @@ public interface Job {
      * a snapshotted job is also enqueued. Forceful job-control actions will
      * interrupt the exported snapshot.
      *
+     * You can access the exported state map using {@link
+     * JetInstance#getExportedState(String)}.
+     *
      * TODO [viliam] finish javadoc
      *
      * @param name name of the snapshot

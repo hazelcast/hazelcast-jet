@@ -128,7 +128,7 @@ public class JetInstanceTest extends JetTestSupport {
         job.cancel();
         assertJobStatusEventually(job, JobStatus.COMPLETED);
         assertEquals(singleton("state2"), new HashSet<>(instance.getExportedStateNames()));
-        instance.deleteExportedState("state1");
+        instance.deleteExportedState("state2");
         assertEquals(emptySet(), new HashSet<>(instance.getExportedStateNames()));
     }
 }

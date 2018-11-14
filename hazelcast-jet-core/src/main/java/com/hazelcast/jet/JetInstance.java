@@ -18,7 +18,6 @@ package com.hazelcast.jet;
 
 import com.hazelcast.core.Cluster;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
 import com.hazelcast.core.ReplicatedMap;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
@@ -148,7 +147,7 @@ public interface JetInstance {
      * @param name exported snapshot name
      * @return IMap instance with the data
      */
-    default IMap<Object, Object> getExportedState(@Nonnull String name) {
+    default IMapJet<Object, Object> getExportedState(@Nonnull String name) {
         return getMap(Jet.EXPORTED_STATES_PREFIX + name);
     }
 
