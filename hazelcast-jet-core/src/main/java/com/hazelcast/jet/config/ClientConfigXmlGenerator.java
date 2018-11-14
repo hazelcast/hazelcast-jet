@@ -67,7 +67,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.stream.IntStream;
 
 import static com.hazelcast.nio.IOUtil.closeResource;
 import static com.hazelcast.util.StringUtil.isNullOrEmpty;
@@ -79,7 +78,7 @@ import static com.hazelcast.util.StringUtil.isNullOrEmpty;
 public final class ClientConfigXmlGenerator {
 
     private static final ILogger LOGGER = Logger.getLogger(ClientConfigXmlGenerator.class);
-    private static final char CHARACTER_THRESHOLD = 0x7e;
+    private static final int CAPACITY = 64;
 
     private ClientConfigXmlGenerator() {
     }
@@ -619,7 +618,11 @@ public final class ClientConfigXmlGenerator {
 
         private static void appendAttributes(StringBuilder xml, Object... attributes) {
             for (int i = 0; i < attributes.length; ) {
-                xml.append(" ").append(escape(attributes[i++])).append("=\"").append(escape(attributes[i++])).append("\"");
+                xml.append(" ");
+                escapeXml(attributes[i++], xml);
+                xml.append("=\"");
+                escapeXml(attributes[i++], xml);
+                xml.append("\"");
             }
         }
 
@@ -627,51 +630,78 @@ public final class ClientConfigXmlGenerator {
             if (contents != null || attributes.length > 0) {
                 xml.append('<').append(name);
                 for (int i = 0; i < attributes.length; ) {
-                    Object key = escape(attributes[i++]);
-                    Object val = escape(attributes[i++]);
+                    Object key = attributes[i++];
+                    Object val = attributes[i++];
                     if (val != null) {
-                        xml.append(" ").append(key).append("=\"").append(val).append("\"");
+                        xml.append(" ");
+                        escapeXmlAttr(key, xml);
+                        xml.append("=\"");
+                        escapeXmlAttr(val, xml);
+                        xml.append("\"");
                     }
                 }
                 if (contents != null) {
-                    xml.append('>').append(escape(contents)).append("</").append(name).append('>');
+                    xml.append('>');
+                    escapeXml(contents, xml);
+                    xml.append("</").append(name).append('>');
                 } else {
                     xml.append("/>");
                 }
             }
         }
 
-        private static String escape(Object o) {
+        /**
+         * Escapes special characters in XML element contents and appends the result to <code>appendTo</code>.
+         */
+        private static void escapeXml(Object o, StringBuilder appendTo) {
             if (o == null) {
-                return null;
+                appendTo.append("null");
+                return;
             }
-            return o.toString()
-                    .codePoints()
-                    .flatMap(XmlGenerator::escapeChar)
-                    .collect(StringBuilder::new,
-                            StringBuilder::appendCodePoint,
-                            StringBuilder::append)
-                    .toString();
+            String s = o.toString();
+            int length = s.length();
+            appendTo.ensureCapacity(appendTo.length() + length + CAPACITY);
+            for (int i = 0; i < length; i++) {
+                char ch = s.charAt(i);
+                if (ch == '<') {
+                    appendTo.append("&lt;");
+                } else if (ch == '&') {
+                    appendTo.append("&amp;");
+                } else {
+                    appendTo.append(ch);
+                }
+            }
         }
 
-        private static IntStream escapeChar(int c) {
-            switch (c) {
-                case '<':
-                    return "&lt;".chars();
-                case '>':
-                    return "&gt;".chars();
-                case '"':
-                    return "&quot;".chars();
-                case '&':
-                    return "&amp;".chars();
-                case '\'':
-                    return "&apos;".chars();
-                default:
-                    if (c > CHARACTER_THRESHOLD) {
-                        return ("&#" + c + ";").chars();
-                    } else {
-                        return IntStream.of(c);
-                    }
+        /**
+         * Escapes special characters in XML attribute value and appends the result to <code>appendTo</code>.
+         */
+        private static void escapeXmlAttr(Object o, StringBuilder appendTo) {
+            if (o == null) {
+                appendTo.append("null");
+                return;
+            }
+            String s = o.toString();
+            int length = s.length();
+            appendTo.ensureCapacity(appendTo.length() + length + CAPACITY);
+            for (int i = 0; i < length; i++) {
+                char ch = s.charAt(i);
+                switch (ch) {
+                    case '"':
+                        appendTo.append("&quot;");
+                        break;
+                    case '\'':
+                        appendTo.append("&#39;");
+                        break;
+                    case '&':
+                        appendTo.append("&amp;");
+                        break;
+                    case '<':
+                        appendTo.append("&lt;");
+                        break;
+                    default:
+                        appendTo.append(ch);
+                }
             }
         }
     }
