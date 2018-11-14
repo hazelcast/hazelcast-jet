@@ -30,6 +30,7 @@ import org.junit.rules.ExpectedException;
 
 import java.util.concurrent.ExecutionException;
 
+import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.JobStatus.FAILED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.impl.TerminationMode.CANCEL_GRACEFUL;
@@ -64,7 +65,8 @@ public class JobUpgradeTest extends JetTestSupport {
     @Test
     public void when_cancelWithSnapshotAndResubmit_then_jobContinues() throws Exception {
         // When
-        Job job = instances[0].newJob(dag);
+        // snapshot export should work also with snapshotting disabled
+        Job job = instances[0].newJob(dag, new JobConfig().setProcessingGuarantee(NONE));
         StuckProcessor.executionStarted.await();
         job.cancelAndExportState("state");
         assertJobStatusEventually(job, FAILED);

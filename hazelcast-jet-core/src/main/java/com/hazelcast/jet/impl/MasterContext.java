@@ -17,13 +17,16 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.ExecutionCallback;
+import com.hazelcast.core.IMap;
 import com.hazelcast.core.LocalMemberResetException;
 import com.hazelcast.core.Member;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.cluster.impl.MembersView;
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
@@ -54,6 +57,7 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -99,6 +103,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.callbackOf;
 import static com.hazelcast.jet.impl.util.Util.jobNameAndExecutionId;
+import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.partitioningBy;
@@ -367,6 +372,7 @@ public class MasterContext {
             return;
         }
 
+        // find snapshot to restore
         long snapshotToRestore = jobExecutionRecord.snapshotId();
         try {
             jobRepository.clearSnapshotData(jobId, jobExecutionRecord.ongoingDataMapIndex());
@@ -411,6 +417,32 @@ public class MasterContext {
     }
 
     private void rewriteDagWithSnapshotRestore(DAG dag, long snapshotId, String mapName) {
+        IMap<Object, Object> map = nodeEngine.getHazelcastInstance().getMap(mapName);
+        SnapshotValidationRecord validationRecord = (SnapshotValidationRecord) map.get(SnapshotValidationRecord.KEY);
+        if (validationRecord == null) {
+            throw new JetException("State for " + jobIdString() + " was supposed to be restored from '" + mapName
+                    + "', but that map doesn't contain the validation key: not an IMap with Jet snapshot or corrupted");
+        }
+        if (validationRecord.getNumChunks() != map.size() - 1) {
+            // TODO [viliam] add test for this
+            Method method = uncheckCall(() ->
+                    Util.class.getDeclaredMethod("cleanUpSnapshotMap", JetInstance.class, String.class));
+            throw new JetException("State for " + jobIdString() + " in '" + mapName + "' probably corrupted: it should " +
+                    "have " + validationRecord.getNumChunks() + " entries, but has " + (map.size() - 1) + " entries. " +
+                    "You can try " + Util.class.getName() + "#" + method.getName() + "(instance, '" + mapName
+                    + "') to fix it");
+        }
+
+        if (snapshotId == -1) {
+            // we're restoring from exported state: in this case we don't know the snapshotId
+            snapshotId = validationRecord.getSnapshotId();
+        } else {
+            if (snapshotId != validationRecord.getSnapshotId()) {
+                throw new JetException(jobIdString() + ": '" + mapName + "' was supposed to contain snapshotId="
+                        + snapshotId + ", but it contains snapshotId=" + validationRecord.getSnapshotId());
+            }
+        }
+
         logger.info("State of " + jobIdString() + " will be restored from snapshot " + snapshotId + ", map=" + mapName);
 
         List<Vertex> originalVertices = new ArrayList<>();
@@ -419,8 +451,9 @@ public class MasterContext {
         Map<String, Integer> vertexToOrdinal = new HashMap<>();
         Vertex readSnapshotVertex = dag.newVertex(SNAPSHOT_VERTEX_PREFIX + "read",
                 readMapP(mapName));
+        long finalSnapshotId = snapshotId;
         Vertex explodeVertex = dag.newVertex(SNAPSHOT_VERTEX_PREFIX + "explode",
-                () -> new ExplodeSnapshotP(vertexToOrdinal, snapshotId));
+                () -> new ExplodeSnapshotP(vertexToOrdinal, finalSnapshotId));
         dag.edge(between(readSnapshotVertex, explodeVertex).isolated());
 
         int index = 0;
@@ -618,13 +651,15 @@ public class MasterContext {
                 plan -> new SnapshotOperation(jobId, executionId, newSnapshotId, finalMapName, isTerminal);
 
         invokeOnParticipants(factory,
-                responses -> onSnapshotCompleted(responses, executionId, newSnapshotId, isTerminal, future), null);
+                responses -> onSnapshotCompleted(responses, executionId, newSnapshotId, finalMapName, isTerminal, future),
+                null);
     }
 
     private void onSnapshotCompleted(
             Map<MemberInfo, Object> responses,
             long executionId,
             long snapshotId,
+            String snapshotMapName,
             boolean wasTerminal,
             @Nullable CompletableFuture<Void> future
     ) {
@@ -646,6 +681,12 @@ public class MasterContext {
                     "one of the failures: " + mergedResult.getError());
         }
 
+        Object oldValue = nodeEngine.getHazelcastInstance().getMap(snapshotMapName).put(SnapshotValidationRecord.KEY,
+                new SnapshotValidationRecord(snapshotId, mergedResult.getNumChunks()));
+        if (oldValue != null) {
+            logger.severe("SnapshotValidationRecord overwritten after writing to '" + snapshotMapName + "' for "
+                    + jobIdString() + ": snapshot data might be corrupted");
+        }
         SnapshotStats stats = jobExecutionRecord.ongoingSnapshotDone(
                 mergedResult.getNumBytes(), mergedResult.getNumKeys(), mergedResult.getNumChunks(),
                 mergedResult.getError());
