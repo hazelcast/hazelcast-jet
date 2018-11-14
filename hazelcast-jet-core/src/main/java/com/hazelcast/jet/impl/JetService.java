@@ -18,9 +18,7 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.client.impl.ClientEngineImpl;
 import com.hazelcast.core.ExecutionCallback;
-import com.hazelcast.instance.BuildInfoProvider;
 import com.hazelcast.instance.HazelcastInstanceImpl;
-import com.hazelcast.instance.JetBuildInfo;
 import com.hazelcast.internal.partition.InternalPartitionService;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
@@ -121,19 +119,10 @@ public class JetService
             Runtime.getRuntime().addShutdownHook(shutdownHookThread);
         }
 
-        JetBuildInfo jetBuildInfo = BuildInfoProvider.getBuildInfo().getJetBuildInfo();
-        logger.info(String.format("Starting Jet %s (%s - %s)",
-                jetBuildInfo.getVersion(), jetBuildInfo.getBuild(), jetBuildInfo.getRevision()));
         logger.info("Setting number of cooperative threads and default parallelism to "
                 + config.getInstanceConfig().getCooperativeThreadCount());
 
-        logger.info('\n' +
-                "\to   o   o   o---o o---o o     o---o   o   o---o o-o-o        o o---o o-o-o\n" +
-                "\t|   |  / \\     /  |     |     |      / \\  |       |          | |       |  \n" +
-                "\to---o o---o   o   o-o   |     o     o---o o---o   |          | o-o     |  \n" +
-                "\t|   | |   |  /    |     |     |     |   |     |   |      \\   | |       |  \n" +
-                "\to   o o   o o---o o---o o---o o---o o   o o---o   o       o--o o---o   o   ");
-        logger.info("Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.");
+
     }
 
     /**
