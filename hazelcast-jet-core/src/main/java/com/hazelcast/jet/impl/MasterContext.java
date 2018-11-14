@@ -642,9 +642,12 @@ public class MasterContext {
         long newSnapshotId = jobExecutionRecord.ongoingSnapshotId();
 
         boolean isExport = mapName != null;
+        if (isExport) {
+            nodeEngine.getHazelcastInstance().getMap(mapName).clear();
+        }
         logger.info(String.format("Starting snapshot %d for %s", newSnapshotId, jobIdString())
                 + (isTerminal ? ", terminal" : "")
-                + (isExport ? ", exported to '" + mapName + '\'' : ""));
+                + (isExport ? ", exporting to '" + mapName + '\'' : ""));
         String finalMapName = isExport ? mapName
                 : snapshotDataMapName(jobId, jobExecutionRecord.ongoingDataMapIndex());
         Function<ExecutionPlan, Operation> factory =

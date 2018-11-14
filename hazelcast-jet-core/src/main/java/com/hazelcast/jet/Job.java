@@ -174,6 +174,9 @@ public interface Job {
      * You can call this method for suspended job: in that case the last
      * successful snapshot will be copied and the job cancelled.
      *
+     * Method will block until the state is fully exported, but might return
+     * before the job is fully cancelled.
+     *
      * TODO [viliam] finish javadoc
      *
      * @param name name of the snapshot
