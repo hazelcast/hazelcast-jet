@@ -23,6 +23,7 @@ import com.hazelcast.core.Member;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.cluster.impl.MembersView;
+import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -383,7 +384,7 @@ public class MasterContext {
         if (snapshotToRestore >= 0) {
             mapName = jobExecutionRecord.successfulSnapshotDataMapName(jobId);
         } else if (jobConfig().getInitialSnapshotName() != null) {
-            mapName = jobConfig().getInitialSnapshotName();
+            mapName = Jet.EXPORTED_STATES_PREFIX + jobConfig().getInitialSnapshotName();
         }
         if (mapName != null) {
             rewriteDagWithSnapshotRestore(dag, snapshotToRestore, mapName);
@@ -643,6 +644,7 @@ public class MasterContext {
 
         boolean isExport = mapName != null;
         if (isExport) {
+            mapName = Jet.EXPORTED_STATES_PREFIX + mapName;
             nodeEngine.getHazelcastInstance().getMap(mapName).clear();
         }
         logger.info(String.format("Starting snapshot %d for %s", newSnapshotId, jobIdString())
@@ -741,14 +743,15 @@ public class MasterContext {
 
     /**
      * <ul>
-     * <li>Returns null if there is no failure.
-     * <li>Returns a CancellationException if the job is cancelled.
-     * <li>Returns a JobRestartRequestedException if the current execution is stopped to be restarted
-     * <li>Returns a JobSuspendRequestedException if the current execution is stopped to be suspended
+     * <li>Returns null if there is no failure
+     * <li>Returns a CancellationException if the job is cancelled forcefully
+     * <li>Returns a JobTerminateRequestedException if the current execution is stopped due
+     *     to a requested termination, except for CANCEL_GRACEFUL, in which case CancellationException is
+     *     returned
      * <li>If there is at least one user failure, such as an exception in user code (restartable or not), then
-     *   returns that failure.
+     *     returns that failure
      * <li>Otherwise, the failure is because a job participant has left the cluster.
-     *   In that case, {@code TopologyChangeException} is returned so that the job will be restarted.
+     *     In that case, {@code TopologyChangeException} is returned so that the job will be restarted
      * </ul>
      */
     private Throwable getResult(String opName, Map<MemberInfo, Object> responses) {
@@ -779,7 +782,7 @@ public class MasterContext {
             logger.fine(opName + " of " + jobIdString() + " terminated after a terminal snapshot");
             TerminationMode mode = requestedTerminationMode;
             assert mode != null && mode.isWithTerminalSnapshot() : "mode=" + mode;
-            return new JobTerminateRequestedException(mode);
+            return mode == CANCEL_GRACEFUL ? new CancellationException() : new JobTerminateRequestedException(mode);
         }
 
         // If there is no user-code exception, it means at least one job participant has left the cluster.

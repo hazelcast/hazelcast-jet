@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
@@ -78,6 +79,26 @@ public class PostponedSnapshotTest extends JetTestSupport {
 
         // Then
         assertTrueEventually(() -> assertTrue(shutdownFuture.isDone()));
+    }
+
+    @Test
+    public void when_exportStateWhilePostponed_then_exportWaits() {
+        Job job = startJob();
+
+        // When
+        Future snapshotFuture = spawn(() -> job.exportState("state"));
+        IMapJet<Object, Object> snapshotMap = instance.getMap("state");
+        assertTrueAllTheTime(() -> {
+            assertFalse(snapshotFuture.isDone());
+            assertTrue(snapshotMap.isEmpty());
+        }, 3);
+
+        // finish the job
+        latches.set(0, 1);
+
+        // Then
+        assertTrueEventually(() -> assertTrue(snapshotFuture.isDone()));
+        assertFalse(snapshotMap.isEmpty());
     }
 
     private Job startJob() {

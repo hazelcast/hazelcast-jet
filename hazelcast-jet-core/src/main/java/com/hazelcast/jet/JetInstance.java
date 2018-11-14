@@ -18,6 +18,7 @@ package com.hazelcast.jet;
 
 import com.hazelcast.core.Cluster;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.IMap;
 import com.hazelcast.core.ReplicatedMap;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
@@ -25,10 +26,14 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.map.impl.MapService;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.List;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * Represents either an instance of a Jet server node or a Jet client
@@ -134,9 +139,37 @@ public interface JetInstance {
         return getJobs(name).stream().findFirst().orElse(null);
     }
 
+    /**
+     * Returns the IMap that contains the data of an exported snapshot with the
+     * given name.
+     * <p>
+     * The contents of the map are unspecified.
+     *
+     * @param name exported snapshot name
+     * @return IMap instance with the data
+     */
+    default IMap<Object, Object> getExportedState(@Nonnull String name) {
+        return getMap(Jet.EXPORTED_STATES_PREFIX + name);
+    }
+
+    /**
+     * Returns the collection of names of existing exported states.
+     */
+    default Collection<String> getExportedStateNames() {
+        return getHazelcastInstance().getDistributedObjects().stream()
+                                     .filter(o -> o.getServiceName().equals(MapService.SERVICE_NAME)
+                                             && o.getName().startsWith(Jet.EXPORTED_STATES_PREFIX))
+                                     .map(o -> o.getName().substring(Jet.EXPORTED_STATES_PREFIX.length()))
+                                     .collect(toList());
+    }
+
+    /**
+     * Destroys the map with exported state with the given name.
+     *
+     * @param name exported snapshot name
+     */
     default void deleteExportedState(@Nonnull String name) {
-        // TODO [viliam]
-        throw new UnsupportedOperationException("todo");
+        getExportedState(name).destroy();
     }
 
     /**

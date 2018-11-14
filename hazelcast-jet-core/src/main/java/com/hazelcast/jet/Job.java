@@ -148,9 +148,13 @@ public interface Job {
      * resumed.
      * <p>
      * <strong>NOTE:</strong> if the cluster becomes unstable (a member leaves or
-     * similar) while the job is in the process of being cancelled, it may end up
-     * getting restarted after the cluster has stabilized. Call {@link
+     * similar) while the job is in the process of cancellation, it may end up
+     * getting restarted after the cluster has stabilized and won't be cancelled. Call {@link
      * #getStatus()} to find out and possibly try to cancel again.
+     * <p>
+     * Job status will be {@link JobStatus#COMPLETED} after cancellation, even
+     * though the job didn't really complete. However, {@link Job#join()} will
+     * throw an exception.
      *
      * @throws IllegalStateException if the cluster is not in a state to
      * restart the job, for example when coordinator member left and new
@@ -177,6 +181,11 @@ public interface Job {
      * Method will block until the state is fully exported, but might return
      * before the job is fully cancelled.
      *
+     * <p>
+     * Job status will be {@link JobStatus#COMPLETED} after cancellation, even
+     * though the job didn't really complete. However, {@link Job#join()} will
+     * throw an exception.
+
      * TODO [viliam] finish javadoc
      *
      * @param name name of the snapshot
