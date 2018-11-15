@@ -83,18 +83,14 @@ public class ClientConfigXmlGeneratorTest extends JetTestSupport {
 
     @Test
     public void escape() {
-        StringBuilder builder = new StringBuilder()
-                .append('<').append(' ')
-                .append('>').append(' ')
-                .append('&').append(' ')
-                .append('"').append(' ')
-                .append('\'').append(' ')
-                .append((char) 0x8e);
-        GroupConfig expected = new GroupConfig(builder.toString(), "pass");
-        clientConfig.setGroupConfig(expected);
-        GroupConfig actual = newConfigViaGenerator().getGroupConfig();
-        assertEquals(expected.getName(), actual.getName());
-        assertEquals(expected.getPassword(), actual.getPassword());
+        String toEscape = "<>&\"'";
+        GroupConfig groupConfig = new GroupConfig(toEscape, "pass");
+        NearCacheConfig nearCacheConfig = new NearCacheConfig(toEscape);
+        clientConfig.setGroupConfig(groupConfig).addNearCacheConfig(nearCacheConfig);
+
+        ClientConfig actual = newConfigViaGenerator();
+        assertEquals(groupConfig.getName(), actual.getGroupConfig().getName());
+        assertEquals(toEscape, actual.getNearCacheConfig(toEscape).getName());
     }
 
     @Test
