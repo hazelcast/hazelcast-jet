@@ -25,6 +25,7 @@ import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.core.TestProcessors.DummyStatefulP;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
@@ -410,9 +411,10 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
 
     private void stressTest(Function<Tuple3<JetInstance, DAG, Job>, Job> action) throws Exception {
         JobRepository jobRepository = new JobRepository(instance1);
+        TestProcessors.reset(2);
 
         DAG dag = new DAG();
-        dag.newVertex("generator", SnapshotStressSourceP::new)
+        dag.newVertex("generator", DummyStatefulP::new)
            .localParallelism(1);
 
         Job[] job = {instance1.newJob(dag,
@@ -435,42 +437,6 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
             job[0].join();
             fail("CancellationException was expected");
         } catch (CancellationException expected) {
-        }
-    }
-
-    private static class SnapshotStressSourceP extends AbstractProcessor {
-        private static final int ITEMS_TO_SAVE = 100;
-
-        private Traverser<Map.Entry<BroadcastKey, Integer>> traverser;
-        private int numRestored;
-
-        @Override
-        public boolean complete() {
-            traverser = null;
-            return false;
-        }
-
-        @Override
-        public boolean saveToSnapshot() {
-            if (traverser == null) {
-                traverser = Traversers
-                        .traverseStream(IntStream.range(0, ITEMS_TO_SAVE)
-                                                 .mapToObj(i -> entry(broadcastKey(i), i)));
-            }
-            return emitFromTraverserToSnapshot(traverser);
-        }
-
-        @Override
-        protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
-            numRestored++;
-        }
-
-        @Override
-        public boolean finishSnapshotRestore() {
-            // multiply expected count by 2 because the restored items are broadcast from 2 members
-            assertEquals(ITEMS_TO_SAVE * 2, numRestored);
-            numRestored = 0;
-            return true;
         }
     }
 

@@ -45,6 +45,7 @@ import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -196,12 +197,12 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
         instanceFactory.terminate(instance);
     }
 
-    public static void spawnSafe(RunnableExc r) {
-        spawn(() -> {
+    public Future spawnSafe(RunnableExc r) {
+        return spawn(() -> {
             try {
                 r.run();
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.warning("Spawned Runnable failed", e);
             }
         });
     }

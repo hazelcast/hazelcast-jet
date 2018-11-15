@@ -22,6 +22,7 @@ import com.hazelcast.nio.Address;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -29,12 +30,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Traversers.traverseIterable;
+import static com.hazelcast.jet.Traversers.traverseStream;
+import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
 import static java.util.stream.Collectors.toList;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -63,6 +69,9 @@ public final class TestProcessors {
         StuckProcessor.proceedLatch = new CountDownLatch(1);
         StuckProcessor.executionStarted = new CountDownLatch(totalParallelism);
         StuckProcessor.initCount.set(0);
+
+        DummyStatefulP.parallelism = totalParallelism;
+        DummyStatefulP.wasRestored = true;
     }
 
     public static class Identity extends AbstractProcessor {
@@ -371,6 +380,50 @@ public final class TestProcessors {
         @Override
         public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
             return tryEmit("wm(" + watermark.timestamp() + ')');
+        }
+    }
+
+    /**
+     * A processor that saves dummy constant data to snapshot and asserts it
+     * receives the same data.
+     */
+    public static class DummyStatefulP extends AbstractProcessor {
+        public static volatile boolean wasRestored;
+        private static final int ITEMS_TO_SAVE = 100;
+        private static int parallelism;
+
+        private Traverser<Map.Entry<BroadcastKey<Integer>, Integer>> traverser;
+        private int[] restored;
+
+        @Override
+        public boolean complete() {
+            return false;
+        }
+
+        @Override
+        public boolean saveToSnapshot() {
+            if (traverser == null) {
+                traverser = traverseStream(IntStream.range(0, ITEMS_TO_SAVE)
+                                                    .mapToObj(i -> entry(broadcastKey(i), i)))
+                        .onFirstNull(() -> traverser = null);
+            }
+            return emitFromTraverserToSnapshot(traverser);
+        }
+
+        @Override
+        protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
+            if (restored == null) {
+                restored = new int[ITEMS_TO_SAVE];
+            }
+            restored[(Integer) value]++;
+        }
+
+        @Override
+        public boolean finishSnapshotRestore() {
+            assertArrayEquals(IntStream.generate(() -> parallelism).limit(ITEMS_TO_SAVE).toArray(), restored);
+            restored = null;
+            wasRestored = true;
+            return true;
         }
     }
 }
