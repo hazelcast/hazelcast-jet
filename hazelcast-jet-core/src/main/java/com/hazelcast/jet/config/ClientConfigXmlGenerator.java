@@ -616,30 +616,10 @@ public final class ClientConfigXmlGenerator {
             xml.append("</").append(name).append('>');
         }
 
-        private static void appendAttributes(StringBuilder xml, Object... attributes) {
-            for (int i = 0; i < attributes.length; ) {
-                xml.append(" ");
-                escapeXml(attributes[i++], xml);
-                xml.append("=\"");
-                escapeXml(attributes[i++], xml);
-                xml.append("\"");
-            }
-        }
-
         private static void appendNode(StringBuilder xml, String name, Object contents, Object... attributes) {
             if (contents != null || attributes.length > 0) {
                 xml.append('<').append(name);
-                for (int i = 0; i < attributes.length; ) {
-                    Object key = attributes[i++];
-                    Object val = attributes[i++];
-                    if (val != null) {
-                        xml.append(" ");
-                        escapeXmlAttr(key, xml);
-                        xml.append("=\"");
-                        escapeXmlAttr(val, xml);
-                        xml.append("\"");
-                    }
-                }
+                appendAttributes(xml, attributes);
                 if (contents != null) {
                     xml.append('>');
                     escapeXml(contents, xml);
@@ -647,6 +627,14 @@ public final class ClientConfigXmlGenerator {
                 } else {
                     xml.append("/>");
                 }
+            }
+        }
+
+        private static void appendAttributes(StringBuilder xml, Object... attributes) {
+            for (int i = 0; i < attributes.length; ) {
+                xml.append(" ").append(attributes[i++]).append("=\"");
+                escapeXmlAttr(attributes[i++], xml);
+                xml.append("\"");
             }
         }
 
