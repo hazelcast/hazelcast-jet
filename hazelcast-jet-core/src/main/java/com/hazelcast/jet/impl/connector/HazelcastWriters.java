@@ -61,6 +61,8 @@ import java.util.stream.Stream;
 import static com.hazelcast.client.HazelcastClient.newHazelcastClient;
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static com.hazelcast.jet.impl.util.Util.asClientConfig;
+import static com.hazelcast.jet.impl.util.Util.asXmlString;
 import static com.hazelcast.jet.impl.util.Util.callbackOf;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.impl.util.Util.tryIncrement;
@@ -110,7 +112,7 @@ public final class HazelcastWriters {
 
         boolean isLocal = clientConfig == null;
         return preferLocalParallelismOne(new HazelcastWriterSupplier<UpdateMapContext<K, V, T>, T>(
-                serializableConfig(clientConfig),
+                asXmlString(clientConfig),
                 procContext -> new UpdateMapContext<>(mapName, toKeyFn, updateFn, isLocal),
                 UpdateMapContext::add,
                 instance -> context -> context.flush(instance),
@@ -184,7 +186,7 @@ public final class HazelcastWriters {
         boolean isLocal = clientConfig == null;
         return preferLocalParallelismOne(new EntryProcessorWriterSupplier<>(
                         name,
-                        serializableConfig(clientConfig),
+                        asXmlString(clientConfig),
                         toKeyFn,
                         toEntryProcessorFn,
                         isLocal
@@ -197,7 +199,7 @@ public final class HazelcastWriters {
     public static ProcessorMetaSupplier writeMapSupplier(@Nonnull String name, @Nullable ClientConfig clientConfig) {
         boolean isLocal = clientConfig == null;
         return preferLocalParallelismOne(new HazelcastWriterSupplier<>(
-                serializableConfig(clientConfig),
+                asXmlString(clientConfig),
                 index -> new ArrayMap(),
                 ArrayMap::add,
                 instance -> {
@@ -219,7 +221,7 @@ public final class HazelcastWriters {
     public static ProcessorMetaSupplier writeCacheSupplier(@Nonnull String name, @Nullable ClientConfig clientConfig) {
         boolean isLocal = clientConfig == null;
         return preferLocalParallelismOne(new HazelcastWriterSupplier<>(
-                serializableConfig(clientConfig),
+                asXmlString(clientConfig),
                 index -> new ArrayMap(),
                 ArrayMap::add,
                 CacheFlush.flushToCache(name, isLocal),
@@ -231,7 +233,7 @@ public final class HazelcastWriters {
     public static ProcessorMetaSupplier writeListSupplier(@Nonnull String name, @Nullable ClientConfig clientConfig) {
         boolean isLocal = clientConfig == null;
         return preferLocalParallelismOne(new HazelcastWriterSupplier<>(
-                serializableConfig(clientConfig),
+                asXmlString(clientConfig),
                 index -> new ArrayList<>(),
                 ArrayList::add,
                 instance -> {
@@ -252,10 +254,6 @@ public final class HazelcastWriters {
     private static RuntimeException handleInstanceNotActive(HazelcastInstanceNotActiveException e, boolean isLocal) {
         // if we are writing to a local instance, restarting the job should resolve the error
         return isLocal ? new RestartableException(e) : e;
-    }
-
-    private static SerializableClientConfig serializableConfig(ClientConfig clientConfig) {
-        return clientConfig != null ? new SerializableClientConfig(clientConfig) : null;
     }
 
     /**
@@ -407,7 +405,7 @@ public final class HazelcastWriters {
         static final long serialVersionUID = 1L;
 
         private final String name;
-        private final SerializableClientConfig clientConfig;
+        private final String clientXml;
         private final DistributedFunction<? super T, ? extends K> toKeyFn;
         private final DistributedFunction<? super T, ? extends EntryProcessor<K, V>> toEntryProcessorFn;
         private final boolean isLocal;
@@ -416,13 +414,13 @@ public final class HazelcastWriters {
 
         private EntryProcessorWriterSupplier(
                 @Nonnull String name,
-                @Nullable SerializableClientConfig clientConfig,
+                @Nullable String clientXml,
                 @Nonnull DistributedFunction<? super T, ? extends K> toKeyFn,
                 @Nonnull DistributedFunction<? super T, ? extends EntryProcessor<K, V>> toEntryProcessorFn,
                 boolean isLocal
         ) {
             this.name = name;
-            this.clientConfig = clientConfig;
+            this.clientXml = clientXml;
             this.toKeyFn = toKeyFn;
             this.toEntryProcessorFn = toEntryProcessorFn;
             this.isLocal = isLocal;
@@ -430,8 +428,8 @@ public final class HazelcastWriters {
 
         @Override
         public void init(@Nonnull Context context) {
-            if (clientConfig != null) {
-                instance = client = newHazelcastClient(clientConfig.asClientConfig());
+            if (clientXml != null) {
+                instance = client = newHazelcastClient(asClientConfig(clientXml));
             } else {
                 instance = context.jetInstance().getHazelcastInstance();
             }
@@ -457,7 +455,7 @@ public final class HazelcastWriters {
 
         static final long serialVersionUID = 1L;
 
-        private final SerializableClientConfig clientConfig;
+        private final String clientXml;
         private final DistributedFunction<HazelcastInstance, DistributedConsumer<B>> instanceToFlushBufferFn;
         private final DistributedFunction<Processor.Context, B> newBufferFn;
         private final DistributedBiConsumer<B, T> addToBufferFn;
@@ -467,13 +465,13 @@ public final class HazelcastWriters {
         private transient HazelcastInstance client;
 
         HazelcastWriterSupplier(
-                SerializableClientConfig clientConfig,
+                String clientXml,
                 DistributedFunction<Processor.Context, B> newBufferFn,
                 DistributedBiConsumer<B, T> addToBufferFn,
                 DistributedFunction<HazelcastInstance, DistributedConsumer<B>> instanceToFlushBufferFn,
                 DistributedConsumer<B> disposeBufferFn
         ) {
-            this.clientConfig = clientConfig;
+            this.clientXml = clientXml;
             this.instanceToFlushBufferFn = instanceToFlushBufferFn;
             this.newBufferFn = newBufferFn;
             this.addToBufferFn = addToBufferFn;
@@ -484,7 +482,7 @@ public final class HazelcastWriters {
         public void init(@Nonnull Context context) {
             HazelcastInstance instance;
             if (isRemote()) {
-                instance = client = newHazelcastClient(clientConfig.asClientConfig());
+                instance = client = newHazelcastClient(asClientConfig(clientXml));
             } else {
                 instance = context.jetInstance().getHazelcastInstance();
             }
@@ -499,7 +497,7 @@ public final class HazelcastWriters {
         }
 
         private boolean isRemote() {
-            return clientConfig != null;
+            return clientXml != null;
         }
 
         @Override @Nonnull
