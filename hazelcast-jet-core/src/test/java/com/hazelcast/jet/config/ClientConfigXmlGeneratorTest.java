@@ -312,7 +312,7 @@ public class ClientConfigXmlGeneratorTest extends JetTestSupport {
         NativeMemoryConfig expected = new NativeMemoryConfig();
         expected.setEnabled(true)
                 .setAllocatorType(MemoryAllocatorType.STANDARD)
-                .setMetadataSpacePercentage(randomInt(90))
+                .setMetadataSpacePercentage(70)
                 .setMinBlockSize(randomInt())
                 .setPageSize(randomInt())
                 .setSize(new MemorySize(randomInt(), MemoryUnit.BYTES));
