@@ -107,6 +107,7 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
 
     private Traverser snapshotTraverser;
     private long minRestoredCurrentWatermark = Long.MAX_VALUE;
+    private boolean inComplete;
 
     // extracted lambdas to reduce GC litter
     private final Function<K, Windows<A>> newWindowsFunction = k -> {
@@ -165,6 +166,7 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
+        inComplete = true;
         return closedWindowFlatmapper.tryProcess(COMPLETING_WM);
     }
 
@@ -200,6 +202,11 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
 
     @Override
     public boolean saveToSnapshot() {
+        if (inComplete) {
+            // If we are in completing phase, we can have a half-emitted item. Instead of finishing it and
+            // writing a snapshot, we finish the final items and save no state.
+            return complete();
+        }
         if (snapshotTraverser == null) {
             snapshotTraverser = Traversers.<Object>traverseIterable(keyToWindows.entrySet())
                     .append(entry(broadcastKey(Keys.CURRENT_WATERMARK), currentWatermark))
@@ -274,10 +281,10 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
     private A resolveAcc(Windows<A> w, K key, long timestamp) {
         long eventEnd = timestamp + sessionTimeout;
         int i = 0;
-        for (; i < w.size && w.starts[i] <= eventEnd; i++) {
+        for (; i < w.size && w.starts[i] < eventEnd; i++) {
             // the window `i` is not after the event interval
 
-            if (w.ends[i] < timestamp) {
+            if (w.ends[i] <= timestamp) {
                 // the window `i` is before the event interval
                 continue;
             }
@@ -287,7 +294,7 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
             }
             // the window `i` overlaps the event interval
 
-            if (i + 1 == w.size || w.starts[i + 1] > eventEnd) {
+            if (i + 1 == w.size || w.starts[i + 1] >= eventEnd) {
                 // the window `i + 1` doesn't overlap the event interval
                 w.starts[i] = min(w.starts[i], timestamp);
                 if (w.ends[i] < eventEnd) {
