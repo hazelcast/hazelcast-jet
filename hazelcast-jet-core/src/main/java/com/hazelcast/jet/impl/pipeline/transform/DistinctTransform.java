@@ -39,10 +39,10 @@ public class DistinctTransform<T, K> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p) {
-        String namePrefix = p.uniqueVertexName(this.name(), "-step");
-        Vertex v1 = p.dag.newVertex(namePrefix + '1', distinctP(keyFn))
+        String vertexName = p.uniqueVertexName(this.name());
+        Vertex v1 = p.dag.newVertex(vertexName + "-preFilter", distinctP(keyFn))
                          .localParallelism(localParallelism());
-        PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', localParallelism(), distinctP(keyFn));
+        PlannerVertex pv2 = p.addVertex(this, vertexName, localParallelism(), distinctP(keyFn));
         p.addEdges(this, v1, (e, ord) -> e.partitioned(keyFn, HASH_CODE));
         p.dag.edge(between(v1, pv2.v).distributed().partitioned(keyFn));
     }

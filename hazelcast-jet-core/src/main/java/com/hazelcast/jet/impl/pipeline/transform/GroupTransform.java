@@ -83,7 +83,7 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     //                        | aggregateByKeyP |
     //                         -----------------
     private void addToDagSingleStage(Planner p) {
-        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name(), ""), localParallelism(),
+        PlannerVertex pv = p.addVertex(this, p.uniqueVertexName(name()), localParallelism(),
                 aggregateByKeyP(groupKeyFns, aggrOp, mapToOutputFn));
         p.addEdges(this, pv.v, (e, ord) -> e.distributed().partitioned(groupKeyFns.get(ord)));
     }
@@ -107,7 +107,7 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     //                         ---------------
     private void addToDagTwoStage(Planner p) {
         List<DistributedFunction<?, ? extends K>> groupKeyFns = this.groupKeyFns;
-        String namePrefix = p.uniqueVertexName(this.name(), "-step");
+        String namePrefix = p.uniqueVertexName(this.name());
         Vertex v1 = p.dag.newVertex(namePrefix + '1', accumulateByKeyP(groupKeyFns, aggrOp))
                 .localParallelism(localParallelism());
         PlannerVertex pv2 = p.addVertex(this, namePrefix + '2', localParallelism(),
