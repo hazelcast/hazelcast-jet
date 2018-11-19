@@ -386,8 +386,7 @@ public class JobUpgradeTest {
     public void test_changeSessionWindowTimeout() {
         pipeline1
                 .drawFrom(Sources.<Integer>streamFromProcessor("source", ProcessorMetaSupplier.of(ProducerP::new)))
-                .filter(i -> i % 4 < 2) // will pass 0, 1, 4, 5,  8, 9, 12, 13, 16, 17
-
+                .filter(i -> i % 4 < 2) // will pass 0, 1, 4, 5, 8, 9, 12, 13, 16, 17
                 .addTimestamps(i -> i, 0)
                 .window(WindowDefinition.session(2))
                 .aggregate(summingLong(i -> i))
@@ -400,16 +399,17 @@ public class JobUpgradeTest {
                 .aggregate(summingLong(i -> i))
                 .drainTo(Sinks.list("sink"));
 
-        Job job1 = instance.newJob(pipeline1, jobConfigInitial);
-        assertTrueEventually(() -> assertEquals(asList(
-                new TimestampedItem(3, 1L),
-                new TimestampedItem(7, 9L)
-        ), new ArrayList<>(sink)), 10);
-        job1.cancelAndExportState(STATE_NAME);
-        ProducerP.wasSnapshotted = false;
-
-        Job job = instance.newJob(pipeline2, jobConfigWithRestore);
-        assertJobStatusEventually(job, FAILED);
+        runPipelines(
+                asList(
+                        new TimestampedItem(3, 1L),
+                        new TimestampedItem(7, 9L)
+                ),
+                asList(
+                        new TimestampedItem(3, 1L),
+                        new TimestampedItem(7, 4 + 5L),
+                        new TimestampedItem(11, 8 + 9L),
+                        new TimestampedItem(16, 12 + 13L)
+                ));
     }
 
     @Test
