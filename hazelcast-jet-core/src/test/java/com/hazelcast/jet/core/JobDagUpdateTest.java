@@ -93,7 +93,7 @@ public class JobDagUpdateTest {
                 .setProcessingGuarantee(NONE)
                 .setInitialSnapshotName(STATE_NAME);
         sink = instance.getList("sink");
-        ProducerP.wasSnapshotted = ProducerP.wasRestored = false;
+        ProducerP.wasSnapshotted = false;
     }
 
     @After
@@ -160,7 +160,8 @@ public class JobDagUpdateTest {
                 .drawFrom(Sources.<Integer>streamFromProcessor("source1", ProcessorMetaSupplier.of(ProducerP::new)))
                 .drainTo(Sinks.list("sink"));
 
-        runPipelines(asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9));
+        runPipelines(asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
+                asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9));
     }
 
     @Test
@@ -434,7 +435,6 @@ public class JobDagUpdateTest {
      */
     private static class ProducerP extends AbstractProcessor {
         private static volatile boolean wasSnapshotted;
-        private static volatile boolean wasRestored;
 
         private Traverser<Integer> traverser1 = traverseStream(IntStream.range(0, 10).boxed());
         private Traverser<Integer> traverser2 = traverseStream(IntStream.range(10, 20).boxed());

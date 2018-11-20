@@ -402,7 +402,7 @@ public class JobConfig implements Serializable {
 
     private static String toFilename(URL url) {
         String urlFile = url.getPath();
-        return urlFile.substring(urlFile.lastIndexOf('/') + 1, urlFile.length());
+        return urlFile.substring(urlFile.lastIndexOf('/') + 1);
     }
 
     /**
@@ -424,6 +424,10 @@ public class JobConfig implements Serializable {
         return classLoaderFactory;
     }
 
+    /**
+     * TODO [viliam] finish javadoc
+     * @return
+     */
     public String getInitialSnapshotName() {
         return initialSnapshotName;
     }

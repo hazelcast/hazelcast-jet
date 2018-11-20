@@ -116,6 +116,12 @@ public final class Util {
         return new String(buf);
     }
 
+    /**
+     * TODO [viliam] javadoc
+     *
+     * @param instance
+     * @param snapshotMapName
+     */
     public static void cleanUpSnapshotMap(JetInstance instance, String snapshotMapName) {
         IMapJet<Object, Object> map = instance.getExportedState(snapshotMapName);
         SnapshotValidationRecord record = (SnapshotValidationRecord) map.get(SnapshotValidationRecord.KEY);

@@ -65,7 +65,7 @@ public class JetInitDataSerializerHookTest {
     public Collection<String> ignoredFields;
 
     @Parameters(name = "{1}")
-    public static Collection<Object[]> data() throws Exception {
+    public static Collection<Object[]> data() {
         return asList(
                 new Object[]{
                         "JobRecord",
@@ -101,6 +101,7 @@ public class JetInitDataSerializerHookTest {
         return populateFields2(object, object.getClass(), ignoredFields);
     }
 
+    @SuppressWarnings("checkstyle:BooleanExpressionComplexity")
     private static Object populateFields2(Object object, Class<?> clazz, Collection<String> ignoredFields) {
         byte i = 1;
         for (Field field : clazz.getDeclaredFields()) {

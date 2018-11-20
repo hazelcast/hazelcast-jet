@@ -449,7 +449,6 @@ public class MasterContext {
                     + "', but that map doesn't contain the validation key: not an IMap with Jet snapshot or corrupted");
         }
         if (validationRecord.getNumChunks() != map.size() - 1) {
-            // TODO [viliam] add test for this
             Method method = uncheckCall(() ->
                     Util.class.getDeclaredMethod("cleanUpSnapshotMap", JetInstance.class, String.class));
             throw new JetException("State for " + jobIdString() + " in '" + mapName + "' probably corrupted: it should " +

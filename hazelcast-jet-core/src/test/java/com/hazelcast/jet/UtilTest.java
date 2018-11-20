@@ -69,7 +69,6 @@ public class UtilTest extends JetTestSupport {
         // insert a mess to the exported state map
         state.put(new SnapshotDataKey(1, 9999, "vertex", 0), "mess");
 
-        System.out.println("here");
         job = instance.newJob(dag, new JobConfig().setInitialSnapshotName("state"));
         try {
             job.join();
