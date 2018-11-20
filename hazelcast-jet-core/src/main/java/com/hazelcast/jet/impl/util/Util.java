@@ -21,6 +21,10 @@ import com.hazelcast.core.Member;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.EdgeConfig;
+import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.impl.JetEvent;
@@ -71,6 +75,9 @@ import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeMapP;
+import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.lang.Math.abs;
 import static java.util.Collections.emptyList;
@@ -502,5 +509,16 @@ public final class Util {
      */
     public static String escapeGraphviz(String value) {
         return value.replace("\"", "\\\"");
+    }
+
+    public static CompletableFuture<Void> copyMapUsingJob(JetInstance instance, int queueSize,
+                                                          String sourceMap, String targetMap) {
+        DAG dag = new DAG();
+        Vertex source = dag.newVertex("readMap(" + sourceMap + ')', readMapP(sourceMap));
+        Vertex sink = dag.newVertex("writeMap(" + targetMap + ')', writeMapP(targetMap));
+        dag.edge(between(source, sink).setConfig(new EdgeConfig().setQueueSize(queueSize)));
+        JobConfig jobConfig = new JobConfig()
+                .setName("copy-" + sourceMap + "-to-" + targetMap);
+        return instance.newJob(dag, jobConfig).getFuture();
     }
 }

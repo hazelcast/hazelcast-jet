@@ -47,6 +47,7 @@ import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
 import com.hazelcast.jet.impl.operation.StartExecutionOperation;
 import com.hazelcast.jet.impl.operation.TerminateExecutionOperation;
+import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.NonCompletableFuture;
@@ -82,6 +83,7 @@ import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.JobStatus.COMPLETED;
+import static com.hazelcast.jet.core.JobStatus.EXPORTING_SNAPSHOT;
 import static com.hazelcast.jet.core.JobStatus.FAILED;
 import static com.hazelcast.jet.core.JobStatus.NOT_RUNNING;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
@@ -103,6 +105,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.isTopologyException;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.callbackOf;
+import static com.hazelcast.jet.impl.util.Util.copyMapUsingJob;
 import static com.hazelcast.jet.impl.util.Util.jobNameAndExecutionId;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.Collections.emptyList;
@@ -125,6 +128,12 @@ public class MasterContext {
             return "NULL_OBJECT";
         }
     };
+
+    /**
+     * Use smaller queue size because the snapshot entries are large ({@value
+     * AsyncSnapshotWriterImpl#DEFAULT_CHUNK_SIZE} bytes).
+     */
+    private static final int COPY_MAP_JOB_QUEUE_SIZE = 32;
 
     private final Object lock = new Object();
 
@@ -274,18 +283,28 @@ public class MasterContext {
 
     CompletableFuture<Void> exportSnapshot(String name, boolean cancelJob) {
         assertLockNotHeld();
-        CompletableFuture<Void> future;
+        CompletableFuture<Void> future = null;
+        JobStatus localStatus;
         synchronized (lock) {
-            JobStatus localStatus = jobStatus();
+            localStatus = jobStatus();
             if (localStatus == SUSPENDED) {
-                // TODO [viliam] copy snapshot map
-                throw new UnsupportedOperationException("TODO");
-            }
-            if (localStatus != RUNNING) {
+                if (jobExecutionRecord.snapshotId() < 0) {
+                    throw new JetException("Cannot export state snapshot: job is suspended and no successful snapshot " +
+                            "was created while it was running");
+                }
+                localStatus = jobStatus = EXPORTING_SNAPSHOT;
+            } else if (localStatus != RUNNING) {
                 throw new JetException("Cannot export snapshot, job is neither RUNNING nor SUSPENDED, but " + localStatus);
+            } else {
+                future = new CompletableFuture<>();
+                requestedSnapshotsQueue.add(tuple3(name, cancelJob, future));
             }
-            future = new CompletableFuture<>();
-            requestedSnapshotsQueue.add(tuple3(name, cancelJob, future));
+        }
+        if (localStatus == EXPORTING_SNAPSHOT) {
+            String sourceMapName = jobExecutionRecord.successfulSnapshotDataMapName(jobId);
+            JetInstance jetInstance = coordinationService.getJetService().getJetInstance();
+            return copyMapUsingJob(jetInstance, COPY_MAP_JOB_QUEUE_SIZE, sourceMapName, Jet.EXPORTED_STATES_PREFIX + name)
+                    .whenComplete(withTryCatch(logger, (r, t) -> jobStatus = SUSPENDED));
         }
         if (cancelJob) {
             if (!requestTermination(CANCEL_GRACEFUL)) {

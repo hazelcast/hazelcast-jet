@@ -144,7 +144,7 @@ public interface Job {
     /**
      * Makes a request to cancel this job and returns. The job will complete
      * after its execution has stopped on all the nodes. If the job is
-     * already suspended, Jet will delete its runtime state so it can't be
+     * already suspended, Jet will delete its runtime state and it can't be
      * resumed.
      * <p>
      * <strong>NOTE:</strong> if the cluster becomes unstable (a member leaves or
@@ -153,8 +153,10 @@ public interface Job {
      * #getStatus()} to find out and possibly try to cancel again.
      * <p>
      * Job status will be {@link JobStatus#COMPLETED} after cancellation, even
-     * though the job didn't really complete. However, {@link Job#join()} will
-     * throw an exception.
+     * though the job didn't really complete. {@link Job#join()} will also
+     * return without an exception.
+     *
+     * @see #cancelAndExportState(String)
      *
      * @throws IllegalStateException if the cluster is not in a state to
      * restart the job, for example when coordinator member left and new
@@ -167,13 +169,14 @@ public interface Job {
      * after which the job will be cancelled without processing any more data
      * after the snapshot. It's similar to {@link #suspend()}, except that the
      * job cannot be later resumed, but a new job has to be submitted with
-     * possibly changed Pipeline using {@link
-     * JobConfig#setInitialSnapshotName(String)}.
-     *
-     * For more comments about "exported state" see {@link
+     * possibly modified Pipeline. To use the exported snapshot for the new
+     * job, use {@link JobConfig#setInitialSnapshotName(String)}.
+     * <p>
+     * For more information about "exported state" see {@link
      * #exportState(String)}.
-     *
-     * If the snapshot fails, the job won't be cancelled but will be suspended.
+     * <p>
+     * If the snapshot fails, the job won't be cancelled but will be suspended
+     * instead.
      *
      * You can call this method for suspended job: in that case the last
      * successful snapshot will be copied and the job cancelled.

@@ -40,6 +40,7 @@ import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.JobStatus.COMPLETED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
+import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.impl.JobRepository.SNAPSHOT_DATA_MAP_PREFIX;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -145,6 +146,41 @@ public class ExportSnapshotTest extends JetTestSupport {
         // Then
         assertNull(stateMap.get("fooKey"));
         assertEquals(1, stateMap.size());
+    }
+
+    @Test
+    public void test_exportStateWhileSuspended() {
+        test_exportStateWhileSuspended(false);
+    }
+
+    @Test
+    public void test_exportStateAndCancelWhileSuspended() {
+        test_exportStateWhileSuspended(true);
+    }
+
+    private void test_exportStateWhileSuspended(boolean cancel) {
+        JetInstance instance = createJetMember();
+        DAG dag = new DAG();
+        dag.newVertex("v", () -> new StuckProcessor());
+        Job job = instance.newJob(dag, new JobConfig().setSnapshotIntervalMillis(10).setProcessingGuarantee(EXACTLY_ONCE));
+        JobRepository jr = new JobRepository(instance);
+        assertJobStatusEventually(job, RUNNING);
+        assertTrueEventually(() -> assertTrue(jr.getJobExecutionRecord(job.getId()).snapshotId() >= 0));
+        job.suspend();
+        assertJobStatusEventually(job, SUSPENDED);
+        if (cancel) {
+            job.cancelAndExportState("state");
+        } else {
+            job.exportState("state");
+        }
+        assertFalse("state map is empty", instance.getExportedState("state").isEmpty());
+        if (cancel) {
+            assertJobStatusEventually(job, COMPLETED);
+        } else {
+            assertTrueAllTheTime(() -> assertEquals(SUSPENDED, job.getStatus()), 1);
+            job.resume();
+            assertJobStatusEventually(job, RUNNING);
+        }
     }
 
     private void configureBlockingMapStore(JetConfig config, String mapName) {
