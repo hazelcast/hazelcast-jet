@@ -59,10 +59,9 @@ import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 @RunWith(HazelcastSerialClassRunner.class)
-public class JobUpgradeTest {
+public class JobDagUpdateTest {
 
     private static final String STATE_NAME = "state";
 
@@ -410,16 +409,6 @@ public class JobUpgradeTest {
                         new TimestampedItem(11, 8 + 9L),
                         new TimestampedItem(16, 12 + 13L)
                 ));
-    }
-
-    @Test
-    public void test_shrinkSlidingWindowSize_leak() {
-        fail("todo");
-    }
-
-    @Test
-    public void test_extendSlidingWindowSize_leak() {
-        fail("todo");
     }
 
     /**

@@ -54,7 +54,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.function.DistributedComparator.naturalOrder;
-import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.lazyAdd;
 import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
 import static com.hazelcast.jet.impl.util.Util.logLateEvent;
@@ -114,11 +114,13 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
 
     // value to be used temporarily during snapshot restore
     private long minRestoredNextWinToEmit = Long.MAX_VALUE;
+    private long minRestoredFrameTs = Long.MAX_VALUE;
     private ProcessingGuarantee processingGuarantee;
 
     // extracted lambdas to reduce GC litter
     private Function<Long, Map<K, A>> createMapPerTsFunction;
     private Function<K, A> createAccFunction;
+    private boolean badRestoredFrameWarned;
 
     @SuppressWarnings("unchecked")
     public SlidingWindowP(
@@ -209,7 +211,7 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
                     )
                     .append(entry(broadcastKey(Keys.NEXT_WIN_TO_EMIT), nextWinToEmit))
                     .onFirstNull(() -> {
-                        logFine(getLogger(), "Saved nextWinToEmit: %s", nextWinToEmit);
+                        logFinest(getLogger(), "Saved nextWinToEmit: %s", nextWinToEmit);
                         snapshotTraverser = null;
                     });
         }
@@ -234,25 +236,41 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
             return;
         }
         SnapshotKey k = (SnapshotKey) key;
+        // align frame timestamp to our frame - they can be misaligned if slide step was changed in updated DAG
+        long floorFrameTs = winPolicy.floorFrameTs(k.timestamp);
+        if (floorFrameTs != k.timestamp) {
+            if (!badRestoredFrameWarned) {
+                getLogger().warning("Frames in the state do not match the current frame size: they were likely " +
+                        "saved for different window slide step. The window results will probably be incorrect until all " +
+                        "restored frames are emitted.");
+                badRestoredFrameWarned = true;
+            }
+        }
+        minRestoredFrameTs = Math.min(floorFrameTs, minRestoredFrameTs);
         if (tsToKeyToAcc
-                .computeIfAbsent(k.timestamp, createMapPerTsFunction)
+                .computeIfAbsent(floorFrameTs, createMapPerTsFunction)
                 .put((K) k.key, (A) value) != null
         ) {
             throw new JetException("Duplicate key in snapshot: " + k);
         }
         lazyIncrement(totalKeysInFrames);
-        topTs = max(topTs, k.timestamp);
+        topTs = max(topTs, floorFrameTs);
     }
 
     @Override
     public boolean finishSnapshotRestore() {
-        // In the first stage we should theoretically have saved `nextWinToEmit`
-        // to the snapshot. We don't bother since the first stage is effectively a
-        // tumbling window and it makes no difference in that case. So we don't
-        // restore and remain at MIN_VALUE.
-        if (isLastStage) {
-            nextWinToEmit = minRestoredNextWinToEmit;
-            logFine(getLogger(), "Restored nextWinToEmit from snapshot to: %s", nextWinToEmit);
+        // if nextWinToEmit is not on frame boundary, push it to next boundary
+        nextWinToEmit = winPolicy.higherFrameTs(minRestoredNextWinToEmit - 1);
+        logFinest(getLogger(), "Restored nextWinToEmit from snapshot to: %s", nextWinToEmit);
+        // delete too old restored frames. This can happen when window size was shortened after restore
+        if (nextWinToEmit > Long.MIN_VALUE + winPolicy.windowSize()) {
+            for (long ts = minRestoredFrameTs; ts <= nextWinToEmit - winPolicy.windowSize(); ts += winPolicy.frameSize()) {
+                Map<K, A> removed = tsToKeyToAcc.remove(ts);
+                if (removed != null) {
+                    lazyAdd(totalFrames, -1);
+                    lazyAdd(totalKeysInFrames, -removed.size());
+                }
+            }
         }
         return true;
     }
