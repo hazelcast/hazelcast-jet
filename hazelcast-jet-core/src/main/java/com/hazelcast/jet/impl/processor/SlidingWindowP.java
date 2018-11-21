@@ -260,7 +260,9 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
     @Override
     public boolean finishSnapshotRestore() {
         // if nextWinToEmit is not on frame boundary, push it to next boundary
-        nextWinToEmit = winPolicy.higherFrameTs(minRestoredNextWinToEmit - 1);
+        nextWinToEmit = minRestoredNextWinToEmit > Long.MIN_VALUE
+                ? winPolicy.higherFrameTs(minRestoredNextWinToEmit - 1)
+                : minRestoredNextWinToEmit;
         logFinest(getLogger(), "Restored nextWinToEmit from snapshot to: %s", nextWinToEmit);
         // delete too old restored frames. This can happen when window size was shortened after restore
         if (nextWinToEmit > Long.MIN_VALUE + winPolicy.windowSize()) {
