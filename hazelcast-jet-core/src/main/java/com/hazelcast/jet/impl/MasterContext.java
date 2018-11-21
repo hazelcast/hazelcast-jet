@@ -304,7 +304,14 @@ public class MasterContext {
             String sourceMapName = jobExecutionRecord.successfulSnapshotDataMapName(jobId);
             JetInstance jetInstance = coordinationService.getJetService().getJetInstance();
             return copyMapUsingJob(jetInstance, COPY_MAP_JOB_QUEUE_SIZE, sourceMapName, Jet.EXPORTED_STATES_PREFIX + name)
-                    .whenComplete(withTryCatch(logger, (r, t) -> jobStatus = SUSPENDED));
+                    .whenComplete(withTryCatch(logger, (r, t) -> {
+                        jobStatus = SUSPENDED;
+                        if (cancelJob && !requestTermination(CANCEL_FORCEFUL)) {
+                            throw new JetException("State for " + jobIdString() + " exported to '" + name
+                                    + "', but failed to cancel the job: already terminating in mode: "
+                                    + requestedTerminationMode());
+                        }
+                    }));
         }
         if (cancelJob) {
             if (!requestTermination(CANCEL_GRACEFUL)) {
@@ -703,14 +710,20 @@ public class MasterContext {
             mergedResult.merge((SnapshotOperationResult) response);
         }
 
+        Object oldValue = null;
+        try {
+            oldValue = nodeEngine.getHazelcastInstance().getMap(snapshotMapName).put(SnapshotValidationRecord.KEY,
+                    new SnapshotValidationRecord(snapshotId, mergedResult.getNumChunks()));
+        } catch (Exception e) {
+            mergedResult.merge(new SnapshotOperationResult(0, 0, 0, e));
+        }
+
         boolean isSuccess = mergedResult.getError() == null;
         if (!isSuccess) {
             logger.warning(jobIdString() + " snapshot " + snapshotId + " failed on some member(s), " +
                     "one of the failures: " + mergedResult.getError());
         }
 
-        Object oldValue = nodeEngine.getHazelcastInstance().getMap(snapshotMapName).put(SnapshotValidationRecord.KEY,
-                new SnapshotValidationRecord(snapshotId, mergedResult.getNumChunks()));
         if (oldValue != null) {
             logger.severe("SnapshotValidationRecord overwritten after writing to '" + snapshotMapName + "' for "
                     + jobIdString() + ": snapshot data might be corrupted");
@@ -734,7 +747,8 @@ public class MasterContext {
             }
         }
 
-        Runnable nonSynchronizedAction = () -> { };
+        Runnable nonSynchronizedAction = () -> {
+        };
         synchronized (lock) {
             if (this.executionId != executionId) {
                 logger.fine("Not completing terminalSnapshotFuture on " + jobIdString() + ", new execution " +
