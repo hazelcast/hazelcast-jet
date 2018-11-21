@@ -54,7 +54,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.function.DistributedComparator.naturalOrder;
-import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static com.hazelcast.jet.impl.util.Util.lazyAdd;
 import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
 import static com.hazelcast.jet.impl.util.Util.logLateEvent;
@@ -211,7 +211,7 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
                     )
                     .append(entry(broadcastKey(Keys.NEXT_WIN_TO_EMIT), nextWinToEmit))
                     .onFirstNull(() -> {
-                        logFinest(getLogger(), "Saved nextWinToEmit: %s", nextWinToEmit);
+                        logFine(getLogger(), "Saved nextWinToEmit: %s", nextWinToEmit);
                         snapshotTraverser = null;
                     });
         }
@@ -259,18 +259,24 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
 
     @Override
     public boolean finishSnapshotRestore() {
-        // if nextWinToEmit is not on frame boundary, push it to next boundary
-        nextWinToEmit = minRestoredNextWinToEmit > Long.MIN_VALUE
-                ? winPolicy.higherFrameTs(minRestoredNextWinToEmit - 1)
-                : minRestoredNextWinToEmit;
-        logFinest(getLogger(), "Restored nextWinToEmit from snapshot to: %s", nextWinToEmit);
-        // delete too old restored frames. This can happen when window size was shortened after restore
-        if (nextWinToEmit > Long.MIN_VALUE + winPolicy.windowSize()) {
-            for (long ts = minRestoredFrameTs; ts <= nextWinToEmit - winPolicy.windowSize(); ts += winPolicy.frameSize()) {
-                Map<K, A> removed = tsToKeyToAcc.remove(ts);
-                if (removed != null) {
-                    lazyAdd(totalFrames, -1);
-                    lazyAdd(totalKeysInFrames, -removed.size());
+        // In the first stage we should theoretically have saved `nextWinToEmit`
+        // to the snapshot. We don't bother since the first stage is effectively a
+        // tumbling window and it makes no difference in that case. So we don't
+        // restore and remain at MIN_VALUE.
+        if (isLastStage) {
+            // if nextWinToEmit is not on frame boundary, push it to next boundary
+            nextWinToEmit = minRestoredNextWinToEmit > Long.MIN_VALUE
+                    ? winPolicy.higherFrameTs(minRestoredNextWinToEmit - 1)
+                    : minRestoredNextWinToEmit;
+            logFine(getLogger(), "Restored nextWinToEmit from snapshot to: %s", nextWinToEmit);
+            // delete too old restored frames. This can happen when window size was shortened after restore
+            if (nextWinToEmit > Long.MIN_VALUE + winPolicy.windowSize()) {
+                for (long ts = minRestoredFrameTs; ts <= nextWinToEmit - winPolicy.windowSize(); ts += winPolicy.frameSize()) {
+                    Map<K, A> removed = tsToKeyToAcc.remove(ts);
+                    if (removed != null) {
+                        lazyAdd(totalFrames, -1);
+                        lazyAdd(totalKeysInFrames, -removed.size());
+                    }
                 }
             }
         }
