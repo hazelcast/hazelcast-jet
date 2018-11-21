@@ -106,7 +106,8 @@ public class WatermarkCoalescer_TerminalSnapshotTest extends JetTestSupport {
                 .drainTo(SinkBuilder.sinkBuilder("throwing", ctx -> "").
                         <TimestampedEntry<String, Long>>receiveFn((w, e) -> {
                             if (e.getValue() != COUNT) {
-                                throw new RuntimeException("Received unexpected item " + e + ", expected count is " + COUNT);
+                                throw new RuntimeException("Received unexpected item " + e + ", expected count is "
+                                        + COUNT);
                             }
                         }).build());
 

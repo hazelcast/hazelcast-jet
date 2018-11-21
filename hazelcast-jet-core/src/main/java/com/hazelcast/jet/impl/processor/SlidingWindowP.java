@@ -271,7 +271,8 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
             logFine(getLogger(), "Restored nextWinToEmit from snapshot to: %s", nextWinToEmit);
             // delete too old restored frames. This can happen when window size was shortened after restore
             if (nextWinToEmit > Long.MIN_VALUE + winPolicy.windowSize()) {
-                for (long ts = minRestoredFrameTs; ts <= nextWinToEmit - winPolicy.windowSize(); ts += winPolicy.frameSize()) {
+                for (long ts = minRestoredFrameTs; ts <= nextWinToEmit - winPolicy.windowSize();
+                        ts += winPolicy.frameSize()) {
                     Map<K, A> removed = tsToKeyToAcc.remove(ts);
                     if (removed != null) {
                         lazyAdd(totalFrames, -1);
