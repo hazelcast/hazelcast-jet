@@ -167,31 +167,30 @@ public interface Job {
     /**
      * Initiates exporting of state snapshot and saves it under the given name,
      * after which the job will be cancelled without processing any more data
-     * after the snapshot. It's similar to {@link #suspend()}, except that the
-     * job cannot be later resumed, but a new job has to be submitted with
-     * possibly modified Pipeline. To use the exported snapshot for the new
-     * job, use {@link JobConfig#setInitialSnapshotName(String)}.
+     * after the barrier (a graceful cancellation). It's similar to {@link
+     * #suspend()}, except that the job cannot be later resumed, but a new job
+     * has to be submitted with possibly modified Pipeline. To use the exported
+     * snapshot for the new job, use {@link
+     * JobConfig#setInitialSnapshotName(String)}.
+     * <p>
+     * If the terminal snapshot fails, the job won't be cancelled but will be
+     * suspended instead.
+     * <p>
+     * You can call this method for a suspended job: in that case the last
+     * successful snapshot will be copied and the job will be cancelled.
+     * <p>
+     * Method will block until the state is fully exported, but might return
+     * before the execution is fully cancelled.
      * <p>
      * For more information about "exported state" see {@link
      * #exportState(String)}.
      * <p>
-     * If the snapshot fails, the job won't be cancelled but will be suspended
-     * instead.
-     *
-     * You can call this method for suspended job: in that case the last
-     * successful snapshot will be copied and the job cancelled.
-     *
-     * Method will block until the state is fully exported, but might return
-     * before the job is fully cancelled.
-     *
-     * <p>
      * Job status will be {@link JobStatus#COMPLETED} after cancellation, even
-     * though the job didn't really complete. However, {@link Job#join()} will
-     * throw an exception.
-
-     * TODO [viliam] finish javadoc
+     * though the job didn't really complete. {@link Job#join()} won't throw an
+     * exception.
      *
-     * @param name name of the snapshot
+     * @param name name of the snapshot. If name is already used, it will be
+     *            overwritten
      */
     void cancelAndExportState(String name);
 
@@ -200,36 +199,33 @@ public interface Job {
      * The call will block until the snapshot is successfully stored. The
      * state can later be used to start a new job from the stored
      * state using {@link JobConfig#setInitialSnapshotName(String)}.
-     *
-     * The state is independent from this job. It will be stored in an IMap Jet won't
-     * automatically delete the snapshot, it has to be {@linkplain
-     * JetInstance#deleteExportedState(String) deleted manually}. If your state is
-     * large, make sure to have enough memory to store it.
+     * <p>
+     * The state is independent from this job. It will be stored in an IMap
+     * that's not managed by Jet: it won't automatically delete the snapshot,
+     * it has to be {@linkplain JetInstance#deleteExportedState(String) deleted
+     * manually}. If your state is large, make sure to have enough memory to
+     * store it.
      * <p>
      * If a snapshot with that name already exists, it will be overwritten. If
-     * a snapshot is already in progress (either automatic or user-requested),
-     * the requested one will start immediately after the previous one
-     * completes. If snapshot with the same name is requested for two jobs at
-     * the same time, their data will likely be damaged (similar to two
-     * processes writing to the same file).
-     *
+     * a snapshot is already in progress for this job (either automatic or
+     * user-requested), the requested one will start immediately after the
+     * previous one completes. If snapshot with the same name is requested for
+     * two jobs at the same time, their data will likely be damaged (similar to
+     * two processes writing to the same file).
+     * <p>
      * You can call this method for suspended job: in that case the last
-     * successful snapshot will be copied.
-     *
-     * You can also export state of non-snapshotted jobs (those with {@link
-     * ProcessingGuarantee#NONE}.
-     *
-     * Parallel requests to export snapshot are serialized and executed one by
-     * one. Graceful job-control action such as graceful shutdown or suspending
-     * a snapshotted job is also enqueued. Forceful job-control actions will
-     * interrupt the exported snapshot.
-     *
+     * successful snapshot will be copied. You can also export state of
+     * non-snapshotted jobs (those with {@link ProcessingGuarantee#NONE}.
+     * <p>
+     * Graceful job-control action such as graceful member shutdown or
+     * suspending a snapshotted job will be enqueued after this snapshot.
+     * Forceful job-control actions will interrupt the exported snapshot.
+     * <p>
      * You can access the exported state map using {@link
      * JetInstance#getExportedState(String)}.
      *
-     * TODO [viliam] finish javadoc
-     *
-     * @param name name of the snapshot
+     * @param name name of the snapshot. If name is already used, it will be
+     *            overwritten
      */
     void exportState(String name);
 }

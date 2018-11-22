@@ -158,6 +158,32 @@ public class ExportSnapshotTest extends JetTestSupport {
         test_exportStateWhileSuspended(true);
     }
 
+    @Test
+    public void when_initialSnapshotSetAndJobFailsBeforeCreatingAnotherSnapshot_then_initialSnapshotUsedAgain() {
+        TestProcessors.reset(2);
+        DAG dag = new DAG();
+        dag.newVertex("p", DummyStatefulP::new).localParallelism(1);
+        JetInstance[] instances = createJetMembers(new JetConfig(), 2);
+        Job job = instances[0].newJob(dag, new JobConfig().setProcessingGuarantee(EXACTLY_ONCE).setSnapshotIntervalMillis(10));
+        // wait for the first snapshot
+        JobRepository jr = new JobRepository(instances[0]);
+        assertJobStatusEventually(job, RUNNING);
+        assertTrueEventually(() ->
+                assertTrue("no first snapshot", jr.getJobExecutionRecord(job.getId()).snapshotId() >= 0));
+        job.cancelAndExportState("state");
+        DummyStatefulP.wasRestored = false;
+
+        // When
+        Job job2 = instances[0].newJob(dag, new JobConfig().setProcessingGuarantee(NONE).setInitialSnapshotName("state"));
+        assertTrueEventually(() -> assertTrue(DummyStatefulP.wasRestored));
+        DummyStatefulP.wasRestored = false;
+        instances[1].getHazelcastInstance().getLifecycleService().terminate();
+
+        // Then
+        assertTrueEventually(() -> assertTrue(DummyStatefulP.wasRestored));
+        assertTrueAllTheTime(() -> assertEquals(RUNNING, job2.getStatus()), 1);
+    }
+
     private void test_exportStateWhileSuspended(boolean cancel) {
         JetInstance instance = createJetMember();
         DAG dag = new DAG();

@@ -40,7 +40,6 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
 import static java.util.stream.Collectors.toList;
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -420,7 +419,8 @@ public final class TestProcessors {
 
         @Override
         public boolean finishSnapshotRestore() {
-            assertArrayEquals(IntStream.generate(() -> parallelism).limit(ITEMS_TO_SAVE).toArray(), restored);
+            assertEquals(IntStream.generate(() -> parallelism).limit(ITEMS_TO_SAVE).boxed().collect(toList()),
+                    IntStream.of(restored).boxed().collect(toList()));
             restored = null;
             wasRestored = true;
             return true;

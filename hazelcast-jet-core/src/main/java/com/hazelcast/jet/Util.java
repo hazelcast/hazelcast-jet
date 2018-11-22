@@ -117,10 +117,14 @@ public final class Util {
     }
 
     /**
-     * TODO [viliam] javadoc
+     * Cleans up a snapshot map that might have extra entries from multiple
+     * snapshots writing to the same map. Jet reuses the same maps for regular
+     * snapshots and in certain failure situations entries from multiple
+     * snapshots can appear. This method can clean up the map as long as the
+     * validation record in the map is valid.
      *
-     * @param instance
-     * @param snapshotMapName
+     * @param instance Jet member or client instance
+     * @param snapshotMapName full name of IMap to be cleaned
      */
     public static void cleanUpSnapshotMap(JetInstance instance, String snapshotMapName) {
         IMapJet<Object, Object> map = instance.getExportedState(snapshotMapName);

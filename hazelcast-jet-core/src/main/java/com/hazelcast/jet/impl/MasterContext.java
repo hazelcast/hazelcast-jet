@@ -710,9 +710,10 @@ public class MasterContext {
             mergedResult.merge((SnapshotOperationResult) response);
         }
 
+        IMap<Object, Object> snapshotMap = nodeEngine.getHazelcastInstance().getMap(snapshotMapName);
         Object oldValue = null;
         try {
-            oldValue = nodeEngine.getHazelcastInstance().getMap(snapshotMapName).put(SnapshotValidationRecord.KEY,
+            oldValue = snapshotMap.put(SnapshotValidationRecord.KEY,
                     new SnapshotValidationRecord(snapshotId, mergedResult.getNumChunks()));
         } catch (Exception e) {
             mergedResult.merge(new SnapshotOperationResult(0, 0, 0, e));
@@ -722,6 +723,12 @@ public class MasterContext {
         if (!isSuccess) {
             logger.warning(jobIdString() + " snapshot " + snapshotId + " failed on some member(s), " +
                     "one of the failures: " + mergedResult.getError());
+            try {
+                snapshotMap.clear();
+            } catch (Exception e) {
+                logger.warning(jobIdString() + ": failed to clear snapshot map '" + snapshotMapName + "' after a failure",
+                        e);
+            }
         }
 
         if (oldValue != null) {

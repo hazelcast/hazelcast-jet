@@ -425,20 +425,26 @@ public class JobConfig implements Serializable {
     }
 
     /**
-     * TODO [viliam] finish javadoc
-     * @return
+     * Returns the configured {@linkplain #setInitialSnapshotName(String)
+     * initial snapshot name}.
      */
     public String getInitialSnapshotName() {
         return initialSnapshotName;
     }
 
     /**
-     * TODO [viliam] finish javadoc
+     * Sets the {@linkplain Job#exportState(String) exported state} snapshot
+     * name to restore the initial job state from. This state will be used for
+     * initial state and also for the case if the job restarts before it
+     * produces first snapshot.
+     * <p>
+     * The job will use the state even if {@linkplain
+     * #setProcessingGuarantee(ProcessingGuarantee) processing guarantee} is
+     * set to {@link ProcessingGuarantee#NONE NONE}.
      *
-     * You can restore state also for non-snapshotted jobs.
-     *
-     * @param initialSnapshotName
-     * @return
+     * @param initialSnapshotName the snapshot name given to {@link
+     *      Job#exportState(String)}
+     * @return {@code this} instance for fluent API
      */
     public JobConfig setInitialSnapshotName(String initialSnapshotName) {
         this.initialSnapshotName = initialSnapshotName;
