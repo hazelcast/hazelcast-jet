@@ -118,17 +118,17 @@ public class JetInstanceTest extends JetTestSupport {
         dag.newVertex("p", () -> new StuckProcessor());
         Job job = instance.newJob(dag);
         assertJobStatusEventually(job, RUNNING);
-        job.exportState("state1");
+        job.exportSnapshot("state1");
         instance.getHazelcastInstance().getDistributedObjects().forEach(System.out::println);
-        assertEquals(singleton("state1"), new HashSet<>(instance.getExportedStateNames()));
-        job.exportState("state2");
-        assertEquals(new HashSet<>(asList("state1", "state2")), new HashSet<>(instance.getExportedStateNames()));
+        assertEquals(singleton("state1"), new HashSet<>(instance.getExportedStates()));
+        job.exportSnapshot("state2");
+        assertEquals(new HashSet<>(asList("state1", "state2")), new HashSet<>(instance.getExportedStates()));
         instance.deleteExportedState("state1");
-        assertEquals(singleton("state2"), new HashSet<>(instance.getExportedStateNames()));
+        assertEquals(singleton("state2"), new HashSet<>(instance.getExportedStates()));
         job.cancel();
         assertJobStatusEventually(job, JobStatus.COMPLETED);
-        assertEquals(singleton("state2"), new HashSet<>(instance.getExportedStateNames()));
+        assertEquals(singleton("state2"), new HashSet<>(instance.getExportedStates()));
         instance.deleteExportedState("state2");
-        assertEquals(emptySet(), new HashSet<>(instance.getExportedStateNames()));
+        assertEquals(emptySet(), new HashSet<>(instance.getExportedStates()));
     }
 }

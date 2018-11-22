@@ -27,7 +27,6 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
@@ -59,7 +58,6 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -107,7 +105,6 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.callbackOf;
 import static com.hazelcast.jet.impl.util.Util.copyMapUsingJob;
 import static com.hazelcast.jet.impl.util.Util.jobNameAndExecutionId;
-import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.partitioningBy;
@@ -455,22 +452,19 @@ public class MasterContext {
             throw new JetException("State for " + jobIdString() + " was supposed to be restored from '" + mapName
                     + "', but that map doesn't contain the validation key: not an IMap with Jet snapshot or corrupted");
         }
-        if (validationRecord.getNumChunks() != map.size() - 1) {
-            Method method = uncheckCall(() ->
-                    Util.class.getDeclaredMethod("cleanUpSnapshotMap", JetInstance.class, String.class));
-            throw new JetException("State for " + jobIdString() + " in '" + mapName + "' probably corrupted: it should " +
-                    "have " + validationRecord.getNumChunks() + " entries, but has " + (map.size() - 1) + " entries. " +
-                    "You can try " + Util.class.getName() + "#" + method.getName() + "(instance, '" + mapName
-                    + "') to fix it");
+        if (validationRecord.numChunks() != map.size() - 1) {
+            // TODO [viliam] fallback validation using aggregate()
+            throw new JetException("State for " + jobIdString() + " in '" + mapName + "' corrupted: it should " +
+                    "have " + validationRecord.numChunks() + " entries, but has " + (map.size() - 1) + " entries");
         }
 
         if (snapshotId == -1) {
             // we're restoring from exported state: in this case we don't know the snapshotId
-            snapshotId = validationRecord.getSnapshotId();
+            snapshotId = validationRecord.snapshotId();
         } else {
-            if (snapshotId != validationRecord.getSnapshotId()) {
+            if (snapshotId != validationRecord.snapshotId()) {
                 throw new JetException(jobIdString() + ": '" + mapName + "' was supposed to contain snapshotId="
-                        + snapshotId + ", but it contains snapshotId=" + validationRecord.getSnapshotId());
+                        + snapshotId + ", but it contains snapshotId=" + validationRecord.snapshotId());
             }
         }
 
@@ -714,7 +708,8 @@ public class MasterContext {
         Object oldValue = null;
         try {
             oldValue = snapshotMap.put(SnapshotValidationRecord.KEY,
-                    new SnapshotValidationRecord(snapshotId, mergedResult.getNumChunks()));
+                    new SnapshotValidationRecord(snapshotId, mergedResult.getNumChunks(), mergedResult.getNumBytes(),
+                            jobExecutionRecord.ongoingSnapshotStartTime(), jobId, jobName, jobRecord.getDagJson()));
         } catch (Exception e) {
             mergedResult.merge(new SnapshotOperationResult(0, 0, 0, e));
         }

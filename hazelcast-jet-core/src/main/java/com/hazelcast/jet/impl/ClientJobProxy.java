@@ -31,6 +31,7 @@ import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.Member;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.JobStateSnapshot;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobStatus;
@@ -105,23 +106,25 @@ public class ClientJobProxy extends AbstractJobProxy<HazelcastClientInstanceImpl
     }
 
     @Override
-    public void cancelAndExportState(String name) {
+    public JobStateSnapshot cancelAndExportSnapshot(String name) {
         ClientMessage request = JetExportStateCodec.encodeRequest(getId(), name, true);
         try {
             new CancellableFuture<>(invocation(request, masterAddress()).invoke()).get();
         } catch (Exception e) {
             throw rethrow(e);
         }
+        return JobStateSnapshot.create(container(), name);
     }
 
     @Override
-    public void exportState(String name) {
+    public JobStateSnapshot exportSnapshot(String name) {
         ClientMessage request = JetExportStateCodec.encodeRequest(getId(), name, false);
         try {
             new CancellableFuture<>(invocation(request, masterAddress()).invoke()).get();
         } catch (Exception e) {
             throw rethrow(e);
         }
+        return JobStateSnapshot.create(container(), name);
     }
 
     @Override

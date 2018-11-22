@@ -156,7 +156,7 @@ public interface Job {
      * though the job didn't really complete. {@link Job#join()} will also
      * return without an exception.
      *
-     * @see #cancelAndExportState(String)
+     * @see #cancelAndExportSnapshot(String)
      *
      * @throws IllegalStateException if the cluster is not in a state to
      * restart the job, for example when coordinator member left and new
@@ -183,7 +183,7 @@ public interface Job {
      * before the execution is fully cancelled.
      * <p>
      * For more information about "exported state" see {@link
-     * #exportState(String)}.
+     * #exportSnapshot(String)}.
      * <p>
      * Job status will be {@link JobStatus#COMPLETED} after cancellation, even
      * though the job didn't really complete. {@link Job#join()} won't throw an
@@ -192,7 +192,7 @@ public interface Job {
      * @param name name of the snapshot. If name is already used, it will be
      *            overwritten
      */
-    void cancelAndExportState(String name);
+    JobStateSnapshot cancelAndExportSnapshot(String name);
 
     /**
      * Initiates a state snapshot and saves it under the given name.
@@ -227,5 +227,5 @@ public interface Job {
      * @param name name of the snapshot. If name is already used, it will be
      *            overwritten
      */
-    void exportState(String name);
+    JobStateSnapshot exportSnapshot(String name);
 }

@@ -433,7 +433,7 @@ public class JobConfig implements Serializable {
     }
 
     /**
-     * Sets the {@linkplain Job#exportState(String) exported state} snapshot
+     * Sets the {@linkplain Job#exportSnapshot(String) exported state} snapshot
      * name to restore the initial job state from. This state will be used for
      * initial state and also for the case if the job restarts before it
      * produces first snapshot.
@@ -443,7 +443,7 @@ public class JobConfig implements Serializable {
      * set to {@link ProcessingGuarantee#NONE NONE}.
      *
      * @param initialSnapshotName the snapshot name given to {@link
-     *      Job#exportState(String)}
+     *      Job#exportSnapshot(String)}
      * @return {@code this} instance for fluent API
      */
     public JobConfig setInitialSnapshotName(String initialSnapshotName) {

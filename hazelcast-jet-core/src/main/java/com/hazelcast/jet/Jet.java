@@ -57,7 +57,7 @@ public final class Jet {
     public static final String INTERNAL_JET_OBJECTS_PREFIX = "__jet.";
 
     /**
-     * State exported using {@link Job#exportState(String)} is stored in IMaps
+     * State exported using {@link Job#exportSnapshot(String)} is stored in IMaps
      * named with this prefix.
      */
     public static final String EXPORTED_STATES_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "exportedState.";

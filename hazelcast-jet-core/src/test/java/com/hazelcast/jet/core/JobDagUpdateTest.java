@@ -336,7 +336,7 @@ public class JobDagUpdateTest {
                         new TimestampedItem(6, 3L),
                         new TimestampedItem(9, 3L)
                 ), new ArrayList<>(sink)), 10);
-        job1.cancelAndExportState(STATE_NAME);
+        job1.cancelAndExportSnapshot(STATE_NAME);
         ProducerP.wasSnapshotted = false;
 
         Job job = instance.newJob(pipeline2, jobConfigWithRestore);
@@ -420,7 +420,7 @@ public class JobDagUpdateTest {
     private <T> void runPipelines(List<T> expected1, List<T> expected2) {
         Job job = instance.newJob(pipeline1, jobConfigInitial);
         assertTrueEventually(() -> assertEquals(expected1, new ArrayList<>(sink)), 10);
-        job.cancelAndExportState(STATE_NAME);
+        job.cancelAndExportSnapshot(STATE_NAME);
         ProducerP.wasSnapshotted = false;
 
         instance.newJob(pipeline2, jobConfigWithRestore);

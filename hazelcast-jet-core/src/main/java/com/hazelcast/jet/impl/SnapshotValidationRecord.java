@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl;
 
+import javax.annotation.Nonnull;
 import java.io.Serializable;
 
 public class SnapshotValidationRecord implements Serializable {
@@ -23,18 +24,50 @@ public class SnapshotValidationRecord implements Serializable {
 
     private final long snapshotId;
     private final long numChunks;
+    private final long numBytes;
 
-    SnapshotValidationRecord(long snapshotId, long numChunks) {
+    private final long creationTime;
+    private final long jobId;
+    private final String jobName;
+    private final String dagJsonString;
+
+    public SnapshotValidationRecord(long snapshotId, long numChunks, long numBytes, long creationTime, long jobId,
+                                    @Nonnull String jobName, @Nonnull String dagJsonString) {
         this.snapshotId = snapshotId;
         this.numChunks = numChunks;
+        this.numBytes = numBytes;
+        this.creationTime = creationTime;
+        this.jobId = jobId;
+        this.jobName = jobName;
+        this.dagJsonString = dagJsonString;
     }
 
-    public long getSnapshotId() {
+    public long snapshotId() {
         return snapshotId;
     }
 
-    long getNumChunks() {
+    long numChunks() {
         return numChunks;
+    }
+
+    public long numBytes() {
+        return numBytes;
+    }
+
+    public long creationTime() {
+        return creationTime;
+    }
+
+    public long jobId() {
+        return jobId;
+    }
+
+    public String jobName() {
+        return jobName;
+    }
+
+    public String dagJsonString() {
+        return dagJsonString;
     }
 
     enum SnapshotValidationKey {

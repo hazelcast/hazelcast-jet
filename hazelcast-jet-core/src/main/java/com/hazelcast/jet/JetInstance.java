@@ -147,19 +147,21 @@ public interface JetInstance {
      * @param name exported snapshot name
      * @return IMap instance with the data
      */
-    default IMapJet<Object, Object> getExportedState(@Nonnull String name) {
-        return getMap(Jet.EXPORTED_STATES_PREFIX + name);
+    default JobStateSnapshot getExportedState(@Nonnull String name) {
+        return JobStateSnapshot.create(this.getHazelcastInstance(), name);
     }
 
     /**
-     * Returns the collection of names of existing exported states.
+     * Returns the collection of exported job state snapshots stored in the
+     * cluster.
      */
-    default Collection<String> getExportedStateNames() {
+    default Collection<JobStateSnapshot> getExportedStates() {
         return getHazelcastInstance().getDistributedObjects().stream()
-                                     .filter(o -> o.getServiceName().equals(MapService.SERVICE_NAME)
-                                             && o.getName().startsWith(Jet.EXPORTED_STATES_PREFIX))
-                                     .map(o -> o.getName().substring(Jet.EXPORTED_STATES_PREFIX.length()))
-                                     .collect(toList());
+                .filter(o -> o.getServiceName().equals(MapService.SERVICE_NAME)
+                        && o.getName().startsWith(Jet.EXPORTED_STATES_PREFIX))
+                .map(o -> JobStateSnapshot.create(this.getHazelcastInstance(),
+                        o.getName().substring(Jet.EXPORTED_STATES_PREFIX.length())))
+                .collect(toList());
     }
 
     /**

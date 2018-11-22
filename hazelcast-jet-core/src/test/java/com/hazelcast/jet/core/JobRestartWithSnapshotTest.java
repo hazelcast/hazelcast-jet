@@ -394,7 +394,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
     public void stressTest_cancelWithSnapshotAndResubmit() throws Exception {
         stressTest(tuple -> {
             logger.info("Cancelling the job with snapshot...");
-            tuple.f2().cancelAndExportState("state");
+            tuple.f2().cancelAndExportSnapshot("state");
             logger.info("cancel() returned");
             assertJobStatusEventually(tuple.f2(), JobStatus.COMPLETED, 15);
             logger.info("Resubmitting the job...");

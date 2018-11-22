@@ -17,8 +17,8 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.config.MapConfig;
+import com.hazelcast.core.IMap;
 import com.hazelcast.core.MapStore;
-import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -69,7 +69,7 @@ public class ExportSnapshotTest extends JetTestSupport {
         Job job = instance.newJob(dag, new JobConfig().setProcessingGuarantee(EXACTLY_ONCE).setSnapshotIntervalMillis(1));
         assertTrueEventually(() -> assertTrue(BlockingMapStore.wasBlocked));
 
-        Future exportFuture = spawnSafe(() -> job.exportState("blockedState"));
+        Future exportFuture = spawnSafe(() -> job.exportSnapshot("blockedState"));
         assertTrueAllTheTime(() -> assertFalse(exportFuture.isDone()), 2);
 
         // now release the blocking store, both snapshots should complete
@@ -90,9 +90,9 @@ public class ExportSnapshotTest extends JetTestSupport {
         assertJobStatusEventually(job, RUNNING);
         JobRepository jr = new JobRepository(instance);
         assertTrueEventually(() -> assertTrue(jr.getJobExecutionRecord(job.getId()).snapshotId() > 1));
-        Future exportFuture = spawnSafe(() -> job.exportState("state"));
+        Future exportFuture = spawnSafe(() -> job.exportSnapshot("state"));
         assertTrueEventually(() -> assertTrue(BlockingMapStore.wasBlocked));
-        Future exportFuture2 = spawnSafe(() -> job.exportState("state2"));
+        Future exportFuture2 = spawnSafe(() -> job.exportSnapshot("state2"));
         assertTrueAllTheTime(() -> {
             assertFalse(exportFuture.isDone());
             assertFalse(exportFuture2.isDone());
@@ -101,8 +101,8 @@ public class ExportSnapshotTest extends JetTestSupport {
         // now release the blocking store, both snapshots should complete
         BlockingMapStore.shouldBlock = false;
         assertTrueEventually(() -> assertTrue(exportFuture.isDone() && exportFuture2.isDone()));
-        assertFalse(instance.getExportedState("state").isEmpty());
-        assertFalse(instance.getExportedState("state2").isEmpty());
+        assertFalse(instance.getExportedState("state").getMap().isEmpty());
+        assertFalse(instance.getExportedState("state2").getMap().isEmpty());
     }
 
     @Test
@@ -114,12 +114,12 @@ public class ExportSnapshotTest extends JetTestSupport {
         // When
         Job job = instance.newJob(dag, new JobConfig().setProcessingGuarantee(NONE));
         assertJobStatusEventually(job, RUNNING);
-        job.exportState("exportState");
+        job.exportSnapshot("exportState");
         // Then1
-        assertFalse("exportState is empty", instance.getExportedState("exportState").isEmpty());
-        job.cancelAndExportState("cancelAndExportState");
+        assertFalse("exportState is empty", instance.getExportedState("exportState").getMap().isEmpty());
+        job.cancelAndExportSnapshot("cancelAndExportState");
         // Then2
-        assertFalse("cancelAndExportState is empty", instance.getExportedState("cancelAndExportState").isEmpty());
+        assertFalse("cancelAndExportState is empty", instance.getExportedState("cancelAndExportState").getMap().isEmpty());
         assertJobStatusEventually(job, COMPLETED);
 
         DummyStatefulP.wasRestored = false;
@@ -135,14 +135,14 @@ public class ExportSnapshotTest extends JetTestSupport {
     @Test
     public void when_targetMapNotEmpty_then_cleared() {
         JetInstance instance = createJetMember();
-        IMapJet<Object, Object> stateMap = instance.getExportedState("state");
+        IMap<Object, Object> stateMap = instance.getExportedState("state").getMap();
         // When
         stateMap.put("fooKey", "bar");
         DAG dag = new DAG();
         dag.newVertex("v", () -> new StuckProcessor());
         Job job = instance.newJob(dag);
         assertJobStatusEventually(job, RUNNING);
-        job.exportState("state");
+        job.exportSnapshot("state");
         // Then
         assertNull(stateMap.get("fooKey"));
         assertEquals(1, stateMap.size());
@@ -164,13 +164,14 @@ public class ExportSnapshotTest extends JetTestSupport {
         DAG dag = new DAG();
         dag.newVertex("p", DummyStatefulP::new).localParallelism(1);
         JetInstance[] instances = createJetMembers(new JetConfig(), 2);
-        Job job = instances[0].newJob(dag, new JobConfig().setProcessingGuarantee(EXACTLY_ONCE).setSnapshotIntervalMillis(10));
+        Job job = instances[0].newJob(dag,
+                new JobConfig().setProcessingGuarantee(EXACTLY_ONCE).setSnapshotIntervalMillis(10));
         // wait for the first snapshot
         JobRepository jr = new JobRepository(instances[0]);
         assertJobStatusEventually(job, RUNNING);
         assertTrueEventually(() ->
                 assertTrue("no first snapshot", jr.getJobExecutionRecord(job.getId()).snapshotId() >= 0));
-        job.cancelAndExportState("state");
+        job.cancelAndExportSnapshot("state");
         DummyStatefulP.wasRestored = false;
 
         // When
@@ -195,11 +196,11 @@ public class ExportSnapshotTest extends JetTestSupport {
         job.suspend();
         assertJobStatusEventually(job, SUSPENDED);
         if (cancel) {
-            job.cancelAndExportState("state");
+            job.cancelAndExportSnapshot("state");
         } else {
-            job.exportState("state");
+            job.exportSnapshot("state");
         }
-        assertFalse("state map is empty", instance.getExportedState("state").isEmpty());
+        assertFalse("state map is empty", instance.getExportedState("state").getMap().isEmpty());
         if (cancel) {
             assertJobStatusEventually(job, COMPLETED);
         } else {

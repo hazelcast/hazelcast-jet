@@ -96,8 +96,8 @@ public class PostponedSnapshotTest extends JetTestSupport {
         Job job = startJob(beforeFirstSnapshot ? 20_000 : 10);
 
         // When
-        Future snapshotFuture = spawn(() -> job.exportState("state"));
-        IMap<Object, Object> snapshotMap = instance.getExportedState("state");
+        Future snapshotFuture = spawn(() -> job.exportSnapshot("state"));
+        IMap<Object, Object> snapshotMap = instance.getExportedState("state").getMap();
         assertTrueAllTheTime(() -> {
             assertFalse(snapshotFuture.isDone());
             assertTrue(snapshotMap.isEmpty());

@@ -21,8 +21,6 @@ import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.core.EntryEventType;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedPredicate;
-import com.hazelcast.jet.impl.SnapshotValidationRecord;
-import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl.SnapshotDataKey;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 
@@ -114,25 +112,5 @@ public final class Util {
             }
         }
         return new String(buf);
-    }
-
-    /**
-     * Cleans up a snapshot map that might have extra entries from multiple
-     * snapshots writing to the same map. Jet reuses the same maps for regular
-     * snapshots and in certain failure situations entries from multiple
-     * snapshots can appear. This method can clean up the map as long as the
-     * validation record in the map is valid.
-     *
-     * @param instance Jet member or client instance
-     * @param snapshotMapName full name of IMap to be cleaned
-     */
-    public static void cleanUpSnapshotMap(JetInstance instance, String snapshotMapName) {
-        IMapJet<Object, Object> map = instance.getExportedState(snapshotMapName);
-        SnapshotValidationRecord record = (SnapshotValidationRecord) map.get(SnapshotValidationRecord.KEY);
-        if (record == null) {
-            throw new JetException("Validation record not found - probably not a snapshot map");
-        }
-        map.removeAll(entry -> entry.getKey() instanceof SnapshotDataKey
-                && ((SnapshotDataKey) entry.getKey()).snapshotId() != record.getSnapshotId());
     }
 }

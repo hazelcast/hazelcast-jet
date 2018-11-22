@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.JobStateSnapshot;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobStatus;
@@ -88,21 +89,23 @@ public class JobProxy extends AbstractJobProxy<NodeEngineImpl> {
     }
 
     @Override
-    public void cancelAndExportState(String name) {
+    public JobStateSnapshot cancelAndExportSnapshot(String name) {
         try {
             invokeOp(new ExportStateOperation(getId(), name, true)).get();
         } catch (Exception e) {
             throw rethrow(e);
         }
+        return JobStateSnapshot.create(container().getHazelcastInstance(), name);
     }
 
     @Override
-    public void exportState(String name) {
+    public JobStateSnapshot exportSnapshot(String name) {
         try {
             invokeOp(new ExportStateOperation(getId(), name, false)).get();
         } catch (Exception e) {
             throw rethrow(e);
         }
+        return JobStateSnapshot.create(container().getHazelcastInstance(), name);
     }
 
     @Override
