@@ -22,11 +22,13 @@ import com.hazelcast.core.MapStore;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.JobStateSnapshot;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.TestProcessors.DummyStatefulP;
 import com.hazelcast.jet.core.TestProcessors.StuckProcessor;
 import com.hazelcast.jet.impl.JobRepository;
+import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl.SnapshotDataKey;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,6 +41,7 @@ import java.util.concurrent.Future;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.JobStatus.COMPLETED;
+import static com.hazelcast.jet.core.JobStatus.FAILED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.impl.JobRepository.SNAPSHOT_DATA_MAP_PREFIX;
@@ -182,6 +185,39 @@ public class ExportSnapshotTest extends JetTestSupport {
 
         // Then
         assertTrueEventually(() -> assertTrue(DummyStatefulP.wasRestored));
+        assertTrueAllTheTime(() -> assertEquals(RUNNING, job2.getStatus()), 1);
+    }
+
+    @Test
+    public void when_snapshotValidationFails_then_snapshotNotUsed() {
+        DAG dag = new DAG();
+        dag.newVertex("v", () -> new StuckProcessor());
+        JetInstance instance = createJetMember();
+        Job job = instance.newJob(dag);
+        assertJobStatusEventually(job, RUNNING);
+        JobStateSnapshot state = job.cancelAndExportSnapshot("state");
+
+        // When - cause the snapshot to be invalid
+        state.getMap().put("foo", "bar");
+
+        job = instance.newJob(dag, new JobConfig().setInitialSnapshotName("state"));
+        assertJobStatusEventually(job, FAILED);
+    }
+
+    @Test
+    public void when_entryWithDifferentSnapshotIdFound_then_fallbackValidationUsed() {
+        DAG dag = new DAG();
+        dag.newVertex("v", () -> new StuckProcessor());
+        JetInstance instance = createJetMember();
+        Job job = instance.newJob(dag);
+        assertJobStatusEventually(job, RUNNING);
+        JobStateSnapshot state = job.cancelAndExportSnapshot("state");
+
+        // When - cause the snapshot to be partly invalid - insert entry with wrong snapshot ID
+        state.getMap().put(new SnapshotDataKey(1, -10, "vertex", 1), "bar");
+
+        Job job2 = instance.newJob(dag, new JobConfig().setInitialSnapshotName("state"));
+        assertJobStatusEventually(job2, RUNNING);
         assertTrueAllTheTime(() -> assertEquals(RUNNING, job2.getStatus()), 1);
     }
 

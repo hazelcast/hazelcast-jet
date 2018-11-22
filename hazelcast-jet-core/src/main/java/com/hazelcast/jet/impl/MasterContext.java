@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl;
 
+import com.hazelcast.aggregation.Aggregators;
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.LocalMemberResetException;
@@ -47,6 +48,7 @@ import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResul
 import com.hazelcast.jet.impl.operation.StartExecutionOperation;
 import com.hazelcast.jet.impl.operation.TerminateExecutionOperation;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl;
+import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl.SnapshotDataKey;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.NonCompletableFuture;
@@ -453,9 +455,14 @@ public class MasterContext {
                     + "', but that map doesn't contain the validation key: not an IMap with Jet snapshot or corrupted");
         }
         if (validationRecord.numChunks() != map.size() - 1) {
-            // TODO [viliam] fallback validation using aggregate()
-            throw new JetException("State for " + jobIdString() + " in '" + mapName + "' corrupted: it should " +
-                    "have " + validationRecord.numChunks() + " entries, but has " + (map.size() - 1) + " entries");
+            // fallback validation that counts using aggregate(), ignoring different snapshot IDs
+            long finalSnapshotId1 = snapshotId;
+            Long filteredCount = map.aggregate(Aggregators.count(), e -> e.getKey() instanceof SnapshotDataKey
+                    && ((SnapshotDataKey) e.getKey()).snapshotId() == finalSnapshotId1);
+            if (validationRecord.numChunks() != filteredCount) {
+                throw new JetException("State for " + jobIdString() + " in '" + mapName + "' corrupted: it should " +
+                        "have " + validationRecord.numChunks() + " entries, but has " + (map.size() - 1) + " entries");
+            }
         }
 
         if (snapshotId == -1) {
