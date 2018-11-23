@@ -50,7 +50,6 @@ import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.aggregate.AggregateOperations.averagingLong;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
-import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.JetTestSupport.assertJobStatusEventually;
 import static com.hazelcast.jet.core.JetTestSupport.assertTrueEventually;
@@ -92,9 +91,7 @@ public class JobDagUpdateTest {
         jobConfigInitial = new JobConfig()
                 .setProcessingGuarantee(NONE); // we'll export manually
         jobConfigWithRestore = new JobConfig()
-                .setProcessingGuarantee(EXACTLY_ONCE)
-                .setInitialSnapshotName(STATE_NAME)
-                .setSnapshotIntervalMillis(100);
+                .setInitialSnapshotName(STATE_NAME);
         sink = instance.getList("sink");
         ProducerP.wasSnapshotted = false;
     }
