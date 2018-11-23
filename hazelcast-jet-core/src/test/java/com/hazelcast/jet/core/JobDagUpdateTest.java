@@ -91,6 +91,7 @@ public class JobDagUpdateTest {
         jobConfigInitial = new JobConfig()
                 .setProcessingGuarantee(NONE); // we'll export manually
         jobConfigWithRestore = new JobConfig()
+                .setProcessingGuarantee(NONE)
                 .setInitialSnapshotName(STATE_NAME);
         sink = instance.getList("sink");
         ProducerP.wasSnapshotted = false;
