@@ -61,7 +61,6 @@ import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class JobDagUpdateTest {
@@ -284,11 +283,6 @@ public class JobDagUpdateTest {
                         new TimestampedItem(18, 2L),
                         new TimestampedItem(19, 2L)
                 ));
-    }
-
-    @Test
-    public void test_slidingWindowChangeSlide() {
-        fail("todo");
     }
 
     @Test

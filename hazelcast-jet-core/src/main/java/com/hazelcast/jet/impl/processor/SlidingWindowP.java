@@ -120,7 +120,7 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
     // extracted lambdas to reduce GC litter
     private Function<Long, Map<K, A>> createMapPerTsFunction;
     private Function<K, A> createAccFunction;
-    private boolean badRestoredFrameWarned;
+    private boolean badFrameRestored;
 
     @SuppressWarnings("unchecked")
     public SlidingWindowP(
@@ -237,24 +237,31 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
         }
         SnapshotKey k = (SnapshotKey) key;
         // align frame timestamp to our frame - they can be misaligned if slide step was changed in updated DAG
-        long floorFrameTs = winPolicy.floorFrameTs(k.timestamp);
-        if (floorFrameTs != k.timestamp) {
-            if (!badRestoredFrameWarned) {
+        long higherFrameTs = winPolicy.higherFrameTs(k.timestamp - 1);
+        if (higherFrameTs != k.timestamp) {
+            if (!badFrameRestored) {
+                badFrameRestored = true;
                 getLogger().warning("Frames in the state do not match the current frame size: they were likely " +
-                        "saved for different window slide step. The window results will probably be incorrect until all " +
-                        "restored frames are emitted.");
-                badRestoredFrameWarned = true;
+                        "saved for different window slide step or different offset. The window results will probably be " +
+                        "incorrect until all restored frames are emitted.");
             }
         }
-        minRestoredFrameTs = Math.min(floorFrameTs, minRestoredFrameTs);
-        if (tsToKeyToAcc
-                .computeIfAbsent(floorFrameTs, createMapPerTsFunction)
-                .put((K) k.key, (A) value) != null
-        ) {
-            throw new JetException("Duplicate key in snapshot: " + k);
-        }
+        minRestoredFrameTs = Math.min(higherFrameTs, minRestoredFrameTs);
+        tsToKeyToAcc
+                .computeIfAbsent(higherFrameTs, createMapPerTsFunction)
+                .merge((K) k.key, (A) value, (o, n) -> {
+                    if (!badFrameRestored) {
+                        throw new JetException("Duplicate key in snapshot: " + k);
+                    }
+                    if (combineFn == null) {
+                        throw new JetException("AggregateOperation.combineFn required for merging restored frames");
+                    }
+                    combineFn.accept(o, n);
+                    lazyAdd(totalKeysInFrames, -1);
+                    return o;
+                });
         lazyIncrement(totalKeysInFrames);
-        topTs = max(topTs, floorFrameTs);
+        topTs = max(topTs, higherFrameTs);
     }
 
     @Override

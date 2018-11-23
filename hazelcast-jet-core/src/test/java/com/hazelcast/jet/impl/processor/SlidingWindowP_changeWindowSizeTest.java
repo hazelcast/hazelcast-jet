@@ -29,7 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.tumblingWinPolicy;
 import static java.util.Arrays.asList;
@@ -45,9 +45,9 @@ public class SlidingWindowP_changeWindowSizeTest {
                 slidingWinPolicy(3, 1),
                 slidingWinPolicy(2, 1),
                 asList(
-                        new TimestampedEntry(3, "key", 2L),
-                        new TimestampedEntry(4, "key", 2L),
-                        new TimestampedEntry(5, "key", 1L)
+                        new TimestampedEntry(3, "key", 3L),
+                        new TimestampedEntry(4, "key", 5L),
+                        new TimestampedEntry(5, "key", 3L)
                 ));
     }
 
@@ -57,10 +57,10 @@ public class SlidingWindowP_changeWindowSizeTest {
                 slidingWinPolicy(2, 1),
                 slidingWinPolicy(3, 1),
                 asList(
-                        new TimestampedEntry(3, "key", 2L),
-                        new TimestampedEntry(4, "key", 3L),
-                        new TimestampedEntry(5, "key", 2L),
-                        new TimestampedEntry(6, "key", 1L)
+                        new TimestampedEntry(3, "key", 3L),
+                        new TimestampedEntry(4, "key", 6L),
+                        new TimestampedEntry(5, "key", 5L),
+                        new TimestampedEntry(6, "key", 3L)
                 ));
     }
 
@@ -69,7 +69,7 @@ public class SlidingWindowP_changeWindowSizeTest {
         test(
                 tumblingWinPolicy(2),
                 tumblingWinPolicy(3),
-                null);
+                singletonList(new TimestampedEntry(6, "key", 5L)));
     }
 
     @Test
@@ -77,7 +77,18 @@ public class SlidingWindowP_changeWindowSizeTest {
         test(
                 tumblingWinPolicy(3),
                 tumblingWinPolicy(2),
-                null);
+                asList(
+                        new TimestampedEntry(4, "key", 3L),
+                        new TimestampedEntry(6, "key", 3L)
+                ));
+    }
+
+    @Test
+    public void when_multipleFramesRestoredIntoSingleFrame_then_incorrectResultButNoLeakOrFailure() throws Exception {
+        test(
+                tumblingWinPolicy(1),
+                tumblingWinPolicy(4),
+                singletonList(new TimestampedEntry(4, "key", 5L)));
     }
 
     private void test(SlidingWindowPolicy policy1, SlidingWindowPolicy policy2,
@@ -116,7 +127,7 @@ public class SlidingWindowP_changeWindowSizeTest {
                 singletonList((Integer t) -> "key"),
                 singletonList((Integer t) -> winPolicy.higherFrameTs(t)),
                 winPolicy,
-                counting(),
+                summingLong((Integer t) -> t),
                 TimestampedEntry::fromWindowResult,
                 true);
     }
