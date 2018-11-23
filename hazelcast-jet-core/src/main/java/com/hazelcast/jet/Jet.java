@@ -39,6 +39,7 @@ import com.hazelcast.spi.properties.HazelcastProperties;
 import java.util.Properties;
 import java.util.function.Function;
 
+import static com.hazelcast.jet.impl.JobRepository.INTERNAL_JET_OBJECTS_PREFIX;
 import static com.hazelcast.jet.impl.JobRepository.JOB_RESULTS_MAP_NAME;
 import static com.hazelcast.jet.impl.config.XmlJetConfigBuilder.getClientConfig;
 import static com.hazelcast.jet.impl.metrics.JetMetricsService.applyMetricsConfig;
@@ -49,18 +50,6 @@ import static com.hazelcast.spi.properties.GroupProperty.SHUTDOWNHOOK_ENABLED;
  * Entry point to the Jet product.
  */
 public final class Jet {
-
-    /**
-     * Prefix of all Hazelcast internal objects used by Jet (such as job
-     * metadata, snapshots etc.)
-     */
-    public static final String INTERNAL_JET_OBJECTS_PREFIX = "__jet.";
-
-    /**
-     * State exported using {@link Job#exportSnapshot(String)} is stored in IMaps
-     * named with this prefix.
-     */
-    public static final String EXPORTED_STATES_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "exportedState.";
 
     private Jet() {
     }

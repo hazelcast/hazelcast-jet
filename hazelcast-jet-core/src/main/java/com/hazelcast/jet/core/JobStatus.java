@@ -39,8 +39,8 @@ public enum JobStatus {
     RUNNING,
 
     /**
-     * The job is suspended and is exporting the snapshot. It cannot be
-     * restarted until the export is finished.
+     * The job is suspended and is exporting the snapshot. It cannot be resumed
+     * until the export is finished and status is {@link #SUSPENDED} again.
      */
     EXPORTING_SNAPSHOT,
 

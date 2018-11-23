@@ -18,6 +18,7 @@ package com.hazelcast.jet;
 
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
+import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.SnapshotValidationRecord;
 import com.hazelcast.spi.annotation.PrivateApi;
 
@@ -40,7 +41,8 @@ public final class JobStateSnapshot {
     }
 
     /**
-     * Returns the snapshot name.
+     * Returns the snapshot name. This is the name that was given to {@link
+     * Job#exportSnapshot(String)}.
      */
     @Nonnull
     public String name() {
@@ -55,14 +57,15 @@ public final class JobStateSnapshot {
     }
 
     /**
-     * Returns the original job ID the snapshot was exported from.
+     * Returns the job ID of the job the snapshot was originally exported from.
      */
     public long jobId() {
         return getSnapshotValidationRecord().jobId();
     }
 
     /**
-     * Returns the original job name the snapshot was exported from.
+     * Returns the job name of the job the snapshot was originally exported
+     * from.
      */
     @Nullable
     public String jobName() {
@@ -79,8 +82,8 @@ public final class JobStateSnapshot {
     }
 
     /**
-     * Returns the DOT string of the DAG of the job this snapshot was created
-     * from.
+     * Returns the JSON representation of the DAG of the job this snapshot was
+     * created from.
      */
     @Nonnull
     public String dagJsonString() {
@@ -116,7 +119,7 @@ public final class JobStateSnapshot {
      */
     @PrivateApi
     public IMap<Object, Object> getMap() {
-        return instance.getMap(Jet.EXPORTED_STATES_PREFIX + name);
+        return instance.getMap(JobRepository.EXPORTED_SNAPSHOTS_PREFIX + name);
     }
 
     /**

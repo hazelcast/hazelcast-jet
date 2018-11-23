@@ -23,6 +23,7 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.map.impl.MapService;
@@ -139,15 +140,13 @@ public interface JetInstance {
     }
 
     /**
-     * Returns the IMap that contains the data of an exported snapshot with the
-     * given name.
-     * <p>
-     * The contents of the map are unspecified.
+     * Returns the {@link JobStateSnapshot} object representing an exported
+     * snapshot with the given name.
      *
-     * @param name exported snapshot name
+     * @param name exported state snapshot name
      * @return IMap instance with the data
      */
-    default JobStateSnapshot getExportedState(@Nonnull String name) {
+    default JobStateSnapshot getExportedSnapshot(@Nonnull String name) {
         return JobStateSnapshot.create(this.getHazelcastInstance(), name);
     }
 
@@ -155,22 +154,13 @@ public interface JetInstance {
      * Returns the collection of exported job state snapshots stored in the
      * cluster.
      */
-    default Collection<JobStateSnapshot> getExportedStates() {
+    default Collection<JobStateSnapshot> getExportedSnapshots() {
         return getHazelcastInstance().getDistributedObjects().stream()
                 .filter(o -> o.getServiceName().equals(MapService.SERVICE_NAME)
-                        && o.getName().startsWith(Jet.EXPORTED_STATES_PREFIX))
+                        && o.getName().startsWith(JobRepository.EXPORTED_SNAPSHOTS_PREFIX))
                 .map(o -> JobStateSnapshot.create(this.getHazelcastInstance(),
-                        o.getName().substring(Jet.EXPORTED_STATES_PREFIX.length())))
+                        o.getName().substring(JobRepository.EXPORTED_SNAPSHOTS_PREFIX.length())))
                 .collect(toList());
-    }
-
-    /**
-     * Destroys the map with exported state with the given name.
-     *
-     * @param name exported snapshot name
-     */
-    default void deleteExportedState(@Nonnull String name) {
-        getExportedState(name).destroy();
     }
 
     /**

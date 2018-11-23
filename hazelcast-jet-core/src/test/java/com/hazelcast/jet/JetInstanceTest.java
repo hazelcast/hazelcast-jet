@@ -36,11 +36,13 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import java.util.HashSet;
+import java.util.Set;
 
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
+import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 
 @Category(NightlyTest.class)
@@ -118,17 +120,23 @@ public class JetInstanceTest extends JetTestSupport {
         dag.newVertex("p", () -> new StuckProcessor());
         Job job = instance.newJob(dag);
         assertJobStatusEventually(job, RUNNING);
-        job.exportSnapshot("state1");
+        JobStateSnapshot state1 = job.exportSnapshot("state1");
         instance.getHazelcastInstance().getDistributedObjects().forEach(System.out::println);
-        assertEquals(singleton("state1"), new HashSet<>(instance.getExportedStates()));
-        job.exportSnapshot("state2");
-        assertEquals(new HashSet<>(asList("state1", "state2")), new HashSet<>(instance.getExportedStates()));
-        instance.deleteExportedState("state1");
-        assertEquals(singleton("state2"), new HashSet<>(instance.getExportedStates()));
+        assertEquals(singleton("state1"), getExportedStateNames(instance));
+        JobStateSnapshot state2 = job.exportSnapshot("state2");
+        assertEquals(new HashSet<>(asList("state1", "state2")), getExportedStateNames(instance));
+        state1.destroy();
+        assertEquals(singleton("state2"), getExportedStateNames(instance));
         job.cancel();
         assertJobStatusEventually(job, JobStatus.COMPLETED);
-        assertEquals(singleton("state2"), new HashSet<>(instance.getExportedStates()));
-        instance.deleteExportedState("state2");
-        assertEquals(emptySet(), new HashSet<>(instance.getExportedStates()));
+        assertEquals(singleton("state2"), getExportedStateNames(instance));
+        state2.destroy();
+        assertEquals(emptySet(), getExportedStateNames(instance));
+    }
+
+    private Set<String> getExportedStateNames(JetInstance instance) {
+        return instance.getExportedSnapshots().stream()
+                       .map(JobStateSnapshot::name)
+                       .collect(toSet());
     }
 }

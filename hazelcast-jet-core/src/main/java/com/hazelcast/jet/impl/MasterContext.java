@@ -24,7 +24,6 @@ import com.hazelcast.core.Member;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.cluster.impl.MembersView;
-import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -92,6 +91,7 @@ import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.impl.JobRepository.EXPORTED_SNAPSHOTS_PREFIX;
 import static com.hazelcast.jet.impl.JobRepository.snapshotDataMapName;
 import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.RESTART;
 import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.SUSPEND;
@@ -302,7 +302,7 @@ public class MasterContext {
         if (localStatus == EXPORTING_SNAPSHOT) {
             String sourceMapName = jobExecutionRecord.successfulSnapshotDataMapName(jobId);
             JetInstance jetInstance = coordinationService.getJetService().getJetInstance();
-            return copyMapUsingJob(jetInstance, COPY_MAP_JOB_QUEUE_SIZE, sourceMapName, Jet.EXPORTED_STATES_PREFIX + name)
+            return copyMapUsingJob(jetInstance, COPY_MAP_JOB_QUEUE_SIZE, sourceMapName, EXPORTED_SNAPSHOTS_PREFIX + name)
                     .whenComplete(withTryCatch(logger, (r, t) -> {
                         jobStatus = SUSPENDED;
                         if (cancelJob && !requestTermination(CANCEL_FORCEFUL)) {
@@ -409,7 +409,7 @@ public class MasterContext {
         if (snapshotToRestore >= 0) {
             mapName = jobExecutionRecord.successfulSnapshotDataMapName(jobId);
         } else if (jobConfig().getInitialSnapshotName() != null) {
-            mapName = Jet.EXPORTED_STATES_PREFIX + jobConfig().getInitialSnapshotName();
+            mapName = EXPORTED_SNAPSHOTS_PREFIX + jobConfig().getInitialSnapshotName();
         }
         if (mapName != null) {
             try {
@@ -448,33 +448,7 @@ public class MasterContext {
     }
 
     private void rewriteDagWithSnapshotRestore(DAG dag, long snapshotId, String mapName) {
-        IMap<Object, Object> map = nodeEngine.getHazelcastInstance().getMap(mapName);
-        SnapshotValidationRecord validationRecord = (SnapshotValidationRecord) map.get(SnapshotValidationRecord.KEY);
-        if (validationRecord == null) {
-            throw new JetException("State for " + jobIdString() + " was supposed to be restored from '" + mapName
-                    + "', but that map doesn't contain the validation key: not an IMap with Jet snapshot or corrupted");
-        }
-        if (validationRecord.numChunks() != map.size() - 1) {
-            // fallback validation that counts using aggregate(), ignoring different snapshot IDs
-            long finalSnapshotId1 = snapshotId;
-            Long filteredCount = map.aggregate(Aggregators.count(), e -> e.getKey() instanceof SnapshotDataKey
-                    && ((SnapshotDataKey) e.getKey()).snapshotId() == finalSnapshotId1);
-            if (validationRecord.numChunks() != filteredCount) {
-                throw new JetException("State for " + jobIdString() + " in '" + mapName + "' corrupted: it should " +
-                        "have " + validationRecord.numChunks() + " entries, but has " + (map.size() - 1) + " entries");
-            }
-        }
-
-        if (snapshotId == -1) {
-            // we're restoring from exported state: in this case we don't know the snapshotId
-            snapshotId = validationRecord.snapshotId();
-        } else {
-            if (snapshotId != validationRecord.snapshotId()) {
-                throw new JetException(jobIdString() + ": '" + mapName + "' was supposed to contain snapshotId="
-                        + snapshotId + ", but it contains snapshotId=" + validationRecord.snapshotId());
-            }
-        }
-
+        snapshotId = validateSnapshot(snapshotId, mapName);
         logger.info("State of " + jobIdString() + " will be restored from snapshot " + snapshotId + ", map=" + mapName);
 
         List<Vertex> originalVertices = new ArrayList<>();
@@ -496,6 +470,37 @@ public class MasterContext {
             dag.edge(new SnapshotRestoreEdge(explodeVertex, index, userVertex, destOrdinal));
             index++;
         }
+    }
+
+    private long validateSnapshot(long snapshotId, String mapName) {
+        IMap<Object, Object> map = nodeEngine.getHazelcastInstance().getMap(mapName);
+        SnapshotValidationRecord validationRecord = (SnapshotValidationRecord) map.get(SnapshotValidationRecord.KEY);
+        if (validationRecord == null) {
+            throw new JetException("State for " + jobIdString() + " was supposed to be restored from '" + mapName
+                    + "', but that map doesn't contain the validation key: not an IMap with Jet snapshot or corrupted");
+        }
+        if (validationRecord.numChunks() != map.size() - 1) {
+            // fallback validation that counts using aggregate(), ignoring different snapshot IDs
+            long finalSnapshotId = snapshotId;
+            Long filteredCount = map.aggregate(Aggregators.count(), e -> e.getKey() instanceof SnapshotDataKey
+                    && ((SnapshotDataKey) e.getKey()).snapshotId() == finalSnapshotId);
+            if (validationRecord.numChunks() != filteredCount) {
+                throw new JetException("State for " + jobIdString() + " in '" + mapName + "' corrupted: it should " +
+                        "have " + validationRecord.numChunks() + " entries, but has " + (map.size() - 1) + " entries");
+            }
+        }
+
+        if (snapshotId == -1) {
+            // We're restoring from exported state: in this case we don't know the snapshotId, we'll
+            // learn it from the validation record
+            snapshotId = validationRecord.snapshotId();
+        } else {
+            if (snapshotId != validationRecord.snapshotId()) {
+                throw new JetException(jobIdString() + ": '" + mapName + "' was supposed to contain snapshotId="
+                        + snapshotId + ", but it contains snapshotId=" + validationRecord.snapshotId());
+            }
+        }
+        return snapshotId;
     }
 
     /**
@@ -675,7 +680,7 @@ public class MasterContext {
 
         boolean isExport = mapName != null;
         if (isExport) {
-            mapName = Jet.EXPORTED_STATES_PREFIX + mapName;
+            mapName = EXPORTED_SNAPSHOTS_PREFIX + mapName;
             nodeEngine.getHazelcastInstance().getMap(mapName).clear();
         }
         logger.info(String.format("Starting snapshot %d for %s", newSnapshotId, jobIdString())
@@ -712,11 +717,14 @@ public class MasterContext {
         }
 
         IMap<Object, Object> snapshotMap = nodeEngine.getHazelcastInstance().getMap(snapshotMapName);
-        Object oldValue = null;
         try {
-            oldValue = snapshotMap.put(SnapshotValidationRecord.KEY,
+            Object oldValue = snapshotMap.put(SnapshotValidationRecord.KEY,
                     new SnapshotValidationRecord(snapshotId, mergedResult.getNumChunks(), mergedResult.getNumBytes(),
                             jobExecutionRecord.ongoingSnapshotStartTime(), jobId, jobName, jobRecord.getDagJson()));
+            if (oldValue != null) {
+                logger.severe("SnapshotValidationRecord overwritten after writing to '" + snapshotMapName + "' for "
+                        + jobIdString() + ": snapshot data might be corrupted");
+            }
         } catch (Exception e) {
             mergedResult.merge(new SnapshotOperationResult(0, 0, 0, e));
         }
@@ -731,11 +739,6 @@ public class MasterContext {
                 logger.warning(jobIdString() + ": failed to clear snapshot map '" + snapshotMapName + "' after a failure",
                         e);
             }
-        }
-
-        if (oldValue != null) {
-            logger.severe("SnapshotValidationRecord overwritten after writing to '" + snapshotMapName + "' for "
-                    + jobIdString() + ": snapshot data might be corrupted");
         }
         SnapshotStats stats = jobExecutionRecord.ongoingSnapshotDone(
                 mergedResult.getNumBytes(), mergedResult.getNumKeys(), mergedResult.getNumChunks(),
@@ -756,8 +759,7 @@ public class MasterContext {
             }
         }
 
-        Runnable nonSynchronizedAction = () -> {
-        };
+        Runnable nonSynchronizedAction = () -> { };
         synchronized (lock) {
             if (this.executionId != executionId) {
                 logger.fine("Not completing terminalSnapshotFuture on " + jobIdString() + ", new execution " +

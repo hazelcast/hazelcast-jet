@@ -39,7 +39,7 @@ import java.util.Set;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
-import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_OF_TWO_SUFFIX;
+import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
 import static com.hazelcast.jet.impl.util.Util.escapeGraphviz;
 import static com.hazelcast.util.Preconditions.checkTrue;
 import static java.util.Collections.emptyList;
@@ -404,9 +404,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
                 if (e.getRoutingPolicy() != RoutingPolicy.UNICAST) {
                     labels.add(e.getRoutingPolicy().toString().toLowerCase());
                 }
-                boolean inSubgraph = e.getSourceName().endsWith(FIRST_STAGE_OF_TWO_SUFFIX)
-                        && e.getSourceName().substring(0, e.getSourceName().length() - FIRST_STAGE_OF_TWO_SUFFIX.length())
-                                .equals(e.getDestName());
+                boolean inSubgraph = e.getSourceName().equals(e.getDestName() + FIRST_STAGE_VERTEX_NAME_SUFFIX);
                 if (inSubgraph) {
                     builder.append("\tsubgraph cluster_").append(clusterCount++).append(" {\n")
                            .append("\t");

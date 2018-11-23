@@ -21,6 +21,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.core.JobNotFoundException;
@@ -53,7 +54,6 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.zip.DeflaterOutputStream;
 
-import static com.hazelcast.jet.Jet.INTERNAL_JET_OBJECTS_PREFIX;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static java.util.Collections.newSetFromMap;
@@ -62,6 +62,18 @@ import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.stream.Collectors.toList;
 
 public class JobRepository {
+
+    /**
+     * Prefix of all Hazelcast internal objects used by Jet (such as job
+     * metadata, snapshots etc.)
+     */
+    public static final String INTERNAL_JET_OBJECTS_PREFIX = "__jet.";
+
+    /**
+     * State snapshot exported using {@link Job#exportSnapshot(String)} is
+     * currently stored in IMaps named with this prefix.
+     */
+    public static final String EXPORTED_SNAPSHOTS_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "exportedSnapshot.";
 
     /**
      * Name of internal IMap which stores job resources

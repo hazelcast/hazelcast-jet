@@ -33,7 +33,7 @@ import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.pipeline.transform.AbstractTransform.Optimization.MEMORY;
-import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_OF_TWO_SUFFIX;
+import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
 
 public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     @Nonnull
@@ -109,7 +109,7 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     private void addToDagTwoStage(Planner p) {
         List<DistributedFunction<?, ? extends K>> groupKeyFns = this.groupKeyFns;
         String vertexName = p.uniqueVertexName(this.name());
-        Vertex v1 = p.dag.newVertex(vertexName + FIRST_STAGE_OF_TWO_SUFFIX, accumulateByKeyP(groupKeyFns, aggrOp))
+        Vertex v1 = p.dag.newVertex(vertexName + FIRST_STAGE_VERTEX_NAME_SUFFIX, accumulateByKeyP(groupKeyFns, aggrOp))
                 .localParallelism(localParallelism());
         PlannerVertex pv2 = p.addVertex(this, vertexName, localParallelism(),
                 combineByKeyP(aggrOp, mapToOutputFn));

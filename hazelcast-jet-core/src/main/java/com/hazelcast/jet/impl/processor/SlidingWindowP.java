@@ -269,7 +269,8 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
                     ? winPolicy.higherFrameTs(minRestoredNextWinToEmit - 1)
                     : minRestoredNextWinToEmit;
             logFine(getLogger(), "Restored nextWinToEmit from snapshot to: %s", nextWinToEmit);
-            // delete too old restored frames. This can happen when window size was shortened after restore
+            // Delete too old restored frames. This can happen when restoring from exported state and new job
+            // has smaller window size
             if (nextWinToEmit > Long.MIN_VALUE + winPolicy.windowSize()) {
                 for (long ts = minRestoredFrameTs; ts <= nextWinToEmit - winPolicy.windowSize();
                         ts += winPolicy.frameSize()) {

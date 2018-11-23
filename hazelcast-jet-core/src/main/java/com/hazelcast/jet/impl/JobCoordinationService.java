@@ -94,10 +94,11 @@ public class JobCoordinationService {
     private final ConcurrentMap<Long, MasterContext> masterContexts = new ConcurrentHashMap<>();
     private final Set<String> membersShuttingDown = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Object lock = new Object();
-    private final AtomicInteger scaleUpScheduledCount = new AtomicInteger();
     private volatile boolean isShutdown;
     private int awaitedTerminatingMembersCount;
     private CompletableFuture<Void> terminalSnapshotsFuture;
+
+    private final AtomicInteger scaleUpScheduledCount = new AtomicInteger();
 
     JobCoordinationService(NodeEngineImpl nodeEngine, JetService jetService, JetConfig config,
                            JobRepository jobRepository) {
@@ -358,7 +359,7 @@ public class JobCoordinationService {
 
         MasterContext masterContext = masterContexts.get(jobId);
         if (masterContext == null) {
-            throw new JobNotFoundException("MasterContext not found to resume job " + idToString(jobId));
+            throw new JobNotFoundException("MasterContext not found to export snapshot of job " + idToString(jobId));
         }
         return masterContext.exportSnapshot(name, cancelJob);
     }

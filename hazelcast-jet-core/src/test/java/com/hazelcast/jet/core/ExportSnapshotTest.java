@@ -19,7 +19,6 @@ package com.hazelcast.jet.core;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.MapStore;
-import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.JobStateSnapshot;
@@ -83,7 +82,7 @@ public class ExportSnapshotTest extends JetTestSupport {
     @Test
     public void when_otherExportInProgress_then_waits() {
         JetConfig config = new JetConfig();
-        configureBlockingMapStore(config, Jet.EXPORTED_STATES_PREFIX + "*");
+        configureBlockingMapStore(config, JobRepository.EXPORTED_SNAPSHOTS_PREFIX + "*");
         JetInstance instance = createJetMember(config);
 
         DAG dag = new DAG();
@@ -104,8 +103,8 @@ public class ExportSnapshotTest extends JetTestSupport {
         // now release the blocking store, both snapshots should complete
         BlockingMapStore.shouldBlock = false;
         assertTrueEventually(() -> assertTrue(exportFuture.isDone() && exportFuture2.isDone()));
-        assertFalse(instance.getExportedState("state").getMap().isEmpty());
-        assertFalse(instance.getExportedState("state2").getMap().isEmpty());
+        assertFalse(instance.getExportedSnapshot("state").getMap().isEmpty());
+        assertFalse(instance.getExportedSnapshot("state2").getMap().isEmpty());
     }
 
     @Test
@@ -119,10 +118,11 @@ public class ExportSnapshotTest extends JetTestSupport {
         assertJobStatusEventually(job, RUNNING);
         job.exportSnapshot("exportState");
         // Then1
-        assertFalse("exportState is empty", instance.getExportedState("exportState").getMap().isEmpty());
+        assertFalse("exportState is empty", instance.getExportedSnapshot("exportState").getMap().isEmpty());
         job.cancelAndExportSnapshot("cancelAndExportState");
         // Then2
-        assertFalse("cancelAndExportState is empty", instance.getExportedState("cancelAndExportState").getMap().isEmpty());
+        assertFalse("cancelAndExportState is empty",
+                instance.getExportedSnapshot("cancelAndExportState").getMap().isEmpty());
         assertJobStatusEventually(job, COMPLETED);
 
         DummyStatefulP.wasRestored = false;
@@ -138,7 +138,7 @@ public class ExportSnapshotTest extends JetTestSupport {
     @Test
     public void when_targetMapNotEmpty_then_cleared() {
         JetInstance instance = createJetMember();
-        IMap<Object, Object> stateMap = instance.getExportedState("state").getMap();
+        IMap<Object, Object> stateMap = instance.getExportedSnapshot("state").getMap();
         // When
         stateMap.put("fooKey", "bar");
         DAG dag = new DAG();
@@ -236,7 +236,7 @@ public class ExportSnapshotTest extends JetTestSupport {
         } else {
             job.exportSnapshot("state");
         }
-        assertFalse("state map is empty", instance.getExportedState("state").getMap().isEmpty());
+        assertFalse("state map is empty", instance.getExportedSnapshot("state").getMap().isEmpty());
         if (cancel) {
             assertJobStatusEventually(job, COMPLETED);
         } else {

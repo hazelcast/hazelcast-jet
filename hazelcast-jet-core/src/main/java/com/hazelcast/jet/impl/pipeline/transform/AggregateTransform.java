@@ -30,7 +30,7 @@ import static com.hazelcast.jet.core.processor.Processors.aggregateP;
 import static com.hazelcast.jet.core.processor.Processors.combineP;
 
 public class AggregateTransform<A, R> extends AbstractTransform {
-    public static final String FIRST_STAGE_OF_TWO_SUFFIX = "-prepare";
+    public static final String FIRST_STAGE_VERTEX_NAME_SUFFIX = "-prepare";
 
     @Nonnull
     private final AggregateOperation<A, ? extends R> aggrOp;
@@ -96,7 +96,7 @@ public class AggregateTransform<A, R> extends AbstractTransform {
     //                   ----------------
     private void addToDagTwoStage(Planner p) {
         String vertexName = p.uniqueVertexName(name());
-        Vertex v1 = p.dag.newVertex(vertexName + FIRST_STAGE_OF_TWO_SUFFIX, accumulateP(aggrOp))
+        Vertex v1 = p.dag.newVertex(vertexName + FIRST_STAGE_VERTEX_NAME_SUFFIX, accumulateP(aggrOp))
                          .localParallelism(localParallelism());
         PlannerVertex pv2 = p.addVertex(this, vertexName, 1, combineP(aggrOp));
         p.addEdges(this, v1);

@@ -81,7 +81,7 @@ public class ManualRestartTest extends JetTestSupport {
     }
 
     @Test
-    public void when_autoRestartOnMemberFailureDisabled_then_jobRestarts() {
+    public void when_autoScalingDisabled_then_jobRestarts() {
         testJobRestartWhenJobIsRunning(false);
     }
 

@@ -50,15 +50,18 @@ import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.aggregate.AggregateOperations.averagingLong;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
+import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.JetTestSupport.assertJobStatusEventually;
 import static com.hazelcast.jet.core.JetTestSupport.assertTrueEventually;
 import static com.hazelcast.jet.core.JobStatus.COMPLETED;
 import static com.hazelcast.jet.core.JobStatus.FAILED;
+import static com.hazelcast.test.HazelcastTestSupport.sleepSeconds;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class JobDagUpdateTest {
@@ -90,8 +93,9 @@ public class JobDagUpdateTest {
         jobConfigInitial = new JobConfig()
                 .setProcessingGuarantee(NONE); // we'll export manually
         jobConfigWithRestore = new JobConfig()
-                .setProcessingGuarantee(NONE)
-                .setInitialSnapshotName(STATE_NAME);
+                .setProcessingGuarantee(EXACTLY_ONCE)
+                .setInitialSnapshotName(STATE_NAME)
+                .setSnapshotIntervalMillis(100);
         sink = instance.getList("sink");
         ProducerP.wasSnapshotted = false;
     }
@@ -283,6 +287,11 @@ public class JobDagUpdateTest {
     }
 
     @Test
+    public void test_slidingWindowChangeSlide() {
+        fail("todo");
+    }
+
+    @Test
     public void test_changeSlidingWindowAggregation_compatible() {
         pipeline1
                 .drawFrom(Sources.<Integer>streamFromProcessor("source", ProcessorMetaSupplier.of(ProducerP::new)))
@@ -425,6 +434,7 @@ public class JobDagUpdateTest {
 
         instance.newJob(pipeline2, jobConfigWithRestore);
         assertTrueEventually(() -> assertEquals(expected2, new ArrayList<>(sink)), 10);
+        sleepSeconds(1);
     }
 
     /**

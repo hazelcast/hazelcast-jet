@@ -433,10 +433,10 @@ public class JobConfig implements Serializable {
     }
 
     /**
-     * Sets the {@linkplain Job#exportSnapshot(String) exported state} snapshot
+     * Sets the {@linkplain Job#exportSnapshot(String) exported state snapshot}
      * name to restore the initial job state from. This state will be used for
-     * initial state and also for the case if the job restarts before it
-     * produces first snapshot.
+     * initial state and also for the case when the execution restarts before
+     * it produces first snapshot.
      * <p>
      * The job will use the state even if {@linkplain
      * #setProcessingGuarantee(ProcessingGuarantee) processing guarantee} is
