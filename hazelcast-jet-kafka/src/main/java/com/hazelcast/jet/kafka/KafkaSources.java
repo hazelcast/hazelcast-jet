@@ -63,7 +63,17 @@ public final class KafkaSources {
      * this processor is 2 (or less if less CPUs are available).
      * <p>
      * If snapshotting is enabled, partition offsets are saved to the snapshot.
-     * After restart, the source emits the events from the same offset.
+     * After a restart, the source emits the events from the same offset.
+     * You can start the job from exported state with the following changes:<ul>
+     *     <li>new topic will be consumed from default offsets
+     *     <li>removed topic will be ignored (there will be a warning logged)
+     * </ul>
+     * If the snapshot contains topic that is no longer drained, it will be logged and
+     * ignored. If the snapshot doesn't contain a topic,
+     * If
+     * the partition count is lower after a restart, the extra offsets will be
+     * ignored (this can happen if an updated DAG is supplied and it connects
+     * to different Kafka cluster).
      * <p>
      * If and only if snapshotting is disabled, the source commits the offsets
      * to Kafka using {@link KafkaConsumer#commitSync()}. Note however that
@@ -75,14 +85,13 @@ public final class KafkaSources {
      * property. Note, however, that events from them can be dropped as late if
      * the allowed lag is not large enough.
      * <p>
-     * The processor completes only in the case of an error or if the job is
-     * cancelled. IO failures are generally handled by Kafka producer and
-     * do not cause the processor to fail.
-     * Kafka consumer also does not return from {@code poll(timeout)} if the
-     * cluster is down. If {@link JobConfig#setSnapshotIntervalMillis(long)
-     * snapshotting is enabled}, entire job might be blocked. This is a known
-     * issue of Kafka (KAFKA-1894).
-     * Refer to Kafka documentation for details.
+     * The processor never completes, it can only fail in the case of an error.
+     * However, IO failures are generally handled by Kafka producer and do not
+     * cause the processor to fail. Kafka consumer also does not return from
+     * {@code poll(timeout)} if the cluster is down. If {@link
+     * JobConfig#setSnapshotIntervalMillis(long) snapshotting is enabled},
+     * entire job might be blocked. This is a known issue of Kafka
+     * (KAFKA-1894). Refer to Kafka documentation for details.
      * <p>
      * Default local parallelism for this processor is 4 (or less if less CPUs
      * are available). Note that deserialization is done inside {@code
