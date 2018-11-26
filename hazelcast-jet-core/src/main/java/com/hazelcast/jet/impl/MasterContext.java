@@ -280,9 +280,7 @@ public class MasterContext {
                 break synchronized_block;
             }
 
-            if (!setJobStatusToStarting()
-                    || scheduleRestartIfQuorumAbsent()
-                    || scheduleRestartIfClusterIsNotSafe()) {
+            if (!setJobStatusToStarting() || scheduleRestartIfQuorumAbsent() || scheduleRestartIfClusterIsNotSafe()) {
                 return;
             }
 
@@ -563,8 +561,9 @@ public class MasterContext {
                 responses -> onSnapshotCompleted(responses, executionId, newSnapshotId, isTerminal), null);
     }
 
-    private void onSnapshotCompleted(Map<MemberInfo, Object> responses, long executionId, long snapshotId,
-                                                  boolean wasTerminal) {
+    private void onSnapshotCompleted(
+            Map<MemberInfo, Object> responses, long executionId, long snapshotId, boolean wasTerminal
+    ) {
         // Note: this method can be called after finalizeJob() is called or even after new execution started.
         // We only wait for snapshot completion if the job completed with a terminal snapshot and the job
         // was successful.
@@ -627,14 +626,16 @@ public class MasterContext {
 
     /**
      * <ul>
-     * <li>Returns null if there is no failure.
-     * <li>Returns a CancellationException if the job is cancelled.
-     * <li>Returns a JobRestartRequestedException if the current execution is stopped to be restarted
-     * <li>Returns a JobSuspendRequestedException if the current execution is stopped to be suspended
-     * <li>If there is at least one user failure, such as an exception in user code (restartable or not), then
-     *   returns that failure.
+     * <li>Returns {@code null} if there is no failure.
+     * <li>Returns a {@link CancellationException} if the job is cancelled
+     *     forcefully.
+     * <li>Returns a {@link JobTerminateRequestedException} if the current
+     *     execution is stopped due to a requested termination.
+     * <li>If there is at least one user failure, such as an exception in user
+     *     code (restartable or not), then returns that failure.
      * <li>Otherwise, the failure is because a job participant has left the cluster.
-     *   In that case, {@code TopologyChangeException} is returned so that the job will be restarted.
+     *     In that case, it returns {@code TopologyChangeException} that the job
+     *     will be restarted.
      * </ul>
      */
     private Throwable getResult(String opName, Map<MemberInfo, Object> responses) {
@@ -656,30 +657,32 @@ public class MasterContext {
             return null;
         }
 
-        // handle TerminatedWithSnapshotException
-        // If only part of the members threw it and other completed normally, the terminal snapshot will fail, but
-        // we still handle it as if terminal snapshot was done.
-        // If there are other exceptions, ignore this and handle the other exception.
-        if (failures.stream().allMatch(e -> e.getValue() instanceof TerminatedWithSnapshotException)) {
-            assert opName.equals("Execution") : "opName=" + opName;
+        // Handle TerminatedWithSnapshotException. If only part of the members
+        // threw it and others completed normally, the terminal snapshot will fail,
+        // but we still handle it as if terminal snapshot was done. If there are
+        // other exceptions, ignore this and handle the other exception.
+        if (failures.stream().allMatch(entry -> entry.getValue() instanceof TerminatedWithSnapshotException)) {
+            assert opName.equals("Execution") : "opName is " + opName + ", expected 'Execution'";
             logger.fine(opName + " of " + jobIdString() + " terminated after a terminal snapshot");
             TerminationMode mode = requestedTerminationMode;
             assert mode != null && mode.isWithTerminalSnapshot() : "mode=" + mode;
             return new JobTerminateRequestedException(mode);
         }
 
-        // If there is no user-code exception, it means at least one job participant has left the cluster.
-        // In that case, all remaining participants return a TopologyChangedException.
+        // If there is no user-code exception, it means at least one job
+        // participant has left the cluster. In that case, all remaining
+        // participants return a TopologyChangedException.
         return failures
                 .stream()
-                .peek(e -> {
-                    if (e.getValue() instanceof ShutdownInProgressException) {
-                        coordinationService.addShuttingDownMember(e.getKey().getUuid());
+                .peek(entry -> {
+                    if (entry.getValue() instanceof ShutdownInProgressException) {
+                        coordinationService.addShuttingDownMember(entry.getKey().getUuid());
                     }
                 })
-                .map(e -> (Throwable) e.getValue())
-                .filter(t -> !(t instanceof CancellationException) && !(t instanceof TerminatedWithSnapshotException))
-                .filter(t -> !isTopologyException(t))
+                .map(entry -> (Throwable) entry.getValue())
+                .filter(e -> !(e instanceof CancellationException
+                               || e instanceof TerminatedWithSnapshotException
+                               || isTopologyException(e)))
                 .findFirst()
                 .map(ExceptionUtil::peel)
                 .orElseGet(TopologyChangedException::new);
@@ -693,19 +696,23 @@ public class MasterContext {
             logger.fine("Completing " + jobIdString());
             finalError = error;
         } else {
-            if (error != null) {
-                logger.severe("Cannot properly complete failed " + jobIdString()
-                        + ": status is " + status, error);
-            } else {
-                logger.severe("Cannot properly complete " + jobIdString()
-                        + ": status is " + status);
-            }
-
+            logCannotComplete(error);
             finalError = new IllegalStateException("Job coordination failed.");
         }
 
-        Function<ExecutionPlan, Operation> operationCtor = plan -> new CompleteExecutionOperation(executionId, finalError);
+        Function<ExecutionPlan, Operation> operationCtor = plan ->
+                new CompleteExecutionOperation(executionId, finalError);
         invokeOnParticipants(operationCtor, responses -> onCompleteExecutionCompleted(error), null);
+    }
+
+    private void logCannotComplete(Throwable error) {
+        if (error != null) {
+            logger.severe("Cannot properly complete failed " + jobIdString()
+                    + ": status is " + jobStatus(), error);
+        } else {
+            logger.severe("Cannot properly complete " + jobIdString()
+                    + ": status is " + jobStatus());
+        }
     }
 
     private void onCompleteExecutionCompleted(Throwable error) {
@@ -723,26 +730,14 @@ public class MasterContext {
         Runnable nonSynchronizedAction = () -> { };
         assertLockNotHeld();
         synchronized (lock) {
-            if (!checkJobNotDone(failure)) {
+            JobStatus status = jobStatus();
+            if (status == COMPLETED || status == FAILED) {
+                logIgnoredCompletion(failure, status);
                 return;
             }
-
             completeVertices(failure);
 
-            long elapsed = NANOSECONDS.toMillis(System.nanoTime() - executionStartTime);
-            boolean isSuccess = failure == null
-                    || failure instanceof CancellationException
-                    || failure instanceof JobTerminateRequestedException;
-            if (isSuccess) {
-                if (failure != null) {
-                    logger.info(String.format("Execution of %s completed in %,d ms, reason=%s",
-                            jobIdString(), elapsed, failure));
-                } else {
-                    logger.info(String.format("Execution of %s completed in %,d ms", jobIdString(), elapsed));
-                }
-            } else {
-                logger.warning(String.format("Execution of %s failed after %,d ms", jobIdString(), elapsed), failure);
-            }
+            boolean isSuccess = isSuccess(failure);
 
             // reset state for the next execution
             requestedTerminationMode = null;
@@ -788,21 +783,28 @@ public class MasterContext {
         nonSynchronizedAction.run();
     }
 
-    /**
-     * @return true, if job is not done
-     */
-    private boolean checkJobNotDone(@Nullable Throwable failure) {
-        JobStatus status = jobStatus();
-        if (status == COMPLETED || status == FAILED) {
-            if (failure != null) {
-                logger.severe("Ignoring failure completion of " + idToString(jobId) + " because status is "
-                        + status, failure);
-            } else {
-                logger.severe("Ignoring completion of " + idToString(jobId) + " because status is " + status);
-            }
-            return false;
+    private boolean isSuccess(@Nullable Throwable failure) {
+        long elapsed = NANOSECONDS.toMillis(System.nanoTime() - executionStartTime);
+        if (failure == null) {
+            logger.info(String.format("Execution of %s completed in %,d ms", jobIdString(), elapsed));
+            return true;
         }
-        return true;
+        if (failure instanceof CancellationException || failure instanceof JobTerminateRequestedException) {
+            logger.info(String.format("Execution of %s completed in %,d ms, reason=%s",
+                    jobIdString(), elapsed, failure));
+            return true;
+        }
+        logger.warning(String.format("Execution of %s failed after %,d ms", jobIdString(), elapsed), failure);
+        return false;
+    }
+
+    private void logIgnoredCompletion(@Nullable Throwable failure, JobStatus status) {
+        if (failure != null) {
+            logger.severe("Ignoring failure completion of " + idToString(jobId) + " because status is " + status,
+                    failure);
+        } else {
+            logger.severe("Ignoring completion of " + idToString(jobId) + " because status is " + status);
+        }
     }
 
     private void completeVertices(@Nullable Throwable failure) {
@@ -850,17 +852,17 @@ public class MasterContext {
     }
 
     /**
-     * @param completionCallback a consumer that will receive a map of
-     *                           responses, one for each member, after all have
-     *                           been received. The value will be either the
-     *                           response or an exception thrown from the
-     *                           operation
-     * @param callback A callback that will be called after each individual
-     *                operation for each member completes
+     * @param completionCallback a consumer that will receive a map of responses, one for each member,
+     *                           after all have been received. The value will be either the response or
+     *                           an exception thrown from the operation
+     * @param callback A callback that will be called after each individual operation for each
+     *                 member completes
      */
-    private void invokeOnParticipants(Function<ExecutionPlan, Operation> operationCtor,
-                                      @Nullable Consumer<Map<MemberInfo, Object>> completionCallback,
-                                      @Nullable ExecutionCallback<Object> callback) {
+    private void invokeOnParticipants(
+            Function<ExecutionPlan, Operation> operationCtor,
+            @Nullable Consumer<Map<MemberInfo, Object>> completionCallback,
+            @Nullable ExecutionCallback<Object> callback
+    ) {
         ConcurrentMap<MemberInfo, Object> responses = new ConcurrentHashMap<>();
         AtomicInteger remainingCount = new AtomicInteger(executionPlanMap.size());
         for (Entry<MemberInfo, ExecutionPlan> entry : executionPlanMap.entrySet()) {

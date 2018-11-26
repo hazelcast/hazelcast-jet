@@ -41,6 +41,12 @@ public class JetNodeExtension extends DefaultNodeExtension {
     }
 
     @Override
+    public void onClusterStateChange(ClusterState newState, boolean isTransient) {
+        super.onClusterStateChange(newState, isTransient);
+        extCommon.onClusterStateChange(newState);
+    }
+
+    @Override
     public void printNodeInfo() {
         extCommon.printNodeInfo(systemLogger, "");
     }

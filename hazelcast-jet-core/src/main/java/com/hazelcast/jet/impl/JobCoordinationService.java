@@ -29,6 +29,7 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
+import com.hazelcast.jet.impl.exception.EnteringPassiveClusterStateException;
 import com.hazelcast.jet.impl.exception.ShutdownInProgressException;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.logging.ILogger;
@@ -63,6 +64,7 @@ import static com.hazelcast.jet.core.JobStatus.NOT_RUNNING;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.impl.TerminationMode.CANCEL;
+import static com.hazelcast.jet.impl.TerminationMode.RESTART_GRACEFUL;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
@@ -94,7 +96,8 @@ public class JobCoordinationService {
     private final ConcurrentMap<Long, MasterContext> masterContexts = new ConcurrentHashMap<>();
     private final Set<String> membersShuttingDown = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Object lock = new Object();
-    private volatile boolean isShutdown;
+    private volatile boolean isShutDown;
+    private volatile boolean isClusterEnteringPassiveState;
     private int awaitedTerminatingMembersCount;
     private CompletableFuture<Void> terminalSnapshotsFuture;
 
@@ -124,14 +127,11 @@ public class JobCoordinationService {
 
     /**
      * Starts the job if it is not already started or completed. Returns a future
-     * which represents result of the job.
+     * which represents the result of the job.
      */
     public void submitJob(long jobId, Data dag, JobConfig config) {
         assertIsMaster("Cannot submit job " + idToString(jobId) + " from non-master node");
-
-        if (isShutdown) {
-            throw new ShutdownInProgressException();
-        }
+        checkOperationalState();
 
         // the order of operations is important.
 
@@ -150,9 +150,7 @@ public class JobCoordinationService {
         MasterContext masterContext = new MasterContext(nodeEngine, this, jobRecord, jobExecutionRecord);
 
         synchronized (lock) {
-            if (isShutdown) {
-                throw new ShutdownInProgressException();
-            }
+            checkOperationalState();
 
             // just try to initiate the coordination
             MasterContext prev = masterContexts.putIfAbsent(jobId, masterContext);
@@ -176,7 +174,23 @@ public class JobCoordinationService {
 
     public void shutdown() {
         synchronized (lock) {
-            isShutdown = true;
+            isShutDown = true;
+        }
+    }
+
+    public void prepareForPassiveClusterState() {
+        assertIsMaster("Cannot prepare for passive cluster state from a non-master node");
+        synchronized (lock) {
+            isClusterEnteringPassiveState = true;
+        }
+        for (long jobId : masterContexts.keySet()) {
+            terminateJob(jobId, RESTART_GRACEFUL);
+        }
+    }
+
+    public void clusterChangeDone() {
+        synchronized (lock) {
+            isClusterEnteringPassiveState = false;
         }
     }
 
@@ -189,9 +203,7 @@ public class JobCoordinationService {
     public CompletableFuture<Void> joinSubmittedJob(long jobId) {
         assertIsMaster("Cannot join job " + idToString(jobId) + " from non-master node");
 
-        if (isShutdown) {
-            throw new ShutdownInProgressException();
-        }
+        checkOperationalState();
 
         JobRecord jobRecord = jobRepository.getJobRecord(jobId);
         if (jobRecord != null) {
@@ -566,6 +578,15 @@ public class JobCoordinationService {
 
 
 
+    private void checkOperationalState() {
+        if (isShutDown) {
+            throw new ShutdownInProgressException();
+        }
+        if (isClusterEnteringPassiveState) {
+            throw new EnteringPassiveClusterStateException();
+        }
+    }
+
     private void scheduleScaleUp(long delay) {
         int counter = scaleUpScheduledCount.incrementAndGet();
         nodeEngine.getExecutionService().schedule(() -> scaleJobsUpNow(counter), delay, MILLISECONDS);
@@ -655,9 +676,7 @@ public class JobCoordinationService {
         MasterContext masterContext;
         MasterContext oldMasterContext;
         synchronized (lock) {
-            if (isShutdown) {
-                throw new ShutdownInProgressException();
-            }
+            checkOperationalState();
 
             masterContext = new MasterContext(nodeEngine, this, jobRecord, jobExecutionRecord);
             oldMasterContext = masterContexts.putIfAbsent(jobId, masterContext);

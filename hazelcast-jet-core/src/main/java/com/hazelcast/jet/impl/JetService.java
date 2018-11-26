@@ -158,8 +158,8 @@ public class JetService
 
                       @Override
                       public void onFailure(Throwable t) {
-                          logger.warning("Failed to notify master member that this member is shutting down, will retry in "
-                                  + NOTIFY_MEMBER_SHUTDOWN_DELAY + " seconds", t);
+                          logger.warning("Failed to notify master member that this member is shutting down," +
+                                  " will retry in " + NOTIFY_MEMBER_SHUTDOWN_DELAY + " seconds", t);
                           // recursive call
                           nodeEngine.getExecutionService().schedule(
                                   () -> notifyMasterWeAreShuttingDown(result), NOTIFY_MEMBER_SHUTDOWN_DELAY, SECONDS);
