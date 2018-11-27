@@ -66,7 +66,7 @@ class NodeExtensionCommon {
         }
     }
 
-    void onClusterStateChange(ClusterState newState) {
+    void onClusterStateChange(ClusterState ignored) {
         if (jetService != null) {
             jetService.getJobCoordinationService().clusterChangeDone();
         }

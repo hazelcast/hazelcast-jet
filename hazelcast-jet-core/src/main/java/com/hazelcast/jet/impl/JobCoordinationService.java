@@ -240,9 +240,8 @@ public class JobCoordinationService {
             if (jobRecord != null) {
                 // we'll eventually learn of the job through scanning of records or from a join operation
                 throw new RetryableHazelcastException(message);
-            } else {
-                throw new JobNotFoundException(jobId);
             }
+            throw new JobNotFoundException(jobId);
         }
 
         // User can cancel in any state, other terminations are allowed only when running.
@@ -402,37 +401,31 @@ public class JobCoordinationService {
             if (uuid.equals(nodeEngine.getLocalMember().getUuid())) {
                 shutdown();
             }
-
-            CompletableFuture<Void> result = this.terminalSnapshotsFuture;
-            if (membersShuttingDown.add(uuid)) {
-                if (result == null) {
-                    this.terminalSnapshotsFuture = result = new CompletableFuture<>();
-                }
-                logger.fine("Added a shutting-down member: " + uuid);
-                CompletableFuture[] futures = masterContexts.values().stream()
-                                                            .map(mc -> mc.onParticipantGracefulShutdown(uuid))
-                                                            .filter(Objects::nonNull)
-                                                            .toArray(CompletableFuture[]::new);
-                awaitedTerminatingMembersCount++;
-                // Need to do this even if futures.length==0, we need to perform the action in whenComplete.
-                // We use async version because we acquire a lock in the action: the completing thread could
-                // hold another locks, opening the possibility of a deadlock.
-                CompletableFuture.allOf(futures)
-                                 .whenCompleteAsync(withTryCatch(logger, (r, e) -> {
-                                     synchronized (lock) {
-                                         if (--awaitedTerminatingMembersCount == 0) {
-                                             terminalSnapshotsFuture.complete(null);
-                                             terminalSnapshotsFuture = null;
-                                         }
-                                     }
-                                 }));
-            } else {
-                if (result == null) {
-                    // The member was already added and the future that was created for it
-                    // was already completed and nulled out -> we return a new, completed future.
-                    result = CompletableFuture.completedFuture(null);
-                }
+            if (!membersShuttingDown.add(uuid)) {
+                // If the member was already added and the future that was created for it
+                // was already completed and nulled out, we return a new completed future.
+                CompletableFuture<Void> result = terminalSnapshotsFuture;
+                return result != null ? result : completedFuture(null);
             }
+            CompletableFuture<Void> result = ensureTerminalSnapshotsFuture();
+            logger.fine("Added a shutting-down member: " + uuid);
+            CompletableFuture[] futures = masterContexts.values().stream()
+                                                        .map(mc -> mc.onParticipantGracefulShutdown(uuid))
+                                                        .toArray(CompletableFuture[]::new);
+            awaitedTerminatingMembersCount++;
+            // Need to do this even if futures.length == 0, we need to perform the
+            // action in whenComplete. We use async version because we acquire a lock
+            // in the action: the completing thread could hold another locks, opening
+            // the possibility of a deadlock.
+            CompletableFuture.allOf(futures)
+                             .whenCompleteAsync(withTryCatch(logger, (r, e) -> {
+                                 synchronized (lock) {
+                                     if (--awaitedTerminatingMembersCount == 0) {
+                                         result.complete(null);
+                                         terminalSnapshotsFuture = null;
+                                     }
+                                 }
+                             }));
             return result;
         }
     }

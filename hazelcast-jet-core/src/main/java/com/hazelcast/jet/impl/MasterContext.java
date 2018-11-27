@@ -241,10 +241,8 @@ public class MasterContext {
 
         if (localStatus == SUSPENDED) {
             coordinationService.completeJob(this, System.currentTimeMillis(), new CancellationException());
-        } else {
-            if (localStatus == RUNNING || localStatus == STARTING) {
-                handleTermination(mode);
-            }
+        } else if (localStatus == RUNNING || localStatus == STARTING) {
+            handleTermination(mode);
         }
 
         return true;
@@ -505,11 +503,9 @@ public class MasterContext {
         // be safe against it (idempotent).
         if (mode.isWithTerminalSnapshot()) {
             nextSnapshotIsTerminal = true;
-            beginSnapshot(executionId);
-        } else {
-            if (executionInvocationCallback != null) {
-                executionInvocationCallback.cancelInvocations(mode);
-            }
+            ensureSnapshotStarted(executionId);
+        } else if (executionInvocationCallback != null) {
+            executionInvocationCallback.cancelInvocations(mode);
         }
     }
 
