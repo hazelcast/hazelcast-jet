@@ -93,6 +93,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.callbackOf;
 import static com.hazelcast.jet.impl.util.Util.jobNameAndExecutionId;
 import static java.util.Collections.emptyList;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.partitioningBy;
 import static java.util.stream.Collectors.toList;
@@ -136,7 +137,7 @@ public class MasterContext {
      * the job is suspended or when it is going to be restarted. It's used for
      * {@link Job#join()}.
      */
-    private final NonCompletableFuture completionFuture = new NonCompletableFuture();
+    private final NonCompletableFuture jobCompletionFuture = new NonCompletableFuture();
 
     /**
      * Null initially. When a job termination is requested, it is assigned a
@@ -163,10 +164,19 @@ public class MasterContext {
     private volatile boolean nextSnapshotIsTerminal;
 
     /**
+     * A future (re)created when the job is started and completed when its
+     * execution ends. Execution ending doesn't mean the job is done, it may
+     * be just temporarily stopping due to suspension, job restarting, etc.
+     */
+    @Nonnull
+    private CompletableFuture<Void> executionCompletionFuture = completedFuture(null);
+
+    /**
      * A future (re)created when the job is started and completed when terminal
      * snapshot is completed (successfully or not).
      */
-    private CompletableFuture<Void> terminalSnapshotFuture;
+    @Nonnull
+    private CompletableFuture<Void> terminalSnapshotFuture = completedFuture(null);
 
     MasterContext(NodeEngineImpl nodeEngine, JobCoordinationService coordinationService, @Nonnull JobRecord jobRecord,
                   @Nonnull JobExecutionRecord jobExecutionRecord) {
@@ -208,11 +218,12 @@ public class MasterContext {
     }
 
     public CompletableFuture<Void> completionFuture() {
-        return completionFuture;
+        return jobCompletionFuture;
     }
 
     /**
-     * @return false, if termination was already requested
+     * {@code true} return value means that this request caused the job to
+     * terminate.
      */
     boolean requestTermination(TerminationMode mode) {
         JobStatus localStatus;
@@ -313,6 +324,7 @@ public class MasterContext {
             snapshotInProgress = false;
             nextSnapshotIsTerminal = false;
             terminalSnapshotFuture = new CompletableFuture<>();
+            executionCompletionFuture = new CompletableFuture<>();
         }
 
         if (exception != null) {
@@ -514,29 +526,27 @@ public class MasterContext {
                 invokeOnParticipants(plan -> new TerminateExecutionOperation(jobId, executionId, mode), null, null));
     }
 
-    void beginSnapshot(long executionId) {
+    void ensureSnapshotStarted(long executionId) {
         boolean isTerminal;
         assertLockNotHeld();
         synchronized (lock) {
             if (this.executionId != executionId) {
                 // Current execution is completed and probably a new execution has started, but we don't
                 // cancel the scheduled snapshot from previous execution, so let's just ignore it.
-                logger.fine("Not beginning snapshot since unexpected execution ID received for " + jobIdString()
-                        + ". Received execution ID: " + idToString(executionId));
+                logger.fine("Received snapshot request for " + jobIdString() + " with unexpected execution ID "
+                        + idToString(executionId) + ". Not starting the snapshot.");
                 return;
             }
-
             if (jobStatus != RUNNING) {
-                logger.fine("Not beginning snapshot, job is not RUNNING, but " + jobStatus);
+                logger.fine("Not starting snapshot because job is not RUNNING but " + jobStatus);
                 return;
             }
-
             if (snapshotInProgress) {
-                logger.fine("Not beginning snapshot since one is already in progress " + jobIdString());
+                logger.fine("Not starting snapshot since one is already in progress for " + jobIdString());
                 return;
             }
             if (terminalSnapshotFuture.isDone()) {
-                logger.fine("Not beginning snapshot since terminal snapshot is already completed");
+                logger.fine("Not starting snapshot since terminal snapshot is already completed");
                 return;
             }
             snapshotInProgress = true;
@@ -775,6 +785,7 @@ public class MasterContext {
                     }
                 };
             }
+            executionCompletionFuture.complete(null);
         }
         nonSynchronizedAction.run();
     }
@@ -818,9 +829,9 @@ public class MasterContext {
 
     void setFinalResult(Throwable failure) {
         if (failure == null) {
-            completionFuture.internalComplete();
+            jobCompletionFuture.internalComplete();
         } else {
-            completionFuture.internalCompleteExceptionally(failure);
+            jobCompletionFuture.internalCompleteExceptionally(failure);
         }
     }
 
@@ -924,28 +935,26 @@ public class MasterContext {
 
     /**
      * Called when job participant is going to gracefully shut down. Will
-     * initiate terminal snapshot and when it's done, will complete the
+     * initiate terminal snapshot and when it's done, it will complete the
      * returned future.
      *
-     * @return a future to wait for or null if there's no need to wait
+     * @return a future to wait for, which may be already completed
      */
-    @Nullable
+    @Nonnull
     CompletableFuture<Void> onParticipantGracefulShutdown(String uuid) {
-        if (!hasParticipant(uuid)) {
-            return null;
-        }
+        return hasParticipant(uuid) ? gracefullyTerminate() : completedFuture(null);
+    }
 
-        if (jobStatus() == SUSPENDED) {
-            return null;
+    @Nonnull
+    CompletableFuture<Void> gracefullyTerminate() {
+        if (jobStatus() != SUSPENDED) {
+            requestTermination(RESTART_GRACEFUL);
         }
+        return executionCompletionFuture;
+    }
 
-        requestTermination(RESTART_GRACEFUL);
-        TerminationMode terminationMode = requestedTerminationMode;
-        if (terminationMode != null && terminationMode.isWithTerminalSnapshot()) {
-            // this future is null if job is not running, which is ok
-            return terminalSnapshotFuture;
-        }
-        return null; // nothing to wait for
+    CompletableFuture<Void> executionCompletionFuture() {
+        return executionCompletionFuture;
     }
 
     /**

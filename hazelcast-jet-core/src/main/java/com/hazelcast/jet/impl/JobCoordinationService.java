@@ -50,6 +50,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -71,6 +72,7 @@ import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 import static com.hazelcast.util.executor.ExecutorType.CACHED;
 import static java.util.Comparator.comparing;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
@@ -178,13 +180,15 @@ public class JobCoordinationService {
         }
     }
 
-    public void prepareForPassiveClusterState() {
+    public CompletableFuture<Void> prepareForPassiveClusterState() {
         assertIsMaster("Cannot prepare for passive cluster state from a non-master node");
         synchronized (lock) {
             isClusterEnteringPassiveState = true;
-        }
-        for (long jobId : masterContexts.keySet()) {
-            terminateJob(jobId, RESTART_GRACEFUL);
+            CompletableFuture[] futures = masterContexts
+                    .values().stream()
+                    .map(MasterContext::gracefullyTerminate)
+                    .toArray(CompletableFuture[]::new);
+            return CompletableFuture.allOf(futures);
         }
     }
 
@@ -220,14 +224,14 @@ public class JobCoordinationService {
         throw new JobNotFoundException(jobId);
     }
 
-    public void terminateJob(long jobId, TerminationMode terminationMode) {
+    public CompletableFuture<Void> terminateJob(long jobId, TerminationMode terminationMode) {
         assertIsMaster("Cannot " + terminationMode + " job " + idToString(jobId) + " from non-master node");
 
         JobResult jobResult = jobRepository.getJobResult(jobId);
         if (jobResult != null) {
             if (terminationMode == CANCEL) {
                 logger.fine("Ignoring cancellation of a completed job " + idToString(jobId));
-                return;
+                return completedFuture(null);
             }
             throw new IllegalStateException("Cannot " + terminationMode + " job " + idToString(jobId)
                     + " because it already has a result: " + jobResult);
@@ -256,16 +260,16 @@ public class JobCoordinationService {
             throw new IllegalStateException("Cannot " + terminationMode + ", job status is " + jobStatus
                     + ", should be " + RUNNING);
         }
-
-        if (!masterContext.requestTermination(terminationMode)) {
-            TerminationMode mcTerminationMode = masterContext.requestedTerminationMode();
-            // ignore double cancellation
-            if (terminationMode == CANCEL && mcTerminationMode == CANCEL) {
-                return;
-            }
-            throw new IllegalStateException("Cannot " + terminationMode + ", job is already terminating in mode: "
-                    + mcTerminationMode);
+        if (masterContext.requestTermination(terminationMode)) {
+            return masterContext.executionCompletionFuture();
         }
+        TerminationMode mcTerminationMode = masterContext.requestedTerminationMode();
+        // ignore double cancellation
+        if (terminationMode == CANCEL && mcTerminationMode == CANCEL) {
+            return completedFuture(null);
+        }
+        throw new IllegalStateException("Cannot " + terminationMode + ", job is already terminating in mode: "
+                + mcTerminationMode);
     }
 
     public Set<Long> getAllJobIds() {
@@ -553,7 +557,7 @@ public class JobCoordinationService {
             return;
         }
 
-        masterContext.beginSnapshot(executionId);
+        masterContext.ensureSnapshotStarted(executionId);
     }
 
     /**
@@ -570,6 +574,13 @@ public class JobCoordinationService {
     }
 
 
+    private CompletableFuture<Void> ensureTerminalSnapshotsFuture() {
+        CompletableFuture<Void> result = terminalSnapshotsFuture;
+        if (result == null) {
+            terminalSnapshotsFuture = result = new CompletableFuture<>();
+        }
+        return result;
+    }
 
     private void checkOperationalState() {
         if (isShutDown) {
@@ -785,5 +796,13 @@ public class JobCoordinationService {
 
     private boolean isMaster() {
         return nodeEngine.getClusterService().isMaster();
+    }
+
+    private static <T> T runOrNull(Callable<T> task) {
+        try {
+            return task.call();
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
