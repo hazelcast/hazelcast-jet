@@ -19,6 +19,7 @@ package com.hazelcast.jet.kafka;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.Stage;
 import com.hazelcast.jet.pipeline.StreamSource;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -63,17 +64,19 @@ public final class KafkaSources {
      * this processor is 2 (or less if less CPUs are available).
      * <p>
      * If snapshotting is enabled, partition offsets are saved to the snapshot.
-     * After a restart, the source emits the events from the same offset.
-     * You can start the job from exported state with the following changes:<ul>
-     *     <li>new topic will be consumed from default offsets
-     *     <li>removed topic will be ignored (there will be a warning logged)
+     * After a restart, the source emits the events from the same offsets.
+     * <p>
+     * If you start a new job from an exported state, you can change the source
+     * parameters as needed:<ul>
+     *     <li>if you add a topic, it will be consumed from the default position
+     *     <li>if you remove a topic, restored offsets will be ignored (there
+     *     will be a warning logged)
+     *     <li>if you connect to another cluster, the offsets will be used based
+     *     on the equality of the topic name. To avoid this, give different
+     *     {@linkplain Stage#setName name} to this source
+     *     <li>if the partition count is lower after a restart, the extra
+     *     offsets will be ignored
      * </ul>
-     * If the snapshot contains topic that is no longer drained, it will be logged and
-     * ignored. If the snapshot doesn't contain a topic,
-     * If
-     * the partition count is lower after a restart, the extra offsets will be
-     * ignored (this can happen if an updated DAG is supplied and it connects
-     * to different Kafka cluster).
      * <p>
      * If and only if snapshotting is disabled, the source commits the offsets
      * to Kafka using {@link KafkaConsumer#commitSync()}. Note however that
