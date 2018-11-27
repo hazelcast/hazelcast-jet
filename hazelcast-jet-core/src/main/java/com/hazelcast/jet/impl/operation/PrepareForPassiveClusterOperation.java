@@ -17,27 +17,36 @@
 package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.spi.Operation;
+
+import java.util.concurrent.CompletableFuture;
+
+import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 
 /**
  * Sent from the member that initiates a cluster state change to the master.
  * When the operation completes, all jobs have been terminated.
  */
-public class PrepareForPassiveClusterOperation extends Operation {
+public class PrepareForPassiveClusterOperation extends AsyncOperation {
 
     public PrepareForPassiveClusterOperation() {
     }
 
     @Override
-    public void run() {
+    protected void doRun() {
         if (!getNodeEngine().getClusterService().isMaster()) {
             return;
         }
-        this.<JetService>getService().getJobCoordinationService().prepareForPassiveClusterState();
+        this.<JetService>getService()
+                .getJobCoordinationService()
+                .prepareForPassiveClusterState()
+                .whenComplete(withTryCatch(getLogger(), (r, t) -> doSendResponse(peel(t))));
     }
 
     @Override
-    public Object getResponse() {
-        return "Ready for passive cluster state";
+    public int getId() {
+        return JetInitDataSerializerHook.PREPARE_FOR_PASSIVE_CLUSTER_OP;
     }
 }
