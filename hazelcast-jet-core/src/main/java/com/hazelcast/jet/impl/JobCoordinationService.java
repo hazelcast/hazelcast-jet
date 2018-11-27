@@ -445,7 +445,7 @@ public class JobCoordinationService {
     }
 
     boolean shouldStartJobs() {
-        if (!isMaster() || !nodeEngine.isRunning()) {
+        if (!(isMaster() && nodeEngine.isRunning() && !isClusterEnteringPassiveState)) {
             return false;
         }
         // if any of the members is in shutdown process, don't start jobs
