@@ -16,14 +16,15 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.SnapshotValidationRecord;
-import com.hazelcast.spi.annotation.PrivateApi;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.function.Supplier;
+
+import static com.hazelcast.jet.impl.JobRepository.exportedSnapshotMapName;
+import static com.hazelcast.jet.impl.util.Util.memoizeConcurrent;
 
 /**
  * A handle to exported state snapshot created using {@link
@@ -31,13 +32,27 @@ import javax.annotation.Nullable;
  */
 public final class JobStateSnapshot {
 
-    private final HazelcastInstance instance;
+    private final JetInstance instance;
     private final String name;
-    private SnapshotValidationRecord snapshotValidationRecord;
+    private final Supplier<SnapshotValidationRecord> snapshotValidationRecord;
 
-    private JobStateSnapshot(@Nonnull HazelcastInstance instance, @Nonnull String name) {
+    JobStateSnapshot(@Nonnull JetInstance instance, @Nonnull String name) {
         this.instance = instance;
         this.name = name;
+        this.snapshotValidationRecord = memoizeConcurrent(() -> {
+            IMap<Object, Object> map = instance.getMap(exportedSnapshotMapName(name));
+            SnapshotValidationRecord rec = (SnapshotValidationRecord) map.get(SnapshotValidationRecord.KEY);
+            if (rec == null) {
+                // By "touching" the map we've created it. There's no way to check for existence of IMap. If the
+                // map is otherwise empty, let's destroy it.
+                if (map.isEmpty()) {
+                    map.destroy();
+                }
+                throw new JetException("The underlying distributed object doesn't exist or it's not an exported state " +
+                        "snapshot");
+            }
+            return rec;
+        });
     }
 
     /**
@@ -53,14 +68,14 @@ public final class JobStateSnapshot {
      * Returns the time the snapshot was created.
      */
     public long creationTime() {
-        return getSnapshotValidationRecord().creationTime();
+        return snapshotValidationRecord.get().creationTime();
     }
 
     /**
      * Returns the job ID of the job the snapshot was originally exported from.
      */
     public long jobId() {
-        return getSnapshotValidationRecord().jobId();
+        return snapshotValidationRecord.get().jobId();
     }
 
     /**
@@ -69,7 +84,7 @@ public final class JobStateSnapshot {
      */
     @Nullable
     public String jobName() {
-        return getSnapshotValidationRecord().jobName();
+        return snapshotValidationRecord.get().jobName();
     }
 
     /**
@@ -78,7 +93,7 @@ public final class JobStateSnapshot {
      * backup copies.
      */
     public long payloadSize() {
-        return getSnapshotValidationRecord().numBytes();
+        return snapshotValidationRecord.get().numBytes();
     }
 
     /**
@@ -87,46 +102,13 @@ public final class JobStateSnapshot {
      */
     @Nonnull
     public String dagJsonString() {
-        return getSnapshotValidationRecord().dagJsonString();
+        return snapshotValidationRecord.get().dagJsonString();
     }
 
     /**
      * Destroy the underlying distributed object.
      */
     public void destroy() {
-        getMap().destroy();
-    }
-
-    private SnapshotValidationRecord getSnapshotValidationRecord() {
-        if (snapshotValidationRecord == null) {
-            IMap<Object, Object> map = getMap();
-            snapshotValidationRecord = (SnapshotValidationRecord) map.get(SnapshotValidationRecord.KEY);
-            if (snapshotValidationRecord == null) {
-                // By "touching" the map we've created it. There's no way to check for existence of IMap. If the
-                // map is otherwise empty, let's destroy it.
-                if (map.isEmpty()) {
-                    map.destroy();
-                }
-                throw new JetException("The underlying distributed object doesn't exist or it's not an exported state " +
-                        "snapshot");
-            }
-        }
-        return snapshotValidationRecord;
-    }
-
-    /**
-     * Private API.
-     */
-    @PrivateApi
-    public IMap<Object, Object> getMap() {
-        return instance.getMap(JobRepository.EXPORTED_SNAPSHOTS_PREFIX + name);
-    }
-
-    /**
-     * Private API.
-     */
-    @PrivateApi
-    public static JobStateSnapshot create(HazelcastInstance instance, String name) {
-        return new JobStateSnapshot(instance, name);
+        instance.getMap(exportedSnapshotMapName(name)).destroy();
     }
 }

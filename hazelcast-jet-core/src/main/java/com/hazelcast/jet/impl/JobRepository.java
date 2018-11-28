@@ -433,6 +433,13 @@ public class JobRepository {
     }
 
     /**
+     * Returns map name in the form {@code "_jet.exportedSnapshot.<jobId>.<dataMapIndex>"}.
+     */
+    public static String exportedSnapshotMapName(String name) {
+        return JobRepository.EXPORTED_SNAPSHOTS_PREFIX + name;
+    }
+
+    /**
      * Delete all snapshots for a given job.
      */
     private void destroySnapshotDataMaps(long jobId) {

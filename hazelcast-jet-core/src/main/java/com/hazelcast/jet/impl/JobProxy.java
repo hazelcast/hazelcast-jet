@@ -40,6 +40,7 @@ import com.hazelcast.spi.serialization.SerializationService;
 import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 
 /**
@@ -95,7 +96,7 @@ public class JobProxy extends AbstractJobProxy<NodeEngineImpl> {
         } catch (Exception e) {
             throw rethrow(e);
         }
-        return JobStateSnapshot.create(container().getHazelcastInstance(), name);
+        return getJetInstance(container()).getJobStateSnapshot(name);
     }
 
     @Override
@@ -105,7 +106,7 @@ public class JobProxy extends AbstractJobProxy<NodeEngineImpl> {
         } catch (Exception e) {
             throw rethrow(e);
         }
-        return JobStateSnapshot.create(container().getHazelcastInstance(), name);
+        return getJetInstance(container()).getJobStateSnapshot(name);
     }
 
     @Override

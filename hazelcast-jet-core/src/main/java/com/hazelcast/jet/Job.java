@@ -223,7 +223,7 @@ public interface Job {
      * Forceful job-control actions will interrupt the exported snapshot.
      * <p>
      * You can access the exported state map using {@link
-     * JetInstance#getExportedSnapshot(String)}.
+     * JetInstance#getJobStateSnapshot(String)}.
      *
      * @param name name of the snapshot. If name is already used, it will be
      *            overwritten

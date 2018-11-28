@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicIntegerArray;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Edge.from;
+import static com.hazelcast.jet.core.ExportSnapshotTest.getSnapshotMap;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLoggerP;
 import static com.hazelcast.jet.impl.JobExecutionRecord.NO_SNAPSHOT;
@@ -97,7 +98,7 @@ public class PostponedSnapshotTest extends JetTestSupport {
 
         // When
         Future snapshotFuture = spawn(() -> job.exportSnapshot("state"));
-        IMap<Object, Object> snapshotMap = instance.getExportedSnapshot("state").getMap();
+        IMap<Object, Object> snapshotMap = getSnapshotMap(instance, instance.getJobStateSnapshot("state"));
         assertTrueAllTheTime(() -> {
             assertFalse(snapshotFuture.isDone());
             assertTrue(snapshotMap.isEmpty());

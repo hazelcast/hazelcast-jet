@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.aggregation.Aggregators;
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.LocalMemberResetException;
@@ -47,7 +46,6 @@ import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResul
 import com.hazelcast.jet.impl.operation.StartExecutionOperation;
 import com.hazelcast.jet.impl.operation.TerminateExecutionOperation;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl;
-import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl.SnapshotDataKey;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.NonCompletableFuture;
@@ -448,7 +446,8 @@ public class MasterContext {
     }
 
     private void rewriteDagWithSnapshotRestore(DAG dag, long snapshotId, String mapName) {
-        snapshotId = validateSnapshot(snapshotId, mapName);
+        IMap<Object, Object> snapshotMap = nodeEngine.getHazelcastInstance().getMap(mapName);
+        snapshotId = SnapshotValidator.validateSnapshot(snapshotId, jobIdString(), snapshotMap);
         logger.info("State of " + jobIdString() + " will be restored from snapshot " + snapshotId + ", map=" + mapName);
 
         List<Vertex> originalVertices = new ArrayList<>();
@@ -470,37 +469,6 @@ public class MasterContext {
             dag.edge(new SnapshotRestoreEdge(explodeVertex, index, userVertex, destOrdinal));
             index++;
         }
-    }
-
-    private long validateSnapshot(long snapshotId, String mapName) {
-        IMap<Object, Object> map = nodeEngine.getHazelcastInstance().getMap(mapName);
-        SnapshotValidationRecord validationRecord = (SnapshotValidationRecord) map.get(SnapshotValidationRecord.KEY);
-        if (validationRecord == null) {
-            throw new JetException("State for " + jobIdString() + " was supposed to be restored from '" + mapName
-                    + "', but that map doesn't contain the validation key: not an IMap with Jet snapshot or corrupted");
-        }
-        if (validationRecord.numChunks() != map.size() - 1) {
-            // fallback validation that counts using aggregate(), ignoring different snapshot IDs
-            long finalSnapshotId = snapshotId;
-            Long filteredCount = map.aggregate(Aggregators.count(), e -> e.getKey() instanceof SnapshotDataKey
-                    && ((SnapshotDataKey) e.getKey()).snapshotId() == finalSnapshotId);
-            if (validationRecord.numChunks() != filteredCount) {
-                throw new JetException("State for " + jobIdString() + " in '" + mapName + "' corrupted: it should " +
-                        "have " + validationRecord.numChunks() + " entries, but has " + (map.size() - 1) + " entries");
-            }
-        }
-
-        if (snapshotId == -1) {
-            // We're restoring from exported state: in this case we don't know the snapshotId, we'll
-            // learn it from the validation record
-            snapshotId = validationRecord.snapshotId();
-        } else {
-            if (snapshotId != validationRecord.snapshotId()) {
-                throw new JetException(jobIdString() + ": '" + mapName + "' was supposed to contain snapshotId="
-                        + snapshotId + ", but it contains snapshotId=" + validationRecord.snapshotId());
-            }
-        }
-        return snapshotId;
     }
 
     /**

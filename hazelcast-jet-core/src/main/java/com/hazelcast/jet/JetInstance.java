@@ -17,6 +17,7 @@
 package com.hazelcast.jet;
 
 import com.hazelcast.core.Cluster;
+import com.hazelcast.core.DistributedObject;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.ReplicatedMap;
 import com.hazelcast.jet.config.JetConfig;
@@ -146,20 +147,20 @@ public interface JetInstance {
      * @param name exported state snapshot name
      * @return IMap instance with the data
      */
-    default JobStateSnapshot getExportedSnapshot(@Nonnull String name) {
-        return JobStateSnapshot.create(this.getHazelcastInstance(), name);
+    default JobStateSnapshot getJobStateSnapshot(@Nonnull String name) {
+        return new JobStateSnapshot(this, name);
     }
 
     /**
      * Returns the collection of exported job state snapshots stored in the
      * cluster.
      */
-    default Collection<JobStateSnapshot> getExportedSnapshots() {
+    default Collection<JobStateSnapshot> getJobStateSnapshots() {
         return getHazelcastInstance().getDistributedObjects().stream()
-                .filter(o -> o.getServiceName().equals(MapService.SERVICE_NAME)
-                        && o.getName().startsWith(JobRepository.EXPORTED_SNAPSHOTS_PREFIX))
-                .map(o -> JobStateSnapshot.create(this.getHazelcastInstance(),
-                        o.getName().substring(JobRepository.EXPORTED_SNAPSHOTS_PREFIX.length())))
+                .filter(o -> o.getServiceName().equals(MapService.SERVICE_NAME))
+                .map(DistributedObject::getName)
+                .filter(n -> n.startsWith(JobRepository.EXPORTED_SNAPSHOTS_PREFIX))
+                .map(n -> new JobStateSnapshot(this, n.substring(JobRepository.EXPORTED_SNAPSHOTS_PREFIX.length())))
                 .collect(toList());
     }
 

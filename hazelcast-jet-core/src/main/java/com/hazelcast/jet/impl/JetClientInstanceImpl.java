@@ -81,7 +81,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     @Nonnull @Override
     public Job newJob(@Nonnull DAG dag, @Nonnull JobConfig config) {
         long jobId = uploadResourcesAndAssignId(config);
-        return new ClientJobProxy(client, jobId, dag, config);
+        return new ClientJobProxy(this, jobId, dag, config);
     }
 
     @Nonnull @Override
@@ -92,14 +92,14 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         return uncheckCall(() -> {
             ClientMessage response = invocation.invoke().get();
             Set<Long> jobs = serializationService.toObject(JetGetJobIdsCodec.decodeResponse(response).response);
-            return jobs.stream().map(jobId -> new ClientJobProxy(client, jobId)).collect(toList());
+            return jobs.stream().map(jobId -> new ClientJobProxy(this, jobId)).collect(toList());
         });
     }
 
     @Override
     public Job getJob(long jobId) {
         try {
-            Job job = new ClientJobProxy(client, jobId);
+            Job job = new ClientJobProxy(this, jobId);
             job.getStatus();
             return job;
         } catch (Exception e) {
@@ -113,7 +113,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
 
     @Nonnull @Override
     public List<Job> getJobs(@Nonnull String name) {
-        return getJobIdsByName(name).stream().map(jobId -> new ClientJobProxy(client, jobId)).collect(toList());
+        return getJobIdsByName(name).stream().map(jobId -> new ClientJobProxy(this, jobId)).collect(toList());
     }
 
     /**

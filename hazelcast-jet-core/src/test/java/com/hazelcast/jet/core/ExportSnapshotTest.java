@@ -19,6 +19,7 @@ package com.hazelcast.jet.core;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.MapStore;
+import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.JobStateSnapshot;
@@ -103,8 +104,8 @@ public class ExportSnapshotTest extends JetTestSupport {
         // now release the blocking store, both snapshots should complete
         BlockingMapStore.shouldBlock = false;
         assertTrueEventually(() -> assertTrue(exportFuture.isDone() && exportFuture2.isDone()));
-        assertFalse(instance.getExportedSnapshot("state").getMap().isEmpty());
-        assertFalse(instance.getExportedSnapshot("state2").getMap().isEmpty());
+        assertFalse(getSnapshotMap(instance, instance.getJobStateSnapshot("state")).isEmpty());
+        assertFalse(getSnapshotMap(instance, instance.getJobStateSnapshot("state2")).isEmpty());
     }
 
     @Test
@@ -118,11 +119,12 @@ public class ExportSnapshotTest extends JetTestSupport {
         assertJobStatusEventually(job, RUNNING);
         job.exportSnapshot("exportState");
         // Then1
-        assertFalse("exportState is empty", instance.getExportedSnapshot("exportState").getMap().isEmpty());
+        assertFalse("exportState is empty",
+                getSnapshotMap(instance, instance.getJobStateSnapshot("exportState")).isEmpty());
         job.cancelAndExportSnapshot("cancelAndExportState");
         // Then2
         assertFalse("cancelAndExportState is empty",
-                instance.getExportedSnapshot("cancelAndExportState").getMap().isEmpty());
+                getSnapshotMap(instance, instance.getJobStateSnapshot("cancelAndExportState")).isEmpty());
         assertJobStatusEventually(job, COMPLETED);
 
         DummyStatefulP.wasRestored = false;
@@ -138,7 +140,7 @@ public class ExportSnapshotTest extends JetTestSupport {
     @Test
     public void when_targetMapNotEmpty_then_cleared() {
         JetInstance instance = createJetMember();
-        IMap<Object, Object> stateMap = instance.getExportedSnapshot("state").getMap();
+        IMap<Object, Object> stateMap = getSnapshotMap(instance, instance.getJobStateSnapshot("state"));
         // When
         stateMap.put("fooKey", "bar");
         DAG dag = new DAG();
@@ -198,7 +200,7 @@ public class ExportSnapshotTest extends JetTestSupport {
         JobStateSnapshot state = job.cancelAndExportSnapshot("state");
 
         // When - cause the snapshot to be invalid
-        state.getMap().put("foo", "bar");
+        getSnapshotMap(instance, state).put("foo", "bar");
 
         job = instance.newJob(dag, new JobConfig().setInitialSnapshotName("state"));
         assertJobStatusEventually(job, FAILED);
@@ -214,7 +216,7 @@ public class ExportSnapshotTest extends JetTestSupport {
         JobStateSnapshot state = job.cancelAndExportSnapshot("state");
 
         // When - cause the snapshot to be partly invalid - insert entry with wrong snapshot ID
-        state.getMap().put(new SnapshotDataKey(1, -10, "vertex", 1), "bar");
+        getSnapshotMap(instance, state).put(new SnapshotDataKey(1, -10, "vertex", 1), "bar");
 
         Job job2 = instance.newJob(dag, new JobConfig().setInitialSnapshotName("state"));
         assertJobStatusEventually(job2, RUNNING);
@@ -236,7 +238,8 @@ public class ExportSnapshotTest extends JetTestSupport {
         } else {
             job.exportSnapshot("state");
         }
-        assertFalse("state map is empty", instance.getExportedSnapshot("state").getMap().isEmpty());
+        IMapJet<Object, Object> snapshotMap = getSnapshotMap(instance, instance.getJobStateSnapshot("state"));
+        assertFalse("state map is empty", snapshotMap.isEmpty());
         if (cancel) {
             assertJobStatusEventually(job, COMPLETED);
         } else {
@@ -244,6 +247,10 @@ public class ExportSnapshotTest extends JetTestSupport {
             job.resume();
             assertJobStatusEventually(job, RUNNING);
         }
+    }
+
+    public static IMapJet<Object, Object> getSnapshotMap(JetInstance instance, JobStateSnapshot snapshot) {
+        return instance.getMap(JobRepository.exportedSnapshotMapName(snapshot.name()));
     }
 
     private void configureBlockingMapStore(JetConfig config, String mapName) {

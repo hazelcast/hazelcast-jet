@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.JetExportStateCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobConfigCodec;
@@ -54,13 +53,13 @@ import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 /**
  * {@link Job} proxy on client.
  */
-public class ClientJobProxy extends AbstractJobProxy<HazelcastClientInstanceImpl> {
+public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
 
-    ClientJobProxy(HazelcastClientInstanceImpl client, long jobId) {
+    ClientJobProxy(JetClientInstanceImpl client, long jobId) {
         super(client, jobId);
     }
 
-    ClientJobProxy(HazelcastClientInstanceImpl client, long jobId, DAG dag, JobConfig config) {
+    ClientJobProxy(JetClientInstanceImpl client, long jobId, DAG dag, JobConfig config) {
         super(client, jobId, dag, config);
     }
 
@@ -113,7 +112,7 @@ public class ClientJobProxy extends AbstractJobProxy<HazelcastClientInstanceImpl
         } catch (Exception e) {
             throw rethrow(e);
         }
-        return JobStateSnapshot.create(container(), name);
+        return container().getJobStateSnapshot(name);
     }
 
     @Override
@@ -124,7 +123,7 @@ public class ClientJobProxy extends AbstractJobProxy<HazelcastClientInstanceImpl
         } catch (Exception e) {
             throw rethrow(e);
         }
-        return JobStateSnapshot.create(container(), name);
+        return container().getJobStateSnapshot(name);
     }
 
     @Override
@@ -156,16 +155,18 @@ public class ClientJobProxy extends AbstractJobProxy<HazelcastClientInstanceImpl
 
     @Override
     protected SerializationService serializationService() {
-        return container().getSerializationService();
+        return container().getHazelcastClient().getSerializationService();
     }
 
     @Override
     protected LoggingService loggingService() {
-        return container().getLoggingService();
+        return container().getHazelcastClient().getLoggingService();
     }
 
     private ClientInvocation invocation(ClientMessage request, Address invocationAddr) {
-        return new ClientInvocation(container(), request, "jobId=" + idToString(getId()), invocationAddr);
+        return new ClientInvocation(
+                container().getHazelcastClient(), request, "jobId=" + idToString(getId()), invocationAddr
+        );
     }
 
     /**

@@ -135,7 +135,7 @@ public class JetInstanceTest extends JetTestSupport {
     }
 
     private Set<String> getExportedStateNames(JetInstance instance) {
-        return instance.getExportedSnapshots().stream()
+        return instance.getJobStateSnapshots().stream()
                        .map(JobStateSnapshot::name)
                        .collect(toSet());
     }
