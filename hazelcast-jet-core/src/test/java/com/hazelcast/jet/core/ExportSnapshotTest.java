@@ -104,8 +104,8 @@ public class ExportSnapshotTest extends JetTestSupport {
         // now release the blocking store, both snapshots should complete
         BlockingMapStore.shouldBlock = false;
         assertTrueEventually(() -> assertTrue(exportFuture.isDone() && exportFuture2.isDone()));
-        assertFalse(getSnapshotMap(instance, instance.getJobStateSnapshot("state")).isEmpty());
-        assertFalse(getSnapshotMap(instance, instance.getJobStateSnapshot("state2")).isEmpty());
+        assertFalse(getSnapshotMap(instance, "state").isEmpty());
+        assertFalse(getSnapshotMap(instance, "state2").isEmpty());
     }
 
     @Test
@@ -119,12 +119,11 @@ public class ExportSnapshotTest extends JetTestSupport {
         assertJobStatusEventually(job, RUNNING);
         job.exportSnapshot("exportState");
         // Then1
-        assertFalse("exportState is empty",
-                getSnapshotMap(instance, instance.getJobStateSnapshot("exportState")).isEmpty());
+        assertFalse("exportState is empty", getSnapshotMap(instance, "exportState").isEmpty());
         job.cancelAndExportSnapshot("cancelAndExportState");
         // Then2
         assertFalse("cancelAndExportState is empty",
-                getSnapshotMap(instance, instance.getJobStateSnapshot("cancelAndExportState")).isEmpty());
+                getSnapshotMap(instance, "cancelAndExportState").isEmpty());
         assertJobStatusEventually(job, COMPLETED);
 
         DummyStatefulP.wasRestored = false;
@@ -140,7 +139,7 @@ public class ExportSnapshotTest extends JetTestSupport {
     @Test
     public void when_targetMapNotEmpty_then_cleared() {
         JetInstance instance = createJetMember();
-        IMap<Object, Object> stateMap = getSnapshotMap(instance, instance.getJobStateSnapshot("state"));
+        IMap<Object, Object> stateMap = getSnapshotMap(instance, "state");
         // When
         stateMap.put("fooKey", "bar");
         DAG dag = new DAG();
@@ -200,7 +199,7 @@ public class ExportSnapshotTest extends JetTestSupport {
         JobStateSnapshot state = job.cancelAndExportSnapshot("state");
 
         // When - cause the snapshot to be invalid
-        getSnapshotMap(instance, state).put("foo", "bar");
+        getSnapshotMap(instance, state.name()).put("foo", "bar");
 
         job = instance.newJob(dag, new JobConfig().setInitialSnapshotName("state"));
         assertJobStatusEventually(job, FAILED);
@@ -216,7 +215,7 @@ public class ExportSnapshotTest extends JetTestSupport {
         JobStateSnapshot state = job.cancelAndExportSnapshot("state");
 
         // When - cause the snapshot to be partly invalid - insert entry with wrong snapshot ID
-        getSnapshotMap(instance, state).put(new SnapshotDataKey(1, -10, "vertex", 1), "bar");
+        getSnapshotMap(instance, state.name()).put(new SnapshotDataKey(1, -10, "vertex", 1), "bar");
 
         Job job2 = instance.newJob(dag, new JobConfig().setInitialSnapshotName("state"));
         assertJobStatusEventually(job2, RUNNING);
@@ -238,8 +237,7 @@ public class ExportSnapshotTest extends JetTestSupport {
         } else {
             job.exportSnapshot("state");
         }
-        IMapJet<Object, Object> snapshotMap = getSnapshotMap(instance, instance.getJobStateSnapshot("state"));
-        assertFalse("state map is empty", snapshotMap.isEmpty());
+        assertFalse("state map is empty", getSnapshotMap(instance, "state").isEmpty());
         if (cancel) {
             assertJobStatusEventually(job, COMPLETED);
         } else {
@@ -249,8 +247,8 @@ public class ExportSnapshotTest extends JetTestSupport {
         }
     }
 
-    public static IMapJet<Object, Object> getSnapshotMap(JetInstance instance, JobStateSnapshot snapshot) {
-        return instance.getMap(JobRepository.exportedSnapshotMapName(snapshot.name()));
+    public static IMapJet<Object, Object> getSnapshotMap(JetInstance instance, String snapshotName) {
+        return instance.getMap(JobRepository.exportedSnapshotMapName(snapshotName));
     }
 
     private void configureBlockingMapStore(JetConfig config, String mapName) {

@@ -21,6 +21,8 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl.SnapshotDataKey;
 
+import static com.hazelcast.jet.impl.JobExecutionRecord.NO_SNAPSHOT;
+
 final class SnapshotValidator {
 
     private SnapshotValidator() {
@@ -29,8 +31,9 @@ final class SnapshotValidator {
     /**
      * Validates a snapshot with the given id.
      *
-     * @param snapshotId -1 if snapshot id is not known
-     * @param jobIdString name and id of the job
+     * @param snapshotId snapshot ID or {@link JobExecutionRecord#NO_SNAPSHOT},
+     *      if snapshot id is not known
+     * @param jobIdString name and id of the job (for debug output)
      * @param map snapshot map to validate
      * @return the snapshot id of the snapshot being validated
      */
@@ -42,25 +45,17 @@ final class SnapshotValidator {
         }
         if (validationRecord.numChunks() != map.size() - 1) {
             // fallback validation that counts using aggregate(), ignoring different snapshot IDs
-            long finalSnapshotId = snapshotId;
             Long filteredCount = map.aggregate(Aggregators.count(), e -> e.getKey() instanceof SnapshotDataKey
-                    && ((SnapshotDataKey) e.getKey()).snapshotId() == finalSnapshotId);
+                    && ((SnapshotDataKey) e.getKey()).snapshotId() == snapshotId);
             if (validationRecord.numChunks() != filteredCount) {
                 throw new JetException("State for " + jobIdString + " in '" + map.getName() + "' corrupted: it should " +
                         "have " + validationRecord.numChunks() + " entries, but has " + (map.size() - 1) + " entries");
             }
         }
-
-        if (snapshotId == -1) {
-            // We're restoring from exported state: in this case we don't know the snapshotId, we'll
-            // learn it from the validation record
-            snapshotId = validationRecord.snapshotId();
-        } else {
-            if (snapshotId != validationRecord.snapshotId()) {
-                throw new JetException(jobIdString + ": '" + map.getName() + "' was supposed to contain snapshotId="
-                        + snapshotId + ", but it contains snapshotId=" + validationRecord.snapshotId());
-            }
+        if (snapshotId != NO_SNAPSHOT && snapshotId != validationRecord.snapshotId()) {
+            throw new JetException(jobIdString + ": '" + map.getName() + "' was supposed to contain snapshotId="
+                    + snapshotId + ", but it contains snapshotId=" + validationRecord.snapshotId());
         }
-        return snapshotId;
+        return validationRecord.snapshotId();
     }
 }
