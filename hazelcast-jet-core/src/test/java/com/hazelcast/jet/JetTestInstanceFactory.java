@@ -22,15 +22,24 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.nio.Address;
+import com.hazelcast.test.mocknetwork.TestNodeRegistry;
 
 import java.util.Arrays;
 
 import static com.hazelcast.jet.Jet.getJetClientInstance;
+import static com.hazelcast.jet.impl.JetNodeContext.JET_EXTENSION_PRIORITY_LIST;
 import static com.hazelcast.jet.impl.config.XmlJetConfigBuilder.getClientConfig;
 
 public class JetTestInstanceFactory {
 
-    private final TestHazelcastFactory factory = new TestHazelcastFactory();
+    private final TestHazelcastFactory factory = new TestHazelcastFactoryForJet();
+
+    private static class TestHazelcastFactoryForJet extends TestHazelcastFactory {
+        @Override
+        protected TestNodeRegistry createRegistry() {
+            return new TestNodeRegistry(getKnownAddresses(), JET_EXTENSION_PRIORITY_LIST);
+        }
+    }
 
     public JetInstance newMember() {
         return newMember(JetConfig.loadDefault());

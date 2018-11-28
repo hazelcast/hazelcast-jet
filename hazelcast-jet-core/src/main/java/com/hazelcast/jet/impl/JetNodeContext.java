@@ -27,12 +27,12 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.unmodifiableList;
 
 public class JetNodeContext extends DefaultNodeContext {
-    private static final String NODE_EXTENSION_FACTORY_ID = "com.hazelcast.instance.NodeExtension";
-
-    private static final List<String> JET_EXTENSION_PRIORITY_LIST = unmodifiableList(asList(
+    public static final List<String> JET_EXTENSION_PRIORITY_LIST = unmodifiableList(asList(
             "com.hazelcast.jet.impl.JetEnterpriseNodeExtension",
             "com.hazelcast.jet.impl.JetNodeExtension"
     ));
+
+    private static final String NODE_EXTENSION_FACTORY_ID = "com.hazelcast.instance.NodeExtension";
 
     @Override
     public NodeExtension createNodeExtension(Node node) {
