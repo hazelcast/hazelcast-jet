@@ -148,7 +148,7 @@ public class ExportSnapshotTest extends JetTestSupport {
         assertJobStatusEventually(job, RUNNING);
         job.exportSnapshot("state");
         // Then
-        assertNull(stateMap.get("fooKey"));
+        assertNull("map was not cleared", stateMap.get("fooKey"));
         assertEquals(1, stateMap.size());
     }
 
