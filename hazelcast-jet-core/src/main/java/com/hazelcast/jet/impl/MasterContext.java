@@ -515,7 +515,7 @@ public class MasterContext {
         // be safe against it (idempotent).
         if (mode.isWithTerminalSnapshot()) {
             nextSnapshotIsTerminal = true;
-            ensureSnapshotStarted(executionId);
+            beginSnapshot(executionId);
         } else if (executionInvocationCallback != null) {
             executionInvocationCallback.cancelInvocations(mode);
         }
@@ -526,27 +526,29 @@ public class MasterContext {
                 invokeOnParticipants(plan -> new TerminateExecutionOperation(jobId, executionId, mode), null, null));
     }
 
-    void ensureSnapshotStarted(long executionId) {
+    void beginSnapshot(long executionId) {
         boolean isTerminal;
         assertLockNotHeld();
         synchronized (lock) {
             if (this.executionId != executionId) {
                 // Current execution is completed and probably a new execution has started, but we don't
                 // cancel the scheduled snapshot from previous execution, so let's just ignore it.
-                logger.fine("Received snapshot request for " + jobIdString() + " with unexpected execution ID "
-                        + idToString(executionId) + ". Not starting the snapshot.");
+                logger.fine("Not beginning snapshot since unexpected execution ID received for " + jobIdString()
+                        + ". Received execution ID: " + idToString(executionId));
                 return;
             }
+
             if (jobStatus != RUNNING) {
-                logger.fine("Not starting snapshot because job is not RUNNING but " + jobStatus);
+                logger.fine("Not beginning snapshot, job is not RUNNING, but " + jobStatus);
                 return;
             }
+
             if (snapshotInProgress) {
-                logger.fine("Not starting snapshot since one is already in progress for " + jobIdString());
+                logger.fine("Not beginning snapshot since one is already in progress " + jobIdString());
                 return;
             }
             if (terminalSnapshotFuture.isDone()) {
-                logger.fine("Not starting snapshot since terminal snapshot is already completed");
+                logger.fine("Not beginning snapshot since terminal snapshot is already completed");
                 return;
             }
             snapshotInProgress = true;
