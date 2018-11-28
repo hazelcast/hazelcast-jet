@@ -140,7 +140,7 @@ public class ExportSnapshotTest extends JetTestSupport {
     @Test
     public void when_targetMapNotEmpty_then_cleared() {
         JetInstance instance = createJetMember();
-        IMap<Object, Object> stateMap = getSnapshotMap(instance, instance.getJobStateSnapshot("state"));
+        IMap<Object, Object> stateMap = getSnapshotMap(instance, "state");
         // When
         stateMap.put("fooKey", "bar");
         DAG dag = new DAG();
@@ -250,7 +250,11 @@ public class ExportSnapshotTest extends JetTestSupport {
     }
 
     public static IMapJet<Object, Object> getSnapshotMap(JetInstance instance, JobStateSnapshot snapshot) {
-        return instance.getMap(JobRepository.exportedSnapshotMapName(snapshot.name()));
+        return getSnapshotMap(instance, snapshot.name());
+    }
+
+    public static IMapJet<Object, Object> getSnapshotMap(JetInstance instance, String name) {
+        return instance.getMap(JobRepository.exportedSnapshotMapName(name));
     }
 
     private void configureBlockingMapStore(JetConfig config, String mapName) {
