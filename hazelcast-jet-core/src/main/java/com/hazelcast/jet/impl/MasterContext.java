@@ -252,8 +252,10 @@ public class MasterContext {
 
         if (localStatus == SUSPENDED) {
             coordinationService.completeJob(this, System.currentTimeMillis(), new CancellationException());
-        } else if (localStatus == RUNNING || localStatus == STARTING) {
-            handleTermination(mode);
+        } else {
+            if (localStatus == RUNNING || localStatus == STARTING) {
+                handleTermination(mode);
+            }
         }
 
         return true;
@@ -289,7 +291,9 @@ public class MasterContext {
                 break synchronized_block;
             }
 
-            if (!setJobStatusToStarting() || scheduleRestartIfQuorumAbsent() || scheduleRestartIfClusterIsNotSafe()) {
+            if (!setJobStatusToStarting()
+                    || scheduleRestartIfQuorumAbsent()
+                    || scheduleRestartIfClusterIsNotSafe()) {
                 return;
             }
 
