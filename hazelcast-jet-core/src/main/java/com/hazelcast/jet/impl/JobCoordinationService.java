@@ -42,14 +42,12 @@ import com.hazelcast.util.Clock;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -94,12 +92,10 @@ public class JobCoordinationService {
     private final ILogger logger;
     private final JobRepository jobRepository;
     private final ConcurrentMap<Long, MasterContext> masterContexts = new ConcurrentHashMap<>();
-    private final Set<String> membersShuttingDown = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final ConcurrentMap<String, CompletableFuture<Void>> membersShuttingDown = new ConcurrentHashMap<>();
     private final Object lock = new Object();
     private volatile boolean isShutDown;
     private volatile boolean isClusterEnteringPassiveState;
-    private int awaitedTerminatingMembersCount;
-    private CompletableFuture<Void> terminalSnapshotsFuture;
 
     private final AtomicInteger scaleUpScheduledCount = new AtomicInteger();
 
@@ -116,7 +112,7 @@ public class JobCoordinationService {
         return jobRepository;
     }
 
-    public void startScanningForJobs() {
+    void startScanningForJobs() {
         InternalExecutionService executionService = nodeEngine.getExecutionService();
         HazelcastProperties properties = new HazelcastProperties(config.getProperties());
         long jobScanPeriodInMillis = properties.getMillis(JOB_SCAN_PERIOD);
@@ -190,7 +186,7 @@ public class JobCoordinationService {
         }
     }
 
-    public void clusterChangeDone() {
+    void clusterChangeDone() {
         synchronized (lock) {
             isClusterEnteringPassiveState = false;
         }
@@ -393,43 +389,23 @@ public class JobCoordinationService {
         NotifyMemberShutdownOperation is received. The
         NotifyMemberShutdownOperation sends response only after all jobs the
         shutting-down member runs have completed the terminal snapshot.
-
-        If before completing the terminalSnapshotsFuture another member shuts
-        down, we'll complete the future after all snapshots for both members
-        complete. This is accomplished by counting the awaitedTerminatingMembersCount
-        and using single future for all terminations.
         */
-        synchronized (lock) {
-            if (uuid.equals(nodeEngine.getLocalMember().getUuid())) {
-                shutdown();
-            }
-            if (!membersShuttingDown.add(uuid)) {
-                // If the member was already added and the future that was created for it
-                // was already completed and nulled out, we return a new completed future.
-                CompletableFuture<Void> result = terminalSnapshotsFuture;
-                return result != null ? result : completedFuture(null);
-            }
-            CompletableFuture<Void> result = ensureTerminalSnapshotsFuture();
-            logger.fine("Added a shutting-down member: " + uuid);
-            CompletableFuture[] futures = masterContexts.values().stream()
-                                                        .map(mc -> mc.onParticipantGracefulShutdown(uuid))
-                                                        .toArray(CompletableFuture[]::new);
-            awaitedTerminatingMembersCount++;
-            // Need to do this even if futures.length == 0, we need to perform the
-            // action in whenComplete. We use async version because we acquire a lock
-            // in the action: the completing thread could hold another locks, opening
-            // the possibility of a deadlock.
-            CompletableFuture.allOf(futures)
-                             .whenCompleteAsync(withTryCatch(logger, (r, e) -> {
-                                 synchronized (lock) {
-                                     if (--awaitedTerminatingMembersCount == 0) {
-                                         result.complete(null);
-                                         terminalSnapshotsFuture = null;
-                                     }
-                                 }
-                             }));
-            return result;
+        if (uuid.equals(nodeEngine.getLocalMember().getUuid())) {
+            shutdown();
         }
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        CompletableFuture<Void> oldFuture = membersShuttingDown.putIfAbsent(uuid, future);
+        if (oldFuture != null) {
+            return oldFuture;
+        }
+        logger.fine("Added a shutting-down member: " + uuid);
+        CompletableFuture[] futures = masterContexts.values().stream()
+                                                    .map(mc -> mc.onParticipantGracefulShutdown(uuid))
+                                                    .toArray(CompletableFuture[]::new);
+        // Need to do this even if futures.length == 0, we need to perform the action in whenComplete
+        CompletableFuture.allOf(futures)
+                         .whenComplete(withTryCatch(logger, (r, e) -> future.complete(null)));
+        return future;
     }
 
     // only for testing
@@ -450,9 +426,8 @@ public class JobCoordinationService {
         if (!(isMaster() && nodeEngine.isRunning() && !isClusterEnteringPassiveState)) {
             return false;
         }
-        // if any of the members is in shutdown process, don't start jobs
-        if (nodeEngine.getClusterService().getMembers().stream()
-                      .anyMatch(m -> membersShuttingDown.contains(m.getUuid()))) {
+        // if there are any members in a shutdown process, don't start jobs
+        if (!membersShuttingDown.isEmpty()) {
             LoggingUtil.logFine(logger, "Not starting jobs because members are shutting down: %s", membersShuttingDown);
             return false;
         }
@@ -472,7 +447,7 @@ public class JobCoordinationService {
     }
 
     void onMemberLeave(String uuid) {
-        if (membersShuttingDown.remove(uuid)) {
+        if (membersShuttingDown.remove(uuid) != null) {
             LoggingUtil.logFine(logger, "Removed a shutting-down member: %s, now shuttingDownMembers=%s",
                     uuid, membersShuttingDown);
         }
@@ -569,15 +544,6 @@ public class JobCoordinationService {
             return;
         }
         tryStartJob(masterContext);
-    }
-
-
-    private CompletableFuture<Void> ensureTerminalSnapshotsFuture() {
-        CompletableFuture<Void> result = terminalSnapshotsFuture;
-        if (result == null) {
-            terminalSnapshotsFuture = result = new CompletableFuture<>();
-        }
-        return result;
     }
 
     private void checkOperationalState() {
@@ -794,13 +760,5 @@ public class JobCoordinationService {
 
     private boolean isMaster() {
         return nodeEngine.getClusterService().isMaster();
-    }
-
-    private static <T> T runOrNull(Callable<T> task) {
-        try {
-            return task.call();
-        } catch (Exception e) {
-            return null;
-        }
     }
 }
