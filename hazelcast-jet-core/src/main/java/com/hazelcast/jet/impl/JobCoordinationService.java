@@ -178,12 +178,12 @@ public class JobCoordinationService {
         assertIsMaster("Cannot prepare for passive cluster state on a non-master node");
         synchronized (lock) {
             isClusterEnteringPassiveState = true;
-            CompletableFuture[] futures = masterContexts
-                    .values().stream()
-                    .map(MasterContext::gracefullyTerminate)
-                    .toArray(CompletableFuture[]::new);
-            return CompletableFuture.allOf(futures);
         }
+        CompletableFuture[] futures = masterContexts
+                .values().stream()
+                .map(MasterContext::gracefullyTerminate)
+                .toArray(CompletableFuture[]::new);
+        return CompletableFuture.allOf(futures);
     }
 
     void clusterChangeDone() {
