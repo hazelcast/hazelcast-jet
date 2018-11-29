@@ -172,20 +172,21 @@ public class MasterContext {
     private boolean snapshotInProgress;
 
     /**
-     * If the queue contains an item, the next snapshot will be started right
-     * after the current one or immediately, if there's no snapshot in
-     * progress. The tuple contains:<ul>
-     *     <li>{@code snapshotName}: name of the snapshot to export the snapshot
-     *         to or null, if no name is specified
+     * The queue with snapshots to run. An item is added to it regularly (to do
+     * a regular snapshot) or when a snapshot export is requested by the user.
+     *
+     * The tuple contains:<ul>
+     *     <li>{@code snapshotName}: user-specified name of the snapshot or null,
+     *         if no name is specified
      *     <li>{@code isTerminal}: if true, job will be terminated after the
      *         snapshot
-     *     <li>{@code future}: future, that will be completed when snapshot is
-     *         validated.
+     *     <li>{@code future}: future, that will be completed when the snapshot
+     *         is validated.
      * </ul>
      *
      * Queue is accessed only in synchronized code.
      */
-    private final Queue<Tuple3<String, Boolean, CompletableFuture<Void>>> requestedSnapshotsQueue = new LinkedList<>();
+    private final Queue<Tuple3<String, Boolean, CompletableFuture<Void>>> snapshotQueue = new LinkedList<>();
 
     /**
      * A future (re)created when the job is started and completed when terminal
@@ -264,7 +265,7 @@ public class MasterContext {
                 setFinalResult(new CancellationException());
             }
             if (mode.isWithTerminalSnapshot()) {
-                requestedSnapshotsQueue.add(tuple3(null, true, null));
+                snapshotQueue.add(tuple3(null, true, null));
             }
         }
 
@@ -281,23 +282,26 @@ public class MasterContext {
 
     CompletableFuture<Void> exportSnapshot(String name, boolean cancelJob) {
         assertLockNotHeld();
-        CompletableFuture<Void> future = null;
+        CompletableFuture<Void> future = new CompletableFuture<>();
         JobStatus localStatus;
+
         synchronized (lock) {
             localStatus = jobStatus();
+            if (localStatus != RUNNING && localStatus != SUSPENDED) {
+                throw new JetException("Cannot export snapshot, job is neither RUNNING nor SUSPENDED, but " + localStatus);
+            }
+
             if (localStatus == SUSPENDED) {
                 if (jobExecutionRecord.snapshotId() < 0) {
                     throw new JetException("Cannot export state snapshot: job is suspended and no successful snapshot " +
                             "was created while it was running");
                 }
                 localStatus = jobStatus = EXPORTING_SNAPSHOT;
-            } else if (localStatus != RUNNING) {
-                throw new JetException("Cannot export snapshot, job is neither RUNNING nor SUSPENDED, but " + localStatus);
             } else {
-                future = new CompletableFuture<>();
-                requestedSnapshotsQueue.add(tuple3(name, cancelJob, future));
+                snapshotQueue.add(tuple3(name, cancelJob, future));
             }
         }
+
         if (localStatus == EXPORTING_SNAPSHOT) {
             String sourceMapName = jobExecutionRecord.successfulSnapshotDataMapName(jobId);
             JetInstance jetInstance = coordinationService.getJetService().getJetInstance();
@@ -312,12 +316,15 @@ public class MasterContext {
                     }));
         }
         if (cancelJob) {
+            // We already added a terminal snapshot to the queue. There will be one more added in
+            // `requestTermination`, but we'll never get to execute that one because the execution
+            // will terminate after our terminal snapshot.
             if (!requestTermination(CANCEL_GRACEFUL)) {
                 throw new JetException("Cannot cancel " + jobIdString() + " and export to '" + name + "': " +
                         "already terminating in mode: " + requestedTerminationMode());
             }
         } else {
-            beginSnapshot(executionId);
+            tryBeginSnapshot();
         }
         return future;
     }
@@ -387,7 +394,7 @@ public class MasterContext {
             executionId = executionIdSupplier.apply(jobId);
 
             snapshotInProgress = false;
-            requestedSnapshotsQueue.clear();
+            assert snapshotQueue.isEmpty() : "snapshotQueue not empty";
             terminalSnapshotFuture = new CompletableFuture<>();
         }
 
@@ -582,7 +589,7 @@ public class MasterContext {
         invokeOnParticipants(operationCtor, completionCallback, executionInvocationCallback);
 
         if (isSnapshottingEnabled()) {
-            coordinationService.scheduleSnapshot(jobId, executionId);
+            coordinationService.scheduleSnapshot(this, executionId);
         }
     }
 
@@ -590,7 +597,7 @@ public class MasterContext {
         // this method can be called multiple times to handle the termination, it must
         // be safe against it (idempotent).
         if (mode.isWithTerminalSnapshot()) {
-            beginSnapshot(executionId);
+            tryBeginSnapshot();
         } else {
             if (executionInvocationCallback != null) {
                 executionInvocationCallback.cancelInvocations(mode);
@@ -598,17 +605,12 @@ public class MasterContext {
         }
     }
 
-    private void cancelExecutionInvocations(long jobId, long executionId, TerminationMode mode) {
-        nodeEngine.getExecutionService().execute(ExecutionService.ASYNC_EXECUTOR, () ->
-                invokeOnParticipants(plan -> new TerminateExecutionOperation(jobId, executionId, mode), null, null));
-    }
-
-    void beginSnapshot(long executionId) {
-        boolean isTerminal;
-        String snapshotName;
-        CompletableFuture<Void> future;
-        assertLockNotHeld();
+    void startScheduledSnapshot(long executionId) {
         synchronized (lock) {
+            if (jobStatus != RUNNING) {
+                logger.fine("Not beginning snapshot, " + jobIdString() + " is not RUNNING, but " + jobStatus);
+                return;
+            }
             if (this.executionId != executionId) {
                 // Current execution is completed and probably a new execution has started, but we don't
                 // cancel the scheduled snapshot from previous execution, so let's just ignore it.
@@ -616,39 +618,49 @@ public class MasterContext {
                         + ". Received execution ID: " + idToString(executionId));
                 return;
             }
+            snapshotQueue.add(tuple3(null, false, null));
+        }
+        tryBeginSnapshot();
+    }
 
+    private void cancelExecutionInvocations(long jobId, long executionId, TerminationMode mode) {
+        nodeEngine.getExecutionService().execute(ExecutionService.ASYNC_EXECUTOR, () ->
+                invokeOnParticipants(plan -> new TerminateExecutionOperation(jobId, executionId, mode), null, null));
+    }
+
+    private void tryBeginSnapshot() {
+        boolean isTerminal;
+        String snapshotName;
+        CompletableFuture<Void> future;
+        assertLockNotHeld();
+        synchronized (lock) {
             if (jobStatus != RUNNING) {
-                logger.fine("Not beginning snapshot, job is not RUNNING, but " + jobStatus);
+                logger.fine("Not beginning snapshot, " + jobIdString() + " is not RUNNING, but " + jobStatus);
                 return;
             }
-
             if (snapshotInProgress) {
                 logger.fine("Not beginning snapshot since one is already in progress " + jobIdString());
                 return;
             }
             if (terminalSnapshotFuture.isDone()) {
-                logger.fine("Not beginning snapshot since terminal snapshot is already completed");
+                logger.fine("Not beginning snapshot since terminal snapshot is already completed " + jobIdString());
+                return;
+            }
+
+            Tuple3<String, Boolean, CompletableFuture<Void>> requestedSnapshot = snapshotQueue.poll();
+            if (requestedSnapshot == null) {
                 return;
             }
             snapshotInProgress = true;
-            Tuple3<String, Boolean, CompletableFuture<Void>> requestedSnapshot = requestedSnapshotsQueue.poll();
-            if (requestedSnapshot != null) {
-                snapshotName = requestedSnapshot.f0();
-                isTerminal = requestedSnapshot.f1();
-                future = requestedSnapshot.f2();
-            } else {
-                isTerminal = false;
-                snapshotName = null;
-                future = null;
-            }
+            snapshotName = requestedSnapshot.f0();
+            isTerminal = requestedSnapshot.f1();
+            future = requestedSnapshot.f2();
             jobExecutionRecord.startNewSnapshot(snapshotName);
         }
 
         writeJobExecutionRecord(false);
         long newSnapshotId = jobExecutionRecord.ongoingSnapshotId();
-
         boolean isExport = snapshotName != null;
-
         String finalMapName = isExport ? exportedSnapshotMapName(snapshotName)
                 : snapshotDataMapName(jobId, jobExecutionRecord.ongoingDataMapIndex());
         if (isExport) {
@@ -661,8 +673,11 @@ public class MasterContext {
         Function<ExecutionPlan, Operation> factory =
                 plan -> new SnapshotOperation(jobId, executionId, newSnapshotId, finalMapName, isTerminal);
 
-        invokeOnParticipants(factory,
-                responses -> onSnapshotCompleted(responses, executionId, newSnapshotId, finalMapName, isTerminal, future),
+        // Need to take a copy of executionId: we don't cancel the scheduled task when the execution
+        // finalizes. If a new execution is started in the meantime, we'll use the execution ID to detect it.
+        long localExecutionId = executionId;
+        invokeOnParticipants(factory, responses -> onSnapshotCompleted(
+                        responses, localExecutionId, newSnapshotId, finalMapName, isExport, isTerminal, future),
                 null);
     }
 
@@ -671,6 +686,7 @@ public class MasterContext {
             long executionId,
             long snapshotId,
             String snapshotMapName,
+            boolean wasExport,
             boolean wasTerminal,
             @Nullable CompletableFuture<Void> future
     ) {
@@ -729,7 +745,6 @@ public class MasterContext {
             }
         }
 
-        Runnable nonSynchronizedAction = () -> { };
         synchronized (lock) {
             if (this.executionId != executionId) {
                 logger.fine("Not completing terminalSnapshotFuture on " + jobIdString() + ", new execution " +
@@ -742,16 +757,12 @@ public class MasterContext {
                 // after a terminal snapshot, no more snapshots are scheduled in this execution
                 boolean completedNow = terminalSnapshotFuture.complete(null);
                 assert completedNow : "terminalSnapshotFuture was already completed";
-            } else {
-                // schedule next snapshot after a delay or immediately, if it is requested
-                if (!requestedSnapshotsQueue.isEmpty()) {
-                    nonSynchronizedAction = () -> coordinationService.beginSnapshot(jobId, executionId);
-                } else {
-                    coordinationService.scheduleSnapshot(jobId, executionId);
-                }
+            } else if (!wasExport) {
+                // if this snapshot was an automatic snapshot, schedule the next one
+                coordinationService.scheduleSnapshot(this, executionId);
             }
         }
-        nonSynchronizedAction.run();
+        tryBeginSnapshot();
     }
 
     // Called as callback when all ExecuteOperation invocations are done
@@ -884,6 +895,13 @@ public class MasterContext {
             executionInvocationCallback = null;
             ActionAfterTerminate terminationModeAction = failure instanceof JobTerminateRequestedException
                     ? ((JobTerminateRequestedException) failure).mode().actionAfterTerminate() : null;
+            for (Tuple3<String, Boolean, CompletableFuture<Void>> snapshotTuple : snapshotQueue) {
+                if (snapshotTuple.f2() != null) {
+                    snapshotTuple.f2().completeExceptionally(
+                            new JetException("Execution completed before snapshot executed"));
+                }
+            }
+            snapshotQueue.clear();
 
             // if restart was requested, restart immediately
             if (terminationModeAction == RESTART) {
