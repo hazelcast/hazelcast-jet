@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
-import com.hazelcast.client.impl.protocol.codec.JetExportStateCodec;
+import com.hazelcast.client.impl.protocol.codec.JetExportSnapshotCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobConfigCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobStatusCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobSubmissionTimeCodec;
@@ -106,7 +106,7 @@ public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
 
     @Override
     public JobStateSnapshot cancelAndExportSnapshot(String name) {
-        ClientMessage request = JetExportStateCodec.encodeRequest(getId(), name, true);
+        ClientMessage request = JetExportSnapshotCodec.encodeRequest(getId(), name, true);
         try {
             new CancellableFuture<>(invocation(request, masterAddress()).invoke()).get();
         } catch (Exception e) {
@@ -117,7 +117,7 @@ public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
 
     @Override
     public JobStateSnapshot exportSnapshot(String name) {
-        ClientMessage request = JetExportStateCodec.encodeRequest(getId(), name, false);
+        ClientMessage request = JetExportSnapshotCodec.encodeRequest(getId(), name, false);
         try {
             new CancellableFuture<>(invocation(request, masterAddress()).invoke()).get();
         } catch (Exception e) {

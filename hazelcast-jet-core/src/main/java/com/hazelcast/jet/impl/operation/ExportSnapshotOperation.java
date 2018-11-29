@@ -26,15 +26,15 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 
-public class ExportStateOperation extends AbstractJobOperation {
+public class ExportSnapshotOperation extends AbstractJobOperation {
 
     private String name;
     private boolean cancelJob;
 
-    public ExportStateOperation() {
+    public ExportSnapshotOperation() {
     }
 
-    public ExportStateOperation(long jobId, String name, boolean cancelJob) {
+    public ExportSnapshotOperation(long jobId, String name, boolean cancelJob) {
         super(jobId);
         this.name = name;
         this.cancelJob = cancelJob;

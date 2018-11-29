@@ -29,7 +29,7 @@ import com.hazelcast.jet.impl.JobRepository.UpdateJobExecutionRecordEntryProcess
 import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.JobSummary;
 import com.hazelcast.jet.impl.operation.CompleteExecutionOperation;
-import com.hazelcast.jet.impl.operation.ExportStateOperation;
+import com.hazelcast.jet.impl.operation.ExportSnapshotOperation;
 import com.hazelcast.jet.impl.operation.GetJobConfigOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsByNameOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsOperation;
@@ -180,7 +180,7 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
                 case SNAPSHOT_STATS:
                     return new SnapshotStats();
                 case EXPORT_SNAPSHOT_OP:
-                    return new ExportStateOperation();
+                    return new ExportSnapshotOperation();
                 default:
                     throw new IllegalArgumentException("Unknown type id " + typeId);
             }

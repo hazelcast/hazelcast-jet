@@ -176,8 +176,8 @@ public class MasterContext {
      * a regular snapshot) or when a snapshot export is requested by the user.
      *
      * The tuple contains:<ul>
-     *     <li>{@code snapshotName}: user-specified name of the snapshot or null,
-     *         if no name is specified
+     *     <li>{@code snapshotMapName}: user-specified name of the snapshot or
+     *         null, if no name is specified
      *     <li>{@code isTerminal}: if true, job will be terminated after the
      *         snapshot
      *     <li>{@code future}: future, that will be completed when the snapshot
@@ -630,7 +630,7 @@ public class MasterContext {
 
     private void tryBeginSnapshot() {
         boolean isTerminal;
-        String snapshotName;
+        String snapshotMapName;
         CompletableFuture<Void> future;
         assertLockNotHeld();
         synchronized (lock) {
@@ -652,23 +652,23 @@ public class MasterContext {
                 return;
             }
             snapshotInProgress = true;
-            snapshotName = requestedSnapshot.f0();
+            snapshotMapName = requestedSnapshot.f0();
             isTerminal = requestedSnapshot.f1();
             future = requestedSnapshot.f2();
-            jobExecutionRecord.startNewSnapshot(snapshotName);
+            jobExecutionRecord.startNewSnapshot(snapshotMapName);
         }
 
         writeJobExecutionRecord(false);
         long newSnapshotId = jobExecutionRecord.ongoingSnapshotId();
-        boolean isExport = snapshotName != null;
-        String finalMapName = isExport ? exportedSnapshotMapName(snapshotName)
+        boolean isExport = snapshotMapName != null;
+        String finalMapName = isExport ? exportedSnapshotMapName(snapshotMapName)
                 : snapshotDataMapName(jobId, jobExecutionRecord.ongoingDataMapIndex());
         if (isExport) {
             nodeEngine.getHazelcastInstance().getMap(finalMapName).clear();
         }
         logger.info(String.format("Starting snapshot %d for %s", newSnapshotId, jobIdString())
                 + (isTerminal ? ", terminal" : "")
-                + (isExport ? ", exporting to '" + snapshotName + '\'' : ""));
+                + (isExport ? ", exporting to '" + snapshotMapName + '\'' : ""));
 
         Function<ExecutionPlan, Operation> factory =
                 plan -> new SnapshotOperation(jobId, executionId, newSnapshotId, finalMapName, isTerminal);
