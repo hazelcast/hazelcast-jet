@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
+import com.hazelcast.spi.exception.WrongTargetException;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
@@ -34,7 +35,7 @@ public class PrepareForPassiveClusterOperation extends AsyncOperation {
     @Override
     protected void doRun() {
         if (!getNodeEngine().getClusterService().isMaster()) {
-            return;
+            throw new WrongTargetException("I am not the master");
         }
         this.<JetService>getService()
                 .getJobCoordinationService()
