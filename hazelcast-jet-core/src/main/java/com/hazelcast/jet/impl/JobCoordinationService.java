@@ -179,7 +179,7 @@ public class JobCoordinationService {
     }
 
     public CompletableFuture<Void> prepareForPassiveClusterState() {
-        assertIsMaster("Cannot prepare for passive cluster state from a non-master node");
+        assertIsMaster("Cannot prepare for passive cluster state on a non-master node");
         synchronized (lock) {
             isClusterEnteringPassiveState = true;
             CompletableFuture[] futures = masterContexts

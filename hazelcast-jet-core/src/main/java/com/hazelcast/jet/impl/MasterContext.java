@@ -167,6 +167,8 @@ public class MasterContext {
      * A future (re)created when the job is started and completed when its
      * execution ends. Execution ending doesn't mean the job is done, it may
      * be just temporarily stopping due to suspension, job restarting, etc.
+     *
+     * <p>It's always completed normally, even if the execution fails.
      */
     @Nonnull
     private CompletableFuture<Void> executionCompletionFuture = completedFuture(null);
@@ -573,9 +575,8 @@ public class MasterContext {
                 responses -> onSnapshotCompleted(responses, executionId, newSnapshotId, isTerminal), null);
     }
 
-    private void onSnapshotCompleted(
-            Map<MemberInfo, Object> responses, long executionId, long snapshotId, boolean wasTerminal
-    ) {
+    private void onSnapshotCompleted(Map<MemberInfo, Object> responses, long executionId, long snapshotId,
+                                                  boolean wasTerminal) {
         // Note: this method can be called after finalizeJob() is called or even after new execution started.
         // We only wait for snapshot completion if the job completed with a terminal snapshot and the job
         // was successful.
@@ -674,7 +675,7 @@ public class MasterContext {
         // but we still handle it as if terminal snapshot was done. If there are
         // other exceptions, ignore this and handle the other exception.
         if (failures.stream().allMatch(entry -> entry.getValue() instanceof TerminatedWithSnapshotException)) {
-            assert opName.equals("Execution") : "opName is " + opName + ", expected 'Execution'";
+            assert opName.equals("Execution") : "opName is '" + opName + "', expected 'Execution'";
             logger.fine(opName + " of " + jobIdString() + " terminated after a terminal snapshot");
             TerminationMode mode = requestedTerminationMode;
             assert mode != null && mode.isWithTerminalSnapshot() : "mode=" + mode;
@@ -709,7 +710,7 @@ public class MasterContext {
             finalError = error;
         } else {
             logCannotComplete(error);
-            finalError = new IllegalStateException("Job coordination failed.");
+            finalError = new IllegalStateException("Job coordination failed");
         }
 
         Function<ExecutionPlan, Operation> operationCtor = plan ->
@@ -791,8 +792,8 @@ public class MasterContext {
                     }
                 };
             }
-            executionCompletionFuture.complete(null);
         }
+        executionCompletionFuture.complete(null);
         nonSynchronizedAction.run();
     }
 
