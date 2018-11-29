@@ -16,22 +16,30 @@
 
 package com.hazelcast.jet.impl;
 
-import javax.annotation.Nonnull;
-import java.io.Serializable;
+import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
-public class SnapshotValidationRecord implements Serializable {
+import javax.annotation.Nonnull;
+import java.io.IOException;
+
+public class SnapshotValidationRecord implements IdentifiedDataSerializable {
     public static final SnapshotValidationKey KEY = SnapshotValidationKey.KEY;
 
-    private final long snapshotId;
-    private final long numChunks;
-    private final long numBytes;
+    private long snapshotId;
+    private long numChunks;
+    private long numBytes;
 
-    private final long creationTime;
-    private final long jobId;
-    private final String jobName;
-    private final String dagJsonString;
+    private long creationTime;
+    private long jobId;
+    private String jobName;
+    private String dagJsonString;
 
-    public SnapshotValidationRecord(long snapshotId, long numChunks, long numBytes, long creationTime, long jobId,
+    public SnapshotValidationRecord() {
+    }
+
+    SnapshotValidationRecord(long snapshotId, long numChunks, long numBytes, long creationTime, long jobId,
                                     @Nonnull String jobName, @Nonnull String dagJsonString) {
         this.snapshotId = snapshotId;
         this.numChunks = numChunks;
@@ -68,6 +76,38 @@ public class SnapshotValidationRecord implements Serializable {
 
     public String dagJsonString() {
         return dagJsonString;
+    }
+
+    @Override
+    public int getFactoryId() {
+        return JetInitDataSerializerHook.FACTORY_ID;
+    }
+
+    @Override
+    public int getId() {
+        return JetInitDataSerializerHook.SNAPSHOT_VALIDATION_RECORD;
+    }
+
+    @Override
+    public void writeData(ObjectDataOutput out) throws IOException {
+        out.writeLong(snapshotId);
+        out.writeLong(numChunks);
+        out.writeLong(numBytes);
+        out.writeLong(creationTime);
+        out.writeLong(jobId);
+        out.writeUTF(jobName);
+        out.writeUTF(dagJsonString);
+    }
+
+    @Override
+    public void readData(ObjectDataInput in) throws IOException {
+        snapshotId = in.readLong();
+        numChunks = in.readLong();
+        numBytes = in.readLong();
+        creationTime = in.readLong();
+        jobId = in.readLong();
+        jobName = in.readUTF();
+        dagJsonString = in.readUTF();
     }
 
     enum SnapshotValidationKey {
