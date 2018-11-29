@@ -33,21 +33,12 @@ public final class JobStateSnapshot {
     private final String name;
     private final SnapshotValidationRecord snapshotValidationRecord;
 
-    JobStateSnapshot(@Nonnull JetInstance instance, @Nonnull String name) {
+    private JobStateSnapshot(
+            @Nonnull JetInstance instance, @Nonnull String name, @Nonnull SnapshotValidationRecord record
+    ) {
         this.instance = instance;
         this.name = name;
-
-        IMapJet<Object, Object> map = instance.getMap(exportedSnapshotMapName(name));
-        this.snapshotValidationRecord = (SnapshotValidationRecord) map.get(SnapshotValidationRecord.KEY);
-        if (snapshotValidationRecord == null) {
-            // By "touching" the map we've created it. There's no way to check for existence of IMap. If the
-            // map is otherwise empty, let's destroy it.
-            if (map.isEmpty()) {
-                map.destroy();
-            }
-            throw new JetException("The underlying distributed object doesn't exist or it's not an exported state " +
-                    "snapshot");
-        }
+        this.snapshotValidationRecord = record;
     }
 
     /**
@@ -105,5 +96,21 @@ public final class JobStateSnapshot {
      */
     public void destroy() {
         instance.getMap(exportedSnapshotMapName(name)).destroy();
+    }
+
+    @Nullable
+    static JobStateSnapshot createJobStateSnapshot(@Nonnull JetInstance instance, @Nonnull String name) {
+        IMapJet<Object, Object> map = instance.getMap(exportedSnapshotMapName(name));
+        Object o = map.get(SnapshotValidationRecord.KEY);
+        if (o instanceof SnapshotValidationRecord) {
+            return new JobStateSnapshot(instance, name, (SnapshotValidationRecord) o);
+        } else {
+            // By "touching" the map we've created it. There's no way to check for existence of IMap. If the
+            // map is otherwise empty, let's destroy it.
+            if (map.isEmpty()) {
+                map.destroy();
+            }
+            return null;
+        }
     }
 }

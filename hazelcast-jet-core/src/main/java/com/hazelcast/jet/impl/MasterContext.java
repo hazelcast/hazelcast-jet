@@ -90,6 +90,7 @@ import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.JobRepository.EXPORTED_SNAPSHOTS_PREFIX;
+import static com.hazelcast.jet.impl.JobRepository.exportedSnapshotMapName;
 import static com.hazelcast.jet.impl.JobRepository.snapshotDataMapName;
 import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.RESTART;
 import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.SUSPEND;
@@ -174,8 +175,8 @@ public class MasterContext {
      * If the queue contains an item, the next snapshot will be started right
      * after the current one or immediately, if there's no snapshot in
      * progress. The tuple contains:<ul>
-     *     <li>{@code mapName}: user-requested map name to export the snapshot
-     *         to or null, if default map is to be used
+     *     <li>{@code snapshotName}: name of the snapshot to export the snapshot
+     *         to or null, if no name is specified
      *     <li>{@code isTerminal}: if true, job will be terminated after the
      *         snapshot
      *     <li>{@code future}: future, that will be completed when snapshot is
@@ -604,7 +605,7 @@ public class MasterContext {
 
     void beginSnapshot(long executionId) {
         boolean isTerminal;
-        String mapName;
+        String snapshotName;
         CompletableFuture<Void> future;
         assertLockNotHeld();
         synchronized (lock) {
@@ -632,30 +633,31 @@ public class MasterContext {
             snapshotInProgress = true;
             Tuple3<String, Boolean, CompletableFuture<Void>> requestedSnapshot = requestedSnapshotsQueue.poll();
             if (requestedSnapshot != null) {
-                mapName = requestedSnapshot.f0();
+                snapshotName = requestedSnapshot.f0();
                 isTerminal = requestedSnapshot.f1();
                 future = requestedSnapshot.f2();
             } else {
                 isTerminal = false;
-                mapName = null;
+                snapshotName = null;
                 future = null;
             }
-            jobExecutionRecord.startNewSnapshot(mapName);
+            jobExecutionRecord.startNewSnapshot(snapshotName);
         }
 
         writeJobExecutionRecord(false);
         long newSnapshotId = jobExecutionRecord.ongoingSnapshotId();
 
-        boolean isExport = mapName != null;
+        boolean isExport = snapshotName != null;
+
+        String finalMapName = isExport ? exportedSnapshotMapName(snapshotName)
+                : snapshotDataMapName(jobId, jobExecutionRecord.ongoingDataMapIndex());
         if (isExport) {
-            mapName = EXPORTED_SNAPSHOTS_PREFIX + mapName;
-            nodeEngine.getHazelcastInstance().getMap(mapName).clear();
+            nodeEngine.getHazelcastInstance().getMap(finalMapName).clear();
         }
         logger.info(String.format("Starting snapshot %d for %s", newSnapshotId, jobIdString())
                 + (isTerminal ? ", terminal" : "")
-                + (isExport ? ", exporting to '" + mapName + '\'' : ""));
-        String finalMapName = isExport ? mapName
-                : snapshotDataMapName(jobId, jobExecutionRecord.ongoingDataMapIndex());
+                + (isExport ? ", exporting to '" + snapshotName + '\'' : ""));
+
         Function<ExecutionPlan, Operation> factory =
                 plan -> new SnapshotOperation(jobId, executionId, newSnapshotId, finalMapName, isTerminal);
 

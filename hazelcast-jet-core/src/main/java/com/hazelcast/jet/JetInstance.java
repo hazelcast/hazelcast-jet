@@ -24,7 +24,6 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.function.DistributedBiFunction;
-import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.map.impl.MapService;
@@ -33,7 +32,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
+import static com.hazelcast.jet.JobStateSnapshot.createJobStateSnapshot;
+import static com.hazelcast.jet.impl.JobRepository.EXPORTED_SNAPSHOTS_PREFIX;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -142,26 +144,27 @@ public interface JetInstance {
 
     /**
      * Returns the {@link JobStateSnapshot} object representing an exported
-     * snapshot with the given name.
-     *
-     * @param name exported state snapshot name
-     * @return IMap instance with the data
+     * snapshot with the given name. Returns {@code null} if no such snapshots exists.
      */
+    @Nullable
     default JobStateSnapshot getJobStateSnapshot(@Nonnull String name) {
-        return new JobStateSnapshot(this, name);
+        return createJobStateSnapshot(this, name);
     }
 
     /**
      * Returns the collection of exported job state snapshots stored in the
      * cluster.
      */
+    @Nonnull
     default Collection<JobStateSnapshot> getJobStateSnapshots() {
         return getHazelcastInstance().getDistributedObjects().stream()
                 .filter(o -> o.getServiceName().equals(MapService.SERVICE_NAME))
                 .map(DistributedObject::getName)
-                .filter(n -> n.startsWith(JobRepository.EXPORTED_SNAPSHOTS_PREFIX))
-                .map(n -> new JobStateSnapshot(this, n.substring(JobRepository.EXPORTED_SNAPSHOTS_PREFIX.length())))
+                .filter(n -> n.startsWith(EXPORTED_SNAPSHOTS_PREFIX))
+                .map(n -> createJobStateSnapshot(this, n.substring(EXPORTED_SNAPSHOTS_PREFIX.length())))
+                .filter(Objects::nonNull)
                 .collect(toList());
+
     }
 
     /**

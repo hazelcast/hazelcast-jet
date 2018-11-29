@@ -153,6 +153,12 @@ public class ExportSnapshotTest extends JetTestSupport {
     }
 
     @Test
+    public void when_nonExistentSnapshot() {
+        JetInstance instance = createJetMember();
+        assertNull("snapshot should be null" , instance.getJobStateSnapshot("state"));
+    }
+
+    @Test
     public void test_exportStateWhileSuspended() {
         test_exportStateWhileSuspended(false);
     }
