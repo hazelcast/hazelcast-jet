@@ -521,44 +521,14 @@ public class JobCoordinationService {
                 RETRY_DELAY_IN_MILLIS, MILLISECONDS);
     }
 
-    void scheduleSnapshot(long jobId, long executionId) {
-        MasterContext masterContext = masterContexts.get(jobId);
-        if (masterContext == null) {
-            logger.warning("MasterContext not found to schedule snapshot of " + idToString(jobId));
-            return;
-        }
-        long snapshotInterval = masterContext.jobConfig().getSnapshotIntervalMillis();
+    void scheduleSnapshot(MasterContext mc, long executionId) {
+        long snapshotInterval = mc.jobConfig().getSnapshotIntervalMillis();
         InternalExecutionService executionService = nodeEngine.getExecutionService();
         if (logger.isFineEnabled()) {
-            logger.fine(masterContext.jobIdString() + " snapshot is scheduled in " + snapshotInterval + "ms");
+            logger.fine(mc.jobIdString() + " snapshot is scheduled in " + snapshotInterval + "ms");
         }
-        executionService.schedule(COORDINATOR_EXECUTOR_NAME, () -> beginSnapshot(jobId, executionId),
+        executionService.schedule(COORDINATOR_EXECUTOR_NAME, () -> mc.startScheduledSnapshot(executionId),
                 snapshotInterval, MILLISECONDS);
-    }
-
-    void beginSnapshot(long jobId, long executionId) {
-        MasterContext masterContext = masterContexts.get(jobId);
-        if (masterContext == null) {
-            logger.warning("MasterContext not found to schedule snapshot of " + idToString(jobId));
-            return;
-        }
-        if (masterContext.completionFuture().isDone() || masterContext.isCancelled()
-                || masterContext.jobStatus() != RUNNING) {
-            logger.fine("Not starting snapshot since " + masterContext.jobIdString() + " is done.");
-            return;
-        }
-
-        if (!isMaster()) {
-            logger.warning("Not starting snapshot, not a master, master is "
-                    + nodeEngine.getClusterService().getMasterAddress());
-            return;
-        }
-        if (!nodeEngine.isRunning()) {
-            logger.warning("Not starting snapshot, node engine is not running");
-            return;
-        }
-
-        masterContext.beginSnapshot(executionId);
     }
 
     /**
@@ -573,8 +543,6 @@ public class JobCoordinationService {
         }
         tryStartJob(masterContext);
     }
-
-
 
     private void scheduleScaleUp(long delay) {
         int counter = scaleUpScheduledCount.incrementAndGet();
