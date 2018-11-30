@@ -433,7 +433,7 @@ public class JobCoordinationService {
         }
         InternalPartitionServiceImpl partitionService = getInternalPartitionService();
         return partitionService.getPartitionStateManager().isInitialized()
-                && partitionService.isMigrationAllowed()
+                && partitionService.areMigrationTasksAllowed()
                 && !partitionService.hasOnGoingMigrationLocal();
     }
 

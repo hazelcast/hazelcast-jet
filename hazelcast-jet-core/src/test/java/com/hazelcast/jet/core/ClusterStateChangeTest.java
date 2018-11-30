@@ -66,6 +66,7 @@ public class ClusterStateChangeTest extends JetTestSupport {
     @Test(expected = IllegalStateException.class)
     public void when_clusterPassive_then_jobSubmissionFails() {
         cluster.changeClusterState(PASSIVE);
+        assertEquals("Cluster state", PASSIVE, cluster.getClusterState());
         jet.newJob(dag);
     }
 
@@ -80,7 +81,8 @@ public class ClusterStateChangeTest extends JetTestSupport {
 
         // Then
         assertEquals("Cluster state", PASSIVE, cluster.getClusterState());
-        assertTrue("Processors should get closed", MockPMS.closeCalled.get());
+        assertTrue("ProcessorMetaSupplier should get closed", MockPMS.closeCalled.get());
+        assertEquals("ProcessorSupplier should get closed on each member", NODE_COUNT, MockPS.closeCount.get());
         assertEquals("Job status", NOT_RUNNING, job.getStatus());
     }
 
@@ -92,6 +94,7 @@ public class ClusterStateChangeTest extends JetTestSupport {
 
         // When
         cluster.changeClusterState(PASSIVE);
+        assertEquals("Cluster state", PASSIVE, cluster.getClusterState());
         TestProcessors.reset(TOTAL_PARALLELISM);
         cluster.changeClusterState(ACTIVE);
 
