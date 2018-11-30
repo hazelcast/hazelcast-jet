@@ -26,7 +26,7 @@ import com.hazelcast.jet.JobStateSnapshot;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.TestProcessors.DummyStatefulP;
-import com.hazelcast.jet.core.TestProcessors.StuckProcessor;
+import com.hazelcast.jet.core.TestProcessors.NoOutputSourceP;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl.SnapshotDataKey;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
@@ -81,7 +81,7 @@ public class ExportSnapshotTest extends JetTestSupport {
         JetInstance client = fromClient ? createJetClient() : instance;
 
         DAG dag = new DAG();
-        dag.newVertex("v", () -> new StuckProcessor());
+        dag.newVertex("v", () -> new NoOutputSourceP());
 
         Job job = client.newJob(dag, new JobConfig().setProcessingGuarantee(EXACTLY_ONCE).setSnapshotIntervalMillis(1));
         assertTrueEventually(() -> assertTrue(BlockingMapStore.wasBlocked));
@@ -102,7 +102,7 @@ public class ExportSnapshotTest extends JetTestSupport {
         JetInstance client = fromClient ? createJetClient() : instance;
 
         DAG dag = new DAG();
-        dag.newVertex("v", () -> new StuckProcessor());
+        dag.newVertex("v", () -> new NoOutputSourceP());
 
         Job job = client.newJob(dag, new JobConfig().setProcessingGuarantee(EXACTLY_ONCE).setSnapshotIntervalMillis(1));
         assertJobStatusEventually(job, RUNNING);
@@ -160,7 +160,7 @@ public class ExportSnapshotTest extends JetTestSupport {
         // When
         stateMap.put("fooKey", "bar");
         DAG dag = new DAG();
-        dag.newVertex("v", () -> new StuckProcessor());
+        dag.newVertex("v", () -> new NoOutputSourceP());
         Job job = client.newJob(dag);
         assertJobStatusEventually(job, RUNNING);
         job.exportSnapshot("state");
@@ -190,7 +190,7 @@ public class ExportSnapshotTest extends JetTestSupport {
         JetInstance instance = createJetMember();
         JetInstance client = fromClient ? createJetClient() : instance;
         DAG dag = new DAG();
-        dag.newVertex("v", () -> new StuckProcessor());
+        dag.newVertex("v", () -> new NoOutputSourceP());
         Job job = client.newJob(dag, new JobConfig().setSnapshotIntervalMillis(10).setProcessingGuarantee(EXACTLY_ONCE));
         JobRepository jr = new JobRepository(client);
         assertJobStatusEventually(job, RUNNING);
@@ -243,7 +243,7 @@ public class ExportSnapshotTest extends JetTestSupport {
     @Test
     public void when_snapshotValidationFails_then_snapshotNotUsed() {
         DAG dag = new DAG();
-        dag.newVertex("v", () -> new StuckProcessor());
+        dag.newVertex("v", () -> new NoOutputSourceP());
         JetInstance instance = createJetMember();
         JetInstance client = fromClient ? createJetClient() : instance;
         Job job = client.newJob(dag);
@@ -260,7 +260,7 @@ public class ExportSnapshotTest extends JetTestSupport {
     @Test
     public void when_entryWithDifferentSnapshotIdFound_then_fallbackValidationUsed() {
         DAG dag = new DAG();
-        dag.newVertex("v", () -> new StuckProcessor());
+        dag.newVertex("v", () -> new NoOutputSourceP());
         JetInstance instance = createJetMember();
         JetInstance client = fromClient ? createJetClient() : instance;
         Job job = client.newJob(dag);

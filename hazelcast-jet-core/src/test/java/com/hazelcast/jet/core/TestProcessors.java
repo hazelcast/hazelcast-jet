@@ -65,9 +65,10 @@ public final class TestProcessors {
         MockP.initCount.set(0);
         MockP.closeCount.set(0);
 
-        StuckProcessor.proceedLatch = new CountDownLatch(1);
-        StuckProcessor.executionStarted = new CountDownLatch(totalParallelism);
-        StuckProcessor.initCount.set(0);
+        NoOutputSourceP.proceedLatch = new CountDownLatch(1);
+        NoOutputSourceP.executionStarted = new CountDownLatch(totalParallelism);
+        NoOutputSourceP.initCount.set(0);
+        NoOutputSourceP.failure = null;
 
         DummyStatefulP.parallelism = totalParallelism;
         DummyStatefulP.wasRestored = true;
@@ -80,19 +81,25 @@ public final class TestProcessors {
         }
     }
 
-    public static final class StuckProcessor implements Processor {
+    /**
+     * A source processor (stream or batch) that outputs no items and allows to
+     * externally control when and whether to complete or fail.
+     */
+    public static final class NoOutputSourceP implements Processor {
         public static volatile CountDownLatch executionStarted;
         public static volatile CountDownLatch proceedLatch;
+        public static volatile RuntimeException failure;
         public static final AtomicInteger initCount = new AtomicInteger();
 
         // how long time to wait during calls to complete()
         private final long timeoutMillis;
+        private boolean executionStartCountedDown;
 
-        public StuckProcessor() {
+        public NoOutputSourceP() {
             this(1);
         }
 
-        public StuckProcessor(long timeoutMillis) {
+        public NoOutputSourceP(long timeoutMillis) {
             this.timeoutMillis = timeoutMillis;
         }
 
@@ -103,22 +110,18 @@ public final class TestProcessors {
 
         @Override
         public boolean complete() {
-            executionStarted.countDown();
+            if (!executionStartCountedDown) {
+                executionStarted.countDown();
+                executionStartCountedDown = true;
+            }
             try {
+                if (failure != null) {
+                    throw failure;
+                }
                 return proceedLatch.await(timeoutMillis, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
                 return false;
             }
-        }
-    }
-
-    /**
-     * A processor that emits nothing and never completes.
-     */
-    public static final class StuckForeverSourceP implements Processor {
-        @Override
-        public boolean complete() {
-            return false;
         }
     }
 

@@ -20,7 +20,7 @@ import com.hazelcast.core.Member;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.core.TestProcessors.StuckForeverSourceP;
+import com.hazelcast.jet.core.TestProcessors.NoOutputSourceP;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -49,7 +49,7 @@ public class Job_StaleInstanceTest {
         instanceFactory = new JetTestInstanceFactory();
         JetInstance instance = instanceFactory.newMember();
         DAG dag = new DAG();
-        dag.newVertex("v", StuckForeverSourceP::new);
+        dag.newVertex("v", () -> new NoOutputSourceP());
 
         client = instanceFactory.newClient();
         job = client.newJob(dag);
@@ -74,6 +74,7 @@ public class Job_StaleInstanceTest {
 
     @AfterClass
     public static void afterClass() {
+        TestProcessors.reset(1);
         instanceFactory.shutdownAll();
     }
 

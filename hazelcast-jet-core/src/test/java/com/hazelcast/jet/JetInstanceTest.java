@@ -24,7 +24,7 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TestProcessors;
-import com.hazelcast.jet.core.TestProcessors.StuckProcessor;
+import com.hazelcast.jet.core.TestProcessors.NoOutputSourceP;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.After;
@@ -117,7 +117,7 @@ public class JetInstanceTest extends JetTestSupport {
     public void smokeTest_exportedStateManagement() {
         JetInstance instance = Jet.newJetInstance();
         DAG dag = new DAG();
-        dag.newVertex("p", () -> new StuckProcessor());
+        dag.newVertex("p", () -> new NoOutputSourceP());
         Job job = instance.newJob(dag);
         assertJobStatusEventually(job, RUNNING);
         JobStateSnapshot state1 = job.exportSnapshot("state1");
