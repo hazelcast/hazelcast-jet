@@ -198,6 +198,12 @@ public final class Util {
         return true;
     }
 
+    public static boolean existsDistributedObject(NodeEngine nodeEngine, String serviceName, String objectName) {
+        return nodeEngine.getProxyService()
+                  .getDistributedObjectNames(serviceName)
+                  .contains(objectName);
+    }
+
     public interface RunnableExc {
         void run() throws Exception;
     }

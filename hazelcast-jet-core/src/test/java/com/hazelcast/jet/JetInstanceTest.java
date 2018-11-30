@@ -44,6 +44,7 @@ import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 @Category(NightlyTest.class)
 @RunWith(HazelcastSerialClassRunner.class)
@@ -114,24 +115,36 @@ public class JetInstanceTest extends JetTestSupport {
     }
 
     @Test
-    public void smokeTest_exportedStateManagement() {
+    public void smokeTest_exportedStateManagement_member() {
+        smokeTest_exportedStateManagement(false);
+    }
+
+    @Test
+    public void smokeTest_exportedStateManagement_client() {
+        smokeTest_exportedStateManagement(true);
+    }
+
+    private void smokeTest_exportedStateManagement(boolean fromClient) {
         JetInstance instance = Jet.newJetInstance();
+        JetInstance client = fromClient ? Jet.newJetClient() : instance;
         DAG dag = new DAG();
         dag.newVertex("p", () -> new NoOutputSourceP());
-        Job job = instance.newJob(dag);
+        Job job = client.newJob(dag);
         assertJobStatusEventually(job, RUNNING);
         JobStateSnapshot state1 = job.exportSnapshot("state1");
-        instance.getHazelcastInstance().getDistributedObjects().forEach(System.out::println);
-        assertEquals(singleton("state1"), getExportedStateNames(instance));
+        client.getHazelcastInstance().getDistributedObjects().forEach(System.out::println);
+        assertEquals(singleton("state1"), getExportedStateNames(client));
         JobStateSnapshot state2 = job.exportSnapshot("state2");
-        assertEquals(new HashSet<>(asList("state1", "state2")), getExportedStateNames(instance));
+        assertEquals(new HashSet<>(asList("state1", "state2")), getExportedStateNames(client));
         state1.destroy();
-        assertEquals(singleton("state2"), getExportedStateNames(instance));
+        assertEquals(singleton("state2"), getExportedStateNames(client));
         job.cancel();
         assertJobStatusEventually(job, JobStatus.COMPLETED);
-        assertEquals(singleton("state2"), getExportedStateNames(instance));
+        assertEquals(singleton("state2"), getExportedStateNames(client));
         state2.destroy();
-        assertEquals(emptySet(), getExportedStateNames(instance));
+        assertEquals(emptySet(), getExportedStateNames(client));
+        assertNull("state1 snapshot returned", client.getJobStateSnapshot("state1"));
+        assertNull("state2 snapshot returned", client.getJobStateSnapshot("state2"));
     }
 
     private Set<String> getExportedStateNames(JetInstance instance) {

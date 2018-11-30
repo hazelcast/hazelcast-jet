@@ -16,7 +16,9 @@
 
 package com.hazelcast.jet;
 
+import com.hazelcast.jet.impl.AbstractJetInstance;
 import com.hazelcast.jet.impl.SnapshotValidationRecord;
+import com.hazelcast.map.impl.MapService;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -100,16 +102,15 @@ public final class JobStateSnapshot {
 
     @Nullable
     static JobStateSnapshot createJobStateSnapshot(@Nonnull JetInstance instance, @Nonnull String name) {
-        IMapJet<Object, Object> map = instance.getMap(exportedSnapshotMapName(name));
+        String mapName = exportedSnapshotMapName(name);
+        if (!((AbstractJetInstance) instance).existsDistributedObject(MapService.SERVICE_NAME, mapName)) {
+            return null;
+        }
+        IMapJet<Object, Object> map = instance.getMap(mapName);
         Object o = map.get(SnapshotValidationRecord.KEY);
         if (o instanceof SnapshotValidationRecord) {
             return new JobStateSnapshot(instance, name, (SnapshotValidationRecord) o);
         } else {
-            // By "touching" the map we've created it. There's no way to check for existence of IMap. If the
-            // map is otherwise empty, let's destroy it.
-            if (map.isEmpty()) {
-                map.destroy();
-            }
             return null;
         }
     }

@@ -24,6 +24,8 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.impl.operation.GetJobIdsByNameOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsOperation;
+import com.hazelcast.jet.impl.util.Util;
+import com.hazelcast.map.impl.MapService;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
@@ -109,5 +111,22 @@ public class JetInstanceImpl extends AbstractJetInstance {
         JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
         jetService.shutDownJobs();
         super.shutdown();
+    }
+
+    /**
+     * Return if this member knows of the given object name.
+     *
+     * Note:
+     * - this member might not know it exists, if the proxy creation operation went wrong
+     * - this member might not know it was destroyed, if the destroy operation went wrong
+     * - it might be racy w.r.t. other create/destroy operations
+     *
+     * @param serviceName for example, {@link MapService#SERVICE_NAME}
+     * @param objectName  object name
+     * @return true, if this member knows of the object
+     */
+    @Override
+    public boolean existsDistributedObject(@Nonnull String serviceName, @Nonnull String objectName) {
+        return Util.existsDistributedObject(nodeEngine, serviceName, objectName);
     }
 }

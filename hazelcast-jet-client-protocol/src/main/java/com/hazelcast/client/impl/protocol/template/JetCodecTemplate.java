@@ -59,4 +59,7 @@ public interface JetCodecTemplate {
 
     @Request(id = 12, retryable = true, response = ResponseMessageConst.DATA)
     Object getJobSummaryList();
+
+    @Request(id = 13, retryable = true, response = ResponseMessageConst.BOOLEAN)
+    Object existsDistributedObject(String serviceName, String objectName);
 }

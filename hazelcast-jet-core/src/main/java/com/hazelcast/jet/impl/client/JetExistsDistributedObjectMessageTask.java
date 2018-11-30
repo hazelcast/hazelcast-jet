@@ -17,27 +17,33 @@
 package com.hazelcast.jet.impl.client;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
-import com.hazelcast.client.impl.protocol.codec.JetExportSnapshotCodec;
+import com.hazelcast.client.impl.protocol.codec.JetExistsDistributedObjectCodec;
 import com.hazelcast.instance.Node;
-import com.hazelcast.jet.impl.operation.ExportSnapshotOperation;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.nio.Connection;
 import com.hazelcast.spi.Operation;
 
-public class JetExportSnapshotMessageTask extends AbstractJetMessageTask<JetExportSnapshotCodec.RequestParameters> {
+public class JetExistsDistributedObjectMessageTask
+        extends AbstractJetMessageTask<JetExistsDistributedObjectCodec.RequestParameters> {
 
-    protected JetExportSnapshotMessageTask(ClientMessage clientMessage, Node node, Connection connection) {
-        super(clientMessage, node, connection, JetExportSnapshotCodec::decodeRequest,
-                o -> JetExportSnapshotCodec.encodeResponse());
+    protected JetExistsDistributedObjectMessageTask(ClientMessage clientMessage, Node node, Connection connection) {
+        super(clientMessage, node, connection, JetExistsDistributedObjectCodec::decodeRequest,
+                o -> JetExistsDistributedObjectCodec.encodeResponse((Boolean) o));
+    }
+
+    @Override
+    protected void processMessage() {
+        sendResponse(Util.existsDistributedObject(nodeEngine, parameters.serviceName, parameters.objectName));
     }
 
     @Override
     protected Operation prepareOperation() {
-        return new ExportSnapshotOperation(parameters.jobId, parameters.name, parameters.cancelJob);
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public String getMethodName() {
-        return "exportSnapshot";
+        return "existsDistributedObject";
     }
 
     @Override
