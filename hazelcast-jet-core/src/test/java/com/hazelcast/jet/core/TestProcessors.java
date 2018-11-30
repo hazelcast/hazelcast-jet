@@ -68,7 +68,7 @@ public final class TestProcessors {
         NoOutputSourceP.proceedLatch = new CountDownLatch(1);
         NoOutputSourceP.executionStarted = new CountDownLatch(totalParallelism);
         NoOutputSourceP.initCount.set(0);
-        NoOutputSourceP.failure = null;
+        NoOutputSourceP.failure.set(null);
 
         DummyStatefulP.parallelism = totalParallelism;
         DummyStatefulP.wasRestored = true;
@@ -88,7 +88,7 @@ public final class TestProcessors {
     public static final class NoOutputSourceP implements Processor {
         public static volatile CountDownLatch executionStarted;
         public static volatile CountDownLatch proceedLatch;
-        public static volatile RuntimeException failure;
+        public static final AtomicReference<RuntimeException> failure = new AtomicReference<>();
         public static final AtomicInteger initCount = new AtomicInteger();
 
         // how long time to wait during calls to complete()
@@ -115,8 +115,9 @@ public final class TestProcessors {
                 executionStartCountedDown = true;
             }
             try {
-                if (failure != null) {
-                    throw failure;
+                RuntimeException localFailure = failure.getAndUpdate(e -> null);
+                if (localFailure != null) {
+                    throw localFailure;
                 }
                 return proceedLatch.await(timeoutMillis, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
