@@ -32,8 +32,6 @@ public class JetNodeContext extends DefaultNodeContext {
             "com.hazelcast.jet.impl.JetNodeExtension"
     ));
 
-    private static final String NODE_EXTENSION_FACTORY_ID = "com.hazelcast.instance.NodeExtension";
-
     @Override
     public NodeExtension createNodeExtension(Node node) {
         return NodeExtensionFactory.create(node, JET_EXTENSION_PRIORITY_LIST);
