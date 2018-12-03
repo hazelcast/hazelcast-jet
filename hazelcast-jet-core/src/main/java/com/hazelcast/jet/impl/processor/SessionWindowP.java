@@ -279,6 +279,19 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
     }
 
     private A resolveAcc(Windows<A> w, K key, long timestamp) {
+        /*
+            If two sessions "touch", we merge them. That is when `window1.end ==
+            window2.start`. Reason: otherwise we'd depend on the order of input in
+            edge case. Mathematically, there's no item that will go to both sessions,
+            so they don't overlap.
+
+            Example: timeout=2. If input is: `1, wm(3), 3`, the output will be two
+            sessions: the event 1 creates a session (1, 3) which can be emitted at
+            wm(3). But if input is: `1, 3, wm(3)`, output would be 1 session (1, 5),
+            if we merge "touching" sessions. In neither case item 3 is late. The
+            wm(3) can come at any time depending on exact order in which other
+            partitions are processed and when the wm is coalesced.
+        */
         long eventEnd = timestamp + sessionTimeout;
         int i = 0;
         for (; i < w.size && w.starts[i] < eventEnd; i++) {
