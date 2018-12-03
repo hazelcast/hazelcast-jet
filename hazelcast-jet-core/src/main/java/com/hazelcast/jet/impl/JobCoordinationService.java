@@ -68,7 +68,6 @@ import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 import static com.hazelcast.util.executor.ExecutorType.CACHED;
 import static java.util.Comparator.comparing;
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
@@ -218,14 +217,14 @@ public class JobCoordinationService {
         throw new JobNotFoundException(jobId);
     }
 
-    public CompletableFuture<Void> terminateJob(long jobId, TerminationMode terminationMode) {
+    public void terminateJob(long jobId, TerminationMode terminationMode) {
         assertIsMaster("Cannot " + terminationMode + " job " + idToString(jobId) + " from non-master node");
 
         JobResult jobResult = jobRepository.getJobResult(jobId);
         if (jobResult != null) {
             if (terminationMode == CANCEL) {
                 logger.fine("Ignoring cancellation of a completed job " + idToString(jobId));
-                return completedFuture(null);
+                return;
             }
             throw new IllegalStateException("Cannot " + terminationMode + " job " + idToString(jobId)
                     + " because it already has a result: " + jobResult);
@@ -254,16 +253,11 @@ public class JobCoordinationService {
             throw new IllegalStateException("Cannot " + terminationMode + ", job status is " + jobStatus
                     + ", should be " + RUNNING);
         }
-        if (masterContext.requestTermination(terminationMode)) {
-            return masterContext.executionCompletionFuture();
+
+        String terminationResult = masterContext.requestTermination(terminationMode).f2();
+        if (terminationResult != null) {
+            throw new IllegalStateException("Cannot " + terminationMode + ": " + terminationResult);
         }
-        TerminationMode mcTerminationMode = masterContext.requestedTerminationMode();
-        // ignore double cancellation
-        if (terminationMode == CANCEL && mcTerminationMode == CANCEL) {
-            return completedFuture(null);
-        }
-        throw new IllegalStateException("Cannot " + terminationMode + ", job is already terminating in mode: "
-                + mcTerminationMode);
     }
 
     public Set<Long> getAllJobIds() {

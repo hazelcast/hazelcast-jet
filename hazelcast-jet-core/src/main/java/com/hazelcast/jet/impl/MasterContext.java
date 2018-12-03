@@ -29,6 +29,7 @@ import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.impl.JobExecutionRecord.SnapshotStats;
 import com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate;
 import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
@@ -79,6 +80,7 @@ import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.STARTING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
+import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.RESTART;
 import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.SUSPEND;
@@ -171,14 +173,14 @@ public class MasterContext {
      * <p>It's always completed normally, even if the execution fails.
      */
     @Nonnull
-    private CompletableFuture<Void> executionCompletionFuture = completedFuture(null);
+    private volatile CompletableFuture<Void> executionCompletionFuture = completedFuture(null);
 
     /**
      * A future (re)created when the job is started and completed when terminal
      * snapshot is completed (successfully or not).
      */
     @Nonnull
-    private CompletableFuture<Void> terminalSnapshotFuture = completedFuture(null);
+    private volatile CompletableFuture<Void> terminalSnapshotFuture = completedFuture(null);
 
     MasterContext(NodeEngineImpl nodeEngine, JobCoordinationService coordinationService, @Nonnull JobRecord jobRecord,
                   @Nonnull JobExecutionRecord jobExecutionRecord) {
@@ -224,12 +226,19 @@ public class MasterContext {
     }
 
     /**
-     * {@code true} return value means that this request caused the job to
-     * terminate.
+     * Returns a tuple of:<ul>
+     *     <li>a future that will be completed when the execution completes (or
+     *          a completed future, if execution is not RUNNING or STARTING)
+     *     <li>a boolean to tell whether the execution was terminated by this
+     *          call
+     *     <li>a string with message why this call did nothing
+     * </ul>
      */
-    boolean requestTermination(TerminationMode mode) {
+    @Nonnull
+    Tuple3<CompletableFuture<Void>, Boolean, String> requestTermination(TerminationMode mode) {
         JobStatus localStatus;
         assertLockNotHeld();
+        Tuple3<CompletableFuture<Void>, Boolean, String> result;
         synchronized (lock) {
             if (!isSnapshottingEnabled()) {
                 // switch graceful method to forceful if we don't do snapshots
@@ -239,10 +248,13 @@ public class MasterContext {
             localStatus = jobStatus();
             if (localStatus == SUSPENDED && mode != CANCEL) {
                 // if suspended, we can only cancel the job. Other terminations have no effect.
-                return false;
+                return tuple3(executionCompletionFuture, false, "Job is " + SUSPENDED);
             }
             if (requestedTerminationMode != null) {
-                return false;
+                // don't report cancellation of cancelled job as an error
+                String message = requestedTerminationMode == CANCEL && mode == CANCEL ? null
+                        : "Job is already terminating in mode: " + requestedTerminationMode.name();
+                return tuple3(executionCompletionFuture, false, message);
             }
             requestedTerminationMode = mode;
             // handle cancellation of a suspended job
@@ -250,6 +262,8 @@ public class MasterContext {
                 this.jobStatus = COMPLETED;
                 setFinalResult(new CancellationException());
             }
+
+            result = tuple3(executionCompletionFuture, true, null);
         }
 
         if (localStatus == SUSPENDED) {
@@ -260,7 +274,7 @@ public class MasterContext {
             }
         }
 
-        return true;
+        return result;
     }
 
     boolean isCancelled() {
@@ -954,14 +968,7 @@ public class MasterContext {
 
     @Nonnull
     CompletableFuture<Void> gracefullyTerminate() {
-        if (jobStatus() != SUSPENDED) {
-            requestTermination(RESTART_GRACEFUL);
-        }
-        return executionCompletionFuture;
-    }
-
-    CompletableFuture<Void> executionCompletionFuture() {
-        return executionCompletionFuture;
+        return requestTermination(RESTART_GRACEFUL).f0();
     }
 
     /**
@@ -990,7 +997,7 @@ public class MasterContext {
         }
 
         JobStatus localStatus = jobStatus;
-        if (localStatus == RUNNING && requestTermination(TerminationMode.RESTART_GRACEFUL)) {
+        if (localStatus == RUNNING && requestTermination(TerminationMode.RESTART_GRACEFUL).f1()) {
             logger.info("Requested restart of " + jobIdString() + " to make use of added member(s)");
             return true;
         }
