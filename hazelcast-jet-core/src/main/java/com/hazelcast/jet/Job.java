@@ -167,29 +167,32 @@ public interface Job {
     void cancel();
 
     /**
-     * Initiates an export of a state snapshot and saves it under the given
-     * name, after which the job will be cancelled without processing any more
-     * data after the barrier (a graceful cancellation). It's similar to {@link
-     * #suspend()} followed by a {@link #cancel()}, except that there won't be
-     * any more processed data after the snapshot. A new job can be submitted
-     * with possibly modified Pipeline that will use the exported snapshot; to
-     * do so, use {@link JobConfig#setInitialSnapshotName(String)}.
+     * Initiates an export of a state snapshot, saves it under the given name,
+     * and then cancels the job without processing any more data after the
+     * barrier (graceful cancellation). It's similar to {@link #suspend()}
+     * followed by a {@link #cancel()}, except that it won't process any more
+     * data data after the snapshot.
      * <p>
-     * If the terminal snapshot fails, the job won't be cancelled but will be
-     * suspended instead.
+     * You can use the exported snapshot as a starting point for a new job. The
+     * job doesn't need to execute the same Pipeline as the job that created it,
+     * it must just be compatible with its state data. To achieve this, use
+     * {@link JobConfig#setInitialSnapshotName(String)}.
      * <p>
-     * You can call this method for a suspended job too: in that case the last
-     * successful snapshot will be copied and the job will be cancelled.
+     * If the terminal snapshot fails, Jet will suspend this job instead of
+     * cancelling it.
      * <p>
-     * Method will block until the state is fully exported, but might return
-     * before the execution is fully cancelled.
+     * You can call this method for a suspended job, too: in that case it will
+     * export the last successful snapshot and cancel the job.
+     * <p>
+     * The method call will block until it has fully exported the snapshot, but
+     * may return before the job has stopped executing.
      * <p>
      * For more information about "exported state" see {@link
      * #exportSnapshot(String)}.
      * <p>
-     * Job status will be {@link JobStatus#COMPLETED} after cancellation, even
-     * though the job didn't really complete. {@link Job#join()} won't throw an
-     * exception.
+     * The job status will be {@link JobStatus#COMPLETED} after cancellation,
+     * even though the job didn't really complete. {@link Job#join()} won't
+     * throw an exception.
      *
      * @param name name of the snapshot. If name is already used, it will be
      *            overwritten
@@ -198,29 +201,30 @@ public interface Job {
 
     /**
      * Initiates an export of a state snapshot and saves it under the given
-     * name. A new job can be started using the exported state using {@link
+     * name. You can start a new job using the exported state using {@link
      * JobConfig#setInitialSnapshotName(String)}.
      * <p>
-     * The snapshot will be independent from the job that created it. It will
-     * be stored in an IMap that's not managed by Jet: it won't automatically
-     * delete the snapshot, it has to be {@linkplain
-     * JobStateSnapshot#destroy()} deleted manually}. If your state is large,
-     * make sure to have enough memory to store it.
+     * The snapshot will be independent from the job that created it. Jet
+     * won't automatically delete the IMap it is exported into. You must
+     * manually call {@linkplain JobStateSnapshot#destroy() snapshot.destroy()}
+     * to delete it. If your state is large, make sure you have enough memory
+     * to store it.
      * <p>
-     * If a snapshot with that name already exists, it will be overwritten. If
-     * a snapshot is already in progress for this job (either automatic or
-     * user-requested), the requested one will wait and start immediately after
-     * the previous one completes. If snapshot with the same name is requested
-     * for two jobs at the same time, their data will likely be damaged
-     * (similar to two processes writing to the same file).
+     * If a snapshot with the same name already exists, it will be
+     * overwritten. If a snapshot is already in progress for this job (either
+     * automatic or user-requested), the requested one will wait and start
+     * immediately after the previous one completes. If a snapshot with the
+     * same name is requested for two jobs at the same time, their data will
+     * likely be damaged (similar to two processes writing to the same file).
      * <p>
-     * You can call this method for suspended job: in that case the last
-     * successful snapshot will be copied. You can also export state of
+     * You can call this method on a suspended job: in that case it will export
+     * the last successful snapshot. You can also export the state of
      * non-snapshotted jobs (those with {@link ProcessingGuarantee#NONE}.
      * <p>
-     * Graceful job-control action such as graceful member shutdown or
-     * suspending a snapshotted job will be enqueued after this snapshot.
-     * Forceful job-control actions will interrupt the exported snapshot.
+     * If you issue any graceful job-control actions such as a graceful member
+     * shutdown or suspending a snapshotted job while Jet is exporting a
+     * snapshot, they will wait in a queue for this snapshot to complete.
+     * Forceful job-control actions will interrupt the export procedure.
      * <p>
      * You can access the exported state map using {@link
      * JetInstance#getJobStateSnapshot(String)}.

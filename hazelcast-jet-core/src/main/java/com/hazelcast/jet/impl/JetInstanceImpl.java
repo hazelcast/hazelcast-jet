@@ -114,12 +114,16 @@ public class JetInstanceImpl extends AbstractJetInstance {
     }
 
     /**
-     * Return if this member knows of the given object name.
-     *
-     * Note:
-     * - this member might not know it exists, if the proxy creation operation went wrong
-     * - this member might not know it was destroyed, if the destroy operation went wrong
-     * - it might be racy w.r.t. other create/destroy operations
+     * Tells whether this member knows of the given object name.
+     * <p>
+     * Notes:
+     * <ul><li>
+     *     this member might not know it exists if the proxy creation operation went wrong
+     * </li><li>
+     *     this member might not know it was destroyed if the destroy operation went wrong
+     * </li><li>
+     *     it might be racy with respect to other create/destroy operations
+     * </li></ul>
      *
      * @param serviceName for example, {@link MapService#SERVICE_NAME}
      * @param objectName  object name
