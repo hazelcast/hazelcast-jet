@@ -508,7 +508,7 @@ public class JobCoordinationService {
             logger.warning("MasterContext not found to schedule snapshot of " + idToString(jobId));
             return;
         }
-        if (masterContext.completionFuture().isDone() || masterContext.isCancelled()
+        if (masterContext.jobCompletionFuture().isDone() || masterContext.isCancelled()
                 || masterContext.jobStatus() != RUNNING) {
             logger.fine("Not starting snapshot since " + masterContext.jobIdString() + " is done.");
             return;
@@ -645,20 +645,20 @@ public class JobCoordinationService {
         }
 
         if (oldMasterContext != null) {
-            return oldMasterContext.completionFuture();
+            return oldMasterContext.jobCompletionFuture();
         }
 
         // If job is not currently running, it might be that it just completed.
         // Since we've put the MasterContext into the masterContexts map, someone else could
         // have joined to the job in the meantime so we should notify its future.
         if (completeMasterContextIfJobAlreadyCompleted(masterContext)) {
-            return masterContext.completionFuture();
+            return masterContext.jobCompletionFuture();
         }
 
         logger.info("Starting job " + idToString(masterContext.jobId()) + ": " + reason);
         tryStartJob(masterContext);
 
-        return masterContext.completionFuture();
+        return masterContext.jobCompletionFuture();
     }
 
     // If a job result is present, it completes the master context using the job result

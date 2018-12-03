@@ -221,7 +221,7 @@ public class MasterContext {
         return jobExecutionRecord;
     }
 
-    public CompletableFuture<Void> completionFuture() {
+    public CompletableFuture<Void> jobCompletionFuture() {
         return jobCompletionFuture;
     }
 
