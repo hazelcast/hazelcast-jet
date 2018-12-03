@@ -254,7 +254,7 @@ public class JobCoordinationService {
                     + ", should be " + RUNNING);
         }
 
-        String terminationResult = masterContext.requestTermination(terminationMode).f2();
+        String terminationResult = masterContext.requestTermination(terminationMode).f1();
         if (terminationResult != null) {
             throw new IllegalStateException("Cannot " + terminationMode + ": " + terminationResult);
         }
