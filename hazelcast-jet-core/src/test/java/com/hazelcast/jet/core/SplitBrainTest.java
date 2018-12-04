@@ -345,8 +345,6 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
 
             logger.info("Shutting down 2nd instance");
             instances[1].shutdown();
-            logger.info("2nd instance down, starting another instance");
-            createJetMember();
 
             assertTrue(((ClusterService) instances[2].getCluster()).isMaster());
 
