@@ -334,6 +334,10 @@ public class MasterContext {
             return copyMapUsingJob(jetInstance, COPY_MAP_JOB_QUEUE_SIZE, sourceMapName, EXPORTED_SNAPSHOTS_PREFIX + name)
                     .whenComplete(withTryCatch(logger, (r, t) -> {
                         jobStatus = SUSPENDED;
+                        SnapshotValidationRecord validationRecord =
+                                (SnapshotValidationRecord) jetInstance.getMap(sourceMapName)
+                                                                      .get(SnapshotValidationRecord.KEY);
+                        jobRepository.cacheValidationRecord(name, validationRecord);
                         if (cancelJob) {
                             String terminationFailure = requestTermination(CANCEL_FORCEFUL).f1();
                             if (terminationFailure != null) {
@@ -732,9 +736,14 @@ public class MasterContext {
 
         IMap<Object, Object> snapshotMap = nodeEngine.getHazelcastInstance().getMap(snapshotMapName);
         try {
-            Object oldValue = snapshotMap.put(SnapshotValidationRecord.KEY,
-                    new SnapshotValidationRecord(snapshotId, mergedResult.getNumChunks(), mergedResult.getNumBytes(),
-                            jobExecutionRecord.ongoingSnapshotStartTime(), jobId, jobName, jobRecord.getDagJson()));
+            SnapshotValidationRecord validationRecord = new SnapshotValidationRecord(snapshotId,
+                    mergedResult.getNumChunks(), mergedResult.getNumBytes(),
+                    jobExecutionRecord.ongoingSnapshotStartTime(), jobId, jobName, jobRecord.getDagJson());
+            Object oldValue = snapshotMap.put(SnapshotValidationRecord.KEY, validationRecord);
+            if (snapshotMapName.startsWith(EXPORTED_SNAPSHOTS_PREFIX)) {
+                String snapshotName = snapshotMapName.substring(EXPORTED_SNAPSHOTS_PREFIX.length());
+                jobRepository.cacheValidationRecord(snapshotName, validationRecord);
+            }
             if (oldValue != null) {
                 logger.severe("SnapshotValidationRecord overwritten after writing to '" + snapshotMapName + "' for "
                         + jobIdString() + ": snapshot data might be corrupted");

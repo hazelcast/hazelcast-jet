@@ -17,13 +17,15 @@
 package com.hazelcast.jet;
 
 import com.hazelcast.core.Cluster;
-import com.hazelcast.core.DistributedObject;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.ReplicatedMap;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.impl.AbstractJetInstance;
+import com.hazelcast.jet.impl.JobRepository;
+import com.hazelcast.jet.impl.SnapshotValidationRecord;
 import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.map.impl.MapService;
@@ -32,10 +34,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 
-import static com.hazelcast.jet.JobStateSnapshot.createJobStateSnapshot;
-import static com.hazelcast.jet.impl.JobRepository.EXPORTED_SNAPSHOTS_PREFIX;
+import static com.hazelcast.jet.impl.JobRepository.exportedSnapshotMapName;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -144,11 +144,24 @@ public interface JetInstance {
 
     /**
      * Returns the {@link JobStateSnapshot} object representing an exported
-     * snapshot with the given name. Returns {@code null} if no such snapshots exists.
+     * snapshot with the given name. Returns {@code null} if no such snapshot
+     * exists.
      */
     @Nullable
     default JobStateSnapshot getJobStateSnapshot(@Nonnull String name) {
-        return createJobStateSnapshot(this, name);
+        String mapName = exportedSnapshotMapName(name);
+        if (!((AbstractJetInstance) this).existsDistributedObject(MapService.SERVICE_NAME, mapName)) {
+            return null;
+        }
+        IMapJet<Object, Object> map = getMap(mapName);
+        Object validationRecord = map.get(SnapshotValidationRecord.KEY);
+        if (validationRecord instanceof SnapshotValidationRecord) {
+            // update the cache - for robustness. For example after the map was copied
+            getMap(JobRepository.EXPORTED_SNAPSHOTS_DETAIL_CACHE).setAsync(name, validationRecord);
+            return new JobStateSnapshot(this, name, (SnapshotValidationRecord) validationRecord);
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -157,14 +170,11 @@ public interface JetInstance {
      */
     @Nonnull
     default Collection<JobStateSnapshot> getJobStateSnapshots() {
-        return getHazelcastInstance().getDistributedObjects().stream()
-                .filter(o -> o.getServiceName().equals(MapService.SERVICE_NAME))
-                .map(DistributedObject::getName)
-                .filter(n -> n.startsWith(EXPORTED_SNAPSHOTS_PREFIX))
-                .map(n -> createJobStateSnapshot(this, n.substring(EXPORTED_SNAPSHOTS_PREFIX.length())))
-                .filter(Objects::nonNull)
+        return getHazelcastInstance().getMap(JobRepository.EXPORTED_SNAPSHOTS_DETAIL_CACHE)
+                .entrySet().stream()
+                .map(entry -> new JobStateSnapshot(this, (String) entry.getKey(),
+                        (SnapshotValidationRecord) entry.getValue()))
                 .collect(toList());
-
     }
 
     /**

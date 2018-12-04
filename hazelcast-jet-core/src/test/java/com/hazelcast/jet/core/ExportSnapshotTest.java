@@ -29,6 +29,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.TestProcessors.DummyStatefulP;
 import com.hazelcast.jet.core.TestProcessors.NoOutputSourceP;
 import com.hazelcast.jet.impl.JobRepository;
+import com.hazelcast.jet.impl.SnapshotValidationRecord;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl.SnapshotDataKey;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import org.junit.Before;
@@ -52,6 +53,7 @@ import static com.hazelcast.jet.impl.JobRepository.SNAPSHOT_DATA_MAP_PREFIX;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -203,6 +205,7 @@ public class ExportSnapshotTest extends JetTestSupport {
             job.exportSnapshot("state");
         }
         assertFalse("state map is empty", getSnapshotMap(client, "state").isEmpty());
+        assertNotNull("cache record", getCacheRecord(client, "state"));
         if (cancel) {
             assertJobStatusEventually(job, COMPLETED);
         } else {
@@ -278,6 +281,12 @@ public class ExportSnapshotTest extends JetTestSupport {
 
     static IMapJet<Object, Object> getSnapshotMap(JetInstance instance, String snapshotName) {
         return instance.getMap(JobRepository.exportedSnapshotMapName(snapshotName));
+    }
+
+    private SnapshotValidationRecord getCacheRecord(JetInstance instance, String snapshotName) {
+        IMapJet<String, SnapshotValidationRecord> cacheMap =
+                instance.getMap(JobRepository.EXPORTED_SNAPSHOTS_DETAIL_CACHE);
+        return cacheMap.get(snapshotName);
     }
 
     private void configureBlockingMapStore(JetConfig config, String mapName) {

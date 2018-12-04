@@ -16,9 +16,8 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.jet.impl.AbstractJetInstance;
+import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.SnapshotValidationRecord;
-import com.hazelcast.map.impl.MapService;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -35,9 +34,7 @@ public final class JobStateSnapshot {
     private final String name;
     private final SnapshotValidationRecord snapshotValidationRecord;
 
-    private JobStateSnapshot(
-            @Nonnull JetInstance instance, @Nonnull String name, @Nonnull SnapshotValidationRecord record
-    ) {
+    JobStateSnapshot(@Nonnull JetInstance instance, @Nonnull String name, @Nonnull SnapshotValidationRecord record) {
         this.instance = instance;
         this.name = name;
         this.snapshotValidationRecord = record;
@@ -98,20 +95,6 @@ public final class JobStateSnapshot {
      */
     public void destroy() {
         instance.getMap(exportedSnapshotMapName(name)).destroy();
-    }
-
-    @Nullable
-    static JobStateSnapshot createJobStateSnapshot(@Nonnull JetInstance instance, @Nonnull String name) {
-        String mapName = exportedSnapshotMapName(name);
-        if (!((AbstractJetInstance) instance).existsDistributedObject(MapService.SERVICE_NAME, mapName)) {
-            return null;
-        }
-        IMapJet<Object, Object> map = instance.getMap(mapName);
-        Object o = map.get(SnapshotValidationRecord.KEY);
-        if (o instanceof SnapshotValidationRecord) {
-            return new JobStateSnapshot(instance, name, (SnapshotValidationRecord) o);
-        } else {
-            return null;
-        }
+        instance.getMap(JobRepository.EXPORTED_SNAPSHOTS_DETAIL_CACHE).delete(name);
     }
 }
