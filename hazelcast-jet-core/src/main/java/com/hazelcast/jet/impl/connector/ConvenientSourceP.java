@@ -20,6 +20,8 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.WatermarkSourceUtil;
+import com.hazelcast.jet.core.processor.SourceProcessors;
+import com.hazelcast.jet.impl.JetEvent;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -30,8 +32,8 @@ import java.util.function.Function;
 /**
  * Implements a data source the user created using the Source Builder API.
  *
- * @see com.hazelcast.jet.core.processor.SourceProcessors#convenientSourceP
- * @see com.hazelcast.jet.core.processor.SourceProcessors#convenientTimestampedSourceP
+ * @see SourceProcessors#convenientSourceP
+ * @see SourceProcessors#convenientTimestampedSourceP
  */
 public class ConvenientSourceP<S, T> extends AbstractProcessor {
 
@@ -94,10 +96,11 @@ public class ConvenientSourceP<S, T> extends AbstractProcessor {
     public boolean complete() {
         if (traverser == null) {
             fillBufferFn.accept(src, buffer);
+            // if eventTimePolicy is not null, we know that T is JetEvent<?>
             traverser =
                     wsu == null ? buffer.traverse()
                     : buffer.isEmpty() ? wsu.handleNoEvent()
-                    : buffer.traverse().flatMap(t -> wsu.handleEvent(t, 0));
+                    : buffer.traverse().flatMap(t -> wsu.handleEvent(t, 0, ((JetEvent) t).timestamp()));
         }
         boolean bufferEmpty = emitFromTraverser(traverser);
         if (bufferEmpty) {

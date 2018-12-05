@@ -60,7 +60,8 @@ public abstract class PipelineStreamTestSupport extends PipelineTestSupport {
     }
 
     StreamStage<Integer> drawEventJournalValues(String mapName) {
-        return p.drawFrom(Sources.mapJournal(mapName, mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST));
+        return p.<Integer>drawFrom(Sources.mapJournal(mapName, mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
+                .withoutTimestamps();
     }
 
     void addToMapJournal(Map<String, Integer> map, List<Integer> items) {

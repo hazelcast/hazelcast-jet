@@ -63,6 +63,7 @@ public class JmsIntegrationTest extends PipelineTestSupport {
     @Test
     public void sourceQueue() {
         p.drawFrom(Sources.jmsQueue(() -> broker.createConnectionFactory(), destinationName))
+         .withoutTimestamps()
          .map(TEXT_MESSAGE_FN)
          .drainTo(sink);
 
@@ -78,6 +79,7 @@ public class JmsIntegrationTest extends PipelineTestSupport {
     @Test
     public void sourceTopic() {
         p.drawFrom(Sources.jmsTopic(() -> broker.createConnectionFactory(), destinationName))
+         .withoutTimestamps()
          .map(TEXT_MESSAGE_FN)
          .drainTo(sink);
 
@@ -129,6 +131,7 @@ public class JmsIntegrationTest extends PipelineTestSupport {
                                               .build();
 
         p.drawFrom(source)
+         .withoutTimestamps()
          .map(TEXT_MESSAGE_FN)
          .drainTo(sink);
 
@@ -151,7 +154,7 @@ public class JmsIntegrationTest extends PipelineTestSupport {
                 .flushFn(DistributedConsumer.noop())
                 .build(TEXT_MESSAGE_FN);
 
-        p.drawFrom(source).drainTo(sink);
+        p.drawFrom(source).withoutTimestamps().drainTo(sink);
 
         startJob(true);
 
@@ -168,7 +171,7 @@ public class JmsIntegrationTest extends PipelineTestSupport {
                 .destinationName(destinationName)
                 .build(TEXT_MESSAGE_FN);
 
-        p.drawFrom(source).drainTo(sink);
+        p.drawFrom(source).withoutTimestamps().drainTo(sink);
 
         startJob(true);
         sleepSeconds(1);
@@ -188,7 +191,7 @@ public class JmsIntegrationTest extends PipelineTestSupport {
                 .destinationName(destinationName)
                 .build(TEXT_MESSAGE_FN);
 
-        p.drawFrom(source).drainTo(sink);
+        p.drawFrom(source).withoutTimestamps().drainTo(sink);
 
         startJob(true);
         sleepSeconds(1);

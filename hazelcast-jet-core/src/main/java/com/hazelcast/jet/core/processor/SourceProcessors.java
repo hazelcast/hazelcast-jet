@@ -42,6 +42,7 @@ import com.hazelcast.jet.impl.connector.StreamFilesP;
 import com.hazelcast.jet.impl.connector.StreamJmsP;
 import com.hazelcast.jet.impl.connector.StreamSocketP;
 import com.hazelcast.jet.impl.pipeline.SourceBufferImpl;
+import com.hazelcast.jet.impl.pipeline.SourceBufferImpl.Timestamped;
 import com.hazelcast.jet.pipeline.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.jet.pipeline.SourceBuilder.SourceBuffer;
@@ -503,13 +504,16 @@ public final class SourceProcessors {
         checkSerializable(destroyFn, "destroyFn");
         checkNotNegative(preferredLocalParallelism + 1, "preferredLocalParallelism must >= -1");
         ProcessorSupplier procSup = ProcessorSupplier.of(
-                () -> new ConvenientSourceP<>(
-                        createFn,
-                        (BiConsumer<? super S, ? super SourceBufferConsumerSide<? extends JetEvent<T>>>) fillBufferFn,
-                        destroyFn,
-                        new SourceBufferImpl.Timestamped<>(),
-                        eventTimePolicy
-                ));
+                () -> {
+                    SourceBufferConsumerSide<JetEvent<T>> sourceBuffer = new Timestamped<>();
+                    return new ConvenientSourceP<S, JetEvent<T>>(
+                            createFn,
+                            (BiConsumer<? super S, ? super SourceBufferConsumerSide<? extends JetEvent<T>>>) fillBufferFn,
+                            destroyFn,
+                            sourceBuffer,
+                            eventTimePolicy
+                    );
+                });
         return preferredLocalParallelism > 0
                 ? ProcessorMetaSupplier.of(procSup, preferredLocalParallelism)
                 : ProcessorMetaSupplier.forceTotalParallelismOne(procSup);

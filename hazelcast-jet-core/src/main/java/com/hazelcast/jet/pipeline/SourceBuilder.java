@@ -28,10 +28,6 @@ import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.core.EventTimePolicy.DEFAULT_IDLE_TIMEOUT;
-import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.NULL_EMIT_POLICY;
-import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientSourceP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientTimestampedSourceP;
 import static com.hazelcast.util.Preconditions.checkPositive;
@@ -475,7 +471,6 @@ public final class SourceBuilder<S> {
      */
     public final class TimestampedStream<T> extends Base<T> {
         private DistributedBiConsumer<? super S, ? super TimestampedSourceBuffer<T>> fillBufferFn;
-        private long maxLag;
 
         private TimestampedStream() {
         }
@@ -519,22 +514,6 @@ public final class SourceBuilder<S> {
         }
 
         /**
-         * Sets the limit on the amount of disorder (skew) present in the
-         * timestamps of the events this source will emit. Any given event's
-         * timestamp must be at most this many milliseconds behind the highest
-         * timestamp emitted so far, otherwise it will be considered late and
-         * dropped.
-         *
-         * @param allowedLateness limit on how much the timestamp of an event being emitted can lag behind
-         *                        the highest emitted timestamp so far
-         */
-        @Nonnull
-        public TimestampedStream<T> allowedLateness(long allowedLateness) {
-            this.maxLag = allowedLateness;
-            return this;
-        }
-
-        /**
          * Builds and returns the timestamped stream source.
          */
         @Nonnull
@@ -543,13 +522,6 @@ public final class SourceBuilder<S> {
             Preconditions.checkNotNull(fillBufferFn, "fillBufferFn must be set");
             StreamSourceTransform<JetEvent<T>> source = new StreamSourceTransform<>(
                     mName,
-                    eventTimePolicy(
-                            JetEvent::timestamp,
-                            (e, timestamp) -> e,
-                            limitingLag(maxLag),
-                            NULL_EMIT_POLICY,
-                            DEFAULT_IDLE_TIMEOUT
-                    ),
                     wmParams -> convenientTimestampedSourceP(
                             mCreateFn, fillBufferFn, wmParams, mDestroyFn, mPreferredLocalParallelism),
                     true);

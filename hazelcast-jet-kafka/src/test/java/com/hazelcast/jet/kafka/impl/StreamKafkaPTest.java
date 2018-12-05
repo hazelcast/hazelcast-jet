@@ -107,6 +107,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
 
         Pipeline p = Pipeline.create();
         p.drawFrom(KafkaSources.<Integer, String, String>kafka(properties, rec -> rec.value() + "-x", topic1Name))
+         .withoutTimestamps()
          .drainTo(Sinks.list("sink"));
 
         instances[0].newJob(p);
@@ -142,6 +143,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
 
         Pipeline p = Pipeline.create();
         p.drawFrom(KafkaSources.kafka(properties, topic1Name, topic2Name))
+         .withoutTimestamps()
          .drainTo(Sinks.list("sink"));
 
         JobConfig config = new JobConfig();

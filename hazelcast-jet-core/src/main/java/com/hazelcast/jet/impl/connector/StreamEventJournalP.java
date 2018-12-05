@@ -186,7 +186,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             if (event != null) {
                 // Always use partition index of 0, treating all the partitions the
                 // same for coalescing purposes.
-                traverser = watermarkSourceUtil.handleEvent(event, 0);
+                traverser = watermarkSourceUtil.handleEvent(event, 0, WatermarkSourceUtil.NO_DEFAULT_TIME);
                 if (!emitFromTraverser(traverser)) {
                     return;
                 }

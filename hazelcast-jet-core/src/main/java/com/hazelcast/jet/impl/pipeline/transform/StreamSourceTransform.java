@@ -42,23 +42,12 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
 
     public StreamSourceTransform(
             @Nonnull String name,
-            @Nullable EventTimePolicy<? super T> initialEventTimePolicy,
             @Nonnull Function<? super EventTimePolicy<? super T>, ? extends ProcessorMetaSupplier> metaSupplierFn,
             boolean emitsWatermarks
     ) {
         super(name, emptyList());
-        this.eventTimePolicy = initialEventTimePolicy;
         this.metaSupplierFn = metaSupplierFn;
         this.emitsWatermarks = emitsWatermarks;
-    }
-
-    public StreamSourceTransform(
-            @Nonnull String name,
-            @Nonnull Function<? super EventTimePolicy<? super T>, ? extends ProcessorMetaSupplier>
-                    metaSupplierFn,
-            boolean emitsWatermarks
-    ) {
-        this(name, null, metaSupplierFn, emitsWatermarks);
     }
 
     @Override
@@ -95,8 +84,8 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
         return eventTimePolicy;
     }
 
-    public void setEventTimePolicy(@Nonnull EventTimePolicy<? super T> wmParams) {
-        this.eventTimePolicy = wmParams;
+    public void setEventTimePolicy(@Nonnull EventTimePolicy<? super T> eventTimePolicy) {
+        this.eventTimePolicy = eventTimePolicy;
     }
 
     public boolean emitsJetEvents() {
