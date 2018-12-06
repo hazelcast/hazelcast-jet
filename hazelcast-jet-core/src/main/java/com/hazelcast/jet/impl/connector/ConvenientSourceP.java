@@ -103,7 +103,8 @@ public class ConvenientSourceP<S, T> extends AbstractProcessor {
             traverser =
                     wsu == null ? buffer.traverse()
                     : buffer.isEmpty() ? wsu.handleNoEvent()
-                    : buffer.traverse().flatMap(t -> wsu.handleEvent(((JetEvent<T>) t).payload(), 0, ((JetEvent) t).timestamp()));
+                    : buffer.traverse().flatMap(t ->
+                            wsu.handleEvent(((JetEvent<T>) t).payload(), 0, ((JetEvent) t).timestamp()));
         }
         boolean bufferEmpty = emitFromTraverser(traverser);
         if (bufferEmpty) {

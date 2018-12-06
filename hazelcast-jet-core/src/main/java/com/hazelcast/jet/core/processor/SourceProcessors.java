@@ -18,11 +18,11 @@ package com.hazelcast.jet.core.processor;
 
 import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedConsumer;
@@ -42,7 +42,6 @@ import com.hazelcast.jet.impl.connector.StreamFilesP;
 import com.hazelcast.jet.impl.connector.StreamJmsP;
 import com.hazelcast.jet.impl.connector.StreamSocketP;
 import com.hazelcast.jet.impl.pipeline.SourceBufferImpl;
-import com.hazelcast.jet.impl.pipeline.SourceBufferImpl.Timestamped;
 import com.hazelcast.jet.pipeline.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.jet.pipeline.SourceBuilder.SourceBuffer;
@@ -504,16 +503,13 @@ public final class SourceProcessors {
         checkSerializable(destroyFn, "destroyFn");
         checkNotNegative(preferredLocalParallelism + 1, "preferredLocalParallelism must >= -1");
         ProcessorSupplier procSup = ProcessorSupplier.of(
-                () -> {
-                    SourceBufferConsumerSide<JetEvent<T>> sourceBuffer = new Timestamped<>();
-                    return new ConvenientSourceP<S, JetEvent<T>>(
-                            createFn,
-                            (BiConsumer<? super S, ? super SourceBufferConsumerSide<? extends JetEvent<T>>>) fillBufferFn,
-                            destroyFn,
-                            sourceBuffer,
-                            eventTimePolicy
-                    );
-                });
+                () -> new ConvenientSourceP<>(
+                        createFn,
+                        (BiConsumer<? super S, ? super SourceBufferConsumerSide<? extends JetEvent<T>>>) fillBufferFn,
+                        destroyFn,
+                        new SourceBufferImpl.Timestamped<>(),
+                        eventTimePolicy
+                ));
         return preferredLocalParallelism > 0
                 ? ProcessorMetaSupplier.of(procSup, preferredLocalParallelism)
                 : ProcessorMetaSupplier.forceTotalParallelismOne(procSup);
