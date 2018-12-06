@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.ObjLongBiFunction;
 import com.hazelcast.jet.pipeline.Sources;
@@ -156,7 +157,7 @@ public class WatermarkSourceUtil<T> {
      * <pre>{@code
      *     Traverser t = traverserIterable(...)
      *         .flatMap(event -> watermarkSourceUtil.handleEvent(
-     *                 event, event.getPartition(), eventTime));
+     *                 event, event.getPartition(), defaultEventTime));
      * }</pre>
      *
      * @param event the event
@@ -184,8 +185,9 @@ public class WatermarkSourceUtil<T> {
         assert traverser.isEmpty() : "the traverser returned previously not yet drained: remove all " +
                 "items from the traverser before you call this method again.";
         if (event != null) {
-            assert defaultEventTime != NO_DEFAULT_TIME || timestampFn != null :
-                    "Neither timestampFn nor defaultEventTime specified";
+            if (timestampFn == null && defaultEventTime == NO_DEFAULT_TIME) {
+                throw new JetException("Neither timestampFn nor defaultEventTime specified");
+            }
             long eventTime = timestampFn == null ? defaultEventTime : timestampFn.applyAsLong(event);
             handleEventInt(now, partitionIndex, eventTime);
             traverser.append(wrapFn.apply(event, eventTime));

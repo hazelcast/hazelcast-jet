@@ -96,11 +96,11 @@ public class ConvenientSourceP<S, T> extends AbstractProcessor {
     public boolean complete() {
         if (traverser == null) {
             fillBufferFn.accept(src, buffer);
-            // if eventTimePolicy is not null, we know that T is TimestampedItem<?>
             traverser =
                     wsu == null ? buffer.traverse()
                     : buffer.isEmpty() ? wsu.handleNoEvent()
                     : buffer.traverse().flatMap(t -> {
+                        // if wsu is not null, we know that T is TimestampedItem<?>
                         TimestampedItem<T> t1 = (TimestampedItem<T>) t;
                         return wsu.handleEvent(t1.item(), 0, t1.timestamp());
                     });

@@ -522,8 +522,8 @@ public final class SourceBuilder<S> {
             Preconditions.checkNotNull(fillBufferFn, "fillBufferFn must be set");
             StreamSourceTransform<TimestampedItem<T>> source = new StreamSourceTransform<>(
                     mName,
-                    wmParams -> convenientTimestampedSourceP(
-                            mCreateFn, fillBufferFn, wmParams, mDestroyFn, mPreferredLocalParallelism),
+                    eventTimePolicy -> convenientTimestampedSourceP(
+                            mCreateFn, fillBufferFn, eventTimePolicy, mDestroyFn, mPreferredLocalParallelism),
                     true);
             return (StreamSource<T>) source;
         }
