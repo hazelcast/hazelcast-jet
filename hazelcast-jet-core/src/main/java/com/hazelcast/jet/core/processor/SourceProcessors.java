@@ -23,7 +23,6 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedConsumer;
@@ -466,7 +465,7 @@ public final class SourceProcessors {
         ProcessorSupplier procSup = ProcessorSupplier.of(
                 () -> new ConvenientSourceP<S, T>(
                         createFn,
-                        (BiConsumer<? super S, ? super SourceBufferConsumerSide<? extends T>>) fillBufferFn,
+                        (BiConsumer<? super S, ? super SourceBufferConsumerSide<?>>) fillBufferFn,
                         destroyFn,
                         new SourceBufferImpl.Plain<>(),
                         null));
@@ -482,6 +481,7 @@ public final class SourceProcessors {
      *
      * @param createFn function that creates the source's state object
      * @param fillBufferFn function that fills Jet's buffer with items to emit
+     * @param eventTimePolicy parameters for watermark generation
      * @param destroyFn function that cleans up the resources held by the state object
      * @param preferredLocalParallelism preferred local parallelism of the source vertex. Special values:
      *                                  {@value Vertex#LOCAL_PARALLELISM_USE_DEFAULT} ->
@@ -495,7 +495,7 @@ public final class SourceProcessors {
     public static <S, T> ProcessorMetaSupplier convenientTimestampedSourceP(
             @Nonnull DistributedFunction<? super Processor.Context, ? extends S> createFn,
             @Nonnull DistributedBiConsumer<? super S, ? super TimestampedSourceBuffer<T>> fillBufferFn,
-            @Nonnull EventTimePolicy<? super TimestampedItem<T>> eventTimePolicy,
+            @Nonnull EventTimePolicy<? super T> eventTimePolicy,
             @Nonnull DistributedConsumer<? super S> destroyFn,
             int preferredLocalParallelism
     ) {
@@ -506,8 +506,7 @@ public final class SourceProcessors {
         ProcessorSupplier procSup = ProcessorSupplier.of(
                 () -> new ConvenientSourceP<>(
                         createFn,
-                        (BiConsumer<? super S, ? super SourceBufferConsumerSide<? extends TimestampedItem<T>>>)
-                                fillBufferFn,
+                        (BiConsumer<? super S, ? super SourceBufferConsumerSide<?>>) fillBufferFn,
                         destroyFn,
                         new SourceBufferImpl.Timestamped<>(),
                         eventTimePolicy

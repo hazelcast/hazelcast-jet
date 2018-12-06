@@ -52,9 +52,9 @@ public class ConvenientSourceP<S, T> extends AbstractProcessor {
     }
 
     private final Function<? super Context, ? extends S> createFn;
-    private final BiConsumer<? super S, ? super SourceBufferConsumerSide<? extends T>> fillBufferFn;
+    private final BiConsumer<? super S, ? super SourceBufferConsumerSide<?>> fillBufferFn;
     private final Consumer<? super S> destroyFn;
-    private final SourceBufferConsumerSide<? extends T> buffer;
+    private final SourceBufferConsumerSide<?> buffer;
     private final WatermarkSourceUtil<T> wsu;
 
     private boolean initialized;
@@ -63,9 +63,9 @@ public class ConvenientSourceP<S, T> extends AbstractProcessor {
 
     public ConvenientSourceP(
             @Nonnull Function<? super Context, ? extends S> createFn,
-            @Nonnull BiConsumer<? super S, ? super SourceBufferConsumerSide<? extends T>> fillBufferFn,
+            @Nonnull BiConsumer<? super S, ? super SourceBufferConsumerSide<?>> fillBufferFn,
             @Nonnull Consumer<? super S> destroyFn,
-            @Nonnull SourceBufferConsumerSide<? extends T> buffer,
+            @Nonnull SourceBufferConsumerSide<?> buffer,
             @Nullable EventTimePolicy<? super T> eventTimePolicy
     ) {
         this.createFn = createFn;

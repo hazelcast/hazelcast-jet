@@ -18,7 +18,6 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Processor.Context;
-import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -458,7 +457,7 @@ public final class SourceBuilder<S> {
             Preconditions.checkNotNull(fillBufferFn, "fillBufferFn must be non-null");
             return new StreamSourceTransform<>(
                     mName,
-                    wmParams -> convenientSourceP(mCreateFn, fillBufferFn, mDestroyFn, mPreferredLocalParallelism),
+                    eventTimePolicy -> convenientSourceP(mCreateFn, fillBufferFn, mDestroyFn, mPreferredLocalParallelism),
                     false);
         }
     }
@@ -520,12 +519,11 @@ public final class SourceBuilder<S> {
         @SuppressWarnings("unchecked")
         public StreamSource<T> build() {
             Preconditions.checkNotNull(fillBufferFn, "fillBufferFn must be set");
-            StreamSourceTransform<TimestampedItem<T>> source = new StreamSourceTransform<>(
+            return new StreamSourceTransform<>(
                     mName,
                     eventTimePolicy -> convenientTimestampedSourceP(
                             mCreateFn, fillBufferFn, eventTimePolicy, mDestroyFn, mPreferredLocalParallelism),
                     true);
-            return (StreamSource<T>) source;
         }
     }
 }
