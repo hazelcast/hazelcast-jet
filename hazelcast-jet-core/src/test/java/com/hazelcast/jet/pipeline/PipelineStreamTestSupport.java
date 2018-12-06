@@ -33,7 +33,7 @@ import static java.util.stream.Collectors.toList;
 
 public abstract class PipelineStreamTestSupport extends PipelineTestSupport {
 
-    StreamStage<Integer> srcStage;
+    StreamSourceStage<Integer> srcStage;
 
     long maxLag;
 
@@ -59,9 +59,8 @@ public abstract class PipelineStreamTestSupport extends PipelineTestSupport {
         srcStage = drawEventJournalValues(journaledSrcMapName);
     }
 
-    StreamStage<Integer> drawEventJournalValues(String mapName) {
-        return p.<Integer>drawFrom(Sources.mapJournal(mapName, mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
-                .withoutTimestamps();
+    StreamSourceStage<Integer> drawEventJournalValues(String mapName) {
+        return p.drawFrom(Sources.mapJournal(mapName, mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST));
     }
 
     void addToMapJournal(Map<String, Integer> map, List<Integer> items) {
