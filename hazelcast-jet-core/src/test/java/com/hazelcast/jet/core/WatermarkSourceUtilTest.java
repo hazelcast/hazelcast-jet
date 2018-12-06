@@ -32,10 +32,10 @@ import static org.junit.Assert.assertNull;
 
 public class WatermarkSourceUtilTest {
 
+    private static final long LAG = 3;
+
     @Rule
     public ExpectedException exception = ExpectedException.none();
-
-    private static final long LAG = 3;
 
     @Test
     public void smokeTest() {
