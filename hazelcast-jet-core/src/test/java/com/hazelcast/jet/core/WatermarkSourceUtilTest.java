@@ -17,7 +17,9 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.Traverser;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.noThrottling;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
@@ -30,11 +32,13 @@ import static org.junit.Assert.assertNull;
 
 public class WatermarkSourceUtilTest {
 
+    @Rule
+    public ExpectedException exception = ExpectedException.none();
+
     private static final long LAG = 3;
 
     @Test
     public void smokeTest() {
-        // TODO [viliam] test default timestamp fn
         WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
                 eventTimePolicy(Long::longValue, limitingLag(LAG), noThrottling(), 5)
         );
@@ -121,6 +125,28 @@ public class WatermarkSourceUtilTest {
         assertTraverser(wsu.handleEvent(ns(10), null, 0, NO_DEFAULT_TIME),
                 wm(10 - LAG),
                 IDLE_MESSAGE);
+    }
+
+    @Test
+    public void when_noTimestampFnAndNoDefaultTime_then_throw() {
+        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
+                eventTimePolicy(null, limitingLag(LAG), noThrottling(), 10)
+        );
+        wsu.increasePartitionCount(ns(0), 1);
+
+        exception.expectMessage("Neither timestampFn nor defaultEventTime specified");
+        wsu.handleEvent(ns(0), 10L, 0, NO_DEFAULT_TIME);
+    }
+
+    @Test
+    public void when_noTimestampFn_then_useDefaultTime() {
+        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
+                eventTimePolicy(null, limitingLag(LAG), noThrottling(), 5)
+        );
+        wsu.increasePartitionCount(0L, 1);
+
+        assertTraverser(wsu.handleEvent(ns(1), 10L, 0, 11L), wm(11L - LAG), 10L);
+        assertTraverser(wsu.handleEvent(ns(1), 11L, 0, 12L), wm(12L - LAG), 11L);
     }
 
     private <T> void assertTraverser(Traverser<T> actual, T ... expected) {
