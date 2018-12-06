@@ -31,6 +31,12 @@ public interface StreamSourceStage<T> {
      * You can add them later using {@link GeneralStage#addTimestamps}, however,
      * source partitions won't be coalesced correctly...
      *
+     * TODO [viliam] keep this comment? ⬊
+     * You can force the watermarks to not be generated in the source by replacing
+     * <pre>.withTimestamps(...)</pre>
+     * with
+     * <pre>.withoutTimestamps().addTimestamps(...)</pre>
+     *
      * TODO [viliam]
      */
     StreamStage<T> withoutTimestamps();

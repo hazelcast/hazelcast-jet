@@ -57,11 +57,11 @@ public abstract class StreamSourceStageTestBase extends JetTestSupport {
     public ExpectedException expectedException = ExpectedException.none();
 
     protected final Function<StreamSourceStage<Integer>, StreamStage<Integer>> withoutTimestampsFn =
-            s -> s.withoutTimestamps().addTimestamps(i -> i + 1, 0);
+            s -> s.withoutTimestamps().addTimestamps(i -> i + 1, 0).setLocalParallelism(1);
     protected final Function<StreamSourceStage<Integer>, StreamStage<Integer>> withDefaultTimestampsFn =
             s -> s.withDefaultTimestamps(0);
     protected final Function<StreamSourceStage<Integer>, StreamStage<Integer>> withTimestampsFn =
-            s -> s.withTimestamps(i -> i + 1, 0);
+            s -> s.withTimestamps(i -> i + 1, 0).setLocalParallelism(1);
 
     @Before
     public void before() {
@@ -93,7 +93,6 @@ public abstract class StreamSourceStageTestBase extends JetTestSupport {
         StreamSourceStage<Integer> sourceStage = p.drawFrom(source);
         StreamStage<Integer> stageWithTimestamps = addTimestampsFunction.apply(sourceStage);
         stageWithTimestamps
-                .peek()
                 .window(WindowDefinition.tumbling(1))
                 .aggregate(counting())
                 .peek()
@@ -103,7 +102,7 @@ public abstract class StreamSourceStageTestBase extends JetTestSupport {
         HashSet<Long> expectedWmsSet = new HashSet<>(expectedWms);
 
         RunnableExc assertTask = () -> assertEquals(expectedWmsSet, WatermarkLogger.watermarks);
-        assertTrueEventually(assertTask, 2);
+        assertTrueEventually(assertTask, 24);
         assertTrueAllTheTime(assertTask, 1);
         assertTrueEventually(() -> assertEquals(expectedJobFailure != null ? FAILED : RUNNING, job.getStatus()));
         job.cancel();

@@ -43,7 +43,7 @@ public class StreamSourceStageTest extends StreamSourceStageTestBase {
                 EventJournalMapEvent::getKey, START_FROM_OLDEST);
     }
 
-    private static StreamSource<Integer> createSourceBuilder() {
+    private static StreamSource<Integer> createTimestampedSourceBuilder() {
         return SourceBuilder.timestampedStream("s", ctx -> new boolean[1])
                 .<Integer>fillBufferFn((ctx, buf) -> {
                     if (!ctx[0]) {
@@ -55,19 +55,47 @@ public class StreamSourceStageTest extends StreamSourceStageTestBase {
                 .build();
     }
 
-    @Test
-    public void test_sourceBuilder_withoutTimestamps() {
-        test(createSourceBuilder(), withoutTimestampsFn, asList(2L, 3L), null);
+    private static StreamSource<Integer> createPlainSourceBuilder() {
+        return SourceBuilder.stream("s", ctx -> new boolean[1])
+                .<Integer>fillBufferFn((ctx, buf) -> {
+                    if (!ctx[0]) {
+                        buf.add(1);
+                        buf.add(2);
+                        ctx[0] = true;
+                    }
+                })
+                .build();
     }
 
     @Test
-    public void test_sourceBuilder_withDefaultTimestamps() {
-        test(createSourceBuilder(), withDefaultTimestampsFn, asList(1L, 2L), null);
+    public void test_timestampedSourceBuilder_withoutTimestamps() {
+        test(createTimestampedSourceBuilder(), withoutTimestampsFn, asList(2L, 3L), null);
     }
 
     @Test
-    public void test_sourceBuilder_withTimestamps() {
-        test(createSourceBuilder(), withTimestampsFn, asList(2L, 3L), null);
+    public void test_timestampedSourceBuilder_withDefaultTimestamps() {
+        test(createTimestampedSourceBuilder(), withDefaultTimestampsFn, asList(1L, 2L), null);
+    }
+
+    @Test
+    public void test_timestampedSourceBuilder_withTimestamps() {
+        test(createTimestampedSourceBuilder(), withTimestampsFn, asList(2L, 3L), null);
+    }
+
+    @Test
+    public void test_plainSourceBuilder_withoutTimestamps() {
+        test(createPlainSourceBuilder(), withoutTimestampsFn, asList(2L, 3L), null);
+    }
+
+    @Test
+    public void test_plainSourceBuilder_withDefaultTimestamps() {
+        test(createPlainSourceBuilder(), withDefaultTimestampsFn, emptyList(),
+                "Neither timestampFn nor defaultEventTime specified");
+    }
+
+    @Test
+    public void test_plainSourceBuilder_withTimestamps() {
+        test(createPlainSourceBuilder(), withTimestampsFn, asList(2L, 3L), null);
     }
 
     @Test

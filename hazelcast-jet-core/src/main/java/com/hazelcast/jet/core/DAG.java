@@ -333,6 +333,8 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
 
     /**
      * Returns a JSON representation of the DAG.
+     * <p>
+     * <i>Note:</i> the exact structure of the JSON is unspecified.
      *
      * @param defaultLocalParallelism the local parallelism that will be shown if
      *                                neither overridden on the vertex nor the

@@ -91,20 +91,20 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
     @Nonnull
     public StreamStage<T> addTimestamps() {
-        return addTimestampsInt(o -> System.currentTimeMillis(), 0);
+        return addTimestampsInt(o -> System.currentTimeMillis(), 0, false);
     }
 
     @Nonnull
     public StreamStage<T> addTimestamps(
             @Nonnull DistributedToLongFunction<? super T> timestampFn, long allowedLateness
     ) {
-        return addTimestampsInt(timestampFn, allowedLateness);
+        return addTimestampsInt(timestampFn, allowedLateness, false);
     }
 
     @SuppressWarnings("unchecked")
     StreamStage<T> addTimestampsInt(
-            @Nullable DistributedToLongFunction<? super T> timestampFn, long allowedLateness
-    ) {
+            @Nullable DistributedToLongFunction<? super T> timestampFn, long allowedLateness,
+            boolean tryAddToSource) {
         checkSerializable(timestampFn, "timestampFn");
         checkFalse(hasJetEvents(), "This stage already has timestamps assigned to it.");
 
@@ -113,7 +113,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 timestampFn, JetEvent::jetEvent, wmPolicy, NULL_EMIT_POLICY, DEFAULT_IDLE_TIMEOUT
         );
 
-        if (transform instanceof StreamSourceTransform) {
+        if (tryAddToSource && transform instanceof StreamSourceTransform) {
             ((StreamSourceTransform<T>) transform).setEventTimePolicy(eventTimePolicy);
             this.fnAdapter = ADAPT_TO_JET_EVENT;
             return (StreamStage<T>) this;

@@ -39,21 +39,21 @@ public class StreamSourceStageImpl<T> implements StreamSourceStage<T> {
     @Override
     public StreamStage<T> withDefaultTimestamps(long allowedLag) {
         StreamStageImpl<T> result = createStreamStage();
-        result.addTimestampsInt(null, allowedLag);
+        result.addTimestampsInt(null, allowedLag, true);
         return result;
     }
 
     @Override
     public StreamStage<T> withIngestionTimestamps() {
-        StreamStage<T> result = createStreamStage();
-        result.addTimestamps(o -> System.currentTimeMillis(), 0);
+        StreamStageImpl<T> result = createStreamStage();
+        result.addTimestampsInt(o -> System.currentTimeMillis(), 0, true);
         return result;
     }
 
     @Override
     public StreamStage<T> withTimestamps(@Nonnull DistributedToLongFunction<? super T> timestampFn, long allowedLag) {
-        StreamStage<T> result = createStreamStage();
-        result.addTimestamps(timestampFn, allowedLag);
+        StreamStageImpl<T> result = createStreamStage();
+        result.addTimestampsInt(timestampFn, allowedLag, true);
         return result;
     }
 

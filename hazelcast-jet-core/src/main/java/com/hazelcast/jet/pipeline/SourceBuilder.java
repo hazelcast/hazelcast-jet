@@ -18,10 +18,10 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Processor.Context;
+import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.util.Preconditions;
@@ -520,7 +520,7 @@ public final class SourceBuilder<S> {
         @SuppressWarnings("unchecked")
         public StreamSource<T> build() {
             Preconditions.checkNotNull(fillBufferFn, "fillBufferFn must be set");
-            StreamSourceTransform<JetEvent<T>> source = new StreamSourceTransform<>(
+            StreamSourceTransform<TimestampedItem<T>> source = new StreamSourceTransform<>(
                     mName,
                     wmParams -> convenientTimestampedSourceP(
                             mCreateFn, fillBufferFn, wmParams, mDestroyFn, mPreferredLocalParallelism),

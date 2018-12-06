@@ -160,7 +160,7 @@ public class WatermarkSourceUtil<T> {
      * @param event the event
      * @param partitionIndex the source partition index the event came from
      * @param defaultEventTime default event time in case no timestampFn was
-     *      supplied
+     *      supplied or {@link #NO_DEFAULT_TIME}
      */
     @Nonnull
     public Traverser<Object> handleEvent(T event, int partitionIndex, long defaultEventTime) {

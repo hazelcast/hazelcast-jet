@@ -21,7 +21,7 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.WatermarkSourceUtil;
 import com.hazelcast.jet.core.processor.SourceProcessors;
-import com.hazelcast.jet.impl.JetEvent;
+import com.hazelcast.jet.datamodel.TimestampedItem;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -99,12 +99,14 @@ public class ConvenientSourceP<S, T> extends AbstractProcessor {
     public boolean complete() {
         if (traverser == null) {
             fillBufferFn.accept(src, buffer);
-            // if eventTimePolicy is not null, we know that T is JetEvent<?>
+            // if eventTimePolicy is not null, we know that T is TimestampedItem<?>
             traverser =
                     wsu == null ? buffer.traverse()
                     : buffer.isEmpty() ? wsu.handleNoEvent()
-                    : buffer.traverse().flatMap(t ->
-                            wsu.handleEvent(((JetEvent<T>) t).payload(), 0, ((JetEvent) t).timestamp()));
+                    : buffer.traverse().flatMap(t -> {
+                        TimestampedItem<T> t1 = (TimestampedItem<T>) t;
+                        return wsu.handleEvent(t1.item(), 0, t1.timestamp());
+                    });
         }
         boolean bufferEmpty = emitFromTraverser(traverser);
         if (bufferEmpty) {
