@@ -29,8 +29,6 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
-
 /**
  * Implements a data source the user created using the Source Builder API.
  *
@@ -75,9 +73,9 @@ public class ConvenientSourceP<S, T> extends AbstractProcessor {
         this.destroyFn = destroyFn;
         this.buffer = buffer;
         if (eventTimePolicy != null) {
-            // remove the wrapFn from the eventTimePolicy
-            eventTimePolicy = eventTimePolicy(eventTimePolicy.timestampFn(), eventTimePolicy.newWmPolicyFn(),
-                    eventTimePolicy.wmEmitPolicy(), eventTimePolicy.idleTimeoutMillis());
+            // remove the wrapFn from the eventTimePolicy TODO [viliam] remove?
+//            eventTimePolicy = eventTimePolicy(eventTimePolicy.timestampFn(), eventTimePolicy.newWmPolicyFn(),
+//                    eventTimePolicy.wmEmitPolicy(), eventTimePolicy.idleTimeoutMillis());
             this.wsu = new WatermarkSourceUtil<>(eventTimePolicy);
             wsu.increasePartitionCount(1);
         } else {
@@ -105,7 +103,7 @@ public class ConvenientSourceP<S, T> extends AbstractProcessor {
             traverser =
                     wsu == null ? buffer.traverse()
                     : buffer.isEmpty() ? wsu.handleNoEvent()
-                    : buffer.traverse().flatMap(t -> wsu.handleEvent(t, 0, ((JetEvent) t).timestamp()));
+                    : buffer.traverse().flatMap(t -> wsu.handleEvent(((JetEvent<T>) t).payload(), 0, ((JetEvent) t).timestamp()));
         }
         boolean bufferEmpty = emitFromTraverser(traverser);
         if (bufferEmpty) {
