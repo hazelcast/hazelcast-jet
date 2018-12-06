@@ -216,7 +216,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         for (int i = 0; i < INITIAL_PARTITION_COUNT; i++) {
             Entry<Integer, String> event = entry(i + 100, Integer.toString(i));
             System.out.println("produced event " + event);
-            produce(topic1Name, i, event.getKey(), event.getValue());
+            produce(topic1Name, i, null, event.getKey(), event.getValue());
             if (i == INITIAL_PARTITION_COUNT - 1) {
                 assertEquals(new Watermark(100 - LAG), consumeEventually(processor, outbox));
             }

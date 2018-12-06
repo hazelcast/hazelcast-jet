@@ -26,7 +26,7 @@ import javax.annotation.Nonnull;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DO_NOT_ADAPT;
 
-public class StreamSourceStageImpl<T>  implements StreamSourceStage<T> {
+public class StreamSourceStageImpl<T> implements StreamSourceStage<T> {
 
     private final StreamSourceTransform<T> transform;
     private final PipelineImpl pipeline;

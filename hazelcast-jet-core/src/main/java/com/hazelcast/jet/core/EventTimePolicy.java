@@ -125,18 +125,18 @@ public final class EventTimePolicy<T> implements Serializable {
      * #noEventTime()}.
      *
      * @param timestampFn       function that extracts the timestamp from the event
-     * @param wmPolicy          factory of the watermark policy objects
+     * @param newWmPolicyFn     factory of the watermark policy objects
      * @param wmEmitPolicy      watermark emission policy (decides how to suppress redundant watermarks)
      * @param idleTimeoutMillis the timeout after which a partition will be marked as <em>idle</em>.
      *                          If <= 0, partitions will never be marked as idle.
      */
     public static <T> EventTimePolicy<T> eventTimePolicy(
             @Nullable DistributedToLongFunction<? super T> timestampFn,
-            @Nonnull DistributedSupplier<? extends WatermarkPolicy> wmPolicy,
+            @Nonnull DistributedSupplier<? extends WatermarkPolicy> newWmPolicyFn,
             @Nonnull WatermarkEmissionPolicy wmEmitPolicy,
             long idleTimeoutMillis
     ) {
-        return eventTimePolicy(timestampFn, noWrapping(), wmPolicy, wmEmitPolicy, idleTimeoutMillis);
+        return eventTimePolicy(timestampFn, noWrapping(), newWmPolicyFn, wmEmitPolicy, idleTimeoutMillis);
     }
 
     /**

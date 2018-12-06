@@ -29,6 +29,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
+
 /**
  * Implements a data source the user created using the Source Builder API.
  *
@@ -73,6 +75,9 @@ public class ConvenientSourceP<S, T> extends AbstractProcessor {
         this.destroyFn = destroyFn;
         this.buffer = buffer;
         if (eventTimePolicy != null) {
+            // remove the wrapFn from the eventTimePolicy
+            eventTimePolicy = eventTimePolicy(eventTimePolicy.timestampFn(), eventTimePolicy.newWmPolicyFn(),
+                    eventTimePolicy.wmEmitPolicy(), eventTimePolicy.idleTimeoutMillis());
             this.wsu = new WatermarkSourceUtil<>(eventTimePolicy);
             wsu.increasePartitionCount(1);
         } else {
