@@ -21,45 +21,57 @@ import com.hazelcast.jet.function.DistributedToLongFunction;
 import javax.annotation.Nonnull;
 
 /**
- * TODO [viliam]
- * @param <T>
+ * A source stage in a distributed computation {@link Pipeline pipeline} that
+ * will observe an unbounded amount of data (i.e., an event stream), before
+ * timestamps are specified.
+ *
+ * @param <T> the type of items coming out of this stage
  */
 public interface StreamSourceStage<T> {
 
     /**
-     * Declares that the source will not emit items with timestamp.
-     * You can add them later using {@link GeneralStage#addTimestamps}, however,
-     * source partitions won't be coalesced correctly...
-     *
-     * TODO [viliam] keep this comment? ⬊
-     * You can force the watermarks to not be generated in the source by replacing
-     * <pre>.withTimestamps(...)</pre>
-     * with
-     * <pre>.withoutTimestamps().addTimestamps(...)</pre>
-     *
-     * TODO [viliam]
+     * Declares that the source will not emit items with timestamp. You can add
+     * them later using {@link GeneralStage#addTimestamps}, if needed.
+     * <p>
+     * When timestamps are added later, source partitions won't be coalesced
+     * properly and will be treated as single stream. The allowed lag will need
+     * to cover for the additional disorder introduced by merging the streams.
+     * The streams are merged in essentially random order and it can happen,
+     * for example, that after the job was suspended for a while, there can be
+     * a very recent event in partition1 and a very old event partition2. If
+     * partition1 happens to be merged first, the recent event could render the
+     * old one late, if the allowed lag is not large enough.
      */
     StreamStage<T> withoutTimestamps();
 
     /**
-     * Declares that the source will use ingestion time.
-     *
-     * TODO [viliam]
+     * Declares that the source will use ingestion time. {@code
+     * System.currentTimeMillis()} time will be assigned to each event at the
+     * processing time in source.
      */
     StreamStage<T> withIngestionTimestamps();
 
     /**
-     * Declares that the stream will use source's default timestamp. Throws,
-     * if the source doesn't have the concept of default timestamps (??).
+     * Declares that the stream will use source's default timestamp. This
+     * typically is the message timestamp of the external system.
+     * <p>
+     * If there's no notion of default timestamp in the source, the job will
+     * fail at runtime when the first event is processed; in that case you have
+     * to use {@link #withTimestamps} or {@link #withIngestionTimestamps}, for
+     * example.
      *
-     * TODO [viliam]
+     * @param allowedLag the allowed lag behind the top observed timestamp
      */
     StreamStage<T> withDefaultTimestamps(long allowedLag);
 
     /**
      * Declares that the source will extract timestamps from the stream items.
      *
-     * TODO [viliam]
+     * @param timestampFn a function that returns the timestamp for each item,
+     *                    typically in milliseconds
+     * @param allowedLag the allowed lag behind the top observed timestamp.
+     *                   Time unit is the same as the unit used by {@code
+     *                   timestampFn}
      */
     StreamStage<T> withTimestamps(@Nonnull DistributedToLongFunction<? super T> timestampFn, long allowedLag);
 }

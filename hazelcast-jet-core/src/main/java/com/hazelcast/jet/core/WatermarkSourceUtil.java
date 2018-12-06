@@ -110,9 +110,11 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 public class WatermarkSourceUtil<T> {
 
     /**
-     * TODO [viliam]
+     * Value to use with {@link #handleEvent(Object, int, long)} for the
+     * `defaultEventTime` if there's no such time.
      */
     public static final long NO_DEFAULT_TIME = Long.MIN_VALUE;
+
     private static final WatermarkPolicy[] EMPTY_WATERMARK_POLICIES = {};
     private static final long[] EMPTY_LONGS = {};
 
