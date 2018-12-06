@@ -107,7 +107,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             long allowedLateness,
             boolean tryAddToSource) {
         checkSerializable(timestampFn, "timestampFn");
-        checkFalse(hasJetEvents(), "This stage already has timestamps assigned to it.");
+        checkFalse(hasJetEvents(), "This stage already has timestamps assigned to it");
 
         DistributedSupplier<WatermarkPolicy> wmPolicy = limitingLag(allowedLateness);
         EventTimePolicy<T> eventTimePolicy = eventTimePolicy(

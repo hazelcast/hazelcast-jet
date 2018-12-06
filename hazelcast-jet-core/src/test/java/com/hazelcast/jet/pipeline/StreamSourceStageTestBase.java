@@ -88,7 +88,8 @@ public abstract class StreamSourceStageTestBase extends JetTestSupport {
             StreamSource<? extends Integer> source, Function<StreamSourceStage<Integer>,
             StreamStage<Integer>> addTimestampsFunction,
             List<Long> expectedWms,
-            String expectedJobFailure) {
+            String expectedJobFailure
+    ) {
         Pipeline p = Pipeline.create();
         StreamSourceStage<Integer> sourceStage = p.drawFrom(source);
         StreamStage<Integer> stageWithTimestamps = addTimestampsFunction.apply(sourceStage);

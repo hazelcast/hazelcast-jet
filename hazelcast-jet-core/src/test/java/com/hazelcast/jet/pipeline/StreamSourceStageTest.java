@@ -23,6 +23,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.Map.Entry;
+
 import static com.hazelcast.jet.function.DistributedPredicate.alwaysTrue;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static java.util.Arrays.asList;
@@ -112,5 +114,15 @@ public class StreamSourceStageTest extends StreamSourceStageTestBase {
     @Test
     public void test_sourceJournal_withTimestamps() {
         test(createSourceJournal(), withTimestampsFn, asList(2L, 3L), null);
+    }
+
+    @Test
+    public void when_withTimestampsAndAddTimestamps_then_fail() {
+        Pipeline p = Pipeline.create();
+        StreamStage<Entry<Object, Object>> stage = p.drawFrom(Sources.mapJournal("foo", START_FROM_OLDEST))
+                                                  .withDefaultTimestamps(0);
+
+        expectedException.expectMessage("This stage already has timestamps assigned to it");
+        stage.addTimestamps();
     }
 }

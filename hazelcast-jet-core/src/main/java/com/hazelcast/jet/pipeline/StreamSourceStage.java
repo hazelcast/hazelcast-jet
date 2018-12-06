@@ -31,16 +31,9 @@ public interface StreamSourceStage<T> {
 
     /**
      * Declares that the source will not emit items with timestamp. You can add
-     * them later using {@link GeneralStage#addTimestamps}, if needed.
-     * <p>
-     * When timestamps are added later, source partitions won't be coalesced
-     * properly and will be treated as single stream. The allowed lag will need
-     * to cover for the additional disorder introduced by merging the streams.
-     * The streams are merged in essentially random order and it can happen,
-     * for example, that after the job was suspended for a while, there can be
-     * a very recent event in partition1 and a very old event partition2. If
-     * partition1 happens to be merged first, the recent event could render the
-     * old one late, if the allowed lag is not large enough.
+     * them later using {@link
+     * GeneralStage#addTimestamps(DistributedToLongFunction, long)
+     * addTimestamps}, but the behavior is different - see the note there.
      */
     StreamStage<T> withoutTimestamps();
 
