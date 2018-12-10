@@ -353,29 +353,6 @@ public interface GeneralStage<T> extends Stage {
     <K> GeneralStageWithKey<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);
 
     /**
-     * Adds a timestamp to each item in the stream using the current system
-     * time.
-     *<p>
-     * <strong>Note:</strong> when snapshotting is enabled to achieve fault
-     * tolerance, after a restart Jet replays all the events that were already
-     * processed since the last snapshot. These events will now get different
-     * timestamps. If you want your job to be fault-tolerant, the events in the
-     * stream must carry their own timestamp and you must use {@link
-     * #addTimestamps(DistributedToLongFunction, long)
-     * addTimestamps(timestampFn, allowedLag} to extract them.
-     * <p>
-     * <strong>Note 2:</strong> if the system time goes back (such as when
-     * adjusting the time), newer events will get older timestamps and might be
-     * dropped as late, because the allowed lag is 0.
-     *
-     * @throws IllegalArgumentException if this stage already has timestamps
-     */
-    @Nonnull
-    default StreamStage<T> addTimestamps() {
-        return addTimestamps(t -> System.currentTimeMillis(), 0);
-    }
-
-    /**
      * Adds a timestamp to each item in the stream using the supplied function
      * and specifies the allowed amount of disorder between them. As the stream
      * moves on, the timestamps must increase, but you can tell Jet to accept

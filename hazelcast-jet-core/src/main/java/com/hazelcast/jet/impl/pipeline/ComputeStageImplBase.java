@@ -90,11 +90,6 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    public StreamStage<T> addTimestamps() {
-        return addTimestamps(o -> System.currentTimeMillis(), 0);
-    }
-
-    @Nonnull
     public StreamStage<T> addTimestamps(
             @Nonnull DistributedToLongFunction<? super T> timestampFn, long allowedLateness
     ) {

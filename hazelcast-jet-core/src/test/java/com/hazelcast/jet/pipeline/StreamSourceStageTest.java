@@ -123,6 +123,6 @@ public class StreamSourceStageTest extends StreamSourceStageTestBase {
                                                   .withDefaultTimestamps(0);
 
         expectedException.expectMessage("This stage already has timestamps assigned to it");
-        stage.addTimestamps();
+        stage.addTimestamps(o -> 0L, 0);
     }
 }

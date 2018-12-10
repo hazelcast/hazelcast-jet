@@ -41,6 +41,18 @@ public interface StreamSourceStage<T> {
      * Declares that the source will use ingestion time. {@code
      * System.currentTimeMillis()} time will be assigned to each event at the
      * processing time in source.
+     *<p>
+     * <strong>Note:</strong> when snapshotting is enabled to achieve fault
+     * tolerance, after a restart Jet replays all the events that were already
+     * processed since the last snapshot. These events will now get different
+     * timestamps. If you want your job to be fault-tolerant, the events in the
+     * stream must carry their own timestamp and you must use {@link
+     * #withTimestamps(DistributedToLongFunction, long)
+     * withTimestamps(timestampFn, allowedLag} to extract them.
+     * <p>
+     * <strong>Note 2:</strong> if the system time goes back (such as when
+     * adjusting the time), newer events will get older timestamps and might be
+     * dropped as late, because the allowed lag is 0.
      */
     StreamStage<T> withIngestionTimestamps();
 
