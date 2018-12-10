@@ -44,13 +44,6 @@ public class StreamSourceStageImpl<T> implements StreamSourceStage<T> {
     }
 
     @Override
-    public StreamStage<T> withIngestionTimestamps() {
-        StreamStageImpl<T> result = createStreamStage();
-        result.addTimestampsInt(o -> System.currentTimeMillis(), 0, true);
-        return result;
-    }
-
-    @Override
     public StreamStage<T> withTimestamps(@Nonnull DistributedToLongFunction<? super T> timestampFn, long allowedLag) {
         StreamStageImpl<T> result = createStreamStage();
         result.addTimestampsInt(timestampFn, allowedLag, true);

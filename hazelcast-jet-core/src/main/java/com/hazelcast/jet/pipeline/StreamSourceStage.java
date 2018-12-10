@@ -54,7 +54,9 @@ public interface StreamSourceStage<T> {
      * adjusting the time), newer events will get older timestamps and might be
      * dropped as late, because the allowed lag is 0.
      */
-    StreamStage<T> withIngestionTimestamps();
+    default StreamStage<T> withIngestionTimestamps() {
+        return withTimestamps(o -> System.currentTimeMillis(), 0);
+    }
 
     /**
      * Declares that the stream will use source's default timestamp. This
