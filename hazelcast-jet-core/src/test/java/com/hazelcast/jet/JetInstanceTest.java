@@ -139,7 +139,7 @@ public class JetInstanceTest extends JetTestSupport {
         state1.destroy();
         assertEquals(singleton("state2"), getExportedStateNames(client));
         job.cancel();
-        assertJobStatusEventually(job, JobStatus.COMPLETED);
+        assertJobStatusEventually(job, JobStatus.FAILED);
         assertEquals(singleton("state2"), getExportedStateNames(client));
         state2.destroy();
         assertEquals(emptySet(), getExportedStateNames(client));

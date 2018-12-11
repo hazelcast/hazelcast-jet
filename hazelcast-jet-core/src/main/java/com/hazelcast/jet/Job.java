@@ -24,6 +24,7 @@ import com.hazelcast.jet.pipeline.Pipeline;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -84,9 +85,11 @@ public interface Job {
     /**
      * Waits for the job to complete and throws an exception if the job
      * completes with an error. Does not return if the job gets suspended.
-     * Never returns for streaming (unbounded) jobs unless they fail.
+     * Never returns for streaming (unbounded) jobs, unless they fail.
      * <p>
-     * Shorthand for <code>job.getFuture().get()</code>.
+     * Shorthand for <code>job.getFuture().join()</code>.
+     *
+     * @throws CancellationException if the job was cancelled
      */
     default void join() {
         getFuture().join();
@@ -152,9 +155,8 @@ public interface Job {
      * cancelled. Call {@link #getStatus()} to find out and possibly try to
      * cancel again.
      * <p>
-     * Job status will be {@link JobStatus#COMPLETED} after cancellation, even
-     * though the job didn't really complete. {@link Job#join()} will also
-     * return without an exception.
+     * The job status will be {@link JobStatus#FAILED} after cancellation,
+     * {@link Job#join()} will throw a {@link CancellationException}.
      * <p>
      * See {@link #cancelAndExportSnapshot(String)} to cancel with a terminal
      * snapshot.
@@ -189,9 +191,8 @@ public interface Job {
      * For more information about "exported state" see {@link
      * #exportSnapshot(String)}.
      * <p>
-     * The job status will be {@link JobStatus#COMPLETED} after cancellation,
-     * even though the job didn't really complete. {@link Job#join()} won't
-     * throw an exception.
+     * The job status will be {@link JobStatus#FAILED} after cancellation,
+     * {@link Job#join()} will throw a {@link CancellationException}.
      *
      * @param name name of the snapshot. If name is already used, it will be
      *            overwritten
