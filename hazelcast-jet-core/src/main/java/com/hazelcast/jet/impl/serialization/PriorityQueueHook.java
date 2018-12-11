@@ -23,7 +23,6 @@ import com.hazelcast.nio.serialization.SerializerHook;
 import com.hazelcast.nio.serialization.StreamSerializer;
 
 import java.io.IOException;
-import java.util.Comparator;
 import java.util.PriorityQueue;
 
 public final class PriorityQueueHook implements SerializerHook<PriorityQueue> {
