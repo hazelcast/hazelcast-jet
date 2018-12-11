@@ -60,8 +60,7 @@ public final class PriorityQueueHook implements SerializerHook<PriorityQueue> {
             @Override
             public PriorityQueue read(ObjectDataInput in) throws IOException {
                 int size = in.readInt();
-                Comparator comparator = in.readObject();
-                PriorityQueue res = size < 1 ? new PriorityQueue(comparator) : new PriorityQueue(size, comparator);
+                PriorityQueue res = new PriorityQueue(Math.min(1, size), in.readObject());
                 for (int i = 0; i < size; i++) {
                     res.add(in.readObject());
                 }
