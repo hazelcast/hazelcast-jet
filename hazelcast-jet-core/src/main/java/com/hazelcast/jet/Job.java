@@ -20,7 +20,6 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobStatus;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.Pipeline;
 
 import javax.annotation.Nonnull;
@@ -90,7 +89,7 @@ public interface Job {
      * Shorthand for <code>job.getFuture().get()</code>.
      */
     default void join() {
-        Util.uncheckRun(() -> getFuture().get());
+        getFuture().join();
     }
 
     /**

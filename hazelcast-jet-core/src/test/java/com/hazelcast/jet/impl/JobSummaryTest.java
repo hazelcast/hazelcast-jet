@@ -72,7 +72,7 @@ public class JobSummaryTest extends JetTestSupport {
         assertEquals("jobA", jobSummary.getName());
         assertEquals(job.getId(), jobSummary.getJobId());
         assertEquals(JobStatus.COMPLETED, jobSummary.getStatus());
-        assertNull(jobSummary.getFailureReason());
+        assertNull(jobSummary.getFailureText());
     }
 
     @Test
@@ -171,7 +171,7 @@ public class JobSummaryTest extends JetTestSupport {
         assertEquals(1, list.size());
         JobSummary jobSummary = list.get(0);
 
-        assertEquals(msg, jobSummary.getFailureReason());
+        assertEquals(msg, jobSummary.getFailureText());
         assertNotEquals(0, jobSummary.getCompletionTime());
     }
 
