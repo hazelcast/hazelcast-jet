@@ -23,6 +23,7 @@ import com.hazelcast.nio.serialization.SerializerHook;
 import com.hazelcast.nio.serialization.StreamSerializer;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.PriorityQueue;
 
 public final class PriorityQueueHook implements SerializerHook<PriorityQueue> {
@@ -59,7 +60,8 @@ public final class PriorityQueueHook implements SerializerHook<PriorityQueue> {
             @Override
             public PriorityQueue read(ObjectDataInput in) throws IOException {
                 int size = in.readInt();
-                PriorityQueue res = new PriorityQueue(size, in.readObject());
+                Comparator comparator = in.readObject();
+                PriorityQueue res = size < 1 ? new PriorityQueue(comparator) : new PriorityQueue(size, comparator);
                 for (int i = 0; i < size; i++) {
                     res.add(in.readObject());
                 }
