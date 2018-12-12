@@ -33,7 +33,7 @@ public class TimestampTransform<T> extends AbstractTransform {
             @Nonnull Transform upstream,
             @Nonnull EventTimePolicy<? super T> eventTimePolicy
     ) {
-        super("insertWM", upstream);
+        super("add-timestamps", upstream);
         this.eventTimePolicy = eventTimePolicy;
         checkNotNull(eventTimePolicy.timestampFn(),
                 "timestampFn must not be null if timestamps aren't added in the source");
