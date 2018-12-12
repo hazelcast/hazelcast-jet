@@ -40,4 +40,7 @@ public interface InboundEdgeStream {
     int capacities();
 
     int sizes();
+
+    long topObservedWm();
+    long coalescedWm();
 }
