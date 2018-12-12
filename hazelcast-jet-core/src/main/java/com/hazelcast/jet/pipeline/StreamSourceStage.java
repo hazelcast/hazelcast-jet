@@ -52,10 +52,10 @@ public interface StreamSourceStage<T> {
      * timestamps. If you want your job to be fault-tolerant, the events in the
      * stream must have a stable timestamp associated with them. The source may
      * natively provide such timestamps (the {@link #withDefaultTimestamps(long)}
-     * option). If that is not appropriate, the event should carry its own
-     * timestap as a part of its data and you can use {@link
+     * option). If that is not appropriate, the events should carry their own
+     * timestamp as a part of their data and you can use {@link
      * #withTimestamps(DistributedToLongFunction, long)
-     * withTimestamps(timestampFn, allowedLag} to extract them.
+     * withTimestamps(timestampFn, allowedLag} to extract it.
      * <p>
      * <strong>Note 2:</strong> if the system time goes back (such as when
      * adjusting the system time), newer events will get older timestamps and

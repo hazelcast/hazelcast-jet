@@ -67,13 +67,13 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
             //                    isolated
             //                       v
             //                  -------------
-            //                 |  insertWMP  |
+            //                 |  insertWmP  |
             //                  -------------
             String v1name = p.uniqueVertexName(name());
             Vertex v1 = p.dag.newVertex(v1name, metaSupplierFn.apply(eventTimePolicy))
                              .localParallelism(localParallelism());
             PlannerVertex pv2 = p.addVertex(
-                    this, v1name + "-insertWM", localParallelism(), insertWatermarksP(eventTimePolicy)
+                    this, v1name + "-add-timestamps", localParallelism(), insertWatermarksP(eventTimePolicy)
             );
             p.dag.edge(between(v1, pv2.v).isolated());
         }
