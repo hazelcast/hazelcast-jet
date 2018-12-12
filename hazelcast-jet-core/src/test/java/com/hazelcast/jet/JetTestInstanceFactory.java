@@ -21,24 +21,40 @@ import com.hazelcast.client.test.TestHazelcastFactory;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
+import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.nio.Address;
+import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.mocknetwork.TestNodeRegistry;
 
-import java.util.Arrays;
+import java.util.function.Function;
+import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Jet.getJetClientInstance;
 import static com.hazelcast.jet.impl.JetNodeContext.JET_EXTENSION_PRIORITY_LIST;
 import static com.hazelcast.jet.impl.config.XmlJetConfigBuilder.getClientConfig;
+import static com.hazelcast.jet.impl.util.Util.uncheckRun;
+import static com.hazelcast.test.HazelcastTestSupport.assertClusterSizeEventually;
+import static com.hazelcast.test.HazelcastTestSupport.spawn;
+import static java.util.stream.Collectors.toList;
 
 public class JetTestInstanceFactory {
 
-    private final TestHazelcastFactory factory = new TestHazelcastFactoryForJet();
+    private final TestHazelcastFactory factory;
 
-    private static class TestHazelcastFactoryForJet extends TestHazelcastFactory {
-        @Override
-        protected TestNodeRegistry createRegistry() {
-            return new TestNodeRegistry(getKnownAddresses(), JET_EXTENSION_PRIORITY_LIST);
-        }
+    public JetTestInstanceFactory(int basePortNumber, String[] addresses) {
+        factory = new TestHazelcastFactoryForJet(basePortNumber, addresses);
+    }
+
+    public JetTestInstanceFactory() {
+        factory = new TestHazelcastFactoryForJet();
+    }
+
+    public Address nextAddress() {
+        return factory.nextAddress();
+    }
+
+    public JetInstance newMember(Address address, JetConfig config) {
+        return Jet.newJetInstanceImpl(config, hzCfg -> factory.newHazelcastInstance(address, hzCfg));
     }
 
     public JetInstance newMember() {
@@ -53,12 +69,18 @@ public class JetTestInstanceFactory {
         return Jet.newJetInstanceImpl(config, hzCfg -> factory.newHazelcastInstance(hzCfg, blockedAddresses));
     }
 
-    public JetInstance[] newMembers(JetConfig config, int nodeCount) {
+    public JetInstance[] newMembers(int nodeCount, Function<Address, JetConfig> configFn) {
         JetInstance[] jetInstances = new JetInstance[nodeCount];
-        Arrays.setAll(jetInstances, i -> newMember(config));
+        IntStream.range(0, nodeCount)
+                 .mapToObj(i -> {
+                     Address address = factory.nextAddress();
+                     return spawn(() -> jetInstances[i] = newMember(address, configFn.apply(address)));
+                 })
+                 .collect(toList())
+                 .forEach(f -> uncheckRun(f::get));
+        assertClusterSizeEventually(nodeCount, factory.getAllHazelcastInstances());
         return jetInstances;
     }
-
 
     public JetClientInstanceImpl newClient() {
         return newClient(getClientConfig());
@@ -69,6 +91,18 @@ public class JetTestInstanceFactory {
         return getJetClientInstance(client);
     }
 
+    public JetInstance[] getAllJetInstances() {
+        return factory.getAllHazelcastInstances().stream()
+                      .map(HazelcastTestSupport::getNodeEngineImpl)
+                      .map(node -> node.<JetService>getService(JetService.SERVICE_NAME))
+                      .map(JetService::getJetInstance)
+                      .toArray(JetInstance[]::new);
+    }
+
+    public void terminate(JetInstance instance) {
+        factory.terminate(instance.getHazelcastInstance());
+    }
+
     public void shutdownAll() {
         factory.shutdownAll();
     }
@@ -77,11 +111,17 @@ public class JetTestInstanceFactory {
         factory.terminateAll();
     }
 
-    public void terminate(JetInstance instance) {
-        factory.terminate(instance.getHazelcastInstance());
-    }
+    private static class TestHazelcastFactoryForJet extends TestHazelcastFactory {
+        TestHazelcastFactoryForJet(int basePortNumber, String[] addresses) {
+            super(basePortNumber, addresses);
+        }
 
-    public Address nextAddress() {
-        return factory.nextAddress();
+        TestHazelcastFactoryForJet() {
+        }
+
+        @Override
+        protected TestNodeRegistry createRegistry() {
+            return new TestNodeRegistry(getKnownAddresses(), JET_EXTENSION_PRIORITY_LIST);
+        }
     }
 }

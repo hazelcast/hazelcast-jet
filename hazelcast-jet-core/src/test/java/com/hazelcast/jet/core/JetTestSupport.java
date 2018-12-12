@@ -91,7 +91,7 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
         if (instanceFactory == null) {
             instanceFactory = new JetTestInstanceFactory();
         }
-        return instanceFactory.newMembers(config, nodeCount);
+        return instanceFactory.newMembers(nodeCount, x -> config);
     }
 
     protected JetInstance createJetMember(JetConfig config, Address[] blockedAddress) {
