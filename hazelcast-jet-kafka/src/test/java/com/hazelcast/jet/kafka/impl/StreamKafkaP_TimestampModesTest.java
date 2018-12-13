@@ -75,8 +75,8 @@ public class StreamKafkaP_TimestampModesTest extends StreamSourceStageTestBase {
     }
 
     @Test
-    public void test_sourceKafka_withDefaultTimestamps() {
-        test(getSource(), withDefaultTimestampsFn, asList(1L, 2L), null);
+    public void test_sourceKafka_withNativeTimestamps() {
+        test(getSource(), withNativeTimestampsFn, asList(1L, 2L), null);
     }
 
     @Test

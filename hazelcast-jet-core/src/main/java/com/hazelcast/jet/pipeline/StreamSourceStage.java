@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 
 import javax.annotation.Nonnull;
@@ -48,35 +49,35 @@ public interface StreamSourceStage<T> {
      * <p>
      * <strong>Note:</strong> when snapshotting is enabled to achieve fault
      * tolerance, after a restart Jet replays all the events that were already
-     * processed since the last snapshot. These events will now get different
+     * processed since the last snapshot. These events will then get different
      * timestamps. If you want your job to be fault-tolerant, the events in the
      * stream must have a stable timestamp associated with them. The source may
-     * natively provide such timestamps (the {@link #withDefaultTimestamps(long)}
+     * natively provide such timestamps (the {@link #withNativeTimestamps(long)}
      * option). If that is not appropriate, the events should carry their own
      * timestamp as a part of their data and you can use {@link
      * #withTimestamps(DistributedToLongFunction, long)
      * withTimestamps(timestampFn, allowedLag} to extract it.
      * <p>
      * <strong>Note 2:</strong> if the system time goes back (such as when
-     * adjusting the system time), newer events will get older timestamps and
-     * might be dropped as late, because the allowed lag is 0.
+     * adjusting it), newer events will get older timestamps and might be
+     * dropped as late, because the allowed lag is 0.
      */
     default StreamStage<T> withIngestionTimestamps() {
         return withTimestamps(o -> System.currentTimeMillis(), 0);
     }
 
     /**
-     * Declares that the stream will use the source's default timestamps. This
+     * Declares that the stream will use the source's native timestamps. This
      * is typically the message timestamp that the external system assigns as
      * event's metadata.
      * <p>
-     * If there's no notion of a default timestamp in the source, the job will
-     * fail at runtime when it tries to processes the first event.
+     * If there's no notion of native timestamps in the source, this method
+     * will throw a {@link JetException}.
      *
      * @param allowedLag the allowed lag of a given event's timestamp behind the top
-     *                   timestamp value observed so far.
+     *                   timestamp value observed so far
      */
-    StreamStage<T> withDefaultTimestamps(long allowedLag);
+    StreamStage<T> withNativeTimestamps(long allowedLag);
 
     /**
      * Declares that the source will extract timestamps from the stream items.

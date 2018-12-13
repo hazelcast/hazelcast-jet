@@ -236,10 +236,10 @@ public final class SourceBuilder<S> {
 
     /**
      * Returns a fluent-API builder with which you can create an {@linkplain
-     * StreamSource unbounded stream source} for a Jet pipeline. The source
-     * emits items with default timestamps, which you can use by calling
-     * {@linkplain StreamSourceStage#withDefaultTimestamps
-     * withDefaultTimestamps()}. It will use {@linkplain
+     * StreamSource unbounded stream source} for a Jet pipeline. The source can
+     * emit items with native timestamps, which you can enable by calling
+     * {@linkplain StreamSourceStage#withNativeTimestamps
+     * withNativeTimestamps()}. It will use {@linkplain
      * Processor#isCooperative() non-cooperative} processors.
      * <p>
      * Each parallel processor that drives your source has its private instance
@@ -288,7 +288,7 @@ public final class SourceBuilder<S> {
      *     .build();
      * Pipeline p = Pipeline.create();
      * StreamStage<String> srcStage = p.drawFrom(socketSource)
-     *         .withDefaultTimestamps(SECONDS.toMillis(5));
+     *         .withNativeTimestamps(SECONDS.toMillis(5));
      * }</pre>
      * <p>
      * <strong>NOTE 1:</strong> the source you build with this builder is not
@@ -302,7 +302,7 @@ public final class SourceBuilder<S> {
      * assigned to single parallel processor. The timestamp you get from one
      * partition may be significantly behind the timestamp you already got from
      * another partition. If the skew is more than the allowed lag you
-     * {@linkplain StreamSourceStage#withDefaultTimestamps(long) configured},
+     * {@linkplain StreamSourceStage#withNativeTimestamps(long) configured},
      * you risk that the events will be dropped. Use {@linkplain
      * Sources#streamFromProcessorWithWatermarks(String, Function) custom
      * processor} if you need to coalesce watermarks from multiple partitions.
@@ -313,7 +313,8 @@ public final class SourceBuilder<S> {
      */
     @Nonnull
     public static <S> SourceBuilder<S>.TimestampedStream<Void> timestampedStream(
-            @Nonnull String name, @Nonnull DistributedFunction<? super Processor.Context, ? extends S> createFn
+            @Nonnull String name,
+            @Nonnull DistributedFunction<? super Processor.Context, ? extends S> createFn
     ) {
         return new SourceBuilder<S>(name, createFn).new TimestampedStream<Void>();
     }
@@ -467,7 +468,7 @@ public final class SourceBuilder<S> {
             return new StreamSourceTransform<>(
                     mName,
                     eventTimePolicy -> convenientSourceP(mCreateFn, fillBufferFn, mDestroyFn, mPreferredLocalParallelism),
-                    false);
+                    false, false);
         }
     }
 
@@ -532,7 +533,7 @@ public final class SourceBuilder<S> {
                     mName,
                     eventTimePolicy -> convenientTimestampedSourceP(
                             mCreateFn, fillBufferFn, eventTimePolicy, mDestroyFn, mPreferredLocalParallelism),
-                    true);
+                    true, true);
         }
     }
 }

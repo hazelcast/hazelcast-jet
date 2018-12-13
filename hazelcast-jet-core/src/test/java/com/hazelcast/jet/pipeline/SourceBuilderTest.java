@@ -209,7 +209,7 @@ public class SourceBuilderTest extends PipelineTestSupport {
             // Then
             Pipeline p = Pipeline.create();
             p.drawFrom(socketSource)
-                    .withDefaultTimestamps(0)
+                    .withNativeTimestamps(0)
                     .window(tumbling(1))
                     .aggregate(AggregateOperations.counting())
                     .drainTo(sinkList());
@@ -249,7 +249,7 @@ public class SourceBuilderTest extends PipelineTestSupport {
             // Then
             Pipeline p = Pipeline.create();
             p.drawFrom(socketSource)
-                    .withDefaultTimestamps(lateness)
+                    .withNativeTimestamps(lateness)
                     .window(tumbling(1))
                     .aggregate(AggregateOperations.counting())
                     .drainTo(sinkList());
@@ -291,7 +291,7 @@ public class SourceBuilderTest extends PipelineTestSupport {
             // Then
             Pipeline p = Pipeline.create();
             p.drawFrom(socketSource)
-                    .withDefaultTimestamps(0)
+                    .withNativeTimestamps(0)
                     .window(tumbling(1))
                     .aggregate(AggregateOperations.counting())
                     .drainTo(sinkList());

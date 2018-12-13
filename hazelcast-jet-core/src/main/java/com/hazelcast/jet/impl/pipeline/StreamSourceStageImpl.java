@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.pipeline.StreamSourceStage;
@@ -37,7 +38,10 @@ public class StreamSourceStageImpl<T> implements StreamSourceStage<T> {
     }
 
     @Override
-    public StreamStage<T> withDefaultTimestamps(long allowedLag) {
+    public StreamStage<T> withNativeTimestamps(long allowedLag) {
+        if (!transform.supportsNativeTimestamps()) {
+            throw new JetException("The source doesn't support native timestamps");
+        }
         StreamStageImpl<T> result = createStreamStage();
         result.addTimestampsInt(null, allowedLag, true);
         return result;

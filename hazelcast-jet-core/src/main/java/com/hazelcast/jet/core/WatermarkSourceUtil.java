@@ -112,9 +112,9 @@ public class WatermarkSourceUtil<T> {
 
     /**
      * Value to use with {@link #handleEvent(Object, int, long)} for the
-     * `defaultEventTime` if there's no such time.
+     * `nativeEventTime` if there's no such time.
      */
-    public static final long NO_DEFAULT_TIME = Long.MIN_VALUE;
+    public static final long NO_NATIVE_TIME = Long.MIN_VALUE;
 
     private static final WatermarkPolicy[] EMPTY_WATERMARK_POLICIES = {};
     private static final long[] EMPTY_LONGS = {};
@@ -157,17 +157,17 @@ public class WatermarkSourceUtil<T> {
      * <pre>{@code
      *     Traverser t = traverserIterable(...)
      *         .flatMap(event -> watermarkSourceUtil.handleEvent(
-     *                 event, event.getPartition(), defaultEventTime));
+     *                 event, event.getPartition(), nativeEventTime));
      * }</pre>
      *
      * @param event the event
      * @param partitionIndex the source partition index the event came from
-     * @param defaultEventTime default event time in case no timestampFn was
-     *      supplied or {@link #NO_DEFAULT_TIME}
+     * @param nativeEventTime native event time in case no timestampFn was
+     *      supplied or {@link #NO_NATIVE_TIME}
      */
     @Nonnull
-    public Traverser<Object> handleEvent(T event, int partitionIndex, long defaultEventTime) {
-        return handleEvent(System.nanoTime(), event, partitionIndex, defaultEventTime);
+    public Traverser<Object> handleEvent(T event, int partitionIndex, long nativeEventTime) {
+        return handleEvent(System.nanoTime(), event, partitionIndex, nativeEventTime);
     }
 
     /**
@@ -177,18 +177,18 @@ public class WatermarkSourceUtil<T> {
      */
     @Nonnull
     public Traverser<Object> handleNoEvent() {
-        return handleEvent(System.nanoTime(), null, -1, NO_DEFAULT_TIME);
+        return handleEvent(System.nanoTime(), null, -1, NO_NATIVE_TIME);
     }
 
     // package-visible for tests
-    Traverser<Object> handleEvent(long now, @Nullable T event, int partitionIndex, long defaultEventTime) {
+    Traverser<Object> handleEvent(long now, @Nullable T event, int partitionIndex, long nativeEventTime) {
         assert traverser.isEmpty() : "the traverser returned previously not yet drained: remove all " +
                 "items from the traverser before you call this method again.";
         if (event != null) {
-            if (timestampFn == null && defaultEventTime == NO_DEFAULT_TIME) {
-                throw new JetException("Neither timestampFn nor defaultEventTime specified");
+            if (timestampFn == null && nativeEventTime == NO_NATIVE_TIME) {
+                throw new JetException("Neither timestampFn nor nativeEventTime specified");
             }
-            long eventTime = timestampFn == null ? defaultEventTime : timestampFn.applyAsLong(event);
+            long eventTime = timestampFn == null ? nativeEventTime : timestampFn.applyAsLong(event);
             handleEventInt(now, partitionIndex, eventTime);
             traverser.append(wrapFn.apply(event, eventTime));
         } else {

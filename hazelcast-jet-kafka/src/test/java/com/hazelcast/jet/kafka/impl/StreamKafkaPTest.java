@@ -123,7 +123,6 @@ public class StreamKafkaPTest extends KafkaTestSupport {
                 assertTrue("missing entry: " + value, list.contains(value));
             }
         }, 5);
-
     }
 
     @Test

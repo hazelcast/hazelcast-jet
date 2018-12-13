@@ -39,15 +39,18 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
 
     @Nullable
     private EventTimePolicy<? super T> eventTimePolicy;
+    private final boolean supportsNativeTimestamps;
 
     public StreamSourceTransform(
             @Nonnull String name,
             @Nonnull Function<? super EventTimePolicy<? super T>, ? extends ProcessorMetaSupplier> metaSupplierFn,
-            boolean emitsWatermarks
+            boolean emitsWatermarks,
+            boolean supportsNativeTimestamps
     ) {
         super(name, emptyList());
         this.metaSupplierFn = metaSupplierFn;
         this.emitsWatermarks = emitsWatermarks;
+        this.supportsNativeTimestamps = supportsNativeTimestamps;
     }
 
     @Override
@@ -90,5 +93,10 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
 
     public boolean emitsJetEvents() {
         return eventTimePolicy != null;
+    }
+
+    @Override
+    public boolean supportsNativeTimestamps() {
+        return supportsNativeTimestamps;
     }
 }

@@ -75,8 +75,8 @@ public class StreamSourceStageTest extends StreamSourceStageTestBase {
     }
 
     @Test
-    public void test_timestampedSourceBuilder_withDefaultTimestamps() {
-        test(createTimestampedSourceBuilder(), withDefaultTimestampsFn, asList(1L, 2L), null);
+    public void test_timestampedSourceBuilder_withNativeTimestamps() {
+        test(createTimestampedSourceBuilder(), withNativeTimestampsFn, asList(1L, 2L), null);
     }
 
     @Test
@@ -90,9 +90,9 @@ public class StreamSourceStageTest extends StreamSourceStageTestBase {
     }
 
     @Test
-    public void test_plainSourceBuilder_withDefaultTimestamps() {
-        test(createPlainSourceBuilder(), withDefaultTimestampsFn, emptyList(),
-                "Neither timestampFn nor defaultEventTime specified");
+    public void test_plainSourceBuilder_withNativeTimestamps() {
+        test(createPlainSourceBuilder(), withNativeTimestampsFn, emptyList(),
+                "Neither timestampFn nor nativeEventTime specified");
     }
 
     @Test
@@ -106,9 +106,9 @@ public class StreamSourceStageTest extends StreamSourceStageTestBase {
     }
 
     @Test
-    public void test_sourceJournal_withDefaultTimestamps() {
-        test(createSourceJournal(), withDefaultTimestampsFn, emptyList(),
-                "Neither timestampFn nor defaultEventTime specified");
+    public void test_sourceJournal_withNativeTimestamps() {
+        test(createSourceJournal(), withNativeTimestampsFn, emptyList(),
+                "Neither timestampFn nor nativeEventTime specified");
     }
 
     @Test
@@ -120,7 +120,7 @@ public class StreamSourceStageTest extends StreamSourceStageTestBase {
     public void when_withTimestampsAndAddTimestamps_then_fail() {
         Pipeline p = Pipeline.create();
         StreamStage<Entry<Object, Object>> stage = p.drawFrom(Sources.mapJournal("foo", START_FROM_OLDEST))
-                                                  .withDefaultTimestamps(0);
+                                                  .withNativeTimestamps(0);
 
         expectedException.expectMessage("This stage already has timestamps assigned to it");
         stage.addTimestamps(o -> 0L, 0);

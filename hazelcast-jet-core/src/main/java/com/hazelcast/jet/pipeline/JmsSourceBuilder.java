@@ -196,7 +196,7 @@ public final class JmsSourceBuilder {
                 SourceProcessors.streamJmsTopicP(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn)
                 : SourceProcessors.streamJmsQueueP(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn);
 
-        return new StreamSourceTransform<>(sourceName(), w -> metaSupplier, false);
+        return new StreamSourceTransform<>(sourceName(), w -> metaSupplier, false, false);
     }
 
     /**

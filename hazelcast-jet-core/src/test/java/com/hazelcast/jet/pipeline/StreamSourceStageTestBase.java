@@ -58,8 +58,8 @@ public abstract class StreamSourceStageTestBase extends JetTestSupport {
 
     protected final Function<StreamSourceStage<Integer>, StreamStage<Integer>> withoutTimestampsFn =
             s -> s.withoutTimestamps().addTimestamps(i -> i + 1, 0).setLocalParallelism(1);
-    protected final Function<StreamSourceStage<Integer>, StreamStage<Integer>> withDefaultTimestampsFn =
-            s -> s.withDefaultTimestamps(0);
+    protected final Function<StreamSourceStage<Integer>, StreamStage<Integer>> withNativeTimestampsFn =
+            s -> s.withNativeTimestamps(0);
     protected final Function<StreamSourceStage<Integer>, StreamStage<Integer>> withTimestampsFn =
             s -> s.withTimestamps(i -> i + 1, 0).setLocalParallelism(1);
 

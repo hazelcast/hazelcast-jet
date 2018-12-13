@@ -60,7 +60,7 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
     @SuppressWarnings("unchecked")
     private boolean tryProcessInternal(@Nullable Object item) {
         if (traverser == null) {
-            traverser = wsu.handleEvent((T) item, 0, WatermarkSourceUtil.NO_DEFAULT_TIME);
+            traverser = wsu.handleEvent((T) item, 0, WatermarkSourceUtil.NO_NATIVE_TIME);
         }
         if (emitFromTraverser(traverser)) {
             traverser = null;
