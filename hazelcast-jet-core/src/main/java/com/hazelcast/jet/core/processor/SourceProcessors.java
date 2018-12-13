@@ -377,10 +377,10 @@ public final class SourceProcessors {
             @Nonnull DistributedFunction<? super Connection, ? extends Session> sessionFn,
             @Nonnull DistributedFunction<? super Session, ? extends MessageConsumer> consumerFn,
             @Nonnull DistributedConsumer<? super Session> flushFn,
-            @Nonnull DistributedFunction<? super Message, ? extends T> projectionFn
-    ) {
+            @Nonnull DistributedFunction<? super Message, ? extends T> projectionFn,
+            @Nonnull EventTimePolicy<? super T> eventTimePolicy) {
         return ProcessorMetaSupplier.of(
-                StreamJmsP.supplier(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn),
+                StreamJmsP.supplier(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn, eventTimePolicy),
                 StreamJmsP.PREFERRED_LOCAL_PARALLELISM);
     }
 
@@ -393,10 +393,10 @@ public final class SourceProcessors {
             @Nonnull DistributedFunction<? super Connection, ? extends Session> sessionFn,
             @Nonnull DistributedFunction<? super Session, ? extends MessageConsumer> consumerFn,
             @Nonnull DistributedConsumer<? super Session> flushFn,
-            @Nonnull DistributedFunction<? super Message, ? extends T> projectionFn
-    ) {
+            @Nonnull DistributedFunction<? super Message, ? extends T> projectionFn,
+            @Nonnull EventTimePolicy<? super T> eventTimePolicy) {
         return ProcessorMetaSupplier.forceTotalParallelismOne(
-                StreamJmsP.supplier(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn));
+                StreamJmsP.supplier(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn, eventTimePolicy));
     }
 
     /**

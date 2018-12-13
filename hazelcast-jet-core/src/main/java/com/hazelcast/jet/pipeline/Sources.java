@@ -1082,6 +1082,10 @@ public final class Sources {
      * a custom JMS {@link StreamSource} for the Pipeline API. See javadoc on
      * {@link JmsSourceBuilder} methods for more details.
      * <p>
+     * This source uses the {@link Message#getJMSTimestamp() JMS' message
+     * timestamp} as the native timestamp, if {@linkplain
+     * StreamSourceStage#withNativeTimestamps(long) enabled}.
+     * <p>
      * The source does not save any state to snapshot. The source starts
      * emitting items where it left from.
      * <p>
@@ -1127,6 +1131,10 @@ public final class Sources {
      * operates on a single member and with local parallelism of 1. Setting
      * local parallelism to a value other than 1 causes an {@code
      * IllegalArgumentException}.
+     * <p>
+     * This source uses the {@link Message#getJMSTimestamp() JMS' message
+     * timestamp} as the native timestamp, if {@linkplain
+     * StreamSourceStage#withNativeTimestamps(long) enabled}.
      * <p>
      * The source does not save any state to snapshot. Behavior of job restart
      * changes according to the consumer. If it is a durable consumer and a

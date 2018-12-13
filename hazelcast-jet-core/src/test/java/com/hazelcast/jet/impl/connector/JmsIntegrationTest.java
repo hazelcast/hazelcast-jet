@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.core.JobStatus;
+import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
@@ -39,15 +40,22 @@ import javax.jms.MessageConsumer;
 import javax.jms.MessageProducer;
 import javax.jms.Session;
 import javax.jms.TextMessage;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
+import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
 import static java.util.Collections.synchronizedList;
+import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 import static javax.jms.Session.AUTO_ACKNOWLEDGE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class JmsIntegrationTest extends PipelineTestSupport {
 
@@ -161,6 +169,36 @@ public class JmsIntegrationTest extends PipelineTestSupport {
         List<Object> messages = sendMessages(true);
         assertEqualsEventually(sinkList::size, messages.size());
         assertContainsAll(sinkList, messages);
+
+        cancelJob();
+    }
+
+    @Test
+    public void sourceTopic_withNativeTimestamps() throws Exception {
+        p.drawFrom(Sources.jmsTopic(() -> broker.createConnectionFactory(), destinationName))
+         .withNativeTimestamps(0)
+         .map(Message::getJMSTimestamp)
+         .window(tumbling(1))
+         .aggregate(counting())
+         .drainTo(sink);
+
+        startJob(true);
+        sendMessages(false);
+        // sleep some time and emit a flushing message, that won't make it to the output, because
+        // the messages with the highest timestamp are not emitted
+        sleepMillis(500);
+        sendMessage(destinationName, false);
+
+        assertTrueEventually(() -> {
+            long countSum = sinkList.stream().mapToLong(o -> ((TimestampedItem<Long>) o).item()).sum();
+            assertEquals(MESSAGE_COUNT, countSum);
+            long avgTime = (long) sinkList.stream().mapToLong(o -> ((TimestampedItem<Long>) o).timestamp())
+                                          .average().orElse(0);
+            long oneHour = HOURS.toMillis(1);
+            long now = System.currentTimeMillis();
+            assertTrue("Time too much off: " + Instant.ofEpochMilli(avgTime).atZone(ZoneId.systemDefault()),
+                    avgTime > now - oneHour && avgTime < now + oneHour);
+        }, 10);
 
         cancelJob();
     }
