@@ -50,7 +50,7 @@ import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
 import static java.util.Collections.synchronizedList;
-import static java.util.concurrent.TimeUnit.HOURS;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 import static javax.jms.Session.AUTO_ACKNOWLEDGE;
@@ -192,12 +192,16 @@ public class JmsIntegrationTest extends PipelineTestSupport {
         assertTrueEventually(() -> {
             long countSum = sinkList.stream().mapToLong(o -> ((TimestampedItem<Long>) o).item()).sum();
             assertEquals(MESSAGE_COUNT, countSum);
+
+            // There's no way to see the JetEvent's timestamp by the user code. In order to check
+            // the native timestamp, we aggregate the events into tumbling(1) windows and check
+            // the timestamps of the windows: we assert that it is around the current time.
             long avgTime = (long) sinkList.stream().mapToLong(o -> ((TimestampedItem<Long>) o).timestamp())
                                           .average().orElse(0);
-            long oneHour = HOURS.toMillis(1);
+            long tenMinutes = MINUTES.toMillis(1);
             long now = System.currentTimeMillis();
             assertTrue("Time too much off: " + Instant.ofEpochMilli(avgTime).atZone(ZoneId.systemDefault()),
-                    avgTime > now - oneHour && avgTime < now + oneHour);
+                    avgTime > now - tenMinutes && avgTime < now + tenMinutes);
         }, 10);
 
         cancelJob();

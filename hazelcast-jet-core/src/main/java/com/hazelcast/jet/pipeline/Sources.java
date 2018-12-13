@@ -1063,6 +1063,10 @@ public final class Sources {
      * version creates a connection without any authentication parameters and
      * uses non-transacted sessions with {@code Session.AUTO_ACKNOWLEDGE} mode.
      * JMS {@link Message} objects are emitted to downstream.
+     * <p>
+     * <b>Note:</b> {@link javax.jms.Message} might not be serializable. In
+     * that case you can use {@linkplain #jmsQueueBuilder(DistributedSupplier)
+     * the builder} and add a projection.
      *
      * @param factorySupplier supplier to obtain JMS connection factory
      * @param name            the name of the queue
@@ -1107,6 +1111,10 @@ public final class Sources {
      * version creates a connection without any authentication parameters and
      * uses non-transacted sessions with {@code Session.AUTO_ACKNOWLEDGE} mode.
      * JMS {@link Message} objects are emitted to downstream.
+     * <p>
+     * <b>Note:</b> {@link javax.jms.Message} might not be serializable. In
+     * that case you can use {@linkplain #jmsTopicBuilder(DistributedSupplier)
+     * the builder} and add a projection.
      *
      * @param factorySupplier supplier to obtain JMS connection factory
      * @param name            the name of the topic
