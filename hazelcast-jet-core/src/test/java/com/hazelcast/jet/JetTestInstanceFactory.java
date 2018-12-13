@@ -69,6 +69,11 @@ public class JetTestInstanceFactory {
         return Jet.newJetInstanceImpl(config, hzCfg -> factory.newHazelcastInstance(hzCfg, blockedAddresses));
     }
 
+    /**
+     * Spawns a separate thread to start each instance. This is required when
+     * starting a Hot Restart-enabled cluster, where the {@code newJetInstance}
+     * call blocks until the whole cluster is re-formed.
+     */
     public JetInstance[] newMembers(int nodeCount, Function<Address, JetConfig> configFn) {
         JetInstance[] jetInstances = new JetInstance[nodeCount];
         IntStream.range(0, nodeCount)
