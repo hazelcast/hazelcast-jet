@@ -41,11 +41,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.jet.core.JobStatus.FAILED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.spi.properties.GroupProperty.PARTITION_COUNT;
 import static java.util.Collections.newSetFromMap;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 public abstract class StreamSourceStageTestBase extends JetTestSupport {
 
@@ -88,11 +88,20 @@ public abstract class StreamSourceStageTestBase extends JetTestSupport {
             StreamSource<? extends Integer> source, Function<StreamSourceStage<Integer>,
             StreamStage<Integer>> addTimestampsFunction,
             List<Long> expectedWms,
-            String expectedJobFailure
+            String expectedTimestampFailure
     ) {
         Pipeline p = Pipeline.create();
         StreamSourceStage<Integer> sourceStage = p.drawFrom(source);
-        StreamStage<Integer> stageWithTimestamps = addTimestampsFunction.apply(sourceStage);
+        StreamStage<Integer> stageWithTimestamps = null;
+        try {
+            stageWithTimestamps = addTimestampsFunction.apply(sourceStage);
+        } catch (Exception e) {
+            if (expectedTimestampFailure == null) {
+                fail("Unexpected exception: " + e);
+            }
+            assertEquals(expectedTimestampFailure, e.getMessage());
+            return;
+        }
         stageWithTimestamps
                 .window(WindowDefinition.tumbling(1))
                 .aggregate(counting())
@@ -105,14 +114,9 @@ public abstract class StreamSourceStageTestBase extends JetTestSupport {
         RunnableExc assertTask = () -> assertEquals(expectedWmsSet, WatermarkLogger.watermarks);
         assertTrueEventually(assertTask, 24);
         assertTrueAllTheTime(assertTask, 1);
-        assertTrueEventually(() -> assertEquals(expectedJobFailure != null ? FAILED : RUNNING, job.getStatus()));
+        assertTrueEventually(() -> assertEquals(RUNNING, job.getStatus()));
         job.cancel();
-        if (expectedJobFailure != null) {
-            expectedException.expect(Exception.class);
-            expectedException.expectMessage(expectedJobFailure);
-        } else {
-            expectedException.expect(CancellationException.class);
-        }
+        expectedException.expect(CancellationException.class);
         job.join();
     }
 

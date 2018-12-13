@@ -92,7 +92,7 @@ public class StreamSourceStageTest extends StreamSourceStageTestBase {
     @Test
     public void test_plainSourceBuilder_withNativeTimestamps() {
         test(createPlainSourceBuilder(), withNativeTimestampsFn, emptyList(),
-                "Neither timestampFn nor nativeEventTime specified");
+                "The source doesn't support native timestamps");
     }
 
     @Test
@@ -108,7 +108,7 @@ public class StreamSourceStageTest extends StreamSourceStageTestBase {
     @Test
     public void test_sourceJournal_withNativeTimestamps() {
         test(createSourceJournal(), withNativeTimestampsFn, emptyList(),
-                "Neither timestampFn nor nativeEventTime specified");
+                "The source doesn't support native timestamps");
     }
 
     @Test
@@ -120,7 +120,7 @@ public class StreamSourceStageTest extends StreamSourceStageTestBase {
     public void when_withTimestampsAndAddTimestamps_then_fail() {
         Pipeline p = Pipeline.create();
         StreamStage<Entry<Object, Object>> stage = p.drawFrom(Sources.mapJournal("foo", START_FROM_OLDEST))
-                                                  .withNativeTimestamps(0);
+                                                  .withIngestionTimestamps();
 
         expectedException.expectMessage("This stage already has timestamps assigned to it");
         stage.addTimestamps(o -> 0L, 0);
