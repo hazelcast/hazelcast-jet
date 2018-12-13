@@ -170,7 +170,8 @@ public class StreamJmsP<T> extends AbstractProcessor {
         @Override
         public Collection<? extends Processor> get(int count) {
             return range(0, count)
-                    .mapToObj(i -> new StreamJmsP<>(connection, sessionFn, consumerFn, flushFn, projectionFn, eventTimePolicy))
+                    .mapToObj(i ->
+                            new StreamJmsP<>(connection, sessionFn, consumerFn, flushFn, projectionFn, eventTimePolicy))
                     .collect(Collectors.toList());
         }
     }
