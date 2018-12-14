@@ -85,7 +85,8 @@ public interface Job {
     /**
      * Waits for the job to complete and throws an exception if the job
      * completes with an error. Does not return if the job gets suspended.
-     * Never returns for streaming (unbounded) jobs, unless they fail.
+     * Never returns for streaming (unbounded) jobs, unless they fail or are
+     * cancelled.
      * <p>
      * Shorthand for <code>job.getFuture().join()</code>.
      *
