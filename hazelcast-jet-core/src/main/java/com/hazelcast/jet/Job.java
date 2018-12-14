@@ -50,8 +50,8 @@ public interface Job {
 
     /**
      * Returns the name of this job or {@code null} if no name was supplied.
-     * <p>
-     * Jobs can be named through {@link JobConfig#setName(String)} prior to submission.
+     * You can set the name of the job using {@link JobConfig#setName(String)}
+     * before submitting it.
      */
     @Nullable
     default String getName() {
@@ -59,11 +59,9 @@ public interface Job {
     }
 
     /**
-     * Returns the time when the job was submitted to the cluster.
-     * <p>
-     * The time is assigned by reading {@code System.currentTimeMillis()} of
-     * the master member that executes the job for the first time. It doesn't
-     * change on restart.
+     * Returns the time when you submitted the job. Jet assigns the time by
+     * reading {@code System.currentTimeMillis()} on the master member that
+     * executes the job for the first time.
      */
     long getSubmissionTime();
 

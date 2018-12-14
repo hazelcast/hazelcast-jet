@@ -111,8 +111,9 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 public class WatermarkSourceUtil<T> {
 
     /**
-     * Value to use with {@link #handleEvent(Object, int, long)} for the
-     * `nativeEventTime` if there's no such time.
+     * Value to use as the {@code nativeEventTime} argument when calling
+     * {@link #handleEvent(Object, int, long)} whene there's no native event
+     * time to supply.
      */
     public static final long NO_NATIVE_TIME = Long.MIN_VALUE;
 
@@ -135,13 +136,11 @@ public class WatermarkSourceUtil<T> {
     private boolean allAreIdle;
 
     /**
-     * A constructor.
-     * <p>
-     * The partition count is initially set to 0, call {@link
-     * #increasePartitionCount} to set it.
+     * The partition count is initially set to 0, call
+     * {@link #increasePartitionCount} to set it.
      *
      * @param eventTimePolicy event time policy as passed in {@link
-     *      Sources#streamFromProcessorWithWatermarks}
+     *                        Sources#streamFromProcessorWithWatermarks}
      **/
     public WatermarkSourceUtil(EventTimePolicy<? super T> eventTimePolicy) {
         this.idleTimeoutNanos = MILLISECONDS.toNanos(eventTimePolicy.idleTimeoutMillis());
@@ -160,10 +159,10 @@ public class WatermarkSourceUtil<T> {
      *                 event, event.getPartition(), nativeEventTime));
      * }</pre>
      *
-     * @param event the event
-     * @param partitionIndex the source partition index the event came from
-     * @param nativeEventTime native event time in case no timestampFn was
-     *      supplied or {@link #NO_NATIVE_TIME}
+     * @param event           the event
+     * @param partitionIndex  the source partition index the event came from
+     * @param nativeEventTime native event time in case no {@code timestampFn} was supplied or
+     *                        {@link #NO_NATIVE_TIME} if the event has no native timestamp
      */
     @Nonnull
     public Traverser<Object> handleEvent(T event, int partitionIndex, long nativeEventTime) {

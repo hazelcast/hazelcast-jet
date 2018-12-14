@@ -101,8 +101,8 @@ public final class EventTimePolicy<T> implements Serializable {
      * Creates and returns a new event time policy. To get a policy that
      * results in no timestamping, call {@link #noEventTime()}.
      *
-     * @param timestampFn       function that extracts the timestamp from the event; if null, default
-     *                          timestamp of the source will be used
+     * @param timestampFn       function that extracts the timestamp from the event; if null, Jet will
+     *                          use the source's native timestamp
      * @param wrapFn            function that transforms the received item and its timestamp into the
      *                          emitted item
      * @param newWmPolicyFn     factory of the watermark policy objects
@@ -125,8 +125,8 @@ public final class EventTimePolicy<T> implements Serializable {
      * results in no watermarks being emitted, call {@link
      * #noEventTime()}.
      *
-     * @param timestampFn       function that extracts the timestamp from the event; if null, default
-     *                          timestamp of the source will be used
+     * @param timestampFn       function that extracts the timestamp from the event; if null, Jet will
+     *                          use the source's native timestamp
      * @param newWmPolicyFn     factory of the watermark policy objects
      * @param wmEmitPolicy      watermark emission policy (decides how to suppress redundant watermarks)
      * @param idleTimeoutMillis the timeout after which a partition will be marked as <em>idle</em>.
