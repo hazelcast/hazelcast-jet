@@ -70,13 +70,15 @@ public class JetTestInstanceFactory {
     }
 
     /**
-     * Creates the given number of jet instances in parallel.
+     * Creates the given number of Jet instances in parallel.
      * <p>
      * Spawns a separate thread to start each instance. This is required when
      * starting a Hot Restart-enabled cluster, where the {@code newJetInstance()}
      * call blocks until the whole cluster is re-formed.
+     *
+     * @param configFn a function that must return a separate config instance for each address
      */
-    public JetInstance[] newMembers(int nodeCount, Function<Address, JetConfig> configFn) {
+    public JetInstance[] newMembersParallel(int nodeCount, Function<Address, JetConfig> configFn) {
         JetInstance[] jetInstances = IntStream.range(0, nodeCount)
                 .mapToObj(i -> factory.nextAddress())
                 .map(address -> spawn(() -> newMember(configFn.apply(address), address)))
@@ -118,11 +120,11 @@ public class JetTestInstanceFactory {
     }
 
     private static class TestHazelcastFactoryForJet extends TestHazelcastFactory {
-        TestHazelcastFactoryForJet(int basePortNumber, String[] addresses) {
-            super(basePortNumber, addresses);
+        TestHazelcastFactoryForJet() {
         }
 
-        TestHazelcastFactoryForJet() {
+        TestHazelcastFactoryForJet(int basePortNumber, String[] addresses) {
+            super(basePortNumber, addresses);
         }
 
         @Override

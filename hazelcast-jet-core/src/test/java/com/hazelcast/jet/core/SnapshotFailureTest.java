@@ -59,20 +59,21 @@ public class SnapshotFailureTest extends JetTestSupport {
 
     @Before
     public void setup() {
-        JetConfig config = new JetConfig();
-        config.getInstanceConfig().setCooperativeThreadCount(LOCAL_PARALLELISM);
+        JetInstance[] instances = createJetMembers(2, addr -> {
+            JetConfig config = new JetConfig();
+            config.getInstanceConfig().setCooperativeThreadCount(LOCAL_PARALLELISM);
 
-        // force snapshots to fail by adding a failing map store configuration for snapshot data maps
-        MapConfig mapConfig = new MapConfig(JobRepository.SNAPSHOT_DATA_MAP_PREFIX + '*');
-        MapStoreConfig mapStoreConfig = mapConfig.getMapStoreConfig();
-        mapStoreConfig.setEnabled(true);
-        mapStoreConfig.setImplementation(new FailingMapStore());
-        config.getHazelcastConfig().addMapConfig(mapConfig);
+            // force snapshots to fail by adding a failing map store configuration for snapshot data maps
+            MapConfig mapConfig = new MapConfig(JobRepository.SNAPSHOT_DATA_MAP_PREFIX + '*');
+            MapStoreConfig mapStoreConfig = mapConfig.getMapStoreConfig();
+            mapStoreConfig.setEnabled(true);
+            mapStoreConfig.setImplementation(new FailingMapStore());
+            config.getHazelcastConfig().addMapConfig(mapConfig);
 
-        config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig()
-                .setMapName(JobRepository.SNAPSHOT_DATA_MAP_PREFIX + '*'));
-
-        JetInstance[] instances = createJetMembers(config, 2);
+            config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig()
+                    .setMapName(JobRepository.SNAPSHOT_DATA_MAP_PREFIX + '*'));
+            return config;
+        });
         instance1 = instances[0];
     }
 

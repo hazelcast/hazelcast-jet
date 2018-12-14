@@ -49,9 +49,11 @@ public class JobSummaryTest extends JetTestSupport {
 
     @Before
     public void setup() {
-        JetConfig config = new JetConfig();
-        config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig().setMapName(SOURCE_NAME));
-        instance = createJetMembers(config, 2)[0];
+        instance = createJetMembers(2, addr -> {
+            JetConfig config = new JetConfig();
+            config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig().setMapName(SOURCE_NAME));
+            return config;
+        })[0];
         client = (JetClientInstanceImpl) createJetClient();
     }
 

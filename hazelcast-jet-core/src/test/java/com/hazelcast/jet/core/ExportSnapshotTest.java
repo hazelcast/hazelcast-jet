@@ -107,9 +107,11 @@ public class ExportSnapshotTest extends JetTestSupport {
 
     @Test
     public void when_regularSnapshotInProgress_then_exportWaits() {
-        JetConfig config = new JetConfig();
-        configureBlockingMapStore(config, SNAPSHOT_DATA_MAP_PREFIX + "*");
-        JetInstance[] instances = createJetMembers(config, 2);
+        JetInstance[] instances = createJetMembers(2, addr -> {
+            JetConfig config = new JetConfig();
+            configureBlockingMapStore(config, SNAPSHOT_DATA_MAP_PREFIX + "*");
+            return config;
+        });
         JetInstance client = fromClient ? createJetClient() : instances[0];
 
         DAG dag = new DAG();
@@ -128,9 +130,11 @@ public class ExportSnapshotTest extends JetTestSupport {
 
     @Test
     public void when_otherExportInProgress_then_waits() {
-        JetConfig config = new JetConfig();
-        configureBlockingMapStore(config, JobRepository.EXPORTED_SNAPSHOTS_PREFIX + "*");
-        JetInstance[] instances = createJetMembers(config, 2);
+        JetInstance[] instances = createJetMembers(2, addr -> {
+            JetConfig config = new JetConfig();
+            configureBlockingMapStore(config, JobRepository.EXPORTED_SNAPSHOTS_PREFIX + "*");
+            return config;
+        });
         JetInstance client = fromClient ? createJetClient() : instances[0];
 
         DAG dag = new DAG();
@@ -249,7 +253,7 @@ public class ExportSnapshotTest extends JetTestSupport {
         DAG dag = new DAG();
         dag.newVertex("p", DummyStatefulP::new).localParallelism(1);
         dag.newVertex("failing", () -> new NoOutputSourceP());
-        JetInstance[] instances = createJetMembers(new JetConfig(), 2);
+        JetInstance[] instances = createJetMembers(2);
         JetInstance client = fromClient ? createJetClient() : instances[0];
         Job job = client.newJob(dag,
                 new JobConfig().setProcessingGuarantee(EXACTLY_ONCE).setSnapshotIntervalMillis(10));
