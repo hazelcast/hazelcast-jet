@@ -231,9 +231,9 @@ public class WatermarkSourceUtil<T> {
                 traverser.append(new Watermark(newWm));
                 lastEmittedWm = newWm;
             }
-            if (allAreIdle) {
-                traverser.append(IDLE_MESSAGE);
-            }
+        }
+        if (allAreIdle) {
+            traverser.append(IDLE_MESSAGE);
         }
     }
 
