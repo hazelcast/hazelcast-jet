@@ -225,13 +225,15 @@ public class WatermarkSourceUtil<T> {
             allAreIdle = false;
         }
 
-        long newWm = wmEmitPolicy.throttleWm(min, lastEmittedWm);
-        if (newWm > lastEmittedWm) {
-            traverser.append(new Watermark(newWm));
-            lastEmittedWm = newWm;
-        }
-        if (allAreIdle) {
-            traverser.append(IDLE_MESSAGE);
+        if (min > lastEmittedWm) {
+            long newWm = wmEmitPolicy.throttleWm(min, lastEmittedWm);
+            if (newWm > lastEmittedWm) {
+                traverser.append(new Watermark(newWm));
+                lastEmittedWm = newWm;
+            }
+            if (allAreIdle) {
+                traverser.append(IDLE_MESSAGE);
+            }
         }
     }
 
