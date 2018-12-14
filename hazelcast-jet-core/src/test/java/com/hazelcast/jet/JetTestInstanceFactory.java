@@ -53,16 +53,16 @@ public class JetTestInstanceFactory {
         return factory.nextAddress();
     }
 
-    public JetInstance newMember(Address address, JetConfig config) {
-        return Jet.newJetInstanceImpl(config, hzCfg -> factory.newHazelcastInstance(address, hzCfg));
-    }
-
     public JetInstance newMember() {
         return newMember(JetConfig.loadDefault());
     }
 
     public JetInstance newMember(JetConfig config) {
         return Jet.newJetInstanceImpl(config, factory::newHazelcastInstance);
+    }
+
+    public JetInstance newMember(JetConfig config, Address address) {
+        return Jet.newJetInstanceImpl(config, hzCfg -> factory.newHazelcastInstance(address, hzCfg));
     }
 
     public JetInstance newMember(JetConfig config, Address[] blockedAddresses) {
@@ -79,7 +79,7 @@ public class JetTestInstanceFactory {
     public JetInstance[] newMembers(int nodeCount, Function<Address, JetConfig> configFn) {
         JetInstance[] jetInstances = IntStream.range(0, nodeCount)
                 .mapToObj(i -> factory.nextAddress())
-                .map(address -> spawn(() -> newMember(address, configFn.apply(address))))
+                .map(address -> spawn(() -> newMember(configFn.apply(address), address)))
                 // we need to collect here to ensure that all threads are spawned before we call future.get()
                 .collect(toList()).stream()
                 .map(f -> uncheckCall(f::get))
