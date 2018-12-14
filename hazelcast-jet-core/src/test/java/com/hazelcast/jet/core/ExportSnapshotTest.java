@@ -107,11 +107,9 @@ public class ExportSnapshotTest extends JetTestSupport {
 
     @Test
     public void when_regularSnapshotInProgress_then_exportWaits() {
-        JetInstance[] instances = createJetMembers(2, addr -> {
-            JetConfig config = new JetConfig();
-            configureBlockingMapStore(config, SNAPSHOT_DATA_MAP_PREFIX + "*");
-            return config;
-        });
+        JetConfig config = new JetConfig();
+        configureBlockingMapStore(config, SNAPSHOT_DATA_MAP_PREFIX + "*");
+        JetInstance[] instances = createJetMembers(config, 2);
         JetInstance client = fromClient ? createJetClient() : instances[0];
 
         DAG dag = new DAG();
@@ -130,11 +128,9 @@ public class ExportSnapshotTest extends JetTestSupport {
 
     @Test
     public void when_otherExportInProgress_then_waits() {
-        JetInstance[] instances = createJetMembers(2, addr -> {
-            JetConfig config = new JetConfig();
-            configureBlockingMapStore(config, JobRepository.EXPORTED_SNAPSHOTS_PREFIX + "*");
-            return config;
-        });
+        JetConfig config = new JetConfig();
+        configureBlockingMapStore(config, JobRepository.EXPORTED_SNAPSHOTS_PREFIX + "*");
+        JetInstance[] instances = createJetMembers(config, 2);
         JetInstance client = fromClient ? createJetClient() : instances[0];
 
         DAG dag = new DAG();

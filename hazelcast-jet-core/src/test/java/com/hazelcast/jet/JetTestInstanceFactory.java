@@ -19,6 +19,7 @@ package com.hazelcast.jet;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.test.TestHazelcastFactory;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.instance.HazelcastInstanceImpl;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JetService;
@@ -26,6 +27,8 @@ import com.hazelcast.nio.Address;
 import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.mocknetwork.TestNodeRegistry;
 
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -41,12 +44,12 @@ public class JetTestInstanceFactory {
 
     private final TestHazelcastFactory factory;
 
-    public JetTestInstanceFactory(int basePortNumber, String[] addresses) {
-        factory = new TestHazelcastFactoryForJet(basePortNumber, addresses);
-    }
-
     public JetTestInstanceFactory() {
         factory = new TestHazelcastFactoryForJet();
+    }
+
+    public JetTestInstanceFactory(int basePortNumber, String[] addresses) {
+        factory = new TestHazelcastFactoryForJet(basePortNumber, addresses);
     }
 
     public Address nextAddress() {
@@ -69,8 +72,15 @@ public class JetTestInstanceFactory {
         return Jet.newJetInstanceImpl(config, hzCfg -> factory.newHazelcastInstance(hzCfg, blockedAddresses));
     }
 
+    public JetInstance[] newMembers(JetConfig config, int nodeCount) {
+        JetInstance[] jetInstances = new JetInstance[nodeCount];
+        Arrays.setAll(jetInstances, i -> newMember(config));
+        return jetInstances;
+    }
+
     /**
-     * Creates the given number of Jet instances in parallel.
+     * Creates the given number of Jet instances in parallel. The first one is
+     * always master.
      * <p>
      * Spawns a separate thread to start each instance. This is required when
      * starting a Hot Restart-enabled cluster, where the {@code newJetInstance()}
@@ -87,7 +97,12 @@ public class JetTestInstanceFactory {
                 .map(f -> uncheckCall(f::get))
                 .toArray(JetInstance[]::new);
         assertClusterSizeEventually(nodeCount, factory.getAllHazelcastInstances());
+        Arrays.sort(jetInstances, Comparator.comparing(inst -> !isMaster(inst)));
         return jetInstances;
+    }
+
+    private static boolean isMaster(JetInstance inst) {
+        return ((HazelcastInstanceImpl) inst.getHazelcastInstance()).node.isMaster();
     }
 
     public JetClientInstanceImpl newClient() {

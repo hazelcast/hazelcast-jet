@@ -46,7 +46,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.Future;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -85,19 +84,14 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
     }
 
     protected JetInstance[] createJetMembers(int nodeCount) {
-        return createJetMembers(nodeCount, x -> new JetConfig());
+        return createJetMembers(new JetConfig(), nodeCount);
     }
 
-    /**
-     * Creates multiple Jet members in parallel.
-     *
-     * @param createConfigFn a function that must return a separate config instance for each address
-     */
-    protected JetInstance[] createJetMembers(int nodeCount, Function<Address, JetConfig> createConfigFn) {
+    protected JetInstance[] createJetMembers(JetConfig config, int nodeCount) {
         if (instanceFactory == null) {
             instanceFactory = new JetTestInstanceFactory();
         }
-        return instanceFactory.newMembersParallel(nodeCount, createConfigFn);
+        return instanceFactory.newMembers(config, nodeCount);
     }
 
     protected JetInstance createJetMember(JetConfig config, Address[] blockedAddress) {

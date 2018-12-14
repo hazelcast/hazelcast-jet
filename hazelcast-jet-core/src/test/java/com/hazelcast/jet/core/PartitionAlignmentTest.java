@@ -52,11 +52,9 @@ public class PartitionAlignmentTest extends JetTestSupport {
 
     @Before
     public void before() {
-        instance = createJetMembers(2, addr -> {
-            final JetConfig cfg = new JetConfig();
-            cfg.getHazelcastConfig().setProperty("hazelcast.partition.count", String.valueOf(PARTITION_COUNT));
-            return cfg;
-        })[0];
+        final JetConfig cfg = new JetConfig();
+        cfg.getHazelcastConfig().setProperty("hazelcast.partition.count", String.valueOf(PARTITION_COUNT));
+        instance = createJetMembers(cfg, 2)[0];
     }
 
     @Test
