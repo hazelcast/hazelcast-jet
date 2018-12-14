@@ -26,13 +26,15 @@ import com.hazelcast.nio.Address;
 import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.mocknetwork.TestNodeRegistry;
 
+import java.util.List;
+import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Jet.getJetClientInstance;
 import static com.hazelcast.jet.impl.JetNodeContext.JET_EXTENSION_PRIORITY_LIST;
 import static com.hazelcast.jet.impl.config.XmlJetConfigBuilder.getClientConfig;
-import static com.hazelcast.jet.impl.util.Util.uncheckRun;
+import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.test.HazelcastTestSupport.assertClusterSizeEventually;
 import static com.hazelcast.test.HazelcastTestSupport.spawn;
 import static java.util.stream.Collectors.toList;
@@ -70,19 +72,20 @@ public class JetTestInstanceFactory {
     }
 
     /**
+     * Creates the given number of jet instances in parallel.
+     * <p>
      * Spawns a separate thread to start each instance. This is required when
-     * starting a Hot Restart-enabled cluster, where the {@code newJetInstance}
+     * starting a Hot Restart-enabled cluster, where the {@code newJetInstance()}
      * call blocks until the whole cluster is re-formed.
      */
     public JetInstance[] newMembers(int nodeCount, Function<Address, JetConfig> configFn) {
-        JetInstance[] jetInstances = new JetInstance[nodeCount];
-        IntStream.range(0, nodeCount)
-                 .mapToObj(i -> {
-                     Address address = factory.nextAddress();
-                     return spawn(() -> jetInstances[i] = newMember(address, configFn.apply(address)));
-                 })
-                 .collect(toList())
-                 .forEach(f -> uncheckRun(f::get));
+        JetInstance[] jetInstances = IntStream.range(0, nodeCount)
+                .mapToObj(i -> factory.nextAddress())
+                .map(address -> spawn(() -> newMember(address, configFn.apply(address))))
+                // we need to collect here to ensure that all threads are spawned before we call future.get()
+                .collect(toList()).stream()
+                .map(f -> uncheckCall(f::get))
+                .toArray(JetInstance[]::new);
         assertClusterSizeEventually(nodeCount, factory.getAllHazelcastInstances());
         return jetInstances;
     }
